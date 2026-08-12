@@ -20,7 +20,32 @@ class HomeView extends GetView<HomeController> {
           )
         ],
       ),
-      body: Padding(
+      body: Obx(() {
+        if (controller.selectedIndex.value == 0) {
+          return _buildMiniAppsList();
+        } else {
+          return _buildProfile();
+        }
+      }),
+      bottomNavigationBar: Obx(() => BottomNavigationBar(
+        currentIndex: controller.selectedIndex.value,
+        onTap: controller.changeTabIndex,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Mini Apps',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
+      )),
+    );
+  }
+
+  Widget _buildMiniAppsList() {
+    return Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -59,11 +84,20 @@ class HomeView extends GetView<HomeController> {
                           tileColor: Colors.grey.shade100,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           onTap: () {
+                            final redirectUri = app['redirectUri'];
+                            if (redirectUri != null && redirectUri.isNotEmpty) {
+                              Get.toNamed(redirectUri);
+                              return;
+                            }
+
                             String url = app['url'] ?? 'http://localhost:3000';
                             if (!kIsWeb && Platform.isAndroid && url.contains('localhost')) {
                               url = url.replaceAll('localhost', '10.0.2.2');
                             }
-                            Get.toNamed(Routes.MINIAPP, arguments: url);
+                            Get.toNamed(Routes.MINIAPP, arguments: {
+                              'url': url,
+                              'permissions': app['permissions'] ?? [],
+                            });
                           },
                         ),
                       );
@@ -74,6 +108,14 @@ class HomeView extends GetView<HomeController> {
             ),
           ],
         ),
+    );
+  }
+
+  Widget _buildProfile() {
+    return const Center(
+      child: Text(
+        'Super App Profile Page',
+        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
       ),
     );
   }

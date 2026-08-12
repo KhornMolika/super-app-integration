@@ -8,11 +8,16 @@ class HomeController extends GetxController {
   var miniApps = [].obs;
   var isLoading = true.obs;
   var hasError = false.obs;
+  var selectedIndex = 0.obs;
 
   @override
   void onInit() {
     super.onInit();
     fetchMiniApps();
+  }
+
+  void changeTabIndex(int index) {
+    selectedIndex.value = index;
   }
 
   Future<void> fetchMiniApps() async {
@@ -34,7 +39,7 @@ class HomeController extends GetxController {
       }
     } catch (e) {
       hasError(true);
-      print("Error fetching mini apps: $e");
+      print ("Error fetching mini apps: $e");
     } finally {
       isLoading(false);
     }

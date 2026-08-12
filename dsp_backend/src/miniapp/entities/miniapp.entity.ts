@@ -3,32 +3,35 @@ import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateCol
 @Entity()
 export class MiniApp {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column()
-  name: string;
+  name!: string;
 
   @Column({ nullable: true })
-  description: string;
+  description!: string;
 
   @Column()
-  url: string;
+  url!: string;
 
   @Column({ nullable: true })
-  logo: string;
+  logo!: string;
 
   @Column()
-  category: string;
+  category!: string;
 
   @Column({ default: 'Draft' })
-  status: string; // e.g., Draft, Pending Review, Published, Rejected
+  status!: string; // e.g., Draft, Pending Review, Published, Rejected
 
   @Column({ nullable: true })
-  redirectUri: string;
+  redirectUri!: string;
+
+  @Column('simple-array', { nullable: true })
+  permissions!: string[];
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 }

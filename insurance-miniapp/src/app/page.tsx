@@ -1,5 +1,9 @@
 import React from 'react';
 import * as jose from 'jose';
+import LocationCard from './components/LocationCard';
+
+import CameraCard from './components/CameraCard';
+import BiometricsCard from './components/BiometricsCard';
 
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ [key: string]: string | undefined }> }) {
   const params = await searchParams;
@@ -43,7 +47,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       </header>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto p-6">
+      <main className="max-w-6xl mx-auto p-6">
         <div className="mb-8">
           <h2 className="text-2xl font-semibold">Welcome {isAuthenticated ? 'from Insurance' : 'Visitor'}</h2>
           <p className="text-gray-600">Manage your policies and claims seamlessly.</p>
@@ -92,6 +96,15 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
             <h3 className="text-lg font-bold mb-2">Claim History</h3>
             <p className="text-gray-600 text-sm">Track the historical status of your past claims in real-time.</p>
           </div>
+
+          {/* Card 5 - NATIVE BRIDGE LOCATION */}
+          <LocationCard />
+
+          {/* Card 6 - NATIVE BRIDGE CAMERA */}
+          <CameraCard />
+
+          {/* Card 7 - NATIVE BRIDGE BIOMETRICS */}
+          <BiometricsCard />
         </div>
       </main>
     </div>

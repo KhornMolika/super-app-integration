@@ -5,6 +5,8 @@ import '../modules/login/bindings/login_binding.dart';
 import '../modules/login/views/login_view.dart';
 import '../modules/miniapp/bindings/miniapp_binding.dart';
 import '../modules/miniapp/views/miniapp_view.dart';
+import '../modules/trust_regulator/bindings/trust_regulator_binding.dart';
+import '../modules/trust_regulator/views/trust_regulator_view.dart';
 
 part 'app_routes.dart';
 
@@ -26,6 +28,11 @@ class AppPages {
       name: Routes.MINIAPP,
       page: () => const MiniappView(),
       binding: MiniappBinding(),
+    ),
+    GetPage(
+      name: Routes.TRUST_REGULATOR,
+      page: () => const TrustRegulatorView(),
+      binding: TrustRegulatorBinding(),
     ),
   ];
 }
