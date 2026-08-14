@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+@theme {
+  /* Green Gold Palette */
+  --color-brand-900: #1A3F22;
+  --color-brand-800: #295133;
+  --color-brand-700: #396344;
+  --color-brand-600: #497454;
+  --color-brand-500: #58761B;
+  --color-brand-400: #6D8B2C;
+  --color-brand-300: #84A141;
+  --color-brand-200: #9BB858;
+  --color-brand-100: #B4CE71;
+  --color-brand-50:  #D4E59C;
+
+  --color-accent-900: #563300;
+  --color-accent-800: #734500;
+  --color-accent-700: #905A01;
+  --color-accent-600: #B47301;
+  --color-accent-500: #D99201;
+  --color-accent-400: #E6A71C;
+  --color-accent-300: #F2BB3B;
+  --color-accent-200: #F8D161;
+  --color-accent-100: #FBE692;
+  --color-accent-50:  #FDF3CB;
+}
+
+:root {
+  --background: #FAFAFA;
+  --foreground: #09090b;
+}
+
+.dark {
+  --background: #090b0a;
+  --foreground: #fafafa;
+}
+
+@variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Animations */
+@layer utilities {
+  .animate-in {
+    animation-duration: 500ms;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    animation-fill-mode: forwards;
+  }
+  .fade-in {
+    animation-name: fadeIn;
+  }
+  .slide-in-from-bottom-4 {
+    animation-name: slideInFromBottom;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInFromBottom {
+  from { transform: translateY(1rem); }
+  to { transform: translateY(0); }
+}

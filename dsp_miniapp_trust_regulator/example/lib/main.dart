@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:dsp_core/dsp_core.dart';
-import 'package:dsp_miniapp_trust_regulator/dsp_miniapp_trust_regulator.dart';
+import 'package:dps_core_package/dps_core.dart';
+import 'package:dps_miniapp_mobile_trust_regulator/dsp_miniapp_trust_regulator.dart';
 
 void main() {
   runApp(const StandaloneExampleApp());

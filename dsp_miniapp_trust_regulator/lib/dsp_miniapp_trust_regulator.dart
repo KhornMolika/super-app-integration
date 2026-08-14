@@ -1,19 +1,18 @@
-
-
 import 'package:flutter/material.dart';
-import 'package:dsp_core/dsp_core.dart';
-import 'package:nfc_manager/nfc_manager.dart';
+import 'package:dps_core_package/dps_core.dart';
 
 /// The entry point widget for the Trust Regulator mini app.
 /// This widget is designed to be embedded into the Super App.
 class TrustRegulatorAppEntry extends StatefulWidget {
   final AuthContext authContext;
   final ExitCallback onExit;
+  final Future<String> Function()? onScanNFC; // The Callback Contract for Native Features!
 
   const TrustRegulatorAppEntry({
     super.key,
     required this.authContext,
     required this.onExit,
+    this.onScanNFC,
   });
 
   @override
@@ -88,30 +87,44 @@ class _TrustRegulatorAppEntryState extends State<TrustRegulatorAppEntry> {
                   ],
                 ),
               ),
+              // --- DEMO FEATURE (Hidden for Phase 1) ---
+              // Uncomment the block below during the demo to show the
+              // Mini App team adding a new native feature!
+              /*
               const SizedBox(height: 32),
               ElevatedButton.icon(
                 icon: const Icon(Icons.nfc),
                 label: const Text('Scan ID Card (NFC)'),
                 onPressed: () async {
-                  try {
-                    bool isAvailable = await NfcManager.instance.isAvailable();
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('NFC Available: $isAvailable')),
-                      );
+                  if (widget.onScanNFC != null) {
+                    try {
+                      final nfcData = await widget.onScanNFC!();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('NFC Success: $nfcData')),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('NFC Error: $e'), backgroundColor: Colors.red),
+                        );
+                      }
                     }
-                  } catch (e) {
+                  } else {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('NFC Error (Platform unsupported?): $e'),
-                          backgroundColor: Colors.red,
+                        const SnackBar(
+                          content: Text('Super App denied NFC permission!'),
+                          backgroundColor: Colors.orange,
                         ),
                       );
                     }
                   }
                 },
               ),
+              */
+              // ----------------------------------------
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () {

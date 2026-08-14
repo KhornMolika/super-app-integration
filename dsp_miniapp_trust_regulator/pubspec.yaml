@@ -1,4 +1,4 @@
-name: dsp_miniapp_trust_regulator
+name: dps_miniapp_mobile_trust_regulator
 description: "A new Flutter package project."
 version: 0.0.1
 publish_to: 'none'
@@ -11,8 +11,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  dsp_core:
-    path: ../dsp_core
+  dps_core_package:
+    path: ../dps_core_package
   nfc_manager: ^3.3.0
 
 dev_dependencies:
