@@ -36,7 +36,18 @@ export class MiniappController {
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateData: UpdateMiniAppDto) {
-    return this.miniappService.update(id, updateData as any);
+    const dataToSave: any = { ...updateData };
+    if (updateData.integrationMethod === 'WEBVIEW') {
+      dataToSave.integrationConfig = updateData.integrationConfigWebView;
+    } else if (updateData.integrationMethod === 'FLUTTER_PACKAGE') {
+      dataToSave.integrationConfig = updateData.integrationConfigFlutter;
+    }
+    
+    // Clean up DTO specific fields
+    delete dataToSave.integrationConfigWebView;
+    delete dataToSave.integrationConfigFlutter;
+
+    return this.miniappService.update(id, dataToSave);
   }
 
   @Delete(':id')
