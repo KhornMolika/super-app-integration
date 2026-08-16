@@ -16,10 +16,6 @@ export class IsUrlReachableConstraint implements ValidatorConstraintInterface {
       return true;
     }
 
-    // Skip localhost for development testing
-    if (url.includes('localhost') || url.includes('127.0.0.1')) {
-      return true;
-    }
 
     try {
       // Perform a fast HEAD request to see if the server responds

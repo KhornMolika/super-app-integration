@@ -1,6 +1,5 @@
 import { IsString, IsNotEmpty, IsEmail, IsOptional, IsEnum, IsUrl, IsArray, ValidateNested, ValidateIf } from 'class-validator';
 import { Type } from 'class-transformer';
-import { IsUrlReachable } from '../../common/validators/is-url-reachable.validator';
 
 export enum IntegrationMethod {
   WEBVIEW = 'WEBVIEW',
@@ -15,13 +14,11 @@ export enum SourceType {
 }
 
 export class WebViewConfigDto {
-  @IsUrl({ require_tld: false })
-  @IsUrlReachable()
+  @IsString()
   @IsNotEmpty()
   productionUrl!: string;
 
-  @IsUrl({ require_tld: false })
-  @IsUrlReachable()
+  @IsString()
   @IsOptional()
   stagingUrl?: string;
 }
@@ -33,8 +30,7 @@ export class FlutterPackageConfigDto {
 
   // If GIT
   @ValidateIf(o => o.sourceType === SourceType.GIT)
-  @IsUrl({ require_tld: false })
-  @IsUrlReachable()
+  @IsString()
   @IsNotEmpty()
   gitUrl?: string;
 
@@ -87,8 +83,7 @@ export class CreateMiniAppDto {
   @IsOptional()
   fullDescription?: string;
 
-  @IsUrl({ require_tld: false })
-  @IsUrlReachable()
+  @IsString()
   @IsOptional()
   logo?: string;
 
@@ -100,11 +95,11 @@ export class CreateMiniAppDto {
   @IsOptional()
   ownerName?: string;
 
-  @IsEmail()
+  @IsString()
   @IsNotEmpty()
   ownerEmail!: string;
 
-  @IsEmail()
+  @IsString()
   @IsOptional()
   supportEmail?: string;
 

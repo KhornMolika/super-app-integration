@@ -1,8 +1,14 @@
+'use client';
+
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/inputs';
+import { useConfirm } from '@/components/ui/ConfirmationProvider';
 
 export default function ReviewApprovalPage({ params }: { params: { id: string } }) {
+  const router = useRouter();
+  const confirm = useConfirm();
   // In a real app, you would fetch the submission details using params.id
   
   return (
@@ -78,10 +84,38 @@ export default function ReviewApprovalPage({ params }: { params: { id: string } 
       </Card>
 
       <div className="flex justify-end space-x-4">
-        <Button className="bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-100 hover:text-rose-700 !shadow-none border border-rose-200 dark:border-rose-500/20">
+        <Button 
+          onClick={async () => {
+            const confirmed = await confirm({
+              title: 'Reject Application',
+              message: 'Are you sure you want to reject this application? The developer will be notified to make changes.',
+              confirmText: 'Reject',
+              confirmVariant: 'danger'
+            });
+            if (confirmed) {
+              // Perform rejection logic here
+              router.push('/approvals');
+            }
+          }}
+          className="bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-100 hover:text-rose-700 !shadow-none border border-rose-200 dark:border-rose-500/20"
+        >
           Reject
         </Button>
-        <Button className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md">
+        <Button 
+          onClick={async () => {
+            const confirmed = await confirm({
+              title: 'Approve & Publish',
+              message: 'Are you sure you want to approve this application? It will immediately become available in the Super App.',
+              confirmText: 'Approve & Publish',
+              confirmVariant: 'success'
+            });
+            if (confirmed) {
+              // Perform approval logic here
+              router.push('/approvals');
+            }
+          }}
+          className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md"
+        >
           Approve & Publish
         </Button>
       </div>

@@ -55,8 +55,8 @@ export function SidebarNav() {
             href={item.href} 
             className={`group flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
               isActive 
-                ? 'bg-brand-800 border border-brand-700 shadow-inner text-white' 
-                : 'hover:bg-brand-800 hover:text-white text-slate-200'
+                ? 'bg-brand-800 dark:bg-brand-900 border border-brand-700 dark:border-brand-800 shadow-inner text-white' 
+                : 'hover:bg-brand-800 dark:hover:bg-brand-900 hover:text-white text-slate-200'
             }`}
           >
             <div className={`transition-colors ${isActive ? 'text-accent-400' : 'text-brand-300 group-hover:text-accent-400'}`}>

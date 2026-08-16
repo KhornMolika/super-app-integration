@@ -11,7 +11,7 @@ export enum AppStatus {
 }
 
 export class UpdateMiniAppDto extends PartialType(CreateMiniAppDto) {
-  @IsEnum(AppStatus)
+  @IsString()
   @IsOptional()
-  status?: AppStatus;
+  status?: string;
 }

@@ -26,6 +26,9 @@ export class MiniApp {
   @Column({ default: 'DRAFT' })
   status!: string;
 
+  @Column({ type: 'boolean', default: false })
+  hasUnreadIssues!: boolean;
+
   @Column({ nullable: true })
   ownerName!: string;
 
@@ -43,6 +46,9 @@ export class MiniApp {
 
   @Column({ type: 'jsonb', nullable: true })
   integrationConfig!: any;
+
+  @Column({ type: 'jsonb', nullable: true })
+  validationErrors?: any;
 
   // Uses JSON to store an array of objects: [{ type: 'CAMERA', purpose: 'Scan QR' }]
   @Column({ type: 'jsonb', nullable: true })

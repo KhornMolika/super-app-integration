@@ -3,15 +3,21 @@
 import Link from 'next/link';
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { Input, Label, Select, Textarea, Button } from '@/components/ui/inputs';
+import { useConfirm } from '@/components/ui/ConfirmationProvider';
+import { Input, Label, Select, Button } from '@/components/ui/inputs';
 import { Card, CardHeader } from '@/components/ui/card';
+import PreviewModal from '@/components/ui/PreviewModal';
+import SubmissionModal, { SubmissionModalState } from '@/components/ui/SubmissionModal';
+import ValidationIssuesButton from '@/components/ValidationIssuesButton';
 import { CreateMiniAppDto, IntegrationMethod, SourceType } from '@/types/miniapp.types';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 export default function ManageMiniAppPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id } = use(params);
   
-  const [formData, setFormData] = useState<Partial<CreateMiniAppDto & { status: string }>>({
+  const [formData, setFormData] = useState<Partial<CreateMiniAppDto & { status: string, validationErrors?: Record<string, string> }>>({
     name: '',
     appId: '',
     category: 'Insurance',
@@ -27,16 +33,80 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
     integrationConfigFlutter: { sourceType: SourceType.ARTIFACT, packageName: '', versionConstraint: '' },
     permissions: [],
     status: 'DRAFT',
+    validationErrors: undefined as Record<string, string> | undefined,
   });
   
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [message, setMessage] = useState<{ text: string | string[], type: string }>({ text: '', type: '' });
+  const [modalState, setModalState] = useState<SubmissionModalState>({ isOpen: false, status: 'loading' });
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
+  
+  const confirm = useConfirm();
+
+  useEffect(() => {
+    const errors: Record<string, string> = {};
+    if (formData.appId && !/^[a-z0-9]+(\.[a-z0-9]+)+$/.test(formData.appId)) {
+      errors.appId = 'App ID must be in reverse-domain format (e.g. com.company.app)';
+    }
+    if (formData.ownerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.ownerEmail)) {
+      errors.ownerEmail = 'Owner Email must be a valid email';
+    }
+    if (formData.supportEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.supportEmail)) {
+      errors.supportEmail = 'Support Email must be a valid email';
+    }
+    if (formData.name && formData.name.length < 2) {
+      errors.name = 'Name must be at least 2 characters';
+    }
+
+    if (formData.integrationMethod === IntegrationMethod.WEBVIEW && formData.integrationConfigWebView?.productionUrl) {
+      const prodUrl = formData.integrationConfigWebView.productionUrl;
+      const allowLocal = process.env.NEXT_PUBLIC_ALLOW_LOCAL_PROD_URLS === 'true';
+      if (!allowLocal) {
+        if (!prodUrl.startsWith('https://')) {
+          errors['integrationConfigWebView.productionUrl'] = 'Production URL must use HTTPS.';
+        } else if (prodUrl.includes('localhost') || prodUrl.includes('127.0.0.1')) {
+          errors['integrationConfigWebView.productionUrl'] = 'Production URL cannot be localhost.';
+        }
+      }
+    }
+
+    setLocalErrors(errors);
+
+    if (formData.appId || formData.name) {
+      const timeoutId = setTimeout(async () => {
+        try {
+          const params = new URLSearchParams();
+          if (formData.appId && !errors.appId) params.append('appId', formData.appId);
+          if (formData.name && !errors.name) params.append('name', formData.name);
+          if (id) params.append('excludeId', id as string);
+          
+          if (params.toString()) {
+            const res = await fetch(`${API_URL}/mini-apps/check-exists?${params.toString()}`);
+            if (res.ok) {
+              const data = await res.json();
+              setLocalErrors(prev => {
+                const newErrors = { ...prev };
+                if (data.appIdExists) newErrors.appId = 'This App ID is already taken.';
+                if (data.nameExists) newErrors.name = 'This App Name is already taken.';
+                return newErrors;
+              });
+            }
+          }
+        } catch (e) {}
+      }, 600);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [formData.appId, formData.name, formData.ownerEmail, formData.supportEmail, formData.logo, id]);
+
+  const allErrors = { ...localErrors, ...(formData.validationErrors || {}) };
+  const hasErrors = Object.keys(allErrors).length > 0;
 
   useEffect(() => {
     async function fetchApp() {
       try {
-        const res = await fetch(`http://localhost:3000/mini-apps/${id}`);
+        const res = await fetch(`${API_URL}/mini-apps/${id}`);
         if (res.ok) {
           const data = await res.json();
           setFormData({
@@ -45,10 +115,10 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
             integrationConfigFlutter: data.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE ? data.integrationConfig : { sourceType: SourceType.ARTIFACT, packageName: '', versionConstraint: '' },
           });
         } else {
-          setMessage({ text: 'Failed to fetch mini app details.', type: 'error' });
+          setModalState({ isOpen: true, status: 'error', message: 'Failed to fetch mini app details.' });
         }
       } catch (error) {
-        setMessage({ text: 'Error connecting to backend.', type: 'error' });
+        setModalState({ isOpen: true, status: 'error', message: 'Error connecting to backend.' });
       } finally {
         setIsLoading(false);
       }
@@ -93,15 +163,14 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setMessage({ text: '', type: '' });
+    setModalState({ isOpen: true, status: 'loading' });
 
-    // Clean up unused config before submitting
     const payload = { ...formData };
     if (payload.integrationMethod !== IntegrationMethod.WEBVIEW) delete payload.integrationConfigWebView;
     if (payload.integrationMethod !== IntegrationMethod.FLUTTER_PACKAGE) delete payload.integrationConfigFlutter;
 
     try {
-      const response = await fetch(`http://localhost:3000/mini-apps/${id}`, {
+      const response = await fetch(`${API_URL}/mini-apps/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -110,34 +179,78 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
       const resData = await response.json().catch(() => ({}));
 
       if (response.ok) {
-        setMessage({ text: 'Changes saved successfully!', type: 'success' });
+        let attempts = 0;
+        
+        const pollTimer = setInterval(async () => {
+          attempts++;
+          try {
+            const pollRes = await fetch(`${API_URL}/mini-apps/${id}`);
+            if (pollRes.ok) {
+              const appData = await pollRes.json();
+              
+              setFormData(prev => ({
+                ...appData,
+                integrationConfigWebView: appData.integrationMethod === IntegrationMethod.WEBVIEW ? appData.integrationConfig : prev.integrationConfigWebView,
+                integrationConfigFlutter: appData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE ? appData.integrationConfig : prev.integrationConfigFlutter,
+              }));
+
+              if (appData.status === 'Draft' || appData.status === 'Published') {
+                clearInterval(pollTimer);
+                setModalState({ isOpen: true, status: 'success' });
+                setIsSubmitting(false);
+              } else if (appData.status === 'Issues') {
+                clearInterval(pollTimer);
+                setModalState({ 
+                  isOpen: true, 
+                  status: 'error', 
+                  message: 'Validation failed.', 
+                  errors: appData.validationErrors || {} 
+                });
+                setIsSubmitting(false);
+              }
+            }
+          } catch (pollErr) {
+          }
+          if (attempts > 30) {
+            clearInterval(pollTimer);
+            setModalState({ isOpen: true, status: 'error', message: 'Validation timed out.' });
+            setIsSubmitting(false);
+          }
+        }, 1000);
       } else {
-        setMessage({ text: resData.message || 'Failed to save changes.', type: 'error' });
+        setModalState({ isOpen: true, status: 'error', message: resData.message || 'Failed to save changes.' });
+        setIsSubmitting(false);
       }
     } catch (error) {
-      setMessage({ text: 'Error connecting to backend.', type: 'error' });
-    } finally {
+      setModalState({ isOpen: true, status: 'error', message: 'Error connecting to backend.' });
       setIsSubmitting(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this mini app? This action cannot be undone.')) return;
+    const isConfirmed = await confirm({
+      title: 'Delete Mini App',
+      message: 'Are you sure you want to delete this mini app? This action cannot be undone.',
+      confirmText: 'Delete App',
+      confirmVariant: 'danger'
+    });
+    
+    if (!isConfirmed) return;
     
     setIsSubmitting(true);
     try {
-      const response = await fetch(`http://localhost:3000/mini-apps/${id}`, {
+      const response = await fetch(`${API_URL}/mini-apps/${id}`, {
         method: 'DELETE',
       });
 
       if (response.ok) {
         router.push('/miniapps');
       } else {
-        setMessage({ text: 'Failed to delete mini app.', type: 'error' });
+        setModalState({ isOpen: true, status: 'error', message: 'Failed to delete mini app.' });
         setIsSubmitting(false);
       }
     } catch (error) {
-      setMessage({ text: 'Error connecting to backend.', type: 'error' });
+      setModalState({ isOpen: true, status: 'error', message: 'Error connecting to backend.' });
       setIsSubmitting(false);
     }
   };
@@ -155,8 +268,9 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
   }
 
   return (
-    <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out pb-12">
-      <div className="mb-8 flex items-center justify-between">
+    <>
+      <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out pb-12">
+        <div className="mb-8 flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/miniapps" className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 hover:text-brand-600 hover:border-brand-200 transition-all shadow-sm">
             <svg className="w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
@@ -166,40 +280,34 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
             <p className="text-slate-500 mt-1 text-sm">Update configuration and security settings</p>
           </div>
         </div>
-        <Button 
-          type="button"
-          onClick={handleDelete}
-          disabled={isSubmitting}
-          className="bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-100 hover:text-rose-700 !shadow-none"
-        >
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-          <span>Delete App</span>
-        </Button>
+        <div className="flex items-center space-x-3">
+          {formData.integrationMethod === IntegrationMethod.WEBVIEW && formData.integrationConfigWebView?.productionUrl && (
+            <Button 
+              type="button"
+              onClick={() => {
+                setPreviewUrl(formData.integrationConfigWebView!.productionUrl);
+                setShowPreview(true);
+              }}
+              className="bg-brand-50 text-brand-700 hover:bg-brand-100 dark:bg-brand-900/30 dark:text-brand-300 dark:hover:bg-brand-900/50 !shadow-none"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+              <span>Preview</span>
+            </Button>
+          )}
+
+          <Button 
+            type="button"
+            onClick={handleDelete}
+            disabled={isSubmitting}
+            className="bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-100 hover:text-rose-700 !shadow-none"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            <span>Delete App</span>
+          </Button>
+        </div>
       </div>
 
-      {message.text && message.text.length > 0 && (
-        <div className={`p-4 mb-6 rounded-xl flex items-start space-x-3 border ${message.type === 'success' ? 'bg-brand-50 text-brand-800 border-brand-200' : 'bg-rose-50 text-rose-800 border-rose-200'}`}>
-          {message.type === 'success' ? (
-            <svg className="w-5 h-5 text-brand-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          ) : (
-            <svg className="w-5 h-5 text-rose-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          )}
-          <div className="flex-1">
-            <span className="font-semibold text-sm block mb-1">
-              {message.type === 'success' ? 'Success' : 'Please fix the following errors:'}
-            </span>
-            {Array.isArray(message.text) ? (
-              <ul className="list-disc pl-5 text-sm space-y-1">
-                {message.text.map((err, idx) => (
-                  <li key={idx}>{err}</li>
-                ))}
-              </ul>
-            ) : (
-              <span className="font-medium text-sm">{message.text}</span>
-            )}
-          </div>
-        </div>
-      )}
+
 
       <form className="space-y-6" onSubmit={handleSave}>
         <Card>
@@ -211,15 +319,23 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
             </div>
             <div>
               <Label>App Name</Label>
-              <Input required name="name" value={formData.name || ''} onChange={handleChange} placeholder="e.g. Insurance Portal" />
+              <Input 
+                required 
+                name="name" 
+                value={formData.name || ''} 
+                onChange={handleChange} 
+                placeholder="e.g. Insurance Portal" 
+                className={allErrors.name ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
+              />
+              {allErrors.name && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors.name}</p>}
             </div>
             <div>
               <Label>Category</Label>
-              <Select name="category" value={formData.category || 'Insurance'} onChange={handleChange}>
-                <option>Insurance</option>
+              <Select name="category" value={formData.category || 'Banking'} onChange={handleChange}>
                 <option>Banking</option>
-                <option>Securities</option>
-                <option>Payment</option>
+                <option>Insurance</option>
+                <option>Lifestyle</option>
+                <option>Shopping</option>
               </Select>
             </div>
             <div>
@@ -234,7 +350,16 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
             </div>
             <div>
               <Label>Logo URL</Label>
-              <Input name="logo" value={formData.logo || ''} onChange={handleChange} type="url" placeholder="https://..." />
+              <Input 
+                required 
+                name="logo" 
+                value={formData.logo || ''} 
+                onChange={handleChange} 
+                type="url" 
+                placeholder="https://..." 
+                className={allErrors.logo ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
+              />
+              {allErrors.logo && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors.logo}</p>}
             </div>
             <div className="col-span-1 md:col-span-2">
               <Label>Short Description</Label>
@@ -256,11 +381,28 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
             </div>
             <div>
               <Label>Owner Email</Label>
-              <Input required name="ownerEmail" value={formData.ownerEmail || ''} onChange={handleChange} type="email" placeholder="john.doe@fsa.gov" />
+              <Input 
+                required 
+                name="ownerEmail" 
+                value={formData.ownerEmail || ''} 
+                onChange={handleChange} 
+                type="email" 
+                placeholder="john.doe@fsa.gov" 
+                className={allErrors.ownerEmail ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
+              />
+              {allErrors.ownerEmail && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors.ownerEmail}</p>}
             </div>
             <div>
               <Label>Support Email</Label>
-              <Input name="supportEmail" value={formData.supportEmail || ''} onChange={handleChange} type="email" placeholder="support@fsa.gov" />
+              <Input 
+                name="supportEmail" 
+                value={formData.supportEmail || ''} 
+                onChange={handleChange} 
+                type="email" 
+                placeholder="support@fsa.gov"
+                className={allErrors.supportEmail ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
+              />
+              {allErrors.supportEmail && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors.supportEmail}</p>}
             </div>
           </div>
         </Card>
@@ -281,11 +423,28 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800">
               <div>
                 <Label>Production URL</Label>
-                <Input required name="productionUrl" value={formData.integrationConfigWebView?.productionUrl || ''} onChange={handleWebViewChange} type="url" placeholder="https://..." />
+                <Input 
+                  required 
+                  name="productionUrl" 
+                  value={formData.integrationConfigWebView?.productionUrl || ''} 
+                  onChange={handleWebViewChange} 
+                  type="url" 
+                  placeholder="https://..." 
+                  className={allErrors['integrationConfigWebView.productionUrl'] ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
+                />
+                {allErrors['integrationConfigWebView.productionUrl'] && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors['integrationConfigWebView.productionUrl']}</p>}
               </div>
               <div>
                 <Label>Staging URL</Label>
-                <Input name="stagingUrl" value={formData.integrationConfigWebView?.stagingUrl || ''} onChange={handleWebViewChange} type="url" placeholder="https://..." />
+                <Input 
+                  name="stagingUrl" 
+                  value={formData.integrationConfigWebView?.stagingUrl || ''} 
+                  onChange={handleWebViewChange} 
+                  type="url" 
+                  placeholder="https://staging..." 
+                  className={allErrors['integrationConfigWebView.stagingUrl'] ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
+                />
+                {allErrors['integrationConfigWebView.stagingUrl'] && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors['integrationConfigWebView.stagingUrl']}</p>}
               </div>
             </div>
           )}
@@ -308,7 +467,14 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
                   </div>
                   <div>
                     <Label>Version Constraint</Label>
-                    <Input required name="versionConstraint" value={formData.integrationConfigFlutter?.versionConstraint || ''} onChange={handleFlutterChange} placeholder="e.g. ^1.0.0" />
+                    <Input 
+                      name="versionConstraint" 
+                      value={formData.integrationConfigFlutter?.versionConstraint || ''} 
+                      onChange={handleFlutterChange} 
+                      placeholder="e.g. ^1.0.0" 
+                      className={allErrors['integrationConfigFlutter.versionConstraint'] ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
+                    />
+                    {allErrors['integrationConfigFlutter.versionConstraint'] && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors['integrationConfigFlutter.versionConstraint']}</p>}
                   </div>
                 </div>
               ) : (
@@ -382,6 +548,34 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
           </Button>
         </div>
       </form>
-    </div>
+
+      <PreviewModal
+        isOpen={showPreview}
+        onClose={() => setShowPreview(false)}
+        url={previewUrl}
+        title={formData.name || ''}
+      />
+      </div>
+
+      <SubmissionModal
+        state={modalState}
+        mode="manage"
+        onClose={() => setModalState({ ...modalState, isOpen: false })}
+        onRunInBackground={() => {
+          setModalState({ ...modalState, isOpen: false });
+          router.push('/miniapps');
+        }}
+        onFixLater={() => {
+          setModalState({ ...modalState, isOpen: false });
+          router.push('/miniapps');
+        }}
+        onSuccessContinue={() => setModalState({ ...modalState, isOpen: false })}
+      />
+
+      {/* Floating Error Summary Button */}
+      {!modalState.isOpen && hasErrors && (
+        <ValidationIssuesButton errors={allErrors} />
+      )}
+    </>
   );
 }

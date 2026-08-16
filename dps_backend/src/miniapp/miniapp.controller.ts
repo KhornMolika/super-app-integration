@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseUUIDPipe } from '@nestjs/common';
 import { MiniappService } from './miniapp.service';
 import { CreateMiniAppDto } from './dto/create-miniapp.dto';
 import { UpdateMiniAppDto } from './dto/update-miniapp.dto';
@@ -29,13 +29,28 @@ export class MiniappController {
     return this.miniappService.findAll(query);
   }
 
+  @Get('check-exists')
+  checkExists(@Query('appId') appId?: string, @Query('name') name?: string, @Query('excludeId') excludeId?: string) {
+    return this.miniappService.checkExists(appId, name, excludeId);
+  }
+
+  @Get('notifications')
+  getNotifications() {
+    return this.miniappService.getNotifications();
+  }
+
+  @Post(':id/mark-read')
+  markNotificationRead(@Param('id') id: string) {
+    return this.miniappService.markNotificationRead(id);
+  }
+
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.miniappService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateData: UpdateMiniAppDto) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateData: UpdateMiniAppDto) {
     const dataToSave: any = { ...updateData };
     if (updateData.integrationMethod === 'WEBVIEW') {
       dataToSave.integrationConfig = updateData.integrationConfigWebView;
@@ -51,7 +66,7 @@ export class MiniappController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.miniappService.remove(id);
   }
 }
