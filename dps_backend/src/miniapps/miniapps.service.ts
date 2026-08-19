@@ -132,13 +132,6 @@ export class MiniappsService {
         }
       }
       
-      if (app.integrationConfig?.stagingUrl) {
-        checks.push(
-          urlValidator.validate(app.integrationConfig.stagingUrl, null as any).then(isValid => {
-            if (!isValid) errors['integrationConfigWebView.stagingUrl'] = 'stagingUrl must be a reachable and accessible URL.';
-          })
-        );
-      }
     }
 
     if (app.permissionRequests && Array.isArray(app.permissionRequests)) {

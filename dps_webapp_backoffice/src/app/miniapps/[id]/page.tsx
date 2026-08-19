@@ -30,7 +30,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
     ownerEmail: '',
     supportEmail: '',
     integrationMethod: IntegrationMethod.WEBVIEW,
-    integrationConfigWebView: { productionUrl: '', stagingUrl: '' },
+    integrationConfigWebView: { productionUrl: '' },
     integrationConfigFlutter: { sourceType: SourceType.ARTIFACT, packageName: '', versionConstraint: '' },
     permissions: [],
     status: 'DRAFT',
@@ -114,7 +114,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
           const data = await res.json();
           setFormData({
             ...data,
-            integrationConfigWebView: data.integrationMethod === IntegrationMethod.WEBVIEW ? data.integrationConfig : { productionUrl: '', stagingUrl: '' },
+            integrationConfigWebView: data.integrationMethod === IntegrationMethod.WEBVIEW ? data.integrationConfig : { productionUrl: '' },
             integrationConfigFlutter: data.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE ? data.integrationConfig : { sourceType: SourceType.ARTIFACT, packageName: '', versionConstraint: '' },
           });
         } else {
@@ -454,18 +454,6 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
                   className={allErrors['integrationConfigWebView.productionUrl'] ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
                 />
                 {allErrors['integrationConfigWebView.productionUrl'] && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors['integrationConfigWebView.productionUrl']}</p>}
-              </div>
-              <div>
-                <Label>Staging URL</Label>
-                <Input 
-                  name="stagingUrl" 
-                  value={formData.integrationConfigWebView?.stagingUrl || ''} 
-                  onChange={handleWebViewChange} 
-                  type="url" 
-                  placeholder="https://staging..." 
-                  className={allErrors['integrationConfigWebView.stagingUrl'] ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
-                />
-                {allErrors['integrationConfigWebView.stagingUrl'] && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors['integrationConfigWebView.stagingUrl']}</p>}
               </div>
             </div>
           )}

@@ -17,10 +17,6 @@ export class WebViewConfigDto {
   @IsString()
   @IsNotEmpty()
   productionUrl!: string;
-
-  @IsString()
-  @IsOptional()
-  stagingUrl?: string;
 }
 
 export class FlutterPackageConfigDto {

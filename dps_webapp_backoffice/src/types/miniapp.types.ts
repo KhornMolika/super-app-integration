@@ -18,7 +18,6 @@ export interface PermissionDto {
 
 export interface WebViewConfigDto {
   productionUrl: string;
-  stagingUrl?: string;
 }
 
 export interface FlutterPackageConfigDto {

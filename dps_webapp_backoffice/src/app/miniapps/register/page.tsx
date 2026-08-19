@@ -26,7 +26,7 @@ export default function RegisterMiniAppPage() {
     ownerEmail: '',
     supportEmail: '',
     integrationMethod: IntegrationMethod.WEBVIEW,
-    integrationConfigWebView: { productionUrl: '', stagingUrl: '' },
+    integrationConfigWebView: { productionUrl: '' },
     integrationConfigFlutter: { sourceType: SourceType.ARTIFACT, packageName: '', versionConstraint: '' },
     permissions: []
   });
@@ -357,18 +357,6 @@ export default function RegisterMiniAppPage() {
 
           {formData.integrationMethod === IntegrationMethod.WEBVIEW && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800">
-                  <div>
-                    <Label>Staging URL</Label>
-                    <Input 
-                      name="stagingUrl" 
-                      value={formData.integrationConfigWebView?.stagingUrl || ''} 
-                      onChange={handleWebViewChange} 
-                      type="url" 
-                      placeholder="https://staging..." 
-                      className={allErrors['integrationConfigWebView.stagingUrl'] ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
-                    />
-                    {allErrors['integrationConfigWebView.stagingUrl'] && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors['integrationConfigWebView.stagingUrl']}</p>}
-                  </div>
                   <div>
                     <Label>Production URL</Label>
                     <Input 
