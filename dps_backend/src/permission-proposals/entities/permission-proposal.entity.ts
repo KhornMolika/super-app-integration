@@ -16,7 +16,7 @@ export class PermissionProposal {
   @Column({ type: 'text', nullable: true })
   description!: string;
 
-  @ManyToOne(() => MiniApp, { nullable: true })
+  @ManyToOne(() => MiniApp, { nullable: true, onDelete: 'CASCADE' })
   miniApp!: MiniApp;
 
   @ManyToOne(() => User, { nullable: true })

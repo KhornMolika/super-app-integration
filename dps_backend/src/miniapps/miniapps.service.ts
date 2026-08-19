@@ -215,7 +215,7 @@ export class MiniappsService {
       await this.issueRepository.save(issues);
 
       // Create a notification
-      await this.notificationsService.createNotification(app.ownerId || '', 'Validation Failed', `${app.name || 'Mini App'} has ${issues.length} validation issue(s).`, 'ISSUE_CREATED');
+      await this.notificationsService.createNotification(app.ownerId || '', 'Validation Failed', `${app.name || 'Mini App'} has ${issues.length} validation issue(s).`, 'ISSUE_CREATED', app.id);
 
       if (app.ownerEmail) {
         await this.mailService.sendRegistrationFailureEmail(app.ownerEmail, app.name || app.appId || 'Unknown App', errors);
@@ -227,7 +227,7 @@ export class MiniappsService {
       });
       
       // Also notify on success
-      await this.notificationsService.createNotification(app.ownerId || '', 'Validation Passed', `${app.name || 'Mini App'} has passed validation and is now under review.`, 'REVIEW_STARTED');
+      await this.notificationsService.createNotification(app.ownerId || '', 'Validation Passed', `${app.name || 'Mini App'} has passed validation and is now under review.`, 'REVIEW_STARTED', app.id);
 
       if (app.ownerEmail) {
         await this.mailService.sendRegistrationSuccessEmail(app.ownerEmail, app.name || app.appId || 'Unknown App');
@@ -266,7 +266,7 @@ export class MiniappsService {
     );
 
     for (const admin of admins) {
-      await this.notificationsService.createNotification(admin.id, 'New Permission Proposal', `Mini App "${app.name}" requested unsupported permission "${permissionKey}".`, 'PROPOSAL_CREATED');
+      await this.notificationsService.createNotification(admin.id, 'New Permission Proposal', `Mini App "${app.name}" requested unsupported permission "${permissionKey}".`, 'PROPOSAL_CREATED', app.id);
     }
 
     return proposal;

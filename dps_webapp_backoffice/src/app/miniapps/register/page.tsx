@@ -26,7 +26,7 @@ export default function RegisterMiniAppPage() {
     ownerEmail: '',
     supportEmail: '',
     integrationMethod: IntegrationMethod.WEBVIEW,
-    integrationConfigWebView: { productionUrl: '', stagingUrl: '' },
+    integrationConfigWebView: { productionUrl: '', },
     integrationConfigFlutter: { sourceType: SourceType.ARTIFACT, packageName: '', versionConstraint: '' },
     permissions: []
   });
@@ -356,19 +356,7 @@ export default function RegisterMiniAppPage() {
           </div>
 
           {formData.integrationMethod === IntegrationMethod.WEBVIEW && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800">
-                  <div>
-                    <Label>Staging URL</Label>
-                    <Input 
-                      name="stagingUrl" 
-                      value={formData.integrationConfigWebView?.stagingUrl || ''} 
-                      onChange={handleWebViewChange} 
-                      type="url" 
-                      placeholder="https://staging..." 
-                      className={allErrors['integrationConfigWebView.stagingUrl'] ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
-                    />
-                    {allErrors['integrationConfigWebView.stagingUrl'] && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors['integrationConfigWebView.stagingUrl']}</p>}
-                  </div>
+            <div className="grid grid-cols-1 gap-6 p-6 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800">
                   <div>
                     <Label>Production URL</Label>
                     <Input 
@@ -436,7 +424,7 @@ export default function RegisterMiniAppPage() {
           <CardHeader title="Native Permissions" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>} />
           <p className="text-sm text-slate-500 mb-5">Select the native device features this Mini App requires access to.</p>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             {['Camera', 'Location', 'Biometrics', 'Microphone'].map((type) => {
               const activePerm = formData.permissions?.find(p => p.type === type);
               const isActive = !!activePerm;

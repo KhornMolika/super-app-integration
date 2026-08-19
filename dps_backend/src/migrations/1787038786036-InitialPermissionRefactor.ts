@@ -47,7 +47,7 @@ export class InitialPermissionRefactor1787038786036 implements MigrationInterfac
         await queryRunner.query(`ALTER TABLE "mini_app_issue" ADD CONSTRAINT "FK_324a4b42949b1e767675d38a803" FOREIGN KEY ("miniAppId") REFERENCES "mini_apps"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "notification" ADD CONSTRAINT "FK_bc02f8f93af1ba68ebbe0c74bb6" FOREIGN KEY ("miniAppId") REFERENCES "mini_apps"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
         
-        await queryRunner.query(`ALTER TABLE "permission_proposals" ADD CONSTRAINT "FK_5029f43de31cb24e38db3593e84" FOREIGN KEY ("miniAppId") REFERENCES "mini_apps"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "permission_proposals" ADD CONSTRAINT "FK_5029f43de31cb24e38db3593e84" FOREIGN KEY ("miniAppId") REFERENCES "mini_apps"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "permission_proposals" ADD CONSTRAINT "FK_ef551a4d928d7803b1a4da20c34" FOREIGN KEY ("requestedById") REFERENCES "user"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
     }
 
