@@ -12,12 +12,13 @@ export class NotificationsService {
     private notificationGateway: NotificationGateway,
   ) {}
 
-  async createNotification(userId: string, title: string, message: string, type: string) {
+  async createNotification(userId: string, title: string, message: string, type: string, miniAppId?: string) {
     const notification = this.notificationRepository.create({
       userId,
       title,
       message,
       type,
+      miniAppId,
     });
     const saved = await this.notificationRepository.save(notification);
     this.notificationGateway.emitNotification({
