@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { useNotificationSocket } from '@/hooks/useNotificationSocket';
 
 type Notification = {
-  id: string;
-  name: string;
-  hasUnreadIssues: boolean;
+  id: string; // The Notification ID
+  miniAppId: string; // The ID of the mini-app to route to
+  title: string;
+  message: string;
+  isRead: boolean;
 };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -25,14 +28,23 @@ export function NotificationBell() {
         setNotifications(data);
       }
     } catch (error) {
-      console.error('Failed to fetch notifications', error);
+      console.error('Failed to fetch initial notifications', error);
     }
   };
 
+  const handleNewNotification = useCallback((notificationData: any) => {
+    setNotifications((prev) => {
+      if (prev.some(n => n.id === notificationData.id)) {
+        return prev.map(n => n.id === notificationData.id ? notificationData : n);
+      }
+      return [notificationData, ...prev];
+    });
+  }, []);
+
+  useNotificationSocket(handleNewNotification);
+
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 5000);
-    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -49,21 +61,19 @@ export function NotificationBell() {
     };
   }, [isOpen]);
 
-  const handleNotificationClick = async (appId: string) => {
+  const handleNotificationClick = async (notif: Notification) => {
     try {
-      // Mark as read immediately in UI for responsive feel
-      setNotifications(prev => prev.map(n => n.id === appId ? { ...n, hasUnreadIssues: false } : n));
+      setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, isRead: true } : n));
       setIsOpen(false);
-      router.push(`/miniapps/${appId}`);
+      router.push(`/miniapps/${notif.miniAppId}`);
       
-      // Send API request in background
-      await fetch(`${API_URL}/mini-apps/${appId}/mark-read`, { method: 'POST' });
+      await fetch(`${API_URL}/mini-apps/${notif.id}/mark-read`, { method: 'POST' });
     } catch (error) {
       console.error('Failed to mark notification as read', error);
     }
   };
 
-  const unreadCount = notifications.filter(n => n.hasUnreadIssues).length;
+  const unreadCount = notifications.filter(n => !n.isRead).length;
   const hasUnread = unreadCount > 0;
 
   return (
@@ -100,21 +110,21 @@ export function NotificationBell() {
                 {notifications.map((notif) => (
                   <li key={notif.id} className="border-b border-slate-100 dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                     <button 
-                      onClick={() => handleNotificationClick(notif.id)}
+                      onClick={() => handleNotificationClick(notif)}
                       className="w-full text-left px-4 py-3 focus:outline-none"
                     >
                       <div className="flex items-start">
                         <div className="flex-shrink-0 mt-1 w-2">
-                          {notif.hasUnreadIssues && (
+                          {!notif.isRead && (
                             <div className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]"></div>
                           )}
                         </div>
                         <div className="ml-3">
-                          <p className={`text-sm font-medium ${notif.hasUnreadIssues ? 'text-slate-800 dark:text-slate-100' : 'text-slate-600 dark:text-slate-300'}`}>
-                            {notif.name}
+                          <p className={`text-sm font-medium ${!notif.isRead ? 'text-slate-800 dark:text-slate-100' : 'text-slate-600 dark:text-slate-300'}`}>
+                            {notif.title}
                           </p>
                           <p className="text-xs text-slate-500 mt-1">
-                            Validation issues detected. Please review configuration.
+                            {notif.message}
                           </p>
                         </div>
                       </div>

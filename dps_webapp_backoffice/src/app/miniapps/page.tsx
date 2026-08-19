@@ -1,12 +1,19 @@
 import Link from 'next/link';
+import { cookies } from 'next/headers';
 import { Button } from '@/components/ui/inputs';
 import ClickableTableRow from '@/components/ui/ClickableTableRow';
+import { RegisterMiniAppButton } from '@/components/ui/RegisterMiniAppButton';
 
 export default async function MiniAppsPage() {
   let miniApps: any[] = [];
+  const cookieStore = await cookies();
+  const token = cookieStore.get('dps_jwt')?.value;
   
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/mini-apps`, { cache: 'no-store' });
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/mini-apps`, { 
+      cache: 'no-store',
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
     if (res.ok) {
       miniApps = await res.json();
     }
@@ -21,13 +28,7 @@ export default async function MiniAppsPage() {
           <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Mini Apps</h2>
           <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">Manage registered applications and permissions.</p>
         </div>
-        <Link 
-          href="/miniapps/register"
-          className="px-6 py-3 rounded-xl transition-all font-semibold flex items-center justify-center disabled:opacity-50 bg-brand-600 text-white shadow-md hover:shadow-lg hover:bg-brand-700 active:bg-brand-800"
-        >
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
-          <span>Register Mini App</span>
-        </Link>
+        <RegisterMiniAppButton />
       </div>
 
       <div className="bg-white dark:bg-slate-800/50 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700/50 overflow-hidden">
@@ -37,7 +38,9 @@ export default async function MiniAppsPage() {
               <tr>
                 <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">App Name</th>
                 <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Category</th>
-                <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Description</th>
+                <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Integration</th>
+                <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Version</th>
+                <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Permissions</th>
                 <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Status</th>
                 <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider text-right">Actions</th>
               </tr>
@@ -72,7 +75,19 @@ export default async function MiniAppsPage() {
                         {app.category || '-'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-sm truncate max-w-xs">{app.shortDescription || app.description || '-'}</td>
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600/50">
+                        {app.integrationMethod || 'WEBVIEW'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-slate-700 dark:text-slate-300 text-sm font-medium">
+                      {app.version || '1.0.0'}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-slate-600 dark:text-slate-400 text-sm font-medium">
+                        {app.permissionRequests?.length ? `${app.permissionRequests.filter((p: any) => p.status === 'SUPPORTED').length}/${app.permissionRequests.length}` : '-'}
+                      </span>
+                    </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
                         app.status === 'Published' 

@@ -34,6 +34,18 @@ export default function RegisterMiniAppPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalState, setModalState] = useState<SubmissionModalState>({ isOpen: false, status: 'loading' });
   const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
+  const [step, setStep] = useState(1);
+
+  const validateStep = (currentStep: number) => {
+    // Simple validation could be added here
+    return true;
+  };
+
+  const nextStep = () => {
+    if (validateStep(step)) setStep(prev => prev + 1);
+  };
+
+  const prevStep = () => setStep(prev => prev - 1);
 
   useEffect(() => {
     if (formData.name) {
@@ -128,14 +140,14 @@ export default function RegisterMiniAppPage() {
     if (exists) {
       setFormData({ ...formData, permissions: formData.permissions?.filter(p => p.type !== type) });
     } else {
-      setFormData({ ...formData, permissions: [...(formData.permissions || []), { type, purpose: '' }] });
+      setFormData({ ...formData, permissions: [...(formData.permissions || []), { type, purpose: '', termsUrl: '' }] });
     }
   };
 
-  const handlePermissionPurposeChange = (type: string, purpose: string) => {
+  const handlePermissionFieldChange = (type: string, field: string, value: string) => {
     setFormData({
       ...formData,
-      permissions: formData.permissions?.map(p => p.type === type ? { ...p, purpose } : p)
+      permissions: formData.permissions?.map(p => p.type === type ? { ...p, [field]: value } : p)
     });
   };
 
@@ -218,8 +230,26 @@ export default function RegisterMiniAppPage() {
       </div>
 
 
-      <form className="space-y-6" onSubmit={handleSubmit}>
-        <Card>
+      
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          {[1, 2, 3, 4, 5].map((s) => (
+            <div key={s} className="flex flex-col items-center flex-1">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${step === s ? 'bg-brand-600 text-white' : step > s ? 'bg-brand-200 text-brand-800' : 'bg-slate-200 text-slate-500'}`}>
+                {s}
+              </div>
+              <span className="text-xs mt-2 text-slate-500 hidden sm:block">
+                {s === 1 ? 'Basic Info' : s === 2 ? 'Team' : s === 3 ? 'Integration' : s === 4 ? 'Permissions' : 'Review'}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="h-1 w-full bg-slate-200 rounded-full overflow-hidden">
+          <div className="h-full bg-brand-600 transition-all" style={{ width: `${(step / 5) * 100}%` }} />
+        </div>
+      </div>
+      <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); if (step === 5) handleSubmit(e); }}>
+        {step === 1 && <Card>
           <CardHeader title="General Information" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
@@ -272,9 +302,9 @@ export default function RegisterMiniAppPage() {
               <Input name="shortDescription" value={formData.shortDescription} onChange={handleChange} placeholder="One sentence summary" />
             </div>
           </div>
-        </Card>
+        </Card>}
 
-        <Card>
+        {step === 2 && <Card>
           <CardHeader title="Team Information" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>} />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
@@ -311,9 +341,9 @@ export default function RegisterMiniAppPage() {
               {allErrors.supportEmail && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors.supportEmail}</p>}
             </div>
           </div>
-        </Card>
+        </Card>}
 
-        <Card>
+        {step === 3 && <Card>
           <CardHeader title="Integration Configuration" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>} />
           <div className="mb-6">
             <Label>Integration Method</Label>
@@ -400,9 +430,9 @@ export default function RegisterMiniAppPage() {
               )}
             </div>
           )}
-        </Card>
+        </Card>}
 
-        <Card>
+        {step === 4 && <Card>
           <CardHeader title="Native Permissions" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>} />
           <p className="text-sm text-slate-500 mb-5">Select the native device features this Mini App requires access to.</p>
           
@@ -427,28 +457,59 @@ export default function RegisterMiniAppPage() {
                     </div>
                   </label>
                   {isActive && (
-                    <div className="mt-3 pt-3 border-t border-brand-200 dark:border-brand-500/20">
-                      <Label className="text-xs mb-1">Purpose (Why is this needed?)</Label>
-                      <Input 
-                        required
-                        value={activePerm.purpose}
-                        onChange={(e) => handlePermissionPurposeChange(type, e.target.value)}
-                        placeholder="e.g. To scan QR codes"
-                        className="h-9 text-sm"
-                      />
+                    <div className="mt-3 pt-3 border-t border-brand-200 dark:border-brand-500/20 space-y-3">
+                      <div>
+                        <Label className="text-xs mb-1">Purpose (Why is this needed?)</Label>
+                        <Input 
+                          required
+                          value={activePerm.purpose}
+                          onChange={(e) => handlePermissionFieldChange(type, 'purpose', e.target.value)}
+                          placeholder="e.g. To scan QR codes"
+                          className="h-9 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs mb-1">Terms/Policy URL</Label>
+                        <Input 
+                          required
+                          type="url"
+                          value={activePerm.termsUrl || ''}
+                          onChange={(e) => handlePermissionFieldChange(type, 'termsUrl', e.target.value)}
+                          placeholder="https://..."
+                          className="h-9 text-sm"
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
               );
             })}
           </div>
-        </Card>
+        </Card>}
 
-        <div className="flex justify-end space-x-4">
-          <Button type="button" variant="outline">Cancel</Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Submitting...' : 'Register Mini App'}
+        {step === 5 && <Card>
+          <CardHeader title="Review Registration" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
+          <div className="space-y-4 p-6">
+            <div><strong>App Name:</strong> {formData.name}</div>
+            <div><strong>App ID:</strong> {formData.appId}</div>
+            <div><strong>Category:</strong> {formData.category}</div>
+            <div><strong>Integration Method:</strong> {formData.integrationMethod}</div>
+            <div><strong>Permissions:</strong> {formData.permissions?.length || 0} requested</div>
+            <p className="text-sm text-slate-500 mt-4">Please review the details above. Click submit to register your Mini App.</p>
+          </div>
+        </Card>}
+
+        <div className="flex justify-between space-x-4 border-t border-slate-200 dark:border-slate-800 pt-6">
+          <Button type="button" variant="outline" onClick={step === 1 ? () => router.push('/miniapps') : prevStep}>
+            {step === 1 ? 'Cancel' : 'Back'}
           </Button>
+          {step < 5 ? (
+            <Button type="button" onClick={nextStep}>Next Step</Button>
+          ) : (
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Submitting...' : 'Register Mini App'}
+            </Button>
+          )}
         </div>
       </form>
 

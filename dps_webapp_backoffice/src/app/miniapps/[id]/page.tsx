@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useConfirm } from '@/components/ui/ConfirmationProvider';
+import { useAuth } from '@/lib/auth';
 import { Input, Label, Select, Button } from '@/components/ui/inputs';
 import { Card, CardHeader } from '@/components/ui/card';
 import PreviewModal from '@/components/ui/PreviewModal';
@@ -44,6 +45,8 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
   const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
   
   const confirm = useConfirm();
+  const { can } = useAuth();
+  const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
     const errors: Record<string, string> = {};
@@ -149,14 +152,14 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
     if (exists) {
       setFormData({ ...formData, permissions: formData.permissions?.filter(p => p.type !== type) });
     } else {
-      setFormData({ ...formData, permissions: [...(formData.permissions || []), { type, purpose: '' }] });
+      setFormData({ ...formData, permissions: [...(formData.permissions || []), { type, purpose: '', termsUrl: '' }] });
     }
   };
 
-  const handlePermissionPurposeChange = (type: string, purpose: string) => {
+  const handlePermissionFieldChange = (type: string, field: string, value: string) => {
     setFormData({
       ...formData,
-      permissions: formData.permissions?.map(p => p.type === type ? { ...p, purpose } : p)
+      permissions: formData.permissions?.map(p => p.type === type ? { ...p, [field]: value } : p)
     });
   };
 
@@ -295,21 +298,38 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
             </Button>
           )}
 
-          <Button 
-            type="button"
-            onClick={handleDelete}
-            disabled={isSubmitting}
-            className="bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-100 hover:text-rose-700 !shadow-none"
-          >
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-            <span>Delete App</span>
-          </Button>
+          {can('miniapp:delete') && (
+            <Button 
+              type="button"
+              onClick={handleDelete}
+              disabled={isSubmitting}
+              className="bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-100 hover:text-rose-700 !shadow-none"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+              <span>Delete App</span>
+            </Button>
+          )}
         </div>
       </div>
 
 
 
+      
+      <div className="flex space-x-6 border-b border-slate-200 dark:border-slate-700 mb-6 px-2">
+        {['overview', 'permissions', 'integration', 'activity'].map(tab => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setActiveTab(tab)}
+            className={`pb-3 font-medium text-sm transition-colors relative ${activeTab === tab ? 'text-brand-600 dark:text-brand-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
+          >
+            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-600 dark:bg-brand-400 rounded-t-full" />}
+          </button>
+        ))}
+      </div>
       <form className="space-y-6" onSubmit={handleSave}>
+        {activeTab === 'overview' && <>
         <Card>
           <CardHeader title="General Information" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -406,8 +426,9 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
             </div>
           </div>
         </Card>
+        </>}
 
-        <Card>
+        {activeTab === 'integration' && <Card>
           <CardHeader title="Integration Configuration" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>} />
           <div className="mb-6">
             <Label>Integration Method</Label>
@@ -495,9 +516,9 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
               )}
             </div>
           )}
-        </Card>
+        </Card>}
 
-        <Card>
+        {activeTab === 'permissions' && <Card>
           <CardHeader title="Native Permissions" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>} />
           <p className="text-sm text-slate-500 mb-5">Select the native device features this Mini App requires access to.</p>
           
@@ -522,30 +543,45 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
                     </div>
                   </label>
                   {isActive && (
-                    <div className="mt-3 pt-3 border-t border-brand-200 dark:border-brand-500/20">
-                      <Label className="text-xs mb-1">Purpose (Why is this needed?)</Label>
-                      <Input 
-                        required
-                        value={activePerm.purpose}
-                        onChange={(e) => handlePermissionPurposeChange(type, e.target.value)}
-                        placeholder="e.g. To scan QR codes"
-                        className="h-9 text-sm"
-                      />
+                    <div className="mt-3 pt-3 border-t border-brand-200 dark:border-brand-500/20 space-y-3">
+                      <div>
+                        <Label className="text-xs mb-1">Purpose (Why is this needed?)</Label>
+                        <Input 
+                          required
+                          value={activePerm.purpose}
+                          onChange={(e) => handlePermissionFieldChange(type, 'purpose', e.target.value)}
+                          placeholder="e.g. To scan QR codes"
+                          className="h-9 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs mb-1">Terms/Policy URL</Label>
+                        <Input 
+                          required
+                          type="url"
+                          value={activePerm.termsUrl || ''}
+                          onChange={(e) => handlePermissionFieldChange(type, 'termsUrl', e.target.value)}
+                          placeholder="https://..."
+                          className="h-9 text-sm"
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
               );
             })}
           </div>
-        </Card>
+        </Card>}
 
         <div className="flex justify-end space-x-4">
           <Link href="/miniapps" className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
             Cancel
           </Link>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Saving...' : 'Save Changes'}
-          </Button>
+          {can('miniapp:update') && (
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Saving...' : 'Save Changes'}
+            </Button>
+          )}
         </div>
       </form>
 

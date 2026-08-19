@@ -14,4 +14,7 @@ export class UpdateMiniAppDto extends PartialType(CreateMiniAppDto) {
   @IsString()
   @IsOptional()
   status?: string;
+
+  @IsOptional()
+  publishedPermissions?: any;
 }

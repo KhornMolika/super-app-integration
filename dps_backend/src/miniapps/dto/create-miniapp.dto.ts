@@ -64,6 +64,14 @@ export class PermissionDto {
   @IsString()
   @IsNotEmpty()
   purpose!: string;
+
+  @IsString()
+  @IsOptional()
+  termsUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  status?: string;
 }
 
 export class CreateMiniAppDto {

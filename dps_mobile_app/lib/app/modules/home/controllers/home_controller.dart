@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io';
@@ -39,7 +40,7 @@ class HomeController extends GetxController {
       }
     } catch (e) {
       hasError(true);
-      print ("Error fetching mini apps: $e");
+      debugPrint("Error fetching mini apps: $e");
     } finally {
       isLoading(false);
     }

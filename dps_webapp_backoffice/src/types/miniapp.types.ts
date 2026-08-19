@@ -13,6 +13,7 @@ export enum SourceType {
 export interface PermissionDto {
   type: string;
   purpose: string;
+  termsUrl?: string;
 }
 
 export interface WebViewConfigDto {

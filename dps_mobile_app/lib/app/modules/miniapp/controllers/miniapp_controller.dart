@@ -56,7 +56,7 @@ class MiniappController extends GetxController {
 
             if (action == 'getLocation') {
               if (!permissions.contains('Location')) {
-                print('Super App blocked Location access for this Mini App.');
+                debugPrint('Super App blocked Location access for this Mini App.');
                 final blockedLocation = '{"lat": 0, "lng": 0, "error": "Permission denied by Super App settings"}';
                 webViewController.runJavaScript(
                   "if (window.dspCallback) window.dspCallback('$callbackId', $blockedLocation);"
@@ -91,7 +91,7 @@ class MiniappController extends GetxController {
                   "if (window.dspCallback) window.dspCallback('$callbackId', $realLocation);"
                 );
               } catch (locationError) {
-                print('Location Error: $locationError');
+                debugPrint('Location Error: $locationError');
                 // You could also send an error object back to the JS side here
                 final fallbackLocation = '{"lat": 0, "lng": 0, "error": "${locationError.toString().replaceAll('"', "'")}"}';
                 webViewController.runJavaScript(
@@ -169,7 +169,7 @@ class MiniappController extends GetxController {
               }
             }
           } catch (e) {
-            print('Error parsing JS message: $e');
+            debugPrint('Error parsing JS message: $e');
           }
         },
       )

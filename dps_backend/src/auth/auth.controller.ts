@@ -6,18 +6,10 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login')
-  login(@Body() body: any) {
+  async login(@Body() body: any) {
     if (body.email && body.password) {
-      // Create a mock user based on email (for PoC)
-      const mockUser = {
-        id: 'user-123',
-        email: body.email,
-        name: body.email.split('@')[0],
-        role: 'user'
-      };
-      
-      const tokens = this.authService.login(mockUser);
-      return { success: true, message: 'Logged in successfully', ...tokens };
+      // In a real app we'd check password here. For this POC, just fetch user by email.
+      return this.authService.login(body);
     }
     return { success: false, message: 'Invalid credentials' };
   }
