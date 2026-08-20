@@ -1,10 +1,11 @@
 "use client";
+import { API_URL } from '@/lib/config';
 
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { useEffect, useState } from 'react';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
 
 export default function Dashboard() {
   const { can } = useAuth();

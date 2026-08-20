@@ -18,7 +18,7 @@ type SubmissionModalProps = {
   mode: 'register' | 'manage';
 };
 
-export default function SubmissionModal({ state, onClose, onRunInBackground, onSuccessContinue, onFixLater, mode }: SubmissionModalProps) {
+export default function SubmissionModal({ state, onClose, onRunInBackground, onSuccessContinue, mode }: SubmissionModalProps) {
   if (!state.isOpen) return null;
 
   return (
@@ -60,24 +60,39 @@ export default function SubmissionModal({ state, onClose, onRunInBackground, onS
             </h3>
             <p className="text-slate-500 text-center text-sm mb-4">
               {state.errors 
-                ? 'Your changes were saved, but have the following issues:' 
+                ? (mode === 'register' ? 'Please fix the following validation issues:' : 'Your changes were saved, but have the following issues:')
                 : (state.message || 'We could not save your changes due to a system error.')}
             </p>
             
             {state.errors && (
-              <div className="w-full bg-rose-50 dark:bg-rose-900/20 p-4 rounded-xl border border-rose-200 dark:border-rose-800/50 mb-6 max-h-72 overflow-y-auto">
-                <ul className="list-disc pl-5 text-sm space-y-2 text-rose-700 dark:text-rose-300">
-                  {Object.entries(state.errors).map(([field, err]) => (
-                    <li key={field}><span className="font-semibold">{field}:</span> {err}</li>
-                  ))}
+              <div className="w-full bg-rose-50 dark:bg-rose-900/20 p-5 rounded-xl border border-rose-200 dark:border-rose-800/50 mb-6 max-h-72 overflow-y-auto">
+                <ul className="space-y-2.5 text-sm text-rose-800 dark:text-rose-200">
+                  {Object.entries(state.errors).map(([field, err]) => {
+                    // Make raw field keys friendly: e.g. "permissions.0.termsUrl" -> "Biometrics Terms/Policy URL"
+                    let friendlyLabel = field;
+                    if (field.includes('termsUrl')) friendlyLabel = 'Terms & Policy URL';
+                    else if (field.includes('purpose')) friendlyLabel = 'Permission Purpose';
+                    else if (field.includes('productionUrl')) friendlyLabel = 'Production URL';
+                    else if (field.includes('stagingUrl')) friendlyLabel = 'Staging URL';
+                    else if (field.includes('ownerEmail')) friendlyLabel = 'Owner Email';
+                    else if (field.includes('supportEmail')) friendlyLabel = 'Support Email';
+                    else if (field.includes('logo')) friendlyLabel = 'Logo URL';
+
+                    return (
+                      <li key={field} className="flex items-start space-x-2">
+                        <span className="text-rose-500 font-bold mt-0.5">•</span>
+                        <div className="flex-1">
+                          <span className="font-semibold text-rose-900 dark:text-rose-100">{friendlyLabel}: </span>
+                          <span className="text-rose-700 dark:text-rose-300">{err}</span>
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             )}
 
-            <div className="flex space-x-3 w-full">
-              {state.errors && (
-                <Button variant="outline" className="flex-1" onClick={onFixLater || onClose}>Fix Later</Button>
-              )}
+                        <div className="flex space-x-3 w-full">
               <Button className="flex-1" onClick={onClose}>
                 {state.errors ? 'Review Fields' : 'Close'}
               </Button>

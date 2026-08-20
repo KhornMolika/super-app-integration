@@ -3,8 +3,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { MiniappsService } from './miniapps.service';
 import { MiniappsController } from './miniapps.controller';
 import { MiniApp } from './entities/miniapp.entity';
-import { MiniAppPermissionRequest } from './entities/miniapp-permission-request.entity';
 import { MiniAppIssue } from './entities/miniapp-issue.entity';
+import { MiniAppActivity } from './entities/miniapp-activity.entity';
 
 import { MailModule } from '../mail/mail.module';
 import { AuthModule } from '../auth/auth.module';
@@ -12,13 +12,14 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { PermissionProposalsModule } from '../permission-proposals/permission-proposals.module';
 import { SuperAppModule } from '../super-app/super-app.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
       MiniApp,
-      MiniAppPermissionRequest,
       MiniAppIssue,
+      MiniAppActivity,
     ]),
     MailModule,
     AuthModule,
@@ -26,6 +27,7 @@ import { SuperAppModule } from '../super-app/super-app.module';
     PermissionsModule,
     PermissionProposalsModule,
     SuperAppModule,
+    AuditModule,
   ],
   controllers: [MiniappsController],
   providers: [MiniappsService],

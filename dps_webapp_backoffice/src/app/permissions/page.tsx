@@ -1,12 +1,14 @@
 "use client";
+import { API_URL } from '@/lib/config';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/inputs';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { useAuth } from '@/lib/auth';
 import { Card } from '@/components/ui/card';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
 
 type PermissionItem = {
   id: string;
@@ -17,6 +19,7 @@ type PermissionItem = {
 };
 
 export default function PermissionsPage() {
+  const { can } = useAuth();
   const [permissions, setPermissions] = useState<PermissionItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -45,7 +48,7 @@ export default function PermissionsPage() {
             <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Permissions Registry</h2>
             <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">Manage standard permissions available for Mini Apps.</p>
           </div>
-          <Button>+ New Permission</Button>
+          {can('permission:manage') && <Button>+ New Permission</Button>}
         </div>
 
         <Card className="!p-0">
@@ -87,7 +90,11 @@ export default function PermissionsPage() {
                           {perm.status || 'Active'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right text-brand-600 dark:text-brand-400 hover:underline cursor-pointer font-medium text-sm">Manage</td>
+                      <td className="px-6 py-4 text-right">
+    <Link href={`/permissions/${perm.id}`} className="text-brand-600 dark:text-brand-400 hover:underline font-medium text-sm">
+      {can('permission:manage') ? 'Manage' : 'View'}
+    </Link>
+  </td>
                     </tr>
                   ))
                 )}

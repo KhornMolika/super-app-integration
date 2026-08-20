@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PermissionDefinition } from './entities/permission-definition.entity';
@@ -15,6 +15,23 @@ export class PermissionsService {
   }
 
   async findByKey(key: string): Promise<PermissionDefinition | null> {
-    return this.permissionDefinitionRepository.findOne({ where: { key } });
+    if (!key) return null;
+    return this.permissionDefinitionRepository
+      .createQueryBuilder('perm')
+      .where('LOWER(perm.key) = LOWER(:key)', { key })
+      .orWhere('LOWER(perm.name) = LOWER(:key)', { key })
+      .getOne();
+  }
+
+  async findOne(id: string): Promise<PermissionDefinition> {
+    const perm = await this.permissionDefinitionRepository.findOne({ where: { id } });
+    if (!perm) throw new NotFoundException('Permission not found');
+    return perm;
+  }
+
+  async update(id: string, data: Partial<PermissionDefinition>): Promise<PermissionDefinition> {
+    const perm = await this.findOne(id);
+    const merged = this.permissionDefinitionRepository.merge(perm, data);
+    return this.permissionDefinitionRepository.save(merged);
   }
 }

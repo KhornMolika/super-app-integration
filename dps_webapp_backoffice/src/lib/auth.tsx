@@ -2,13 +2,11 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
-export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'MINI_APP_MANAGER' | 'DEVELOPER' | 'VIEWER';
+export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'MINI_APP_MANAGER' | 'DEVELOPER';
 
-// Note: These mock permissions correspond to the backend permissions.
-// In a real application, the backend would return the user's specific permissions.
 const ROLE_PERMISSIONS: Record<Role, string[]> = {
   SUPER_ADMIN: [
-    'miniapp:create', 'miniapp:read', 'miniapp:update', 'miniapp:delete',
+    'miniapp:create', 'miniapp:read', 'miniapp:update', 'miniapp:submit', 'miniapp:delete', 'miniapp:approve', 'miniapp:reject', 'miniapp:suspend',
     'miniapp_permission:approve', 'issue:resolve',
     'permission_proposal:read', 'permission_proposal:review', 'permission_proposal:approve',
     'super_app:read', 'super_app:manage',
@@ -19,7 +17,7 @@ const ROLE_PERMISSIONS: Record<Role, string[]> = {
     'audit_log:read', 'settings:manage'
   ],
   ADMIN: [
-    'miniapp:create', 'miniapp:read', 'miniapp:update', 'miniapp:delete',
+    'miniapp:create', 'miniapp:read', 'miniapp:update', 'miniapp:submit', 'miniapp:delete', 'miniapp:approve', 'miniapp:reject', 'miniapp:suspend',
     'miniapp_permission:approve', 'issue:resolve',
     'permission_proposal:read', 'permission_proposal:review',
     'super_app:read',
@@ -28,7 +26,7 @@ const ROLE_PERMISSIONS: Record<Role, string[]> = {
     'organization:read'
   ],
   MINI_APP_MANAGER: [
-    'miniapp:create', 'miniapp:read', 'miniapp:update',
+    'miniapp:create', 'miniapp:read', 'miniapp:update', 'miniapp:submit',
     'permission_proposal:read',
     'permission:read',
     'organization:read'
@@ -37,14 +35,6 @@ const ROLE_PERMISSIONS: Record<Role, string[]> = {
     'miniapp:read',
     'permission:read',
     'super_app:read'
-  ],
-  VIEWER: [
-    'miniapp:read',
-    'permission:read',
-    'super_app:read',
-    'permission_proposal:read',
-    'organization:read',
-    'user:read'
   ]
 };
 
@@ -61,49 +51,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRoleState] = useState<Role>('SUPER_ADMIN');
   const [mounted, setMounted] = useState(false);
 
+  
   const performLogin = async (currentRole: Role) => {
-    const email = ['SUPER_ADMIN', 'ADMIN', 'MINI_APP_MANAGER'].includes(currentRole) 
-      ? 'admin@example.com' 
-      : 'dev@example.com';
+    let email = 'dev@example.com';
+    if (currentRole === 'SUPER_ADMIN') email = 'superadmin@example.com';
+    else if (currentRole === 'ADMIN') email = 'admin@example.com';
+    else if (currentRole === 'MINI_APP_MANAGER') email = 'manager@example.com';
+
 
     try {
-      // Use original fetch to avoid infinite loop with our interceptor
-      const fetchFn = (window as any).__original_fetch || window.fetch;
-      const res = await fetchFn(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/auth/login`, {
+      // Hit our new BFF proxy
+      await fetch(`/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password: 'password' })
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.access_token) {
-          localStorage.setItem('dps_jwt', data.access_token);
-          document.cookie = `dps_jwt=${data.access_token}; path=/`;
-        }
-      }
     } catch(e) {
-      console.error('Mock login failed', e);
+      console.error('Login failed', e);
     }
   };
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && !(window as any).__fetch_overridden) {
-      (window as any).__original_fetch = window.fetch;
-      window.fetch = async (...args) => {
-        let [resource, config] = args;
-        const token = localStorage.getItem('dps_jwt');
-        if (token && typeof resource === 'string' && resource.includes(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000')) {
-          config = config || {};
-          config.headers = {
-            ...config.headers,
-            'Authorization': `Bearer ${token}`
-          };
-        }
-        return (window as any).__original_fetch(resource, config);
-      };
-      (window as any).__fetch_overridden = true;
-    }
-  }, []);
 
   useEffect(() => {
     const saved = localStorage.getItem('dps_mock_role') as Role;

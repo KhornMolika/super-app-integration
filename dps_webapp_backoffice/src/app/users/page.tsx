@@ -1,11 +1,12 @@
 "use client";
+import { API_URL } from '@/lib/config';
 
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/inputs';
 import { Card } from '@/components/ui/card';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
 
 type User = {
   id: string;

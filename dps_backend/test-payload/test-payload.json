@@ -1,7 +1,0 @@
-{
-  "appId": "test",
-  "name": "test",
-  "ownerEmail": "test@test.com",
-  "integrationMethod": "WEBVIEW",
-  "logo": "https://this.is.a.fake.url.that.does.not.exist.com/logo.png"
-}

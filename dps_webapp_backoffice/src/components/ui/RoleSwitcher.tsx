@@ -6,7 +6,7 @@ import { useAuth, Role } from '@/lib/auth';
 export function RoleSwitcher() {
   const { role, setRole } = useAuth();
   
-  const roles: Role[] = ['SUPER_ADMIN', 'ADMIN', 'MINI_APP_MANAGER', 'DEVELOPER', 'VIEWER'];
+  const roles: Role[] = ['SUPER_ADMIN', 'ADMIN', 'MINI_APP_MANAGER', 'DEVELOPER'];
   
   return (
     <select 
