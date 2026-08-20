@@ -1,5 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
-import { MiniAppPermissionRequest } from '../../miniapps/entities/miniapp-permission-request.entity';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('permission_definitions')
 export class PermissionDefinition {
@@ -38,9 +37,6 @@ export class PermissionDefinition {
 
   @Column({ type: 'jsonb', nullable: true })
   metadata!: any;
-
-  @OneToMany(() => MiniAppPermissionRequest, request => request.permission)
-  miniAppRequests!: MiniAppPermissionRequest[];
 
   @CreateDateColumn()
   createdAt!: Date;

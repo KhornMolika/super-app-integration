@@ -1,1 +1,9 @@
 /doc
+/fix-errors
+*.js
+!next.config.ts
+dps_backend/*.js
+!dps_backend/src/**
+.env.development
+.env.production
+.env.local

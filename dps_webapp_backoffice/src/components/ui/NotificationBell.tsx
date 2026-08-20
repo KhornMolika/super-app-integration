@@ -1,4 +1,5 @@
 'use client';
+import { API_URL } from '@/lib/config';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -12,7 +13,7 @@ type Notification = {
   isRead: boolean;
 };
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
 
 export function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -107,8 +108,8 @@ export function NotificationBell() {
               </div>
             ) : (
               <ul>
-                {notifications.map((notif) => (
-                  <li key={notif.id} className="border-b border-slate-100 dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                {notifications.map((notif, index) => (
+                  <li key={`${notif.id || 'notif'}-${index}`} className="border-b border-slate-100 dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                     <button 
                       onClick={() => handleNotificationClick(notif)}
                       className="w-full text-left px-4 py-3 focus:outline-none"

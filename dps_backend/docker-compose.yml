@@ -4,14 +4,27 @@ services:
   postgres:
     image: postgres:15
     container_name: dps-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: dps_user
       POSTGRES_PASSWORD: dps_password
       POSTGRES_DB: dps_db
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  nexus:
+    image: sonatype/nexus3:latest
+    container_name: nexus
+    restart: unless-stopped
+
+    ports:
+      - '8081:8081'
+
+    volumes:
+      - nexus-data:/nexus-data
+
 volumes:
   pgdata:
+  nexus-data:

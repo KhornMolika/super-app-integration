@@ -1,0 +1,18 @@
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { AuditLog } from './entities/audit-log.entity';
+
+@Injectable()
+export class AuditService {
+  constructor(
+    @InjectRepository(AuditLog)
+    private auditLogRepository: Repository<AuditLog>,
+  ) {}
+
+  async log(data: Partial<AuditLog>): Promise<AuditLog> {
+    const entry = this.auditLogRepository.create(data);
+    return this.auditLogRepository.save(entry);
+  }
+}
+

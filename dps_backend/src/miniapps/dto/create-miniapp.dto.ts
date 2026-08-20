@@ -15,8 +15,8 @@ export enum SourceType {
 
 export class WebViewConfigDto {
   @IsString()
-  @IsNotEmpty()
-  productionUrl!: string;
+  @IsOptional()
+  productionUrl?: string;
 
   @IsString()
   @IsOptional()
@@ -25,18 +25,18 @@ export class WebViewConfigDto {
 
 export class FlutterPackageConfigDto {
   @IsEnum(SourceType)
-  @IsNotEmpty()
-  sourceType!: SourceType;
+  @IsOptional()
+  sourceType?: SourceType;
 
   // If GIT
   @ValidateIf(o => o.sourceType === SourceType.GIT)
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   gitUrl?: string;
 
   @ValidateIf(o => o.sourceType === SourceType.GIT)
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   gitBranch?: string;
 
   @ValidateIf(o => o.sourceType === SourceType.GIT)
@@ -47,12 +47,12 @@ export class FlutterPackageConfigDto {
   // If ARTIFACT
   @ValidateIf(o => o.sourceType === SourceType.ARTIFACT)
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   packageName?: string;
 
   @ValidateIf(o => o.sourceType === SourceType.ARTIFACT)
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   versionConstraint?: string;
 }
 
@@ -62,16 +62,26 @@ export class PermissionDto {
   type!: string;
 
   @IsString()
-  @IsNotEmpty()
-  purpose!: string;
+  @IsOptional()
+  purpose?: string;
 
   @IsString()
   @IsOptional()
   termsUrl?: string;
 
+  @IsOptional()
+  required?: boolean;
+
+  @IsString()
+  @IsOptional()
+  requestedVersion?: string;
+
   @IsString()
   @IsOptional()
   status?: string;
+
+  @IsOptional()
+  metadata?: any;
 }
 
 export class CreateMiniAppDto {

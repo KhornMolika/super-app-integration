@@ -18,6 +18,9 @@ export class MiniAppIssue {
   @Column({ default: 'OPEN' })
   status!: string;
 
+  @Column({ default: 'MINI_APP_ISSUE' })
+  classification!: string;
+
   @Column({ type: 'jsonb', nullable: true })
   metadata!: any;
 

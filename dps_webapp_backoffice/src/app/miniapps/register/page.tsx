@@ -1,19 +1,31 @@
 "use client";
+import { API_URL } from '@/lib/config';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth';
 import { useState, useEffect } from 'react';
 import { Input, Label, Select, Textarea, Button } from '@/components/ui/inputs';
 import { Card, CardHeader } from '@/components/ui/card';
 import PreviewModal from '@/components/ui/PreviewModal';
 import SubmissionModal, { SubmissionModalState } from '@/components/ui/SubmissionModal';
+import BasicInfoForm from '@/components/forms/BasicInfoForm';
+import TeamForm from '@/components/forms/TeamForm';
+import IntegrationForm from '@/components/forms/IntegrationForm';
+import PermissionsForm from '@/components/forms/PermissionsForm';
 import ValidationIssuesButton from '@/components/ValidationIssuesButton';
 import { CreateMiniAppDto, IntegrationMethod, SourceType } from '@/types/miniapp.types';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 export default function RegisterMiniAppPage() {
   const router = useRouter();
+  const { can } = useAuth();
+
+  useEffect(() => {
+    if (!can('miniapp:create')) {
+      router.push('/miniapps');
+    }
+  }, [can, router]);
   const [formData, setFormData] = useState<Partial<CreateMiniAppDto>>({
     name: '',
     appId: '',
@@ -35,14 +47,145 @@ export default function RegisterMiniAppPage() {
   const [modalState, setModalState] = useState<SubmissionModalState>({ isOpen: false, status: 'loading' });
   const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
   const [step, setStep] = useState(1);
+  const [customPermission, setCustomPermission] = useState('');
 
-  const validateStep = (currentStep: number) => {
-    // Simple validation could be added here
-    return true;
+  const validateStep = async (currentStep: number) => {
+    const errors: Record<string, string> = {};
+    let isValid = true;
+
+    if (currentStep === 1) {
+      if (!formData.name || formData.name.trim().length < 2) {
+        errors.name = 'App Name must be at least 2 characters';
+        isValid = false;
+      }
+      if (!formData.appId) {
+        errors.appId = 'App ID is required';
+        isValid = false;
+      } else if (!/^[a-z0-9]+(\.[a-z0-9]+)+$/.test(formData.appId)) {
+        errors.appId = 'App ID must be in reverse-domain format (e.g. com.company.app)';
+        isValid = false;
+      }
+      if (!formData.logo) {
+        errors.logo = 'Logo URL is required';
+        isValid = false;
+      } else if (!formData.logo.startsWith('http')) {
+        errors.logo = 'Logo must be a valid URL';
+        isValid = false;
+      }
+    }
+
+    if (currentStep === 2) {
+      if (!formData.ownerEmail) {
+        errors.ownerEmail = 'Owner Email is required';
+        isValid = false;
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.ownerEmail)) {
+        errors.ownerEmail = 'Owner Email must be a valid email';
+        isValid = false;
+      }
+      if (formData.supportEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.supportEmail)) {
+        errors.supportEmail = 'Support Email must be a valid email';
+        isValid = false;
+      }
+    }
+
+    if (currentStep === 3) {
+      if (formData.integrationMethod === IntegrationMethod.WEBVIEW) {
+        const prodUrl = formData.integrationConfigWebView?.productionUrl;
+        if (!prodUrl) {
+          errors['integrationConfigWebView.productionUrl'] = 'Production URL is required';
+          isValid = false;
+        } else {
+          if (!prodUrl.startsWith('https://')) {
+            if (prodUrl.startsWith('http://localhost') || prodUrl.startsWith('http://127.0.0.1')) {
+              // let localhost slide
+            } else {
+              errors['integrationConfigWebView.productionUrl'] = 'Production URL must use HTTPS';
+              isValid = false;
+            }
+          }
+          
+          if (isValid) {
+            try {
+              const res = await fetch(`${API_URL}/mini-apps/check-url?url=${encodeURIComponent(prodUrl)}`);
+              const data = await res.json();
+              if (!data.reachable) {
+                errors['integrationConfigWebView.productionUrl'] = 'Production URL is not reachable';
+                isValid = false;
+              }
+            } catch (e) {
+              errors['integrationConfigWebView.productionUrl'] = 'Error checking URL reachability';
+              isValid = false;
+            }
+          }
+        }
+      }
+      if (formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE) {
+        const conf = formData.integrationConfigFlutter;
+        if (conf?.sourceType === SourceType.ARTIFACT) {
+          if (!conf.packageName) { errors['integrationConfigFlutter.packageName'] = 'Package Name is required'; isValid = false; }
+          if (!conf.versionConstraint) { errors['integrationConfigFlutter.versionConstraint'] = 'Version Constraint is required'; isValid = false; }
+        } else {
+          if (!conf?.gitUrl) { errors['integrationConfigFlutter.gitUrl'] = 'Git URL is required'; isValid = false; }
+        }
+      }
+    }
+
+    if (currentStep === 4) {
+      if (formData.permissions && formData.permissions.length > 0) {
+        formData.permissions.forEach((p, idx) => {
+          if (!p.purpose) {
+            errors[`permission_${p.type}_purpose`] = 'Purpose is required';
+            isValid = false;
+          }
+          if (!p.termsUrl) {
+            errors[`permission_${p.type}_termsUrl`] = 'Terms/Policy URL is required';
+            isValid = false;
+          }
+        });
+      }
+    }
+
+    if (!isValid) {
+      setLocalErrors(prev => ({ ...prev, ...errors }));
+    } else {
+      // Clear errors for this step
+      setLocalErrors(prev => {
+        const next = { ...prev };
+        Object.keys(errors).forEach(k => delete next[k]);
+        return next;
+      });
+    }
+
+    return isValid;
   };
 
-  const nextStep = () => {
-    if (validateStep(step)) setStep(prev => prev + 1);
+  const handleSaveDraft = async () => {
+    setIsSubmitting(true);
+    const payload = { ...formData };
+    if (payload.integrationMethod !== IntegrationMethod.WEBVIEW) delete payload.integrationConfigWebView;
+    if (payload.integrationMethod !== IntegrationMethod.FLUTTER_PACKAGE) delete payload.integrationConfigFlutter;
+    
+    try {
+      const response = await fetch(`${API_URL}/mini-apps/draft`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (response.ok) {
+        router.push('/miniapps');
+      } else {
+        setIsSubmitting(false);
+      }
+    } catch (e) {
+      setIsSubmitting(false);
+    }
+  };
+
+  const nextStep = async () => {
+    setIsSubmitting(true);
+    const valid = await validateStep(step);
+    setIsSubmitting(false);
+    if (valid) setStep(prev => prev + 1);
   };
 
   const prevStep = () => setStep(prev => prev - 1);
@@ -75,12 +218,11 @@ export default function RegisterMiniAppPage() {
     
     if (formData.integrationMethod === IntegrationMethod.WEBVIEW && formData.integrationConfigWebView?.productionUrl) {
       const prodUrl = formData.integrationConfigWebView.productionUrl;
-      const allowLocal = process.env.NEXT_PUBLIC_ALLOW_LOCAL_PROD_URLS === 'true';
-      if (!allowLocal) {
-        if (!prodUrl.startsWith('https://')) {
+      if (!prodUrl.startsWith('https://')) {
+        if (prodUrl.startsWith('http://localhost') || prodUrl.startsWith('http://127.0.0.1')) {
+          // Let localhost pass the HTTPS check on frontend. Backend will verify if it's reachable.
+        } else {
           errors['integrationConfigWebView.productionUrl'] = 'Production URL must use HTTPS.';
-        } else if (prodUrl.includes('localhost') || prodUrl.includes('127.0.0.1')) {
-          errors['integrationConfigWebView.productionUrl'] = 'Production URL cannot be localhost.';
         }
       }
     }
@@ -112,6 +254,12 @@ export default function RegisterMiniAppPage() {
     }
   }, [formData.appId, formData.name, formData.ownerEmail, formData.supportEmail, formData.logo]);
 
+    const handleNavigateToIssue = (field: string) => {
+    if (field === 'name' || field === 'appId' || field === 'category' || field === 'logo') setStep(1);
+    else if (field === 'teamName' || field === 'ownerName' || field === 'ownerEmail' || field === 'supportEmail') setStep(2);
+    else if (field.startsWith('integration')) setStep(3);
+    else if (field.startsWith('permission')) setStep(4);
+  };
   const allErrors = { ...localErrors, ...(modalState.errors || {}) };
   const hasErrors = Object.keys(allErrors).length > 0;
   const [showPreview, setShowPreview] = useState(false);
@@ -154,6 +302,14 @@ export default function RegisterMiniAppPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    
+    // Add validation before submit
+    const valid = await validateStep(4);
+    if (!valid) {
+      setIsSubmitting(false);
+      return;
+    }
+
     setModalState(prev => ({ isOpen: true, status: 'loading', createdId: prev.createdId }));
 
     const payload = { ...formData };
@@ -182,32 +338,51 @@ export default function RegisterMiniAppPage() {
             const pollRes = await fetch(`${API_URL}/mini-apps/${appId}`);
             if (pollRes.ok) {
               const appData = await pollRes.json();
-              if (appData.status === 'Draft' || appData.status === 'Published') {
-                clearInterval(pollTimer);
-                setModalState({ isOpen: true, status: 'success' });
-                setTimeout(() => router.push(`/miniapps/${appId}`), 1500);
-              } else if (appData.status === 'Issues') {
-                clearInterval(pollTimer);
-                setModalState({ 
-                  isOpen: true, 
-                  status: 'error', 
-                  message: 'Validation failed.', 
-                  errors: appData.validationErrors || {},
-                  createdId: appId
-                });
-                setIsSubmitting(false);
+              const statusUpper = (appData.status || '').toUpperCase();
+              
+              if (statusUpper !== 'PROCESSING') {
+                const hasErrors = appData.validationErrors && Object.keys(appData.validationErrors).length > 0;
+                if (hasErrors) {
+                  clearInterval(pollTimer);
+                  setModalState({ 
+                    isOpen: true, 
+                    status: 'error', 
+                    message: 'Validation failed.', 
+                    errors: appData.validationErrors,
+                    createdId: appId
+                  });
+                  setIsSubmitting(false);
+                } else {
+                  clearInterval(pollTimer);
+                  setModalState({ isOpen: true, status: 'success' });
+                  setTimeout(() => router.push(`/miniapps/${appId}`), 1200);
+                }
               }
             }
           } catch (pollErr) {
           }
-          if (attempts > 30) {
+          if (attempts > 20) {
             clearInterval(pollTimer);
             setModalState({ isOpen: true, status: 'error', message: 'Validation timed out.', createdId: appId });
             setIsSubmitting(false);
           }
         }, 1000);
       } else {
-        setModalState({ isOpen: true, status: 'error', message: resData.message || 'Failed to register mini app.' });
+        let errorsObj: Record<string, string> | undefined = undefined;
+        if (Array.isArray(resData.message)) {
+          errorsObj = {};
+          const errs = errorsObj as Record<string, string>;
+          resData.message.forEach((msg: string) => {
+            const field = msg.split(' ')[0];
+            errs[field] = msg;
+          });
+        }
+        setModalState({ 
+          isOpen: true, 
+          status: 'error', 
+          message: Array.isArray(resData.message) ? undefined : resData.message || 'Failed to register mini app.',
+          errors: errorsObj
+        });
         setIsSubmitting(false);
       }
     } catch (error) {
@@ -251,239 +426,99 @@ export default function RegisterMiniAppPage() {
       <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); if (step === 5) handleSubmit(e); }}>
         {step === 1 && <Card>
           <CardHeader title="General Information" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <Label>App Name</Label>
-              <Input 
-                required 
-                name="name" 
-                value={formData.name} 
-                onChange={handleChange} 
-                placeholder="e.g. Core Banking App" 
-                className={allErrors.name ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
-              />
-              {allErrors.name && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors.name}</p>}
-            </div>
-            <div>
-              <Label>App ID (Auto-generated)</Label>
-              <Input 
-                readOnly 
-                name="appId" 
-                value={formData.appId} 
-                placeholder="com.fsa.banking" 
-                className={`font-mono text-sm bg-slate-50 dark:bg-slate-900/50 text-slate-500 cursor-not-allowed ${allErrors.appId ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}`}
-              />
-              {allErrors.appId && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors.appId}</p>}
-            </div>
-            <div>
-              <Label>Category</Label>
-              <Select name="category" value={formData.category} onChange={handleChange}>
-                <option>Banking</option>
-                <option>Insurance</option>
-                <option>Lifestyle</option>
-                <option>Shopping</option>
-              </Select>
-            </div>
-            <div>
-              <Label>Logo URL</Label>
-              <Input 
-                required 
-                name="logo" 
-                value={formData.logo} 
-                onChange={handleChange} 
-                type="url" 
-                placeholder="https://..." 
-                className={allErrors.logo ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
-              />
-              {allErrors.logo && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors.logo}</p>}
-            </div>
-            <div className="col-span-1 md:col-span-2">
-              <Label>Short Description</Label>
-              <Input name="shortDescription" value={formData.shortDescription} onChange={handleChange} placeholder="One sentence summary" />
-            </div>
-          </div>
+          <BasicInfoForm formData={formData} handleChange={handleChange} allErrors={allErrors} />
         </Card>}
 
         {step === 2 && <Card>
-          <CardHeader title="Team Information" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>} />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <Label>Team Name</Label>
-              <Input name="teamName" value={formData.teamName} onChange={handleChange} placeholder="e.g. Core Banking Team" />
-            </div>
-            <div>
-              <Label>Owner Name</Label>
-              <Input name="ownerName" value={formData.ownerName} onChange={handleChange} placeholder="John Doe" />
-            </div>
-            <div>
-              <Label>Owner Email</Label>
-              <Input 
-                required 
-                name="ownerEmail" 
-                value={formData.ownerEmail} 
-                onChange={handleChange} 
-                type="email" 
-                placeholder="john.doe@fsa.gov" 
-                className={allErrors.ownerEmail ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
-              />
-              {allErrors.ownerEmail && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors.ownerEmail}</p>}
-            </div>
-            <div>
-              <Label>Support Email</Label>
-              <Input 
-                name="supportEmail" 
-                value={formData.supportEmail} 
-                onChange={handleChange} 
-                type="email" 
-                placeholder="support@fsa.gov" 
-                className={allErrors.supportEmail ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
-              />
-              {allErrors.supportEmail && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors.supportEmail}</p>}
-            </div>
-          </div>
+          <CardHeader title="Team & Support" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>} />
+          <TeamForm formData={formData} handleChange={handleChange} allErrors={allErrors} />
         </Card>}
 
         {step === 3 && <Card>
-          <CardHeader title="Integration Configuration" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>} />
-          <div className="mb-6">
-            <Label>Integration Method</Label>
-            <Select name="integrationMethod" value={formData.integrationMethod} onChange={handleChange}>
-              <option value={IntegrationMethod.WEBVIEW}>WebView (Web App)</option>
-              <option value={IntegrationMethod.FLUTTER_PACKAGE}>Flutter Package</option>
-              <option value={IntegrationMethod.NATIVE_SDK} disabled>Native SDK (Coming Soon)</option>
-              <option value={IntegrationMethod.DEEP_LINK} disabled>Deep Link (Coming Soon)</option>
-            </Select>
-          </div>
-
-          {formData.integrationMethod === IntegrationMethod.WEBVIEW && (
-            <div className="grid grid-cols-1 gap-6 p-6 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800">
-                  <div>
-                    <Label>Production URL</Label>
-                    <Input 
-                      name="productionUrl" 
-                      value={formData.integrationConfigWebView?.productionUrl || ''} 
-                      onChange={handleWebViewChange} 
-                      type="url" 
-                      placeholder="https://..." 
-                      className={allErrors['integrationConfigWebView.productionUrl'] ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
-                    />
-                    {allErrors['integrationConfigWebView.productionUrl'] && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors['integrationConfigWebView.productionUrl']}</p>}
-                  </div>
-            </div>
-          )}
-
-          {formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE && (
-            <div className="space-y-6 p-6 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800">
-              <div>
-                <Label>Source Type</Label>
-                <Select name="sourceType" value={formData.integrationConfigFlutter?.sourceType} onChange={handleFlutterChange}>
-                  <option value={SourceType.ARTIFACT}>Compiled Artifact (Private Pub)</option>
-                  <option value={SourceType.GIT}>Git Repository (Source Code)</option>
-                </Select>
-              </div>
-
-              {formData.integrationConfigFlutter?.sourceType === SourceType.ARTIFACT ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <Label>Package Name</Label>
-                    <Input required name="packageName" value={formData.integrationConfigFlutter?.packageName || ''} onChange={handleFlutterChange} placeholder="e.g. dps_banking_miniapp" />
-                  </div>
-                  <div>
-                    <Label>Version Constraint</Label>
-                    <Input 
-                      name="versionConstraint" 
-                      value={formData.integrationConfigFlutter?.versionConstraint || ''} 
-                      onChange={handleFlutterChange} 
-                      placeholder="e.g. ^1.0.0" 
-                      className={allErrors['integrationConfigFlutter.versionConstraint'] ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
-                    />
-                    {allErrors['integrationConfigFlutter.versionConstraint'] && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors['integrationConfigFlutter.versionConstraint']}</p>}
-                  </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="col-span-1 md:col-span-2">
-                    <Label>Git URL</Label>
-                    <Input required name="gitUrl" value={formData.integrationConfigFlutter?.gitUrl || ''} onChange={handleFlutterChange} placeholder="https://github.com/..." />
-                  </div>
-                  <div>
-                    <Label>Git Branch</Label>
-                    <Input required name="gitBranch" value={formData.integrationConfigFlutter?.gitBranch || ''} onChange={handleFlutterChange} placeholder="e.g. main" />
-                  </div>
-                  <div>
-                    <Label>Access Token (Optional)</Label>
-                    <Input name="gitAccessToken" type="password" value={formData.integrationConfigFlutter?.gitAccessToken || ''} onChange={handleFlutterChange} placeholder="ghp_..." />
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+          <CardHeader title="Technical Integration" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>} />
+          <IntegrationForm formData={formData} handleChange={handleChange} allErrors={allErrors} handleWebViewChange={handleWebViewChange} handleFlutterChange={handleFlutterChange} />
         </Card>}
 
         {step === 4 && <Card>
-          <CardHeader title="Native Permissions" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>} />
-          <p className="text-sm text-slate-500 mb-5">Select the native device features this Mini App requires access to.</p>
-          
-          <div className="grid grid-cols-1 gap-4">
-            {['Camera', 'Location', 'Biometrics', 'Microphone'].map((type) => {
-              const activePerm = formData.permissions?.find(p => p.type === type);
-              const isActive = !!activePerm;
-              
-              return (
-                <div key={type} className={`relative flex flex-col rounded-xl border p-4 shadow-sm transition-all ${isActive ? 'border-brand-500 ring-1 ring-brand-500 bg-brand-50/50 dark:bg-brand-900/20' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 hover:border-brand-300 dark:hover:border-brand-600 hover:shadow-md'}`}>
-                  <label className="flex items-start cursor-pointer">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <input 
-                          type="checkbox" 
-                          checked={isActive}
-                          onChange={() => togglePermission(type)}
-                          className="w-5 h-5 text-brand-600 border-slate-300 rounded focus:ring-brand-600" 
-                        />
-                        <span className="font-semibold text-slate-800 dark:text-slate-200">{type}</span>
-                      </div>
-                    </div>
-                  </label>
-                  {isActive && (
-                    <div className="mt-3 pt-3 border-t border-brand-200 dark:border-brand-500/20 space-y-3">
-                      <div>
-                        <Label className="text-xs mb-1">Purpose (Why is this needed?)</Label>
-                        <Input 
-                          required
-                          value={activePerm.purpose}
-                          onChange={(e) => handlePermissionFieldChange(type, 'purpose', e.target.value)}
-                          placeholder="e.g. To scan QR codes"
-                          className="h-9 text-sm"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-xs mb-1">Terms/Policy URL</Label>
-                        <Input 
-                          required
-                          type="url"
-                          value={activePerm.termsUrl || ''}
-                          onChange={(e) => handlePermissionFieldChange(type, 'termsUrl', e.target.value)}
-                          placeholder="https://..."
-                          className="h-9 text-sm"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          <CardHeader title="Native Permissions" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" /></svg>} />
+          <PermissionsForm 
+            formData={formData} 
+            handleChange={handleChange} 
+            allErrors={allErrors} 
+            togglePermission={togglePermission}
+            handlePermissionFieldChange={handlePermissionFieldChange}
+            customPermission={customPermission}
+            setCustomPermission={setCustomPermission}
+          />
         </Card>}
 
-        {step === 5 && <Card>
+{step === 5 && <Card>
           <CardHeader title="Review Registration" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
-          <div className="space-y-4 p-6">
-            <div><strong>App Name:</strong> {formData.name}</div>
-            <div><strong>App ID:</strong> {formData.appId}</div>
-            <div><strong>Category:</strong> {formData.category}</div>
-            <div><strong>Integration Method:</strong> {formData.integrationMethod}</div>
-            <div><strong>Permissions:</strong> {formData.permissions?.length || 0} requested</div>
-            <p className="text-sm text-slate-500 mt-4">Please review the details above. Click submit to register your Mini App.</p>
+          <div className="space-y-6 p-6 text-sm">
+            
+            <div>
+              <h4 className="font-semibold text-slate-900 dark:text-white border-b pb-2 mb-3">1. Basic Info</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div><span className="text-slate-500">App Name:</span> <br/>{formData.name || '-'}</div>
+                <div><span className="text-slate-500">App ID:</span> <br/><span className="font-mono text-xs">{formData.appId || '-'}</span></div>
+                <div><span className="text-slate-500">Category:</span> <br/>{formData.category || '-'}</div>
+                <div><span className="text-slate-500">Logo:</span> <br/>{formData.logo ? <span className="text-brand-600 truncate block max-w-xs">{formData.logo}</span> : '-'}</div>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-slate-900 dark:text-white border-b pb-2 mb-3">2. Team</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div><span className="text-slate-500">Team Name:</span> <br/>{formData.teamName || '-'}</div>
+                <div><span className="text-slate-500">Owner Name:</span> <br/>{formData.ownerName || '-'}</div>
+                <div><span className="text-slate-500">Owner Email:</span> <br/>{formData.ownerEmail || '-'}</div>
+                <div><span className="text-slate-500">Support Email:</span> <br/>{formData.supportEmail || '-'}</div>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-slate-900 dark:text-white border-b pb-2 mb-3">3. Integration</h4>
+              <div className="mb-2"><span className="text-slate-500">Method:</span> {formData.integrationMethod}</div>
+              {formData.integrationMethod === 'WEBVIEW' && (
+                <div><span className="text-slate-500">Production URL:</span> {formData.integrationConfigWebView?.productionUrl || '-'}</div>
+              )}
+              {formData.integrationMethod === 'FLUTTER_PACKAGE' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div><span className="text-slate-500">Source Type:</span> <br/>{formData.integrationConfigFlutter?.sourceType}</div>
+                  {formData.integrationConfigFlutter?.sourceType === 'ARTIFACT' ? (
+                    <>
+                      <div><span className="text-slate-500">Package Name:</span> <br/>{formData.integrationConfigFlutter?.packageName || '-'}</div>
+                      <div><span className="text-slate-500">Version:</span> <br/>{formData.integrationConfigFlutter?.versionConstraint || '-'}</div>
+                    </>
+                  ) : (
+                    <>
+                      <div><span className="text-slate-500">Git URL:</span> <br/>{formData.integrationConfigFlutter?.gitUrl || '-'}</div>
+                      <div><span className="text-slate-500">Branch:</span> <br/>{formData.integrationConfigFlutter?.gitBranch || '-'}</div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-slate-900 dark:text-white border-b pb-2 mb-3">4. Permissions</h4>
+              {formData.permissions && formData.permissions.length > 0 ? (
+                <ul className="space-y-2">
+                  {formData.permissions.map((p, i) => (
+                    <li key={i} className="bg-slate-50 dark:bg-slate-900/40 p-3 rounded-lg border border-slate-100 dark:border-slate-800">
+                      <strong>{p.type}</strong>
+                      <div className="text-slate-500 mt-1">Purpose: {p.purpose || '-'}</div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <span className="text-slate-500">No special permissions requested.</span>
+              )}
+            </div>
+
+            <div className="bg-brand-50 dark:bg-brand-900/20 p-4 rounded-xl border border-brand-100 dark:border-brand-800 text-brand-700 dark:text-brand-300">
+              Please verify all the details above. Clicking register will create your Mini App and submit it for validation.
+            </div>
           </div>
         </Card>}
 
@@ -492,7 +527,10 @@ export default function RegisterMiniAppPage() {
             {step === 1 ? 'Cancel' : 'Back'}
           </Button>
           {step < 5 ? (
-            <Button type="button" onClick={nextStep}>Next Step</Button>
+            <div className="flex space-x-3">
+              <Button type="button" variant="outline" onClick={handleSaveDraft} disabled={isSubmitting}>Save as Draft</Button>
+              <Button type="button" onClick={nextStep} disabled={isSubmitting}>Next Step</Button>
+            </div>
           ) : (
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? 'Submitting...' : 'Register Mini App'}
@@ -513,9 +551,28 @@ export default function RegisterMiniAppPage() {
         state={modalState}
         mode="register"
         onClose={() => setModalState({ ...modalState, isOpen: false })}
-        onFixLater={() => {
-          setModalState({ ...modalState, isOpen: false });
-          router.push('/miniapps');
+        onFixLater={async () => {
+          setModalState(prev => ({ ...prev, status: 'loading' }));
+          const payload = { ...formData };
+          if (payload.integrationMethod !== 'WEBVIEW') delete payload.integrationConfigWebView;
+          if (payload.integrationMethod !== 'FLUTTER_PACKAGE') delete payload.integrationConfigFlutter;
+          
+          try {
+            const url = `${API_URL}/mini-apps/draft`;
+            const response = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            if (response.ok) {
+              setModalState({ isOpen: false, status: 'success' });
+              router.push('/miniapps');
+            } else {
+              setModalState(prev => ({ ...prev, status: 'error', message: 'Failed to save draft' }));
+            }
+          } catch (e) {
+            setModalState(prev => ({ ...prev, status: 'error', message: 'Network error' }));
+          }
         }}
         onRunInBackground={() => {
           setModalState({ ...modalState, isOpen: false });
@@ -526,7 +583,7 @@ export default function RegisterMiniAppPage() {
 
       {/* Floating Error Summary Button */}
       {!modalState.isOpen && hasErrors && (
-        <ValidationIssuesButton errors={allErrors} />
+        <ValidationIssuesButton errors={allErrors} onNavigate={handleNavigateToIssue} />
       )}
     </>
   );

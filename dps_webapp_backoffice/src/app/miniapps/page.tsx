@@ -6,23 +6,37 @@ import { RegisterMiniAppButton } from '@/components/ui/RegisterMiniAppButton';
 
 export default async function MiniAppsPage() {
   let miniApps: any[] = [];
+  let fetchError = null;
   const cookieStore = await cookies();
-  const token = cookieStore.get('dps_jwt')?.value;
+  const token = cookieStore.get('auth_token')?.value;
   
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/mini-apps`, { 
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:3000'}/mini-apps`, { 
       cache: 'no-store',
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
     if (res.ok) {
       miniApps = await res.json();
+    } else {
+      const errText = await res.text();
+      console.error('API ERROR:', res.status, errText);
+      fetchError = `API Error: ${res.status} ${errText}`;
     }
   } catch (error) {
     console.error("Failed to fetch mini apps", error);
+    fetchError = `Network Error: ${(error as Error).message || String(error)}`;
   }
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
+      
+      {fetchError && (
+        <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700">
+          <h3 className="font-bold">Error loading data:</h3>
+          <p>{fetchError}</p>
+        </div>
+      )}
+  
       <div className="flex justify-between items-end mb-8">
         <div>
           <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Mini Apps</h2>
@@ -90,20 +104,25 @@ export default async function MiniAppsPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
-                        app.status === 'Published' 
+                        (app.status === 'ACTIVE' || app.status === 'Published') 
                           ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20' 
-                          : app.status === 'Draft'
+                          : ((app.status === 'DRAFT' || app.status === 'Draft' || app.status === 'Issues') && !app.validationErrors)
                           ? 'bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600/50'
-                          : app.status === 'Processing'
+                          : ((app.status === 'DRAFT' || app.status === 'Draft' || app.status === 'Issues') && false)
                           ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/20 animate-pulse'
-                          : app.status === 'Issues'
+                          : ((app.status === 'DRAFT' || app.status === 'Draft' || app.status === 'Issues') && app.validationErrors)
                           ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-500/20'
                           : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20'
                       }`}>
-                        {app.status === 'Published' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>}
-                        {app.status === 'Processing' && <svg className="animate-spin -ml-0.5 mr-1.5 h-3 w-3 text-blue-600 dark:text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
-                        {app.status === 'Issues' && <svg className="-ml-0.5 mr-1.5 h-3 w-3 text-rose-600 dark:text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>}
-                        {app.status || 'Pending'}
+                        {(app.status === 'ACTIVE' || app.status === 'Published') && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>}
+                        {((app.status === 'DRAFT' || app.status === 'Draft' || app.status === 'Issues') && false) && <svg className="animate-spin -ml-0.5 mr-1.5 h-3 w-3 text-blue-600 dark:text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
+                        {((app.status === 'DRAFT' || app.status === 'Draft' || app.status === 'Issues') && app.validationErrors) && <svg className="-ml-0.5 mr-1.5 h-3 w-3 text-rose-600 dark:text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>}
+                        {((app.status === 'DRAFT' || app.status === 'Draft' || app.status === 'Issues') || app.status === 'Draft') && app.validationErrors ? 'Issues' : 
+    (app.status === 'PENDING_REVIEW' || app.status === 'Pending Review') ? 'Pending Review' : 
+    ((app.status === 'DRAFT' || app.status === 'Draft' || app.status === 'Issues') || app.status === 'Draft') ? 'Draft' : 
+    ((app.status === 'ACTIVE' || app.status === 'Published') || app.status === 'Published') ? 'Active' : 
+    (app.status === 'Issues') ? 'Issues' :
+    app.status || 'Pending'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">

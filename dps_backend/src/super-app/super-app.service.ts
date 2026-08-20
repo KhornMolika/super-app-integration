@@ -19,7 +19,7 @@ export class SuperAppService implements OnApplicationBootstrap {
     const count = await this.superAppCapabilityRepository.count({ where: { superAppVersion: version } });
     if (count > 0) return;
 
-    const initialCapabilities = ['camera', 'location', 'storage', 'microphone'];
+    const initialCapabilities = ['camera', 'location', 'storage', 'microphone', 'biometrics'];
     
     for (const key of initialCapabilities) {
       await this.superAppCapabilityRepository.save({
@@ -36,6 +36,10 @@ export class SuperAppService implements OnApplicationBootstrap {
   }
 
   async findLatestCapability(): Promise<SuperAppCapability | null> {
-    return this.superAppCapabilityRepository.findOne({ order: { createdAt: 'DESC' } });
+    const list = await this.superAppCapabilityRepository.find({
+      order: { createdAt: 'DESC' },
+      take: 1,
+    });
+    return list[0] || null;
   }
 }

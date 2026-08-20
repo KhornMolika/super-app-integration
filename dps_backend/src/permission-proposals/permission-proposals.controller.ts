@@ -34,15 +34,25 @@ export class PermissionProposalsController {
     });
 
     if (proposal.requestedBy) {
-      const message = decision === 'APPROVED' 
-        ? `Great news! Your proposal for '${proposal.permissionKey}' has been approved and targeted for version ${targetVersion || 'a future release'}.`
-        : `Your proposal for '${proposal.permissionKey}' was rejected. Reason: ${reason || 'N/A'}`;
+      let message = '';
+      let type = 'proposal_reviewed';
+
+      if (decision === 'APPROVED') {
+        message = `Great news! Your proposal for '${proposal.permissionKey}' has been approved and targeted for version ${targetVersion || 'a future release'}.`;
+        type = 'proposal_approved';
+      } else if (decision === 'IN_DEVELOPMENT') {
+        message = `Your proposal for '${proposal.permissionKey}' is now under development for Super App support. You will be notified once ready for release.`;
+        type = 'proposal_in_development';
+      } else {
+        message = `Your proposal for '${proposal.permissionKey}' was rejected. Reason: ${reason || 'N/A'}`;
+        type = 'proposal_rejected';
+      }
         
       await this.notificationsService.createNotification(
         proposal.requestedBy.id,
-        `Permission Proposal ${decision}`,
+        `Permission Proposal ${decision === 'IN_DEVELOPMENT' ? 'In Development' : decision}`,
         message,
-        decision === 'APPROVED' ? 'proposal_approved' : 'proposal_rejected'
+        type
       );
     }
     

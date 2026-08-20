@@ -1,8 +1,18 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
 import { User } from '../../access-control/entities/user.entity';
-import { MiniAppPermissionRequest } from './miniapp-permission-request.entity';
+import { MiniAppActivity } from './miniapp-activity.entity';
 import { MiniAppIssue } from './miniapp-issue.entity';
 import { Notification } from '../../notifications/entities/notification.entity';
+
+export enum MiniAppStatus {
+  DRAFT = 'DRAFT',
+  PENDING_REVIEW = 'PENDING_REVIEW',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  ACTIVE = 'ACTIVE',
+  SUSPENDED = 'SUSPENDED',
+  ARCHIVED = 'ARCHIVED',
+}
 
 @Entity('mini_apps')
 export class MiniApp {
@@ -27,10 +37,8 @@ export class MiniApp {
   @Column({ nullable: true })
   category!: string;
 
-  @Column({ default: 'Draft' })
+  @Column({ default: 'DRAFT' })
   status!: string;
-
-
 
   @Column({ nullable: true })
   ownerName!: string;
@@ -60,8 +68,8 @@ export class MiniApp {
   @Column({ type: 'jsonb', nullable: true })
   validationErrors?: any;
 
-  @OneToMany(() => MiniAppPermissionRequest, permission => permission.miniApp, { cascade: true, eager: true, orphanedRowAction: 'delete' })
-  permissionRequests!: MiniAppPermissionRequest[];
+  @Column({ type: 'jsonb', nullable: true, default: () => "'[]'" })
+  permissions!: any[];
 
   @OneToMany(() => MiniAppIssue, issue => issue.miniApp, { cascade: true, eager: true })
   issues!: MiniAppIssue[];
@@ -74,4 +82,7 @@ export class MiniApp {
 
   @UpdateDateColumn()
   updatedAt!: Date;
+
+  @OneToMany(() => MiniAppActivity, activity => activity.miniApp)
+  activities!: MiniAppActivity[];
 }

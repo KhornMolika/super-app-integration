@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException, OnApplicationBootstrap } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MiniApp } from './entities/miniapp.entity';
@@ -9,15 +9,9 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { PermissionProposalsService } from '../permission-proposals/permission-proposals.service';
 import { SuperAppService } from '../super-app/super-app.service';
-
-
 import { MiniAppIssue } from './entities/miniapp-issue.entity';
-import { PermissionDefinition } from '../permissions/entities/permission-definition.entity';
-
-
-
-
-import { User } from '../access-control/entities/user.entity';
+import { MiniAppActivity } from './entities/miniapp-activity.entity';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class MiniappsService {
@@ -27,42 +21,41 @@ export class MiniappsService {
     @InjectRepository(MiniApp)
     private miniappRepository: Repository<MiniApp>,
     
+    @InjectRepository(MiniAppActivity)
+    private activityRepository: Repository<MiniAppActivity>,
+    private auditService: AuditService,
+    
     @InjectRepository(MiniAppIssue)
     private issueRepository: Repository<MiniAppIssue>,
+    
+    private mailService: MailService,
+    private notificationsService: NotificationsService,
     private permissionsService: PermissionsService,
     private permissionProposalsService: PermissionProposalsService,
     private superAppService: SuperAppService,
-    private mailService: MailService,
-    private notificationsService: NotificationsService,
   ) {}
 
-    async create(data: Partial<MiniApp> & { permissions?: any[] }) {
-    data.status = 'Processing';
+  async logActivity(miniAppId: string, actorId: string, actionType: string, title: string, description: string, auditAction: string, oldVal?: any, newVal?: any) {
+    try {
+      await this.activityRepository.save(this.activityRepository.create({ miniAppId, actorId, type: actionType, title, description }));
+    } catch (e) {
+      this.logger.warn(`Failed to log activity: ${e.message}`);
+    }
+    if (auditAction) {
+       await this.auditService.log({ actorId, action: auditAction, resourceType: 'MiniApp', resourceId: miniAppId, oldValue: oldVal, newValue: newVal });
+    }
+  }
+
+  async create(data: Partial<MiniApp>, actorId?: string) {
+    delete data.status;
+    data.status = 'PROCESSING';
     
-    // Process permissions into permissionRequests
-    if (data.permissions && Array.isArray(data.permissions)) {
-      data.permissionRequests = [];
-      for (const perm of data.permissions) {
-        // Look up the definition
-        const def = await this.permissionsService.findByKey(perm.type);
-        // Even if definition doesn't exist yet, we save it (it will just not have a permissionId linked)
-        // We handle the unknown permission check in the validation phase
-        data.permissionRequests.push({
-          permissionId: def ? def.id : undefined,
-          purpose: perm.purpose,
-          termsUrl: perm.termsUrl,
-          required: perm.required || false,
-          requestedVersion: perm.requestedVersion,
-          status: 'PENDING',
-          // Temporarily store the original type string in metadata if no def is found so we know what they asked for
-          metadata: def ? undefined : { originalType: perm.type }
-        } as any);
-      }
-      delete data.permissions;
+    if (!data.permissions) {
+      data.permissions = [];
     }
 
     const app = this.miniappRepository.create(data);
-    let savedApp;
+    let savedApp: MiniApp;
     try {
       savedApp = await this.miniappRepository.save(app);
     } catch (error: any) {
@@ -77,6 +70,8 @@ export class MiniappsService {
       this.logger.error(`Error in async validation for app ${savedApp.id}:`, err);
     });
 
+    await this.logActivity(savedApp.id, actorId || 'system', 'CREATE', `App ${savedApp.name} Created`, 'Initial draft creation', 'CREATE_MINI_APP', null, savedApp);
+
     return savedApp;
   }
 
@@ -86,7 +81,6 @@ export class MiniappsService {
 
     const errors: Record<string, string> = {};
     const urlValidator = new IsUrlReachableConstraint();
-
     const checks: Promise<void>[] = [];
 
     if (!app.ownerEmail || !isEmail(app.ownerEmail)) {
@@ -110,7 +104,6 @@ export class MiniappsService {
       } else {
         const prodUrl = app.integrationConfig.productionUrl;
         const allowLocal = process.env.ALLOW_LOCAL_PROD_URLS === 'true';
-        
         let isValidProdUrl = true;
         
         if (!allowLocal) {
@@ -141,49 +134,46 @@ export class MiniappsService {
       }
     }
 
-    if (app.permissionRequests && Array.isArray(app.permissionRequests)) {
-      for (let index = 0; index < app.permissionRequests.length; index++) {
-        const perm = app.permissionRequests[index];
-        const permKey = perm.permission?.key || perm.metadata?.originalType || 'unknown';
+    if (app.permissions && Array.isArray(app.permissions)) {
+      for (let index = 0; index < app.permissions.length; index++) {
+        const perm = app.permissions[index];
+        const permKey = perm.type || 'unknown';
 
         if (!perm.purpose || perm.purpose.trim() === '') {
-          errors[`permissionRequests.${index}.purpose`] = `Purpose is required for ${permKey} permission.`;
+          errors[`permissions.${index}.purpose`] = `Please describe why your Mini App requires ${permKey} access.`;
         }
         if (!perm.termsUrl || perm.termsUrl.trim() === '') {
-          errors[`permissionRequests.${index}.termsUrl`] = `Terms/Policy URL is required for ${permKey} permission.`;
+          errors[`permissions.${index}.termsUrl`] = `A privacy policy or terms link is required for ${permKey} permission.`;
         } else {
           checks.push(
             urlValidator.validate(perm.termsUrl, null as any).then(isValid => {
-              if (!isValid) errors[`permissionRequests.${index}.termsUrl`] = `Terms/Policy URL for ${permKey} must be reachable.`;
+              if (!isValid) errors[`permissions.${index}.termsUrl`] = `The URL provided for ${permKey} privacy policy (${perm.termsUrl}) is unreachable. Please verify the link is publicly accessible.`;
             })
           );
         }
 
-        // Permission Compatibility Check
-        let permissionDef: PermissionDefinition | null = perm.permission;
-        if (!permissionDef && perm.metadata?.originalType) {
-           permissionDef = await this.permissionsService.findByKey(perm.metadata.originalType);
-        }
+        // Permission Catalog & Compatibility Check
+        const permissionDef = await this.permissionsService.findByKey(permKey);
 
         if (!permissionDef) {
-           // UNKNOWN PERMISSION -> create proposal
-           await this.createPermissionProposal(app, permKey, perm.metadata?.originalType);
-           // Not returning a 500 error, just logging the issue.
-           // If it's required, we block approval
+           // UNKNOWN PERMISSION -> create proposal in permission_proposals
+           await this.createPermissionProposal(app, permKey);
            if (perm.required) {
-              errors[`permissionRequests.${index}.unsupported`] = `The requested permission "${permKey}" is unknown and required. A proposal has been created.`;
+              errors[`permissions.${index}.unsupported`] = `The requested permission "${permKey}" is not currently supported in the platform catalog. A proposal has been created for review.`;
            }
         } else {
-           // Known permission, check Super App Compatibility
-           // For simplicity in this architecture, we get the latest Super App capability (or an active one)
+           // Known permission, check Super App Runtime Compatibility
            const latestCapability = await this.superAppService.findLatestCapability();
+           const supportedCaps = latestCapability 
+             ? (Array.isArray(latestCapability.capabilities) ? latestCapability.capabilities : String(latestCapability.capabilities).split(',')).map(c => c.trim().toLowerCase())
+             : ['camera', 'location', 'storage', 'microphone', 'biometrics'];
            
-           if (!latestCapability || !latestCapability.capabilities.includes(permissionDef.key)) {
-              // UNSUPPORTED BY RUNTIME -> create proposal
+           const isSupported = supportedCaps.includes(permissionDef.key.toLowerCase()) || supportedCaps.includes(permissionDef.name.toLowerCase());
+           
+           if (!isSupported) {
               await this.createPermissionProposal(app, permissionDef.key, permissionDef.name);
-              
               if (perm.required) {
-                 errors[`permissionRequests.${index}.unsupported`] = `The requested permission "${permissionDef.key}" is not supported by the current Super App runtime. A proposal has been created.`;
+                 errors[`permissions.${index}.unsupported`] = `The requested permission "${permissionDef.key}" is not supported by the current Super App runtime. A proposal has been created for review.`;
               }
            }
         }
@@ -197,7 +187,7 @@ export class MiniappsService {
 
     if (Object.keys(errors).length > 0) {
       await this.miniappRepository.update(id, {
-        status: 'Issues',
+        status: 'DRAFT',
         validationErrors: errors as any,
       });
 
@@ -216,18 +206,19 @@ export class MiniappsService {
 
       // Create a notification
       await this.notificationsService.createNotification(app.ownerId || '', 'Validation Failed', `${app.name || 'Mini App'} has ${issues.length} validation issue(s).`, 'ISSUE_CREATED', app.id);
+      await this.logActivity(id, 'system', 'VALIDATION', 'Validation Failed', `Found ${issues.length} issues`, 'VALIDATE_MINI_APP', app, await this.findOne(id));
 
       if (app.ownerEmail) {
         await this.mailService.sendRegistrationFailureEmail(app.ownerEmail, app.name || app.appId || 'Unknown App', errors);
       }
     } else {
       await this.miniappRepository.update(id, {
-        status: 'Draft',
+        status: 'PENDING_REVIEW',
         validationErrors: null as any,
       });
       
-      // Also notify on success
-      await this.notificationsService.createNotification(app.ownerId || '', 'Validation Passed', `${app.name || 'Mini App'} has passed validation and is now under review.`, 'REVIEW_STARTED', app.id);
+      await this.notificationsService.createNotification(app.ownerId || '', 'Validation Passed', `${app.name || 'Mini App'} has passed validation and is now ready for review.`, 'REVIEW_STARTED', app.id);
+      await this.logActivity(id, 'system', 'VALIDATION', 'Validation Passed', 'No issues found', 'VALIDATE_MINI_APP', app, await this.findOne(id));
 
       if (app.ownerEmail) {
         await this.mailService.sendRegistrationSuccessEmail(app.ownerEmail, app.name || app.appId || 'Unknown App');
@@ -236,24 +227,19 @@ export class MiniappsService {
   }
 
   private async createPermissionProposal(app: MiniApp, permissionKey: string, permissionName?: string) {
-    // Check if an open proposal already exists
     const [existing] = await this.permissionProposalsService.findPendingByKey(permissionKey);
-
     if (existing) {
-      // Just link or log? In MVP, we might just use the existing one
       return existing;
     }
 
-    const proposal = this.permissionProposalsService.create({
+    const proposal = await this.permissionProposalsService.create({
       permissionKey,
       permissionName: permissionName || permissionKey,
-      description: `Automatically created from MiniApp ${app.name} requesting unsupported permission ${permissionKey}`,
+      description: `Automatically created from MiniApp "${app.name}" requesting unsupported permission "${permissionKey}"`,
       miniApp: app,
       requestedBy: app.owner,
       status: 'PENDING_REVIEW'
     });
-
-    
 
     // Notify admins
     const admins = await this.miniappRepository.manager.query(
@@ -272,15 +258,21 @@ export class MiniappsService {
     return proposal;
   }
 
+  async findAllIssues() {
+    return this.issueRepository.find({
+      relations: { miniApp: true },
+      order: { createdAt: 'DESC' }
+    });
+  }
+
   findAll(query: any = {}) {
     return this.miniappRepository.find({ 
       where: query, 
       order: { createdAt: 'DESC' },
-      relations: { permissionRequests: { permission: true }, issues: true }
+      relations: { issues: true }
     });
   }
 
-  // Fetch all notifications (apps with issues)
   getNotifications(userId: string) {
     return this.notificationsService.findByUserId(userId);
   }
@@ -288,6 +280,13 @@ export class MiniappsService {
   async markNotificationRead(id: string) {
     await this.notificationsService.markAsRead(id);
     return { success: true };
+  }
+
+  async getActivities(id: string) {
+    return this.activityRepository.find({
+      where: { miniAppId: id },
+      order: { createdAt: 'DESC' }
+    });
   }
 
   async checkExists(appId?: string, name?: string, excludeId?: string) {
@@ -311,44 +310,27 @@ export class MiniappsService {
   async findOne(id: string) {
     return this.miniappRepository.findOne({ 
       where: { id },
-      relations: { permissionRequests: { permission: true }, issues: true }
+      relations: { issues: true }
     });
   }
 
-  async update(id: string, data: Partial<MiniApp> & { permissions?: any[] }) {
+  async update(id: string, data: Partial<MiniApp>, actorId?: string) {
+    delete data.status;
     const existing = await this.findOne(id);
     if (!existing) throw new BadRequestException('App not found');
 
     if (data.permissions && Array.isArray(data.permissions)) {
-      data.permissionRequests = [];
-      for (const perm of data.permissions) {
-        const def = await this.permissionsService.findByKey(perm.type);
-        data.permissionRequests.push({
-          permissionId: def ? def.id : undefined,
-          purpose: perm.purpose,
-          termsUrl: perm.termsUrl,
-          required: perm.required || false,
-          requestedVersion: perm.requestedVersion,
-          status: 'PENDING',
-          metadata: def ? undefined : { originalType: perm.type }
-        } as any);
-      }
-      delete data.permissions;
+      // Deduplicate permissions array by type
+      data.permissions = Array.from(
+        new Map(data.permissions.map((p: any) => [p.type, p])).values()
+      );
     }
 
-    // If an explicit status like 'Published' or 'Rejected' is provided, we skip validation
-    if (data.status === 'Published' || data.status === 'Rejected') {
-      if (data.status === 'Published' && existing.permissionRequests) {
-        existing.permissionRequests.forEach(p => p.status = 'PUBLISHED');
-      }
-      
-      const merged = this.miniappRepository.merge(existing, data);
-      await this.miniappRepository.save(merged);
-      return this.findOne(id);
-    }
-
-    data.status = 'Processing';
+    data.status = 'PROCESSING';
     const merged = this.miniappRepository.merge(existing, data);
+    if (data.permissions) {
+      merged.permissions = data.permissions;
+    }
     
     await this.miniappRepository.save(merged);
     
@@ -357,16 +339,62 @@ export class MiniappsService {
       this.logger.error(`Error in async validation for app ${id}:`, err);
     });
 
-    return this.findOne(id);
+    const updated = await this.findOne(id);
+    await this.logActivity(id, actorId || 'system', 'UPDATE', `App updated`, 'Draft changes saved', 'UPDATE_MINI_APP', existing, updated);
+    return updated;
   }
 
-  remove(id: string) {
+  async remove(id: string, actorId?: string) {
+    const existing = await this.findOne(id);
+    if (existing) {
+       await this.logActivity(id, actorId || 'system', 'DELETE', `App ${existing.name || existing.appId} Deleted`, 'App removed', 'DELETE_MINI_APP', existing, null);
+    }
     return this.miniappRepository.delete(id);
   }
 
-  
+  async submitForReview(id: string, actorId: string) {
+    const app = await this.findOne(id);
+    if (!app) throw new BadRequestException('App not found');
+    const currentStatus = app.status?.toUpperCase();
+    if (currentStatus !== 'DRAFT' && currentStatus !== 'REJECTED') {
+      throw new BadRequestException('App is not in DRAFT or REJECTED status');
+    }
+    app.status = 'PENDING_REVIEW';
+    await this.miniappRepository.save(app);
+    await this.logActivity(id, actorId, 'STATUS_CHANGE', 'Submitted for Review', 'App submitted for review', 'SUBMIT_MINI_APP', null, app);
+    return app;
+  }
 
-  
+  async approve(id: string, actorId: string) {
+    const app = await this.findOne(id);
+    if (!app) throw new BadRequestException('App not found');
+    if (app.status?.toUpperCase() !== 'PENDING_REVIEW') {
+      throw new BadRequestException('App is not pending review');
+    }
+    app.status = 'APPROVED';
+    await this.miniappRepository.save(app);
+    await this.logActivity(id, actorId, 'STATUS_CHANGE', 'Mini App Approved', 'App approved', 'APPROVE_MINI_APP', null, app);
+    return app;
+  }
 
-  
+  async reject(id: string, reason: string, actorId: string) {
+    const app = await this.findOne(id);
+    if (!app) throw new BadRequestException('App not found');
+    if (app.status?.toUpperCase() !== 'PENDING_REVIEW') {
+      throw new BadRequestException('App is not pending review');
+    }
+    app.status = 'REJECTED';
+    await this.miniappRepository.save(app);
+    await this.logActivity(id, actorId, 'STATUS_CHANGE', 'Mini App Rejected', reason || 'App rejected', 'REJECT_MINI_APP', null, app);
+    return app;
+  }
+
+  async suspend(id: string, actorId: string) {
+    const app = await this.findOne(id);
+    if (!app) throw new BadRequestException('App not found');
+    app.status = 'SUSPENDED';
+    await this.miniappRepository.save(app);
+    await this.logActivity(id, actorId, 'STATUS_CHANGE', 'Mini App Suspended', 'App suspended', 'SUSPEND_MINI_APP', null, app);
+    return app;
+  }
 }
