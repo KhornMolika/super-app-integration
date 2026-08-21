@@ -13,6 +13,20 @@ export enum SourceType {
   ARTIFACT = 'ARTIFACT',
 }
 
+export class DeepLinkConfigDto {
+  @IsString()
+  @IsNotEmpty()
+  urlScheme!: string;
+
+  @IsString()
+  @IsOptional()
+  packageName?: string;
+
+  @IsString()
+  @IsOptional()
+  appStoreUrl?: string;
+}
+
 export class WebViewConfigDto {
   @IsString()
   @IsOptional()
@@ -165,6 +179,8 @@ export class CreateMiniAppDto {
   @Type(() => DeepLinkConfigDto)
   @IsNotEmpty()
   integrationConfigDeepLink?: DeepLinkConfigDto;
+
+  // In the controller, we can map integrationConfigWebView, integrationConfigFlutter, or integrationConfigDeepLink to integrationConfig before saving
 
   @IsArray()
   @ValidateNested({ each: true })

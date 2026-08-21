@@ -1,0 +1,803 @@
+{
+  "ABIRoot": {
+    "kind": "Root",
+    "name": "SpaBookingSDK",
+    "printedName": "SpaBookingSDK",
+    "children": [
+      {
+        "kind": "Import",
+        "name": "Foundation",
+        "printedName": "Foundation",
+        "declKind": "Import",
+        "moduleName": "SpaBookingSDK"
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "SpaBookingResult",
+        "printedName": "SpaBookingResult",
+        "children": [
+          {
+            "kind": "Var",
+            "name": "completed",
+            "printedName": "completed",
+            "children": [
+              {
+                "kind": "TypeFunc",
+                "name": "Function",
+                "printedName": "(SpaBookingSDK.SpaBookingResult.Type) -> (Swift.String, Swift.String, Swift.String, Swift.String, Swift.String) -> SpaBookingSDK.SpaBookingResult",
+                "children": [
+                  {
+                    "kind": "TypeFunc",
+                    "name": "Function",
+                    "printedName": "(Swift.String, Swift.String, Swift.String, Swift.String, Swift.String) -> SpaBookingSDK.SpaBookingResult",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "SpaBookingResult",
+                        "printedName": "SpaBookingSDK.SpaBookingResult",
+                        "usr": "s:13SpaBookingSDK0aB6ResultO"
+                      },
+                      {
+                        "kind": "TypeNominal",
+                        "name": "Tuple",
+                        "printedName": "(bookingId: Swift.String, serviceName: Swift.String, price: Swift.String, date: Swift.String, time: Swift.String)",
+                        "children": [
+                          {
+                            "kind": "TypeNominal",
+                            "name": "String",
+                            "printedName": "Swift.String",
+                            "usr": "s:SS"
+                          },
+                          {
+                            "kind": "TypeNominal",
+                            "name": "String",
+                            "printedName": "Swift.String",
+                            "usr": "s:SS"
+                          },
+                          {
+                            "kind": "TypeNominal",
+                            "name": "String",
+                            "printedName": "Swift.String",
+                            "usr": "s:SS"
+                          },
+                          {
+                            "kind": "TypeNominal",
+                            "name": "String",
+                            "printedName": "Swift.String",
+                            "usr": "s:SS"
+                          },
+                          {
+                            "kind": "TypeNominal",
+                            "name": "String",
+                            "printedName": "Swift.String",
+                            "usr": "s:SS"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Metatype",
+                    "printedName": "SpaBookingSDK.SpaBookingResult.Type",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "SpaBookingResult",
+                        "printedName": "SpaBookingSDK.SpaBookingResult",
+                        "usr": "s:13SpaBookingSDK0aB6ResultO"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "declKind": "EnumElement",
+            "usr": "s:13SpaBookingSDK0aB6ResultO9completedyACSS_S4StcACmF",
+            "mangledName": "$s13SpaBookingSDK0aB6ResultO9completedyACSS_S4StcACmF",
+            "moduleName": "SpaBookingSDK"
+          },
+          {
+            "kind": "Var",
+            "name": "cancelled",
+            "printedName": "cancelled",
+            "children": [
+              {
+                "kind": "TypeFunc",
+                "name": "Function",
+                "printedName": "(SpaBookingSDK.SpaBookingResult.Type) -> SpaBookingSDK.SpaBookingResult",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "SpaBookingResult",
+                    "printedName": "SpaBookingSDK.SpaBookingResult",
+                    "usr": "s:13SpaBookingSDK0aB6ResultO"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Metatype",
+                    "printedName": "SpaBookingSDK.SpaBookingResult.Type",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "SpaBookingResult",
+                        "printedName": "SpaBookingSDK.SpaBookingResult",
+                        "usr": "s:13SpaBookingSDK0aB6ResultO"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "declKind": "EnumElement",
+            "usr": "s:13SpaBookingSDK0aB6ResultO9cancelledyA2CmF",
+            "mangledName": "$s13SpaBookingSDK0aB6ResultO9cancelledyA2CmF",
+            "moduleName": "SpaBookingSDK"
+          },
+          {
+            "kind": "Var",
+            "name": "notInitialized",
+            "printedName": "notInitialized",
+            "children": [
+              {
+                "kind": "TypeFunc",
+                "name": "Function",
+                "printedName": "(SpaBookingSDK.SpaBookingResult.Type) -> SpaBookingSDK.SpaBookingResult",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "SpaBookingResult",
+                    "printedName": "SpaBookingSDK.SpaBookingResult",
+                    "usr": "s:13SpaBookingSDK0aB6ResultO"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Metatype",
+                    "printedName": "SpaBookingSDK.SpaBookingResult.Type",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "SpaBookingResult",
+                        "printedName": "SpaBookingSDK.SpaBookingResult",
+                        "usr": "s:13SpaBookingSDK0aB6ResultO"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "declKind": "EnumElement",
+            "usr": "s:13SpaBookingSDK0aB6ResultO14notInitializedyA2CmF",
+            "mangledName": "$s13SpaBookingSDK0aB6ResultO14notInitializedyA2CmF",
+            "moduleName": "SpaBookingSDK"
+          }
+        ],
+        "declKind": "Enum",
+        "usr": "s:13SpaBookingSDK0aB6ResultO",
+        "mangledName": "$s13SpaBookingSDK0aB6ResultO",
+        "moduleName": "SpaBookingSDK",
+        "declAttributes": [
+          "AccessControl"
+        ],
+        "conformances": [
+          {
+            "kind": "Conformance",
+            "name": "Copyable",
+            "printedName": "Copyable",
+            "usr": "s:s8CopyableP",
+            "mangledName": "$ss8CopyableP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Escapable",
+            "printedName": "Escapable",
+            "usr": "s:s9EscapableP",
+            "mangledName": "$ss9EscapableP"
+          }
+        ]
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "SpaService",
+        "printedName": "SpaService",
+        "children": [
+          {
+            "kind": "Var",
+            "name": "id",
+            "printedName": "id",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "s:13SpaBookingSDK0A7ServiceV2idSSvp",
+            "mangledName": "$s13SpaBookingSDK0A7ServiceV2idSSvp",
+            "moduleName": "SpaBookingSDK",
+            "declAttributes": [
+              "HasStorage",
+              "AccessControl"
+            ],
+            "isLet": true,
+            "hasStorage": true,
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "String",
+                    "printedName": "Swift.String",
+                    "usr": "s:SS"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:13SpaBookingSDK0A7ServiceV2idSSvg",
+                "mangledName": "$s13SpaBookingSDK0A7ServiceV2idSSvg",
+                "moduleName": "SpaBookingSDK",
+                "implicit": true,
+                "accessorKind": "get"
+              }
+            ]
+          },
+          {
+            "kind": "Var",
+            "name": "name",
+            "printedName": "name",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "s:13SpaBookingSDK0A7ServiceV4nameSSvp",
+            "mangledName": "$s13SpaBookingSDK0A7ServiceV4nameSSvp",
+            "moduleName": "SpaBookingSDK",
+            "declAttributes": [
+              "HasStorage",
+              "AccessControl"
+            ],
+            "isLet": true,
+            "hasStorage": true,
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "String",
+                    "printedName": "Swift.String",
+                    "usr": "s:SS"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:13SpaBookingSDK0A7ServiceV4nameSSvg",
+                "mangledName": "$s13SpaBookingSDK0A7ServiceV4nameSSvg",
+                "moduleName": "SpaBookingSDK",
+                "implicit": true,
+                "accessorKind": "get"
+              }
+            ]
+          },
+          {
+            "kind": "Var",
+            "name": "price",
+            "printedName": "price",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "s:13SpaBookingSDK0A7ServiceV5priceSSvp",
+            "mangledName": "$s13SpaBookingSDK0A7ServiceV5priceSSvp",
+            "moduleName": "SpaBookingSDK",
+            "declAttributes": [
+              "HasStorage",
+              "AccessControl"
+            ],
+            "isLet": true,
+            "hasStorage": true,
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "String",
+                    "printedName": "Swift.String",
+                    "usr": "s:SS"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:13SpaBookingSDK0A7ServiceV5priceSSvg",
+                "mangledName": "$s13SpaBookingSDK0A7ServiceV5priceSSvg",
+                "moduleName": "SpaBookingSDK",
+                "implicit": true,
+                "accessorKind": "get"
+              }
+            ]
+          }
+        ],
+        "declKind": "Struct",
+        "usr": "s:13SpaBookingSDK0A7ServiceV",
+        "mangledName": "$s13SpaBookingSDK0A7ServiceV",
+        "moduleName": "SpaBookingSDK",
+        "declAttributes": [
+          "AccessControl"
+        ],
+        "conformances": [
+          {
+            "kind": "Conformance",
+            "name": "Copyable",
+            "printedName": "Copyable",
+            "usr": "s:s8CopyableP",
+            "mangledName": "$ss8CopyableP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Escapable",
+            "printedName": "Escapable",
+            "usr": "s:s9EscapableP",
+            "mangledName": "$ss9EscapableP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Identifiable",
+            "printedName": "Identifiable",
+            "children": [
+              {
+                "kind": "TypeWitness",
+                "name": "ID",
+                "printedName": "ID",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "String",
+                    "printedName": "Swift.String",
+                    "usr": "s:SS"
+                  }
+                ]
+              }
+            ],
+            "usr": "s:s12IdentifiableP",
+            "mangledName": "$ss12IdentifiableP"
+          }
+        ]
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "SpaSlot",
+        "printedName": "SpaSlot",
+        "children": [
+          {
+            "kind": "Var",
+            "name": "id",
+            "printedName": "id",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "s:13SpaBookingSDK0A4SlotV2idSSvp",
+            "mangledName": "$s13SpaBookingSDK0A4SlotV2idSSvp",
+            "moduleName": "SpaBookingSDK",
+            "declAttributes": [
+              "HasStorage",
+              "AccessControl"
+            ],
+            "isLet": true,
+            "hasStorage": true,
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "String",
+                    "printedName": "Swift.String",
+                    "usr": "s:SS"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:13SpaBookingSDK0A4SlotV2idSSvg",
+                "mangledName": "$s13SpaBookingSDK0A4SlotV2idSSvg",
+                "moduleName": "SpaBookingSDK",
+                "implicit": true,
+                "accessorKind": "get"
+              }
+            ]
+          },
+          {
+            "kind": "Var",
+            "name": "date",
+            "printedName": "date",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "s:13SpaBookingSDK0A4SlotV4dateSSvp",
+            "mangledName": "$s13SpaBookingSDK0A4SlotV4dateSSvp",
+            "moduleName": "SpaBookingSDK",
+            "declAttributes": [
+              "HasStorage",
+              "AccessControl"
+            ],
+            "isLet": true,
+            "hasStorage": true,
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "String",
+                    "printedName": "Swift.String",
+                    "usr": "s:SS"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:13SpaBookingSDK0A4SlotV4dateSSvg",
+                "mangledName": "$s13SpaBookingSDK0A4SlotV4dateSSvg",
+                "moduleName": "SpaBookingSDK",
+                "implicit": true,
+                "accessorKind": "get"
+              }
+            ]
+          },
+          {
+            "kind": "Var",
+            "name": "time",
+            "printedName": "time",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "s:13SpaBookingSDK0A4SlotV4timeSSvp",
+            "mangledName": "$s13SpaBookingSDK0A4SlotV4timeSSvp",
+            "moduleName": "SpaBookingSDK",
+            "declAttributes": [
+              "HasStorage",
+              "AccessControl"
+            ],
+            "isLet": true,
+            "hasStorage": true,
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "String",
+                    "printedName": "Swift.String",
+                    "usr": "s:SS"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:13SpaBookingSDK0A4SlotV4timeSSvg",
+                "mangledName": "$s13SpaBookingSDK0A4SlotV4timeSSvg",
+                "moduleName": "SpaBookingSDK",
+                "implicit": true,
+                "accessorKind": "get"
+              }
+            ]
+          },
+          {
+            "kind": "Var",
+            "name": "label",
+            "printedName": "label",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "s:13SpaBookingSDK0A4SlotV5labelSSvp",
+            "mangledName": "$s13SpaBookingSDK0A4SlotV5labelSSvp",
+            "moduleName": "SpaBookingSDK",
+            "declAttributes": [
+              "AccessControl"
+            ],
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "String",
+                    "printedName": "Swift.String",
+                    "usr": "s:SS"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:13SpaBookingSDK0A4SlotV5labelSSvg",
+                "mangledName": "$s13SpaBookingSDK0A4SlotV5labelSSvg",
+                "moduleName": "SpaBookingSDK",
+                "accessorKind": "get"
+              }
+            ]
+          }
+        ],
+        "declKind": "Struct",
+        "usr": "s:13SpaBookingSDK0A4SlotV",
+        "mangledName": "$s13SpaBookingSDK0A4SlotV",
+        "moduleName": "SpaBookingSDK",
+        "declAttributes": [
+          "AccessControl"
+        ],
+        "conformances": [
+          {
+            "kind": "Conformance",
+            "name": "Copyable",
+            "printedName": "Copyable",
+            "usr": "s:s8CopyableP",
+            "mangledName": "$ss8CopyableP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Escapable",
+            "printedName": "Escapable",
+            "usr": "s:s9EscapableP",
+            "mangledName": "$ss9EscapableP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Identifiable",
+            "printedName": "Identifiable",
+            "children": [
+              {
+                "kind": "TypeWitness",
+                "name": "ID",
+                "printedName": "ID",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "String",
+                    "printedName": "Swift.String",
+                    "usr": "s:SS"
+                  }
+                ]
+              }
+            ],
+            "usr": "s:s12IdentifiableP",
+            "mangledName": "$ss12IdentifiableP"
+          }
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "SwiftUI",
+        "printedName": "SwiftUI",
+        "declKind": "Import",
+        "moduleName": "SpaBookingSDK"
+      },
+      {
+        "kind": "Import",
+        "name": "UIKit",
+        "printedName": "UIKit",
+        "declKind": "Import",
+        "moduleName": "SpaBookingSDK"
+      },
+      {
+        "kind": "TypeDecl",
+        "name": "SpaBooking",
+        "printedName": "SpaBooking",
+        "children": [
+          {
+            "kind": "Function",
+            "name": "initialize",
+            "printedName": "initialize(token:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "String",
+                "printedName": "Swift.String",
+                "usr": "s:SS"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:13SpaBookingSDK0aB0C10initialize5tokenySS_tFZ",
+            "mangledName": "$s13SpaBookingSDK0aB0C10initialize5tokenySS_tFZ",
+            "moduleName": "SpaBookingSDK",
+            "static": true,
+            "declAttributes": [
+              "Final",
+              "AccessControl"
+            ],
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "presentBooking",
+            "printedName": "presentBooking(from:completion:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "UIViewController",
+                "printedName": "UIKit.UIViewController",
+                "usr": "c:objc(cs)UIViewController"
+              },
+              {
+                "kind": "TypeFunc",
+                "name": "Function",
+                "printedName": "(SpaBookingSDK.SpaBookingResult) -> ()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "SpaBookingResult",
+                    "printedName": "SpaBookingSDK.SpaBookingResult",
+                    "usr": "s:13SpaBookingSDK0aB6ResultO"
+                  }
+                ]
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:13SpaBookingSDK0aB0C07presentB04from10completionySo16UIViewControllerC_yAA0aB6ResultOctFZ",
+            "mangledName": "$s13SpaBookingSDK0aB0C07presentB04from10completionySo16UIViewControllerC_yAA0aB6ResultOctFZ",
+            "moduleName": "SpaBookingSDK",
+            "static": true,
+            "declAttributes": [
+              "Final",
+              "AccessControl"
+            ],
+            "funcSelfKind": "NonMutating"
+          }
+        ],
+        "declKind": "Class",
+        "usr": "s:13SpaBookingSDK0aB0C",
+        "mangledName": "$s13SpaBookingSDK0aB0C",
+        "moduleName": "SpaBookingSDK",
+        "declAttributes": [
+          "Final",
+          "AccessControl",
+          "RawDocComment"
+        ],
+        "hasMissingDesignatedInitializers": true,
+        "conformances": [
+          {
+            "kind": "Conformance",
+            "name": "Copyable",
+            "printedName": "Copyable",
+            "usr": "s:s8CopyableP",
+            "mangledName": "$ss8CopyableP"
+          },
+          {
+            "kind": "Conformance",
+            "name": "Escapable",
+            "printedName": "Escapable",
+            "usr": "s:s9EscapableP",
+            "mangledName": "$ss9EscapableP"
+          }
+        ]
+      },
+      {
+        "kind": "Import",
+        "name": "SwiftUI",
+        "printedName": "SwiftUI",
+        "declKind": "Import",
+        "moduleName": "SpaBookingSDK"
+      }
+    ],
+    "json_format_version": 8
+  },
+  "ConstValues": [
+    {
+      "filePath": "\/Users\/junior\/Desktop\/project\/SuperApp\/vendor-samples\/spa-booking-sdk\/ios\/Sources\/SpaBookingSDK\/SpaBookingModels.swift",
+      "kind": "StringLiteral",
+      "offset": 633,
+      "length": 13,
+      "value": "\"svc_massage\""
+    },
+    {
+      "filePath": "\/Users\/junior\/Desktop\/project\/SuperApp\/vendor-samples\/spa-booking-sdk\/ios\/Sources\/SpaBookingSDK\/SpaBookingModels.swift",
+      "kind": "StringLiteral",
+      "offset": 654,
+      "length": 21,
+      "value": "\"Deep Tissue Massage\""
+    },
+    {
+      "filePath": "\/Users\/junior\/Desktop\/project\/SuperApp\/vendor-samples\/spa-booking-sdk\/ios\/Sources\/SpaBookingSDK\/SpaBookingModels.swift",
+      "kind": "StringLiteral",
+      "offset": 684,
+      "length": 5,
+      "value": "\"$80\""
+    },
+    {
+      "filePath": "\/Users\/junior\/Desktop\/project\/SuperApp\/vendor-samples\/spa-booking-sdk\/ios\/Sources\/SpaBookingSDK\/SpaBookingModels.swift",
+      "kind": "StringLiteral",
+      "offset": 715,
+      "length": 12,
+      "value": "\"svc_facial\""
+    },
+    {
+      "filePath": "\/Users\/junior\/Desktop\/project\/SuperApp\/vendor-samples\/spa-booking-sdk\/ios\/Sources\/SpaBookingSDK\/SpaBookingModels.swift",
+      "kind": "StringLiteral",
+      "offset": 735,
+      "length": 18,
+      "value": "\"Signature Facial\""
+    },
+    {
+      "filePath": "\/Users\/junior\/Desktop\/project\/SuperApp\/vendor-samples\/spa-booking-sdk\/ios\/Sources\/SpaBookingSDK\/SpaBookingModels.swift",
+      "kind": "StringLiteral",
+      "offset": 762,
+      "length": 5,
+      "value": "\"$65\""
+    },
+    {
+      "filePath": "\/Users\/junior\/Desktop\/project\/SuperApp\/vendor-samples\/spa-booking-sdk\/ios\/Sources\/SpaBookingSDK\/SpaBookingModels.swift",
+      "kind": "StringLiteral",
+      "offset": 793,
+      "length": 14,
+      "value": "\"svc_manicure\""
+    },
+    {
+      "filePath": "\/Users\/junior\/Desktop\/project\/SuperApp\/vendor-samples\/spa-booking-sdk\/ios\/Sources\/SpaBookingSDK\/SpaBookingModels.swift",
+      "kind": "StringLiteral",
+      "offset": 815,
+      "length": 14,
+      "value": "\"Spa Manicure\""
+    },
+    {
+      "filePath": "\/Users\/junior\/Desktop\/project\/SuperApp\/vendor-samples\/spa-booking-sdk\/ios\/Sources\/SpaBookingSDK\/SpaBookingModels.swift",
+      "kind": "StringLiteral",
+      "offset": 838,
+      "length": 5,
+      "value": "\"$40\""
+    }
+  ]
+}
