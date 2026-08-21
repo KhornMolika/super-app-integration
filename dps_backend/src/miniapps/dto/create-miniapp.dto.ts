@@ -75,19 +75,6 @@ export class FlutterPackageConfigDto {
   versionConstraint?: string;
 }
 
-export class DeepLinkConfigDto {
-  @IsString()
-  @IsNotEmpty()
-  urlScheme!: string;
-
-  @IsString()
-  @IsOptional()
-  packageName?: string;
-
-  @IsString()
-  @IsOptional()
-  appStoreUrl?: string;
-}
 
 export class PermissionDto {
   @IsString()

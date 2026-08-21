@@ -165,11 +165,14 @@ export class MiniappsController {
       dataToSave.integrationConfig = updateData.integrationConfigWebView;
     } else if (updateData.integrationMethod === 'FLUTTER_PACKAGE') {
       dataToSave.integrationConfig = updateData.integrationConfigFlutter;
+    } else if (updateData.integrationMethod === 'DEEP_LINK') {
+      dataToSave.integrationConfig = (updateData as any).integrationConfigDeepLink;
     }
     
     // Clean up DTO specific fields
     delete dataToSave.integrationConfigWebView;
     delete dataToSave.integrationConfigFlutter;
+    delete dataToSave.integrationConfigDeepLink;
 
     return this.miniappService.update(id, dataToSave, req.user.sub);
   }
