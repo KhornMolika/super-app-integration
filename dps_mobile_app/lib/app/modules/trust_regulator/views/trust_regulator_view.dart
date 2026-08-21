@@ -15,25 +15,15 @@ class TrustRegulatorView extends GetView {
       userId: 'super_app_user_456',
     );
 
-    // --- MOCK BACK OFFICE REGISTRATION CHECK ---
-    // In a real app, the Super App fetches the Mini App's permissions from the server.
-    // We simulate that the Trust Regulator app is granted NFC permissions.
-    final bool isNfcEnabledFromBackOffice = true; 
-
     return TrustRegulatorAppEntry(
       authContext: authContext,
       onExit: () {
-        // This callback is executed when the mini app requests to close itself
         Get.back();
       },
-      // Here the Super App fulfills the contract if the Back Office allows it!
-      onScanNFC: isNfcEnabledFromBackOffice 
-        ? () async {
-            // The Super App securely triggers the hardware plugin
-            await Future.delayed(const Duration(seconds: 1)); // Simulate hardware scan
-            return "NFC_CARD_DATA_123456789"; 
-          }
-        : null, // If false in back office, pass null to disable the feature
+      onScanNFC: () async {
+        await Future.delayed(const Duration(seconds: 1)); // Simulate hardware scan
+        return "NFC_CARD_DATA_123456789"; 
+      },
     );
   }
 }

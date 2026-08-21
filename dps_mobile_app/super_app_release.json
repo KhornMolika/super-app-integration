@@ -1,0 +1,24 @@
+﻿{
+    "superAppVersion":  "v1.1.0",
+    "buildTimestamp":  "2026-08-21T00:34:08.525Z",
+    "bundledMiniApps":  [
+                            {
+                                "id":  "miniapp-trust-regulator",
+                                "packageName":  "dps_miniapp_mobile_trust_regulator",
+                                "version":  "0.0.2",
+                                "checksum":  "8410969cd6012796c8506ef501e1cc8ebb223a6138d140ed02bc424f4b19f78d",
+                                "entryPoint":  "package:dps_miniapp_mobile_trust_regulator/dsp_miniapp_trust_regulator.dart"
+                            },
+                            {
+                                "id":  "core-package",
+                                "packageName":  "dps_core_package",
+                                "version":  "1.0.0",
+                                "checksum":  "15d4446b22608766812992798fd29d6269857e8d87d1cbdae5af4b999dcfa0d8",
+                                "entryPoint":  "package:dps_core_package/dps_core_package.dart"
+                            }
+                        ],
+    "consolidatedPermissions":  [
+                                    "NFC"
+                                ],
+    "integrityDigest":  "56a6bb257e62415745ed38236798e81082235b365ade799940784ba2126f9c8c"
+}

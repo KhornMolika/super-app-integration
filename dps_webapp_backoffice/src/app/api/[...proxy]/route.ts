@@ -13,7 +13,10 @@ const ALLOWED_ROUTES = [
   'roles',
   'organizations',
   'super-app',
-  'audit-logs'
+  'audit-logs',
+  'integrations',
+  'security',
+  'api',
 ];
 
 async function handleProxy(request: Request, { params }: { params: Promise<{ proxy: string[] }> }) {

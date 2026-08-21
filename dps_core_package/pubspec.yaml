@@ -1,7 +1,8 @@
 name: dps_core_package
 description: A starting point for Dart libraries or applications.
 version: 1.0.0
-# repository: https://github.com/my_org/my_repo
+homepage: http://localhost:8081/repository/pub-group
+publish_to: "http://localhost:8081/repository/pub-hosted"
 
 environment:
   sdk: ^3.12.2

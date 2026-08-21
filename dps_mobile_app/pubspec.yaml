@@ -19,9 +19,11 @@ dependencies:
   local_auth: ^3.0.2
 
   dps_core_package:
-    path: ../dps_core_package
+    hosted: http://localhost:8081/repository/pub-group
+    version: ^1.0.0
   dps_miniapp_mobile_trust_regulator:
-    path: ../dsp_miniapp_trust_regulator
+    hosted: http://localhost:8081/repository/pub-group
+    version: ^0.0.1
 
 dev_dependencies:
   flutter_test:

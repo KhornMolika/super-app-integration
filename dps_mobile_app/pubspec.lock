@@ -84,16 +84,18 @@ packages:
   dps_core_package:
     dependency: "direct main"
     description:
-      path: "../dps_core_package"
-      relative: true
-    source: path
+      name: dps_core_package
+      sha256: f0a9b9b4b6b89c323fc79effd75921adab38c530f0d82adeb343b8528c4f3b3f
+      url: "http://localhost:8081/repository/pub-group/"
+    source: hosted
     version: "1.0.0"
   dps_miniapp_mobile_trust_regulator:
     dependency: "direct main"
     description:
-      path: "../dsp_miniapp_trust_regulator"
-      relative: true
-    source: path
+      name: dps_miniapp_mobile_trust_regulator
+      sha256: "96dc2c4c9ca0045be2796dcec42d30bb678bc707112cc8ecba760a9d31d5b178"
+      url: "http://localhost:8081/repository/pub-group/"
+    source: hosted
     version: "0.0.1"
   fake_async:
     dependency: transitive

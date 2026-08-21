@@ -14,12 +14,16 @@ export default function IframePreviewEngine({ url, reloadKey }: IframePreviewEng
 
   // Validate and sanitize URL
   let safeUrl = url;
-  if (!safeUrl.startsWith('http://') && !safeUrl.startsWith('https://')) {
+  if (!safeUrl.startsWith('/') && !safeUrl.startsWith('http://') && !safeUrl.startsWith('https://')) {
     safeUrl = `https://${safeUrl}`;
   }
 
   // Security checks
   React.useEffect(() => {
+    if (safeUrl.startsWith('/')) {
+      setSecurityError(null);
+      return;
+    }
     try {
       const parsedUrl = new URL(safeUrl);
       const hostname = parsedUrl.hostname.toLowerCase();

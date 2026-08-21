@@ -13,6 +13,7 @@ import { PermissionsModule } from '../permissions/permissions.module';
 import { PermissionProposalsModule } from '../permission-proposals/permission-proposals.module';
 import { SuperAppModule } from '../super-app/super-app.module';
 import { AuditModule } from '../audit/audit.module';
+import { IntegrationsModule } from '../integrations/integrations.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { AuditModule } from '../audit/audit.module';
     PermissionProposalsModule,
     SuperAppModule,
     AuditModule,
+    IntegrationsModule,
   ],
   controllers: [MiniappsController],
   providers: [MiniappsService],

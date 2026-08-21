@@ -26,6 +26,7 @@ export interface FlutterPackageConfigDto {
   gitUrl?: string;
   gitBranch?: string;
   gitAccessToken?: string;
+  gitPath?: string;
   packageName?: string;
   versionConstraint?: string;
 }

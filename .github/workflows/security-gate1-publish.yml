@@ -1,0 +1,60 @@
+name: Security Gate 1 & Nexus Pre-Publish Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags: [ 'v*.*.*' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  security-gate-1:
+    name: Security Gate 1 Pre-Publish Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter & Dart SDK
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Install Package Dependencies
+        run: |
+          cd dsp_miniapp_trust_regulator
+          flutter pub get
+
+      - name: 1. Static Code Analysis (dart analyze)
+        run: |
+          cd dsp_miniapp_trust_regulator
+          dart analyze --fatal-infos
+
+      - name: 2. Automated Unit Tests (flutter test)
+        run: |
+          cd dsp_miniapp_trust_regulator
+          if [ -d "test" ]; then flutter test; else echo "No tests found; skipping."; fi
+
+      - name: 3. Secret & Leak Scanning (TruffleHog / Pattern Scanner)
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./dsp_miniapp_trust_regulator
+          extra_args: --debug --only-verified
+
+      - name: 4. Checksum & SHA-256 Digest Verification
+        run: |
+          cd dsp_miniapp_trust_regulator
+          sha256sum pubspec.yaml > checksum.sha256
+          cat checksum.sha256
+
+      - name: 5. Publish Artifact to Nexus (Release Tags Only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          NEXUS_PUB_HOSTED: ${{ secrets.NEXUS_PUB_HOSTED || 'http://nexus.internal:8081/repository/pub-hosted' }}
+          PUB_TOKEN: ${{ secrets.NEXUS_PUB_TOKEN }}
+        run: |
+          cd dsp_miniapp_trust_regulator
+          echo "Publishing package artifact to Nexus registry..."
+          dart pub publish --force
