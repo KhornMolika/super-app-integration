@@ -74,10 +74,7 @@ export default function RegisterMiniAppPage() {
         errors.logo = 'Logo must be a valid URL';
         isValid = false;
       }
-      if (!formData.termsUrl) {
-        errors.termsUrl = 'Terms & Privacy Policy URL is required';
-        isValid = false;
-      } else if (!formData.termsUrl.startsWith('http')) {
+      if (formData.termsUrl && !formData.termsUrl.startsWith('http')) {
         errors.termsUrl = 'Terms URL must be a valid URL (e.g. https://...)';
         isValid = false;
       }

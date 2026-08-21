@@ -219,8 +219,6 @@ export class MiniappsService {
           if (!isValid) errors.termsUrl = 'The Terms & Privacy Policy URL is unreachable. Please verify the link is publicly accessible.';
         })
       );
-    } else {
-      errors.termsUrl = 'Terms & Privacy Policy URL is required.';
     }
 
     if (app.permissions && Array.isArray(app.permissions)) {
