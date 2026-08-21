@@ -520,7 +520,13 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
               <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 dark:text-slate-400">
                 <span className="font-mono text-slate-600 dark:text-slate-300">{formData.appId || 'com.app'}</span>
                 <span>•</span>
-                <span>{formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE ? 'Flutter Package' : 'WebView'}</span>
+                <span>
+                  {formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE
+                    ? 'Flutter Package'
+                    : formData.integrationMethod === IntegrationMethod.DEEP_LINK
+                    ? 'Deep Link'
+                    : 'WebView'}
+                </span>
                 {formData.category && (
                   <>
                     <span>•</span>
@@ -540,6 +546,8 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
               onClick={() => {
                 if (formData.integrationMethod === IntegrationMethod.WEBVIEW) {
                   setPreviewUrl(formData.integrationConfigWebView?.productionUrl || '');
+                } else if (formData.integrationMethod === IntegrationMethod.DEEP_LINK) {
+                  setPreviewUrl(formData.integrationConfigDeepLink?.urlScheme || (formData as any).integrationConfig?.urlScheme || 'app://open');
                 } else {
                   const conf = formData.integrationConfigFlutter;
                   const target = conf?.sourceType === SourceType.GIT 
