@@ -43,6 +43,7 @@ export interface CreateMiniAppDto {
   shortDescription?: string;
   fullDescription?: string;
   logo?: string;
+  termsUrl?: string;
   
   ownerName?: string;
   ownerEmail: string;

@@ -56,32 +56,17 @@ export default function PermissionsForm({ formData, handleChange, allErrors = {}
                   {isActive && (
                     <div className="mt-3 pt-3 border-t border-brand-200 dark:border-brand-500/20 space-y-3">
                       <div>
-                        <Label className="text-xs mb-1">Purpose (Why is this needed?)</Label>
+                        <Label className="text-xs mb-1">Purpose (Why is this capability needed?) <span className="text-rose-500">*</span></Label>
                         <Input 
                           required
                           value={activePerm.purpose || ''}
                           name={`permission_${type}_purpose`}
                           onChange={(e) => handlePermissionFieldChange(type, 'purpose', e.target.value)}
-                          placeholder="e.g. To scan QR codes"
+                          placeholder="e.g. To scan QR codes for payments"
                           className={`h-9 text-sm ${purposeError ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}`}
                         />
                         {purposeError && (
                           <p className="mt-1.5 text-xs text-rose-600 font-medium">{purposeError}</p>
-                        )}
-                      </div>
-                      <div>
-                        <Label className="text-xs mb-1">Terms/Policy URL</Label>
-                        <Input 
-                          required
-                          type="url"
-                          value={activePerm.termsUrl || ''}
-                          name={`permission_${type}_termsUrl`}
-                          onChange={(e) => handlePermissionFieldChange(type, 'termsUrl', e.target.value)}
-                          placeholder="https://..."
-                          className={`h-9 text-sm ${termsError ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}`}
-                        />
-                        {termsError && (
-                          <p className="mt-1.5 text-xs text-rose-600 font-medium">{termsError}</p>
                         )}
                       </div>
                     </div>

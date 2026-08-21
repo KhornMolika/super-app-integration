@@ -41,6 +41,9 @@ export class MiniApp {
   status!: string;
 
   @Column({ nullable: true })
+  termsUrl?: string;
+
+  @Column({ nullable: true })
   ownerName!: string;
 
   @Column({ nullable: true })

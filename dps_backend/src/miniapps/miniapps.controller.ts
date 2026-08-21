@@ -65,9 +65,9 @@ export class MiniappsController {
     const query = status ? { status } : {};
     try {
       return await this.miniappService.findAll(query);
-    } catch (error) {
+    } catch (error: any) {
       console.error('FIND ALL ERROR:', error);
-      throw new HttpException({ message: error.message || 'Error', stack: error.stack }, 500);
+      throw new HttpException({ message: error?.message || 'Error', stack: error?.stack }, 500);
     }
   }
 

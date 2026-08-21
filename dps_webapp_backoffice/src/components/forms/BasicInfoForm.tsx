@@ -55,6 +55,22 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {} }
               <Label>Short Description</Label>
               <Input name="shortDescription" value={formData.shortDescription} onChange={handleChange} placeholder="One sentence summary" />
             </div>
+            <div className="col-span-1 md:col-span-2">
+              <Label>Terms & Privacy Policy URL <span className="text-rose-500">*</span></Label>
+              <Input 
+                required 
+                name="termsUrl" 
+                value={formData.termsUrl || ''} 
+                onChange={handleChange} 
+                type="url" 
+                placeholder="https://example.com/privacy-policy" 
+                className={allErrors.termsUrl ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
+              />
+              {allErrors.termsUrl && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors.termsUrl}</p>}
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                The public privacy policy or terms of service URL for this Mini Application.
+              </p>
+            </div>
           </div>
 
 

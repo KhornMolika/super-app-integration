@@ -38,8 +38,8 @@ security-gate-1-scan:
 
 publish-nexus-artifact:
   stage: publish-nexus
-  only:
-    - tags
+  rules:
+    - if: $CI_COMMIT_TAG
   script:
-    - echo "Publishing artifact to private Nexus registry: $NEXUS_HOSTED_URL"
+    - 'echo "Publishing artifact to private Nexus registry: ${NEXUS_HOSTED_URL}"'
     - dart pub publish --force

@@ -213,6 +213,16 @@ export class MiniappsService {
       }
     }
 
+    if (app.termsUrl && app.termsUrl.trim() !== '') {
+      checks.push(
+        urlValidator.validate(app.termsUrl, null as any).then(isValid => {
+          if (!isValid) errors.termsUrl = 'The Terms & Privacy Policy URL is unreachable. Please verify the link is publicly accessible.';
+        })
+      );
+    } else {
+      errors.termsUrl = 'Terms & Privacy Policy URL is required.';
+    }
+
     if (app.permissions && Array.isArray(app.permissions)) {
       for (let index = 0; index < app.permissions.length; index++) {
         const perm = app.permissions[index];
@@ -220,15 +230,6 @@ export class MiniappsService {
 
         if (!perm.purpose || perm.purpose.trim() === '') {
           errors[`permissions.${index}.purpose`] = `Please describe why your Mini App requires ${permKey} access.`;
-        }
-        if (!perm.termsUrl || perm.termsUrl.trim() === '') {
-          errors[`permissions.${index}.termsUrl`] = `A privacy policy or terms link is required for ${permKey} permission.`;
-        } else {
-          checks.push(
-            urlValidator.validate(perm.termsUrl, null as any).then(isValid => {
-              if (!isValid) errors[`permissions.${index}.termsUrl`] = `The URL provided for ${permKey} privacy policy (${perm.termsUrl}) is unreachable. Please verify the link is publicly accessible.`;
-            })
-          );
         }
 
         // Permission Catalog & Compatibility Check

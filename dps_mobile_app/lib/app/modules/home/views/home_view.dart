@@ -137,7 +137,9 @@ class HomeView extends GetView<HomeController> {
                               return;
                             }
 
-                            String url = app['url'] ?? 'http://localhost:3000';
+                            String url = app['url'] ?? 
+                                (app['integrationConfig'] is Map ? app['integrationConfig']['productionUrl'] : null) ?? 
+                                'http://localhost:3000';
                             if (!kIsWeb && Platform.isAndroid && url.contains('localhost')) {
                               url = url.replaceAll('localhost', '10.0.2.2');
                             }

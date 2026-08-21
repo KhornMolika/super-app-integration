@@ -33,6 +33,7 @@ export default function RegisterMiniAppPage() {
     shortDescription: '',
     fullDescription: '',
     logo: '',
+    termsUrl: '',
     teamName: '',
     ownerName: '',
     ownerEmail: '',
@@ -71,6 +72,13 @@ export default function RegisterMiniAppPage() {
         isValid = false;
       } else if (!formData.logo.startsWith('http')) {
         errors.logo = 'Logo must be a valid URL';
+        isValid = false;
+      }
+      if (!formData.termsUrl) {
+        errors.termsUrl = 'Terms & Privacy Policy URL is required';
+        isValid = false;
+      } else if (!formData.termsUrl.startsWith('http')) {
+        errors.termsUrl = 'Terms URL must be a valid URL (e.g. https://...)';
         isValid = false;
       }
     }
@@ -215,13 +223,9 @@ export default function RegisterMiniAppPage() {
 
     if (currentStep === 4) {
       if (formData.permissions && formData.permissions.length > 0) {
-        formData.permissions.forEach((p, idx) => {
-          if (!p.purpose) {
+        formData.permissions.forEach((p) => {
+          if (!p.purpose || p.purpose.trim() === '') {
             errors[`permission_${p.type}_purpose`] = 'Purpose is required';
-            isValid = false;
-          }
-          if (!p.termsUrl) {
-            errors[`permission_${p.type}_termsUrl`] = 'Terms/Policy URL is required';
             isValid = false;
           }
         });

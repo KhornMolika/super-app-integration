@@ -131,6 +131,10 @@ export class CreateMiniAppDto {
 
   @IsString()
   @IsOptional()
+  termsUrl?: string;
+
+  @IsString()
+  @IsOptional()
   ownerName?: string;
 
   @IsString()
