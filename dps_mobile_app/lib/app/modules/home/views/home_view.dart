@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../controllers/home_controller.dart';
 import '../../../routes/app_pages.dart';
 
@@ -92,7 +93,7 @@ class HomeView extends GetView<HomeController> {
                           subtitle: Text(app['description'] ?? 'No description available'),
                           tileColor: Colors.grey.shade100,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          onTap: () {
+                          onTap: () async {
                             final redirectUri = app['redirectUri'];
                             if (redirectUri != null && redirectUri.isNotEmpty) {
                               Get.toNamed(redirectUri);
@@ -107,17 +108,32 @@ class HomeView extends GetView<HomeController> {
                               Get.toNamed(Routes.TRUST_REGULATOR);
                               return;
                             }
-
                             if (integrationMethod == 'DEEP_LINK') {
-                              final config = app['integrationConfig'] ?? {};
-                              final scheme = config['urlScheme'] ?? 'app://open';
-                              Get.snackbar(
-                                'Deep Link Invoked',
-                                'Launching external application: $scheme',
-                                snackPosition: SnackPosition.BOTTOM,
-                                backgroundColor: Colors.indigo.shade900,
-                                colorText: Colors.white,
-                              );
+                              final config = app['integrationConfig'];
+                              if (config != null && config['urlScheme'] != null) {
+                                final urlScheme = config['urlScheme'];
+                                final appStoreUrl = config['appStoreUrl'];
+                                
+                                final uri = Uri.parse(urlScheme);
+                                try {
+                                  bool launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                  if (!launched) {
+                                    if (appStoreUrl != null && appStoreUrl.isNotEmpty) {
+                                      final storeUri = Uri.parse(appStoreUrl);
+                                      bool storeLaunched = await launchUrl(storeUri, mode: LaunchMode.externalApplication);
+                                      if (!storeLaunched) {
+                                        Get.snackbar('Error', 'Could not open deep link or app store URL.');
+                                      }
+                                    } else {
+                                      Get.snackbar('Error', 'App not installed and no store URL provided.');
+                                    }
+                                  }
+                                } catch (e) {
+                                  Get.snackbar('Error', 'Failed to launch URL: $e');
+                                }
+                              } else {
+                                Get.snackbar('Error', 'Invalid deep link configuration.');
+                              }
                               return;
                             }
 

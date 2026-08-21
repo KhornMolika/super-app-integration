@@ -1,0 +1,36 @@
+// swift-interface-format-version: 1.0
+// swift-compiler-version: Apple Swift version 6.2.3 effective-5.10 (swiftlang-6.2.3.3.21 clang-1700.6.3.2)
+// swift-module-flags: -target x86_64-apple-ios13.0-simulator -enable-objc-interop -enable-library-evolution -swift-version 5 -enforce-exclusivity=checked -O -enable-experimental-feature DebugDescriptionMacro -module-name SpaBookingSDK
+// swift-module-flags-ignorable:  -formal-cxx-interoperability-mode=off -interface-compiler-version 6.2.3
+import Foundation
+import Swift
+import SwiftUI
+import UIKit
+import _Concurrency
+import _StringProcessing
+import _SwiftConcurrencyShims
+public enum SpaBookingResult {
+  case completed(bookingId: Swift.String, serviceName: Swift.String, price: Swift.String, date: Swift.String, time: Swift.String)
+  case cancelled
+  case notInitialized
+}
+public struct SpaService : Swift.Identifiable {
+  public let id: Swift.String
+  public let name: Swift.String
+  public let price: Swift.String
+  public typealias ID = Swift.String
+}
+public struct SpaSlot : Swift.Identifiable {
+  public let id: Swift.String
+  public let date: Swift.String
+  public let time: Swift.String
+  public var label: Swift.String {
+    get
+  }
+  public typealias ID = Swift.String
+}
+@_hasMissingDesignatedInitializers final public class SpaBooking {
+  public static func initialize(token: Swift.String)
+  public static func presentBooking(from presenter: UIKit.UIViewController, completion: @escaping (SpaBookingSDK.SpaBookingResult) -> Swift.Void)
+  @objc deinit
+}
