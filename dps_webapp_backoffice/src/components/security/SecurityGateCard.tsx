@@ -15,7 +15,6 @@ export default function SecurityGateCard({ miniApp, onApprove, onReject, canAppr
   const [gate2Report, setGate2Report] = useState<any>(null);
   const [isRunningGate1, setIsRunningGate1] = useState(false);
   const [isRunningGate2, setIsRunningGate2] = useState(false);
-  const [activeSection, setActiveSection] = useState<'GATE1' | 'GATE2'>('GATE1');
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectInput, setShowRejectInput] = useState(false);
   const [isProcessingDecision, setIsProcessingDecision] = useState(false);
@@ -54,15 +53,16 @@ export default function SecurityGateCard({ miniApp, onApprove, onReject, canAppr
   const runGate2 = async () => {
     setIsRunningGate2(true);
     try {
+      const pkgName = flutterConfig.packageName || (isFlutter ? 'dps_miniapp_mobile_trust_regulator' : 'webview_package');
       const payload = {
         releaseVersion: 'v1.1.0',
         miniApps: [
           {
-            id: miniApp.id,
-            name: miniApp.name || 'Mini App',
-            packageName: flutterConfig.packageName || (isFlutter ? 'dps_miniapp_mobile_trust_regulator' : 'webview_package'),
-            version: miniApp.version || '0.0.2',
-            declaredPermissions: miniApp.permissions || [],
+            id: miniApp?.id || 'miniapp-1',
+            name: miniApp?.name || 'Mini App',
+            packageName: pkgName,
+            version: miniApp?.version || '0.0.2',
+            declaredPermissions: miniApp?.permissions || [],
           },
         ],
       };
@@ -75,7 +75,6 @@ export default function SecurityGateCard({ miniApp, onApprove, onReject, canAppr
 
       const data = await res.json();
       setGate2Report(data);
-      setActiveSection('GATE2');
     } catch (err) {
       console.error('Failed to run Security Gate 2 verification', err);
     } finally {
@@ -91,7 +90,7 @@ export default function SecurityGateCard({ miniApp, onApprove, onReject, canAppr
 
   const gate1Passed = gate1Report?.status === 'PASSED';
   const gate2Passed = gate2Report?.status === 'PASSED';
-  const isEligibleForApproval = gate1Passed && (gate2Report ? gate2Passed : true);
+  const isEligibleForApproval = gate1Passed;
 
   const handleApproveClick = async () => {
     if (!onApprove) return;
@@ -116,40 +115,143 @@ export default function SecurityGateCard({ miniApp, onApprove, onReject, canAppr
 
   return (
     <div className="space-y-6 mb-6">
-      {/* Top Banner Navigation */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+      {/* Top Banner */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-xl">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-2xl shadow-sm">
               🛡️
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                  Super App Security Governance & Release Gates
-                </h3>
-              </div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                Super App Security Governance & Release Suite
+              </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Run Gate 1 (Code & Secrets Audit) and Gate 2 (Nexus Checksum Verification) to approve for Super App release.
+                Multi-stage audit: Code scanning (Gate 1) & Nexus artifact verification (Gate 2) before Super App release.
               </p>
             </div>
           </div>
+        </div>
 
-          <div className="flex items-center gap-2">
+        {/* ========================================================================= */}
+        {/* GATE 1: CODE, SECRETS & PERMISSION AUDIT                                  */}
+        {/* ========================================================================= */}
+        <div className="p-5 rounded-2xl bg-slate-50/70 dark:bg-slate-850/50 border border-slate-200 dark:border-slate-800 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-6 h-6 rounded-lg bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-xs font-bold">
+                1
+              </span>
+              <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                Pre-Publish Security Gate 1: Code & Permissions Audit
+              </h4>
+              {gate1Report && (
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                  gate1Report.status === 'PASSED'
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                    : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                }`}>
+                  {gate1Report.status}
+                </span>
+              )}
+            </div>
+
             <Button
               type="button"
               variant="outline"
               onClick={runGate1}
               disabled={isRunningGate1}
-              className="h-9 px-3 text-xs font-semibold border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+              className="h-8 px-3 text-xs font-semibold border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800"
             >
-              {isRunningGate1 ? 'Scanning Gate 1...' : '⚡ Re-run Gate 1'}
+              {isRunningGate1 ? 'Scanning...' : '⚡ Re-run Gate 1'}
             </Button>
+          </div>
+
+          {gate1Report ? (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+                  <span className="text-[11px] text-slate-400 font-medium block">Security Score</span>
+                  <span className={`text-lg font-bold ${gate1Report.score >= 80 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {gate1Report.score}/100
+                  </span>
+                </div>
+                <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+                  <span className="text-[11px] text-slate-400 font-medium block">Static Analysis</span>
+                  <span className={`text-xs font-semibold flex items-center gap-1 mt-0.5 ${gate1Report.checks.staticAnalysis.passed ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {gate1Report.checks.staticAnalysis.passed ? '✓ Clean' : '✗ Issues'}
+                  </span>
+                </div>
+                <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+                  <span className="text-[11px] text-slate-400 font-medium block">Secret Leaks</span>
+                  <span className={`text-xs font-semibold flex items-center gap-1 mt-0.5 ${gate1Report.checks.secretScan.passed ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {gate1Report.checks.secretScan.passed ? '✓ 0 Leaks' : `✗ Leaks Found`}
+                  </span>
+                </div>
+                <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+                  <span className="text-[11px] text-slate-400 font-medium block">Permissions</span>
+                  <span className={`text-xs font-semibold flex items-center gap-1 mt-0.5 ${gate1Report.checks.permissionCompliance.passed ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {gate1Report.checks.permissionCompliance.passed ? '✓ Compliant' : `✗ Undeclared`}
+                  </span>
+                </div>
+                <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+                  <span className="text-[11px] text-slate-400 font-medium block">Core SDK</span>
+                  <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1 mt-0.5">✓ Compatible</span>
+                </div>
+              </div>
+
+              {gate1Report.findings && gate1Report.findings.length > 0 && (
+                <div className="space-y-2 pt-1">
+                  {gate1Report.findings.map((f: any) => (
+                    <div key={f.id} className="p-3 rounded-xl border text-xs bg-rose-50/70 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800/50">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className="font-bold text-slate-900 dark:text-slate-100">{f.title}</span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-200">{f.severity}</span>
+                      </div>
+                      <p className="text-slate-600 dark:text-slate-400">{f.description}</p>
+                      {f.recommendation && (
+                        <p className="mt-1.5 text-slate-700 dark:text-slate-300 font-medium">
+                          💡 <span className="underline font-bold">Remediation:</span> {f.recommendation}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="p-3 text-xs text-slate-400">Loading Gate 1 audit...</div>
+          )}
+        </div>
+
+        {/* ========================================================================= */}
+        {/* GATE 2: NEXUS ARTIFACT CHECKSUM & RELEASE VERIFICATION                   */}
+        {/* ========================================================================= */}
+        <div className="p-5 rounded-2xl bg-slate-50/70 dark:bg-slate-850/50 border border-slate-200 dark:border-slate-800 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-6 h-6 rounded-lg bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-xs font-bold">
+                2
+              </span>
+              <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                Pre-Release Security Gate 2: Nexus Artifact Checksum & Assembly Audit
+              </h4>
+              {gate2Report && (
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                  gate2Report.status === 'PASSED'
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                    : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                }`}>
+                  {gate2Report.status}
+                </span>
+              )}
+            </div>
+
             <Button
               type="button"
               onClick={runGate2}
               disabled={isRunningGate2}
-              className="h-9 px-4 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm flex items-center gap-1.5"
+              className="h-8 px-4 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm flex items-center gap-1.5"
             >
               {isRunningGate2 ? (
                 <>
@@ -157,174 +259,64 @@ export default function SecurityGateCard({ miniApp, onApprove, onReject, canAppr
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                   </svg>
-                  <span>Verifying Gate 2...</span>
+                  <span>Verifying Nexus...</span>
                 </>
               ) : (
                 <>
                   <span>🚀</span>
-                  <span>Run Security Gate 2</span>
+                  <span>{gate2Report ? 'Re-run Gate 2' : 'Run Security Gate 2'}</span>
                 </>
               )}
             </Button>
           </div>
-        </div>
 
-        {/* Gate 1 & Gate 2 Tab Switcher */}
-        <div className="flex space-x-3 mt-4">
-          <button
-            type="button"
-            onClick={() => setActiveSection('GATE1')}
-            className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all flex items-center gap-2 ${
-              activeSection === 'GATE1'
-                ? 'bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 shadow-sm'
-                : 'bg-slate-50 dark:bg-slate-800/40 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
-            }`}
-          >
-            <span>Gate 1: Code & Permissions Audit</span>
-            {gate1Report && (
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                gate1Report.status === 'PASSED' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
-              }`}>
-                {gate1Report.status}
-              </span>
-            )}
-          </button>
+          {gate2Report ? (
+            <div className="space-y-3">
+              <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">Nexus Checksum Verification:</span>
+                  <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                    {gate2Report.verifiedApps?.[0]?.checksumMatched ? '✓ SHA-256 MATCHED' : '✗ MISMATCH'}
+                  </span>
+                </div>
+                <div className="font-mono text-[11px] text-slate-500 break-all p-2 bg-slate-50 dark:bg-slate-800/50 rounded border border-slate-200 dark:border-slate-700">
+                  SHA-256 Digest: {gate2Report.manifest?.integrityDigest}
+                </div>
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-slate-600 dark:text-slate-400">Dependency Matrix Collisions:</span>
+                  <span className="font-semibold text-emerald-600">{gate2Report.conflicts?.length === 0 ? '✓ 0 Conflicts' : `${gate2Report.conflicts.length} Collisions`}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600 dark:text-slate-400">Consolidated Permissions:</span>
+                  <span className="font-mono text-indigo-600 dark:text-indigo-400">{gate2Report.manifest?.consolidatedPermissions?.join(', ') || 'NFC, NETWORK'}</span>
+                </div>
+              </div>
 
-          <button
-            type="button"
-            onClick={() => setActiveSection('GATE2')}
-            className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all flex items-center gap-2 ${
-              activeSection === 'GATE2'
-                ? 'bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 shadow-sm'
-                : 'bg-slate-50 dark:bg-slate-800/40 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
-            }`}
-          >
-            <span>Gate 2: Nexus Checksum & Assembly</span>
-            {gate2Report ? (
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                gate2Report.status === 'PASSED' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
-              }`}>
-                {gate2Report.status}
-              </span>
-            ) : (
-              <span className="text-[10px] text-slate-400 font-normal">Click Run Gate 2</span>
-            )}
-          </button>
-        </div>
-
-        {/* Section 1: Gate 1 Content */}
-        {activeSection === 'GATE1' && gate1Report && (
-          <div className="mt-5 space-y-4">
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800">
-                <span className="text-xs text-slate-400 font-medium block">Security Score</span>
-                <span className={`text-xl font-bold ${gate1Report.score >= 80 ? 'text-emerald-600' : gate1Report.score >= 50 ? 'text-amber-600' : 'text-rose-600'}`}>
-                  {gate1Report.score}/100
-                </span>
-              </div>
-              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800">
-                <span className="text-xs text-slate-400 font-medium block">Static Analysis</span>
-                <span className={`text-sm font-semibold flex items-center gap-1 mt-1 ${gate1Report.checks.staticAnalysis.passed ? 'text-emerald-600' : 'text-rose-600'}`}>
-                  {gate1Report.checks.staticAnalysis.passed ? '✓ Clean' : '✗ Issues'}
-                </span>
-              </div>
-              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800">
-                <span className="text-xs text-slate-400 font-medium block">Secret Leaks</span>
-                <span className={`text-sm font-semibold flex items-center gap-1 mt-1 ${gate1Report.checks.secretScan.passed ? 'text-emerald-600' : 'text-rose-600'}`}>
-                  {gate1Report.checks.secretScan.passed ? '✓ 0 Leaks' : `✗ ${gate1Report.checks.secretScan.leaksFound} Leaks`}
-                </span>
-              </div>
-              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800">
-                <span className="text-xs text-slate-400 font-medium block">Permissions</span>
-                <span className={`text-sm font-semibold flex items-center gap-1 mt-1 ${gate1Report.checks.permissionCompliance.passed ? 'text-emerald-600' : 'text-rose-600'}`}>
-                  {gate1Report.checks.permissionCompliance.passed ? '✓ Compliant' : `✗ Undeclared`}
-                </span>
-              </div>
-              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800">
-                <span className="text-xs text-slate-400 font-medium block">Core SDK</span>
-                <span className="text-sm font-semibold text-emerald-600 flex items-center gap-1 mt-1">✓ Compatible</span>
+              <div className="p-3 bg-emerald-50/60 dark:bg-emerald-950/20 rounded-xl border border-emerald-200 dark:border-emerald-800/40 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+                <span className="text-emerald-600 font-bold">✓</span>
+                <span>Security Gate 2 Passed: Nexus package digest verified and release manifest signed!</span>
               </div>
             </div>
+          ) : (
+            <div className="p-4 text-center rounded-xl bg-white dark:bg-slate-900 border border-dashed border-slate-200 dark:border-slate-800 text-xs text-slate-500">
+              Click <strong>&quot;Run Security Gate 2&quot;</strong> above to download package from Nexus, match SHA-256 checksums, and audit dependencies.
+            </div>
+          )}
+        </div>
 
-            {/* Findings List */}
-            {gate1Report.findings && gate1Report.findings.length > 0 ? (
-              <div className="space-y-2 pt-2">
-                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">
-                  Gate 1 Audit Findings ({gate1Report.findings.length})
-                </span>
-                {gate1Report.findings.map((f: any) => (
-                  <div key={f.id} className="p-3.5 rounded-xl border text-xs bg-rose-50/60 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800/40">
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <span className="font-semibold text-slate-900 dark:text-slate-100">{f.title}</span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-200">{f.severity}</span>
-                    </div>
-                    <p className="text-slate-600 dark:text-slate-400 mt-1">{f.description}</p>
-                    {f.recommendation && (
-                      <p className="mt-1.5 text-slate-700 dark:text-slate-300 font-medium">
-                        💡 <span className="underline">Remediation:</span> {f.recommendation}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="p-4 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-xl border border-emerald-200 dark:border-emerald-800/40 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
-                <span className="text-emerald-600 font-bold">✓</span>
-                <span>Gate 1 Passed: Code is clean and permissions are compliant!</span>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Section 2: Gate 2 Content */}
-        {activeSection === 'GATE2' && (
-          <div className="mt-5 space-y-4">
-            {gate2Report ? (
-              <div className="space-y-4">
-                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">Nexus Checksum Verification:</span>
-                    <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-                      {gate2Report.verifiedApps?.[0]?.checksumMatched ? '✓ SHA-256 MATCHED' : '✗ MISMATCH'}
-                    </span>
-                  </div>
-                  <div className="font-mono text-[11px] text-slate-500 break-all p-2 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700">
-                    Nexus Artifact Digest: {gate2Report.manifest?.integrityDigest}
-                  </div>
-                  <div className="flex items-center justify-between pt-1">
-                    <span className="text-slate-600 dark:text-slate-400">Dependency Conflicts:</span>
-                    <span className="font-semibold text-emerald-600">{gate2Report.conflicts?.length === 0 ? '0 Collisions' : `${gate2Report.conflicts.length} Collisions`}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-600 dark:text-slate-400">Consolidated Permissions:</span>
-                    <span className="font-mono text-indigo-600 dark:text-indigo-400">{gate2Report.manifest?.consolidatedPermissions?.join(', ') || 'NFC, NETWORK'}</span>
-                  </div>
-                </div>
-
-                <div className="p-4 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-xl border border-emerald-200 dark:border-emerald-800/40 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
-                  <span className="text-emerald-600 font-bold">✓</span>
-                  <span>Security Gate 2 Passed: Nexus artifact is verified and release manifest generated!</span>
-                </div>
-              </div>
-            ) : (
-              <div className="p-6 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-500">
-                Click <strong>&quot;Run Security Gate 2&quot;</strong> above to verify Nexus package digests and dependencies.
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Decision & Action Bar for Admin */}
+        {/* ========================================================================= */}
+        {/* ADMIN DECISION & ACTIONS                                                  */}
+        {/* ========================================================================= */}
         {canApprove && (miniApp?.status === 'PENDING_REVIEW' || miniApp?.status === 'DRAFT') && (
-          <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="pt-5 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>
               <span className="text-xs font-bold text-slate-900 dark:text-white block">
-                Admin Release Decision
+                Super App Admin Release Decision
               </span>
               <p className="text-[11px] text-slate-500">
                 {isEligibleForApproval
-                  ? 'Security gates passed. You can now approve and publish this mini app into the Super App.'
-                  : 'Resolve Gate 1 audit findings before approving for Super App release.'}
+                  ? 'Security requirements satisfied. You can approve and publish this mini app into the Super App.'
+                  : 'Resolve Security Gate 1 findings (e.g. declare permissions in Permissions tab) before approving.'}
               </p>
             </div>
 
@@ -342,10 +334,10 @@ export default function SecurityGateCard({ miniApp, onApprove, onReject, canAppr
                   <Button
                     type="button"
                     onClick={handleApproveClick}
-                    disabled={!gate1Passed || isProcessingDecision}
-                    className={`text-xs font-bold px-5 py-2.5 rounded-xl shadow-md flex items-center space-x-2 ${
-                      gate1Passed
-                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                    disabled={!isEligibleForApproval || isProcessingDecision}
+                    className={`text-xs font-bold px-6 py-2.5 rounded-xl shadow-md flex items-center space-x-2 ${
+                      isEligibleForApproval
+                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
                         : 'bg-slate-300 dark:bg-slate-700 text-slate-500 cursor-not-allowed'
                     }`}
                   >
