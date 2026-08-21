@@ -11,11 +11,16 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { PermissionsModule } from './permissions/permissions.module';
 import { PermissionProposalsModule } from './permission-proposals/permission-proposals.module';
 import { SuperAppModule } from './super-app/super-app.module';
+import { IntegrationsModule } from './integrations/integrations.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: [
+        `.env.${process.env.NODE_ENV || 'development'}`,
+        '.env',
+      ],
     }),
 
     TypeOrmModule.forRootAsync({
@@ -41,6 +46,7 @@ import { SuperAppModule } from './super-app/super-app.module';
     MiniappsModule,
     OrganizationsModule,
     AuditModule,
+    IntegrationsModule,
   ],
 })
 

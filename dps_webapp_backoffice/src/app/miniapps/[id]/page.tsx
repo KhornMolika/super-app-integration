@@ -17,6 +17,7 @@ import IntegrationForm from '@/components/forms/IntegrationForm';
 import PermissionsForm from '@/components/forms/PermissionsForm';
 import ValidationIssuesButton from '@/components/ValidationIssuesButton';
 import ActivityTab from '@/components/ui/ActivityTab';
+import SecurityGateCard from '@/components/security/SecurityGateCard';
 import { CreateMiniAppDto, IntegrationMethod, SourceType } from '@/types/miniapp.types';
 
 
@@ -53,7 +54,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
   
   const confirm = useConfirm();
   const { can } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'team' | 'permissions' | 'integration' | 'activity' | 'validation'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'team' | 'permissions' | 'integration' | 'security' | 'activity' | 'validation'>('overview');
   const [customPermission, setCustomPermission] = useState('');
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
@@ -134,7 +135,8 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
 
   const allErrors = { ...localErrors, ...(formData.validationErrors || {}) };
   const hasErrors = Object.keys(allErrors).length > 0;
-  const isEditable = can('miniapp:update') && formData.status !== 'PENDING_REVIEW' && formData.status !== 'APPROVED';
+  const [isEditingUnlocked, setIsEditingUnlocked] = useState(false);
+  const isEditable = can('miniapp:update') && (formData.status === 'DRAFT' || formData.status === 'REJECTED' || isEditingUnlocked);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -461,28 +463,111 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
   return (
     <>
       <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out pb-12">
-        <div className="mb-8 flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <BackButton href="/miniapps" />
-          <div>
-            <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Manage Mini App</h2>
-            <p className="text-slate-500 mt-1 text-sm">Update configuration and security settings</p>
+        {/* Top Header Card */}
+        <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+          <div className="flex items-center space-x-4">
+            <BackButton href="/miniapps" />
+            <div>
+              <div className="flex items-center gap-3">
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+                  {formData.name || 'Manage Mini App'}
+                </h2>
+                {/* Status Pill Badge */}
+                <span
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${
+                    formData.status === 'APPROVED' || formData.status === 'ACTIVE'
+                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+                      : formData.status === 'PENDING_REVIEW'
+                      ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
+                      : formData.status === 'REJECTED' || formData.status === 'SUSPENDED'
+                      ? 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
+                      : 'bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
+                  }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      formData.status === 'APPROVED' || formData.status === 'ACTIVE'
+                        ? 'bg-emerald-500'
+                        : formData.status === 'PENDING_REVIEW'
+                        ? 'bg-amber-500 animate-pulse'
+                        : formData.status === 'REJECTED' || formData.status === 'SUSPENDED'
+                        ? 'bg-rose-500'
+                        : 'bg-slate-400'
+                    }`}
+                  />
+                  <span>{formData.status || 'DRAFT'}</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 dark:text-slate-400">
+                <span className="font-mono text-slate-600 dark:text-slate-300">{formData.appId || 'com.app'}</span>
+                <span>•</span>
+                <span>{formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE ? 'Flutter Package' : 'WebView'}</span>
+                {formData.category && (
+                  <>
+                    <span>•</span>
+                    <span>{formData.category}</span>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center space-x-3">
-          {formData.integrationMethod === IntegrationMethod.WEBVIEW && formData.integrationConfigWebView?.productionUrl && (
+
+          {/* Header Actions */}
+          <div className="flex items-center space-x-2.5">
+            {/* Preview Button */}
             <Button 
               type="button"
+              variant="outline"
               onClick={() => {
-                setPreviewUrl(formData.integrationConfigWebView!.productionUrl);
+                if (formData.integrationMethod === IntegrationMethod.WEBVIEW) {
+                  setPreviewUrl(formData.integrationConfigWebView?.productionUrl || '');
+                } else {
+                  const conf = formData.integrationConfigFlutter;
+                  const target = conf?.sourceType === SourceType.GIT 
+                    ? conf.gitUrl || ''
+                    : `http://localhost:8081/repository/pub-group/api/packages/${conf?.packageName || 'dps_core_package'}`;
+                  setPreviewUrl(target);
+                }
                 setShowPreview(true);
               }}
-              className="bg-brand-50 text-brand-700 hover:bg-brand-100 dark:bg-brand-900/30 dark:text-brand-300 dark:hover:bg-brand-900/50 !shadow-none h-10 px-4 text-sm font-medium"
+              className="h-9 px-3.5 text-xs font-medium border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
             >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+              <svg className="w-3.5 h-3.5 mr-1.5 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
               <span>Preview</span>
             </Button>
-          )}
+
+            {/* Edit Configuration Toggle */}
+            {can('miniapp:update') && (
+              <Button
+                type="button"
+                variant={isEditingUnlocked ? 'primary' : 'outline'}
+                onClick={() => setIsEditingUnlocked(!isEditingUnlocked)}
+                className={`h-9 px-3.5 text-xs font-medium transition-all ${
+                  isEditingUnlocked
+                    ? 'bg-brand-600 text-white hover:bg-brand-700'
+                    : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
+                }`}
+              >
+                {isEditingUnlocked ? (
+                  <>
+                    <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>Finish Editing</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-3.5 h-3.5 mr-1.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    <span>Edit Configuration</span>
+                  </>
+                )}
+              </Button>
+            )}
 
           {/* More Actions Dropdown (...) */}
           {(can('miniapp:approve') || can('miniapp:suspend') || can('miniapp:delete')) && (
@@ -569,15 +654,15 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
         </div>
       </div>
 
-      <div className="flex space-x-6 border-b border-slate-200 dark:border-slate-700 mb-6 px-2">
-        {['overview', 'team', 'permissions', 'integration', 'validation', 'activity'].map(tab => (
+      <div className="flex space-x-6 border-b border-slate-200 dark:border-slate-700 mb-6 px-2 overflow-x-auto">
+        {['overview', 'team', 'permissions', 'integration', 'security', 'validation', 'activity'].map(tab => (
           <button
             key={tab}
             type="button"
             onClick={() => setActiveTab(tab as any)}
-            className={`pb-3 font-medium text-sm transition-colors relative ${activeTab === tab ? 'text-brand-600 dark:text-brand-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
+            className={`pb-3 font-medium text-sm transition-colors relative whitespace-nowrap ${activeTab === tab ? 'text-brand-600 dark:text-brand-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
           >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {tab === 'security' ? 'Security Gate 1' : tab.charAt(0).toUpperCase() + tab.slice(1)}
             {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-600 dark:bg-brand-400 rounded-t-full" />}
           </button>
         ))}
@@ -614,104 +699,74 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
               </Select>
             </div>
             
-            <div>
-              <Label>Logo URL</Label>
-              <Input 
-                required 
-                name="logo" 
-                value={formData.logo || ''} 
-                onChange={handleChange} 
-                type="url" 
-                placeholder="https://..." 
-                className={allErrors.logo ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
-              />
-              {allErrors.logo && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors.logo}</p>}
-            </div>
             <div className="col-span-1 md:col-span-2">
               <Label>Short Description</Label>
-              <Input name="shortDescription" value={formData.shortDescription || ''} onChange={handleChange} placeholder="One sentence summary" />
+              <Input name="shortDescription" value={formData.shortDescription || ''} onChange={handleChange} placeholder="Brief summary of the app..." />
+            </div>
+            
+            <div className="col-span-1 md:col-span-2">
+              <Label>Full Description</Label>
+              <textarea 
+                name="fullDescription" 
+                rows={3} 
+                value={formData.fullDescription || ''} 
+                onChange={handleChange} 
+                placeholder="Comprehensive details regarding the purpose and functionality..." 
+                className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              />
             </div>
           </div>
         </Card>
         )}
 
-        {activeTab === 'team' && (
-          <Card>
-            <CardHeader title="Team Information" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>} />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <Label>Team Name</Label>
-                <Input name="teamName" value={formData.teamName || ''} onChange={handleChange} placeholder="e.g. Core Banking Team" />
-              </div>
-              <div>
-                <Label>Owner Name</Label>
-                <Input name="ownerName" value={formData.ownerName || ''} onChange={handleChange} placeholder="John Doe" />
-              </div>
-              <div>
-                <Label>Owner Email</Label>
-                <Input 
-                  required 
-                  name="ownerEmail" 
-                  value={formData.ownerEmail || ''} 
-                  onChange={handleChange} 
-                  type="email" 
-                  placeholder="john.doe@fsa.gov" 
-                  className={allErrors.ownerEmail ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
-                />
-                {allErrors.ownerEmail && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors.ownerEmail}</p>}
-              </div>
-              <div>
-                <Label>Support Email</Label>
-                <Input 
-                  name="supportEmail" 
-                  value={formData.supportEmail || ''} 
-                  onChange={handleChange} 
-                  type="email" 
-                  placeholder="support@fsa.gov"
-                  className={allErrors.supportEmail ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
-                />
-                {allErrors.supportEmail && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors.supportEmail}</p>}
-              </div>
-            </div>
-          </Card>
-        )}
+        {activeTab === 'team' && <Card>
+          <CardHeader title="Developer & Contact Info" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>} />
+          <TeamForm formData={formData} handleChange={handleChange} allErrors={allErrors} />
+        </Card>}
 
         {activeTab === 'integration' && <Card>
           <CardHeader title="Technical Integration" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>} />
           <IntegrationForm formData={formData} handleChange={handleChange} allErrors={allErrors} handleWebViewChange={handleWebViewChange} handleFlutterChange={handleFlutterChange} />
         </Card>}
 
+        {activeTab === 'security' && (
+          <SecurityGateCard miniApp={formData} />
+        )}
+
         {activeTab === 'validation' && (
-          <Card>
-            <CardHeader title="Validation Dashboard" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
-            <p className="text-sm text-slate-500 mb-5">Granular pass/fail status of all automated checks.</p>
-            
-            <div className="space-y-4">
-              {(formData as any).issues?.length > 0 ? (
-                (formData as any).issues.map((issue: any, index: number) => (
-                  <div key={index} className="flex items-start p-4 rounded-xl border border-rose-200 bg-rose-50/50 dark:bg-rose-500/10 dark:border-rose-500/20">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-rose-100 dark:bg-rose-500/20 flex items-center justify-center text-rose-600 dark:text-rose-400 mr-3">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+          <div className="space-y-6">
+            <SecurityGateCard miniApp={formData} />
+            <Card>
+              <CardHeader title="Validation Issues Log" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
+              <p className="text-sm text-slate-500 mb-5">Granular pass/fail status of all platform validation rules.</p>
+              
+              <div className="space-y-4">
+                {(formData as any).issues?.length > 0 ? (
+                  (formData as any).issues.map((issue: any, index: number) => (
+                    <div key={index} className="flex items-start p-4 rounded-xl border border-rose-200 bg-rose-50/50 dark:bg-rose-500/10 dark:border-rose-500/20">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-rose-100 dark:bg-rose-500/20 flex items-center justify-center text-rose-600 dark:text-rose-400 mr-3">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">{issue.classification || 'MINI_APP_ISSUE'} ({issue.severity || 'HIGH'})</h4>
+                        <p className="text-sm text-rose-700 dark:text-rose-300 mt-1">{issue.description}</p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex items-center p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 dark:bg-emerald-500/10 dark:border-emerald-500/20">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mr-3">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">{issue.classification || 'MINI_APP_ISSUE'} ({issue.severity || 'HIGH'})</h4>
-                      <p className="text-sm text-rose-700 dark:text-rose-300 mt-1">{issue.description}</p>
+                      <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">All Platform Checks Passed</h4>
+                      <p className="text-sm text-emerald-700 dark:text-emerald-300 mt-1">This Mini App has passed all automated security and platform validation checks.</p>
                     </div>
                   </div>
-                ))
-              ) : (
-                <div className="flex items-center p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 dark:bg-emerald-500/10 dark:border-emerald-500/20">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mr-3">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">All Checks Passed</h4>
-                    <p className="text-sm text-emerald-700 dark:text-emerald-300 mt-1">This Mini App has passed all automated security and platform validation checks.</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </Card>
+                )}
+              </div>
+            </Card>
+          </div>
         )}
         
         {activeTab === 'permissions' && <Card>
@@ -764,6 +819,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
         onClose={() => setShowPreview(false)}
         url={previewUrl}
         title={formData.name || ''}
+        isFlutter={formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE}
       />
       </div>
 

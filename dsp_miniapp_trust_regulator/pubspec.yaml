@@ -1,8 +1,8 @@
 name: dps_miniapp_mobile_trust_regulator
 description: "A new Flutter package project."
-version: 0.0.1
-publish_to: 'none'
-homepage:
+version: 0.0.3
+homepage: http://localhost:8081/repository/pub-group
+publish_to: "http://localhost:8081/repository/pub-hosted"
 
 environment:
   sdk: ^3.12.2
@@ -12,7 +12,8 @@ dependencies:
   flutter:
     sdk: flutter
   dps_core_package:
-    path: ../dps_core_package
+    hosted: http://localhost:8081/repository/pub-group
+    version: ^1.0.0
   nfc_manager: ^3.3.0
 
 dev_dependencies:

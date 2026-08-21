@@ -1,9 +1,21 @@
 /doc
 /fix-errors
-*.js
-!next.config.ts
-dps_backend/*.js
-!dps_backend/src/**
 .env.development
 .env.production
 .env.local
+
+# Node & Next.js
+node_modules/
+.next/
+dist/
+*.log
+
+# Flutter & Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+**/build/
+*.lock.db
+*.lock

@@ -44,6 +44,11 @@ export class FlutterPackageConfigDto {
   @IsOptional()
   gitAccessToken?: string;
 
+  @ValidateIf(o => o.sourceType === SourceType.GIT)
+  @IsString()
+  @IsOptional()
+  gitPath?: string;
+
   // If ARTIFACT
   @ValidateIf(o => o.sourceType === SourceType.ARTIFACT)
   @IsString()

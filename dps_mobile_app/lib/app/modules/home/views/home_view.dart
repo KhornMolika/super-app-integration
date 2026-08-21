@@ -66,7 +66,16 @@ class HomeView extends GetView<HomeController> {
                 }
 
                 if (controller.miniApps.isEmpty) {
-                  return const Center(child: Text('No mini apps available yet.'));
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24.0),
+                      child: Text(
+                        'No approved mini apps available yet.\nMini apps must pass Security Gates and be approved by the Super App Admin.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.grey, height: 1.5),
+                      ),
+                    ),
+                  );
                 }
 
                 return RefreshIndicator(
@@ -87,6 +96,15 @@ class HomeView extends GetView<HomeController> {
                             final redirectUri = app['redirectUri'];
                             if (redirectUri != null && redirectUri.isNotEmpty) {
                               Get.toNamed(redirectUri);
+                              return;
+                            }
+
+                            final integrationMethod = app['integrationMethod'];
+                            final appId = app['appId'];
+                            final name = (app['name'] ?? '').toString();
+
+                            if (integrationMethod == 'FLUTTER_PACKAGE' || appId == 'com.fsa.trust_regulator' || name.contains('Trust Regulator')) {
+                              Get.toNamed(Routes.TRUST_REGULATOR);
                               return;
                             }
 

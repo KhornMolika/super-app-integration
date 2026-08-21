@@ -122,10 +122,84 @@ export default function RegisterMiniAppPage() {
       if (formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE) {
         const conf = formData.integrationConfigFlutter;
         if (conf?.sourceType === SourceType.ARTIFACT) {
-          if (!conf.packageName) { errors['integrationConfigFlutter.packageName'] = 'Package Name is required'; isValid = false; }
-          if (!conf.versionConstraint) { errors['integrationConfigFlutter.versionConstraint'] = 'Version Constraint is required'; isValid = false; }
+          if (!conf.packageName) {
+            errors['integrationConfigFlutter.packageName'] = 'Package Name is required';
+            isValid = false;
+          } else if (isValid) {
+            try {
+              const res = await fetch(`/api/integrations/nexus/packages/${encodeURIComponent(conf.packageName)}`);
+              const data = await res.json();
+              if (data && data.exists === false) {
+                errors['integrationConfigFlutter.packageName'] = `Package "${conf.packageName}" does not exist on Nexus. Please save as Draft or publish the package to Nexus before submitting for review.`;
+                isValid = false;
+              }
+            } catch (e) {
+              // non-blocking if offline
+            }
+          }
+          if (!conf.versionConstraint) {
+            errors['integrationConfigFlutter.versionConstraint'] = 'Version Constraint is required';
+            isValid = false;
+          }
         } else {
-          if (!conf?.gitUrl) { errors['integrationConfigFlutter.gitUrl'] = 'Git URL is required'; isValid = false; }
+          if (!conf?.gitUrl) {
+            errors['integrationConfigFlutter.gitUrl'] = 'Git URL is required';
+            isValid = false;
+          } else if (isValid) {
+            try {
+              const res = await fetch('/api/integrations/git/validate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  url: conf.gitUrl,
+                  ref: conf.gitBranch,
+                  token: conf.gitAccessToken,
+                  path: conf.gitPath,
+                }),
+              });
+              const data = await res.json();
+              if (data && data.validation) {
+                if (!data.validation.isValid) {
+                  errors['integrationConfigFlutter.gitUrl'] =
+                    data.validation.error || 'Git repository or pubspec.yaml could not be verified.';
+                  isValid = false;
+                } else {
+                  // Auto-detect required native permissions from dependencies
+                  const deps = data.validation.dependencies || {};
+                  const detectedPerms = [...(formData.permissions || [])];
+                  const pluginMap: Record<string, string> = {
+                    nfc_manager: 'NFC',
+                    camera: 'CAMERA',
+                    geolocator: 'LOCATION',
+                    location: 'LOCATION',
+                    local_auth: 'BIOMETRICS',
+                    image_picker: 'PHOTO_LIBRARY',
+                    file_picker: 'STORAGE',
+                    contacts_service: 'CONTACTS',
+                  };
+
+                  let added = false;
+                  Object.keys(deps).forEach((dep) => {
+                    const permType = pluginMap[dep];
+                    if (permType && !detectedPerms.some((p) => p.type === permType)) {
+                      detectedPerms.push({
+                        type: permType,
+                        purpose: `Required for ${dep} platform capability`,
+                        termsUrl: 'https://privacy.example.com',
+                      });
+                      added = true;
+                    }
+                  });
+
+                  if (added) {
+                    setFormData((prev: any) => ({ ...prev, permissions: detectedPerms }));
+                  }
+                }
+              }
+            } catch (e) {
+              // non-blocking if offline
+            }
+          }
         }
       }
     }
@@ -544,6 +618,7 @@ export default function RegisterMiniAppPage() {
         onClose={() => setShowPreview(false)}
         url={previewUrl}
         title={formData.name}
+        isFlutter={formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE}
       />
       </div>
 

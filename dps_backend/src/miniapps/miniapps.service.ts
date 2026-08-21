@@ -12,6 +12,9 @@ import { SuperAppService } from '../super-app/super-app.service';
 import { MiniAppIssue } from './entities/miniapp-issue.entity';
 import { MiniAppActivity } from './entities/miniapp-activity.entity';
 import { AuditService } from '../audit/audit.service';
+import { GitIntegrationService } from '../integrations/git/git-integration.service';
+import { NexusIntegrationService } from '../integrations/nexus/nexus-integration.service';
+import { SecurityGateService } from '../integrations/security/security-gate.service';
 
 @Injectable()
 export class MiniappsService {
@@ -33,6 +36,9 @@ export class MiniappsService {
     private permissionsService: PermissionsService,
     private permissionProposalsService: PermissionProposalsService,
     private superAppService: SuperAppService,
+    private gitService: GitIntegrationService,
+    private nexusService: NexusIntegrationService,
+    private securityGateService: SecurityGateService,
   ) {}
 
   async logActivity(miniAppId: string, actorId: string, actionType: string, title: string, description: string, auditAction: string, oldVal?: any, newVal?: any) {
@@ -125,6 +131,77 @@ export class MiniappsService {
         }
       }
       
+    }
+
+    if (app.integrationMethod === 'FLUTTER_PACKAGE') {
+      const flutterConfig = app.integrationConfig || {};
+      const isArtifact = flutterConfig.sourceType === 'ARTIFACT' || (!flutterConfig.sourceType && flutterConfig.packageName);
+
+      if (isArtifact) {
+        const packageName = flutterConfig.packageName?.trim();
+        if (!packageName) {
+          errors['integrationConfigFlutter.packageName'] = 'Package name is required for Artifact integration.';
+        } else {
+          checks.push(
+            this.nexusService.getPackageInfo(packageName).then(result => {
+              if (!result.exists) {
+                errors['integrationConfigFlutter.packageName'] =
+                  `Package "${packageName}" was not found in Nexus repository (pub-group). Please publish the package before submitting for review.`;
+              }
+            }).catch(err => {
+              errors['integrationConfigFlutter.packageName'] =
+                `Could not verify package "${packageName}" on Nexus: ${err.message}`;
+            })
+          );
+        }
+      } else {
+        const gitUrl = flutterConfig.gitUrl?.trim();
+        if (!gitUrl) {
+          errors['integrationConfigFlutter.gitUrl'] = 'Git URL is required for Source Code integration.';
+        } else {
+          checks.push(
+            this.gitService
+              .validatePackage(
+                gitUrl,
+                flutterConfig.gitBranch || flutterConfig.ref,
+                flutterConfig.gitProvider || flutterConfig.provider,
+                flutterConfig.gitAccessToken || flutterConfig.token,
+                flutterConfig.gitPath || flutterConfig.path,
+              )
+              .then(async result => {
+                if (!result.validation.isValid) {
+                  errors['integrationConfigFlutter.gitUrl'] =
+                    result.validation.error || `Git repository or pubspec.yaml could not be verified for ${gitUrl}.`;
+                } else {
+                  // Run Automated Security Gate 1 Pre-Publish Scan
+                  try {
+                    const gateReport = await this.securityGateService.runGate1Scan({
+                      url: gitUrl,
+                      ref: flutterConfig.gitBranch || flutterConfig.ref,
+                      path: flutterConfig.gitPath || flutterConfig.path,
+                      token: flutterConfig.gitAccessToken || flutterConfig.token,
+                      declaredPermissions: app.permissions || [],
+                    });
+
+                    if (gateReport.status === 'FAILED') {
+                      for (const f of gateReport.findings) {
+                        if (f.severity === 'CRITICAL' || f.severity === 'HIGH') {
+                          errors[`security.${f.id}`] = `[${f.title}]: ${f.description}`;
+                        }
+                      }
+                    }
+                  } catch (secErr: any) {
+                    this.logger.warn(`Security Gate 1 scan warning: ${secErr.message}`);
+                  }
+                }
+              })
+              .catch(err => {
+                errors['integrationConfigFlutter.gitUrl'] =
+                  `Could not verify Git repository "${gitUrl}": ${err.message}`;
+              })
+          );
+        }
+      }
     }
 
     if (app.permissions && Array.isArray(app.permissions)) {

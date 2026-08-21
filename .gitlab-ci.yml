@@ -1,0 +1,45 @@
+image: ghcr.io/cirruslabs/flutter:latest
+
+stages:
+  - test
+  - security-gate-1
+  - publish-nexus
+
+variables:
+  NEXUS_HOSTED_URL: "http://nexus.internal:8081/repository/pub-hosted"
+
+cache:
+  paths:
+    - .pub-cache/
+
+before_script:
+  - cd dsp_miniapp_trust_regulator
+  - flutter pub get
+
+lint-and-analyze:
+  stage: test
+  script:
+    - dart analyze --fatal-infos
+
+unit-tests:
+  stage: test
+  script:
+    - if [ -d "test" ]; then flutter test; else echo "No unit tests found."; fi
+
+security-gate-1-scan:
+  stage: security-gate-1
+  script:
+    - echo "Executing Security Gate 1 automated checks..."
+    - sha256sum pubspec.yaml > checksum.sha256
+    - echo "Package Checksum:" && cat checksum.sha256
+  artifacts:
+    paths:
+      - dsp_miniapp_trust_regulator/checksum.sha256
+
+publish-nexus-artifact:
+  stage: publish-nexus
+  only:
+    - tags
+  script:
+    - echo "Publishing artifact to private Nexus registry: $NEXUS_HOSTED_URL"
+    - dart pub publish --force

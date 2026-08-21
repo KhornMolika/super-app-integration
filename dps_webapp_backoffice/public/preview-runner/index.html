@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Trust Regulator Standalone Test</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * { -webkit-tap-highlight-color: transparent; font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; user-select: none; }
+    .pulse-ring { animation: pulseRing 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
+    @keyframes pulseRing {
+      0% { transform: scale(0.8); opacity: 0.8; }
+      50% { transform: scale(1.4); opacity: 0.2; }
+      100% { transform: scale(1.8); opacity: 0; }
+    }
+  </style>
+</head>
+<body class="bg-white text-slate-900 min-h-screen flex flex-col justify-between">
+
+  <!-- FLUTTER APPBAR (Colors.blueGrey) -->
+  <header id="mainAppBar" class="bg-[#607D8B] text-white px-4 py-3.5 flex items-center justify-between shadow-md sticky top-0 z-30 transition-colors">
+    <div class="flex items-center space-x-3">
+      <button id="navBackBtn" onclick="handleNavBack()" class="p-1 rounded-full hover:bg-white/20 active:scale-95 transition-all">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+      </button>
+      <h1 id="appBarTitle" class="text-lg font-medium tracking-normal">Trust Regulator Portal</h1>
+    </div>
+  </header>
+
+  <!-- SCREEN 1: MAIN TRUST REGULATOR ENTRY (Scan Tab / Settings Tab) -->
+  <main id="mainEntryScreen" class="flex-1 flex flex-col justify-center px-4 py-6 max-w-sm mx-auto w-full">
+    
+    <!-- SCAN TAB CONTENT -->
+    <div id="scanTabContent" class="flex flex-col items-center text-center space-y-4">
+      <!-- verified_user icon (size 80, blueGrey) -->
+      <div class="relative flex items-center justify-center my-2">
+        <div id="nfcRadarEffect" class="hidden absolute -inset-4 rounded-full bg-[#607D8B]/20 pulse-ring"></div>
+        <svg class="w-20 h-20 text-[#607D8B]" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+        </svg>
+      </div>
+
+      <h2 class="text-2xl font-normal text-slate-800 tracking-tight">
+        Welcome to Trust Regulator
+      </h2>
+
+      <p class="text-sm text-slate-600 max-w-xs">
+        You have successfully entered the isolated mini app environment.
+      </p>
+
+      <!-- Injected Auth Context Box -->
+      <div class="w-full bg-slate-100 rounded-lg p-4 text-center text-xs space-y-1.5 border border-slate-200 shadow-sm mt-2">
+        <div class="font-bold text-slate-800 text-sm mb-1">Injected Auth Context:</div>
+        <div class="text-slate-700">User ID: <span id="authUserId" class="font-mono font-semibold">test_user_123</span></div>
+        <div class="text-slate-700">JWT: <span id="authJwtToken" class="font-mono font-semibold">mock_jwt_t...</span></div>
+      </div>
+
+      <!-- NFC Scan Button (Live Demo Trigger) -->
+      <button onclick="triggerNfcScan()" class="w-full py-2.5 px-4 bg-[#455A64] hover:bg-[#37474F] active:scale-98 text-white rounded-full text-sm font-medium shadow transition-all flex items-center justify-center space-x-2 mt-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+        <span>Scan ID Card (NFC)</span>
+      </button>
+
+      <!-- Go Deeper (Test Routing) Button -->
+      <button onclick="navigateToDeepScreen()" class="w-full py-2.5 px-4 bg-[#ECEFF1] hover:bg-[#CFD8DC] active:scale-98 text-[#37474F] rounded-full text-sm font-medium transition-all shadow-sm">
+        Go Deeper (Test Routing)
+      </button>
+
+      <!-- Return to Super App Button -->
+      <button onclick="returnToSuperApp()" class="w-full py-2.5 px-4 bg-[#ECEFF1] hover:bg-[#CFD8DC] active:scale-98 text-[#37474F] rounded-full text-sm font-medium transition-all shadow-sm">
+        Return to Super App
+      </button>
+    </div>
+
+    <!-- SETTINGS TAB CONTENT -->
+    <div id="settingsTabContent" class="hidden flex flex-col items-center justify-center text-center py-20">
+      <h3 class="text-2xl font-bold text-slate-800">Mini App Settings</h3>
+      <p class="text-sm text-slate-500 mt-2">Configured via dps_core_package contract.</p>
+    </div>
+
+  </main>
+
+  <!-- SCREEN 2: DEEP SCREEN (TrustRegulatorDetailsScreen) -->
+  <main id="deepScreen" class="hidden flex-1 flex flex-col justify-center items-center px-6 py-12 max-w-sm mx-auto text-center">
+    <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-[#455A64] mb-4">
+      <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+    </div>
+    <h3 class="text-xl font-bold text-slate-800">Deep Screen</h3>
+    <p class="text-sm text-slate-600 mt-3 leading-relaxed">
+      If you press the Android hardware back button,<br>this screen should pop instead of closing the entire mini app!
+    </p>
+    <button onclick="popDeepScreen()" class="mt-8 py-2.5 px-6 bg-[#607D8B] text-white rounded-full text-sm font-medium shadow active:scale-95 transition-all">
+      Pop Screen Back
+    </button>
+  </main>
+
+  <!-- FLUTTER BOTTOM NAVIGATION BAR -->
+  <nav id="bottomNavBar" class="bg-white border-t border-slate-200 flex items-center justify-around py-2 sticky bottom-0 z-30 shadow-lg">
+    <!-- Scan Tab Item -->
+    <button id="navTabScan" onclick="switchTab(0)" class="flex flex-col items-center flex-1 py-1 text-[#607D8B] font-medium transition-colors">
+      <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+      </svg>
+      <span class="text-xs mt-0.5">Scan</span>
+    </button>
+
+    <!-- Settings Tab Item -->
+    <button id="navTabSettings" onclick="switchTab(1)" class="flex flex-col items-center flex-1 py-1 text-slate-400 font-medium transition-colors">
+      <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+      </svg>
+      <span class="text-xs mt-0.5">Settings</span>
+    </button>
+  </nav>
+
+  <!-- FLUTTER SNACKBAR NOTIFICATION CONTAINER -->
+  <div id="flutterSnackbar" class="fixed bottom-16 inset-x-4 max-w-sm mx-auto hidden bg-slate-900 text-white text-xs px-4 py-3 rounded-lg shadow-xl flex items-center justify-between z-50 transition-all transform duration-200">
+    <span id="snackbarText">NFC Success: Tag [KHM-99201948]</span>
+    <button onclick="hideSnackbar()" class="text-amber-400 font-bold ml-3 uppercase text-[10px]">DISMISS</button>
+  </div>
+
+  <!-- BRIDGE LOGIC -->
+  <script>
+    let currentTab = 0;
+    let isDeepScreen = false;
+
+    function sendBridgeEvent(type, payload) {
+      window.parent.postMessage({
+        source: 'DSP_MINIAPP_RUNNER',
+        type: type,
+        timestamp: new Date().toISOString(),
+        payload: payload
+      }, '*');
+    }
+
+    function switchTab(index) {
+      currentTab = index;
+      const scanContent = document.getElementById('scanTabContent');
+      const settingsContent = document.getElementById('settingsTabContent');
+      const tabScan = document.getElementById('navTabScan');
+      const tabSettings = document.getElementById('navTabSettings');
+
+      if (index === 0) {
+        scanContent.classList.remove('hidden');
+        settingsContent.classList.add('hidden');
+        tabScan.className = 'flex flex-col items-center flex-1 py-1 text-[#607D8B] font-medium transition-colors';
+        tabSettings.className = 'flex flex-col items-center flex-1 py-1 text-slate-400 font-medium transition-colors';
+      } else {
+        scanContent.classList.add('hidden');
+        settingsContent.classList.remove('hidden');
+        tabScan.className = 'flex flex-col items-center flex-1 py-1 text-slate-400 font-medium transition-colors';
+        tabSettings.className = 'flex flex-col items-center flex-1 py-1 text-[#607D8B] font-medium transition-colors';
+      }
+      sendBridgeEvent('TAB_SWITCHED', { tab: index === 0 ? 'Scan' : 'Settings' });
+    }
+
+    function navigateToDeepScreen() {
+      isDeepScreen = true;
+      document.getElementById('mainEntryScreen').classList.add('hidden');
+      document.getElementById('bottomNavBar').classList.add('hidden');
+      document.getElementById('deepScreen').classList.remove('hidden');
+      document.getElementById('mainAppBar').style.backgroundColor = '#455A64';
+      document.getElementById('appBarTitle').textContent = 'Deep Screen';
+      sendBridgeEvent('NAVIGATE_DEEP_SCREEN', { route: '/trust_regulator/details' });
+    }
+
+    function popDeepScreen() {
+      isDeepScreen = false;
+      document.getElementById('mainEntryScreen').classList.remove('hidden');
+      document.getElementById('bottomNavBar').classList.remove('hidden');
+      document.getElementById('deepScreen').classList.add('hidden');
+      document.getElementById('mainAppBar').style.backgroundColor = '#607D8B';
+      document.getElementById('appBarTitle').textContent = 'Trust Regulator Portal';
+      sendBridgeEvent('POP_NAVIGATION_STACK', { route: '/trust_regulator' });
+    }
+
+    function handleNavBack() {
+      if (isDeepScreen) {
+        popDeepScreen();
+      } else {
+        returnToSuperApp();
+      }
+    }
+
+    function returnToSuperApp() {
+      showSnackbar("Exiting mini app -> Returning to Super App Home");
+      sendBridgeEvent('EXIT_MINIAPP', { reason: 'User clicked return button' });
+    }
+
+    function triggerNfcScan() {
+      const radar = document.getElementById('nfcRadarEffect');
+      radar.classList.remove('hidden');
+      showSnackbar("Scanning Contactless Chip...");
+      sendBridgeEvent('NFC_SCAN_INVOKED', { status: 'SCANNING' });
+
+      setTimeout(() => {
+        radar.classList.add('hidden');
+        showSnackbar("NFC Success: Tag [KHM-99201948 - Chan Sokha]");
+        sendBridgeEvent('NFC_TAG_DISCOVERED', {
+          tagId: 'KHM-99201948',
+          holder: 'Chan Sokha',
+          issuer: 'Kingdom of Cambodia - FSA Authority',
+          status: 'VERIFIED'
+        });
+      }, 1000);
+    }
+
+    function showSnackbar(text) {
+      const bar = document.getElementById('flutterSnackbar');
+      document.getElementById('snackbarText').textContent = text;
+      bar.classList.remove('hidden');
+      setTimeout(() => hideSnackbar(), 3500);
+    }
+
+    function hideSnackbar() {
+      document.getElementById('flutterSnackbar').classList.add('hidden');
+    }
+
+    // Listen for simulator host commands from Backoffice
+    window.addEventListener('message', (event) => {
+      if (!event.data || event.data.source !== 'DSP_SIMULATOR_HOST') return;
+      const { command, data } = event.data;
+
+      if (command === 'SIMULATE_NFC') {
+        triggerNfcScan();
+      } else if (command === 'SET_USER') {
+        document.getElementById('authUserId').textContent = data.id;
+        document.getElementById('authJwtToken').textContent = `${data.role}_jwt...`;
+        showSnackbar(`Auth Context Updated: ${data.name}`);
+        sendBridgeEvent('AUTH_CONTEXT_UPDATED', data);
+      }
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      sendBridgeEvent('RUNNER_READY', {
+        widget: 'TrustRegulatorAppEntry',
+        theme: 'Colors.blueGrey',
+        routes: ['/', '/details']
+      });
+    });
+  </script>
+</body>
+</html>
