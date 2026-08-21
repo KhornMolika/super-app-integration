@@ -730,12 +730,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
         </Card>}
 
         {activeTab === 'security' && (
-          <SecurityGateCard 
-            miniApp={formData} 
-            canApprove={can('miniapp:approve')}
-            onApprove={() => handleLifecycleAction('approve')}
-            onReject={(reason) => handleLifecycleAction('reject', reason)}
-          />
+          <SecurityGateCard miniApp={formData} />
         )}
 
         {activeTab === 'validation' && (
