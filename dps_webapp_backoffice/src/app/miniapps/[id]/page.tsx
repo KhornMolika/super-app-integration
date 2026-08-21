@@ -383,13 +383,13 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
   };
 
   
-  const handleLifecycleAction = async (action: 'submit' | 'approve' | 'reject' | 'suspend') => {
-    let reason = '';
-    if (action === 'reject') {
+  const handleLifecycleAction = async (action: 'submit' | 'approve' | 'reject' | 'suspend', explicitReason?: string) => {
+    let reason = explicitReason || '';
+    if (action === 'reject' && !explicitReason) {
       const response = prompt('Please enter a reason for rejection:');
       if (response === null) return;
       reason = response;
-    } else {
+    } else if (!explicitReason) {
       const isConfirmed = await confirm({
         title: `Confirm ${action}`,
         message: `Are you sure you want to ${action} this Mini App?`,
@@ -662,7 +662,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
             onClick={() => setActiveTab(tab as any)}
             className={`pb-3 font-medium text-sm transition-colors relative whitespace-nowrap ${activeTab === tab ? 'text-brand-600 dark:text-brand-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
           >
-            {tab === 'security' ? 'Security Gate 1' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {tab === 'security' ? 'Security Gates (1 & 2)' : tab.charAt(0).toUpperCase() + tab.slice(1)}
             {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-600 dark:bg-brand-400 rounded-t-full" />}
           </button>
         ))}
@@ -730,7 +730,12 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
         </Card>}
 
         {activeTab === 'security' && (
-          <SecurityGateCard miniApp={formData} />
+          <SecurityGateCard 
+            miniApp={formData} 
+            canApprove={can('miniapp:approve')}
+            onApprove={() => handleLifecycleAction('approve')}
+            onReject={(reason) => handleLifecycleAction('reject', reason)}
+          />
         )}
 
         {activeTab === 'validation' && (
