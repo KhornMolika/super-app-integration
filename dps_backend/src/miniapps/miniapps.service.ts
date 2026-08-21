@@ -204,6 +204,20 @@ export class MiniappsService {
       }
     }
 
+    if (app.integrationMethod === 'DEEP_LINK') {
+      const deepLinkConfig = app.integrationConfig || {};
+      if (!deepLinkConfig.urlScheme || deepLinkConfig.urlScheme.trim() === '') {
+        errors['integrationConfigDeepLink.urlScheme'] = 'URL Scheme is required for Deep Link integration (e.g. app:// or myapp://open).';
+      }
+      if (deepLinkConfig.appStoreUrl && deepLinkConfig.appStoreUrl.trim() !== '') {
+        checks.push(
+          urlValidator.validate(deepLinkConfig.appStoreUrl, null as any).then(isValid => {
+            if (!isValid) errors['integrationConfigDeepLink.appStoreUrl'] = 'App Store fallback URL must be a valid, reachable URL.';
+          })
+        );
+      }
+    }
+
     if (app.permissions && Array.isArray(app.permissions)) {
       for (let index = 0; index < app.permissions.length; index++) {
         const perm = app.permissions[index];

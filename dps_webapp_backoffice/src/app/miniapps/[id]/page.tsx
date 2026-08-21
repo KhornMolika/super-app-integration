@@ -159,6 +159,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
             permissions: Array.isArray(data.permissions) ? data.permissions : [],
             integrationConfigWebView: data.integrationMethod === IntegrationMethod.WEBVIEW ? data.integrationConfig : { productionUrl: ''},
             integrationConfigFlutter: data.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE ? data.integrationConfig : { sourceType: SourceType.ARTIFACT, packageName: '', versionConstraint: '' },
+            integrationConfigDeepLink: data.integrationMethod === IntegrationMethod.DEEP_LINK ? data.integrationConfig : { urlScheme: '', packageName: '', appStoreUrl: '' },
           });
         } else {
           setModalState({ isOpen: true, status: 'error', message: 'Failed to fetch mini app details.' });
@@ -212,6 +213,21 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
       return {
         ...prev,
         integrationConfigFlutter: { ...prev.integrationConfigFlutter!, [fieldName]: e.target.value },
+        validationErrors: nextValidationErrors
+      };
+    });
+  };
+
+  const handleDeepLinkChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const fieldName = e.target.name;
+    setFormData(prev => {
+      const nextValidationErrors = prev.validationErrors ? { ...prev.validationErrors } : undefined;
+      if (nextValidationErrors) {
+        delete nextValidationErrors[`integrationConfigDeepLink.${fieldName}`];
+      }
+      return {
+        ...prev,
+        integrationConfigDeepLink: { ...prev.integrationConfigDeepLink!, [fieldName]: e.target.value } as any,
         validationErrors: nextValidationErrors
       };
     });
@@ -298,6 +314,8 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
       payload.integrationConfigWebView = formData.integrationConfigWebView;
     } else if (formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE) {
       payload.integrationConfigFlutter = formData.integrationConfigFlutter;
+    } else if (formData.integrationMethod === IntegrationMethod.DEEP_LINK) {
+      payload.integrationConfigDeepLink = formData.integrationConfigDeepLink;
     }
 
     try {
@@ -329,6 +347,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
                 permissions: Array.isArray(appData.permissions) ? appData.permissions : prev.permissions,
                 integrationConfigWebView: appData.integrationMethod === IntegrationMethod.WEBVIEW ? appData.integrationConfig : prev.integrationConfigWebView,
                 integrationConfigFlutter: appData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE ? appData.integrationConfig : prev.integrationConfigFlutter,
+                integrationConfigDeepLink: appData.integrationMethod === IntegrationMethod.DEEP_LINK ? appData.integrationConfig : prev.integrationConfigDeepLink,
               }));
 
               const statusUpper = (appData.status || '').toUpperCase();
@@ -726,7 +745,14 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
 
         {activeTab === 'integration' && <Card>
           <CardHeader title="Technical Integration" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>} />
-          <IntegrationForm formData={formData} handleChange={handleChange} allErrors={allErrors} handleWebViewChange={handleWebViewChange} handleFlutterChange={handleFlutterChange} />
+          <IntegrationForm 
+            formData={formData} 
+            handleChange={handleChange} 
+            allErrors={allErrors} 
+            handleWebViewChange={handleWebViewChange} 
+            handleFlutterChange={handleFlutterChange}
+            handleDeepLinkChange={handleDeepLinkChange}
+          />
         </Card>}
 
         {activeTab === 'security' && (

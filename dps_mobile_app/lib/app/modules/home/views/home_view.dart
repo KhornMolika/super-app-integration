@@ -108,6 +108,19 @@ class HomeView extends GetView<HomeController> {
                               return;
                             }
 
+                            if (integrationMethod == 'DEEP_LINK') {
+                              final config = app['integrationConfig'] ?? {};
+                              final scheme = config['urlScheme'] ?? 'app://open';
+                              Get.snackbar(
+                                'Deep Link Invoked',
+                                'Launching external application: $scheme',
+                                snackPosition: SnackPosition.BOTTOM,
+                                backgroundColor: Colors.indigo.shade900,
+                                colorText: Colors.white,
+                              );
+                              return;
+                            }
+
                             String url = app['url'] ?? 'http://localhost:3000';
                             if (!kIsWeb && Platform.isAndroid && url.contains('localhost')) {
                               url = url.replaceAll('localhost', '10.0.2.2');

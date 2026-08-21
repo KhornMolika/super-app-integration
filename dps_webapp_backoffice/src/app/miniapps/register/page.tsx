@@ -119,6 +119,14 @@ export default function RegisterMiniAppPage() {
           }
         }
       }
+      if (formData.integrationMethod === IntegrationMethod.DEEP_LINK) {
+        const conf = formData.integrationConfigDeepLink;
+        if (!conf?.urlScheme || conf.urlScheme.trim() === '') {
+          errors['integrationConfigDeepLink.urlScheme'] = 'URL Scheme is required (e.g. trustregulator:// or myapp://open)';
+          isValid = false;
+        }
+      }
+
       if (formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE) {
         const conf = formData.integrationConfigFlutter;
         if (conf?.sourceType === SourceType.ARTIFACT) {
@@ -357,6 +365,13 @@ export default function RegisterMiniAppPage() {
     });
   };
 
+  const handleDeepLinkChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setFormData({
+      ...formData,
+      integrationConfigDeepLink: { ...formData.integrationConfigDeepLink!, [e.target.name]: e.target.value } as any
+    });
+  };
+
   const togglePermission = (type: string) => {
     const exists = formData.permissions?.find(p => p.type === type);
     if (exists) {
@@ -389,6 +404,7 @@ export default function RegisterMiniAppPage() {
     const payload = { ...formData };
     if (payload.integrationMethod !== IntegrationMethod.WEBVIEW) delete payload.integrationConfigWebView;
     if (payload.integrationMethod !== IntegrationMethod.FLUTTER_PACKAGE) delete payload.integrationConfigFlutter;
+    if (payload.integrationMethod !== IntegrationMethod.DEEP_LINK) delete payload.integrationConfigDeepLink;
 
     try {
       const url = modalState.createdId ? `${API_URL}/mini-apps/${modalState.createdId}` : `${API_URL}/mini-apps`;
@@ -510,7 +526,14 @@ export default function RegisterMiniAppPage() {
 
         {step === 3 && <Card>
           <CardHeader title="Technical Integration" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>} />
-          <IntegrationForm formData={formData} handleChange={handleChange} allErrors={allErrors} handleWebViewChange={handleWebViewChange} handleFlutterChange={handleFlutterChange} />
+          <IntegrationForm 
+            formData={formData} 
+            handleChange={handleChange} 
+            allErrors={allErrors} 
+            handleWebViewChange={handleWebViewChange} 
+            handleFlutterChange={handleFlutterChange}
+            handleDeepLinkChange={handleDeepLinkChange}
+          />
         </Card>}
 
         {step === 4 && <Card>
@@ -555,6 +578,13 @@ export default function RegisterMiniAppPage() {
               <div className="mb-2"><span className="text-slate-500">Method:</span> {formData.integrationMethod}</div>
               {formData.integrationMethod === 'WEBVIEW' && (
                 <div><span className="text-slate-500">Production URL:</span> {formData.integrationConfigWebView?.productionUrl || '-'}</div>
+              )}
+              {formData.integrationMethod === 'DEEP_LINK' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div><span className="text-slate-500">URL Scheme:</span> <br/><span className="font-mono">{formData.integrationConfigDeepLink?.urlScheme || '-'}</span></div>
+                  <div><span className="text-slate-500">Package Name:</span> <br/><span className="font-mono">{formData.integrationConfigDeepLink?.packageName || '-'}</span></div>
+                  <div className="col-span-2"><span className="text-slate-500">Store Fallback URL:</span> <br/>{formData.integrationConfigDeepLink?.appStoreUrl || '-'}</div>
+                </div>
               )}
               {formData.integrationMethod === 'FLUTTER_PACKAGE' && (
                 <div className="grid grid-cols-2 gap-4">

@@ -30,6 +30,12 @@ export interface FlutterPackageConfigDto {
   versionConstraint?: string;
 }
 
+export interface DeepLinkConfigDto {
+  urlScheme: string;
+  packageName?: string;
+  appStoreUrl?: string;
+}
+
 export interface CreateMiniAppDto {
   appId: string;
   name: string;
@@ -46,6 +52,7 @@ export interface CreateMiniAppDto {
   integrationMethod: IntegrationMethod;
   integrationConfigWebView?: WebViewConfigDto;
   integrationConfigFlutter?: FlutterPackageConfigDto;
+  integrationConfigDeepLink?: DeepLinkConfigDto;
   
   permissions?: PermissionDto[];
 }

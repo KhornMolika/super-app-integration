@@ -27,9 +27,12 @@ export class MiniappsController {
       dataToSave.integrationConfig = createData.integrationConfigWebView;
     } else if (createData.integrationMethod === 'FLUTTER_PACKAGE') {
       dataToSave.integrationConfig = createData.integrationConfigFlutter;
+    } else if (createData.integrationMethod === 'DEEP_LINK') {
+      dataToSave.integrationConfig = createData.integrationConfigDeepLink;
     }
     delete dataToSave.integrationConfigWebView;
     delete dataToSave.integrationConfigFlutter;
+    delete dataToSave.integrationConfigDeepLink;
     return this.miniappService.create(dataToSave, req.user.sub);
   }
 
@@ -44,11 +47,14 @@ export class MiniappsController {
       dataToSave.integrationConfig = createData.integrationConfigWebView;
     } else if (createData.integrationMethod === 'FLUTTER_PACKAGE') {
       dataToSave.integrationConfig = createData.integrationConfigFlutter;
+    } else if (createData.integrationMethod === 'DEEP_LINK') {
+      dataToSave.integrationConfig = createData.integrationConfigDeepLink;
     }
     
     // Clean up DTO specific fields
     delete dataToSave.integrationConfigWebView;
     delete dataToSave.integrationConfigFlutter;
+    delete dataToSave.integrationConfigDeepLink;
 
     return this.miniappService.create(dataToSave, req.user.sub);
   }
