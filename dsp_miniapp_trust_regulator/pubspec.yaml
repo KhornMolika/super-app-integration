@@ -5,7 +5,7 @@ homepage: https://nd40vsdk-8081.asse.devtunnels.ms/repository/pub-group
 publish_to: "https://nd40vsdk-8081.asse.devtunnels.ms/repository/pub-hosted"
 
 environment:
-  sdk: ^3.12.2
+  sdk: '>=3.0.0 <4.0.0'
   flutter: ">=1.17.0"
 
 dependencies:
