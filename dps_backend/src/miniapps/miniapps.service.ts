@@ -131,9 +131,7 @@ export class MiniappsService {
         }
       }
       
-    }
-
-    if (app.integrationMethod === 'FLUTTER_PACKAGE') {
+    } else if (app.integrationMethod === 'FLUTTER_PACKAGE') {
       const flutterConfig = app.integrationConfig || {};
       const isArtifact = flutterConfig.sourceType === 'ARTIFACT' || (!flutterConfig.sourceType && flutterConfig.packageName);
 
@@ -202,16 +200,13 @@ export class MiniappsService {
           );
         }
       }
-    }
-
-    if (app.integrationMethod === 'DEEP_LINK') {
-      const deepLinkConfig = app.integrationConfig || {};
-      if (!deepLinkConfig.urlScheme || deepLinkConfig.urlScheme.trim() === '') {
-        errors['integrationConfigDeepLink.urlScheme'] = 'URL Scheme is required for Deep Link integration (e.g. app:// or myapp://open).';
+    } else if (app.integrationMethod === 'DEEP_LINK') {
+      if (!app.integrationConfig?.urlScheme) {
+        errors['integrationConfigDeepLink.urlScheme'] = 'urlScheme is required for Deep Link integration.';
       }
-      if (deepLinkConfig.appStoreUrl && deepLinkConfig.appStoreUrl.trim() !== '') {
+      if (app.integrationConfig?.appStoreUrl && app.integrationConfig.appStoreUrl.trim() !== '') {
         checks.push(
-          urlValidator.validate(deepLinkConfig.appStoreUrl, null as any).then(isValid => {
+          urlValidator.validate(app.integrationConfig.appStoreUrl, null as any).then(isValid => {
             if (!isValid) errors['integrationConfigDeepLink.appStoreUrl'] = 'App Store fallback URL must be a valid, reachable URL.';
           })
         );
