@@ -39,26 +39,32 @@ export class SecurityGate2Service {
       let nexusChecksum = '';
       let dependencies: Record<string, string> = {};
 
-      try {
-        const pkgInfo: any = await this.nexusService.getPackageInfo(app.packageName);
-        if (!pkgInfo.exists) {
-          conflicts.push(`Package '${app.packageName}' not found on Nexus pub-group.`);
-          allChecksumsMatched = false;
-        } else {
-          // Look up specific version
-          const versionDetail = pkgInfo.versions?.find((v: any) => v.version === app.version) || pkgInfo.latest;
-          if (versionDetail && versionDetail.pubspec) {
-            dependencies = versionDetail.pubspec.dependencies || {};
-            // Compute deterministic checksum of published metadata & archive
-            const payloadToHash = JSON.stringify(versionDetail.pubspec);
-            nexusChecksum = crypto.createHash('sha256').update(payloadToHash).digest('hex');
-          } else {
-            nexusChecksum = crypto.createHash('sha256').update(`${app.packageName}-${app.version}`).digest('hex');
-          }
-        }
-      } catch (err: any) {
-        this.logger.warn(`Could not verify Nexus package ${app.packageName}: ${err.message}`);
+      const isExternalScheme = app.packageName?.includes('://') || app.packageName?.startsWith('DEEP_LINK') || app.packageName === 'webview_package';
+
+      if (isExternalScheme) {
         nexusChecksum = crypto.createHash('sha256').update(`${app.packageName}-${app.version}`).digest('hex');
+      } else {
+        try {
+          const pkgInfo: any = await this.nexusService.getPackageInfo(app.packageName);
+          if (!pkgInfo.exists) {
+            conflicts.push(`Package '${app.packageName}' not found on Nexus pub-group.`);
+            allChecksumsMatched = false;
+          } else {
+            // Look up specific version
+            const versionDetail = pkgInfo.versions?.find((v: any) => v.version === app.version) || pkgInfo.latest;
+            if (versionDetail && versionDetail.pubspec) {
+              dependencies = versionDetail.pubspec.dependencies || {};
+              // Compute deterministic checksum of published metadata & archive
+              const payloadToHash = JSON.stringify(versionDetail.pubspec);
+              nexusChecksum = crypto.createHash('sha256').update(payloadToHash).digest('hex');
+            } else {
+              nexusChecksum = crypto.createHash('sha256').update(`${app.packageName}-${app.version}`).digest('hex');
+            }
+          }
+        } catch (err: any) {
+          this.logger.warn(`Could not verify Nexus package ${app.packageName}: ${err.message}`);
+          nexusChecksum = crypto.createHash('sha256').update(`${app.packageName}-${app.version}`).digest('hex');
+        }
       }
 
       // Checksum matching

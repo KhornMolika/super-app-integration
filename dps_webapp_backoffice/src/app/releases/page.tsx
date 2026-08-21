@@ -32,7 +32,7 @@ export default function ReleasesPage() {
         miniApps: apps.map(a => ({
           id: a.id,
           name: a.name || 'Mini App',
-          packageName: a.integrationConfig?.packageName || (a.integrationMethod === 'FLUTTER_PACKAGE' ? 'dps_miniapp_mobile_trust_regulator' : 'webview_package'),
+          packageName: a.integrationConfig?.packageName || (a.integrationMethod === 'FLUTTER_PACKAGE' ? 'dps_miniapp_mobile_trust_regulator' : a.integrationMethod === 'DEEP_LINK' ? (a.integrationConfig?.urlScheme || a.appId) : 'webview_package'),
           version: a.version || '0.0.2',
           declaredPermissions: a.permissions || [{ type: 'NFC' }],
         })),
