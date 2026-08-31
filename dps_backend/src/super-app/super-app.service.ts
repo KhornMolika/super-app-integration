@@ -21,14 +21,11 @@ export class SuperAppService implements OnApplicationBootstrap {
 
     const initialCapabilities = ['camera', 'location', 'storage', 'microphone', 'biometrics'];
     
-    for (const key of initialCapabilities) {
-      await this.superAppCapabilityRepository.save({
-        superAppVersion: version,
-        permissionKey: key,
-        supportedPlatform: 'ALL',
-        isSupported: true
-      });
-    }
+    await this.superAppCapabilityRepository.save({
+      superAppVersion: version,
+      platform: 'ALL',
+      capabilities: initialCapabilities
+    });
   }
 
   async findCapabilitiesForVersion(version: string): Promise<SuperAppCapability[]> {
