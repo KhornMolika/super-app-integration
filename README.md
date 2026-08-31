@@ -4,7 +4,7 @@ Welcome to the Digital Public Service (DSP) Super App Integration Platform. This
 
 ## Overview
 
-The platform provides an automated, secure, and streamlined workflow for third-party developers to register their Mini-Apps, submit them for automated technical validation, and eventually get approved for publication within the Super App. 
+The platform provides an automated, secure, and streamlined workflow for third-party developers to register their Mini-Apps, submit them for automated technical validation, and eventually get approved for publication within the Super App.
 
 It supports multiple integration methodologies, heavily focusing on **WebView** and **Flutter In-App Modules**.
 
@@ -12,12 +12,12 @@ It supports multiple integration methodologies, heavily focusing on **WebView** 
 
 This repository is split into two primary applications:
 
-1. **Backend API (`/dps_backend`)**: 
+1. **Backend API (`/dps_backend`)**:
    - **Framework**: NestJS (Node.js)
    - **Database**: PostgreSQL (via TypeORM)
    - **Features**: Handles Mini-App schema validation, asynchronous background validation checks (URL reachability), and automated email notifications using the Resend SDK.
 
-2. **Admin Back-Office (`/dps_webapp_backoffice`)**: 
+2. **Admin Back-Office (`/dps_webapp_backoffice`)**:
    - **Framework**: Next.js 16 (React, Turbopack)
    - **Styling**: Tailwind CSS
    - **Features**: A comprehensive dashboard for administrators to review submitted Mini-Apps, check validation statuses, and interactively preview Mini-Apps across Desktop, Tablet, and Mobile views.
@@ -33,9 +33,11 @@ This repository is split into two primary applications:
 ## Getting Started: How to Run the Projects
 
 ### 1. Database Setup
+
 Ensure you have a PostgreSQL instance running locally or remotely. Create a database named `dps_db`.
 
 ### 2. Running the Backend API
+
 The backend is powered by NestJS. To run it locally:
 
 ```bash
@@ -58,9 +60,11 @@ pnpm install
 # 4. Start the development server
 pnpm run start:dev
 ```
+
 The backend API will start on `http://localhost:3000`.
 
 ### 3. Running the Admin Back-Office (Frontend)
+
 The frontend is powered by Next.js. To run it locally alongside the backend:
 
 ```bash
@@ -77,6 +81,7 @@ pnpm install
 # 4. Start the development server
 pnpm run dev
 ```
+
 The frontend application will start on `http://localhost:3001` (or whichever port Next.js assigns). Open it in your browser to view the Back-Office dashboard.
 
 ## Roadmap (Upcoming Features)
@@ -84,10 +89,11 @@ The frontend application will start on `http://localhost:3001` (or whichever por
 According to our `doc/tasks.md` roadmap, the following major features are currently under development:
 
 1. **Native Permission Management**: Designing flows to handle, review, and enforce native device permissions requested by Mini-Apps.
-2. **Flutter Package Integration**: Automated source-code security scanning and compiled artifact validation for Flutter modules.
+2. **Flutter Package Integration**: Automated source-code security scanning and compiled artifact validation for Flutter packages.
 3. **Validation Status Dashboard**: A granular UI detailing the exact Pass/Fail status of every micro-check (Security, Build, Integration).
 4. **Automated Issue Classification**: System-level intelligence to determine if a failure is the fault of the Mini-App team or the Super App platform.
 5. **Strict Approval Gates**: Locking the final Super App approval controls until all automated validation phases pass successfully.
 
 ---
-*Built for the DSP Super App Ecosystem.*
+
+_Built for the DSP Super App Ecosystem._
