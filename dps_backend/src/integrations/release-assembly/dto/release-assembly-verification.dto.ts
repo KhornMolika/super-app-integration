@@ -3,16 +3,16 @@ import { Type } from 'class-transformer';
 
 export class BundledMiniAppDto {
   @IsString()
-  id: string;
+  id!: string;
 
   @IsString()
-  name: string;
+  name!: string;
 
   @IsString()
-  packageName: string;
+  packageName!: string;
 
   @IsString()
-  version: string;
+  version!: string;
 
   @IsOptional()
   @IsString()
@@ -25,19 +25,19 @@ export class BundledMiniAppDto {
 
 export class VerifyAndAssembleReleaseDto {
   @IsString()
-  releaseVersion: string;
+  releaseVersion!: string;
 
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => BundledMiniAppDto)
-  miniApps: BundledMiniAppDto[];
+  miniApps!: BundledMiniAppDto[];
 
   @IsOptional()
   @IsString()
   environment?: string;
 }
 
-export interface Gate2AuditResult {
+export interface ReleaseAssemblyAuditResult {
   passed: boolean;
   status: 'PASSED' | 'FAILED';
   releaseVersion: string;
@@ -66,3 +66,6 @@ export interface Gate2AuditResult {
     integrityDigest: string;
   };
 }
+
+// Backwards compatibility alias
+export type Gate2AuditResult = ReleaseAssemblyAuditResult;

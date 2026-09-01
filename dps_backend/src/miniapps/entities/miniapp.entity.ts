@@ -31,7 +31,7 @@ export class MiniApp {
   @Column({ type: 'text', nullable: true })
   fullDescription!: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   logo!: string;
 
   @Column({ nullable: true })
@@ -42,6 +42,9 @@ export class MiniApp {
 
   @Column({ nullable: true })
   termsUrl?: string;
+
+  @Column({ nullable: true })
+  privacyPolicyUrl?: string;
 
   @Column({ nullable: true })
   ownerName!: string;
@@ -70,6 +73,18 @@ export class MiniApp {
 
   @Column({ type: 'jsonb', nullable: true })
   validationErrors?: any;
+
+  @Column({ default: 'PENDING' })
+  validationStatus!: string; // PENDING, RUNNING, PASSED, FAILED
+
+  @Column({ nullable: true })
+  verificationToken?: string;
+
+  @Column({ default: false })
+  isDomainVerified!: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  domainVerifiedAt?: Date;
 
   @Column({ type: 'jsonb', nullable: true, default: () => "'[]'" })
   permissions!: any[];

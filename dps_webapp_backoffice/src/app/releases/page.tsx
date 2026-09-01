@@ -38,7 +38,7 @@ export default function ReleasesPage() {
         })),
       };
 
-      const res = await fetch('/api/security/gate2/verify-and-assemble', {
+      const res = await fetch('/api/release-assembly/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -62,7 +62,7 @@ export default function ReleasesPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto py-8 space-y-8">
+    <div className="w-full py-6 space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
@@ -160,14 +160,14 @@ export default function ReleasesPage() {
           <span className="text-xs text-slate-500">{apps.length} Mini Apps Eligible</span>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full text-left border-collapse">
             <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
               <tr>
-                <th className="px-6 py-4 text-xs font-semibold uppercase text-slate-500">Mini App</th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase text-slate-500">Package / Version</th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase text-slate-500">Integration Method</th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase text-slate-500">Status</th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase text-slate-500 text-right">Actions</th>
+                <th className="w-[28%] px-6 py-4 text-xs font-semibold uppercase text-slate-500">Mini App</th>
+                <th className="w-[28%] px-6 py-4 text-xs font-semibold uppercase text-slate-500">Package / Version</th>
+                <th className="w-[22%] px-6 py-4 text-xs font-semibold uppercase text-slate-500">Integration Method</th>
+                <th className="w-[12%] px-6 py-4 text-xs font-semibold uppercase text-slate-500">Status</th>
+                <th className="w-[10%] px-6 py-4 text-xs font-semibold uppercase text-slate-500 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">

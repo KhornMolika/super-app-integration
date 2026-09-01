@@ -11,7 +11,7 @@ import PreviewModal from '@/components/ui/PreviewModal';
 import SubmissionModal, { SubmissionModalState } from '@/components/ui/SubmissionModal';
 import BasicInfoForm from '@/components/forms/BasicInfoForm';
 import TeamForm from '@/components/forms/TeamForm';
-import IntegrationForm from '@/components/forms/IntegrationForm';
+import IntegrationForm, { generateClientVerificationToken } from '@/components/forms/IntegrationForm';
 import PermissionsForm from '@/components/forms/PermissionsForm';
 import ValidationIssuesButton from '@/components/ValidationIssuesButton';
 import { CreateMiniAppDto, IntegrationMethod, SourceType } from '@/types/miniapp.types';
@@ -34,12 +34,17 @@ export default function RegisterMiniAppPage() {
     fullDescription: '',
     logo: '',
     termsUrl: '',
+    privacyPolicyUrl: '',
     teamName: '',
     ownerName: '',
     ownerEmail: '',
     supportEmail: '',
     integrationMethod: IntegrationMethod.WEBVIEW,
-    integrationConfigWebView: { productionUrl: '', },
+    verificationToken: generateClientVerificationToken(),
+    integrationConfigWebView: {
+      productionUrl: '',
+      verificationToken: generateClientVerificationToken(),
+    },
     integrationConfigFlutter: { sourceType: SourceType.ARTIFACT, packageName: '', versionConstraint: '' },
     integrationConfigDeepLink: { urlScheme: '', packageName: '', appStoreUrl: '' },
     permissions: []
@@ -67,15 +72,19 @@ export default function RegisterMiniAppPage() {
         errors.appId = 'App ID must be in reverse-domain format (e.g. com.company.app)';
         isValid = false;
       }
-      if (!formData.logo) {
-        errors.logo = 'Logo URL is required';
+      if (!formData.logo || !formData.logo.trim()) {
+        errors.logo = 'Logo is required';
         isValid = false;
-      } else if (!formData.logo.startsWith('http')) {
-        errors.logo = 'Logo must be a valid URL';
+      } else if (!formData.logo.startsWith('http') && !formData.logo.startsWith('data:image/') && !formData.logo.startsWith('/')) {
+        errors.logo = 'Logo must be an uploaded image or valid URL';
         isValid = false;
       }
       if (formData.termsUrl && !formData.termsUrl.startsWith('http')) {
-        errors.termsUrl = 'Terms URL must be a valid URL (e.g. https://...)';
+        errors.termsUrl = 'Terms & Conditions URL must be a valid URL (e.g. https://...)';
+        isValid = false;
+      }
+      if (formData.privacyPolicyUrl && !formData.privacyPolicyUrl.startsWith('http')) {
+        errors.privacyPolicyUrl = 'Privacy Policy URL must be a valid URL (e.g. https://...)';
         isValid = false;
       }
     }
@@ -101,13 +110,14 @@ export default function RegisterMiniAppPage() {
           errors['integrationConfigWebView.productionUrl'] = 'Production URL is required';
           isValid = false;
         } else {
-          if (!prodUrl.startsWith('https://')) {
-            if (prodUrl.startsWith('http://localhost') || prodUrl.startsWith('http://127.0.0.1')) {
-              // let localhost slide
-            } else {
-              errors['integrationConfigWebView.productionUrl'] = 'Production URL must use HTTPS';
-              isValid = false;
-            }
+          const isDev =
+            process.env.NEXT_PUBLIC_ENVIRONMENT === 'DEV' ||
+            process.env.NODE_ENV !== 'production' ||
+            (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'));
+
+          if (!isDev && !prodUrl.startsWith('https://')) {
+            errors['integrationConfigWebView.productionUrl'] = 'Production URL must use HTTPS in production';
+            isValid = false;
           }
 
           if (isValid) {
@@ -274,6 +284,28 @@ export default function RegisterMiniAppPage() {
 
   const prevStep = () => setStep(prev => prev - 1);
 
+  const handleDomainVerified = (data: any) => {
+    setFormData(prev => ({
+      ...prev,
+      isDomainVerified: true,
+      domainVerifiedAt: data.domainVerifiedAt || new Date().toISOString(),
+      verificationToken: data.verificationToken || prev.verificationToken,
+      integrationConfigWebView: {
+        productionUrl: prev.integrationConfigWebView?.productionUrl || '',
+        ...prev.integrationConfigWebView,
+        verificationToken: data.verificationToken || prev.integrationConfigWebView?.verificationToken,
+        allowedDomains: data.allowedDomains && Array.isArray(data.allowedDomains)
+          ? data.allowedDomains.join(', ')
+          : (prev.integrationConfigWebView?.allowedDomains || ''),
+      },
+    }));
+    setLocalErrors(prev => {
+      const next = { ...prev };
+      delete next['integrationConfigWebView.domainVerification'];
+      return next;
+    });
+  };
+
   useEffect(() => {
     if (formData.name) {
       const generatedId = `com.fsa.${formData.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
@@ -404,7 +436,18 @@ export default function RegisterMiniAppPage() {
     setModalState(prev => ({ isOpen: true, status: 'loading', createdId: prev.createdId }));
 
     const payload = { ...formData };
-    if (payload.integrationMethod !== IntegrationMethod.WEBVIEW) delete payload.integrationConfigWebView;
+    if (payload.integrationMethod !== IntegrationMethod.WEBVIEW) {
+      delete payload.integrationConfigWebView;
+    } else if (payload.integrationConfigWebView) {
+      const webConfig = { ...payload.integrationConfigWebView };
+      if (typeof webConfig.allowedDomains === 'string') {
+        webConfig.allowedDomains = (webConfig.allowedDomains as any)
+          .split(',')
+          .map((d: string) => d.trim())
+          .filter(Boolean);
+      }
+      payload.integrationConfigWebView = webConfig;
+    }
     if (payload.integrationMethod !== IntegrationMethod.FLUTTER_PACKAGE) delete payload.integrationConfigFlutter;
     if (payload.integrationMethod !== IntegrationMethod.DEEP_LINK) delete payload.integrationConfigDeepLink;
 
@@ -485,7 +528,7 @@ export default function RegisterMiniAppPage() {
 
   return (
     <>
-      <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out pb-12">
+      <div className="w-full mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out pb-12">
         <div className="mb-8 flex items-center space-x-4">
           <Link href="/miniapps" className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 hover:text-brand-600 hover:border-brand-200 transition-all shadow-sm">
             <svg className="w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
@@ -535,6 +578,7 @@ export default function RegisterMiniAppPage() {
               handleWebViewChange={handleWebViewChange}
               handleFlutterChange={handleFlutterChange}
               handleDeepLinkChange={handleDeepLinkChange}
+              onDomainVerified={handleDomainVerified}
             />
           </Card>}
 
@@ -542,6 +586,7 @@ export default function RegisterMiniAppPage() {
             <CardHeader title="Native Permissions" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" /></svg>} />
             <PermissionsForm
               formData={formData}
+              setFormData={setFormData}
               handleChange={handleChange}
               allErrors={allErrors}
               togglePermission={togglePermission}
@@ -561,7 +606,19 @@ export default function RegisterMiniAppPage() {
                   <div><span className="text-slate-500">App Name:</span> <br />{formData.name || '-'}</div>
                   <div><span className="text-slate-500">App ID:</span> <br /><span className="font-mono text-xs">{formData.appId || '-'}</span></div>
                   <div><span className="text-slate-500">Category:</span> <br />{formData.category || '-'}</div>
-                  <div><span className="text-slate-500">Logo:</span> <br />{formData.logo ? <span className="text-brand-600 truncate block max-w-xs">{formData.logo}</span> : '-'}</div>
+                  <div><span className="text-slate-500">Logo:</span> <br />{formData.logo ? <span className="text-brand-600 truncate block w-full">{formData.logo}</span> : '-'}</div>
+                  {formData.shortDescription && (
+                    <div className="col-span-2"><span className="text-slate-500">Short Description:</span> <br />{formData.shortDescription}</div>
+                  )}
+                  {formData.fullDescription && (
+                    <div className="col-span-2"><span className="text-slate-500">Full Description:</span> <br />{formData.fullDescription}</div>
+                  )}
+                  {formData.termsUrl && (
+                    <div className="col-span-2"><span className="text-slate-500">Terms & Conditions:</span> <br />{formData.termsUrl}</div>
+                  )}
+                  {formData.privacyPolicyUrl && (
+                    <div className="col-span-2"><span className="text-slate-500">Privacy Policy:</span> <br />{formData.privacyPolicyUrl}</div>
+                  )}
                 </div>
               </div>
 

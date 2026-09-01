@@ -14,7 +14,7 @@ import { MiniAppActivity } from './entities/miniapp-activity.entity';
 import { AuditService } from '../audit/audit.service';
 import { GitIntegrationService } from '../integrations/git/git-integration.service';
 import { NexusIntegrationService } from '../integrations/nexus/nexus-integration.service';
-import { SecurityGateService } from '../integrations/security/security-gate.service';
+import { DomainVerificationService } from '../integrations/webview/domain-verification.service';
 
 @Injectable()
 export class MiniappsService {
@@ -38,13 +38,13 @@ export class MiniappsService {
     private superAppService: SuperAppService,
     private gitService: GitIntegrationService,
     private nexusService: NexusIntegrationService,
-    private securityGateService: SecurityGateService,
+    private domainVerificationService: DomainVerificationService,
   ) {}
 
   async logActivity(miniAppId: string, actorId: string, actionType: string, title: string, description: string, auditAction: string, oldVal?: any, newVal?: any) {
     try {
       await this.activityRepository.save(this.activityRepository.create({ miniAppId, actorId, type: actionType, title, description }));
-    } catch (e) {
+    } catch (e: any) {
       this.logger.warn(`Failed to log activity: ${e.message}`);
     }
     if (auditAction) {
@@ -58,6 +58,15 @@ export class MiniappsService {
     
     if (!data.permissions) {
       data.permissions = [];
+    }
+
+    if (data.integrationMethod === 'WEBVIEW') {
+      if (!data.verificationToken) {
+        data.verificationToken = data.integrationConfig?.verificationToken || this.domainVerificationService.generateVerificationToken();
+      }
+      if (data.integrationConfig) {
+        data.integrationConfig.verificationToken = data.verificationToken;
+      }
     }
 
     const app = this.miniappRepository.create(data);
@@ -96,29 +105,45 @@ export class MiniappsService {
       errors.supportEmail = 'supportEmail must be a valid email address.';
     }
 
-    if (app.logo) {
-      checks.push(
-        urlValidator.validate(app.logo, null as any).then(isValid => {
-          if (!isValid) errors.logo = 'logo must be a reachable and accessible URL.';
-        })
-      );
+    if (app.logo && app.logo.trim() !== '') {
+      if (app.logo.startsWith('data:image/') || app.logo.startsWith('/uploads/')) {
+        // Uploaded image format is valid
+      } else {
+        checks.push(
+          urlValidator.validate(app.logo, null as any).then(isValid => {
+            if (!isValid) errors.logo = 'logo must be a reachable and accessible URL.';
+          })
+        );
+      }
     }
 
     if (app.integrationMethod === 'WEBVIEW') {
+      const envVal = (process.env.ENVIRONMENT || process.env.NODE_ENV || '').toUpperCase();
+      const isDev = envVal === 'DEV' || envVal === 'DEVELOPMENT' || process.env.NODE_ENV !== 'production';
+
       if (!app.integrationConfig?.productionUrl) {
         errors['integrationConfigWebView.productionUrl'] = 'productionUrl is required for WebView integration.';
       } else {
         const prodUrl = app.integrationConfig.productionUrl;
-        const allowLocal = process.env.ALLOW_LOCAL_PROD_URLS === 'true';
         let isValidProdUrl = true;
+        let parsedUrl: URL | null = null;
+
+        try {
+          parsedUrl = new URL(prodUrl);
+        } catch {
+          errors['integrationConfigWebView.productionUrl'] = 'Production URL has an invalid URL format.';
+          isValidProdUrl = false;
+        }
         
-        if (!allowLocal) {
-          if (!prodUrl.startsWith('https://')) {
-             errors['integrationConfigWebView.productionUrl'] = 'Production URL must use HTTPS.';
-             isValidProdUrl = false;
-          } else if (prodUrl.includes('localhost') || prodUrl.includes('127.0.0.1')) {
-             errors['integrationConfigWebView.productionUrl'] = 'Production URL cannot be localhost.';
-             isValidProdUrl = false;
+        if (parsedUrl) {
+          if (!isDev) {
+            if (parsedUrl.protocol !== 'https:') {
+              errors['integrationConfigWebView.productionUrl'] = 'Production URL must use HTTPS.';
+              isValidProdUrl = false;
+            } else if (parsedUrl.hostname === 'localhost' || parsedUrl.hostname === '127.0.0.1') {
+              errors['integrationConfigWebView.productionUrl'] = 'Production URL cannot be localhost in production.';
+              isValidProdUrl = false;
+            }
           }
         }
         
@@ -128,6 +153,75 @@ export class MiniappsService {
               if (!isValid) errors['integrationConfigWebView.productionUrl'] = 'productionUrl must be a reachable and accessible URL.';
             })
           );
+        }
+      }
+
+      // Check stagingUrl format and reachability if provided
+      if (app.integrationConfig?.stagingUrl) {
+        const stagingUrl = app.integrationConfig.stagingUrl;
+        let isValidStaging = true;
+        let parsedStaging: URL | null = null;
+
+        try {
+          parsedStaging = new URL(stagingUrl);
+        } catch {
+          errors['integrationConfigWebView.stagingUrl'] = 'Staging URL has an invalid URL format.';
+          isValidStaging = false;
+        }
+
+        if (parsedStaging && !isDev && parsedStaging.protocol !== 'https:') {
+          errors['integrationConfigWebView.stagingUrl'] = 'Staging URL must use HTTPS.';
+          isValidStaging = false;
+        }
+
+        if (isValidStaging) {
+          checks.push(
+            urlValidator.validate(stagingUrl, null as any).then(isValid => {
+              if (!isValid) errors['integrationConfigWebView.stagingUrl'] = 'stagingUrl must be a reachable and accessible URL.';
+            })
+          );
+        }
+      }
+
+      // Check domain verification
+      const prodUrl = app.integrationConfig?.productionUrl;
+      if (!app.isDomainVerified) {
+        if (prodUrl && app.verificationToken && app.appId) {
+          checks.push(
+            this.domainVerificationService.verifyDomainOwnership(
+              prodUrl,
+              app.appId,
+              app.verificationToken
+            ).then(result => {
+              if (result.success) {
+                app.isDomainVerified = true;
+                app.domainVerifiedAt = result.verifiedAt || new Date();
+                if (result.allowedDomains && result.allowedDomains.length > 0) {
+                  const currentAllowed = Array.isArray(app.integrationConfig?.allowedDomains) ? app.integrationConfig.allowedDomains : [];
+                  app.integrationConfig = {
+                    ...app.integrationConfig,
+                    allowedDomains: Array.from(new Set([...currentAllowed, ...result.allowedDomains])),
+                  };
+                }
+              } else {
+                errors['integrationConfigWebView.domainVerification'] = result.message || 'Domain ownership has not been verified. Please host the verification token at /.well-known/superapp-miniapp-association.json and verify.';
+              }
+            }).catch(() => {
+              errors['integrationConfigWebView.domainVerification'] = 'Domain ownership has not been verified. Please host the verification token at /.well-known/superapp-miniapp-association.json and verify.';
+            })
+          );
+        } else {
+          errors['integrationConfigWebView.domainVerification'] = 'Domain ownership has not been verified. Please host the verification token at /.well-known/superapp-miniapp-association.json and verify.';
+        }
+      }
+
+      // Check allowed domains format
+      if (app.integrationConfig?.allowedDomains && Array.isArray(app.integrationConfig.allowedDomains)) {
+        for (const domain of app.integrationConfig.allowedDomains) {
+          if (typeof domain !== 'string' || domain.includes('/') || domain.includes('://')) {
+            errors['integrationConfigWebView.allowedDomains'] = `Invalid domain "${domain}". allowedDomains must only contain valid hostnames (e.g. "api.domain.com").`;
+            break;
+          }
         }
       }
       
@@ -171,26 +265,7 @@ export class MiniappsService {
                   errors['integrationConfigFlutter.gitUrl'] =
                     result.validation.error || `Git repository or pubspec.yaml could not be verified for ${gitUrl}.`;
                 } else {
-                  // Run Automated Security Gate 1 Pre-Publish Scan
-                  try {
-                    const gateReport = await this.securityGateService.runGate1Scan({
-                      url: gitUrl,
-                      ref: flutterConfig.gitBranch || flutterConfig.ref,
-                      path: flutterConfig.gitPath || flutterConfig.path,
-                      token: flutterConfig.gitAccessToken || flutterConfig.token,
-                      declaredPermissions: app.permissions || [],
-                    });
-
-                    if (gateReport.status === 'FAILED') {
-                      for (const f of gateReport.findings) {
-                        if (f.severity === 'CRITICAL' || f.severity === 'HIGH') {
-                          errors[`security.${f.id}`] = `[${f.title}]: ${f.description}`;
-                        }
-                      }
-                    }
-                  } catch (secErr: any) {
-                    this.logger.warn(`Security Gate 1 scan warning: ${secErr.message}`);
-                  }
+                  this.logger.log(`Git repository metadata verified for ${gitUrl}. Automated security scanning and build integration will be orchestrated via Jenkins.`);
                 }
               })
               .catch(err => {
@@ -216,7 +291,15 @@ export class MiniappsService {
     if (app.termsUrl && app.termsUrl.trim() !== '') {
       checks.push(
         urlValidator.validate(app.termsUrl, null as any).then(isValid => {
-          if (!isValid) errors.termsUrl = 'The Terms & Privacy Policy URL is unreachable. Please verify the link is publicly accessible.';
+          if (!isValid) errors.termsUrl = 'The Terms & Conditions URL is unreachable. Please verify the link is publicly accessible.';
+        })
+      );
+    }
+
+    if (app.privacyPolicyUrl && app.privacyPolicyUrl.trim() !== '') {
+      checks.push(
+        urlValidator.validate(app.privacyPolicyUrl, null as any).then(isValid => {
+          if (!isValid) errors.privacyPolicyUrl = 'The Privacy Policy URL is unreachable. Please verify the link is publicly accessible.';
         })
       );
     }
@@ -409,6 +492,14 @@ export class MiniappsService {
     if (data.permissions) {
       merged.permissions = data.permissions;
     }
+
+    // Reset domain verification status if productionUrl changes
+    const oldProdUrl = (existing.integrationConfig as any)?.productionUrl;
+    const newProdUrl = (data.integrationConfig as any)?.productionUrl;
+    if (newProdUrl && oldProdUrl && newProdUrl.trim() !== oldProdUrl.trim()) {
+      merged.isDomainVerified = false;
+      merged.domainVerifiedAt = null as any;
+    }
     
     await this.miniappRepository.save(merged);
     
@@ -474,5 +565,336 @@ export class MiniappsService {
     await this.miniappRepository.save(app);
     await this.logActivity(id, actorId, 'STATUS_CHANGE', 'Mini App Suspended', 'App suspended', 'SUSPEND_MINI_APP', null, app);
     return app;
+  }
+
+  async verifyDomain(id: string, overrideUrl?: string) {
+    const app = await this.findOne(id);
+    if (!app) throw new BadRequestException('App not found');
+    if (app.integrationMethod !== 'WEBVIEW') {
+      throw new BadRequestException('Domain verification is only applicable for WebView integrations');
+    }
+
+    const prodUrl = overrideUrl?.trim() || app.integrationConfig?.productionUrl;
+    if (!prodUrl) {
+      throw new BadRequestException('No productionUrl configured for this Mini App');
+    }
+
+    // Keep app.integrationConfig in sync with overrideUrl if supplied
+    if (overrideUrl && app.integrationConfig) {
+      app.integrationConfig = {
+        ...app.integrationConfig,
+        productionUrl: overrideUrl.trim(),
+      };
+    }
+
+    if (!app.verificationToken) {
+      app.verificationToken = this.domainVerificationService.generateVerificationToken();
+      if (!app.integrationConfig) {
+        app.integrationConfig = {};
+      }
+      app.integrationConfig.verificationToken = app.verificationToken;
+      await this.miniappRepository.save(app);
+    }
+
+    const result = await this.domainVerificationService.verifyDomainOwnership(
+      prodUrl,
+      app.appId,
+      app.verificationToken
+    );
+
+    if (result.success) {
+      app.isDomainVerified = true;
+      app.domainVerifiedAt = result.verifiedAt || new Date();
+
+      // Clear domain verification validation error from entity
+      if (app.validationErrors) {
+        delete app.validationErrors['integrationConfigWebView.domainVerification'];
+      }
+
+      // Automatically resolve any open domain verification issues
+      try {
+        await this.issueRepository.update(
+          {
+            miniAppId: app.id,
+            type: 'DOMAIN_VERIFICATION',
+            status: 'OPEN',
+          },
+          {
+            status: 'RESOLVED',
+          }
+        );
+      } catch (issueErr) {
+        this.logger.warn(`Could not update issue status for miniapp ${app.id}: ${issueErr}`);
+      }
+
+      if (result.allowedDomains && result.allowedDomains.length > 0) {
+        const currentAllowed = Array.isArray(app.integrationConfig?.allowedDomains) ? app.integrationConfig.allowedDomains : [];
+        const mergedAllowed = Array.from(new Set([...currentAllowed, ...result.allowedDomains]));
+        app.integrationConfig = {
+          ...app.integrationConfig,
+          allowedDomains: mergedAllowed,
+        };
+      }
+      await this.miniappRepository.save(app);
+      await this.logActivity(id, 'system', 'DOMAIN_VERIFICATION', 'Domain Ownership Verified', result.message, 'VERIFY_DOMAIN', null, app);
+      return {
+        verified: true,
+        message: result.message,
+        domainVerifiedAt: app.domainVerifiedAt,
+        allowedDomains: app.integrationConfig?.allowedDomains || [],
+        permissions: result.permissions || [],
+        validationErrors: app.validationErrors || {},
+      };
+    } else {
+      app.isDomainVerified = false;
+      app.domainVerifiedAt = null as any;
+      if (!app.validationErrors) {
+        app.validationErrors = {};
+      }
+      app.validationErrors['integrationConfigWebView.domainVerification'] = result.message;
+      await this.miniappRepository.save(app);
+      await this.logActivity(id, 'system', 'DOMAIN_VERIFICATION', 'Domain Verification Failed', result.message, 'VERIFY_DOMAIN_FAILED', null, app);
+      return {
+        verified: false,
+        message: result.message,
+        validationErrors: app.validationErrors,
+      };
+    }
+  }
+
+  generateVerificationToken(): string {
+    return this.domainVerificationService.generateVerificationToken();
+  }
+
+  async verifyDomainStandalone(
+    prodUrl: string,
+    appId: string,
+    verificationToken: string
+  ) {
+    const result = await this.domainVerificationService.verifyDomainOwnership(
+      prodUrl,
+      appId,
+      verificationToken
+    );
+
+    if (result.success) {
+      return {
+        verified: true,
+        message: result.message,
+        domainVerifiedAt: result.verifiedAt || new Date(),
+        allowedDomains: result.allowedDomains || [],
+        permissions: result.permissions || [],
+      };
+    } else {
+      return {
+        verified: false,
+        message: result.message,
+        validationErrors: {
+          'integrationConfigWebView.domainVerification': result.message,
+        },
+      };
+    }
+  }
+
+  async detectPermissions(body: { productionUrl?: string; category?: string; name?: string; appId?: string }) {
+    const detected: Array<{ type: string; purpose: string; source: string; confidence: 'HIGH' | 'MEDIUM' }> = [];
+    const addedTypes = new Set<string>();
+    const appLabel = body.name?.trim() || '$(PRODUCT_NAME)';
+
+    const formatCompliantPurpose = (type: string, rawPurpose: string): string => {
+      const trimmed = (rawPurpose || '').trim();
+      if (!trimmed) {
+        return `${appLabel} requires access to your ${type.toLowerCase()} to provide core mini application features.`;
+      }
+      if (trimmed.toLowerCase().includes('requires') && (trimmed.toLowerCase().startsWith(appLabel.toLowerCase()) || trimmed.startsWith('$('))) {
+        return trimmed.endsWith('.') ? trimmed : `${trimmed}.`;
+      }
+      let cleaned = trimmed;
+      if (/^(to|for)\s+/i.test(cleaned)) {
+        cleaned = cleaned.replace(/^(to|for)\s+/i, '');
+      }
+      cleaned = cleaned.charAt(0).toLowerCase() + cleaned.slice(1);
+      if (cleaned.endsWith('.')) {
+        cleaned = cleaned.slice(0, -1);
+      }
+      return `${appLabel} requires access to your ${type.toLowerCase()} to ${cleaned}.`;
+    };
+
+    const addPerm = (type: string, purpose: string, source: string, confidence: 'HIGH' | 'MEDIUM' = 'HIGH') => {
+      const normalizedType = type.charAt(0).toUpperCase() + type.slice(1);
+      if (!addedTypes.has(normalizedType.toLowerCase())) {
+        addedTypes.add(normalizedType.toLowerCase());
+        const compliantPurpose = formatCompliantPurpose(normalizedType, purpose);
+        detected.push({ type: normalizedType, purpose: compliantPurpose, source, confidence });
+      }
+    };
+
+    // 1. Check association file if productionUrl is provided
+    if (body.productionUrl && body.productionUrl.trim()) {
+      try {
+        const parsed = new URL(body.productionUrl.trim());
+        const assocUrl = `${parsed.origin}/.well-known/superapp-miniapp-association.json`;
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 3500);
+        const res = await fetch(assocUrl, { signal: ctrl.signal });
+        clearTimeout(tid);
+        if (res.ok) {
+          const json = await res.json();
+          const perms = json.permissions || json.requestedPermissions || json.requiredPermissions;
+          if (Array.isArray(perms)) {
+            for (const p of perms) {
+              const pType = typeof p === 'string' ? p : p.type;
+              const pPurpose = typeof p === 'object' && p.purpose ? p.purpose : `Required by Mini App association configuration`;
+              if (pType) {
+                addPerm(pType, pPurpose, 'Association File (.well-known)', 'HIGH');
+              }
+            }
+          }
+        }
+      } catch {
+        // Association file might not be reachable or not contain perms
+      }
+
+      // 2. Scan remote HTML & JS scripts for Super App JS Bridge invocations
+      try {
+        const parsed = new URL(body.productionUrl.trim());
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 4000);
+        const res = await fetch(parsed.origin, { signal: ctrl.signal });
+        clearTimeout(tid);
+        if (res.ok) {
+          const html = await res.text();
+          let combinedCode = html;
+
+          // Find script tags to scan JavaScript bundles
+          const scriptSrcMatches = Array.from(html.matchAll(/<script[^>]+src=["']([^"']+)["']/gi));
+          const scriptsToFetch = scriptSrcMatches
+            .map(m => m[1])
+            .filter(src => src && (!src.startsWith('http') || src.startsWith(parsed.origin)))
+            .slice(0, 3);
+
+          for (const scriptSrc of scriptsToFetch) {
+            try {
+              const fullScriptUrl = scriptSrc.startsWith('http') ? scriptSrc : new URL(scriptSrc, parsed.origin).href;
+              const sCtrl = new AbortController();
+              const sTid = setTimeout(() => sCtrl.abort(), 2000);
+              const sRes = await fetch(fullScriptUrl, { signal: sCtrl.signal });
+              clearTimeout(sTid);
+              if (sRes.ok) {
+                const jsText = await sRes.text();
+                combinedCode += ' ' + jsText;
+              }
+            } catch {
+              // Ignore individual bundle failures
+            }
+          }
+
+          const lower = combinedCode.toLowerCase();
+
+          // A. Scan Super App Native Bridge (DSPNativeBridge)
+          const hasBridge = lower.includes('dspnativebridge') || lower.includes('superapp') || lower.includes('nativebridge');
+
+          if (lower.includes('opencamera') || lower.includes('capturephoto') || lower.includes('scanqr') || lower.includes('barcode') || lower.includes('getusermedia')) {
+            addPerm(
+              'Camera',
+              'To scan QR codes and capture verification photos',
+              hasBridge && (lower.includes('opencamera') || lower.includes('capturephoto'))
+                ? 'JS Bridge: DSPNativeBridge (openCamera)'
+                : 'Code Scan (Camera API)',
+              'HIGH'
+            );
+          }
+
+          if (lower.includes('getlocation') || lower.includes('geolocation') || lower.includes('getcurrentposition') || lower.includes('watchposition')) {
+            addPerm(
+              'Location',
+              'To provide location-based services and map features',
+              hasBridge && lower.includes('getlocation')
+                ? 'JS Bridge: DSPNativeBridge (getLocation)'
+                : 'Code Scan (Geolocation API)',
+              'HIGH'
+            );
+          }
+
+          if (lower.includes('authenticate') || lower.includes('publickeycredential') || lower.includes('webauthn') || lower.includes('biometric') || lower.includes('faceid')) {
+            addPerm(
+              'Biometrics',
+              'To authenticate user identity and authorize transactions securely',
+              hasBridge && lower.includes('authenticate')
+                ? 'JS Bridge: DSPNativeBridge (authenticate)'
+                : 'Code Scan (WebAuthn / Biometrics)',
+              'HIGH'
+            );
+          }
+
+          if (lower.includes('openmicrophone') || lower.includes('recordaudio') || lower.includes('speechrecognition') || lower.includes('audiocontext')) {
+            addPerm(
+              'Microphone',
+              'To record voice notes and enable speech input',
+              hasBridge && (lower.includes('openmicrophone') || lower.includes('recordaudio'))
+                ? 'JS Bridge: DSPNativeBridge (openMicrophone)'
+                : 'Code Scan (Audio / Microphone)',
+              'HIGH'
+            );
+          }
+
+          if (lower.includes('nfcscan') || lower.includes('readnfc') || lower.includes('ndeffilter')) {
+            addPerm(
+              'NFC',
+              'To scan contactless NFC tags and identity chips',
+              'JS Bridge: DSPNativeBridge (nfcScan)',
+              'HIGH'
+            );
+          }
+
+          if (lower.includes('openbluetooth') || lower.includes('bluetooth')) {
+            addPerm(
+              'Bluetooth',
+              'To communicate with nearby Bluetooth devices',
+              hasBridge && lower.includes('openbluetooth')
+                ? 'JS Bridge: DSPNativeBridge (openBluetooth)'
+                : 'Code Scan (Bluetooth)',
+              'MEDIUM'
+            );
+          }
+
+          if (lower.includes('getcontacts') || lower.includes('navigator.contacts')) {
+            addPerm(
+              'Contacts',
+              'To select recipients and contacts from the address book',
+              'JS Bridge: DSPNativeBridge (getContacts)',
+              'MEDIUM'
+            );
+          }
+        }
+      } catch {
+        // Endpoint scan optional
+      }
+    }
+
+    // 3. Category Intelligence Fallback / Augmentation
+    const cat = (body.category || '').toLowerCase();
+    if (cat.includes('bank') || cat.includes('finan')) {
+      addPerm('Biometrics', 'To authenticate user identity securely and authorize transactions', 'Banking Profile', 'HIGH');
+      addPerm('Camera', 'To scan QR codes for quick transfers and payments', 'Banking Profile', 'HIGH');
+    } else if (cat.includes('insur')) {
+      addPerm('Camera', 'To photograph accident evidence and upload policy claim documents', 'Insurance Profile', 'HIGH');
+    } else if (cat.includes('travel') || cat.includes('transport') || cat.includes('ride')) {
+      addPerm('Location', 'To locate pickup points and provide live GPS trip tracking', 'Travel Profile', 'HIGH');
+    } else if (cat.includes('food') || cat.includes('shop') || cat.includes('e-commerce') || cat.includes('retail')) {
+      addPerm('Location', 'To determine delivery address and locate nearby partner stores', 'Shopping Profile', 'MEDIUM');
+    } else if (cat.includes('health') || cat.includes('med')) {
+      addPerm('Camera', 'To take pictures of prescriptions and conduct video consultations', 'Healthcare Profile', 'HIGH');
+      addPerm('Biometrics', 'To secure electronic medical records and patient data', 'Healthcare Profile', 'HIGH');
+    } else if (cat.includes('gov') || cat.includes('public')) {
+      addPerm('Biometrics', 'To verify citizen identity against national digital ID', 'Government Profile', 'HIGH');
+      addPerm('Camera', 'To capture identity card photos for verification', 'Government Profile', 'HIGH');
+    }
+
+    return {
+      success: true,
+      detected,
+      count: detected.length,
+    };
   }
 }

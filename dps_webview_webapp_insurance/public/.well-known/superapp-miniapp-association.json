@@ -1,0 +1,11 @@
+{
+  "appId": "com.company.insurance_miniapp",
+  "verificationToken": "tok_live_insurance_demo_5432",
+  "environment": "PRODUCTION",
+  "allowedDomains": [
+    "localhost",
+    "127.0.0.1",
+    "insurance.fsa.gov",
+    "claims.insurance.fsa.gov"
+  ]
+}

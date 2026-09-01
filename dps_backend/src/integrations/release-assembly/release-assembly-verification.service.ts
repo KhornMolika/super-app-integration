@@ -1,7 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { NexusIntegrationService } from '../nexus/nexus-integration.service';
-import { VerifyAndAssembleReleaseDto, Gate2AuditResult } from './dto/security-gate2.dto';
+import {
+  VerifyAndAssembleReleaseDto,
+  ReleaseAssemblyAuditResult,
+} from './dto/release-assembly-verification.dto';
 
 interface VerifiedAppRecord {
   id: string;
@@ -14,16 +17,16 @@ interface VerifiedAppRecord {
 }
 
 @Injectable()
-export class SecurityGate2Service {
-  private readonly logger = new Logger(SecurityGate2Service.name);
+export class ReleaseAssemblyVerificationService {
+  private readonly logger = new Logger(ReleaseAssemblyVerificationService.name);
 
   constructor(private readonly nexusService: NexusIntegrationService) {}
 
   /**
-   * Performs Security Gate 2 Checksum Verification & Super App Release Assembly
+   * Performs Release Assembly Checksum Verification & Super App Release Assembly
    */
-  async verifyAndAssembleRelease(dto: VerifyAndAssembleReleaseDto): Promise<Gate2AuditResult> {
-    this.logger.log(`Executing Security Gate 2 Verification for Super App release ${dto.releaseVersion}...`);
+  async verifyAndAssembleRelease(dto: VerifyAndAssembleReleaseDto): Promise<ReleaseAssemblyAuditResult> {
+    this.logger.log(`Executing Release Assembly Verification for Super App release ${dto.releaseVersion}...`);
 
     const timestamp = new Date().toISOString();
     const verifiedApps: VerifiedAppRecord[] = [];
@@ -39,7 +42,10 @@ export class SecurityGate2Service {
       let nexusChecksum = '';
       let dependencies: Record<string, string> = {};
 
-      const isExternalScheme = app.packageName?.includes('://') || app.packageName?.startsWith('DEEP_LINK') || app.packageName === 'webview_package';
+      const isExternalScheme =
+        app.packageName?.includes('://') ||
+        app.packageName?.startsWith('DEEP_LINK') ||
+        app.packageName === 'webview_package';
 
       if (isExternalScheme) {
         nexusChecksum = crypto.createHash('sha256').update(`${app.packageName}-${app.version}`).digest('hex');
@@ -69,7 +75,7 @@ export class SecurityGate2Service {
 
       // Checksum matching
       const approvedChecksum = app.approvedChecksum || nexusChecksum;
-      const checksumMatched = (nexusChecksum === approvedChecksum || !app.approvedChecksum);
+      const checksumMatched = nexusChecksum === approvedChecksum || !app.approvedChecksum;
       if (!checksumMatched) {
         allChecksumsMatched = false;
         conflicts.push(
@@ -152,3 +158,6 @@ export class SecurityGate2Service {
     };
   }
 }
+
+// Backwards compatibility alias
+export { ReleaseAssemblyVerificationService as SecurityGate2Service };

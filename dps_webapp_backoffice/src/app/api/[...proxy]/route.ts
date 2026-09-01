@@ -15,6 +15,7 @@ const ALLOWED_ROUTES = [
   'super-app',
   'audit-logs',
   'integrations',
+  'release-assembly',
   'security',
   'api',
 ];

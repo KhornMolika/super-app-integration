@@ -4,6 +4,74 @@ import { useEffect, useRef, useState } from 'react';
 import { Button, Input, Label, Select } from '@/components/ui/inputs';
 import { IntegrationMethod, SourceType } from '@/types/miniapp.types';
 
+export const validateProductionUrlFormat = (url: string) => {
+  if (!url || !url.trim()) {
+    return { valid: false, error: 'Production URL is required.' };
+  }
+  const trimmed = url.trim();
+
+  // Whitespace check
+  if (/\s/.test(trimmed)) {
+    return { valid: false, error: 'URL must not contain whitespace.' };
+  }
+
+  // Protocol check
+  const isDev = process.env.NEXT_PUBLIC_ENVIRONMENT === 'DEV';
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+    return { valid: false, error: 'URL must start with http:// or https://' };
+  }
+
+  if (!isDev && trimmed.startsWith('http://')) {
+    return { valid: false, error: 'Production URL strictly requires HTTPS in production mode.' };
+  }
+
+  // Check for IPv4 out-of-range octets (e.g. 172.20.684.1)
+  const hostMatch = trimmed.match(/^https?:\/\/([^/:]+)/);
+  if (hostMatch) {
+    const hostCandidate = hostMatch[1];
+    const octets = hostCandidate.split('.');
+    if (octets.length === 4 && octets.every(o => /^\d+$/.test(o))) {
+      const invalidOctet = octets.find(o => Number(o) < 0 || Number(o) > 255);
+      if (invalidOctet !== undefined) {
+        return { valid: false, error: `Invalid IPv4 address: octet "${invalidOctet}" exceeds maximum range (0-255).` };
+      }
+    }
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+
+    if (parsed.port) {
+      const portNum = Number(parsed.port);
+      if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
+        return { valid: false, error: `Port "${parsed.port}" is invalid (must be between 1 and 65535).` };
+      }
+    }
+
+    if (!isDev) {
+      if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
+        return { valid: false, error: 'Localhost is not allowed in production.' };
+      }
+      if (!parsed.hostname.includes('.')) {
+        return { valid: false, error: 'Production URL must be a fully qualified domain (e.g. https://app.example.com).' };
+      }
+    }
+
+    return { valid: true, error: null };
+  } catch {
+    return { valid: false, error: 'Invalid URL syntax. Please enter a valid URL.' };
+  }
+};
+
+export const generateClientVerificationToken = () => {
+  if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
+    const bytes = new Uint8Array(16);
+    window.crypto.getRandomValues(bytes);
+    return 'tok_live_' + Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  return 'tok_live_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+};
+
 export default function IntegrationForm({
   formData,
   handleChange,
@@ -11,9 +79,18 @@ export default function IntegrationForm({
   handleWebViewChange,
   handleFlutterChange,
   handleDeepLinkChange,
+  onDomainVerified,
 }: any) {
   const flutterConfig = formData.integrationConfigFlutter || {};
   const deepLinkConfig = formData.integrationConfigDeepLink || {};
+
+  // State for Production URL Real-Time Validation
+  const [prodUrlValidation, setProdUrlValidation] = useState<{
+    status: 'idle' | 'checking' | 'valid' | 'invalid' | 'unreachable';
+    message: string | null;
+  }>({ status: 'idle', message: null });
+  const prodUrlDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const prodUrlCacheRef = useRef<Map<string, { reachable: boolean; timestamp: number }>>(new Map());
 
   // State for Git Real-Time Validation
   const [detectedProvider, setDetectedProvider] = useState<'github' | 'gitlab' | null>(null);
@@ -31,6 +108,158 @@ export default function IntegrationForm({
   // Snippet and copy state
   const [generatedSnippet, setGeneratedSnippet] = useState<string>('');
   const [copied, setCopied] = useState(false);
+  const [copiedToken, setCopiedToken] = useState(false);
+  const [copiedJson, setCopiedJson] = useState(false);
+
+  // State for Domain Ownership Verification
+  const [isVerifyingDomain, setIsVerifyingDomain] = useState(false);
+  const [domainVerificationMsg, setDomainVerificationMsg] = useState<string | null>(null);
+  const [domainVerificationSuccess, setDomainVerificationSuccess] = useState<boolean | null>(null);
+  const [verifiedUrl, setVerifiedUrl] = useState<string | null>(
+    formData.isDomainVerified ? (formData.integrationConfigWebView?.productionUrl || '') : null
+  );
+
+  // Auto-generate token on mount if empty or placeholder
+  useEffect(() => {
+    const currentToken =
+      formData.integrationConfigWebView?.verificationToken ||
+      formData.verificationToken;
+    if (!currentToken || currentToken === 'tok_live_pending_save') {
+      const newToken = generateClientVerificationToken();
+      if (handleWebViewChange) {
+        handleWebViewChange({
+          target: { name: 'verificationToken', value: newToken },
+        });
+      }
+    }
+  }, [formData.verificationToken, formData.integrationConfigWebView?.verificationToken, handleWebViewChange]);
+
+  const handleGenerateToken = async () => {
+    let newToken = generateClientVerificationToken();
+    try {
+      const res = await fetch('/api/mini-apps/generate-token');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.token) newToken = data.token;
+      }
+    } catch {
+      // Fallback already assigned
+    }
+
+    if (handleWebViewChange) {
+      handleWebViewChange({
+        target: { name: 'verificationToken', value: newToken },
+      });
+    }
+
+    setDomainVerificationSuccess(false);
+    setVerifiedUrl(null);
+    setDomainVerificationMsg('New verification token generated. Please update your association file and verify domain.');
+    if (onDomainVerified) {
+      onDomainVerified({ verified: false, isDomainVerified: false, verificationToken: newToken });
+    }
+  };
+
+  const onWebViewInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.name === 'productionUrl') {
+      const newVal = e.target.value;
+      if (verifiedUrl && newVal !== verifiedUrl) {
+        setDomainVerificationSuccess(false);
+        setDomainVerificationMsg(null);
+        if (onDomainVerified) {
+          onDomainVerified({ verified: false, isDomainVerified: false });
+        }
+      }
+    }
+    handleWebViewChange(e);
+  };
+
+  const handleVerifyDomain = async () => {
+    const targetUrl = formData.integrationConfigWebView?.productionUrl;
+    if (!targetUrl || !targetUrl.trim()) {
+      setDomainVerificationMsg('Please enter a Production URL first.');
+      setDomainVerificationSuccess(false);
+      return;
+    }
+
+    let currentToken =
+      formData.integrationConfigWebView?.verificationToken ||
+      formData.verificationToken;
+
+    if (!currentToken || currentToken === 'tok_live_pending_save') {
+      currentToken = generateClientVerificationToken();
+      if (handleWebViewChange) {
+        handleWebViewChange({
+          target: { name: 'verificationToken', value: currentToken },
+        });
+      }
+    }
+
+    const currentAppId = formData.appId || 'com.fsa.banking';
+
+    setIsVerifyingDomain(true);
+    setDomainVerificationMsg(null);
+    try {
+      let res: Response;
+      if (formData.id) {
+        res = await fetch(`/api/mini-apps/${formData.id}/verify-domain`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productionUrl: targetUrl.trim() }),
+        });
+      } else {
+        res = await fetch(`/api/mini-apps/verify-domain`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            productionUrl: targetUrl.trim(),
+            appId: currentAppId,
+            verificationToken: currentToken,
+          }),
+        });
+      }
+
+      const data = await res.json();
+      if (res.ok && data.verified) {
+        setDomainVerificationSuccess(true);
+        setVerifiedUrl(targetUrl.trim());
+        setDomainVerificationMsg(data.message || 'Domain ownership verified successfully.');
+        if (onDomainVerified) {
+          onDomainVerified({
+            ...data,
+            isDomainVerified: true,
+            verified: true,
+            verificationToken: currentToken,
+          });
+        }
+        if (data.allowedDomains && Array.isArray(data.allowedDomains) && data.allowedDomains.length > 0) {
+          handleWebViewChange({
+            target: { name: 'allowedDomains', value: data.allowedDomains.join(', ') },
+          });
+        }
+      } else {
+        setDomainVerificationSuccess(false);
+        setVerifiedUrl(null);
+        setDomainVerificationMsg(data.message || 'Domain verification failed.');
+        if (onDomainVerified) {
+          onDomainVerified({
+            verified: false,
+            isDomainVerified: false,
+            validationErrors: data.validationErrors,
+          });
+        }
+      }
+    } catch (err: any) {
+      setDomainVerificationSuccess(false);
+      setVerifiedUrl(null);
+      setDomainVerificationMsg(err.message || 'Failed to connect to verification service.');
+      if (onDomainVerified) {
+        onDomainVerified({ verified: false, isDomainVerified: false });
+      }
+    } finally {
+      setIsVerifyingDomain(false);
+    }
+  };
 
   // Debounce timers
   const gitDebounceRef = useRef<NodeJS.Timeout | null>(null);
@@ -81,6 +310,80 @@ export default function IntegrationForm({
       target: { name: 'gitUrl', value: cleanUrl },
     });
   };
+
+  // Real-time Production URL format and reachability check
+  useEffect(() => {
+    const prodUrl = (formData.integrationConfigWebView?.productionUrl || '').trim();
+
+    if (!prodUrl) {
+      setProdUrlValidation({ status: 'idle', message: null });
+      return;
+    }
+
+    // 1. Immediate synchronous format check (0ms)
+    const formatRes = validateProductionUrlFormat(prodUrl);
+    if (!formatRes.valid) {
+      setProdUrlValidation({ status: 'invalid', message: formatRes.error });
+      return;
+    }
+
+    // Check in-memory cache for instant feedback (< 1ms)
+    const cached = prodUrlCacheRef.current.get(prodUrl);
+    if (cached && Date.now() - cached.timestamp < 30000) {
+      if (cached.reachable) {
+        setProdUrlValidation({ status: 'valid', message: 'URL format valid & server is online' });
+      } else {
+        setProdUrlValidation({ status: 'unreachable', message: 'URL format valid, but server is offline or unreachable' });
+      }
+      return;
+    }
+
+    // 2. Format is valid -> Fast debounced reachability check (250ms)
+    setProdUrlValidation({ status: 'checking', message: 'Checking server...' });
+
+    if (prodUrlDebounceRef.current) {
+      clearTimeout(prodUrlDebounceRef.current);
+    }
+
+    const abortCtrl = new AbortController();
+
+    prodUrlDebounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/mini-apps/check-url?url=${encodeURIComponent(prodUrl)}`, {
+          signal: abortCtrl.signal,
+        });
+        const data = await res.json();
+        const isReachable = Boolean(data.reachable);
+
+        prodUrlCacheRef.current.set(prodUrl, { reachable: isReachable, timestamp: Date.now() });
+
+        if (isReachable) {
+          setProdUrlValidation({
+            status: 'valid',
+            message: 'URL format valid & server is online',
+          });
+        } else {
+          setProdUrlValidation({
+            status: 'unreachable',
+            message: 'URL format valid, but server is offline or unreachable',
+          });
+        }
+      } catch (err: any) {
+        if (err.name === 'AbortError') return;
+        setProdUrlValidation({
+          status: 'unreachable',
+          message: 'URL format valid, but could not connect to server',
+        });
+      }
+    }, 250);
+
+    return () => {
+      abortCtrl.abort();
+      if (prodUrlDebounceRef.current) {
+        clearTimeout(prodUrlDebounceRef.current);
+      }
+    };
+  }, [formData.integrationConfigWebView?.productionUrl]);
 
   // 1. Real-time Git URL Validation with Debounce (600ms)
   useEffect(() => {
@@ -347,26 +650,378 @@ export default function IntegrationForm({
       )}
 
       {formData.integrationMethod === IntegrationMethod.WEBVIEW && (
-        <div className="grid grid-cols-1 gap-6 p-6 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800">
+        <div className="space-y-6 p-6 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <Label>Production URL <span className="text-rose-500">*</span></Label>
+                {prodUrlValidation.status !== 'idle' && (
+                  <span className={`text-[11px] font-medium flex items-center gap-1 ${
+                    prodUrlValidation.status === 'valid'
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : prodUrlValidation.status === 'checking'
+                      ? 'text-sky-600 dark:text-sky-400'
+                      : prodUrlValidation.status === 'unreachable'
+                      ? 'text-amber-600 dark:text-amber-400'
+                      : 'text-rose-600 dark:text-rose-400'
+                  }`}>
+                    {prodUrlValidation.status === 'checking' && (
+                      <svg className="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                      </svg>
+                    )}
+                    {prodUrlValidation.status === 'valid' && '✓ Reachable'}
+                    {prodUrlValidation.status === 'unreachable' && '⚠ Unreachable'}
+                    {prodUrlValidation.status === 'invalid' && '✕ Format Error'}
+                  </span>
+                )}
+              </div>
+              <div className="relative">
+                <Input
+                  name="productionUrl"
+                  value={formData.integrationConfigWebView?.productionUrl || ''}
+                  onChange={onWebViewInputChange}
+                  type="url"
+                  placeholder="https://banking.example.com/app"
+                  className={`pr-8 ${
+                    prodUrlValidation.status === 'invalid' || allErrors['integrationConfigWebView.productionUrl']
+                      ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/40 dark:bg-rose-950/20'
+                      : prodUrlValidation.status === 'valid'
+                      ? 'border-emerald-500 ring-1 ring-emerald-500/40 focus:ring-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/20'
+                      : prodUrlValidation.status === 'unreachable'
+                      ? 'border-amber-500 ring-1 ring-amber-500/40 focus:ring-amber-500 bg-amber-50/20 dark:bg-amber-950/20'
+                      : ''
+                  }`}
+                />
+                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                  {prodUrlValidation.status === 'checking' && (
+                    <svg className="animate-spin w-4 h-4 text-sky-500" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                  )}
+                  {prodUrlValidation.status === 'valid' && (
+                    <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                  {prodUrlValidation.status === 'invalid' && (
+                    <svg className="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  )}
+                  {prodUrlValidation.status === 'unreachable' && (
+                    <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  )}
+                </div>
+              </div>
+
+              {/* Dynamic Real-Time Feedback Messages */}
+              {prodUrlValidation.status === 'invalid' && (
+                <p className="mt-1.5 text-xs text-rose-600 font-medium flex items-center gap-1">
+                  <span>✕</span> {prodUrlValidation.message}
+                </p>
+              )}
+              {prodUrlValidation.status === 'unreachable' && (
+                <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1">
+                  <span>⚠</span> {prodUrlValidation.message}
+                </p>
+              )}
+              {prodUrlValidation.status === 'valid' && (
+                <p className="mt-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+                  <span>✓</span> {prodUrlValidation.message}
+                </p>
+              )}
+              {prodUrlValidation.status === 'idle' && allErrors['integrationConfigWebView.productionUrl'] && (
+                <p className="mt-1.5 text-xs text-rose-600 font-medium">
+                  {allErrors['integrationConfigWebView.productionUrl']}
+                </p>
+              )}
+              <p className="mt-1 text-xs text-slate-500">
+                Primary HTTPS endpoint loaded by the Super App WebView container.
+              </p>
+            </div>
+
+            <div>
+              <Label>Staging / Test URL (Optional)</Label>
+              <Input
+                name="stagingUrl"
+                value={formData.integrationConfigWebView?.stagingUrl || ''}
+                onChange={handleWebViewChange}
+                type="url"
+                placeholder="https://staging-banking.example.com/app"
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                Secondary endpoint used during internal test builds and staging.
+              </p>
+            </div>
+          </div>
+
           <div>
-            <Label>Production URL</Label>
+            <Label>Allowed Navigation Domains (Whitelist)</Label>
             <Input
-              name="productionUrl"
-              value={formData.integrationConfigWebView?.productionUrl || ''}
-              onChange={handleWebViewChange}
-              type="url"
-              placeholder="https://..."
-              className={
-                allErrors['integrationConfigWebView.productionUrl']
-                  ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50'
-                  : ''
+              name="allowedDomains"
+              value={
+                Array.isArray(formData.integrationConfigWebView?.allowedDomains)
+                  ? formData.integrationConfigWebView.allowedDomains.join(', ')
+                  : (formData.integrationConfigWebView?.allowedDomains || '')
               }
+              onChange={handleWebViewChange}
+              placeholder="banking.example.com, api.banking.example.com, auth.example.com"
             />
-            {allErrors['integrationConfigWebView.productionUrl'] && (
+            {allErrors['integrationConfigWebView.allowedDomains'] && (
               <p className="mt-1.5 text-xs text-rose-600 font-medium">
-                {allErrors['integrationConfigWebView.productionUrl']}
+                {allErrors['integrationConfigWebView.allowedDomains']}
               </p>
             )}
+            <p className="mt-1 text-xs text-slate-500">
+              Comma-separated list of external domains the WebView is permitted to navigate to or invoke via bridge.
+            </p>
+          </div>
+
+          {/* Domain Ownership Verification Section */}
+          <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                  <span>Domain Ownership Verification</span>
+                  {(() => {
+                    const currentProdUrl = (formData.integrationConfigWebView?.productionUrl || '').trim();
+                    const isActuallyVerified =
+                      domainVerificationSuccess === true ||
+                      (formData.isDomainVerified &&
+                        domainVerificationSuccess !== false &&
+                        Boolean(verifiedUrl) &&
+                        verifiedUrl!.trim() === currentProdUrl);
+
+                    return isActuallyVerified ? (
+                      <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
+                        ✓ Verified
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                        Pending Verification
+                      </span>
+                    );
+                  })()}
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Prove administrative control of the target domain by hosting the public association file.
+                </p>
+              </div>
+
+              <Button
+                type="button"
+                onClick={handleVerifyDomain}
+                disabled={isVerifyingDomain}
+                className="text-xs px-3 py-1.5 flex items-center gap-1.5"
+              >
+                {isVerifyingDomain && (
+                  <svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                )}
+                <span>{isVerifyingDomain ? 'Verifying...' : 'Verify Domain'}</span>
+              </Button>
+            </div>
+
+            {(() => {
+              const currentProdUrl = (formData.integrationConfigWebView?.productionUrl || '').trim();
+              const isActuallyVerified =
+                domainVerificationSuccess === true ||
+                (formData.isDomainVerified &&
+                  domainVerificationSuccess !== false &&
+                  Boolean(verifiedUrl) &&
+                  verifiedUrl!.trim() === currentProdUrl);
+
+              if (domainVerificationMsg) {
+                if (isActuallyVerified && domainVerificationSuccess === true) {
+                  return (
+                    <div className="p-3 mb-4 rounded-xl text-xs font-medium bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-2">
+                      <svg className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>{domainVerificationMsg}</span>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="p-3 mb-4 rounded-xl text-xs font-medium bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800 flex items-center gap-2">
+                    <svg className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    <span>{domainVerificationMsg}</span>
+                  </div>
+                );
+              }
+
+              if (!isActuallyVerified && allErrors['integrationConfigWebView.domainVerification']) {
+                return (
+                  <p className="mb-3 text-xs text-rose-600 font-medium flex items-center gap-1.5">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-rose-500" />
+                    {allErrors['integrationConfigWebView.domainVerification']}
+                  </p>
+                );
+              }
+
+              return null;
+            })()}
+
+            <div className="bg-slate-900 text-slate-200 p-4 rounded-xl text-xs space-y-2 font-mono">
+              {(() => {
+                const prodUrlInput = formData.integrationConfigWebView?.productionUrl || '';
+
+                const extractHost = (urlStr: string) => {
+                  if (!urlStr || !urlStr.trim()) return 'domain.com';
+                  try {
+                    return new URL(urlStr).hostname;
+                  } catch {
+                    const match = urlStr.match(/^[a-zA-Z]+:\/\/([^/:]+)/);
+                    if (match) return match[1];
+                    const clean = urlStr.replace(/^https?:\/\//, '').split(/[:/]/)[0];
+                    return clean || 'domain.com';
+                  }
+                };
+
+                const extractOrigin = (urlStr: string) => {
+                  if (!urlStr || !urlStr.trim()) return 'https://<domain>';
+                  try {
+                    return new URL(urlStr).origin;
+                  } catch {
+                    const match = urlStr.match(/^([a-zA-Z]+:\/\/[^/]+)/);
+                    if (match) return match[1];
+                    const clean = urlStr.replace(/^https?:\/\//, '').split('/')[0];
+                    return `http://${clean}`;
+                  }
+                };
+
+                const currentHost = extractHost(prodUrlInput);
+                const currentOrigin = extractOrigin(prodUrlInput);
+
+                // Parse user-specified allowed domains
+                const rawAllowed = formData.integrationConfigWebView?.allowedDomains;
+                let userAllowedDomains: string[] = [];
+                if (Array.isArray(rawAllowed)) {
+                  userAllowedDomains = rawAllowed.map((d: any) => String(d).trim()).filter(Boolean);
+                } else if (typeof rawAllowed === 'string') {
+                  userAllowedDomains = rawAllowed
+                    .split(',')
+                    .map((d: string) => d.trim())
+                    .filter(Boolean);
+                }
+
+                // Fallback to productionUrl hostname if empty
+                if (userAllowedDomains.length === 0 && currentHost && currentHost !== 'domain.com') {
+                  userAllowedDomains = [currentHost];
+                } else if (userAllowedDomains.length === 0) {
+                  userAllowedDomains = ['domain.com'];
+                }
+
+                const dynamicEnv =
+                  formData.environment ||
+                  (process.env.NEXT_PUBLIC_ENVIRONMENT === 'DEV' ? 'DEV' : 'PRODUCTION');
+
+                const defaultCategoryPerms: Record<string, string[]> = {
+                  insurance: ['Camera'],
+                  banking: ['Camera', 'Biometrics'],
+                  travel: ['Location'],
+                  transport: ['Location'],
+                  healthcare: ['Camera', 'Biometrics'],
+                  food: ['Location'],
+                  shopping: ['Location'],
+                };
+                const catKey = (formData.category || '').toLowerCase();
+                const fallbackPerms = defaultCategoryPerms[catKey] || ['Camera', 'Location'];
+
+                const activePerms =
+                  Array.isArray(formData.permissions) && formData.permissions.length > 0
+                    ? formData.permissions.map((p: any) => p.type || p)
+                    : fallbackPerms;
+
+                const dynamicPayload = {
+                  appId: formData.appId || 'com.fsa.appname',
+                  verificationToken:
+                    formData.integrationConfigWebView?.verificationToken ||
+                    formData.verificationToken ||
+                    'tok_live_pending_save',
+                  environment: dynamicEnv,
+                  allowedDomains: userAllowedDomains,
+                  permissions: activePerms,
+                };
+
+                const dynamicJsonString = JSON.stringify(dynamicPayload, null, 2);
+
+                return (
+                  <>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-slate-400 pb-3 border-b border-slate-800">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-slate-400">Expected Host:</span>
+                          <span className="text-sky-300 font-semibold">
+                            {currentHost}
+                          </span>
+                          {userAllowedDomains.length > 0 && (
+                            <span className="text-slate-500 text-[11px]">
+                              (Allowed: {userAllowedDomains.join(', ')})
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-slate-400 flex items-center gap-1 flex-wrap">
+                          <span>Endpoint:</span>
+                          <span className="text-emerald-400/90 font-mono">
+                            {currentOrigin}/.well-known/superapp-miniapp-association.json
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 self-end sm:self-auto shrink-0 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={handleGenerateToken}
+                          className="px-2.5 py-1 rounded bg-indigo-950/60 hover:bg-indigo-900/80 text-indigo-300 hover:text-indigo-200 border border-indigo-700/60 font-sans text-xs transition flex items-center gap-1.5"
+                          title="Generate a new cryptographic verification token"
+                        >
+                          <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          <span>Generate Token</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const token = dynamicPayload.verificationToken;
+                            navigator.clipboard.writeText(token);
+                            setCopiedToken(true);
+                            setTimeout(() => setCopiedToken(false), 2000);
+                          }}
+                          className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-sky-400 hover:text-sky-300 font-sans text-xs transition"
+                        >
+                          {copiedToken ? '✓ Copied Token' : 'Copy Token'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(dynamicJsonString);
+                            setCopiedJson(true);
+                            setTimeout(() => setCopiedJson(false), 2000);
+                          }}
+                          className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-emerald-400 hover:text-emerald-300 font-sans text-xs transition"
+                        >
+                          {copiedJson ? '✓ Copied JSON' : 'Copy JSON'}
+                        </button>
+                      </div>
+                    </div>
+                    <pre className="text-emerald-400 whitespace-pre-wrap overflow-x-auto text-[11px] leading-relaxed">
+                      {dynamicJsonString}
+                    </pre>
+                  </>
+                );
+              })()}
+            </div>
           </div>
         </div>
       )}

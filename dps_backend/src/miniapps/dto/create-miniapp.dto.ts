@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsEmail, IsOptional, IsEnum, IsUrl, IsArray, ValidateNested, ValidateIf } from 'class-validator';
+import { IsString, IsNotEmpty, IsEmail, IsOptional, IsEnum, IsUrl, IsArray, ValidateNested, ValidateIf, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export enum IntegrationMethod {
@@ -35,6 +35,25 @@ export class WebViewConfigDto {
   @IsString()
   @IsOptional()
   stagingUrl?: string;
+
+  @IsArray()
+  @IsOptional()
+  allowedDomains?: string[];
+
+  @IsString()
+  @IsOptional()
+  bridgeApiVersion?: string;
+
+  @IsString()
+  @IsOptional()
+  verificationToken?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  isDomainVerified?: boolean;
+
+  @IsOptional()
+  domainVerifiedAt?: Date | string;
 }
 
 export class FlutterPackageConfigDto {
@@ -135,6 +154,10 @@ export class CreateMiniAppDto {
 
   @IsString()
   @IsOptional()
+  privacyPolicyUrl?: string;
+
+  @IsString()
+  @IsOptional()
   ownerName?: string;
 
   @IsString()
@@ -178,4 +201,15 @@ export class CreateMiniAppDto {
   @Type(() => PermissionDto)
   @IsOptional()
   permissions?: PermissionDto[];
+
+  @IsString()
+  @IsOptional()
+  verificationToken?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  isDomainVerified?: boolean;
+
+  @IsOptional()
+  domainVerifiedAt?: Date | string;
 }

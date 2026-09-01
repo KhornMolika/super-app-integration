@@ -17,7 +17,8 @@ import IntegrationForm from '@/components/forms/IntegrationForm';
 import PermissionsForm from '@/components/forms/PermissionsForm';
 import ValidationIssuesButton from '@/components/ValidationIssuesButton';
 import ActivityTab from '@/components/ui/ActivityTab';
-import SecurityGateCard from '@/components/security/SecurityGateCard';
+import { ValidatedUrlInput } from '@/components/ui/ValidatedUrlInput';
+import { LogoUploadInput } from '@/components/ui/LogoUploadInput';
 import { CreateMiniAppDto, IntegrationMethod, SourceType } from '@/types/miniapp.types';
 
 
@@ -34,6 +35,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
     fullDescription: '',
     logo: '',
     termsUrl: '',
+    privacyPolicyUrl: '',
     teamName: '',
     ownerName: '',
     ownerEmail: '',
@@ -56,7 +58,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
 
   const confirm = useConfirm();
   const { can } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'team' | 'permissions' | 'integration' | 'security' | 'activity' | 'validation'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'team' | 'integration' | 'permissions' | 'validation' | 'activity'>('overview');
   const [customPermission, setCustomPermission] = useState('');
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
@@ -90,12 +92,16 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
 
     if (formData.integrationMethod === IntegrationMethod.WEBVIEW && formData.integrationConfigWebView?.productionUrl) {
       const prodUrl = formData.integrationConfigWebView.productionUrl;
-      const allowLocal = process.env.NEXT_PUBLIC_ALLOW_LOCAL_PROD_URLS === 'true';
-      if (!allowLocal) {
+      const isDev =
+        process.env.NEXT_PUBLIC_ENVIRONMENT === 'DEV' ||
+        process.env.NODE_ENV !== 'production' ||
+        (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'));
+
+      if (!isDev) {
         if (!prodUrl.startsWith('https://')) {
           errors['integrationConfigWebView.productionUrl'] = 'Production URL must use HTTPS.';
         } else if (prodUrl.includes('localhost') || prodUrl.includes('127.0.0.1')) {
-          errors['integrationConfigWebView.productionUrl'] = 'Production URL cannot be localhost.';
+          errors['integrationConfigWebView.productionUrl'] = 'Production URL cannot be localhost in production.';
         }
       }
     }
@@ -159,7 +165,12 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
           setFormData({
             ...data,
             permissions: Array.isArray(data.permissions) ? data.permissions : [],
-            integrationConfigWebView: data.integrationMethod === IntegrationMethod.WEBVIEW ? data.integrationConfig : { productionUrl: '' },
+            integrationConfigWebView: data.integrationMethod === IntegrationMethod.WEBVIEW ? {
+              ...data.integrationConfig,
+              allowedDomains: Array.isArray(data.integrationConfig?.allowedDomains)
+                ? data.integrationConfig.allowedDomains.join(', ')
+                : (data.integrationConfig?.allowedDomains || ''),
+            } : { productionUrl: '', allowedDomains: '', stagingUrl: '' },
             integrationConfigFlutter: data.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE ? data.integrationConfig : { sourceType: SourceType.ARTIFACT, packageName: '', versionConstraint: '' },
             integrationConfigDeepLink: data.integrationMethod === IntegrationMethod.DEEP_LINK ? data.integrationConfig : { urlScheme: '', packageName: '', appStoreUrl: '' },
           });
@@ -262,6 +273,31 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
     });
   };
 
+  const handleDomainVerified = (data: any) => {
+    setFormData(prev => {
+      const nextErrors = prev.validationErrors ? { ...prev.validationErrors } : {};
+      delete nextErrors['integrationConfigWebView.domainVerification'];
+      return {
+        ...prev,
+        isDomainVerified: true,
+        domainVerifiedAt: data.domainVerifiedAt || new Date().toISOString(),
+        integrationConfigWebView: {
+          productionUrl: prev.integrationConfigWebView?.productionUrl || '',
+          ...prev.integrationConfigWebView,
+          allowedDomains: data.allowedDomains && Array.isArray(data.allowedDomains)
+            ? data.allowedDomains.join(', ')
+            : (prev.integrationConfigWebView?.allowedDomains || ''),
+        },
+        validationErrors: nextErrors,
+      };
+    });
+    setLocalErrors(prev => {
+      const next = { ...prev };
+      delete next['integrationConfigWebView.domainVerification'];
+      return next;
+    });
+  };
+
   const handlePermissionFieldChange = (type: string, field: string, value: string) => {
     setFormData(prev => {
       const nextValidationErrors = prev.validationErrors ? { ...prev.validationErrors } : undefined;
@@ -305,6 +341,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
       fullDescription: formData.fullDescription,
       logo: formData.logo,
       termsUrl: formData.termsUrl,
+      privacyPolicyUrl: formData.privacyPolicyUrl,
       teamName: formData.teamName,
       ownerName: formData.ownerName,
       ownerEmail: formData.ownerEmail,
@@ -314,7 +351,14 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
     };
 
     if (formData.integrationMethod === IntegrationMethod.WEBVIEW) {
-      payload.integrationConfigWebView = formData.integrationConfigWebView;
+      const webConfig = { ...formData.integrationConfigWebView };
+      if (typeof webConfig.allowedDomains === 'string') {
+        webConfig.allowedDomains = (webConfig.allowedDomains as any)
+          .split(',')
+          .map((d: string) => d.trim())
+          .filter(Boolean);
+      }
+      payload.integrationConfigWebView = webConfig;
     } else if (formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE) {
       payload.integrationConfigFlutter = formData.integrationConfigFlutter;
     } else if (formData.integrationMethod === IntegrationMethod.DEEP_LINK) {
@@ -484,7 +528,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
 
   return (
     <>
-      <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out pb-12">
+      <div className="w-full mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out pb-12">
         {/* Top Header Card */}
         <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
           <div className="flex items-center space-x-4">
@@ -682,14 +726,14 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
         </div>
 
         <div className="flex space-x-6 border-b border-slate-200 dark:border-slate-700 mb-6 px-2 overflow-x-auto">
-          {['overview', 'team', 'permissions', 'integration', 'security', 'validation', 'activity'].map(tab => (
+          {['overview', 'team', 'integration', 'permissions', 'validation', 'activity'].map(tab => (
             <button
               key={tab}
               type="button"
               onClick={() => setActiveTab(tab as any)}
               className={`pb-3 font-medium text-sm transition-colors relative whitespace-nowrap ${activeTab === tab ? 'text-brand-600 dark:text-brand-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
             >
-              {tab === 'security' ? 'Security Gates (1 & 2)' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
               {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-600 dark:bg-brand-400 rounded-t-full" />}
             </button>
           ))}
@@ -701,11 +745,11 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
                 <CardHeader title="General Information" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <Label>App ID</Label>
+                    <Label>App ID <span className="text-rose-500">*</span></Label>
                     <Input readOnly className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 cursor-not-allowed" name="appId" value={formData.appId || ''} placeholder="com.fsa..." />
                   </div>
                   <div>
-                    <Label>App Name</Label>
+                    <Label>App Name <span className="text-rose-500">*</span></Label>
                     <Input
                       required
                       name="name"
@@ -717,7 +761,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
                     {allErrors.name && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors.name}</p>}
                   </div>
                   <div>
-                    <Label>Category</Label>
+                    <Label>Category <span className="text-rose-500">*</span></Label>
                     <Select name="category" value={formData.category || 'Banking'} onChange={handleChange}>
                       <option>Banking</option>
                       <option>Insurance</option>
@@ -726,13 +770,28 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
                     </Select>
                   </div>
 
+                  <div>
+                    <LogoUploadInput
+                      value={formData.logo || ''}
+                      onChange={(logoVal) => setFormData(prev => ({ ...prev, logo: logoVal }))}
+                      error={allErrors.logo}
+                      required={true}
+                    />
+                  </div>
+
                   <div className="col-span-1 md:col-span-2">
-                    <Label>Short Description</Label>
+                    <div className="flex items-center justify-between mb-1">
+                      <Label>Short Description</Label>
+                      <span className="text-[11px] text-slate-400 font-medium">Optional</span>
+                    </div>
                     <Input name="shortDescription" value={formData.shortDescription || ''} onChange={handleChange} placeholder="Brief summary of the app..." />
                   </div>
 
                   <div className="col-span-1 md:col-span-2">
-                    <Label>Full Description</Label>
+                    <div className="flex items-center justify-between mb-1">
+                      <Label>Full Description</Label>
+                      <span className="text-[11px] text-slate-400 font-medium">Optional</span>
+                    </div>
                     <textarea
                       name="fullDescription"
                       rows={3}
@@ -741,6 +800,36 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
                       placeholder="Comprehensive details regarding the purpose and functionality..."
                       className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                     />
+                  </div>
+
+                  {/* Legal Information */}
+                  <div className="col-span-1 md:col-span-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                      <span>Legal Information</span>
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <ValidatedUrlInput
+                        name="termsUrl"
+                        label="Terms & Conditions URL"
+                        value={formData.termsUrl || ''}
+                        onChange={handleChange}
+                        placeholder="https://example.com/terms"
+                        helperText="Public terms of service URL for this Mini Application."
+                        optional={true}
+                        externalError={allErrors.termsUrl}
+                      />
+
+                      <ValidatedUrlInput
+                        name="privacyPolicyUrl"
+                        label="Privacy Policy URL"
+                        value={formData.privacyPolicyUrl || ''}
+                        onChange={handleChange}
+                        placeholder="https://example.com/privacy-policy"
+                        helperText="Public privacy policy URL describing data handling."
+                        optional={true}
+                        externalError={allErrors.privacyPolicyUrl}
+                      />
+                    </div>
                   </div>
                 </div>
               </Card>
@@ -760,35 +849,68 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
                 handleWebViewChange={handleWebViewChange}
                 handleFlutterChange={handleFlutterChange}
                 handleDeepLinkChange={handleDeepLinkChange}
+                onDomainVerified={handleDomainVerified}
               />
             </Card>}
 
-            {activeTab === 'security' && (
-              <SecurityGateCard miniApp={formData} />
-            )}
+            {
+              activeTab === 'permissions' && <Card>
+                <CardHeader title="Native Permissions" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" /></svg>} />
+                <PermissionsForm
+                  formData={formData}
+                  setFormData={setFormData}
+                  handleChange={handleChange}
+                  allErrors={allErrors}
+                  togglePermission={togglePermission}
+                  handlePermissionFieldChange={handlePermissionFieldChange}
+                  customPermission={customPermission}
+                  setCustomPermission={setCustomPermission}
+                />
+              </Card>
+            }
 
             {
               activeTab === 'validation' && (
                 <div className="space-y-6">
-                  <SecurityGateCard miniApp={formData} />
                   <Card>
                     <CardHeader title="Validation Issues Log" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
                     <p className="text-sm text-slate-500 mb-5">Granular pass/fail status of all platform validation rules.</p>
 
                     <div className="space-y-4">
-                      {(formData as any).issues?.length > 0 ? (
-                        (formData as any).issues.map((issue: any, index: number) => (
-                          <div key={index} className="flex items-start p-4 rounded-xl border border-rose-200 bg-rose-50/50 dark:bg-rose-500/10 dark:border-rose-500/20">
-                            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-rose-100 dark:bg-rose-500/20 flex items-center justify-center text-rose-600 dark:text-rose-400 mr-3">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                            </div>
-                            <div>
-                              <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">{issue.classification || 'MINI_APP_ISSUE'} ({issue.severity || 'HIGH'})</h4>
-                              <p className="text-sm text-rose-700 dark:text-rose-300 mt-1">{issue.description}</p>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
+                    {(formData as any).issues?.length > 0 ? (
+                      <div className="overflow-x-auto rounded-xl border border-rose-200 dark:border-rose-800/40">
+                        <table className="w-full text-left border-collapse">
+                          <thead className="bg-rose-50/80 dark:bg-rose-950/40 border-b border-rose-200 dark:border-rose-800/40 text-xs font-semibold uppercase text-rose-700 dark:text-rose-300">
+                            <tr>
+                              <th className="w-[15%] px-4 py-3">Severity</th>
+                              <th className="w-[25%] px-4 py-3">Classification</th>
+                              <th className="w-[60%] px-4 py-3">Description</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm bg-white dark:bg-slate-900/60">
+                            {(formData as any).issues.map((issue: any, index: number) => (
+                              <tr key={index} className="hover:bg-rose-50/30 dark:hover:bg-rose-950/20 transition-colors">
+                                <td className="px-4 py-3">
+                                  <span className={`inline-flex px-2 py-0.5 text-xs font-bold rounded-full ${
+                                    issue.severity === 'HIGH'
+                                      ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-400 border border-rose-200 dark:border-rose-800'
+                                      : 'bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
+                                  }`}>
+                                    {issue.severity || 'HIGH'}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 font-semibold text-slate-800 dark:text-slate-200">
+                                  {issue.classification || 'MINI_APP_ISSUE'}
+                                </td>
+                                <td className="px-4 py-3 text-rose-700 dark:text-rose-300">
+                                  {issue.description}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
                         <div className="flex items-center p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 dark:bg-emerald-500/10 dark:border-emerald-500/20">
                           <div className="flex-shrink-0 w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mr-3">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
@@ -803,21 +925,6 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
                   </Card>
                 </div >
               )
-            }
-
-            {
-              activeTab === 'permissions' && <Card>
-                <CardHeader title="Native Permissions" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" /></svg>} />
-                <PermissionsForm
-                  formData={formData}
-                  handleChange={handleChange}
-                  allErrors={allErrors}
-                  togglePermission={togglePermission}
-                  handlePermissionFieldChange={handlePermissionFieldChange}
-                  customPermission={customPermission}
-                  setCustomPermission={setCustomPermission}
-                />
-              </Card>
             }
 
             {

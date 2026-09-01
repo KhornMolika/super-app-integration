@@ -1,0 +1,93 @@
+pipeline {
+    agent {
+        docker {
+            image 'node:20-alpine'
+            args '-u root'
+        }
+    }
+
+    parameters {
+        string(name: 'MINIAPP_ID', defaultValue: '', description: 'Mini App UUID')
+        string(name: 'PRODUCTION_URL', defaultValue: '', description: 'Target WebView Production Endpoint')
+        string(name: 'ALLOWED_DOMAINS', defaultValue: '', description: 'Comma-separated list of permitted navigation domains')
+        string(name: 'CALLBACK_URL', defaultValue: 'http://dps-backend:3000/api/integrations/validation/callback', description: 'Backend status webhook URL')
+        booleanParam(name: 'ALLOW_LOCAL', defaultValue: false, description: 'Permit localhost/private IP for local test simulation')
+    }
+
+    environment {
+        REPORT_PATH = "reports/webview-report-${params.MINIAPP_ID}.json"
+    }
+
+    stages {
+        stage('Initialize & Pre-Flight') {
+            steps {
+                echo "Starting automated WebView validation for Mini App: ${params.MINIAPP_ID}"
+                echo "Target URL: ${params.PRODUCTION_URL}"
+                echo "Allowed Domains: ${params.ALLOWED_DOMAINS}"
+                sh 'mkdir -p reports'
+            }
+        }
+
+        stage('Execute Security & Method Validation') {
+            steps {
+                script {
+                    def localFlag = params.ALLOW_LOCAL ? '--allow-local' : ''
+                    // Run scanner script
+                    sh """
+                        node scripts/security/webview-security-scan.mjs \
+                            --url "${params.PRODUCTION_URL}" \
+                            --allowed-domains "${params.ALLOWED_DOMAINS}" \
+                            ${localFlag} \
+                            --output "${env.REPORT_PATH}" || true
+                    """
+                }
+            }
+        }
+
+        stage('Archive Report & MinIO Storage') {
+            steps {
+                archiveArtifacts artifacts: 'reports/*.json', allowEmptyArchive: true
+                echo "Report archived for Mini App: ${params.MINIAPP_ID}"
+            }
+        }
+
+        stage('Post Callback to Backend') {
+            steps {
+                script {
+                    sh """
+                        node -e '
+                            const fs = require("fs");
+                            const reportFile = "${env.REPORT_PATH}";
+                            let report = { status: "FAILED", score: 0, findings: [{ id: "NO_REPORT", severity: "HIGH", title: "Report generation failed" }] };
+                            if (fs.existsSync(reportFile)) {
+                                try { report = JSON.parse(fs.readFileSync(reportFile, "utf8")); } catch(e) {}
+                            }
+                            const payload = JSON.stringify({
+                                miniAppId: "${params.MINIAPP_ID}",
+                                method: "WEBVIEW",
+                                status: report.status || "FAILED",
+                                score: report.score || 0,
+                                checks: report.checks || {},
+                                findings: report.findings || [],
+                                reportPath: "${env.REPORT_PATH}"
+                            });
+
+                            fetch("${params.CALLBACK_URL}", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: payload
+                            }).then(res => console.log("Callback dispatched, status:", res.status))
+                              .catch(err => console.error("Callback failed:", err));
+                        '
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+    }
+}

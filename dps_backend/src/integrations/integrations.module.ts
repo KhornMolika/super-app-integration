@@ -7,34 +7,45 @@ import { GitLabProvider } from './git/providers/gitlab.provider';
 import { NexusIntegrationController } from './nexus/nexus-integration.controller';
 import { NexusIntegrationService } from './nexus/nexus-integration.service';
 
-import { SecurityGateController } from './security/security-gate.controller';
-import { SecurityGateService } from './security/security-gate.service';
-import { SecurityGate2Controller } from './security/security-gate2.controller';
-import { SecurityGate2Service } from './security/security-gate2.service';
+import { ReleaseAssemblyVerificationController } from './release-assembly/release-assembly-verification.controller';
+import { ReleaseAssemblyVerificationService } from './release-assembly/release-assembly-verification.service';
+
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { MiniApp } from '../miniapps/entities/miniapp.entity';
+import { MiniAppIssue } from '../miniapps/entities/miniapp-issue.entity';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { AuditModule } from '../audit/audit.module';
+import { DomainVerificationService } from './webview/domain-verification.service';
+import { ValidationCallbackController } from './validation/validation-callback.controller';
 
 @Module({
-  imports: [ConfigModule],
+  imports: [
+    ConfigModule,
+    TypeOrmModule.forFeature([MiniApp, MiniAppIssue]),
+    NotificationsModule,
+    AuditModule,
+  ],
   controllers: [
     GitIntegrationController,
     NexusIntegrationController,
-    SecurityGateController,
-    SecurityGate2Controller,
+    ReleaseAssemblyVerificationController,
+    ValidationCallbackController,
   ],
   providers: [
     GitIntegrationService,
     GitHubProvider,
     GitLabProvider,
     NexusIntegrationService,
-    SecurityGateService,
-    SecurityGate2Service,
+    ReleaseAssemblyVerificationService,
+    DomainVerificationService,
   ],
   exports: [
     GitIntegrationService,
     GitHubProvider,
     GitLabProvider,
     NexusIntegrationService,
-    SecurityGateService,
-    SecurityGate2Service,
+    ReleaseAssemblyVerificationService,
+    DomainVerificationService,
   ],
 })
 export class IntegrationsModule {}

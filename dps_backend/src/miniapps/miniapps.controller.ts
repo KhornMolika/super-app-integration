@@ -1,4 +1,5 @@
-import { Controller, HttpException, Get, Post, Body, Patch, Param, Delete, Query, ParseUUIDPipe, UseGuards, Req } from '@nestjs/common';
+import { Controller, HttpException, BadRequestException, Get, Post, Body, Patch, Param, Delete, Query, ParseUUIDPipe, UseGuards, Req } from '@nestjs/common';
+import * as net from 'net';
 import { MiniappsService } from './miniapps.service';
 import { CreateMiniAppDto } from './dto/create-miniapp.dto';
 import { MiniAppStatus } from './entities/miniapp.entity';
@@ -25,6 +26,23 @@ export class MiniappsController {
     dataToSave.ownerId = req.user.sub;
     if (createData.integrationMethod === 'WEBVIEW') {
       dataToSave.integrationConfig = createData.integrationConfigWebView;
+      if (createData.isDomainVerified !== undefined) {
+        dataToSave.isDomainVerified = createData.isDomainVerified;
+      } else if (createData.integrationConfigWebView?.isDomainVerified !== undefined) {
+        dataToSave.isDomainVerified = createData.integrationConfigWebView.isDomainVerified;
+      }
+      if (createData.domainVerifiedAt !== undefined) {
+        dataToSave.domainVerifiedAt = createData.domainVerifiedAt;
+      } else if (createData.integrationConfigWebView?.domainVerifiedAt !== undefined) {
+        dataToSave.domainVerifiedAt = createData.integrationConfigWebView.domainVerifiedAt;
+      }
+      const token = createData.verificationToken || createData.integrationConfigWebView?.verificationToken;
+      if (token) {
+        dataToSave.verificationToken = token;
+        if (dataToSave.integrationConfig) {
+          dataToSave.integrationConfig.verificationToken = token;
+        }
+      }
     } else if (createData.integrationMethod === 'FLUTTER_PACKAGE') {
       dataToSave.integrationConfig = createData.integrationConfigFlutter;
     } else if (createData.integrationMethod === 'DEEP_LINK') {
@@ -45,6 +63,23 @@ export class MiniappsController {
     dataToSave.ownerId = req.user.sub;
     if (createData.integrationMethod === 'WEBVIEW') {
       dataToSave.integrationConfig = createData.integrationConfigWebView;
+      if (createData.isDomainVerified !== undefined) {
+        dataToSave.isDomainVerified = createData.isDomainVerified;
+      } else if (createData.integrationConfigWebView?.isDomainVerified !== undefined) {
+        dataToSave.isDomainVerified = createData.integrationConfigWebView.isDomainVerified;
+      }
+      if (createData.domainVerifiedAt !== undefined) {
+        dataToSave.domainVerifiedAt = createData.domainVerifiedAt;
+      } else if (createData.integrationConfigWebView?.domainVerifiedAt !== undefined) {
+        dataToSave.domainVerifiedAt = createData.integrationConfigWebView.domainVerifiedAt;
+      }
+      const token = createData.verificationToken || createData.integrationConfigWebView?.verificationToken;
+      if (token) {
+        dataToSave.verificationToken = token;
+        if (dataToSave.integrationConfig) {
+          dataToSave.integrationConfig.verificationToken = token;
+        }
+      }
     } else if (createData.integrationMethod === 'FLUTTER_PACKAGE') {
       dataToSave.integrationConfig = createData.integrationConfigFlutter;
     } else if (createData.integrationMethod === 'DEEP_LINK') {
@@ -72,33 +107,60 @@ export class MiniappsController {
   }
 
 
+  private probeTcp(host: string, port: number, timeoutMs = 1200): Promise<boolean> {
+    return new Promise((resolve) => {
+      const socket = new net.Socket();
+      socket.setTimeout(timeoutMs);
+
+      socket.on('connect', () => {
+        socket.destroy();
+        resolve(true);
+      });
+
+      socket.on('timeout', () => {
+        socket.destroy();
+        resolve(false);
+      });
+
+      socket.on('error', () => {
+        socket.destroy();
+        resolve(false);
+      });
+
+      try {
+        socket.connect(port, host);
+      } catch {
+        resolve(false);
+      }
+    });
+  }
+
   @Get('check-url')
   async checkUrl(@Query('url') url: string) {
-    if (!url) return { reachable: false };
+    if (!url) return { reachable: false, message: 'URL is required' };
+
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      return { reachable: false, message: 'Invalid URL format' };
+    }
     
     // Skip git repository URLs as they often block simple HEAD/GET requests
     if (url.includes('github.com') || url.includes('gitlab.com') || url.includes('bitbucket.org') || url.endsWith('.git')) {
       return { reachable: true };
     }
 
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-      const response = await fetch(url, { method: 'HEAD', signal: controller.signal });
-      clearTimeout(timeoutId);
-      if (response.ok || (response.status >= 300 && response.status < 400)) return { reachable: true };
-    } catch (error) {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-        const response = await fetch(url, { method: 'GET', signal: controller.signal });
-        clearTimeout(timeoutId);
-        if (response.ok || (response.status >= 300 && response.status < 400)) return { reachable: true };
-      } catch (e) {
-        return { reachable: false };
-      }
+    const port = parsed.port ? Number(parsed.port) : (parsed.protocol === 'https:' ? 443 : 80);
+    const host = parsed.hostname;
+
+    // Fast TCP probe (1200ms max timeout)
+    const isPortOpen = await this.probeTcp(host, port, 1200);
+    if (!isPortOpen) {
+      return { reachable: false, message: `Could not connect to ${host}:${port} (server offline or unreachable)` };
     }
-    return { reachable: false };
+
+    return { reachable: true, host, port };
   }
 
   @Get('check-exists')
@@ -108,6 +170,41 @@ export class MiniappsController {
   }
 
 
+
+  @Get('generate-token')
+  @RequirePermissions('miniapp:create')
+  generateToken() {
+    return { token: this.miniappService.generateVerificationToken() };
+  }
+
+  @Post('verify-domain')
+  @RequirePermissions('miniapp:create')
+  verifyDomainStandalone(
+    @Body() body: { productionUrl: string; appId: string; verificationToken: string }
+  ) {
+    if (!body?.productionUrl) {
+      throw new BadRequestException('productionUrl is required.');
+    }
+    if (!body?.appId) {
+      throw new BadRequestException('appId is required.');
+    }
+    if (!body?.verificationToken) {
+      throw new BadRequestException('verificationToken is required.');
+    }
+    return this.miniappService.verifyDomainStandalone(
+      body.productionUrl,
+      body.appId,
+      body.verificationToken
+    );
+  }
+
+  @Post('detect-permissions')
+  @RequirePermissions('miniapp:create')
+  detectPermissions(
+    @Body() body: { productionUrl?: string; category?: string; name?: string; appId?: string }
+  ) {
+    return this.miniappService.detectPermissions(body);
+  }
 
   @Get('notifications')
   @RequirePermissions('miniapp:read')
@@ -119,6 +216,12 @@ export class MiniappsController {
   @RequirePermissions('miniapp:read')
   markNotificationRead(@Param('id') id: string) {
     return this.miniappService.markNotificationRead(id);
+  }
+
+  @Post(':id/verify-domain')
+  @RequirePermissions('miniapp:update')
+  verifyDomain(@Param('id', ParseUUIDPipe) id: string, @Body() body?: { productionUrl?: string }) {
+    return this.miniappService.verifyDomain(id, body?.productionUrl);
   }
 
   @Post(':id/submit')

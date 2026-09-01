@@ -1,5 +1,7 @@
 "use client";
 import { Input, Label, Select, Textarea, Button } from '@/components/ui/inputs';
+import { ValidatedUrlInput } from '@/components/ui/ValidatedUrlInput';
+import { LogoUploadInput } from '@/components/ui/LogoUploadInput';
 import { CreateMiniAppDto, IntegrationMethod, SourceType } from '@/types/miniapp.types';
 
 export default function BasicInfoForm({ formData, handleChange, allErrors = {} }: any) {
@@ -7,7 +9,7 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {} }
     <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <Label>App Name</Label>
+              <Label>App Name <span className="text-rose-500">*</span></Label>
               <Input 
                 required 
                 name="name" 
@@ -19,7 +21,7 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {} }
               {allErrors.name && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors.name}</p>}
             </div>
             <div>
-              <Label>App ID (Auto-generated)</Label>
+              <Label>App ID (Auto-generated) <span className="text-rose-500">*</span></Label>
               <Input 
                 readOnly 
                 name="appId" 
@@ -30,7 +32,7 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {} }
               {allErrors.appId && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors.appId}</p>}
             </div>
             <div>
-              <Label>Category</Label>
+              <Label>Category <span className="text-rose-500">*</span></Label>
               <Select name="category" value={formData.category} onChange={handleChange}>
                 <option>Banking</option>
                 <option>Insurance</option>
@@ -39,36 +41,63 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {} }
               </Select>
             </div>
             <div>
-              <Label>Logo URL</Label>
-              <Input 
-                required 
-                name="logo" 
-                value={formData.logo} 
-                onChange={handleChange} 
-                type="url" 
-                placeholder="https://..." 
-                className={allErrors.logo ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
+              <LogoUploadInput
+                value={formData.logo || ''}
+                onChange={(logoVal) => handleChange({ target: { name: 'logo', value: logoVal } })}
+                error={allErrors.logo}
+                required={true}
               />
-              {allErrors.logo && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors.logo}</p>}
             </div>
             <div className="col-span-1 md:col-span-2">
-              <Label>Short Description</Label>
-              <Input name="shortDescription" value={formData.shortDescription} onChange={handleChange} placeholder="One sentence summary" />
+              <div className="flex items-center justify-between mb-1">
+                <Label>Short Description</Label>
+                <span className="text-[11px] text-slate-400 font-medium">Optional</span>
+              </div>
+              <Input name="shortDescription" value={formData.shortDescription || ''} onChange={handleChange} placeholder="One sentence summary" />
             </div>
             <div className="col-span-1 md:col-span-2">
-              <Label>Terms & Privacy Policy URL (Optional)</Label>
-              <Input 
-                name="termsUrl" 
-                value={formData.termsUrl || ''} 
-                onChange={handleChange} 
-                type="url" 
-                placeholder="https://example.com/privacy-policy" 
-                className={allErrors.termsUrl ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
+              <div className="flex items-center justify-between mb-1">
+                <Label>Full Description</Label>
+                <span className="text-[11px] text-slate-400 font-medium">Optional</span>
+              </div>
+              <Textarea
+                name="fullDescription"
+                rows={3}
+                value={formData.fullDescription || ''}
+                onChange={handleChange}
+                placeholder="Comprehensive details regarding the purpose and functionality..."
+                className={allErrors.fullDescription ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
               />
-              {allErrors.termsUrl && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors.termsUrl}</p>}
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                Optional public privacy policy or terms of service URL for this Mini Application.
-              </p>
+              {allErrors.fullDescription && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors.fullDescription}</p>}
+            </div>
+            {/* Legal Information */}
+            <div className="col-span-1 md:col-span-2 pt-2">
+              <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                <span>Legal Information</span>
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <ValidatedUrlInput
+                  name="termsUrl"
+                  label="Terms & Conditions URL"
+                  value={formData.termsUrl || ''}
+                  onChange={handleChange}
+                  placeholder="https://example.com/terms"
+                  helperText="Public terms of service URL for this Mini Application."
+                  optional={true}
+                  externalError={allErrors.termsUrl}
+                />
+
+                <ValidatedUrlInput
+                  name="privacyPolicyUrl"
+                  label="Privacy Policy URL"
+                  value={formData.privacyPolicyUrl || ''}
+                  onChange={handleChange}
+                  placeholder="https://example.com/privacy-policy"
+                  helperText="Public privacy policy URL describing data handling."
+                  optional={true}
+                  externalError={allErrors.privacyPolicyUrl}
+                />
+              </div>
             </div>
           </div>
 

@@ -1,3 +1,3 @@
-library dps_core_package;
+library;
 
 export 'dps_core.dart';

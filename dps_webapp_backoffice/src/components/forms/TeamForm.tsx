@@ -7,15 +7,21 @@ export default function TeamForm({ formData, handleChange, allErrors = {} }: any
     <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <Label>Team Name</Label>
+              <div className="flex items-center justify-between mb-1">
+                <Label>Team Name</Label>
+                <span className="text-[11px] text-slate-400 font-medium">Optional</span>
+              </div>
               <Input name="teamName" value={formData.teamName} onChange={handleChange} placeholder="e.g. Core Banking Team" />
             </div>
             <div>
-              <Label>Owner Name</Label>
+              <div className="flex items-center justify-between mb-1">
+                <Label>Owner Name</Label>
+                <span className="text-[11px] text-slate-400 font-medium">Optional</span>
+              </div>
               <Input name="ownerName" value={formData.ownerName} onChange={handleChange} placeholder="John Doe" />
             </div>
             <div>
-              <Label>Owner Email</Label>
+              <Label>Owner Email <span className="text-rose-500">*</span></Label>
               <Input 
                 required 
                 name="ownerEmail" 
@@ -28,7 +34,10 @@ export default function TeamForm({ formData, handleChange, allErrors = {} }: any
               {allErrors.ownerEmail && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors.ownerEmail}</p>}
             </div>
             <div>
-              <Label>Support Email</Label>
+              <div className="flex items-center justify-between mb-1">
+                <Label>Support Email</Label>
+                <span className="text-[11px] text-slate-400 font-medium">Optional</span>
+              </div>
               <Input 
                 name="supportEmail" 
                 value={formData.supportEmail} 

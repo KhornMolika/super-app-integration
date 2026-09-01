@@ -18,6 +18,10 @@ export interface PermissionDto {
 
 export interface WebViewConfigDto {
   productionUrl: string;
+  stagingUrl?: string;
+  allowedDomains?: string[];
+  bridgeApiVersion?: string;
+  verificationToken?: string;
 }
 
 export interface FlutterPackageConfigDto {
@@ -44,6 +48,7 @@ export interface CreateMiniAppDto {
   fullDescription?: string;
   logo?: string;
   termsUrl?: string;
+  privacyPolicyUrl?: string;
   
   ownerName?: string;
   ownerEmail: string;
@@ -54,6 +59,9 @@ export interface CreateMiniAppDto {
   integrationConfigWebView?: WebViewConfigDto;
   integrationConfigFlutter?: FlutterPackageConfigDto;
   integrationConfigDeepLink?: DeepLinkConfigDto;
+  verificationToken?: string;
+  isDomainVerified?: boolean;
+  domainVerifiedAt?: string;
   
   permissions?: PermissionDto[];
 }

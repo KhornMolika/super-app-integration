@@ -147,12 +147,12 @@ export default function ReviewQueuePage() {
               <table className="w-full text-left border-collapse">
                 <thead className="bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/50">
                   <tr>
-                    <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Mini App</th>
-                    <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Permission</th>
-                    <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Date Submitted</th>
-                    <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Status</th>
+                    <th className="w-[25%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Mini App</th>
+                    <th className="w-[25%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Permission</th>
+                    <th className="w-[20%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Date Submitted</th>
+                    <th className="w-[18%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Status</th>
                     {isAdminOrSuperAdmin && (
-                      <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider text-right">Actions</th>
+                      <th className="w-[12%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider text-right">Actions</th>
                     )}
                   </tr>
                 </thead>
@@ -177,8 +177,8 @@ export default function ReviewQueuePage() {
                           <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-sm">
                             {proposal.createdAt ? new Date(proposal.createdAt).toLocaleDateString() : '-'}
                           </td>
-                          <td className="px-6 py-4">
-                            <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 border ${
                               isPending
                                 ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20'
                                 : proposal.status === 'APPROVED'
@@ -216,12 +216,12 @@ export default function ReviewQueuePage() {
               <table className="w-full text-left border-collapse">
                 <thead className="bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/50">
                   <tr>
-                    <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Mini App</th>
-                    <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Category</th>
-                    <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Date Submitted</th>
-                    <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Status</th>
+                    <th className="w-[28%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Mini App</th>
+                    <th className="w-[22%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Category</th>
+                    <th className="w-[22%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Date Submitted</th>
+                    <th className="w-[16%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Status</th>
                     {isAdminOrSuperAdmin && (
-                      <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider text-right">Actions</th>
+                      <th className="w-[12%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider text-right">Actions</th>
                     )}
                   </tr>
                 </thead>
@@ -244,8 +244,8 @@ export default function ReviewQueuePage() {
                         <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-sm">
                           {app.createdAt ? new Date(app.createdAt).toLocaleDateString() : '-'}
                         </td>
-                        <td className="px-6 py-4">
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-medium border bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20`}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 border bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20`}>
                             {app.status === 'PENDING_REVIEW' ? 'Pending Review' : app.status}
                           </span>
                         </td>

@@ -62,7 +62,7 @@ export default function RootLayout({
                   <HeaderProfile />
                 </div>
               </header>
-              <div className="p-10 max-w-7xl mx-auto w-full">
+              <div className="p-4 sm:p-6 lg:p-8 w-full min-w-0">
                 {children}
               </div>
             </main>

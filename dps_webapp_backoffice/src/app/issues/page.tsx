@@ -26,7 +26,7 @@ export default function IssuesPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto py-8">
+    <div className="w-full py-6">
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Issues Management</h1>
@@ -36,15 +36,15 @@ export default function IssuesPage() {
 
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full text-left border-collapse">
             <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
               <tr>
-                <th className="px-6 py-4 text-xs font-semibold uppercase text-slate-500">Mini App</th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase text-slate-500">Classification</th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase text-slate-500">Description</th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase text-slate-500">Severity</th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase text-slate-500">Status</th>
-                <th className="px-6 py-4 text-xs font-semibold uppercase text-slate-500">Actions</th>
+                <th className="w-[18%] px-6 py-4 text-xs font-semibold uppercase text-slate-500">Mini App</th>
+                <th className="w-[18%] px-6 py-4 text-xs font-semibold uppercase text-slate-500">Classification</th>
+                <th className="w-[36%] px-6 py-4 text-xs font-semibold uppercase text-slate-500">Description</th>
+                <th className="w-[10%] px-6 py-4 text-xs font-semibold uppercase text-slate-500">Severity</th>
+                <th className="w-[10%] px-6 py-4 text-xs font-semibold uppercase text-slate-500">Status</th>
+                <th className="w-[8%] px-6 py-4 text-xs font-semibold uppercase text-slate-500 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
@@ -65,7 +65,7 @@ export default function IssuesPage() {
                         {issue.classification || 'MINI_APP_ISSUE'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 max-w-xs truncate text-sm text-slate-600 dark:text-slate-400" title={issue.description}>
+                    <td className="px-6 py-4 max-w-[36%] truncate text-sm text-slate-600 dark:text-slate-400" title={issue.description}>
                       {issue.description}
                     </td>
                     <td className="px-6 py-4">

@@ -896,11 +896,11 @@ export default function GuidelinesPage() {
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-700">
                 <tr>
-                  <th className="p-3.5">Method</th>
-                  <th className="p-3.5">Super App Receives</th>
-                  <th className="p-3.5">Who Builds / Hosts?</th>
-                  <th className="p-3.5">Source Confidentiality</th>
-                  <th className="p-3.5">Runtime Performance</th>
+                  <th className="w-[20%] p-3.5">Method</th>
+                  <th className="w-[20%] p-3.5">Super App Receives</th>
+                  <th className="w-[20%] p-3.5">Who Builds / Hosts?</th>
+                  <th className="w-[20%] p-3.5">Source Confidentiality</th>
+                  <th className="w-[20%] p-3.5">Runtime Performance</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-800/40">
@@ -1715,6 +1715,35 @@ export default function GuidelinesPage() {
             blocked with actionable line-by-line remediation logs.
           </p>
 
+          {/* 5 Security Checkpoints Overview */}
+          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30">
+            <h5 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-3">
+              5 Defense-in-Depth Checkpoints
+            </h5>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 text-xs">
+              <div className="p-2.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                <span className="font-bold text-slate-900 dark:text-white block mb-1">1. Submission Boundary</span>
+                <p className="text-slate-600 dark:text-slate-400">Direct MinIO upload via pre-signed URLs; backend never parses untrusted binaries directly.</p>
+              </div>
+              <div className="p-2.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                <span className="font-bold text-slate-900 dark:text-white block mb-1">2. Ephemeral Isolation</span>
+                <p className="text-slate-600 dark:text-slate-400">All scans and builds execute inside ephemeral, isolated CI containers destroyed post-run.</p>
+              </div>
+              <div className="p-2.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                <span className="font-bold text-slate-900 dark:text-white block mb-1">3. Automated Scanning</span>
+                <p className="text-slate-600 dark:text-slate-400">Gitleaks, Semgrep, Trivy SCA, ClamAV, and OWASP ZAP dynamic analysis.</p>
+              </div>
+              <div className="p-2.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                <span className="font-bold text-slate-900 dark:text-white block mb-1">4. Trusted Nexus Gate</span>
+                <p className="text-slate-600 dark:text-slate-400">Only artifacts passing 100% of policy gates are published to Sonatype Nexus for Super App builds.</p>
+              </div>
+              <div className="p-2.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                <span className="font-bold text-slate-900 dark:text-white block mb-1">5. Remediation Loop</span>
+                <p className="text-slate-600 dark:text-slate-400">Detected issues are recorded in the Portal and reset status to DRAFT for resubmission.</p>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40">
               <div className="flex items-center justify-between mb-2">
@@ -1777,6 +1806,24 @@ export default function GuidelinesPage() {
               <div className="flex items-center justify-between mb-2">
                 <span className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <span className="p-1 rounded bg-slate-100 text-slate-700 text-xs">
+                    <ShieldIcon />
+                  </span>{" "}
+                  ClamAV (Malware Scan)
+                </span>
+                <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                  Binary Gate
+                </span>
+              </div>
+              <p className="text-sm text-slate-700 dark:text-slate-300">
+                Performs signature and heuristic scanning of uploaded package
+                archives, binaries, and assets to detect malicious payloads prior to build ingestion.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 md:col-span-2">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <span className="p-1 rounded bg-slate-100 text-slate-700 text-xs">
                     <GlobeIcon />
                   </span>{" "}
                   OWASP ZAP (DAST for WebView)
@@ -1799,20 +1846,21 @@ export default function GuidelinesPage() {
             </h5>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
               <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700">
-                <span className="font-bold text-slate-700 dark:text-slate-300">
+                <span className="font-bold text-rose-600 dark:text-rose-400">
                   CRITICAL
                 </span>
                 <p className="text-sm text-slate-700 dark:text-slate-300 mt-0.5">
-                  Immediate hard failure. State moves to{" "}
-                  <code>SECURITY_FAILED</code>.
+                  Immediate hard block. Issue logged; integration state resets to{" "}
+                  <code>DRAFT</code> for remediation.
                 </p>
               </div>
               <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700">
-                <span className="font-bold text-slate-700 dark:text-slate-300">
+                <span className="font-bold text-amber-600 dark:text-amber-400">
                   HIGH
                 </span>
                 <p className="text-sm text-slate-700 dark:text-slate-300 mt-0.5">
-                  Build blocked. Requires code remediation and resubmission.
+                  Build blocked. Issue logged; integration state resets to{" "}
+                  <code>DRAFT</code> until resolved and resubmitted.
                 </p>
               </div>
               <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700">
@@ -1820,7 +1868,7 @@ export default function GuidelinesPage() {
                   MEDIUM
                 </span>
                 <p className="text-sm text-slate-700 dark:text-slate-300 mt-0.5">
-                  Warning logged. Requires explicit SA Admin sign-off.
+                  Warning logged. Requires explicit SA Admin review and sign-off.
                 </p>
               </div>
               <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700">
@@ -1828,7 +1876,7 @@ export default function GuidelinesPage() {
                   LOW / INFO
                 </span>
                 <p className="text-sm text-slate-700 dark:text-slate-300 mt-0.5">
-                  Informational note included in audit log.
+                  Informational note recorded in audit log.
                 </p>
               </div>
             </div>
@@ -1934,7 +1982,7 @@ export default function GuidelinesPage() {
               <p className="text-slate-700 dark:text-slate-300">
                 Once the CI pipeline builds the test Android APK and iOS test
                 package and stores them securely in Sonatype Nexus (promoted
-                from MinIO Quarantine):
+                from verified MinIO submissions):
               </p>
               <ul className="list-disc pl-4 mt-2 space-y-1 text-slate-700 dark:text-slate-300">
                 <li>
@@ -1990,7 +2038,7 @@ export default function GuidelinesPage() {
             },
             {
               issue:
-                "SECURITY_FAILED: Gitleaks detected sensitive key in assets",
+                "SECURITY_CHECK_FAILED: Gitleaks detected sensitive key in assets",
               cause:
                 "Hardcoded staging/dev API secret or private key committed in source repository.",
               fix: "Remove token from Git history, rotate the compromised credential, and retrieve keys dynamically via SuperAppSDK auth context.",
@@ -2173,7 +2221,7 @@ export default function GuidelinesPage() {
         <main className="flex-1 overflow-y-auto bg-white dark:bg-slate-950 relative scroll-smooth">
           {/* Subtle background glow */}
 
-          <div className="p-10 max-w-7xl mx-auto w-full relative z-10">
+          <div className="p-4 sm:p-6 lg:p-10 w-full relative z-10">
             <div className="space-y-20 pb-20">
               {sections.map((sec, index) => (
                 <section key={sec.id} id={sec.id} className="scroll-mt-24">

@@ -1,0 +1,53 @@
+{
+  "timestamp": "2026-09-01T07:21:23.923Z",
+  "targetUrl": "https://example.com/",
+  "allowedDomains": [
+    "example.com"
+  ],
+  "status": "PASSED",
+  "score": 80,
+  "checks": {
+    "ssrfProtection": {
+      "passed": true,
+      "details": "Hostname resolved safely to [104.20.23.154, 172.66.147.243]. No private subnets detected."
+    },
+    "tlsConfiguration": {
+      "passed": true,
+      "details": "Negotiated TLSv1.3. Certificate valid until Oct 27 22:17:21 2026 GMT."
+    },
+    "redirectPolicy": {
+      "passed": true,
+      "details": "Followed 0 redirect hop(s). All destinations verified against allowlist."
+    },
+    "securityHeaders": {
+      "passed": true,
+      "details": "CSP: Missing, X-Frame-Options: Missing, HSTS: Missing."
+    }
+  },
+  "findings": [
+    {
+      "id": "SEC-HEADER-NO-FRAME-CONTROL",
+      "severity": "MEDIUM",
+      "category": "HEADERS",
+      "title": "Missing Framing Controls (Clickjacking Protection)",
+      "description": "Neither Content-Security-Policy (frame-ancestors) nor X-Frame-Options header was detected.",
+      "recommendation": "Configure Content-Security-Policy: frame-ancestors to permit only the official Super App host shell."
+    },
+    {
+      "id": "SEC-HEADER-NO-SNIFF",
+      "severity": "LOW",
+      "category": "HEADERS",
+      "title": "Missing X-Content-Type-Options Header",
+      "description": "The X-Content-Type-Options: nosniff header prevents MIME type sniffing exploits.",
+      "recommendation": "Add \"X-Content-Type-Options: nosniff\" to web server response headers."
+    },
+    {
+      "id": "SEC-HEADER-NO-HSTS",
+      "severity": "LOW",
+      "category": "HEADERS",
+      "title": "Missing Strict-Transport-Security (HSTS) Header",
+      "description": "HSTS ensures browsers and WebViews never degrade connections to insecure plain HTTP.",
+      "recommendation": "Add \"Strict-Transport-Security: max-age=31536000; includeSubDomains\" header."
+    }
+  ]
+}
