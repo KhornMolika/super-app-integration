@@ -1,0 +1,95 @@
+services:
+  # 1. Jenkins Controller (The Orchestrator)
+  jenkins-controller:
+    image: jenkins/jenkins:lts-jdk21
+    container_name: jenkins-controller
+    restart: unless-stopped
+    user: root
+    ports:
+      # Changed from 8080 to 8085 to avoid conflict with Jitsi/other services
+      - "8085:8080"
+      - "50000:50000"
+    environment:
+      - DOCKER_HOST=tcp://docker:2376
+      - DOCKER_CERT_PATH=/certs/client
+      - DOCKER_TLS_VERIFY=1
+      - JAVA_OPTS=-Xmx2048m -Xms1024m
+    volumes:
+      - jenkins_data:/var/jenkins_home
+      - jenkins_certs:/certs/client:ro
+      - scan_reports:/var/reports
+    depends_on:
+      - docker-dind
+    networks:
+      - ci_network
+
+  # 2. Docker-in-Docker (The Ephemeral Execution Boundary)
+  docker-dind:
+    image: docker:dind
+    container_name: jenkins-docker-dind
+    privileged: true
+    restart: unless-stopped
+    environment:
+      - DOCKER_TLS_CERTDIR=/certs
+    volumes:
+      - jenkins_data:/var/jenkins_home
+      - jenkins_certs:/certs/client
+      - scan_reports:/var/reports
+    networks:
+      ci_network:
+        aliases:
+          - docker
+    ports:
+      - "2376:2376"
+
+  # 3. OWASP ZAP (XSS, CSP, & Web Vulnerability DAST Scanner)
+  owasp-zap:
+    image: zaproxy/zap-stable
+    container_name: superapp-zap
+    restart: unless-stopped
+    command: zap.sh -daemon -host 0.0.0.0 -port 8090 -config api.disablekey=true -config api.addrs.addr.name=.* -config api.addrs.addr.regex=true
+    networks:
+      - ci_network
+    ports:
+      - "8090:8090"
+    volumes:
+      - scan_reports:/zap/wrk
+
+  # 4. testssl.sh (HTTPS & TLS 1.2+ Security Enforcer)
+  testssl:
+    image: drwetter/testssl.sh
+    platform: linux/amd64
+    container_name: superapp-testssl
+    entrypoint: ["tail", "-f", "/dev/null"]
+    restart: unless-stopped
+    networks:
+      - ci_network
+    volumes:
+      - scan_reports:/home/testssl/reports
+
+  # 5. Nuclei (Exposed Secrets, Misconfigurations & Known CVE Scanner)
+  nuclei:
+    image: projectdiscovery/nuclei:latest
+    container_name: superapp-nuclei
+    entrypoint: ["tail", "-f", "/dev/null"]
+    restart: unless-stopped
+    networks:
+      - ci_network
+    volumes:
+      - nuclei_templates:/root/nuclei-templates
+      - scan_reports:/reports
+
+networks:
+  ci_network:
+    name: ci_network
+    driver: bridge
+
+volumes:
+  jenkins_data:
+    name: superapp_jenkins_data
+  jenkins_certs:
+    name: superapp_jenkins_certs
+  scan_reports:
+    name: superapp_scan_reports
+  nuclei_templates:
+    name: superapp_nuclei_templates

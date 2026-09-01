@@ -230,6 +230,12 @@ export class MiniappsController {
     return this.miniappService.submitForReview(id, req.user.sub);
   }
 
+  @Post(':id/rescan')
+  @RequirePermissions('miniapp:update')
+  rescan(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    return this.miniappService.rescan(id, req.user?.sub);
+  }
+
   @Post(':id/approve')
   @RequirePermissions('miniapp:approve')
   approve(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {

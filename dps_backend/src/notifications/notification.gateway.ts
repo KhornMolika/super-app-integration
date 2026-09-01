@@ -22,6 +22,14 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
   }
 
   emitNotification(notification: any) {
-    this.server.emit('notification.created', notification);
+    if (this.server) {
+      this.server.emit('notification.created', notification);
+    }
+  }
+
+  emitStageUpdate(data: any) {
+    if (this.server) {
+      this.server.emit('miniapp.stage_updated', data);
+    }
   }
 }

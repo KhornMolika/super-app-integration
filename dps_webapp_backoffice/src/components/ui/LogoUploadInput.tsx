@@ -29,6 +29,7 @@ export function LogoUploadInput({
 }: LogoUploadInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string>('');
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -48,7 +49,7 @@ export function LogoUploadInput({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isPreviewOpen]);
 
-  const handleFile = (file: File) => {
+  const handleFile = async (file: File) => {
     setUploadError(null);
 
     // Validate mime type
@@ -64,17 +65,44 @@ export function LogoUploadInput({
     }
 
     setFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
-      if (dataUrl) {
-        onChange(dataUrl);
+    setIsUploading(true);
+
+    try {
+      // Direct upload to MinIO via BFF proxy
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
+
+      const res = await fetch('/api/storage/upload', {
+        method: 'POST',
+        body: uploadFormData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.url) {
+          onChange(data.url);
+          setIsUploading(false);
+          return;
+        }
       }
-    };
-    reader.onerror = () => {
-      setUploadError('Failed to read image file.');
-    };
-    reader.readAsDataURL(file);
+      throw new Error('Upload to MinIO failed');
+    } catch (err: any) {
+      console.warn('MinIO upload fallback:', err.message);
+      // Fallback to DataURL
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        if (dataUrl) {
+          onChange(dataUrl);
+        }
+        setIsUploading(false);
+      };
+      reader.onerror = () => {
+        setUploadError('Failed to read image file.');
+        setIsUploading(false);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -137,7 +165,16 @@ export function LogoUploadInput({
             : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
         } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
-        {value ? (
+        {isUploading ? (
+          /* Uploading state */
+          <div className="flex items-center gap-2 text-brand-600 dark:text-brand-400 min-w-0 flex-1 pr-2">
+            <svg className="animate-spin w-4 h-4 text-brand-600 dark:text-brand-400 shrink-0" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span className="text-sm font-medium animate-pulse">Uploading logo to MinIO...</span>
+          </div>
+        ) : value ? (
           /* Has Image State: Clickable Thumbnail + Name */
           <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
             <button
@@ -170,10 +207,15 @@ export function LogoUploadInput({
                 e.stopPropagation();
                 setIsPreviewOpen(true);
               }}
-              className="text-sm font-medium text-slate-800 dark:text-slate-200 hover:text-brand-600 dark:hover:text-brand-400 truncate cursor-pointer"
+              className="text-sm font-medium text-slate-800 dark:text-slate-200 hover:text-brand-600 dark:hover:text-brand-400 truncate cursor-pointer flex items-center gap-1.5"
               title="Click to preview"
             >
-              {fileName || (value.startsWith('data:') ? 'Image uploaded' : value)}
+              <span className="truncate">{fileName || (value.startsWith('data:') ? 'Image uploaded' : value)}</span>
+              {(value.includes('mini-app-logos') || value.includes('9000') || value.includes('minio')) && (
+                <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 rounded font-mono shrink-0">
+                  MinIO
+                </span>
+              )}
             </span>
           </div>
         ) : (

@@ -12,6 +12,7 @@ import { PermissionsModule } from './permissions/permissions.module';
 import { PermissionProposalsModule } from './permission-proposals/permission-proposals.module';
 import { SuperAppModule } from './super-app/super-app.module';
 import { IntegrationsModule } from './integrations/integrations.module';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { IntegrationsModule } from './integrations/integrations.module';
     OrganizationsModule,
     AuditModule,
     IntegrationsModule,
+    StorageModule,
   ],
 })
 

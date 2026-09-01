@@ -1,9 +1,9 @@
 {
-  "appId": "com.fsa.khornmolika",
-  "verificationToken": "tok_live_416ce49f5fcb2f69b67ffa56d0bdac3a",
+  "appId": "com.fsa.minio",
+  "verificationToken": "tok_live_cc62fe25ca22462f8cb2682d7ab8235d",
   "environment": "DEV",
   "allowedDomains": [
-    "172.20.64.1"
+    "192.168.1.152"
   ],
   "permissions": [
     "Camera"

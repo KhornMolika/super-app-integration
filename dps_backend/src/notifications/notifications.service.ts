@@ -38,4 +38,8 @@ export class NotificationsService {
   async markAsRead(id: string): Promise<void> {
     await this.notificationRepository.update(id, { isRead: true });
   }
+
+  emitStageUpdate(data: any) {
+    this.notificationGateway.emitStageUpdate(data);
+  }
 }

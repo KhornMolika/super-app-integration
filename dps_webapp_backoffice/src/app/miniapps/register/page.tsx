@@ -473,35 +473,84 @@ export default function RegisterMiniAppPage() {
             const pollRes = await fetch(`${API_URL}/mini-apps/${appId}`);
             if (pollRes.ok) {
               const appData = await pollRes.json();
-              const statusUpper = (appData.status || '').toUpperCase();
+              if (appData.validationStages) {
+                setModalState(prev => ({
+                  ...prev,
+                  stages: appData.validationStages
+                }));
+              }
 
-              if (statusUpper !== 'PROCESSING') {
-                const hasErrors = appData.validationErrors && Object.keys(appData.validationErrors).length > 0;
-                if (hasErrors) {
-                  clearInterval(pollTimer);
-                  setModalState({
-                    isOpen: true,
-                    status: 'error',
-                    message: 'Validation failed.',
-                    errors: appData.validationErrors,
-                    createdId: appId
+              const statusUpper = (appData.status || '').toUpperCase();
+              const valStatusUpper = (appData.validationStatus || '').toUpperCase();
+
+              // Still running Jenkins security scans
+              if (statusUpper === 'PROCESSING' || valStatusUpper === 'RUNNING') {
+                return;
+              }
+
+              // Finished scanning
+              const hasErrors = valStatusUpper === 'FAILED' || (appData.validationErrors && Object.keys(appData.validationErrors).length > 0) || (appData.issues && appData.issues.length > 0);
+              if (hasErrors) {
+                clearInterval(pollTimer);
+                const displayErrors: Record<string, string> = { ...(appData.validationErrors || {}) };
+
+                // 1. Findings from validationReport
+                if (appData.validationReport?.findings?.length > 0) {
+                  appData.validationReport.findings.forEach((finding: any) => {
+                    const key = finding.title || finding.id || 'Security Finding';
+                    displayErrors[key] = `${finding.description}${finding.recommendation ? ' (Remediation: ' + finding.recommendation + ')' : ''}`;
                   });
-                  setIsSubmitting(false);
-                } else {
-                  clearInterval(pollTimer);
-                  setModalState({ isOpen: true, status: 'success' });
-                  setTimeout(() => router.push(`/miniapps/${appId}`), 1200);
                 }
+
+                // 2. Issues from database
+                if (Array.isArray(appData.issues) && appData.issues.length > 0) {
+                  appData.issues.forEach((iss: any, idx: number) => {
+                    const key = iss.title || iss.classification || `Security Finding #${idx + 1}`;
+                    if (!Object.values(displayErrors).some(val => val.includes(iss.description))) {
+                      displayErrors[key] = iss.description;
+                    }
+                  });
+                }
+
+                // 3. Failed stages from pipeline execution (e.g. TLS failed)
+                if (appData.validationStages) {
+                  Object.values(appData.validationStages).forEach((st: any) => {
+                    if (st.status === 'FAILED') {
+                      const stageName = st.name || st.id || 'Validation Stage';
+                      if (!displayErrors[stageName]) {
+                        displayErrors[stageName] = st.details || 'Failed automated security check.';
+                      }
+                    }
+                  });
+                }
+
+                // 4. Default fallback if somehow still empty
+                if (Object.keys(displayErrors).length === 0) {
+                  displayErrors['Security Validation'] = 'Automated security scan failed on this endpoint. Please verify your URLs and TLS configuration.';
+                }
+
+                setModalState({
+                  isOpen: true,
+                  status: 'error',
+                  message: 'Automated security validation failed. Please address the issues below.',
+                  errors: displayErrors,
+                  createdId: appId
+                });
+                setIsSubmitting(false);
+              } else {
+                clearInterval(pollTimer);
+                setModalState({ isOpen: true, status: 'success' });
+                setTimeout(() => router.push(`/miniapps/${appId}`), 1200);
               }
             }
           } catch (pollErr) {
           }
-          if (attempts > 20) {
+          if (attempts > 500) {
             clearInterval(pollTimer);
             setModalState({ isOpen: true, status: 'error', message: 'Validation timed out.', createdId: appId });
             setIsSubmitting(false);
           }
-        }, 1000);
+        }, 600);
       } else {
         let errorsObj: Record<string, string> | undefined = undefined;
         if (Array.isArray(resData.message)) {

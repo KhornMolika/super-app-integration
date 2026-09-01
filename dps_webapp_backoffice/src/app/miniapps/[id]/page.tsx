@@ -17,6 +17,7 @@ import IntegrationForm from '@/components/forms/IntegrationForm';
 import PermissionsForm from '@/components/forms/PermissionsForm';
 import ValidationIssuesButton from '@/components/ValidationIssuesButton';
 import ActivityTab from '@/components/ui/ActivityTab';
+import ValidationReportTab from '@/components/ui/ValidationReportTab';
 import { ValidatedUrlInput } from '@/components/ui/ValidatedUrlInput';
 import { LogoUploadInput } from '@/components/ui/LogoUploadInput';
 import { CreateMiniAppDto, IntegrationMethod, SourceType } from '@/types/miniapp.types';
@@ -58,7 +59,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
 
   const confirm = useConfirm();
   const { can } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'team' | 'integration' | 'permissions' | 'validation' | 'activity'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'team' | 'integration' | 'permissions' | 'report' | 'activity'>('overview');
   const [customPermission, setCustomPermission] = useState('');
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
@@ -726,14 +727,32 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
         </div>
 
         <div className="flex space-x-6 border-b border-slate-200 dark:border-slate-700 mb-6 px-2 overflow-x-auto">
-          {['overview', 'team', 'integration', 'permissions', 'validation', 'activity'].map(tab => (
+          {['overview', 'team', 'integration', 'permissions', 'report', 'activity'].map(tab => (
             <button
               key={tab}
               type="button"
               onClick={() => setActiveTab(tab as any)}
-              className={`pb-3 font-medium text-sm transition-colors relative whitespace-nowrap ${activeTab === tab ? 'text-brand-600 dark:text-brand-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
+              className={`pb-3 font-medium text-sm transition-colors relative whitespace-nowrap flex items-center gap-1.5 ${activeTab === tab ? 'text-brand-600 dark:text-brand-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
             >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab === 'report' && (
+                <svg className="w-4 h-4 text-current" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              )}
+              <span>{tab === 'report' ? 'Report' : tab.charAt(0).toUpperCase() + tab.slice(1)}</span>
+              {tab === 'report' && (
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                  (formData as any).validationStatus === 'PASSED'
+                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400'
+                    : (formData as any).validationStatus === 'RUNNING'
+                    ? 'bg-brand-100 text-brand-700 dark:bg-brand-950/60 dark:text-brand-400 animate-pulse'
+                    : (formData as any).validationStatus === 'FAILED'
+                    ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400'
+                    : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                }`}>
+                  {(formData as any).validationStatus || 'PENDING'}
+                </span>
+              )}
               {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-600 dark:bg-brand-400 rounded-t-full" />}
             </button>
           ))}
@@ -870,60 +889,19 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
             }
 
             {
-              activeTab === 'validation' && (
-                <div className="space-y-6">
-                  <Card>
-                    <CardHeader title="Validation Issues Log" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
-                    <p className="text-sm text-slate-500 mb-5">Granular pass/fail status of all platform validation rules.</p>
-
-                    <div className="space-y-4">
-                    {(formData as any).issues?.length > 0 ? (
-                      <div className="overflow-x-auto rounded-xl border border-rose-200 dark:border-rose-800/40">
-                        <table className="w-full text-left border-collapse">
-                          <thead className="bg-rose-50/80 dark:bg-rose-950/40 border-b border-rose-200 dark:border-rose-800/40 text-xs font-semibold uppercase text-rose-700 dark:text-rose-300">
-                            <tr>
-                              <th className="w-[15%] px-4 py-3">Severity</th>
-                              <th className="w-[25%] px-4 py-3">Classification</th>
-                              <th className="w-[60%] px-4 py-3">Description</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm bg-white dark:bg-slate-900/60">
-                            {(formData as any).issues.map((issue: any, index: number) => (
-                              <tr key={index} className="hover:bg-rose-50/30 dark:hover:bg-rose-950/20 transition-colors">
-                                <td className="px-4 py-3">
-                                  <span className={`inline-flex px-2 py-0.5 text-xs font-bold rounded-full ${
-                                    issue.severity === 'HIGH'
-                                      ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-400 border border-rose-200 dark:border-rose-800'
-                                      : 'bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
-                                  }`}>
-                                    {issue.severity || 'HIGH'}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3 font-semibold text-slate-800 dark:text-slate-200">
-                                  {issue.classification || 'MINI_APP_ISSUE'}
-                                </td>
-                                <td className="px-4 py-3 text-rose-700 dark:text-rose-300">
-                                  {issue.description}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    ) : (
-                        <div className="flex items-center p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 dark:bg-emerald-500/10 dark:border-emerald-500/20">
-                          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mr-3">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
-                          </div>
-                          <div>
-                            <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">All Platform Checks Passed</h4>
-                            <p className="text-sm text-emerald-700 dark:text-emerald-300 mt-1">This Mini App has passed all automated security and platform validation checks.</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </Card>
-                </div >
+              activeTab === 'report' && (
+                <ValidationReportTab
+                  miniApp={{ ...formData, id }}
+                  onRefresh={async () => {
+                    try {
+                      const res = await fetch(`${API_URL}/mini-apps/${id}`);
+                      if (res.ok) {
+                        const data = await res.json();
+                        setFormData(data);
+                      }
+                    } catch (e) {}
+                  }}
+                />
               )
             }
 

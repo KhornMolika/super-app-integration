@@ -17,6 +17,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { AuditModule } from '../audit/audit.module';
 import { DomainVerificationService } from './webview/domain-verification.service';
 import { ValidationCallbackController } from './validation/validation-callback.controller';
+import { JenkinsService } from './jenkins/jenkins.service';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { ValidationCallbackController } from './validation/validation-callback.c
     NexusIntegrationService,
     ReleaseAssemblyVerificationService,
     DomainVerificationService,
+    JenkinsService,
   ],
   exports: [
     GitIntegrationService,
@@ -46,6 +48,7 @@ import { ValidationCallbackController } from './validation/validation-callback.c
     NexusIntegrationService,
     ReleaseAssemblyVerificationService,
     DomainVerificationService,
+    JenkinsService,
   ],
 })
 export class IntegrationsModule {}

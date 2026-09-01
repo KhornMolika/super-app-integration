@@ -74,6 +74,12 @@ export class MiniApp {
   @Column({ type: 'jsonb', nullable: true })
   validationErrors?: any;
 
+  @Column({ type: 'jsonb', nullable: true, default: () => "'{}'" })
+  validationStages?: any;
+
+  @Column({ type: 'jsonb', nullable: true })
+  validationReport?: any;
+
   @Column({ default: 'PENDING' })
   validationStatus!: string; // PENDING, RUNNING, PASSED, FAILED
 

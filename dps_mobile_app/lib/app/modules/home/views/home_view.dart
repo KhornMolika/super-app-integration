@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../controllers/home_controller.dart';
 import '../../../routes/app_pages.dart';
+import 'package:dps_mobile_app/app/config/api_config.dart';
 
 class HomeView extends GetView<HomeController> {
   const HomeView({super.key});
@@ -139,10 +138,8 @@ class HomeView extends GetView<HomeController> {
 
                             String url = app['url'] ?? 
                                 (app['integrationConfig'] is Map ? app['integrationConfig']['productionUrl'] : null) ?? 
-                                'http://localhost:3000';
-                            if (!kIsWeb && Platform.isAndroid && url.contains('localhost')) {
-                              url = url.replaceAll('localhost', '10.0.2.2');
-                            }
+                                ApiConfig.baseUrl;
+                            url = ApiConfig.resolveUrl(url);
                             Get.toNamed(Routes.MINIAPP, arguments: {
                               'url': url,
                               'permissions': app['permissions'] ?? [],

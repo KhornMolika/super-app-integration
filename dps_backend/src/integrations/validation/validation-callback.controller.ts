@@ -40,6 +40,39 @@ export class ValidationCallbackController {
     private readonly auditService: AuditService,
   ) {}
 
+  @Post('stage')
+  @HttpCode(HttpStatus.OK)
+  async handleStageUpdate(
+    @Body() body: { miniAppId: string; stageId: string; stageName: string; status: string; details?: string }
+  ) {
+    const { miniAppId, stageId, stageName, status, details } = body;
+    if (!miniAppId || !stageId) return { ok: false };
+
+    const app = await this.miniappRepository.findOne({ where: { id: miniAppId } });
+    if (!app) return { ok: false };
+
+    const stages = app.validationStages || {};
+    stages[stageId] = {
+      id: stageId,
+      name: stageName,
+      status,
+      details: details || '',
+      updatedAt: new Date().toISOString(),
+    };
+
+    app.validationStages = stages;
+    await this.miniappRepository.save(app);
+
+    this.notificationsService.emitStageUpdate({
+      miniAppId,
+      stage: stages[stageId],
+      stages,
+    });
+
+    this.logger.log(`Stage update [${miniAppId}] ${stageId} (${stageName}) -> ${status}`);
+    return { ok: true };
+  }
+
   @Post('callback')
   @HttpCode(HttpStatus.OK)
   async handleValidationCallback(@Body() dto: ValidationCallbackDto) {
@@ -53,6 +86,16 @@ export class ValidationCallbackController {
 
     // Clear old validation issues
     await this.issueRepository.delete({ miniAppId: app.id, type: 'SECURITY_CHECK' });
+
+    app.validationReport = {
+      score: dto.score,
+      status: dto.status,
+      method: dto.method,
+      checks: dto.checks,
+      findings: dto.findings || [],
+      reportPath: dto.reportPath,
+      completedAt: new Date().toISOString(),
+    };
 
     if (dto.status === 'PASSED') {
       app.validationStatus = 'PASSED';

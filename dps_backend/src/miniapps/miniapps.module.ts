@@ -14,6 +14,7 @@ import { PermissionProposalsModule } from '../permission-proposals/permission-pr
 import { SuperAppModule } from '../super-app/super-app.module';
 import { AuditModule } from '../audit/audit.module';
 import { IntegrationsModule } from '../integrations/integrations.module';
+import { StorageModule } from '../storage/storage.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { IntegrationsModule } from '../integrations/integrations.module';
     SuperAppModule,
     AuditModule,
     IntegrationsModule,
+    StorageModule,
   ],
   controllers: [MiniappsController],
   providers: [MiniappsService],

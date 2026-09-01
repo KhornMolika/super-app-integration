@@ -150,6 +150,35 @@ export default function ReleasesPage() {
               </div>
             </div>
           </div>
+
+          {/* APK Build Status & Download Button */}
+          {gate2Result.apkUrl && (
+            <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-indigo-500/10 border border-emerald-500/30 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-xl shadow-sm">
+                  📱
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                    Super App Android APK Ready
+                    <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 rounded-full">
+                      v1.1.0 • Sonatype Nexus Trusted Registry
+                    </span>
+                  </h4>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    Compiled with approved Mini Apps and native bridges. Ready for MA Manager & SA Admin dual testing.
+                  </p>
+                </div>
+              </div>
+              <a
+                href={gate2Result.apkUrl}
+                download
+                className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm flex items-center justify-center space-x-2 transition-transform active:scale-95"
+              >
+                <span>📲 Download Test APK</span>
+              </a>
+            </div>
+          )}
         </div>
       )}
 

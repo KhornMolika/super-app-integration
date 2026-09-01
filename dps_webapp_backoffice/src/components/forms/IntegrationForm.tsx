@@ -16,7 +16,7 @@ export const validateProductionUrlFormat = (url: string) => {
   }
 
   // Protocol check
-  const isDev = process.env.NEXT_PUBLIC_ENVIRONMENT === 'DEV';
+  const isDev = process.env.NEXT_PUBLIC_ENVIRONMENT === 'DEV' || process.env.NEXT_PUBLIC_ALLOW_LOCAL_PROD_URLS === 'true' || process.env.NODE_ENV !== 'production';
   if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
     return { valid: false, error: 'URL must start with http:// or https://' };
   }

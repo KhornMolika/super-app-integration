@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:convert';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../../../../app/routes/app_pages.dart';
 import '../../../services/auth_service.dart';
+import 'package:dps_mobile_app/app/config/api_config.dart';
 
 class LoginController extends GetxController {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+
+  @override
+  void onInit() {
+    super.onInit();
+    ApiConfig.autoDetectServer();
+  }
 
   @override
   void onClose() {
@@ -20,14 +25,67 @@ class LoginController extends GetxController {
 
   var isLoading = false.obs;
 
+  void showServerSettingsDialog(BuildContext context) {
+    final textController = TextEditingController(text: ApiConfig.baseUrl);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Server Connection'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter backend host IP or URL (e.g. 192.168.1.152:3000):',
+              style: TextStyle(fontSize: 12),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: textController,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                isDense: true,
+                hintText: '192.168.1.152:3000',
+              ),
+            ),
+            const SizedBox(height: 12),
+            Obx(() => Text(
+              'Status: ${ApiConfig.connectionStatusRx.value}',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: ApiConfig.connectionStatusRx.value.contains('Connected')
+                    ? Colors.green
+                    : Colors.orange,
+              ),
+            )),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await ApiConfig.autoDetectServer();
+              textController.text = ApiConfig.baseUrl;
+            },
+            child: const Text('Auto-Detect'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              await ApiConfig.setCustomServer(textController.text);
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> login() async {
     if (emailController.text.isNotEmpty && passwordController.text.isNotEmpty) {
       try {
         isLoading(true);
-        String baseUrl = 'http://localhost:3000';
-        if (!kIsWeb && Platform.isAndroid) {
-          baseUrl = 'http://10.0.2.2:3000';
-        }
+        final baseUrl = ApiConfig.baseUrl;
 
         final response = await http.post(
           Uri.parse('$baseUrl/auth/login'),

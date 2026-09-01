@@ -65,7 +65,10 @@ export interface ReleaseAssemblyAuditResult {
     consolidatedPermissions: string[];
     integrityDigest: string;
   };
+  buildTriggered?: boolean;
+  apkUrl?: string;
 }
+
 
 // Backwards compatibility alias
 export type Gate2AuditResult = ReleaseAssemblyAuditResult;

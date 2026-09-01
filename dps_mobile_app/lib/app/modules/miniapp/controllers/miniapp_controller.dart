@@ -2,11 +2,11 @@ import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../../../services/auth_service.dart';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:dps_mobile_app/app/config/api_config.dart';
 
 class MiniappController extends GetxController {
   late final WebViewController webViewController;
@@ -31,11 +31,8 @@ class MiniappController extends GetxController {
 
     final token = Get.find<AuthService>().token;
     
-    // Fix localhost routing for Android emulators
-    String parsedTargetUrl = targetUrl;
-    if (!kIsWeb && Platform.isAndroid && parsedTargetUrl.contains('localhost')) {
-      parsedTargetUrl = parsedTargetUrl.replaceAll('localhost', '10.0.2.2');
-    }
+    // Resolve host IP for Android devices/emulators
+    String parsedTargetUrl = ApiConfig.resolveUrl(targetUrl);
 
     // Append token as query parameter
     final uri = Uri.parse(parsedTargetUrl);

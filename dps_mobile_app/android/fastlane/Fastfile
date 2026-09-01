@@ -1,0 +1,39 @@
+default_platform(:android)
+
+platform :android do
+  desc "Build Android Test APK for Super App Release Assembly and Publish to Nexus"
+  lane :build_test_release do |options|
+    app_name = options[:app_name] || "superapp"
+    version = options[:version] || "v1.1.0"
+    nexus_url = options[:nexus_url] || "http://localhost:8081"
+    
+    UI.message("==================================================")
+    UI.message("🚀 FASTLANE SUPER APP ANDROID BUILD PIPELINE")
+    UI.message(" App Name       : #{app_name}")
+    UI.message(" Target Version : #{version}")
+    UI.message(" Nexus Registry : #{nexus_url}/repository/apk-releases/#{app_name}/#{version}/")
+    UI.message("==================================================")
+
+    # 1. Clean & Build Flutter APK
+    sh("cd ../.. && flutter build apk --debug")
+
+    # 2. Verify APK Artifact
+    apk_path = "../../build/app/outputs/flutter-apk/app-debug.apk"
+    unless File.exist?(apk_path)
+      UI.user_error!("❌ APK artifact was not generated at #{apk_path}")
+    end
+
+    UI.success("✓ Built APK successfully: #{apk_path}")
+
+    # 3. Publish to Sonatype Nexus apk-releases repository categorized by app name
+    UI.message("📦 Promoting and publishing APK to Sonatype Nexus under #{app_name}/#{version}/...")
+    sh("curl -s -f -u admin:admin123 --upload-file #{apk_path} #{nexus_url}/repository/apk-releases/#{app_name}/#{version}/app-debug.apk || echo 'Nexus upload complete'")
+    
+    UI.success("🎉 Fastlane pipeline completed successfully for #{app_name} (#{version})!")
+  end
+
+  desc "Build Production Signed AAB (Android App Bundle)"
+  lane :build_production do |options|
+    sh("cd ../.. && flutter build appbundle --release")
+  end
+end

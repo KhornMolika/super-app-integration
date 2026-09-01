@@ -12,8 +12,7 @@ dependencies:
   flutter:
     sdk: flutter
   dps_core_package:
-    hosted: https://nd40vsdk-8081.asse.devtunnels.ms/repository/pub-group
-    version: ^1.0.0
+    path: ../dps_core_package
   nfc_manager: ^3.3.0
 
 dev_dependencies:

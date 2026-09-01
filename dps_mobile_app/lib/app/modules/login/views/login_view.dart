@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/login_controller.dart';
+import 'package:dps_mobile_app/app/config/api_config.dart';
 
 class LoginView extends GetView<LoginController> {
   const LoginView({super.key});
@@ -48,6 +49,33 @@ class LoginView extends GetView<LoginController> {
                   child: const Text('Login', style: TextStyle(fontSize: 18)),
                 ),
               ),
+              const SizedBox(height: 24),
+              Obx(() => InkWell(
+                onTap: () => controller.showServerSettingsDialog(context),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.circle,
+                        size: 10,
+                        color: ApiConfig.connectionStatusRx.value.contains('Connected')
+                            ? Colors.green
+                            : Colors.orange,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Server: ${ApiConfig.baseUrl}',
+                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      const SizedBox(width: 6),
+                      const Icon(Icons.settings, size: 14, color: Colors.grey),
+                    ],
+                  ),
+                ),
+              )),
             ],
           ),
         ),

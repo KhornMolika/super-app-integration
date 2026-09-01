@@ -1,0 +1,2 @@
+json_key_file("") # Path to Google Play JSON secret key if deploying to Play Store
+package_name("com.example.dsp_mobile")

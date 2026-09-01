@@ -2,8 +2,8 @@ import 'package:get/get.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'dart:io';
 import '../../../services/auth_service.dart';
+import 'package:dps_mobile_app/app/config/api_config.dart';
 
 class HomeController extends GetxController {
   var miniApps = [].obs;
@@ -26,10 +26,7 @@ class HomeController extends GetxController {
       isLoading(true);
       hasError(false);
       
-      String baseUrl = 'http://localhost:3000';
-      if (!kIsWeb && Platform.isAndroid) {
-        baseUrl = 'http://10.0.2.2:3000';
-      }
+      final baseUrl = ApiConfig.baseUrl;
 
       final headers = <String, String>{
         'Content-Type': 'application/json',

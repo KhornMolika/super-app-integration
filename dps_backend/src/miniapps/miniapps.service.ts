@@ -15,6 +15,8 @@ import { AuditService } from '../audit/audit.service';
 import { GitIntegrationService } from '../integrations/git/git-integration.service';
 import { NexusIntegrationService } from '../integrations/nexus/nexus-integration.service';
 import { DomainVerificationService } from '../integrations/webview/domain-verification.service';
+import { JenkinsService } from '../integrations/jenkins/jenkins.service';
+import { StorageService } from '../storage/storage.service';
 
 @Injectable()
 export class MiniappsService {
@@ -39,6 +41,8 @@ export class MiniappsService {
     private gitService: GitIntegrationService,
     private nexusService: NexusIntegrationService,
     private domainVerificationService: DomainVerificationService,
+    private jenkinsService: JenkinsService,
+    private storageService: StorageService,
   ) {}
 
   async logActivity(miniAppId: string, actorId: string, actionType: string, title: string, description: string, auditAction: string, oldVal?: any, newVal?: any) {
@@ -56,6 +60,15 @@ export class MiniappsService {
     delete data.status;
     data.status = 'PROCESSING';
     
+    // Automatically upload base64 image data to MinIO object storage
+    if (data.logo && (data.logo.startsWith('data:image/') || data.logo.length > 500)) {
+      try {
+        data.logo = await this.storageService.uploadBase64(data.logo, `${data.name || 'logo'}.png`);
+      } catch (err: any) {
+        this.logger.error(`Failed to store logo in MinIO: ${err.message}`);
+      }
+    }
+
     if (!data.permissions) {
       data.permissions = [];
     }
@@ -373,16 +386,49 @@ export class MiniappsService {
         await this.mailService.sendRegistrationFailureEmail(app.ownerEmail, app.name || app.appId || 'Unknown App', errors);
       }
     } else {
-      await this.miniappRepository.update(id, {
-        status: 'PENDING_REVIEW',
-        validationErrors: null as any,
-      });
-      
-      await this.notificationsService.createNotification(app.ownerId || '', 'Validation Passed', `${app.name || 'Mini App'} has passed validation and is now ready for review.`, 'REVIEW_STARTED', app.id);
-      await this.logActivity(id, 'system', 'VALIDATION', 'Validation Passed', 'No issues found', 'VALIDATE_MINI_APP', app, await this.findOne(id));
+      if (app.integrationMethod === 'WEBVIEW' && app.integrationConfig?.productionUrl) {
+        const initialStages = {
+          ssrf: { id: 'ssrf', name: '1. Pre-Flight & SSRF Defense', status: 'RUNNING', details: 'Resolving DNS & verifying IP routes...' },
+          tls: { id: 'tls', name: '2. TLS & HTTPS Security', status: 'PENDING', details: 'Awaiting cipher suite verification...' },
+          zap: { id: 'zap', name: '3. OWASP ZAP DAST Scan', status: 'PENDING', details: 'Awaiting XSS & CSP header audit...' },
+          nuclei: { id: 'nuclei', name: '4. Exposure & Vulnerability Audit', status: 'PENDING', details: 'Awaiting CVE & endpoint check...' },
+        };
+        await this.miniappRepository.update(id, {
+          status: 'SUBMITTED',
+          validationStatus: 'RUNNING',
+          validationStages: initialStages as any,
+          validationErrors: null as any,
+        });
 
-      if (app.ownerEmail) {
-        await this.mailService.sendRegistrationSuccessEmail(app.ownerEmail, app.name || app.appId || 'Unknown App');
+        const allowedDomains = Array.isArray(app.integrationConfig.allowedDomains)
+          ? app.integrationConfig.allowedDomains
+          : (typeof app.integrationConfig.allowedDomains === 'string' ? app.integrationConfig.allowedDomains.split(',') : []);
+
+        const envVal = (process.env.ENVIRONMENT || '').toUpperCase();
+        const allowLocal = envVal === 'DEV' || envVal === 'DEVELOPMENT';
+
+        this.logger.log(`Triggering Jenkins automated security scan for Mini App ${id}...`);
+        this.jenkinsService.triggerWebViewValidation({
+          miniAppId: id,
+          targetUrl: app.integrationConfig.productionUrl,
+          allowedDomains,
+          allowLocal,
+        }).catch(err => this.logger.error(`Jenkins trigger error: ${err.message}`));
+
+        await this.notificationsService.createNotification(app.ownerId || '', 'Validation Running', `${app.name || 'Mini App'} automated security scans initiated on Jenkins.`, 'SCAN_STARTED', app.id);
+        await this.logActivity(id, 'system', 'VALIDATION', 'Validation Running', 'Automated security scan pipeline triggered on Jenkins', 'VALIDATE_MINI_APP', app, await this.findOne(id));
+      } else {
+        await this.miniappRepository.update(id, {
+          status: 'PENDING_REVIEW',
+          validationErrors: null as any,
+        });
+        
+        await this.notificationsService.createNotification(app.ownerId || '', 'Validation Passed', `${app.name || 'Mini App'} has passed validation and is now ready for review.`, 'REVIEW_STARTED', app.id);
+        await this.logActivity(id, 'system', 'VALIDATION', 'Validation Passed', 'No issues found', 'VALIDATE_MINI_APP', app, await this.findOne(id));
+
+        if (app.ownerEmail) {
+          await this.mailService.sendRegistrationSuccessEmail(app.ownerEmail, app.name || app.appId || 'Unknown App');
+        }
       }
     }
   }
@@ -488,6 +534,16 @@ export class MiniappsService {
     }
 
     data.status = 'PROCESSING';
+
+    // Automatically upload base64 image data to MinIO object storage
+    if (data.logo && (data.logo.startsWith('data:image/') || data.logo.length > 500)) {
+      try {
+        data.logo = await this.storageService.uploadBase64(data.logo, `${data.name || existing.name || 'logo'}.png`);
+      } catch (err: any) {
+        this.logger.error(`Failed to store logo in MinIO: ${err.message}`);
+      }
+    }
+
     const merged = this.miniappRepository.merge(existing, data);
     if (data.permissions) {
       merged.permissions = data.permissions;
@@ -528,10 +584,91 @@ export class MiniappsService {
     if (currentStatus !== 'DRAFT' && currentStatus !== 'REJECTED') {
       throw new BadRequestException('App is not in DRAFT or REJECTED status');
     }
-    app.status = 'PENDING_REVIEW';
-    await this.miniappRepository.save(app);
+
+    if (app.integrationMethod === 'WEBVIEW' && app.integrationConfig?.productionUrl) {
+      const initialStages = {
+        ssrf: { id: 'ssrf', name: '1. Pre-Flight & SSRF Defense', status: 'RUNNING', details: 'Resolving DNS & verifying IP routes...' },
+        tls: { id: 'tls', name: '2. TLS & HTTPS Security', status: 'PENDING', details: 'Awaiting cipher suite verification...' },
+        zap: { id: 'zap', name: '3. OWASP ZAP DAST Scan', status: 'PENDING', details: 'Awaiting XSS & CSP header audit...' },
+        nuclei: { id: 'nuclei', name: '4. Exposure & Vulnerability Audit', status: 'PENDING', details: 'Awaiting CVE & endpoint check...' },
+      };
+      app.validationStages = initialStages;
+      app.status = 'SUBMITTED';
+      app.validationStatus = 'RUNNING';
+      await this.miniappRepository.save(app);
+
+      const allowedDomains = Array.isArray(app.integrationConfig.allowedDomains)
+        ? app.integrationConfig.allowedDomains
+        : (typeof app.integrationConfig.allowedDomains === 'string' ? app.integrationConfig.allowedDomains.split(',') : []);
+
+      const envVal = (process.env.ENVIRONMENT || '').toUpperCase();
+      const allowLocal = envVal === 'DEV' || envVal === 'DEVELOPMENT';
+
+      this.jenkinsService.triggerWebViewValidation({
+        miniAppId: id,
+        targetUrl: app.integrationConfig.productionUrl,
+        allowedDomains,
+        allowLocal,
+      }).catch(err => this.logger.error(`Jenkins trigger failed: ${err.message}`));
+    } else {
+      app.status = 'PENDING_REVIEW';
+      await this.miniappRepository.save(app);
+    }
+
     await this.logActivity(id, actorId, 'STATUS_CHANGE', 'Submitted for Review', 'App submitted for review', 'SUBMIT_MINI_APP', null, app);
     return app;
+  }
+
+  async rescan(id: string, actorId = 'system') {
+    const app = await this.findOne(id);
+    if (!app) throw new BadRequestException('App not found');
+
+    const targetUrl = (app.integrationConfig?.productionUrl || '').trim();
+    if (!targetUrl) {
+      throw new BadRequestException('Mini App does not have a configured production URL to scan');
+    }
+
+    const initialStages = {
+      ssrf: { id: 'ssrf', name: '1. Pre-Flight & SSRF Defense', status: 'RUNNING', details: 'Resolving DNS & verifying IP routes...' },
+      tls: { id: 'tls', name: '2. TLS & HTTPS Security', status: 'PENDING', details: 'Awaiting cipher suite verification...' },
+      zap: { id: 'zap', name: '3. OWASP ZAP DAST Scan', status: 'PENDING', details: 'Awaiting XSS & CSP header audit...' },
+      nuclei: { id: 'nuclei', name: '4. Exposure & Vulnerability Audit', status: 'PENDING', details: 'Awaiting CVE & endpoint check...' },
+    };
+
+    app.validationStages = initialStages;
+    app.validationStatus = 'RUNNING';
+    await this.miniappRepository.save(app);
+
+    const allowedDomains = Array.isArray(app.integrationConfig.allowedDomains)
+      ? app.integrationConfig.allowedDomains
+      : (typeof app.integrationConfig.allowedDomains === 'string' ? app.integrationConfig.allowedDomains.split(',') : []);
+
+    const envVal = (process.env.ENVIRONMENT || '').toUpperCase();
+    const allowLocal = envVal === 'DEV' || envVal === 'DEVELOPMENT';
+
+    this.jenkinsService.triggerWebViewValidation({
+      miniAppId: id,
+      targetUrl,
+      allowedDomains,
+      allowLocal,
+    }).catch(err => this.logger.error(`Jenkins rescan trigger failed: ${err.message}`));
+
+    await this.notificationsService.createNotification(
+      app.ownerId || '',
+      'Scan Re-run',
+      `${app.name || 'Mini App'} automated security scan re-initiated.`,
+      'SCAN_STARTED',
+      app.id
+    );
+
+    await this.logActivity(id, actorId, 'VALIDATION', 'Scan Re-run', 'Automated security scan re-triggered on Jenkins', 'RESCAN_MINI_APP', null, app);
+
+    return {
+      success: true,
+      message: 'Automated security scan re-initiated on Jenkins',
+      validationStatus: 'RUNNING',
+      validationStages: initialStages,
+    };
   }
 
   async approve(id: string, actorId: string) {

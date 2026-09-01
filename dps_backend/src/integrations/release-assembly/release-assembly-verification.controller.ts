@@ -14,4 +14,11 @@ export class ReleaseAssemblyVerificationController {
   async verify(@Body() dto: VerifyAndAssembleReleaseDto): Promise<ReleaseAssemblyAuditResult> {
     return this.releaseService.verifyAndAssembleRelease(dto);
   }
+
+  @Post('build-callback')
+  @HttpCode(HttpStatus.OK)
+  async buildCallback(@Body() body: any) {
+    return this.releaseService.handleBuildCallback(body);
+  }
 }
+
