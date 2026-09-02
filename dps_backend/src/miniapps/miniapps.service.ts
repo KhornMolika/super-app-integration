@@ -892,9 +892,44 @@ export class MiniappsService {
     if (!validStatuses.includes(app.status?.toUpperCase())) {
       throw new BadRequestException('App must be in TESTING or APPROVED status to activate');
     }
+
+    // Trigger Jenkins Production Release Build
+    const releaseVersion = (app as any).version ? `v${(app as any).version}` : 'v1.1.0';
+    try {
+      this.logger.log(`Triggering Jenkins Production Release build for Mini App ${app.name} (${app.id})...`);
+      await this.jenkinsService.triggerSuperAppBuild({
+        releaseVersion,
+        appName: 'superapp',
+        buildType: 'release', // Production Release build
+      });
+    } catch (err: any) {
+      this.logger.error(`Error triggering Jenkins production release build: ${err.message}`);
+    }
+
     app.status = 'ACTIVE';
     await this.miniappRepository.save(app);
-    await this.logActivity(id, actorId, 'STATUS_CHANGE', 'Mini App Activated', 'Final approval granted. Mini App is now ACTIVE in Super App catalog.', 'ACTIVATE_MINI_APP', null, app);
+
+    if (app.ownerId) {
+      await this.notificationsService.createNotification(
+        app.ownerId,
+        'Mini App Live & Activated',
+        `Mini App "${app.name}" has been granted final approval and production release build is live in the Super App catalog.`,
+        'MINIAPP_ACTIVATED',
+        app.id,
+      );
+    }
+
+    await this.logActivity(
+      id,
+      actorId,
+      'STATUS_CHANGE',
+      'Mini App Activated (Production Release)',
+      `Final approval granted. Production release build (${releaseVersion}, release) triggered in Jenkins and app is ACTIVE in Super App catalog.`,
+      'ACTIVATE_MINI_APP',
+      null,
+      app,
+    );
+
     return app;
   }
 

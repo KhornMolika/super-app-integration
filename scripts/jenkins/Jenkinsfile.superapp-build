@@ -96,18 +96,22 @@ pipeline {
             steps {
                 echo "Publishing APK artifact to Sonatype Nexus..."
                 sh """
-                if [ -f /var/reports/app-debug.apk ]; then
-                    echo "Uploading /var/reports/app-debug.apk to Nexus at ${params.NEXUS_URL}/repository/apk-releases/${params.APP_NAME}/${params.RELEASE_VERSION}/app-debug.apk..."
-                    curl -s -f -u admin:admin123 --upload-file /var/reports/app-debug.apk "${params.NEXUS_URL}/repository/apk-releases/${params.APP_NAME}/${params.RELEASE_VERSION}/app-debug.apk"
-                    echo "✓ Upload to Sonatype Nexus (${params.APP_NAME}/${params.RELEASE_VERSION}) successfully completed!"
+                APK_FILE="/var/reports/app-debug.apk"
+                TARGET_NAME="${params.BUILD_TYPE == 'release' ? 'app-release.apk' : 'app-debug.apk'}"
+                if [ -f "\$APK_FILE" ]; then
+                    echo "Uploading \${TARGET_NAME} (${params.BUILD_TYPE}) to Nexus at ${params.NEXUS_URL}/repository/apk-releases/${params.APP_NAME}/${params.RELEASE_VERSION}/\${TARGET_NAME}..."
+                    curl -s -f -u admin:admin123 --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-releases/${params.APP_NAME}/${params.RELEASE_VERSION}/\${TARGET_NAME}"
+                    echo "✓ Upload to Sonatype Nexus (${params.APP_NAME}/${params.RELEASE_VERSION}/\${TARGET_NAME}) successfully completed!"
                 else
-                    echo "Warning: /var/reports/app-debug.apk not found, skipping binary upload."
+                    echo "Warning: \$APK_FILE not found, skipping binary upload."
                 fi
                 """
                 script {
                     sh """
                     node -e '
                         const callbackUrl = "${params.CALLBACK_URL}".replace("/build-callback", "/stage");
+                        const buildType = "${params.BUILD_TYPE}";
+                        const stageLabel = buildType === "release" ? "Production Release Publishing" : "Test Build Publishing";
                         fetch(callbackUrl, {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
@@ -115,9 +119,9 @@ pipeline {
                                 appName: "${params.APP_NAME}",
                                 releaseVersion: "${params.RELEASE_VERSION}",
                                 stageId: "publish",
-                                stageName: "3. Nexus Release Publishing",
+                                stageName: "3. " + stageLabel,
                                 status: "COMPLETED",
-                                details: "Published APK artifacts to Sonatype Nexus apk-releases/${params.APP_NAME}/${params.RELEASE_VERSION}/."
+                                details: "Published " + buildType + " APK artifacts to Sonatype Nexus apk-releases/${params.APP_NAME}/${params.RELEASE_VERSION}/."
                             })
                         }).catch(() => {});
                     ' || true
@@ -136,7 +140,9 @@ pipeline {
                     const callbackUrl = "${params.CALLBACK_URL}";
                     const releaseVersion = "${params.RELEASE_VERSION}";
                     const appName = "${params.APP_NAME}";
-                    const apkUrl = "${params.NEXUS_URL}/repository/apk-releases/" + appName + "/" + releaseVersion + "/app-debug.apk";
+                    const buildType = "${params.BUILD_TYPE}";
+                    const filename = buildType === "release" ? "app-release.apk" : "app-debug.apk";
+                    const apkUrl = "${params.NEXUS_URL}/repository/apk-releases/" + appName + "/" + releaseVersion + "/" + filename;
 
                     fetch(callbackUrl, {
                         method: "POST",
@@ -145,8 +151,9 @@ pipeline {
                             appName: appName,
                             releaseVersion: releaseVersion,
                             status: "COMPLETED",
+                            buildType: buildType,
                             apkUrl: apkUrl,
-                            filename: "app-debug.apk"
+                            filename: filename
                         })
                     }).catch(err => console.error("Callback error:", err.message));
                 ' || true
