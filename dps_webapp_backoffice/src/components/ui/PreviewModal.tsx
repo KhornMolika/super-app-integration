@@ -55,7 +55,7 @@ export default function PreviewModal({
   const [customDimensions, setCustomDimensions] = useState({ width: 800, height: 600 });
   const [reloadKey, setReloadKey] = useState(0);
   const [mounted, setMounted] = useState(false);
-  const [currentScreen, setCurrentScreen] = useState<'home' | 'miniapp'>('home');
+  const [currentScreen, setCurrentScreen] = useState<'flutter-web' | 'miniapp' | 'home'>('flutter-web');
   
   // Simulator State
   const [showInspector, setShowInspector] = useState(true);
@@ -259,15 +259,20 @@ export default function PreviewModal({
           <div className="flex bg-slate-800/80 rounded-lg p-0.5 border border-slate-700">
             <button
               type="button"
-              onClick={() => setCurrentScreen('home')}
+              onClick={() => setCurrentScreen('flutter-web')}
               className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
-                currentScreen === 'home'
+                currentScreen === 'flutter-web'
                   ? 'bg-brand-600 text-white shadow-sm font-semibold'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-              <span>Super App Home</span>
+              <svg className="w-3.5 h-3.5 text-sky-400" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M14.314 0L2.3 12 6 15.7 21.686 0h-7.372zm.072 10.301L8.171 16.514 14.386 22.7 21.686 22.7l-7.3-7.299 7.3-5.1z" />
+              </svg>
+              <span>Flutter Super App</span>
+              <span className="px-1.5 py-0.2 text-[9px] font-bold bg-emerald-500/20 text-emerald-300 rounded border border-emerald-500/30">
+                Web Build
+              </span>
             </button>
             <button
               type="button"
@@ -280,6 +285,18 @@ export default function PreviewModal({
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
               <span>Mini App View</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setCurrentScreen('home')}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+                currentScreen === 'home'
+                  ? 'bg-brand-600 text-white shadow-sm font-semibold'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+              <span>Mock Home</span>
             </button>
           </div>
 
@@ -355,8 +372,39 @@ export default function PreviewModal({
                 </div>
               )}
 
-              {/* Viewport Content: Super App Home Screen vs Embedded Mini App */}
-              {currentScreen === 'home' ? (
+              {/* Viewport Content: Flutter Web Super App Container vs Mock Home vs Direct Mini App */}
+              {currentScreen === 'flutter-web' ? (
+                <div className="w-full h-full relative z-10 flex flex-col bg-slate-950 overflow-hidden">
+                  {/* Top Bar for Flutter Web Container */}
+                  <div className="h-10 pt-2 px-4 bg-slate-900 border-b border-slate-800 text-white flex items-center justify-between z-20 flex-shrink-0">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                      <span className="text-[11px] font-bold text-slate-200">Super App Container (Flutter Web)</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={handleReload}
+                        className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800"
+                        title="Reload Flutter Container"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Sandboxed Flutter Web Iframe */}
+                  <div className="flex-1 relative bg-slate-900 w-full h-full">
+                    <iframe
+                      key={reloadKey}
+                      src={`/superapp-sandbox/index.html?t=${reloadKey}`}
+                      className="w-full h-full border-0 bg-slate-900"
+                      title="Flutter Super App Web Container"
+                      allow="geolocation; camera; microphone; clipboard-read; clipboard-write; autoplay"
+                    />
+                  </div>
+                </div>
+              ) : currentScreen === 'home' ? (
                 <div className="w-full h-full relative z-10 flex flex-col bg-slate-950 text-white select-none overflow-y-auto font-sans">
                   {/* Top Status Bar with Dynamic Island spacing */}
                   <div className="h-11 pt-3.5 px-6 flex justify-between items-center text-[11px] font-semibold text-slate-300 flex-shrink-0">
