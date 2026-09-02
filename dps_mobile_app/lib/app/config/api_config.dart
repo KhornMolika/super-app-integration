@@ -8,7 +8,7 @@ class ApiConfig {
   static const String _envApiUrl = String.fromEnvironment('API_URL', defaultValue: '');
 
   /// Observable current base URL used by all HTTP calls across the Super App
-  static final RxString baseUrlRx = 'http://192.168.1.152:3000'.obs;
+  static final RxString baseUrlRx = 'http://192.168.10.35:3000'.obs;
   static final RxString connectionStatusRx = 'Unknown'.obs;
   static final RxBool isCheckingRx = false.obs;
 
@@ -19,18 +19,20 @@ class ApiConfig {
       final uri = Uri.parse(baseUrl);
       return uri.host;
     } catch (_) {
-      return '192.168.1.152';
+      return '192.168.10.35';
     }
   }
 
   /// Candidate URLs to test in order of preference across all platforms and machines
   static List<String> get candidateUrls => [
     if (_envApiUrl.isNotEmpty) _envApiUrl,
-    'http://10.0.2.2:3000',      // Standard Android Studio Emulator on ALL machines (Mac/Windows/Linux)
-    'http://10.0.3.2:3000',      // Genymotion Android Emulator on ALL machines
+    'http://192.168.10.35:3000', // Current Wi-Fi LAN IP
+    'http://192.168.56.1:3000',  // Ethernet / Host adapter IP
+    'http://10.0.2.2:3000',      // Standard Android Studio Emulator
+    'http://10.0.3.2:3000',      // Genymotion Android Emulator
     'http://localhost:3000',     // Web, Desktop, or Physical Device via USB (`adb reverse`)
     'http://127.0.0.1:3000',
-    'http://192.168.1.152:3000', // Current Wi-Fi LAN IP
+    'http://192.168.1.152:3000',
   ];
 
   /// Dynamically detect reachable backend server
