@@ -147,6 +147,21 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
   const [isEditingUnlocked, setIsEditingUnlocked] = useState(false);
   const isEditable = can('miniapp:update') && (formData.status === 'DRAFT' || formData.status === 'REJECTED' || isEditingUnlocked);
 
+  const openSandboxPreview = () => {
+    if (formData.integrationMethod === IntegrationMethod.WEBVIEW) {
+      setPreviewUrl(formData.integrationConfigWebView?.productionUrl || '');
+    } else if (formData.integrationMethod === IntegrationMethod.DEEP_LINK) {
+      setPreviewUrl(formData.integrationConfigDeepLink?.urlScheme || (formData as any).integrationConfig?.urlScheme || 'app://open');
+    } else {
+      const conf = formData.integrationConfigFlutter;
+      const target = conf?.sourceType === SourceType.GIT
+        ? conf.gitUrl || ''
+        : `http://localhost:8081/repository/pub-group/api/packages/${conf?.packageName || 'dps_core_package'}`;
+      setPreviewUrl(target);
+    }
+    setShowPreview(true);
+  };
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
@@ -598,34 +613,17 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
 
           {/* Header Actions */}
           <div className="flex items-center space-x-2.5">
-            {/* Preview Button - Only shown when NOT in TESTING mode (in TESTING, the dedicated Testing Banner has the full sandbox preview launch button) */}
-            {formData.status !== 'TESTING' && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  if (formData.integrationMethod === IntegrationMethod.WEBVIEW) {
-                    setPreviewUrl(formData.integrationConfigWebView?.productionUrl || '');
-                  } else if (formData.integrationMethod === IntegrationMethod.DEEP_LINK) {
-                    setPreviewUrl(formData.integrationConfigDeepLink?.urlScheme || (formData as any).integrationConfig?.urlScheme || 'app://open');
-                  } else {
-                    const conf = formData.integrationConfigFlutter;
-                    const target = conf?.sourceType === SourceType.GIT
-                      ? conf.gitUrl || ''
-                      : `http://localhost:8081/repository/pub-group/api/packages/${conf?.packageName || 'dps_core_package'}`;
-                    setPreviewUrl(target);
-                  }
-                  setShowPreview(true);
-                }}
-                className="h-9 px-3.5 text-xs font-medium border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
-              >
-                <svg className="w-3.5 h-3.5 mr-1.5 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                <span>Preview</span>
-              </Button>
-            )}
+            {/* Super App Sandbox Preview Button - Always accessible in Mini App Manage header */}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={openSandboxPreview}
+              className="h-9 px-3.5 text-xs font-semibold border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center gap-1.5 shadow-sm"
+              title="Launch Super App Sandbox Preview"
+            >
+              <svg className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+              <span>Sandbox Preview</span>
+            </Button>
 
             {/* Download Test Build APK Button - Always accessible in Mini App Manage header */}
             <a
@@ -684,6 +682,17 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
                 {showActionsMenu && (
                   <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 divide-y divide-slate-100 dark:divide-slate-800/60">
                     <div className="py-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowActionsMenu(false);
+                          openSandboxPreview();
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center space-x-2.5 font-medium transition-colors"
+                      >
+                        <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                        <span>Super App Sandbox</span>
+                      </button>
                       <a
                         href="http://localhost:8081/repository/apk-releases/superapp/v1.1.0/app-debug.apk"
                         download="superapp-debug.apk"
@@ -1003,34 +1012,42 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
                     />
                   </div>
 
-                  {/* Test Build & Verification Section */}
-                  <div className="col-span-1 md:col-span-2 p-4 rounded-2xl bg-gradient-to-r from-slate-50 via-indigo-50/20 to-purple-50/20 dark:from-slate-900/80 dark:via-indigo-950/20 dark:to-purple-950/20 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                  {/* Super App Sandbox & Test Build Section */}
+                  <div className="col-span-1 md:col-span-2 p-5 rounded-2xl bg-gradient-to-r from-slate-50 via-indigo-50/30 to-purple-50/20 dark:from-slate-900/80 dark:via-indigo-950/20 dark:to-purple-950/20 border border-slate-200 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+                    <div className="flex items-start gap-3.5">
+                      <div className="w-11 h-11 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                       </div>
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                            Super App Test Build (Android APK)
+                            Super App Sandbox & Test Verification
                           </h4>
                           <span className="text-[10px] font-mono font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-                            Ready
+                            v1.1.0 Ready
                           </span>
                         </div>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                          Download the compiled Super App APK to test and verify {formData.name || 'this Mini App'} on physical Android devices or emulators.
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-xl">
+                          Test this Mini App inside the interactive Super App browser container, or download the compiled Android APK for physical device testing.
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex items-center gap-2.5 flex-wrap flex-shrink-0">
+                      <Button
+                        type="button"
+                        onClick={openSandboxPreview}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3.5 py-2 font-semibold rounded-xl flex items-center gap-1.5 shadow-sm transition-all"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                        <span>Super App Sandbox</span>
+                      </Button>
                       <a
                         href="http://localhost:8081/repository/apk-releases/superapp/v1.1.0/app-debug.apk"
                         download="superapp-debug.apk"
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/80 shadow-sm transition-all"
                         title="Download Test APK from Sonatype Nexus"
                       >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                        <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                         <span>Download APK (92 MB)</span>
                       </a>
                     </div>
