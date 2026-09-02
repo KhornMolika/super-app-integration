@@ -12,7 +12,13 @@ export default function ClickableTableRow({ href, children, className, ...props 
   
   return (
     <tr 
-      onClick={() => router.push(href)} 
+      onClick={(e) => {
+        const target = e.target as HTMLElement;
+        if (target.closest('a, button, input, select, textarea')) {
+          return;
+        }
+        router.push(href);
+      }} 
       className={`cursor-pointer ${className || ''}`}
       {...props}
     >

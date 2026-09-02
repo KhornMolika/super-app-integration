@@ -760,28 +760,6 @@ export default function IntegrationForm({
             </div>
           </div>
 
-          <div>
-            <Label>Allowed Navigation Domains (Whitelist)</Label>
-            <Input
-              name="allowedDomains"
-              value={
-                Array.isArray(formData.integrationConfigWebView?.allowedDomains)
-                  ? formData.integrationConfigWebView.allowedDomains.join(', ')
-                  : (formData.integrationConfigWebView?.allowedDomains || '')
-              }
-              onChange={handleWebViewChange}
-              placeholder="banking.example.com, api.banking.example.com, auth.example.com"
-            />
-            {allErrors['integrationConfigWebView.allowedDomains'] && (
-              <p className="mt-1.5 text-xs text-rose-600 font-medium">
-                {allErrors['integrationConfigWebView.allowedDomains']}
-              </p>
-            )}
-            <p className="mt-1 text-xs text-slate-500">
-              Comma-separated list of external domains the WebView is permitted to navigate to or invoke via bridge.
-            </p>
-          </div>
-
           {/* Domain Ownership Verification Section */}
           <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
             <div className="flex items-center justify-between mb-3">
@@ -1022,6 +1000,29 @@ export default function IntegrationForm({
                 );
               })()}
             </div>
+          </div>
+
+          {/* Allowed Navigation Domains (Whitelist) */}
+          <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
+            <Label>Allowed Navigation Domains (Whitelist)</Label>
+            <Input
+              name="allowedDomains"
+              value={
+                Array.isArray(formData.integrationConfigWebView?.allowedDomains)
+                  ? formData.integrationConfigWebView.allowedDomains.join(', ')
+                  : (formData.integrationConfigWebView?.allowedDomains || '')
+              }
+              onChange={handleWebViewChange}
+              placeholder="banking.example.com, api.banking.example.com, auth.example.com"
+            />
+            {allErrors['integrationConfigWebView.allowedDomains'] && (
+              <p className="mt-1.5 text-xs text-rose-600 font-medium">
+                {allErrors['integrationConfigWebView.allowedDomains']}
+              </p>
+            )}
+            <p className="mt-1 text-xs text-slate-500">
+              Comma-separated list of external domains the WebView is permitted to navigate to. Automatically imported from your association file during verification, or customized here.
+            </p>
           </div>
         </div>
       )}

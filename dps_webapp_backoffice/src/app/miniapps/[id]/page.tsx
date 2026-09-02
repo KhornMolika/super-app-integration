@@ -613,32 +613,31 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
 
           {/* Header Actions */}
           <div className="flex items-center space-x-2.5">
-            {/* Sandbox Preview & Download APK in Header:
-                - Always shown when NOT in TESTING mode for everyone
-                - In TESTING mode: ONLY displayed in header for MINI_APP_MANAGER (since SA Admin, Admin, and Developer have the dedicated Manual Sandbox Testing Phase banner below) */}
+            {/* Sandbox Preview: Available to test browser sandbox container */}
             {(formData.status !== 'TESTING' || role === 'MINI_APP_MANAGER') && (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={openSandboxPreview}
-                  className="h-9 px-3.5 text-xs font-semibold border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center gap-1.5 shadow-sm"
-                  title="Launch Super App Sandbox Preview"
-                >
-                  <svg className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-                  <span>Sandbox Preview</span>
-                </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={openSandboxPreview}
+                className="h-9 px-3.5 text-xs font-semibold border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center gap-1.5 shadow-sm"
+                title="Launch Super App Sandbox Preview"
+              >
+                <svg className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                <span>Sandbox Preview</span>
+              </Button>
+            )}
 
-                <a
-                  href="http://localhost:8081/repository/apk-releases/superapp/v1.1.0/app-debug.apk"
-                  download="superapp-debug.apk"
-                  className="h-9 px-3.5 text-xs font-semibold rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-all flex items-center gap-1.5 shadow-sm"
-                  title="Download Super App Test Build APK (Nexus)"
-                >
-                  <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                  <span>Download Test APK (92.8 MB)</span>
-                </a>
-              </>
+            {/* Download Test APK: ONLY displayed after approve and build successfully (TESTING or ACTIVE) */}
+            {(formData.status === 'TESTING' || formData.status === 'ACTIVE') && (formData.status !== 'TESTING' || role === 'MINI_APP_MANAGER') && (
+              <a
+                href="http://localhost:8081/repository/apk-releases/superapp/v1.1.0/app-debug.apk"
+                download="superapp-debug.apk"
+                className="h-9 px-3.5 text-xs font-semibold rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-all flex items-center gap-1.5 shadow-sm"
+                title="Download Super App Test Build APK (Nexus)"
+              >
+                <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                <span>Download Test APK (92.8 MB)</span>
+              </a>
             )}
 
             {/* Edit Configuration Toggle */}
@@ -698,15 +697,17 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
                         <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                         <span>Super App Sandbox</span>
                       </button>
-                      <a
-                        href="http://localhost:8081/repository/apk-releases/superapp/v1.1.0/app-debug.apk"
-                        download="superapp-debug.apk"
-                        onClick={() => setShowActionsMenu(false)}
-                        className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center space-x-2.5 font-medium transition-colors"
-                      >
-                        <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                        <span>Download Test APK (92.8 MB)</span>
-                      </a>
+                      {(formData.status === 'TESTING' || formData.status === 'ACTIVE') && (
+                        <a
+                          href="http://localhost:8081/repository/apk-releases/superapp/v1.1.0/app-debug.apk"
+                          download="superapp-debug.apk"
+                          onClick={() => setShowActionsMenu(false)}
+                          className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center space-x-2.5 font-medium transition-colors"
+                        >
+                          <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                          <span>Download Test APK (92.8 MB)</span>
+                        </a>
+                      )}
                     </div>
                     {can('miniapp:suspend') && (formData.status === 'APPROVED' || formData.status === 'ACTIVE') && (
                       <div className="py-1">
@@ -1133,6 +1134,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
           appId={formData.appId}
           version={(formData as any).version || '1.0.0'}
           isFlutter={formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE}
+          status={formData.status}
         />
       </div >
 

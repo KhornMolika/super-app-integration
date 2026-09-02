@@ -1,14 +1,11 @@
 {
-  "appId": "com.fsa.ecomerce",
-  "verificationToken": "tok_live_a949bc5e7660bc388db0a176c696b145",
+  "appId": "com.fsa.ll",
+  "verificationToken": "tok_live_869979f6991972ee18e368dc28256be9",
   "environment": "DEV",
   "allowedDomains": [
-    "localhost",
-    "127.0.0.1",
-    "ecommerce.fsa.gov"
+    "http://192.168.56.11:3003"
   ],
   "permissions": [
-    "Camera",
-    "Location"
+    "Camera"
   ]
 }

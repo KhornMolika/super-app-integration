@@ -27,6 +27,7 @@ interface PreviewModalProps {
   appId?: string;
   apkUrl?: string;
   isFlutter?: boolean;
+  status?: string;
 }
 
 const DEVICE_DIMENSIONS = {
@@ -46,6 +47,7 @@ export default function PreviewModal({
   appId,
   apkUrl = 'http://localhost:8081/repository/apk-releases/superapp/v1.1.0/app-debug.apk',
   isFlutter = false,
+  status,
 }: PreviewModalProps) {
   const [device, setDevice] = useState<DeviceType>('iPhone 16 Pro');
   const [orientation, setOrientation] = useState<Orientation>('Portrait');
@@ -281,16 +283,18 @@ export default function PreviewModal({
             </button>
           </div>
 
-          {/* Direct APK Download Button */}
-          <a
-            href={apkUrl}
-            download="superapp-debug.apk"
-            className="h-8 px-3 text-xs font-semibold rounded-lg bg-emerald-600/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-600 hover:text-white transition-colors flex items-center gap-1.5 shadow-sm"
-            title="Download Super App Test Build APK (Nexus)"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-            <span>Download Test APK (92.8 MB)</span>
-          </a>
+          {/* Direct APK Download Button (only available after approval and build in TESTING/ACTIVE) */}
+          {(status === 'TESTING' || status === 'ACTIVE') && (
+            <a
+              href={apkUrl}
+              download="superapp-debug.apk"
+              className="h-8 px-3 text-xs font-semibold rounded-lg bg-emerald-600/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-600 hover:text-white transition-colors flex items-center gap-1.5 shadow-sm"
+              title="Download Super App Test Build APK (Nexus)"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              <span>Download Test APK (92.8 MB)</span>
+            </a>
+          )}
 
           {/* Toggle Inspector Drawer */}
           <Button
