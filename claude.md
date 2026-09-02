@@ -1,4 +1,4 @@
-﻿# DSP Super App Integration Platform (POC) - Claude Guide
+# DSP Super App Integration Platform (POC) - Claude Guide
 
 Welcome to the Digital Public Service (DSP) Super App Integration Platform codebase. This document serves as a comprehensive reference for AI assistants and developers working on this repository.
 
@@ -87,7 +87,25 @@ dsp-poc/
 
 ## 4. Key Workflows & Architectural Rules
 
-### 4.1. Two-Stage Mini App Lifecycle
+### 4.1. The 5 Integration Tiers
+1. **WebView (`WEBVIEW`)**:
+   * Mini Apps run as responsive web applications served from partner infrastructure.
+   * Super App embeds the webview and injects `DSPNativeBridge` into `window` for secure bidirectional JavaScript-to-Native communication.
+   * Access to native capabilities (`getLocation`, `getBiometrics`, `openCamera`, `getDeviceInfo`, secure storage) is guarded by permissions approved in the Backoffice.
+2. **Flutter Package Artifact (`FLUTTER_PACKAGE_ARTIFACT`)**:
+   * Pre-compiled / published Dart package artifacts hosted in a private repository (e.g., Sonatype Nexus hosted Pub repository).
+   * Verified by package versioning, cryptographic checksum, and artifact integrity checks before being resolved as a binary dependency.
+3. **Flutter Package Source Code (`FLUTTER_PACKAGE_SOURCE`)**:
+   * Direct Git repository integration referencing a private Git URL with specific branch, tag, or commit hash.
+   * Super App CI/CD clones and checks out the source code directly, executing static analysis, security auditing, and compilation into the Super App bundle.
+4. **Native SDK (`NATIVE_SDK`)**:
+   * Platform-specific native binary libraries (Android `.aar` / iOS `.xcframework` or Maven / CocoaPods dependencies) containing pre-compiled native code.
+   * Integrated into the Super App via Flutter platform channels (`MethodChannel` / `EventChannel`), providing maximum performance for hardware-accelerated or proprietary partner SDKs.
+5. **Deep Link (`DEEP_LINK`)**:
+   * OS-level URL scheme delegation (e.g., `app://open`, `banking://pay`) or Android App Links / iOS Universal Links.
+   * Directly launches standalone native applications installed on the user's device, with fallback redirection to the Google Play Store or Apple App Store.
+
+### 4.2. Two-Stage Mini App Lifecycle
 1. **DRAFT / SUBMITTED**: Partner submits Mini App metadata, URLs, and requested native permissions.
 2. **SECURITY VALIDATION**: Jenkins runs automated domain validation and sandbox tests (`webview-validation`).
 3. **APPROVED (Ready for Test)**: SA Admin approves the Mini App for testing.
@@ -104,18 +122,18 @@ dsp-poc/
    * Artifact is published to Nexus `apk-releases/superapp/v1.1.0/app-release.apk`.
    * App status transitions to `ACTIVE` in the public catalog.
 
-### 4.2. Universal Android Architecture Rule
+### 4.3. Universal Android Architecture Rule
 * Physical Android phones (Samsung, Xiaomi, Pixel) run on 64-bit ARM (`arm64-v8a`).
 * **Never compile x86_64-only APKs** as real phones will fail with:
   `"App not installed as app isn't compatible with your phone"`.
 * Always build universal multi-platform APKs supporting:
   `--target-platform android-arm,android-arm64,android-x64`.
 
-### 4.3. Browser APK Streaming Route (`/api/download-apk`)
+### 4.4. Browser APK Streaming Route (`/api/download-apk`)
 * Direct downloads from Sonatype Nexus raw repositories fail in Chromium browsers because Nexus transmits `Content-Security-Policy: sandbox ...` without `allow-downloads`.
 * All download links in the Backoffice point to `/api/download-apk?type=test&version=v1.1.0`, which streams the file from Nexus with `Content-Disposition: attachment` and stripped CSP headers.
 
-### 4.4. Host Resolution in Flutter (`ApiConfig`)
+### 4.5. Host Resolution in Flutter (`ApiConfig`)
 * Flutter uses `ApiConfig.resolveUrl(url)` to dynamically rewrite `localhost`, `10.0.2.2`, or `127.0.0.1` to the workstation's active LAN Wi-Fi IP so physical phones can reach backend and webview mini apps.
 
 ---

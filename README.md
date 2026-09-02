@@ -1,4 +1,4 @@
-﻿# DSP Super App Integration Platform (POC)
+# DSP Super App Integration Platform (POC)
 
 [![NestJS](https://img.shields.io/badge/Backend-NestJS-E0234E?style=flat&logo=nestjs&logoColor=white)](https://nestjs.com/)
 [![Next.js](https://img.shields.io/badge/Backoffice-Next.js%2016-000000?style=flat&logo=next.js&logoColor=white)](https://nextjs.org/)
@@ -80,21 +80,30 @@ flowchart TD
 
 ---
 
-## 3. Integration Methodologies
+## 3. Integration Methodologies (5 Integration Tiers)
 
-The platform natively supports three distinct integration tiers:
+The platform natively supports five distinct integration tiers:
 
-1. **WebView Integration (`WEBVIEW`)**:
+1. **WebView (`WEBVIEW`)**:
    * Mini Apps run as responsive web applications served from partner infrastructure.
-   * Super App injects `DSPNativeBridge` into `window` for secure bidirectional communication.
-   * Access to native capabilities (e.g. `getLocation`, `getBiometrics`, `openCamera`, `getDeviceInfo`) is governed by granular permissions approved in the Backoffice.
+   * Super App injects `DSPNativeBridge` into `window` for secure bidirectional communication between web and native device layers.
+   * Access to native capabilities (e.g., `getLocation`, `getBiometrics`, `openCamera`, `getDeviceInfo`, secure storage) is governed by granular permissions approved in the Backoffice.
 
-2. **Flutter In-App Module (`FLUTTER_PACKAGE`)**:
-   * High-performance native Flutter modules published to Sonatype Nexus Pub repositories or private Git repos.
-   * Packaged and compiled directly into the Super App binary.
+2. **Flutter Package Artifact (`FLUTTER_PACKAGE_ARTIFACT`)**:
+   * Pre-compiled and versioned Dart package artifacts hosted in a private repository (e.g., Sonatype Nexus hosted Pub repository).
+   * Resolved as a pre-packaged dependency during the automated build pipeline with cryptographic checksum and artifact integrity validation.
 
-3. **Deep Link Integration (`DEEP_LINK`)**:
-   * Mini Apps registered with custom OS URI schemes (e.g. `app://open`) with fallback to app store URLs.
+3. **Flutter Package Source Code (`FLUTTER_PACKAGE_SOURCE`)**:
+   * Direct Git repository source code integration referencing a private Git URL with specific branch, tag, or commit hash.
+   * Super App CI/CD pulls source code directly into the workspace, executing automated static analysis, security auditing, and compilation into the Super App bundle.
+
+4. **Native SDK (`NATIVE_SDK`)**:
+   * Platform-specific native binary libraries (Android `.aar` / iOS `.xcframework` or Maven / CocoaPods dependencies) containing pre-compiled native modules.
+   * Integrated into the Super App via Flutter platform channels (`MethodChannel` / `EventChannel`), providing maximum performance for hardware-accelerated or proprietary partner SDKs.
+
+5. **Deep Link (`DEEP_LINK`)**:
+   * OS-level URL scheme delegation (e.g., `app://open`, `banking://pay`) or Android App Links / iOS Universal Links.
+   * Directly launches standalone native applications installed on the user's device, with automatic fallback redirection to the Google Play Store or Apple App Store.
 
 ---
 
