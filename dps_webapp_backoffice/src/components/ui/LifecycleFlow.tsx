@@ -32,7 +32,7 @@ const initialNodes = [
   
   { id: '5', position: { x: 740, y: 150 }, data: { label: 'CAPABILITY_CHECK', colorClass: 'bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-900/30 dark:border-rose-800 dark:text-rose-400', targetHandle: Position.Top, sourceHandle: Position.Left }, type: 'stateNode' },
   { id: '6', position: { x: 510, y: 150 }, data: { label: 'SECURITY_CHECK', colorClass: 'bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-900/30 dark:border-rose-800 dark:text-rose-400', targetHandle: Position.Right, sourceHandle: Position.Left }, type: 'stateNode' },
-  { id: '7', position: { x: 280, y: 150 }, data: { label: 'PENDING_REVIEW', colorClass: 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400', targetHandle: Position.Right, sourceHandle: Position.Left }, type: 'stateNode' },
+  { id: '7', position: { x: 280, y: 150 }, data: { label: 'IN_REVIEW', colorClass: 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400', targetHandle: Position.Right, sourceHandle: Position.Left }, type: 'stateNode' },
   { id: '8', position: { x: 50, y: 150 }, data: { label: 'BUILDING', colorClass: 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400', targetHandle: Position.Right, sourceHandle: Position.Bottom }, type: 'stateNode' },
   
   { id: '9', position: { x: 50, y: 250 }, data: { label: 'TESTING', colorClass: 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30 dark:border-emerald-800 dark:text-emerald-400', targetHandle: Position.Top, sourceHandle: Position.Right }, type: 'stateNode' },

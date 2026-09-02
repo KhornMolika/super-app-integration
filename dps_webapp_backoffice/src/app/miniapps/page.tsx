@@ -108,7 +108,7 @@ export default async function MiniAppsPage() {
                           ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20' 
                           : app.status === 'APPROVED'
                           ? 'bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-200 dark:border-teal-500/20'
-                          : (app.status === 'IN_REVIEW' || app.status === 'PENDING_REVIEW' || app.status === 'Pending Review')
+                          : app.status === 'IN_REVIEW'
                           ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/20'
                           : (app.status === 'TESTING' || app.status === 'BUILDING')
                           ? 'bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-500/20'
@@ -119,11 +119,11 @@ export default async function MiniAppsPage() {
                           : 'bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600/50'
                       }`}>
                         {(app.status === 'ACTIVE' || app.status === 'Published') && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>}
-                        {(app.status === 'IN_REVIEW' || app.status === 'PENDING_REVIEW' || app.status === 'Pending Review') && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse mr-1.5"></span>}
+                        {app.status === 'IN_REVIEW' && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse mr-1.5"></span>}
                         {(app.status === 'TESTING' || app.status === 'BUILDING') && <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse mr-1.5"></span>}
                         {app.status === 'APPROVED' && <span className="w-1.5 h-1.5 rounded-full bg-teal-500 mr-1.5"></span>}
                         {
-                          (app.status === 'IN_REVIEW' || app.status === 'PENDING_REVIEW' || app.status === 'Pending Review') ? 'In Review' :
+                          app.status === 'IN_REVIEW' ? 'In Review' :
                           app.status === 'APPROVED' ? 'Approved' :
                           app.status === 'TESTING' ? 'Testing' :
                           app.status === 'BUILDING' ? 'Building' :

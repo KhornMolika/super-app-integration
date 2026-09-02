@@ -786,7 +786,7 @@ export class MiniappsService {
   async approve(id: string, actorId: string) {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
-    const validStatuses = ['IN_REVIEW', 'PENDING_REVIEW', 'SUBMITTED'];
+    const validStatuses = ['IN_REVIEW', 'SUBMITTED'];
     if (!validStatuses.includes(app.status?.toUpperCase())) {
       throw new BadRequestException(`App is not in review (current status: ${app.status})`);
     }
@@ -799,7 +799,7 @@ export class MiniappsService {
   async reject(id: string, reason: string, actorId: string) {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
-    const validStatuses = ['IN_REVIEW', 'PENDING_REVIEW', 'SUBMITTED', 'APPROVED', 'TESTING'];
+    const validStatuses = ['IN_REVIEW', 'SUBMITTED', 'APPROVED', 'TESTING'];
     if (!validStatuses.includes(app.status?.toUpperCase())) {
       throw new BadRequestException(`App cannot be rejected from current status: ${app.status}`);
     }

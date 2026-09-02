@@ -565,7 +565,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
                     ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
                     : formData.status === 'APPROVED'
                       ? 'bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800'
-                      : formData.status === 'IN_REVIEW' || formData.status === 'PENDING_REVIEW'
+                      : formData.status === 'IN_REVIEW'
                         ? 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800'
                         : formData.status === 'TESTING' || formData.status === 'BUILDING'
                           ? 'bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800'
@@ -579,7 +579,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
                       ? 'bg-emerald-500'
                       : formData.status === 'APPROVED'
                         ? 'bg-teal-500'
-                        : formData.status === 'IN_REVIEW' || formData.status === 'PENDING_REVIEW'
+                        : formData.status === 'IN_REVIEW'
                           ? 'bg-blue-500 animate-pulse'
                           : formData.status === 'TESTING' || formData.status === 'BUILDING'
                             ? 'bg-purple-500 animate-pulse'
@@ -749,7 +749,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
         </div>
 
         {/* SA Admin Review & Action Banner for IN_REVIEW */}
-        {can('miniapp:approve') && (formData.status === 'IN_REVIEW' || formData.status === 'PENDING_REVIEW') && (
+        {can('miniapp:approve') && formData.status === 'IN_REVIEW' && (
           <div className="mb-6 p-4 rounded-2xl border border-blue-200 dark:border-blue-900/50 bg-blue-50/80 dark:bg-blue-950/40 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm animate-in fade-in">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/60 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0 border border-blue-200 dark:border-blue-800">

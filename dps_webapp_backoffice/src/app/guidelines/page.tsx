@@ -1933,7 +1933,7 @@ export default function GuidelinesPage() {
                 icon: <WrenchIcon />,
                 colorClass:
                   "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-500 border-blue-200 dark:border-blue-500/30",
-                states: ["PENDING_REVIEW", "BUILDING"],
+                states: ["IN_REVIEW", "BUILDING"],
                 desc: "SA Admin manual audit (if required) followed by CI/CD artifact generation.",
               },
               {
