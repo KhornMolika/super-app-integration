@@ -68,7 +68,7 @@ export class DomainVerificationService {
     }
 
     const envVal = (process.env.ENVIRONMENT || process.env.NODE_ENV || '').toUpperCase();
-    const isDev = envVal === 'DEV' || envVal === 'DEVELOPMENT' || process.env.NODE_ENV !== 'production';
+    const isDev = envVal === 'DEV' || envVal === 'DEVELOPMENT' || process.env.NODE_ENV !== 'PROD';
     const isLocalhost = parsedUrl.hostname === 'localhost' || parsedUrl.hostname === '127.0.0.1';
 
     // In production, enforce HTTPS strictly. In DEV mode, allow HTTP.

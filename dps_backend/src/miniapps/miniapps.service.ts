@@ -132,7 +132,7 @@ export class MiniappsService {
 
     if (app.integrationMethod === 'WEBVIEW') {
       const envVal = (process.env.ENVIRONMENT || process.env.NODE_ENV || '').toUpperCase();
-      const isDev = envVal === 'DEV' || envVal === 'DEVELOPMENT' || process.env.NODE_ENV !== 'production';
+      const isDev = envVal === 'DEV' || envVal === 'DEVELOPMENT' || process.env.NODE_ENV !== 'PROD';
 
       if (!app.integrationConfig?.productionUrl) {
         errors['integrationConfigWebView.productionUrl'] = 'productionUrl is required for WebView integration.';

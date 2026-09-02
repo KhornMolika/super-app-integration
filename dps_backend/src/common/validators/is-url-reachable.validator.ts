@@ -18,7 +18,7 @@ export class IsUrlReachableConstraint implements ValidatorConstraintInterface {
 
     // In local development / testing, allow localhost and test URLs
     const envVal = (process.env.ENVIRONMENT || process.env.NODE_ENV || '').toUpperCase();
-    const isDev = envVal === 'DEV' || envVal === 'DEVELOPMENT' || process.env.NODE_ENV !== 'production';
+    const isDev = envVal === 'DEV' || envVal === 'DEVELOPMENT' || process.env.NODE_ENV !== 'PROD';
     if (isDev && (url.includes('localhost') || url.includes('127.0.0.1') || url.startsWith('http://localhost') || url.startsWith('https://example.com') || url.startsWith('http://example.com'))) {
       return true;
     }
