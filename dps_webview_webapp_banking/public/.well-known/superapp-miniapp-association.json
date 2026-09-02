@@ -1,6 +1,6 @@
 {
-  "appId": "com.fsa.testbuid1",
-  "verificationToken": "tok_live_1223ba7e895d1df233ac4dc36405d840",
+  "appId": "com.fsa.testbuild3",
+  "verificationToken": "tok_live_e719890421406f6e8efdef50e32f409a",
   "environment": "DEV",
   "allowedDomains": [
     "localhost"
