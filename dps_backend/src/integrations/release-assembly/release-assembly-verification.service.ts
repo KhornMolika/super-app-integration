@@ -233,7 +233,9 @@ export class ReleaseAssemblyVerificationService {
         .where("status = 'BUILDING'")
         .execute();
 
-      const apkUrl = body.apkUrl || `http://localhost:8081/repository/apk-releases/superapp/${body.releaseVersion}/app-debug.apk`;
+      const repoName = body.buildType === 'release' ? 'apk-releases' : 'apk-test-builds';
+      const filename = body.filename || (body.buildType === 'release' ? 'app-release.apk' : 'app-debug.apk');
+      const apkUrl = body.apkUrl || `http://localhost:8081/repository/${repoName}/superapp/${body.releaseVersion}/${filename}`;
 
       for (const app of buildingApps) {
         if (app.ownerId) {

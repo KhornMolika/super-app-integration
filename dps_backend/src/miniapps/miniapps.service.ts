@@ -877,7 +877,7 @@ export class MiniappsService {
         app.ownerEmail,
         app.name || app.appId,
         (app as any).version || '1.0.0',
-        'http://localhost:8081/repository/apk-releases/superapp/v1.1.0/app-debug.apk',
+        'http://localhost:8081/repository/apk-test-builds/superapp/v1.1.0/app-debug.apk',
         `http://localhost:3002/miniapps/${app.id}`,
       );
     }

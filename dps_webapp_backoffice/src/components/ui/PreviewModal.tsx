@@ -45,7 +45,7 @@ export default function PreviewModal({
   version = '1.0.0',
   category,
   appId,
-  apkUrl = 'http://localhost:8081/repository/apk-releases/superapp/v1.1.0/app-debug.apk',
+  apkUrl = 'http://localhost:8081/repository/apk-test-builds/superapp/v1.1.0/app-debug.apk',
   isFlutter = false,
   status,
 }: PreviewModalProps) {

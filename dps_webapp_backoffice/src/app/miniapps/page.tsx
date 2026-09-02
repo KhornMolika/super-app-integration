@@ -139,7 +139,7 @@ export default async function MiniAppsPage() {
                       <div className="inline-flex items-center gap-2">
                         {(app.status === 'TESTING' || app.status === 'ACTIVE') && (
                           <a
-                            href="http://localhost:8081/repository/apk-releases/superapp/v1.1.0/app-debug.apk"
+                            href="http://localhost:8081/repository/apk-test-builds/superapp/v1.1.0/app-debug.apk"
                             download="superapp-debug.apk"
                             className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-300 dark:hover:border-emerald-700 shadow-sm transition-all"
                             title="Download Super App Test APK (92.8 MB)"

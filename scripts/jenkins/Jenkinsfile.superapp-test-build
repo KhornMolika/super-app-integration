@@ -97,11 +97,12 @@ pipeline {
                 echo "Publishing APK artifact to Sonatype Nexus..."
                 sh """
                 APK_FILE="/var/reports/app-debug.apk"
+                REPO_NAME="${params.BUILD_TYPE == 'release' ? 'apk-releases' : 'apk-test-builds'}"
                 TARGET_NAME="${params.BUILD_TYPE == 'release' ? 'app-release.apk' : 'app-debug.apk'}"
                 if [ -f "\$APK_FILE" ]; then
-                    echo "Uploading \${TARGET_NAME} (${params.BUILD_TYPE}) to Nexus at ${params.NEXUS_URL}/repository/apk-releases/${params.APP_NAME}/${params.RELEASE_VERSION}/\${TARGET_NAME}..."
-                    curl -s -f -u admin:admin123 --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-releases/${params.APP_NAME}/${params.RELEASE_VERSION}/\${TARGET_NAME}"
-                    echo "✓ Upload to Sonatype Nexus (${params.APP_NAME}/${params.RELEASE_VERSION}/\${TARGET_NAME}) successfully completed!"
+                    echo "Uploading \${TARGET_NAME} to Nexus repository \${REPO_NAME} at ${params.NEXUS_URL}/repository/\${REPO_NAME}/${params.APP_NAME}/${params.RELEASE_VERSION}/\${TARGET_NAME}..."
+                    curl -s -f -u admin:admin123 --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/\${REPO_NAME}/${params.APP_NAME}/${params.RELEASE_VERSION}/\${TARGET_NAME}"
+                    echo "Upload to Sonatype Nexus \${REPO_NAME} successfully completed!"
                 else
                     echo "Warning: \$APK_FILE not found, skipping binary upload."
                 fi
@@ -111,7 +112,8 @@ pipeline {
                     node -e '
                         const callbackUrl = "${params.CALLBACK_URL}".replace("/build-callback", "/stage");
                         const buildType = "${params.BUILD_TYPE}";
-                        const stageLabel = buildType === "release" ? "Production Release Publishing" : "Test Build Publishing";
+                        const repoName = buildType === "release" ? "apk-releases" : "apk-test-builds";
+                        const stageLabel = buildType === "release" ? "Production Release Publishing (apk-releases)" : "Test Build Publishing (apk-test-builds)";
                         fetch(callbackUrl, {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
@@ -121,7 +123,7 @@ pipeline {
                                 stageId: "publish",
                                 stageName: "3. " + stageLabel,
                                 status: "COMPLETED",
-                                details: "Published " + buildType + " APK artifacts to Sonatype Nexus apk-releases/${params.APP_NAME}/${params.RELEASE_VERSION}/."
+                                details: "Published " + buildType + " APK artifacts to Sonatype Nexus " + repoName + "/${params.APP_NAME}/${params.RELEASE_VERSION}/."
                             })
                         }).catch(() => {});
                     ' || true
@@ -141,8 +143,9 @@ pipeline {
                     const releaseVersion = "${params.RELEASE_VERSION}";
                     const appName = "${params.APP_NAME}";
                     const buildType = "${params.BUILD_TYPE}";
+                    const repoName = buildType === "release" ? "apk-releases" : "apk-test-builds";
                     const filename = buildType === "release" ? "app-release.apk" : "app-debug.apk";
-                    const apkUrl = "${params.NEXUS_URL}/repository/apk-releases/" + appName + "/" + releaseVersion + "/" + filename;
+                    const apkUrl = "${params.NEXUS_URL}/repository/" + repoName + "/" + appName + "/" + releaseVersion + "/" + filename;
 
                     fetch(callbackUrl, {
                         method: "POST",
@@ -153,7 +156,8 @@ pipeline {
                             status: "COMPLETED",
                             buildType: buildType,
                             apkUrl: apkUrl,
-                            filename: filename
+                            filename: filename,
+                            repoName: repoName
                         })
                     }).catch(err => console.error("Callback error:", err.message));
                 ' || true

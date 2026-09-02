@@ -658,7 +658,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
             {/* Download Test APK: ONLY displayed after approve and build successfully (TESTING or ACTIVE) */}
             {(formData.status === 'TESTING' || formData.status === 'ACTIVE') && (formData.status !== 'TESTING' || role === 'MINI_APP_MANAGER') && (
               <a
-                href="http://localhost:8081/repository/apk-releases/superapp/v1.1.0/app-debug.apk"
+                href="http://localhost:8081/repository/apk-test-builds/superapp/v1.1.0/app-debug.apk"
                 download="superapp-debug.apk"
                 className="h-9 px-3.5 text-xs font-semibold rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-all flex items-center gap-1.5 shadow-sm"
                 title="Download Super App Test Build APK (Nexus)"
@@ -727,7 +727,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
                       </button>
                       {(formData.status === 'TESTING' || formData.status === 'ACTIVE') && (
                         <a
-                          href="http://localhost:8081/repository/apk-releases/superapp/v1.1.0/app-debug.apk"
+                          href="http://localhost:8081/repository/apk-test-builds/superapp/v1.1.0/app-debug.apk"
                           download="superapp-debug.apk"
                           onClick={() => setShowActionsMenu(false)}
                           className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center space-x-2.5 font-medium transition-colors"
@@ -930,7 +930,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
                 </Button>
 
                 <a
-                  href="http://localhost:8081/repository/apk-releases/superapp/v1.1.0/app-debug.apk"
+                  href="http://localhost:8081/repository/apk-test-builds/superapp/v1.1.0/app-debug.apk"
                   download="superapp-debug.apk"
                   className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-all shadow-sm"
                   title="Download Super App Test Build APK (Nexus)"
