@@ -5,7 +5,7 @@ import {
   ReleaseAssemblyAuditResult,
 } from './dto/release-assembly-verification.dto';
 
-@Controller('release-assembly')
+@Controller(['release-assembly', 'api/release-assembly'])
 export class ReleaseAssemblyVerificationController {
   constructor(private readonly releaseService: ReleaseAssemblyVerificationService) {}
 

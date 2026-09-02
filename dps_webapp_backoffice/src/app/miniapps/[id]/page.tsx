@@ -202,6 +202,25 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
     fetchApp();
   }, [id]);
 
+  // Auto-poll status when app is BUILDING until Jenkins completes
+  useEffect(() => {
+    if (formData.status !== 'BUILDING') return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`${API_URL}/mini-apps/${id}`);
+        if (res.ok) {
+          const updated = await res.json();
+          if (updated.status && updated.status !== 'BUILDING') {
+            setFormData(prev => ({ ...prev, status: updated.status }));
+          }
+        }
+      } catch (_) {}
+    }, 3000);
+
+    return () => clearInterval(pollInterval);
+  }, [formData.status, id]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const fieldName = e.target.name;
     setFormData(prev => {
@@ -476,11 +495,14 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
       if (response === null) return;
       reason = response;
     } else if (!explicitReason) {
-      const actionLabel = action === 'start-testing' ? 'move to testing' : action === 'activate' ? 'activate' : action;
+      const isTestBuild = action === 'start-testing';
+      const actionLabel = isTestBuild ? 'build test package and advance to testing' : action === 'activate' ? 'activate' : action;
       const isConfirmed = await confirm({
-        title: `Confirm ${actionLabel}`,
-        message: `Are you sure you want to ${actionLabel} this Mini App?`,
-        confirmText: `Yes, proceed`,
+        title: isTestBuild ? 'Trigger Super App Test Build' : `Confirm ${actionLabel}`,
+        message: isTestBuild
+          ? 'Are you sure you want to trigger the Jenkins test build? This will compile the Super App container in debug mode and upload the test APK to Nexus for manual testing.'
+          : `Are you sure you want to ${actionLabel} this Mini App?`,
+        confirmText: isTestBuild ? 'Trigger Test Build' : `Yes, proceed`,
         cancelText: 'Cancel'
       });
       if (!isConfirmed) return;
@@ -494,7 +516,13 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
         body: JSON.stringify({ reason })
       });
       if (res.ok) {
-        setModalState({ isOpen: true, status: 'success', message: `Mini App status successfully updated!` });
+        setModalState({
+          isOpen: true,
+          status: 'success',
+          message: action === 'start-testing'
+            ? 'Super App test build pipeline triggered in Jenkins! Packaging test APK for Nexus store...'
+            : `Mini App status successfully updated!`
+        });
         setTimeout(() => window.location.reload(), 1200);
       } else {
         const errorData = await res.json().catch(() => null);

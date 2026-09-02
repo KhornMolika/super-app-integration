@@ -821,17 +821,53 @@ export class MiniappsService {
   async startTesting(id: string, actorId: string) {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
-    const validStatuses = ['APPROVED', 'BUILDING'];
+    const validStatuses = ['APPROVED', 'BUILDING', 'IN_REVIEW'];
     if (!validStatuses.includes(app.status?.toUpperCase())) {
-      throw new BadRequestException('App must be in APPROVED or BUILDING status before moving to TESTING');
+      throw new BadRequestException(`App must be in APPROVED or BUILDING status before moving to TESTING (current: ${app.status})`);
     }
+
+    if (app.status === 'APPROVED' || app.status === 'IN_REVIEW') {
+      // 1. Move to BUILDING and trigger Jenkins test build pipeline
+      app.status = 'BUILDING';
+      await this.miniappRepository.save(app);
+
+      const releaseVersion = (app as any).version ? `v${(app as any).version}` : 'v1.1.0';
+      try {
+        this.logger.log(`Triggering Jenkins Super App test build for Mini App ${app.name} (${app.id})...`);
+        const jenkinsResult = await this.jenkinsService.triggerSuperAppBuild({
+          releaseVersion,
+          appName: 'superapp',
+          buildType: 'debug', // Debug test build, stored in Nexus for manual testing
+        });
+        if (!jenkinsResult.success) {
+          this.logger.warn(`Jenkins test build trigger returned: ${jenkinsResult.message}`);
+        }
+      } catch (err: any) {
+        this.logger.error(`Error triggering Jenkins test build: ${err.message}`);
+      }
+
+      await this.logActivity(
+        id,
+        actorId,
+        'STATUS_CHANGE',
+        'Super App Test Build Triggered',
+        `Triggered Jenkins compilation of Super App test build (${releaseVersion}, debug). Artifact will be stored in Nexus for testing.`,
+        'TRIGGER_TEST_BUILD',
+        null,
+        app,
+      );
+
+      return app;
+    }
+
+    // If already in BUILDING and clicked "Advance to Testing":
     app.status = 'TESTING';
     await this.miniappRepository.save(app);
     if (app.ownerId) {
       await this.notificationsService.createNotification(
         app.ownerId,
         'Testing Phase Started',
-        `Mini App "${app.name}" has been approved and is now ready for testing.`,
+        `Mini App "${app.name}" has completed test build compilation and is ready for manual testing.`,
         'TESTING_STARTED',
         app.id,
       );
