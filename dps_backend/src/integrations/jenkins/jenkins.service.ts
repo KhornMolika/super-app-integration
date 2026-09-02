@@ -135,14 +135,14 @@ export class JenkinsService {
   }
 
   /**
-   * Triggers the superapp-build parameterized pipeline in Jenkins
+   * Triggers the superapp-test-build parameterized pipeline in Jenkins
    */
   async triggerSuperAppBuild(options: {
     appName?: string;
     releaseVersion: string;
     buildType?: string;
   }): Promise<{ success: boolean; message: string }> {
-    const jobName = 'superapp-build';
+    const jobName = 'superapp-test-build';
     const callbackUrl = `${this.callbackBaseUrl}/api/release-assembly/build-callback`;
     const buildType = options.buildType || 'debug';
     const appName = options.appName || 'superapp';
