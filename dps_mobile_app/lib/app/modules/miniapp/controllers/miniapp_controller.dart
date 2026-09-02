@@ -9,9 +9,10 @@ import 'package:local_auth/local_auth.dart';
 import 'package:dps_mobile_app/app/config/api_config.dart';
 
 class MiniappController extends GetxController {
-  late final WebViewController webViewController;
-  late final String targetUrl;
-  late final List<String> permissions;
+  late WebViewController webViewController;
+  String targetUrl = 'https://flutter.dev';
+  List<String> permissions = [];
+  String appName = 'Mini App';
 
   @override
   void onInit() {
@@ -21,12 +22,15 @@ class MiniappController extends GetxController {
     if (args is Map) {
       targetUrl = args['url'] ?? 'https://flutter.dev';
       permissions = List<String>.from(args['permissions'] ?? []);
+      appName = args['name'] ?? 'Mini App';
     } else if (args is String) {
       targetUrl = args;
       permissions = [];
+      appName = 'Mini App';
     } else {
       targetUrl = 'https://flutter.dev';
       permissions = [];
+      appName = 'Mini App';
     }
 
     final token = Get.find<AuthService>().token;
