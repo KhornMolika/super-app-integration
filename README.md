@@ -1,99 +1,228 @@
-# DSP Super App Integration Platform (POC)
+﻿# DSP Super App Integration Platform (POC)
 
-Welcome to the Digital Public Service (DSP) Super App Integration Platform. This Proof of Concept (POC) serves as the core onboarding and management portal for integrating third-party **Mini-Apps** into the main Super App ecosystem.
+[![NestJS](https://img.shields.io/badge/Backend-NestJS-E0234E?style=flat&logo=nestjs&logoColor=white)](https://nestjs.com/)
+[![Next.js](https://img.shields.io/badge/Backoffice-Next.js%2016-000000?style=flat&logo=next.js&logoColor=white)](https://nextjs.org/)
+[![Flutter](https://img.shields.io/badge/Super_App-Flutter%203.44+-02569B?style=flat&logo=flutter&logoColor=white)](https://flutter.dev/)
+[![Jenkins](https://img.shields.io/badge/CI%2FCD-Jenkins%20Pipeline-D24939?style=flat&logo=jenkins&logoColor=white)](https://www.jenkins.io/)
+[![Nexus](https://img.shields.io/badge/Artifacts-Sonatype%20Nexus-1B1C1D?style=flat&logo=sonatype&logoColor=white)](https://www.sonatype.com/)
+[![License](https://img.shields.io/badge/License-Proprietary-blue.svg)](#)
 
-## Overview
-
-The platform provides an automated, secure, and streamlined workflow for third-party developers to register their Mini-Apps, submit them for automated technical validation, and eventually get approved for publication within the Super App.
-
-It supports multiple integration methodologies, heavily focusing on **WebView** and **Flutter In-App Modules**.
-
-## Architecture & Tech Stack
-
-This repository is split into two primary applications:
-
-1. **Backend API (`/dps_backend`)**:
-   - **Framework**: NestJS (Node.js)
-   - **Database**: PostgreSQL (via TypeORM)
-   - **Features**: Handles Mini-App schema validation, asynchronous background validation checks (URL reachability), and automated email notifications using the Resend SDK.
-
-2. **Admin Back-Office (`/dps_webapp_backoffice`)**:
-   - **Framework**: Next.js 16 (React, Turbopack)
-   - **Styling**: Tailwind CSS
-   - **Features**: A comprehensive dashboard for administrators to review submitted Mini-Apps, check validation statuses, and interactively preview Mini-Apps across Desktop, Tablet, and Mobile views.
-
-## Current Capabilities
-
-- **Robust Registration Flow**: Developers can register Mini-Apps with detailed metadata (Name, Description, Owner Email, Integration Methods).
-- **Automated Pre-Integration Validation**: The backend automatically performs asynchronous reachability and format checks on submitted URLs (enforcing HTTPS for production, allowing localhost for dev).
-- **Automated Email Notifications**: Integration with **Resend** to automatically dispatch success or failure emails directly to the Mini-App developer based on the automated validation results.
-- **Interactive Multi-Device Preview**: A built-in iframe-based preview modal inside the Back-Office allows administrators to natively test the Mini-App UI in simulated Desktop, Tablet, and Mobile device frames.
-- **Global Action Safety**: Critical actions (like approving or deleting an app) are protected by a globally accessible Tailwind confirmation modal.
-
-## Getting Started: How to Run the Projects
-
-### 1. Database Setup
-
-Ensure you have a PostgreSQL instance running locally or remotely. Create a database named `dps_db`.
-
-### 2. Running the Backend API
-
-The backend is powered by NestJS. To run it locally:
-
-```bash
-# 1. Navigate to the backend directory
-cd dps_backend
-
-# 2. Install dependencies
-pnpm install
-
-# 3. Configure environment variables
-# Duplicate .env.example (or create a .env file) and fill in the required variables:
-# DB_HOST=localhost
-# DB_PORT=5432
-# DB_USERNAME=your_username
-# DB_PASSWORD=your_password
-# DB_DATABASE=dps_db
-# RESEND_API_KEY=your_resend_api_key
-# RESEND_FROM_EMAIL=onboarding@resend.dev
-
-# 4. Start the development server
-pnpm run start:dev
-```
-
-The backend API will start on `http://localhost:3000`.
-
-### 3. Running the Admin Back-Office (Frontend)
-
-The frontend is powered by Next.js. To run it locally alongside the backend:
-
-```bash
-# 1. Navigate to the frontend directory
-cd dps_webapp_backoffice
-
-# 2. Install dependencies
-pnpm install
-
-# 3. Configure environment variables
-# Create a .env.local file and set the API URL pointing to the backend:
-# NEXT_PUBLIC_API_URL=http://localhost:3000
-
-# 4. Start the development server
-pnpm run dev
-```
-
-The frontend application will start on `http://localhost:3001` (or whichever port Next.js assigns). Open it in your browser to view the Back-Office dashboard.
-
-## Roadmap (Upcoming Features)
-
-According to our `doc/tasks.md` roadmap, the following major features are currently under development:
-
-1. **Native Permission Management**: Designing flows to handle, review, and enforce native device permissions requested by Mini-Apps.
-2. **Flutter Package Integration**: Automated source-code security scanning and compiled artifact validation for Flutter packages.
-3. **Validation Status Dashboard**: A granular UI detailing the exact Pass/Fail status of every micro-check (Security, Build, Integration).
-4. **Automated Issue Classification**: System-level intelligence to determine if a failure is the fault of the Mini-App team or the Super App platform.
-5. **Strict Approval Gates**: Locking the final Super App approval controls until all automated validation phases pass successfully.
+The **Digital Public Service (DSP) Super App Integration Platform** is an enterprise-grade Proof of Concept (POC) designed to govern, validate, test, assemble, and distribute third-party **Mini Apps** inside a unified national/enterprise **Super App** ecosystem.
 
 ---
 
-_Built for the DSP Super App Ecosystem._
+## 1. System Architecture & Flow
+
+```mermaid
+flowchart TD
+    subgraph Partners["Partner & Developer Ecosystem"]
+        Dev["Partner Developer"]
+        BankingApp["Banking Mini App (Port 3003)"]
+        InsuranceApp["Insurance Mini App (Port 3004)"]
+        FlutterPkg["Flutter In-App Package"]
+    end
+
+    subgraph Backoffice["DSP Backoffice Admin Portal (Port 3002)"]
+        BO_UI["Next.js 16 Webapp"]
+        SandboxSim["Phone Simulator & JS Bridge Inspector"]
+        WebSandbox["Embedded Flutter Web Container (/superapp-sandbox)"]
+        DownloadRoute["Streaming Download Route (/api/download-apk)"]
+    end
+
+    subgraph Backend["DSP Backend Gateway (Port 3000)"]
+        API["NestJS Core API"]
+        DB[(PostgreSQL)]
+        AuthService["Auth & JWKS Service"]
+        Lifecycle["Mini App Lifecycle Engine"]
+        JenkinsService["Jenkins Integration Service"]
+    end
+
+    subgraph CICD["Automated CI/CD & Storage"]
+        Jenkins["Jenkins Controller (Port 8085)"]
+        NexusTest["Nexus: apk-test-builds"]
+        NexusRel["Nexus: apk-releases"]
+    end
+
+    subgraph MobileRuntime["Super App Mobile Runtime"]
+        RealPhone["Physical Android Phone (arm64-v8a)"]
+        SuperAppUI["Super App OneHub UI"]
+        NativeBridge["DSPNativeBridge (Biometrics, Geo, Camera)"]
+    end
+
+    Dev -->|1. Register & Submit| BO_UI
+    BO_UI -->|2. REST API| API
+    API --> DB
+    API -->|3. Trigger Validation| Jenkins
+    Jenkins -->|4. Security & Reachability| BankingApp & InsuranceApp
+    API -->|5. Approve for Testing| Lifecycle
+    Lifecycle -->|6. Trigger Test Build| Jenkins
+    Jenkins -->|7. Fastlane Multi-Arch Build| NexusTest
+    Jenkins -->|8. Webhook Callback| API
+    NexusTest -->|9. Stream Test APK| DownloadRoute --> RealPhone
+    NexusTest -->|10. Deploy Web Container| WebSandbox
+    RealPhone --> SuperAppUI
+    SuperAppUI --> NativeBridge
+```
+
+---
+
+## 2. Core Components
+
+| Component | Directory | Technology | Default Port | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| **Backend API** | [`dps_backend/`](file:///d:/Projects/fintect/dsp-poc/dps_backend) | NestJS, TypeORM, PostgreSQL | `3000` | Central API managing auth, Mini App lifecycles, Jenkins CI/CD callbacks, and issue tracking. |
+| **Backoffice Portal** | [`dps_webapp_backoffice/`](file:///d:/Projects/fintect/dsp-poc/dps_webapp_backoffice) | Next.js 16 (Turbopack), Tailwind CSS | `3002` | Admin dashboard for reviewing apps, inspecting JS bridges, running Flutter Web sandbox, and downloading APKs. |
+| **Super App Mobile Container** | [`dps_mobile_app/`](file:///d:/Projects/fintect/dsp-poc/dps_mobile_app) | Flutter 3.44+, Dart 3.12+, GetX | N/A (App) | Production-ready Super App featuring OneHub UI, digital wallet, featured mini app launcher, and dynamic LAN IP resolver. |
+| **Core Shared Library** | [`dps_core_package/`](file:///d:/Projects/fintect/dsp-poc/dps_core_package) | Dart / Flutter | N/A (Package) | Shared contracts, base models, and native communication interfaces. |
+| **Example Flutter Mini App** | [`dsp_miniapp_trust_regulator/`](file:///d:/Projects/fintect/dsp-poc/dsp_miniapp_trust_regulator) | Flutter / Dart | N/A (Module) | Sample in-app package mini app compiled directly into the Super App runtime. |
+| **Banking Mini App** | [`dps_webview_webapp_banking/`](file:///d:/Projects/fintect/dsp-poc/dps_webview_webapp_banking) | Next.js, React, Tailwind CSS | `3003` | Sample WebView Mini App with live biometrics, camera, and location bridge calls. |
+| **Insurance Mini App** | [`dps_webview_webapp_insurance/`](file:///d:/Projects/fintect/dsp-poc/dps_webview_webapp_insurance) | Next.js, React, Tailwind CSS | `3004` | Sample WebView Mini App for policy management and claims verification. |
+
+---
+
+## 3. Integration Methodologies
+
+The platform natively supports three distinct integration tiers:
+
+1. **WebView Integration (`WEBVIEW`)**:
+   * Mini Apps run as responsive web applications served from partner infrastructure.
+   * Super App injects `DSPNativeBridge` into `window` for secure bidirectional communication.
+   * Access to native capabilities (e.g. `getLocation`, `getBiometrics`, `openCamera`, `getDeviceInfo`) is governed by granular permissions approved in the Backoffice.
+
+2. **Flutter In-App Module (`FLUTTER_PACKAGE`)**:
+   * High-performance native Flutter modules published to Sonatype Nexus Pub repositories or private Git repos.
+   * Packaged and compiled directly into the Super App binary.
+
+3. **Deep Link Integration (`DEEP_LINK`)**:
+   * Mini Apps registered with custom OS URI schemes (e.g. `app://open`) with fallback to app store URLs.
+
+---
+
+## 4. Two-Stage Build & Delivery Lifecycle
+
+```
+[Draft / In Review] 
+       │
+       ▼ (Pass Automated Security Gates)
+[Approved for Testing] 
+       │
+       ▼ (Trigger: superapp-test-build / BUILD_TYPE=debug)
+[Building Stage 1] 
+       │
+       ▼ (Publish to Nexus: apk-test-builds)
+[Testing Phase] ──► Manual Sandbox Testing (Physical Phone APK & Flutter Web Sandbox)
+       │
+       ▼ (Final Super App Admin & Partner Approval)
+[Building Stage 2] (Trigger: superapp-test-build / BUILD_TYPE=release)
+       │
+       ▼ (Publish to Nexus: apk-releases)
+[Active / Production] ──► Available in live public Super App Catalog
+```
+
+* **Stage 1 (Test Build)**: Assembles a debug build (`app-debug.apk`) for SA Admins and Partners to verify integrations in sandbox mode before public rollout.
+* **Stage 2 (Release Build)**: Generates the official production release APK (`app-release.apk`) signed with production credentials.
+
+---
+
+## 5. Prerequisites & Environment Setup
+
+* **Node.js**: `v20.x` or higher
+* **Package Manager**: Strictly use **`pnpm`** (`npm install -g pnpm`)
+* **Flutter SDK**: `v3.44.x` or higher (Channel `stable`) with Android toolchain
+* **Docker & Docker Compose**: For PostgreSQL, Jenkins, and Sonatype Nexus
+* **Android Device**: Physical Android phone (Android 10+) or Android Studio Emulator
+
+---
+
+## 6. Quick Start Guide
+
+### 1. Start Infrastructure Services (Docker)
+Ensure your PostgreSQL, Jenkins, and Sonatype Nexus containers are running:
+* **PostgreSQL**: Port `5432` (database: `dps_db`)
+* **Sonatype Nexus**: Port `8081` (credentials: `admin` / `admin123`)
+* **Jenkins Controller**: Port `8085` (credentials: `admin` / `admin123`)
+
+### 2. Start Backend API
+```bash
+cd dps_backend
+pnpm install
+pnpm run start:dev
+```
+*API running at `http://localhost:3000` (Swagger docs at `/api/docs`).*
+
+### 3. Start Backoffice Web Portal
+```bash
+cd dps_webapp_backoffice
+pnpm install
+pnpm run dev
+```
+*Portal running at `http://localhost:3002`.*
+
+### 4. Start Sample Mini Apps
+```bash
+# Terminal 1: Banking Mini App
+cd dps_webview_webapp_banking
+pnpm install && pnpm run dev
+
+# Terminal 2: Insurance Mini App
+cd dps_webview_webapp_insurance
+pnpm install && pnpm run dev
+```
+*Banking available at `http://localhost:3003`, Insurance at `http://localhost:3004`.*
+
+---
+
+## 7. Testing & Verification
+
+### A. Testing on Physical Android Devices
+
+1. **Download Test APK**:
+   Run the included PowerShell helper script to download the latest universal test build from Nexus:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File .\scripts\download-test-apk.ps1
+   ```
+   *(Or download directly via the Backoffice UI or `http://localhost:3002/api/download-apk?type=test&version=v1.1.0`).*
+
+2. **Install to Device**:
+   ```powershell
+   adb install -r "$HOME\Downloads\superapp-test-build.apk"
+   ```
+
+3. **Multi-Architecture Support**:
+   The Super App APK is built as a universal binary supporting:
+   * `arm64-v8a` (Modern 64-bit Android devices: Samsung, Pixel, Xiaomi, etc.)
+   * `armeabi-v7a` (32-bit legacy devices)
+   * `x86_64` (PC Android emulators)
+
+4. **Dynamic Host Resolution**:
+   The Super App dynamically detects your computer's Wi-Fi LAN IP (e.g. `192.168.10.35:3000`). If your network changes, simply tap the **Gear Icon `⚙️`** on the Super App login screen to update the server address.
+
+### B. Testing in Backoffice Interactive Sandbox
+
+1. Navigate to any Mini App in `TESTING` status in the Backoffice.
+2. Click **`[ Super App Sandbox ]`**.
+3. The phone simulator will render the **live Flutter Web Super App container** (`/superapp-sandbox/index.html`) running the real OneHub UI, digital wallet, and featured mini app launcher.
+
+---
+
+## 8. Helper Scripts Reference
+
+| Script | Path | Purpose |
+| :--- | :--- | :--- |
+| `download-test-apk.ps1` | [`scripts/download-test-apk.ps1`](file:///d:/Projects/fintect/dsp-poc/scripts/download-test-apk.ps1) | Downloads the latest test build APK from Nexus to Windows Downloads with live progress bar. |
+| `download-test-apk.sh` | [`scripts/download-test-apk.sh`](file:///d:/Projects/fintect/dsp-poc/scripts/download-test-apk.sh) | Bash script to download test build APK on Linux / macOS / CI runners. |
+| `Jenkinsfile.superapp-test-build` | [`scripts/jenkins/Jenkinsfile.superapp-test-build`](file:///d:/Projects/fintect/dsp-poc/scripts/jenkins/Jenkinsfile.superapp-test-build) | Jenkins pipeline compiling multi-arch APKs and Flutter Web artifacts to Nexus. |
+| `Jenkinsfile.webview-validation` | [`scripts/jenkins/Jenkinsfile.webview-validation`](file:///d:/Projects/fintect/dsp-poc/scripts/jenkins/Jenkinsfile.webview-validation) | Jenkins pipeline verifying domain security and URL reachability. |
+
+---
+
+## 9. Developer Guidelines
+
+* **Strict Git Policy**: Never execute `git push` without explicit instruction from the team. Keep all changes local on branch `molika`.
+* **Package Manager**: Strictly use `pnpm` across all TypeScript/Node.js projects.
+* **UI Design**: Strictly use clean SVG vector icons. Do not use emoji graphics in action buttons or headers.
+* **State Management**: In Flutter GetX controllers, avoid `late final` declarations for route arguments to allow seamless re-entry without initialization errors.
+
+---
+
+_Built for the Digital Public Service Super App Ecosystem._
