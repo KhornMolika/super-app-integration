@@ -1,0 +1,12 @@
+FROM jenkins/jenkins:lts-jdk21
+
+USER root
+
+# Install Node.js, curl, jq and pnpm
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl jq nodejs && \
+    curl -fsSL https://get.pnpm.io/install.sh | SHELL=/bin/bash bash - && \
+    chmod -R 755 /root/.local/share/pnpm && \
+    ln -sf /root/.local/share/pnpm/bin/pnpm /usr/local/bin/pnpm && \
+    ln -sf /root/.local/share/pnpm/bin/pnpm /usr/bin/pnpm && \
+    rm -rf /var/lib/apt/lists/*

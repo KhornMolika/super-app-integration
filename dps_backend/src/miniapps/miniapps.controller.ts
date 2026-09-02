@@ -57,7 +57,7 @@ export class MiniappsController {
   @Post()
   @RequirePermissions('miniapp:create')
   create(@Body() createData: CreateMiniAppDto, @Req() req: any) {
-    const dataToSave: any = { ...createData, status: MiniAppStatus.PENDING_REVIEW };
+    const dataToSave: any = { ...createData, status: MiniAppStatus.IN_REVIEW };
     
     // Assign the ownerId from the authenticated user token payload
     dataToSave.ownerId = req.user.sub;
@@ -212,6 +212,18 @@ export class MiniappsController {
     return this.miniappService.getNotifications(req.user.sub);
   }
 
+  @Post('notifications/mark-all-read')
+  @RequirePermissions('miniapp:read')
+  markAllNotificationsRead() {
+    return this.miniappService.markAllNotificationsRead();
+  }
+
+  @Delete('notifications/:id')
+  @RequirePermissions('miniapp:read')
+  deleteNotification(@Param('id') id: string) {
+    return this.miniappService.deleteNotification(id);
+  }
+
   @Post(':id/mark-read')
   @RequirePermissions('miniapp:read')
   markNotificationRead(@Param('id') id: string) {
@@ -236,6 +248,12 @@ export class MiniappsController {
     return this.miniappService.rescan(id, req.user?.sub);
   }
 
+  @Post(':id/cancel-validation')
+  @RequirePermissions('miniapp:update')
+  cancelValidation(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    return this.miniappService.cancelValidation(id, req.user?.sub);
+  }
+
   @Post(':id/approve')
   @RequirePermissions('miniapp:approve')
   approve(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
@@ -246,6 +264,24 @@ export class MiniappsController {
   @RequirePermissions('miniapp:reject')
   reject(@Param('id', ParseUUIDPipe) id: string, @Body('reason') reason: string, @Req() req: any) {
     return this.miniappService.reject(id, reason, req.user.sub);
+  }
+
+  @Post(':id/request-changes')
+  @RequirePermissions('miniapp:reject')
+  requestChanges(@Param('id', ParseUUIDPipe) id: string, @Body('reason') reason: string, @Req() req: any) {
+    return this.miniappService.requestChanges(id, reason, req.user.sub);
+  }
+
+  @Post(':id/start-testing')
+  @RequirePermissions('miniapp:approve')
+  startTesting(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    return this.miniappService.startTesting(id, req.user.sub);
+  }
+
+  @Post(':id/activate')
+  @RequirePermissions('miniapp:approve')
+  activate(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    return this.miniappService.activate(id, req.user.sub);
   }
 
   @Post(':id/suspend')

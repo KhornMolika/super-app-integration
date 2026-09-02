@@ -6,10 +6,14 @@ import { Notification } from '../../notifications/entities/notification.entity';
 
 export enum MiniAppStatus {
   DRAFT = 'DRAFT',
+  SUBMITTED = 'SUBMITTED',
+  IN_REVIEW = 'IN_REVIEW',
   PENDING_REVIEW = 'PENDING_REVIEW',
   APPROVED = 'APPROVED',
-  REJECTED = 'REJECTED',
+  BUILDING = 'BUILDING',
+  TESTING = 'TESTING',
   ACTIVE = 'ACTIVE',
+  REJECTED = 'REJECTED',
   SUSPENDED = 'SUSPENDED',
   ARCHIVED = 'ARCHIVED',
 }

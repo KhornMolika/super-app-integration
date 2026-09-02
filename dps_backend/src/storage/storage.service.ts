@@ -1,12 +1,13 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as Minio from 'minio';
+import { Client as MinioClient } from 'minio';
 import { randomUUID } from 'crypto';
+import type { Multer } from 'multer';
 
 @Injectable()
 export class StorageService implements OnModuleInit {
   private readonly logger = new Logger(StorageService.name);
-  private minioClient: Minio.Client;
+  private minioClient: MinioClient;
   private bucketName: string;
   private publicUrl: string;
 
@@ -14,13 +15,13 @@ export class StorageService implements OnModuleInit {
     const endPoint = this.configService.get<string>('MINIO_ENDPOINT', 'localhost');
     const port = parseInt(this.configService.get<string>('MINIO_PORT', '9000'), 10);
     const useSSL = this.configService.get<string>('MINIO_USE_SSL', 'false') === 'true';
-    const accessKey = this.configService.get<string>('MINIO_ACCESS_KEY', 'minioadmin');
-    const secretKey = this.configService.get<string>('MINIO_SECRET_KEY', 'minioadmin');
+    const accessKey = this.configService.get<string>('MINIO_ACCESS_KEY', 'admin');
+    const secretKey = this.configService.get<string>('MINIO_SECRET_KEY', 'adminadmin');
 
     this.bucketName = this.configService.get<string>('MINIO_BUCKET_NAME', 'mini-app-logos');
     this.publicUrl = this.configService.get<string>('MINIO_PUBLIC_URL', `http://${endPoint}:${port}`).replace(/\/$/, '');
 
-    this.minioClient = new Minio.Client({
+    this.minioClient = new MinioClient({
       endPoint,
       port,
       useSSL,

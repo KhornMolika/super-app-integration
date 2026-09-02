@@ -5,6 +5,7 @@ import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 import { MiniAppIssue } from '../../miniapps/entities/miniapp-issue.entity';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { AuditService } from '../../audit/audit.service';
+import { MailService } from '../../mail/mail.service';
 
 export interface ValidationFindingDto {
   id: string;
@@ -38,6 +39,7 @@ export class ValidationCallbackController {
 
     private readonly notificationsService: NotificationsService,
     private readonly auditService: AuditService,
+    private readonly mailService: MailService,
   ) {}
 
   @Post('stage')
@@ -112,6 +114,15 @@ export class ValidationCallbackController {
         app.id
       );
 
+      if (app.ownerEmail) {
+        await this.mailService.sendValidationPassedEmail(
+          app.ownerEmail,
+          app.name || app.appId || 'Mini App',
+          dto.score ?? 100,
+          `http://localhost:3002/miniapps/${app.id}`,
+        );
+      }
+
       await this.auditService.log({
         actorId: 'system:jenkins',
         action: 'VALIDATION_PASSED',
@@ -124,6 +135,25 @@ export class ValidationCallbackController {
     } else {
       app.validationStatus = 'FAILED';
       app.status = 'DRAFT'; // Auto-reset to DRAFT for remediation
+
+      // Mark running/pending stages as FAILED
+      const stages = app.validationStages || {};
+      let updatedAny = false;
+      Object.keys(stages).forEach(key => {
+        if (stages[key].status === 'RUNNING') {
+          stages[key].status = 'FAILED';
+          stages[key].details = dto.checks?.pipeline?.details || stages[key].details || 'Stage failed or scanner error encountered.';
+          updatedAny = true;
+        }
+      });
+      if (!updatedAny && Object.keys(stages).length > 0) {
+        const firstIncomplete = Object.keys(stages).find(k => stages[k].status !== 'COMPLETED');
+        if (firstIncomplete) {
+          stages[firstIncomplete].status = 'FAILED';
+          stages[firstIncomplete].details = dto.checks?.pipeline?.details || 'Stage failed.';
+        }
+      }
+      app.validationStages = stages;
 
       // Log findings as MiniAppIssues
       const issuesToCreate: MiniAppIssue[] = [];
@@ -148,6 +178,13 @@ export class ValidationCallbackController {
 
       await this.miniappRepository.save(app);
 
+      // Real-time stage update to immediately stop frontend spinners
+      this.notificationsService.emitStageUpdate({
+        miniAppId: app.id,
+        stages: app.validationStages,
+        validationStatus: 'FAILED',
+      });
+
       await this.notificationsService.createNotification(
         app.ownerId || '',
         'Automated Validation Failed',
@@ -155,6 +192,16 @@ export class ValidationCallbackController {
         'ISSUE_CREATED',
         app.id
       );
+
+      if (app.ownerEmail) {
+        await this.mailService.sendValidationFailedEmail(
+          app.ownerEmail,
+          app.name || app.appId || 'Mini App',
+          dto.score ?? 0,
+          (dto.findings || []).filter(f => f.severity === 'CRITICAL' || f.severity === 'HIGH'),
+          `http://localhost:3002/miniapps/${app.id}`,
+        );
+      }
 
       await this.auditService.log({
         actorId: 'system:jenkins',

@@ -30,13 +30,22 @@ export class NotificationsService {
 
   async findByUserId(userId: string) {
     return this.notificationRepository.find({
-      where: { userId },
+      relations: { miniApp: true },
       order: { createdAt: 'DESC' },
+      take: 100,
     });
   }
 
   async markAsRead(id: string): Promise<void> {
     await this.notificationRepository.update(id, { isRead: true });
+  }
+
+  async markAllAsRead(): Promise<void> {
+    await this.notificationRepository.update({}, { isRead: true });
+  }
+
+  async delete(id: string): Promise<void> {
+    await this.notificationRepository.delete(id);
   }
 
   emitStageUpdate(data: any) {

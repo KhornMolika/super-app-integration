@@ -419,7 +419,7 @@ export class MiniappsService {
         await this.logActivity(id, 'system', 'VALIDATION', 'Validation Running', 'Automated security scan pipeline triggered on Jenkins', 'VALIDATE_MINI_APP', app, await this.findOne(id));
       } else {
         await this.miniappRepository.update(id, {
-          status: 'PENDING_REVIEW',
+          status: 'IN_REVIEW',
           validationErrors: null as any,
         });
         
@@ -489,6 +489,16 @@ export class MiniappsService {
     return { success: true };
   }
 
+  async markAllNotificationsRead() {
+    await this.notificationsService.markAllAsRead();
+    return { success: true };
+  }
+
+  async deleteNotification(id: string) {
+    await this.notificationsService.delete(id);
+    return { success: true };
+  }
+
   async getActivities(id: string) {
     return this.activityRepository.find({
       where: { miniAppId: id },
@@ -515,10 +525,112 @@ export class MiniappsService {
   }
 
   async findOne(id: string) {
-    return this.miniappRepository.findOne({ 
+    const app = await this.miniappRepository.findOne({ 
       where: { id },
       relations: { issues: true }
     });
+    if (!app) return null;
+
+    // Auto-reconciliation: If validation is marked RUNNING, verify with Jenkins
+    if (app.validationStatus === 'RUNNING') {
+      try {
+        const lastBuild = await this.jenkinsService.getLastBuild('webview-validation');
+        if (lastBuild && lastBuild.building === false) {
+          if (lastBuild.result === 'FAILURE' || lastBuild.result === 'ABORTED') {
+            this.logger.warn(`Mini App ${id} validation auto-reconciled: Jenkins build #${lastBuild.number} failed (${lastBuild.result})`);
+            app.validationStatus = 'FAILED';
+            if (app.status === 'SUBMITTED') {
+              app.status = 'DRAFT';
+            }
+
+            const stages = app.validationStages || {};
+            Object.keys(stages).forEach(key => {
+              if (stages[key].status === 'RUNNING') {
+                stages[key].status = 'FAILED';
+                stages[key].details = `Jenkins build #${lastBuild.number} finished with ${lastBuild.result}.`;
+              }
+            });
+            app.validationStages = stages;
+
+            if (!app.validationReport || !app.validationReport.findings?.length) {
+              app.validationReport = {
+                score: 0,
+                status: 'FAILED',
+                method: app.integrationMethod || 'WEBVIEW',
+                completedAt: new Date().toISOString(),
+                findings: [
+                  {
+                    id: 'PIPELINE_ERROR',
+                    severity: 'CRITICAL',
+                    title: 'Security Validation Pipeline Interrupted',
+                    description: `The automated Jenkins pipeline build #${lastBuild.number} terminated with result ${lastBuild.result}. Check Jenkins logs.`,
+                    recommendation: 'Verify target URL accessibility and re-run the scan.',
+                  }
+                ]
+              };
+            }
+
+            await this.miniappRepository.save(app);
+
+            this.notificationsService.emitStageUpdate({
+              miniAppId: id,
+              stages: app.validationStages,
+              validationStatus: 'FAILED',
+            });
+          }
+        }
+      } catch (e: any) {
+        this.logger.debug(`Reconciliation check skipped: ${e.message}`);
+      }
+    }
+
+    return app;
+  }
+
+  async cancelValidation(id: string, actorId = 'system') {
+    const app = await this.miniappRepository.findOne({ where: { id } });
+    if (!app) throw new BadRequestException('App not found');
+
+    app.validationStatus = 'FAILED';
+    if (app.status === 'SUBMITTED') {
+      app.status = 'DRAFT';
+    }
+
+    const stages = app.validationStages || {};
+    Object.keys(stages).forEach(key => {
+      if (stages[key].status === 'RUNNING') {
+        stages[key].status = 'FAILED';
+        stages[key].details = 'Scan cancelled by user.';
+      }
+    });
+    app.validationStages = stages;
+
+    app.validationReport = {
+      score: 0,
+      status: 'FAILED',
+      method: app.integrationMethod || 'WEBVIEW',
+      completedAt: new Date().toISOString(),
+      findings: [
+        {
+          id: 'SCAN_CANCELLED',
+          severity: 'HIGH',
+          title: 'Security Scan Cancelled',
+          description: 'The automated security scan was manually cancelled or reset.',
+          recommendation: 'Re-run the automated security scan when ready.',
+        }
+      ]
+    };
+
+    await this.miniappRepository.save(app);
+
+    this.notificationsService.emitStageUpdate({
+      miniAppId: id,
+      stages: app.validationStages,
+      validationStatus: 'FAILED',
+    });
+
+    await this.logActivity(id, actorId, 'STATUS_CHANGE', 'Validation Reset', 'Security validation was reset', 'CANCEL_VALIDATION', null, app);
+    return app;
   }
 
   async update(id: string, data: Partial<MiniApp>, actorId?: string) {
@@ -611,7 +723,7 @@ export class MiniappsService {
         allowLocal,
       }).catch(err => this.logger.error(`Jenkins trigger failed: ${err.message}`));
     } else {
-      app.status = 'PENDING_REVIEW';
+      app.status = 'IN_REVIEW';
       await this.miniappRepository.save(app);
     }
 
@@ -674,24 +786,78 @@ export class MiniappsService {
   async approve(id: string, actorId: string) {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
-    if (app.status?.toUpperCase() !== 'PENDING_REVIEW') {
-      throw new BadRequestException('App is not pending review');
+    const validStatuses = ['IN_REVIEW', 'PENDING_REVIEW', 'SUBMITTED'];
+    if (!validStatuses.includes(app.status?.toUpperCase())) {
+      throw new BadRequestException(`App is not in review (current status: ${app.status})`);
     }
     app.status = 'APPROVED';
     await this.miniappRepository.save(app);
-    await this.logActivity(id, actorId, 'STATUS_CHANGE', 'Mini App Approved', 'App approved', 'APPROVE_MINI_APP', null, app);
+    await this.logActivity(id, actorId, 'STATUS_CHANGE', 'Mini App Approved', 'App approved by SA Admin', 'APPROVE_MINI_APP', null, app);
     return app;
   }
 
   async reject(id: string, reason: string, actorId: string) {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
-    if (app.status?.toUpperCase() !== 'PENDING_REVIEW') {
-      throw new BadRequestException('App is not pending review');
+    const validStatuses = ['IN_REVIEW', 'PENDING_REVIEW', 'SUBMITTED', 'APPROVED', 'TESTING'];
+    if (!validStatuses.includes(app.status?.toUpperCase())) {
+      throw new BadRequestException(`App cannot be rejected from current status: ${app.status}`);
     }
     app.status = 'REJECTED';
     await this.miniappRepository.save(app);
-    await this.logActivity(id, actorId, 'STATUS_CHANGE', 'Mini App Rejected', reason || 'App rejected', 'REJECT_MINI_APP', null, app);
+    await this.logActivity(id, actorId, 'STATUS_CHANGE', 'Mini App Rejected', reason || 'App rejected by SA Admin', 'REJECT_MINI_APP', null, app);
+    return app;
+  }
+
+  async requestChanges(id: string, reason: string, actorId: string) {
+    const app = await this.findOne(id);
+    if (!app) throw new BadRequestException('App not found');
+    app.status = 'DRAFT';
+    await this.miniappRepository.save(app);
+    await this.logActivity(id, actorId, 'STATUS_CHANGE', 'Changes Requested', reason || 'SA Admin sent app back to Draft for remediation', 'REQUEST_CHANGES', null, app);
+    return app;
+  }
+
+  async startTesting(id: string, actorId: string) {
+    const app = await this.findOne(id);
+    if (!app) throw new BadRequestException('App not found');
+    if (app.status?.toUpperCase() !== 'APPROVED') {
+      throw new BadRequestException('App must be in APPROVED status before moving to TESTING');
+    }
+    app.status = 'TESTING';
+    await this.miniappRepository.save(app);
+    if (app.ownerId) {
+      await this.notificationsService.createNotification(
+        app.ownerId,
+        'Testing Phase Started',
+        `Mini App "${app.name}" has been approved and is now ready for testing.`,
+        'TESTING_STARTED',
+        app.id,
+      );
+    }
+    if (app.ownerEmail) {
+      await this.mailService.sendTestBuildReadyEmail(
+        app.ownerEmail,
+        app.name || app.appId,
+        (app as any).version || '1.0.0',
+        'http://localhost:8081/repository/apk-releases/superapp/v1.1.0/app-debug.apk',
+        `http://localhost:3002/miniapps/${app.id}`,
+      );
+    }
+    await this.logActivity(id, actorId, 'STATUS_CHANGE', 'Testing Started', 'Mini App promoted to manual sandbox testing phase', 'START_TESTING', null, app);
+    return app;
+  }
+
+  async activate(id: string, actorId: string) {
+    const app = await this.findOne(id);
+    if (!app) throw new BadRequestException('App not found');
+    const validStatuses = ['TESTING', 'APPROVED'];
+    if (!validStatuses.includes(app.status?.toUpperCase())) {
+      throw new BadRequestException('App must be in TESTING or APPROVED status to activate');
+    }
+    app.status = 'ACTIVE';
+    await this.miniappRepository.save(app);
+    await this.logActivity(id, actorId, 'STATUS_CHANGE', 'Mini App Activated', 'Final approval granted. Mini App is now ACTIVE in Super App catalog.', 'ACTIVATE_MINI_APP', null, app);
     return app;
   }
 

@@ -70,7 +70,7 @@ export default function ReviewQueuePage() {
       if (appRes.ok) {
         const data = await appRes.json();
         // Filter to show Mini Apps needing review (or user's submitted apps if manager)
-        setMiniapps(data.filter((app: MiniApp) => app.status === 'PENDING_REVIEW' || (isManager && app.status !== 'DRAFT')));
+        setMiniapps(data.filter((app: MiniApp) => app.status === 'IN_REVIEW' || app.status === 'PENDING_REVIEW' || (isManager && app.status !== 'DRAFT')));
       }
     } catch (err) {
       console.error('Failed to fetch review data', err);

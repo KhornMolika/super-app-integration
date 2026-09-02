@@ -117,6 +117,24 @@ export class JenkinsService {
   }
 
   /**
+   * Fetches latest build info from Jenkins for a job
+   */
+  async getLastBuild(jobName = 'webview-validation'): Promise<any> {
+    try {
+      const headers: Record<string, string> = {};
+      const authHeader = this.getAuthHeader();
+      if (authHeader) headers['Authorization'] = authHeader;
+
+      const res = await fetch(`${this.jenkinsUrl}/job/${jobName}/lastBuild/api/json`, { headers });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (e: any) {
+      this.logger.debug(`Could not fetch last build from Jenkins: ${e.message}`);
+      return null;
+    }
+  }
+
+  /**
    * Triggers the superapp-build parameterized pipeline in Jenkins
    */
   async triggerSuperAppBuild(options: {

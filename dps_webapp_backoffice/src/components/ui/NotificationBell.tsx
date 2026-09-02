@@ -135,6 +135,19 @@ export function NotificationBell() {
               </ul>
             )}
           </div>
+
+          {/* Footer linking to full notifications page */}
+          <div className="p-2 border-t border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-900/60 text-center">
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                router.push('/notifications');
+              }}
+              className="w-full py-1.5 px-3 rounded-lg text-xs font-semibold text-brand-600 dark:text-brand-400 hover:bg-white dark:hover:bg-slate-800 hover:shadow-sm transition-all"
+            >
+              View All in Notifications Center →
+            </button>
+          </div>
         </div>
       )}
     </div>

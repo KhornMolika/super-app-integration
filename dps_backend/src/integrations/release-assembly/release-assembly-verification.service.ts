@@ -7,6 +7,7 @@ import { Repository } from 'typeorm';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 import { JenkinsService } from '../jenkins/jenkins.service';
 import { NexusIntegrationService } from '../nexus/nexus-integration.service';
+import { NotificationsService } from '../../notifications/notifications.service';
 import {
   VerifyAndAssembleReleaseDto,
   ReleaseAssemblyAuditResult,
@@ -29,6 +30,7 @@ export class ReleaseAssemblyVerificationService {
   constructor(
     private readonly nexusService: NexusIntegrationService,
     private readonly jenkinsService: JenkinsService,
+    private readonly notificationsService: NotificationsService,
     @InjectRepository(MiniApp)
     private readonly miniappRepository: Repository<MiniApp>,
   ) {}
@@ -221,11 +223,29 @@ export class ReleaseAssemblyVerificationService {
   async handleBuildCallback(body: any) {
     this.logger.log(`Received build callback from Jenkins for release ${body.releaseVersion}: ${body.status}`);
     if (body.status === 'COMPLETED' || body.status === 'SUCCESS') {
+      const buildingApps = await this.miniappRepository.find({
+        where: { status: 'BUILDING' as any },
+      });
+
       await this.miniappRepository.createQueryBuilder()
         .update(MiniApp)
         .set({ status: 'TESTING' })
         .where("status = 'BUILDING'")
         .execute();
+
+      const apkUrl = body.apkUrl || `http://localhost:8081/repository/apk-releases/superapp/${body.releaseVersion}/app-debug.apk`;
+
+      for (const app of buildingApps) {
+        if (app.ownerId) {
+          await this.notificationsService.createNotification(
+            app.ownerId,
+            'Super App Test Build Ready',
+            `Super App test build (${body.releaseVersion}) is ready! Download the test APK to verify ${app.name}.`,
+            'TEST_BUILD_READY',
+            app.id,
+          );
+        }
+      }
     }
     return { success: true };
   }

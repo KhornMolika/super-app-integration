@@ -182,6 +182,8 @@ pipeline {
                     sh """
                     node -e '
                         const isHttps = "${params.TARGET_URL}".startsWith("https://");
+                        const allowLocal = "${params.ALLOW_LOCAL}" === "true";
+                        const passed = isHttps || allowLocal;
                         const callbackUrl = "${params.CALLBACK_URL}".replace("/callback", "/stage");
                         fetch(callbackUrl, {
                             method: "POST",
@@ -190,8 +192,10 @@ pipeline {
                                 miniAppId: "${params.MINIAPP_ID}",
                                 stageId: "tls",
                                 stageName: "2. TLS & HTTPS Security",
-                                status: isHttps ? "COMPLETED" : "FAILED",
-                                details: isHttps ? "TLS 1.2+ transport security verified." : "Target uses insecure plain HTTP."
+                                status: passed ? "COMPLETED" : "FAILED",
+                                details: isHttps
+                                    ? "TLS 1.2+ transport security verified."
+                                    : (allowLocal ? "Plain HTTP permitted in development mode (ALLOW_LOCAL=true)." : "Target uses insecure plain HTTP.")
                             })
                         }).catch(() => {});
                     ' || true
@@ -311,6 +315,7 @@ pipeline {
 
                         const miniAppId = "${params.MINIAPP_ID}";
                         const targetUrl = "${params.TARGET_URL}";
+                        const allowLocal = "${params.ALLOW_LOCAL}" === "true";
                         const ssrfFile = "${env.SSRF_REPORT}";
                         const zapFile = "${env.ZAP_REPORT}";
                         const tlsFile = "${env.TLS_REPORT}";
@@ -348,17 +353,23 @@ pipeline {
 
                         // 2. TLS Check
                         if (targetUrl.startsWith("http://")) {
-                            checks.tls.passed = false;
-                            checks.tls.details = "Production URL uses unencrypted HTTP";
-                            findings.push({
-                                id: "INSECURE_TRANSPORT",
-                                severity: "HIGH",
-                                category: "TRANSPORT_SECURITY",
-                                title: "Insecure HTTP Protocol",
-                                description: "The Mini App endpoint uses plain HTTP instead of encrypted HTTPS.",
-                                recommendation: "Enforce TLS 1.2+ with a valid SSL certificate."
-                            });
-                            score -= 25;
+                            if (allowLocal) {
+                                checks.tls.passed = true;
+                                checks.tls.details = "Plain HTTP permitted in development mode (ALLOW_LOCAL=true).";
+                                console.log("Development mode: HTTP permitted without penalty.");
+                            } else {
+                                checks.tls.passed = false;
+                                checks.tls.details = "Production URL uses unencrypted HTTP";
+                                findings.push({
+                                    id: "INSECURE_TRANSPORT",
+                                    severity: "HIGH",
+                                    category: "TRANSPORT_SECURITY",
+                                    title: "Insecure HTTP Protocol",
+                                    description: "The Mini App endpoint uses plain HTTP instead of encrypted HTTPS.",
+                                    recommendation: "Enforce TLS 1.2+ with a valid SSL certificate."
+                                });
+                                score -= 25;
+                            }
                         }
 
                         // 3. Nuclei Check
@@ -420,18 +431,10 @@ pipeline {
 
                         fs.writeFileSync("${env.REPORT_FILE}", JSON.stringify(payload, null, 2));
                         console.log("Final Validation Status:", status, "Score:", payload.score, "Findings Count:", findings.length);
-
-                        fetch(callbackUrl, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify(payload)
-                        }).then(res => {
-                            console.log("Webhook callback dispatched to NestJS backend! HTTP Status:", res.status);
-                        }).catch(err => {
-                            console.error("Failed to reach NestJS backend callback:", err.message);
-                        });
                     '
                     """
+
+                    sh "curl -s -X POST -H 'Content-Type: application/json' -d @'${env.REPORT_FILE}' '${params.CALLBACK_URL}'"
                 }
             }
         }
@@ -442,37 +445,24 @@ pipeline {
             script {
                 echo "Pipeline failed unexpectedly. Dispatching FAILED status to backend..."
                 sh """
-                node -e '
-                    const callbackUrl = "${params.CALLBACK_URL}";
-                    const miniAppId = "${params.MINIAPP_ID}";
-                    if (!miniAppId) process.exit(0);
+                STAGE_URL="\$(echo '${params.CALLBACK_URL}' | sed 's|/callback|/stage|')"
+                curl -s -X POST -H 'Content-Type: application/json' \
+                  -d '{"miniAppId":"${params.MINIAPP_ID}","stageId":"ssrf","stageName":"Validation Pipeline","status":"FAILED","details":"Pipeline execution failed or scanner encountered an error."}' \
+                  "\${STAGE_URL}" || true
 
-                    const payload = {
-                        miniAppId: miniAppId,
-                        method: "WEBVIEW",
-                        status: "FAILED",
-                        score: 0,
-                        checks: {
-                            pipeline: { passed: false, details: "Pipeline execution encountered a fatal error." }
-                        },
-                        findings: [
-                            {
-                                id: "PIPELINE_ERROR",
-                                severity: "CRITICAL",
-                                category: "SYSTEM_CHECK",
-                                title: "Security Validation Pipeline Failed",
-                                description: "The automated Jenkins validation pipeline was interrupted or encountered a scanner error.",
-                                recommendation: "Review the URL, verify target server accessibility, or check Jenkins logs."
-                            }
-                        ]
-                    };
-
-                    fetch(callbackUrl, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(payload)
-                    }).catch(e => console.error("Fallback callback error:", e.message));
-                ' || true
+                curl -s -X POST -H 'Content-Type: application/json' \
+                  -d '{"miniAppId":"${params.MINIAPP_ID}","method":"WEBVIEW","status":"FAILED","score":0,"checks":{"pipeline":{"passed":false,"details":"Jenkins validation pipeline failed unexpectedly."}},"findings":[{"id":"PIPELINE_ERROR","severity":"CRITICAL","category":"SYSTEM_CHECK","title":"Security Validation Pipeline Failed","description":"The automated Jenkins validation pipeline was interrupted or encountered an execution error.","recommendation":"Review target server accessibility or inspect Jenkins build logs at http://localhost:8085/job/webview-validation/"}]}' \
+                  "${params.CALLBACK_URL}" || true
+                """
+            }
+        }
+        aborted {
+            script {
+                echo "Pipeline was aborted. Dispatching FAILED status to backend..."
+                sh """
+                curl -s -X POST -H 'Content-Type: application/json' \
+                  -d '{"miniAppId":"${params.MINIAPP_ID}","method":"WEBVIEW","status":"FAILED","score":0,"checks":{"pipeline":{"passed":false,"details":"Pipeline was aborted."}},"findings":[{"id":"PIPELINE_ABORTED","severity":"HIGH","category":"SYSTEM_CHECK","title":"Security Validation Aborted","description":"The Jenkins validation pipeline was stopped before completion.","recommendation":"Re-run the automated security scan."}]}' \
+                  "${params.CALLBACK_URL}" || true
                 """
             }
         }

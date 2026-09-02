@@ -1,7 +1,10 @@
 services:
   # 1. Jenkins Controller (The Orchestrator)
   jenkins-controller:
-    image: jenkins/jenkins:lts-jdk21
+    build:
+      context: .
+      dockerfile: Dockerfile.jenkins
+    image: custom-jenkins-controller:lts-jdk21
     container_name: jenkins-controller
     restart: unless-stopped
     user: root

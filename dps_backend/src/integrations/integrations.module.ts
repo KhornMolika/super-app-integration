@@ -15,6 +15,7 @@ import { MiniApp } from '../miniapps/entities/miniapp.entity';
 import { MiniAppIssue } from '../miniapps/entities/miniapp-issue.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { AuditModule } from '../audit/audit.module';
+import { MailModule } from '../mail/mail.module';
 import { DomainVerificationService } from './webview/domain-verification.service';
 import { ValidationCallbackController } from './validation/validation-callback.controller';
 import { JenkinsService } from './jenkins/jenkins.service';
@@ -25,6 +26,7 @@ import { JenkinsService } from './jenkins/jenkins.service';
     TypeOrmModule.forFeature([MiniApp, MiniAppIssue]),
     NotificationsModule,
     AuditModule,
+    MailModule,
   ],
   controllers: [
     GitIntegrationController,

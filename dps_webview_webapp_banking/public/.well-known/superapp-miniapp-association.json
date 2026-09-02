@@ -1,11 +1,14 @@
 {
-  "appId": "com.fsa.minio",
-  "verificationToken": "tok_live_cc62fe25ca22462f8cb2682d7ab8235d",
+  "appId": "com.fsa.ecomerce",
+  "verificationToken": "tok_live_a949bc5e7660bc388db0a176c696b145",
   "environment": "DEV",
   "allowedDomains": [
-    "192.168.1.152"
+    "localhost",
+    "127.0.0.1",
+    "ecommerce.fsa.gov"
   ],
   "permissions": [
-    "Camera"
+    "Camera",
+    "Location"
   ]
 }
