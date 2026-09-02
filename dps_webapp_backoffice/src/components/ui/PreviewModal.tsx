@@ -45,7 +45,7 @@ export default function PreviewModal({
   version = '1.0.0',
   category,
   appId,
-  apkUrl = 'http://localhost:8081/repository/apk-test-builds/superapp/v1.1.0/app-debug.apk',
+  apkUrl = '/api/download-apk?type=test&version=v1.1.0',
   isFlutter = false,
   status,
 }: PreviewModalProps) {
@@ -292,7 +292,7 @@ export default function PreviewModal({
               title="Download Super App Test Build APK (Nexus)"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-              <span>Download Test APK (92.8 MB)</span>
+              <span>Download Test APK</span>
             </a>
           )}
 

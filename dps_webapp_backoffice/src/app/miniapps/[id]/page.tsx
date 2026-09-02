@@ -658,13 +658,13 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
             {/* Download Test APK: ONLY displayed after approve and build successfully (TESTING or ACTIVE) */}
             {(formData.status === 'TESTING' || formData.status === 'ACTIVE') && (formData.status !== 'TESTING' || role === 'MINI_APP_MANAGER') && (
               <a
-                href="http://localhost:8081/repository/apk-test-builds/superapp/v1.1.0/app-debug.apk"
-                download="superapp-debug.apk"
+                href="/api/download-apk?type=test&version=v1.1.0"
+                download="superapp-test-build.apk"
                 className="h-9 px-3.5 text-xs font-semibold rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-all flex items-center gap-1.5 shadow-sm"
                 title="Download Super App Test Build APK (Nexus)"
               >
                 <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                <span>Download Test APK (92.8 MB)</span>
+                <span>Download Test APK</span>
               </a>
             )}
 
@@ -727,13 +727,13 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
                       </button>
                       {(formData.status === 'TESTING' || formData.status === 'ACTIVE') && (
                         <a
-                          href="http://localhost:8081/repository/apk-test-builds/superapp/v1.1.0/app-debug.apk"
-                          download="superapp-debug.apk"
+                          href="/api/download-apk?type=test&version=v1.1.0"
+                          download="superapp-test-build.apk"
                           onClick={() => setShowActionsMenu(false)}
                           className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center space-x-2.5 font-medium transition-colors"
                         >
                           <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                          <span>Download Test APK (92.8 MB)</span>
+                          <span>Download Test APK</span>
                         </a>
                       )}
                     </div>
@@ -930,13 +930,13 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
                 </Button>
 
                 <a
-                  href="http://localhost:8081/repository/apk-test-builds/superapp/v1.1.0/app-debug.apk"
-                  download="superapp-debug.apk"
+                  href="/api/download-apk?type=test&version=v1.1.0"
+                  download="superapp-test-build.apk"
                   className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-all shadow-sm"
                   title="Download Super App Test Build APK (Nexus)"
                 >
                   <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                  <span>Download Test APK (92.8 MB)</span>
+                  <span>Download Test APK</span>
                 </a>
               </div>
 

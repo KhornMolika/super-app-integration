@@ -1,9 +1,9 @@
 {
-  "appId": "com.fsa.ll",
-  "verificationToken": "tok_live_869979f6991972ee18e368dc28256be9",
+  "appId": "com.fsa.testbuid1",
+  "verificationToken": "tok_live_1223ba7e895d1df233ac4dc36405d840",
   "environment": "DEV",
   "allowedDomains": [
-    "http://192.168.56.11:3003"
+    "localhost"
   ],
   "permissions": [
     "Camera"
