@@ -821,8 +821,9 @@ export class MiniappsService {
   async startTesting(id: string, actorId: string) {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
-    if (app.status?.toUpperCase() !== 'APPROVED') {
-      throw new BadRequestException('App must be in APPROVED status before moving to TESTING');
+    const validStatuses = ['APPROVED', 'BUILDING'];
+    if (!validStatuses.includes(app.status?.toUpperCase())) {
+      throw new BadRequestException('App must be in APPROVED or BUILDING status before moving to TESTING');
     }
     app.status = 'TESTING';
     await this.miniappRepository.save(app);
