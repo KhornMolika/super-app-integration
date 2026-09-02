@@ -106,30 +106,50 @@ export default async function MiniAppsPage() {
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 border ${
                         (app.status === 'ACTIVE' || app.status === 'Published') 
                           ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20' 
-                          : ((app.status === 'DRAFT' || app.status === 'Draft' || app.status === 'Issues') && !app.validationErrors)
-                          ? 'bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600/50'
-                          : ((app.status === 'DRAFT' || app.status === 'Draft' || app.status === 'Issues') && false)
-                          ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/20 animate-pulse'
-                          : ((app.status === 'DRAFT' || app.status === 'Draft' || app.status === 'Issues') && app.validationErrors)
+                          : app.status === 'APPROVED'
+                          ? 'bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-200 dark:border-teal-500/20'
+                          : app.status === 'IN_REVIEW'
+                          ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/20'
+                          : (app.status === 'TESTING' || app.status === 'BUILDING')
+                          ? 'bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-500/20'
+                          : (app.status === 'REJECTED' || app.status === 'SUSPENDED')
                           ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-500/20'
-                          : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20'
+                          : ((app.status === 'DRAFT' || app.status === 'Draft') && app.validationErrors)
+                          ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-500/20'
+                          : 'bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600/50'
                       }`}>
                         {(app.status === 'ACTIVE' || app.status === 'Published') && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>}
-                        {((app.status === 'DRAFT' || app.status === 'Draft' || app.status === 'Issues') && false) && <svg className="animate-spin -ml-0.5 mr-1.5 h-3 w-3 text-blue-600 dark:text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
-                        {((app.status === 'DRAFT' || app.status === 'Draft' || app.status === 'Issues') && app.validationErrors) && <svg className="-ml-0.5 mr-1.5 h-3 w-3 text-rose-600 dark:text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>}
-                        {((app.status === 'DRAFT' || app.status === 'Draft' || app.status === 'Issues') || app.status === 'Draft') && app.validationErrors ? 'Issues' : 
-    (app.status === 'PENDING_REVIEW' || app.status === 'Pending Review') ? 'Pending Review' : 
-    ((app.status === 'DRAFT' || app.status === 'Draft' || app.status === 'Issues') || app.status === 'Draft') ? 'Draft' : 
-    ((app.status === 'ACTIVE' || app.status === 'Published') || app.status === 'Published') ? 'Active' : 
-    (app.status === 'Issues') ? 'Issues' :
-    app.status || 'Pending'}
+                        {app.status === 'IN_REVIEW' && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse mr-1.5"></span>}
+                        {(app.status === 'TESTING' || app.status === 'BUILDING') && <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse mr-1.5"></span>}
+                        {app.status === 'APPROVED' && <span className="w-1.5 h-1.5 rounded-full bg-teal-500 mr-1.5"></span>}
+                        {
+                          app.status === 'IN_REVIEW' ? 'In Review' :
+                          app.status === 'APPROVED' ? 'Approved' :
+                          app.status === 'TESTING' ? 'Testing' :
+                          app.status === 'BUILDING' ? 'Building' :
+                          app.status === 'REJECTED' ? 'Rejected' :
+                          app.status === 'SUSPENDED' ? 'Suspended' :
+                          (app.status === 'ACTIVE' || app.status === 'Published') ? 'Active' :
+                          ((app.status === 'DRAFT' || app.status === 'Draft') && app.validationErrors) ? 'Issues' :
+                          'Draft'
+                        }
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <Link href={`/miniapps/${app.id}`} className="inline-flex items-center space-x-1 text-slate-500 dark:text-slate-400 hover:text-brand-700 dark:hover:text-brand-300 font-medium text-sm transition-all px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-brand-50 dark:hover:bg-brand-900/30 hover:border-brand-200 dark:hover:border-brand-800 shadow-sm group-hover:text-brand-600 dark:group-hover:text-brand-400 group-hover:border-brand-200 dark:group-hover:border-brand-800">
-                        <span>Manage</span>
-                        <svg className="w-4 h-4 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
-                      </Link>
+                      <div className="inline-flex items-center gap-2">
+                        <a
+                          href="http://localhost:8081/repository/apk-releases/superapp/v1.1.0/app-debug.apk"
+                          download="superapp-debug.apk"
+                          className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-300 dark:hover:border-emerald-700 shadow-sm transition-all"
+                          title="Download Super App Test APK (92.8 MB)"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                        </a>
+                        <Link href={`/miniapps/${app.id}`} className="inline-flex items-center space-x-1 text-slate-500 dark:text-slate-400 hover:text-brand-700 dark:hover:text-brand-300 font-medium text-sm transition-all px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-brand-50 dark:hover:bg-brand-900/30 hover:border-brand-200 dark:hover:border-brand-800 shadow-sm group-hover:text-brand-600 dark:group-hover:text-brand-400 group-hover:border-brand-200 dark:group-hover:border-brand-800">
+                          <span>Manage</span>
+                          <svg className="w-4 h-4 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                        </Link>
+                      </div>
                     </td>
                   </ClickableTableRow>
                 ))
