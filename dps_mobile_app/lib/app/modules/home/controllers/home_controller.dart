@@ -46,10 +46,10 @@ class HomeController extends GetxController {
       
       if (response.statusCode == 200) {
         final List<dynamic> allApps = json.decode(response.body);
-        // Strictly display ONLY Approved or Published mini apps
+        // Display Approved, Active, and Testing mini apps
         miniApps.value = allApps.where((app) {
           final s = (app['status'] ?? '').toString().toUpperCase();
-          return s == 'APPROVED' || s == 'PUBLISHED' || s == 'ACTIVE';
+          return s == 'APPROVED' || s == 'PUBLISHED' || s == 'ACTIVE' || s == 'TESTING';
         }).toList();
       } else {
         hasError(true);

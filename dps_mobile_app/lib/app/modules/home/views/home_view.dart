@@ -88,7 +88,26 @@ class HomeView extends GetView<HomeController> {
                         padding: const EdgeInsets.only(bottom: 8.0),
                         child: ListTile(
                           leading: _buildIcon(app['category'], app['logo']),
-                          title: Text(app['name'] ?? 'Unknown App'),
+                          title: Row(
+                            children: [
+                              Flexible(child: Text(app['name'] ?? 'Unknown App', overflow: TextOverflow.ellipsis)),
+                              if ((app['status'] ?? '').toString().toUpperCase() == 'TESTING') ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.purple.shade100,
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: Colors.purple.shade300),
+                                  ),
+                                  child: Text(
+                                    'TESTING',
+                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.purple.shade800),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
                           subtitle: Text(app['description'] ?? 'No description available'),
                           tileColor: Colors.grey.shade100,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
