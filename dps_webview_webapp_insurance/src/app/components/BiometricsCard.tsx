@@ -2,18 +2,24 @@
 
 import { useState, useEffect } from 'react';
 
+interface AuthResponse {
+  error?: string;
+  success?: boolean;
+}
+
 export default function BiometricsCard() {
   const [success, setSuccess] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   useEffect(() => {
-    const handleAuthResponse = (callbackId: string, response: any) => {
+    const handleAuthResponse = (callbackId: string, rawData: unknown) => {
+      const response = rawData as AuthResponse | undefined;
       if (callbackId === 'auth-request') {
         setIsAuthenticating(false);
-        if (response.error) {
+        if (response?.error) {
           setError(response.error);
-        } else if (response.success) {
+        } else if (response?.success) {
           setSuccess(true);
           setError(null);
         }
@@ -22,7 +28,7 @@ export default function BiometricsCard() {
 
     if (typeof window !== 'undefined') {
       const originalCallback = window.DPSCallback;
-      window.DPSCallback = (callbackId: string, response: any) => {
+      window.DPSCallback = (callbackId: string, response: unknown) => {
         if (callbackId === 'auth-request') {
           handleAuthResponse(callbackId, response);
         } else if (originalCallback) {

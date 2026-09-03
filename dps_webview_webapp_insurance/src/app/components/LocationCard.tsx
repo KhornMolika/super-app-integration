@@ -8,8 +8,14 @@ declare global {
     DPSNativeBridge?: {
       postMessage: (message: string) => void;
     };
-    DPSCallback?: (callbackId: string, data: any) => void;
+    DPSCallback?: (callbackId: string, data: unknown) => void;
   }
+}
+
+interface LocationData {
+  error?: string;
+  lat?: number;
+  lng?: number;
 }
 
 export default function LocationCard() {
@@ -19,14 +25,15 @@ export default function LocationCard() {
 
   useEffect(() => {
     // Register the global callback that Flutter will invoke
-    window.DPSCallback = (callbackId: string, data: any) => {
-      console.log('Received from Flutter:', callbackId, data);
+    window.DPSCallback = (callbackId: string, rawData: unknown) => {
+      console.log('Received from Flutter:', callbackId, rawData);
+      const data = rawData as LocationData | undefined;
       if (callbackId === 'req_loc_1') {
-        if (data.error) {
+        if (data?.error) {
           setError(data.error);
           setLocation(null);
-        } else {
-          setLocation(data);
+        } else if (data?.lat && data?.lng) {
+          setLocation({ lat: data.lat, lng: data.lng });
           setError(null);
         }
         setLoading(false);

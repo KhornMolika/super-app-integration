@@ -2,18 +2,24 @@
 
 import { useState, useEffect } from 'react';
 
+interface CameraResponse {
+  error?: string;
+  image?: string;
+}
+
 export default function CameraCard() {
   const [photo, setPhoto] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
 
   useEffect(() => {
-    const handleCameraResponse = (callbackId: string, response: any) => {
+    const handleCameraResponse = (callbackId: string, rawData: unknown) => {
+      const response = rawData as CameraResponse | undefined;
       if (callbackId === 'camera-request') {
         setIsCapturing(false);
-        if (response.error) {
+        if (response?.error) {
           setError(response.error);
-        } else if (response.image) {
+        } else if (response?.image) {
           setPhoto(response.image);
           setError(null);
         }
@@ -21,7 +27,7 @@ export default function CameraCard() {
     };
 
     if (typeof window !== 'undefined') {
-      window.DPSCallback = (callbackId: string, response: any) => {
+      window.DPSCallback = (callbackId: string, response: unknown) => {
         handleCameraResponse(callbackId, response);
       };
     }
@@ -68,6 +74,7 @@ export default function CameraCard() {
 
       {photo ? (
         <div className="mb-4 text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={photo} alt="Captured" className="w-full h-40 object-cover rounded-xl shadow-sm border border-gray-200" />
           <button 
             onClick={() => setPhoto(null)} 
