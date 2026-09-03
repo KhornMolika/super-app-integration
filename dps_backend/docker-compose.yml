@@ -6,11 +6,11 @@ services:
     container_name: dps-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: dps_user
-      POSTGRES_PASSWORD: dps_password
-      POSTGRES_DB: dps_db
+      POSTGRES_USER: ${POSTGRES_USER:-dps_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dps_password}
+      POSTGRES_DB: ${POSTGRES_DB:-dps_db}
     ports:
-      - '5432:5432'
+      - '${POSTGRES_PORT:-5432}:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
 
@@ -18,10 +18,8 @@ services:
     image: sonatype/nexus3:latest
     container_name: nexus
     restart: unless-stopped
-
     ports:
-      - '8081:8081'
-
+      - '${NEXUS_PORT:-8081}:8081'
     volumes:
       - nexus-data:/nexus-data
 
@@ -31,12 +29,12 @@ services:
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: admin
-      MINIO_ROOT_PASSWORD: adminadmin
-      MINIO_SUBNET_LICENSE: "eyJhbGciOiJFUzM4NCIsInR5cCI6IkpXVCJ9.eyJhaWQiOjAsImNhcCI6MCwiZmVhdHVyZXMiOlsiT2JqZWN0cyIsIlRhYmxlcyJdLCJpYXQiOjEuNzg4Mjg5MTQ3ODM4MDEwNzEzZTksImlzcyI6InN1Ym5ldEBtaW4uaW8iLCJsaWQiOiJhZWI3ZGUxNy03ZWU5LTQ2MmEtODhkYy03MzEyMjRlMDM5ZTIiLCJub2RlcyI6MSwib3JnIjoiIiwicGxhbiI6IkZSRUUiLCJwcm9kdWN0IjoiQUlTdG9yIiwic3ViIjoibW9saWtha2hvcm43MUBnbWFpbC5jb20iLCJ0cmlhbCI6ZmFsc2UsInZlciI6MX0.EkNQ786hp_ScpmgL3bZMtfjUXePrHLczVDi-BoigJZF8gOcuro9uxeNdKgGzdtnOhL-T_VlVJoMWNR_-4io8MdVwmQ7hkNk5AmimPIYBip100gLapgi5xd5TN0sreUVb"
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-adminadmin}
+      MINIO_SUBNET_LICENSE: ${MINIO_SUBNET_LICENSE:-}
     ports:
-      - '9000:9000'
-      - '9001:9001'
+      - '${MINIO_PORT:-9000}:9000'
+      - '${MINIO_CONSOLE_PORT:-9001}:9001'
     volumes:
       - minio_data:/data
 
@@ -48,7 +46,7 @@ services:
     entrypoint: >
       /bin/sh -c "
       sleep 2;
-      /usr/bin/mc alias set myminio http://minio:9000 admin adminadmin;
+      /usr/bin/mc alias set myminio http://minio:9000 $${MINIO_ROOT_USER:-admin} $${MINIO_ROOT_PASSWORD:-adminadmin};
       /usr/bin/mc mb myminio/mini-app-logos --ignore-existing;
       /usr/bin/mc anonymous set download myminio/mini-app-logos;
       /usr/bin/mc mb myminio/releases --ignore-existing;

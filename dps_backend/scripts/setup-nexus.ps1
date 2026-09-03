@@ -20,7 +20,7 @@ if (Test-Path $EnvFile) {
 
 $baseUrl = if ($env:NEXUS_BASE_URL) { $env:NEXUS_BASE_URL } else { "http://localhost:8081" }
 $adminUser = if ($env:NEXUS_ADMIN_USER) { $env:NEXUS_ADMIN_USER } else { "admin" }
-$targetPassword = if ($env:NEXUS_ADMIN_PASSWORD) { $env:NEXUS_ADMIN_PASSWORD } else { "admin123" }
+$targetPassword = if ($env:NEXUS_ADMIN_PASSWORD) { $env:NEXUS_ADMIN_PASSWORD } else { $null }
 
 Write-Host "Connecting to Nexus at: $baseUrl"
 

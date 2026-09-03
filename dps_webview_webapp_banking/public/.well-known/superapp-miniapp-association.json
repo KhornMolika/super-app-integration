@@ -1,6 +1,6 @@
 {
   "appId": "com.fsa.testbuild3",
-  "verificationToken": "tok_live_e719890421406f6e8efdef50e32f409a",
+  "verificationToken": "dev-miniapp-verification-token",
   "environment": "DEV",
   "allowedDomains": [
     "localhost"

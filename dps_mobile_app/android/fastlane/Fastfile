@@ -27,7 +27,10 @@ platform :android do
 
     # 3. Publish to Sonatype Nexus apk-releases repository categorized by app name
     UI.message("📦 Promoting and publishing APK to Sonatype Nexus under #{app_name}/#{version}/...")
-    sh("curl -s -f -u admin:admin123 --upload-file #{apk_path} #{nexus_url}/repository/apk-releases/#{app_name}/#{version}/app-debug.apk || echo 'Nexus upload complete'")
+    nexus_user = ENV['NEXUS_USER'] || 'admin'
+    nexus_pass = ENV['NEXUS_PASSWORD'] || ''
+    auth_arg = nexus_pass.empty? ? "" : "-u #{nexus_user}:#{nexus_pass}"
+    sh("curl -s -f #{auth_arg} --upload-file #{apk_path} #{nexus_url}/repository/apk-releases/#{app_name}/#{version}/app-debug.apk || echo 'Nexus upload complete'")
     
     UI.success("🎉 Fastlane pipeline completed successfully for #{app_name} (#{version})!")
   end

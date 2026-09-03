@@ -12,7 +12,7 @@ export class JenkinsService {
   constructor(private readonly configService: ConfigService) {
     this.jenkinsUrl = this.configService.get<string>('JENKINS_URL', 'http://localhost:8085').replace(/\/$/, '');
     this.jenkinsUser = this.configService.get<string>('JENKINS_USER', 'admin');
-    this.jenkinsApiToken = this.configService.get<string>('JENKINS_API_TOKEN', '115ed206119433c7d3804cf23865c3255a');
+    this.jenkinsApiToken = this.configService.get<string>('JENKINS_API_TOKEN', '');
     this.callbackBaseUrl = this.configService.get<string>('CALLBACK_BASE_URL', 'http://host.docker.internal:3000').replace(/\/$/, '');
   }
 

@@ -147,9 +147,9 @@ The platform natively supports five distinct integration tiers:
 
 ### 1. Start Infrastructure Services (Docker)
 Ensure your PostgreSQL, Jenkins, and Sonatype Nexus containers are running:
-* **PostgreSQL**: Port `5432` (database: `dps_db`)
-* **Sonatype Nexus**: Port `8081` (credentials: `admin` / `admin123`)
-* **Jenkins Controller**: Port `8085` (credentials: `admin` / `admin123`)
+* **PostgreSQL**: Port `5432` (database: `dps_db`, configured via `.env.development`)
+* **Sonatype Nexus**: Port `8081` (configured via `.env.development`)
+* **Jenkins Controller**: Port `8085` (configured via `.env.development`)
 
 ### 2. Start Backend API
 ```bash

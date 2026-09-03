@@ -1,7 +1,7 @@
 {
   "appId": "com.company.insurance_miniapp",
-  "verificationToken": "tok_live_insurance_demo_5432",
-  "environment": "PRODUCTION",
+  "verificationToken": "dev-insurance-verification-token",
+  "environment": "DEV",
   "allowedDomains": [
     "localhost",
     "127.0.0.1",
