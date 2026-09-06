@@ -80,8 +80,8 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
 
   useEffect(() => {
     const errors: Record<string, string> = {};
-    if (formData.appId && !/^[a-z0-9]+(\.[a-z0-9]+)+$/.test(formData.appId)) {
-      errors.appId = 'Mini App ID must be in reverse-domain format (e.g. com.company.app)';
+    if (formData.appId && !/^[a-z0-9_.-]+$/.test(formData.appId)) {
+      errors.appId = 'Mini App ID can only contain lowercase letters, numbers, and underscores (e.g. miniapp_8f32a1)';
     }
     if (formData.ownerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.ownerEmail)) {
       errors.ownerEmail = 'Owner Email must be a valid email';
@@ -1011,7 +1011,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <Label>Mini App ID <span className="text-rose-500">*</span></Label>
-                    <Input readOnly className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 cursor-not-allowed" name="appId" value={formData.appId || ''} placeholder="com.fsa..." />
+                    <Input readOnly className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 cursor-not-allowed" name="appId" value={formData.appId || ''} placeholder="miniapp_8f32a1" />
                   </div>
                   <div>
                     <Label>Mini App Name <span className="text-rose-500">*</span></Label>

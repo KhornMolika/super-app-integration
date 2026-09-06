@@ -72,6 +72,15 @@ export const generateClientVerificationToken = () => {
   return 'tok_live_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 };
 
+export const generateClientMiniAppId = () => {
+  if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
+    const bytes = new Uint8Array(3);
+    window.crypto.getRandomValues(bytes);
+    return 'miniapp_' + Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  return 'miniapp_' + Math.random().toString(36).substring(2, 8);
+};
+
 export default function IntegrationForm({
   formData,
   handleChange,
@@ -196,7 +205,7 @@ export default function IntegrationForm({
       }
     }
 
-    const currentAppId = formData.appId || 'com.fsa.banking';
+    const currentAppId = formData.appId || 'miniapp_8f32a1';
 
     setIsVerifyingDomain(true);
     setDomainVerificationMsg(null);
@@ -972,7 +981,7 @@ export default function IntegrationForm({
                     : fallbackPerms;
 
                 const dynamicPayload = {
-                  appId: formData.appId || 'com.fsa.appname',
+                  appId: formData.appId || 'miniapp_8f32a1',
                   verificationToken:
                     formData.integrationConfigWebView?.verificationToken ||
                     formData.verificationToken ||

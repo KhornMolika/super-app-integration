@@ -11,7 +11,7 @@ import PreviewModal from '@/components/ui/PreviewModal';
 import SubmissionModal, { SubmissionModalState } from '@/components/ui/SubmissionModal';
 import BasicInfoForm from '@/components/forms/BasicInfoForm';
 import TeamForm from '@/components/forms/TeamForm';
-import IntegrationForm, { generateClientVerificationToken } from '@/components/forms/IntegrationForm';
+import IntegrationForm, { generateClientVerificationToken, generateClientMiniAppId } from '@/components/forms/IntegrationForm';
 import PermissionsForm from '@/components/forms/PermissionsForm';
 import ValidationIssuesButton from '@/components/ValidationIssuesButton';
 import { CreateMiniAppDto, IntegrationMethod, SourceType } from '@/types/miniapp.types';
@@ -28,7 +28,7 @@ export default function RegisterMiniAppPage() {
   }, [can, router]);
   const [formData, setFormData] = useState<Partial<CreateMiniAppDto>>({
     name: '',
-    appId: '',
+    appId: generateClientMiniAppId(),
     category: 'Insurance',
     shortDescription: '',
     fullDescription: '',
@@ -70,8 +70,8 @@ export default function RegisterMiniAppPage() {
       if (!formData.appId) {
         errors.appId = 'Mini App ID is required';
         isValid = false;
-      } else if (!/^[a-z0-9]+(\.[a-z0-9]+)+$/.test(formData.appId)) {
-        errors.appId = 'Mini App ID must be in reverse-domain format (e.g. com.company.app)';
+      } else if (!/^[a-z0-9_.-]+$/.test(formData.appId)) {
+        errors.appId = 'Mini App ID can only contain lowercase letters, numbers, and underscores (e.g. miniapp_8f32a1)';
         isValid = false;
       }
       if (!formData.logo || !formData.logo.trim()) {
@@ -309,20 +309,15 @@ export default function RegisterMiniAppPage() {
   };
 
   useEffect(() => {
-    if (formData.name) {
-      const generatedId = `com.fsa.${formData.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
-      if (formData.appId !== generatedId) {
-        setFormData(prev => ({ ...prev, appId: generatedId }));
-      }
-    } else if (formData.appId !== '') {
-      setFormData(prev => ({ ...prev, appId: '' }));
+    if (!formData.appId) {
+      setFormData(prev => ({ ...prev, appId: generateClientMiniAppId() }));
     }
-  }, [formData.name]);
+  }, [formData.appId]);
 
   useEffect(() => {
     const errors: Record<string, string> = {};
-    if (formData.appId && !/^[a-z0-9]+(\.[a-z0-9]+)+$/.test(formData.appId)) {
-      errors.appId = 'Mini App ID must be in reverse-domain format (e.g. com.company.app)';
+    if (formData.appId && !/^[a-z0-9_.-]+$/.test(formData.appId)) {
+      errors.appId = 'Mini App ID can only contain lowercase letters, numbers, and underscores (e.g. miniapp_8f32a1)';
     }
     if (formData.ownerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.ownerEmail)) {
       errors.ownerEmail = 'Owner Email must be a valid email';
