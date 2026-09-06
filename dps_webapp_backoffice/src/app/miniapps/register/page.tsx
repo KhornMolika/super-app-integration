@@ -4,14 +4,14 @@ import { API_URL } from '@/lib/config';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Input, Label, Select, Textarea, Button } from '@/components/ui/inputs';
 import { Card, CardHeader } from '@/components/ui/card';
 import PreviewModal from '@/components/ui/PreviewModal';
 import SubmissionModal, { SubmissionModalState } from '@/components/ui/SubmissionModal';
 import BasicInfoForm from '@/components/forms/BasicInfoForm';
 import TeamForm from '@/components/forms/TeamForm';
-import IntegrationForm, { generateClientVerificationToken, generateClientMiniAppId } from '@/components/forms/IntegrationForm';
+import IntegrationForm, { generateClientVerificationToken, generateClientMiniAppId, generateClientRandomSuffix } from '@/components/forms/IntegrationForm';
 import PermissionsForm from '@/components/forms/PermissionsForm';
 import ValidationIssuesButton from '@/components/ValidationIssuesButton';
 import { CreateMiniAppDto, IntegrationMethod, SourceType } from '@/types/miniapp.types';
@@ -20,6 +20,7 @@ import { CreateMiniAppDto, IntegrationMethod, SourceType } from '@/types/miniapp
 export default function RegisterMiniAppPage() {
   const router = useRouter();
   const { can } = useAuth();
+  const randomSuffixRef = useRef(generateClientRandomSuffix());
 
   useEffect(() => {
     if (!can('miniapp:create')) {
@@ -310,7 +311,7 @@ export default function RegisterMiniAppPage() {
 
   useEffect(() => {
     if (formData.name && formData.name.trim()) {
-      const generatedId = generateClientMiniAppId(formData.name);
+      const generatedId = generateClientMiniAppId(formData.name, randomSuffixRef.current);
       if (formData.appId !== generatedId) {
         setFormData(prev => ({ ...prev, appId: generatedId }));
       }

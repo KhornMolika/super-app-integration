@@ -1011,7 +1011,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <Label>Mini App ID <span className="text-rose-500">*</span></Label>
-                    <Input readOnly className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 cursor-not-allowed" name="appId" value={formData.appId || ''} placeholder="miniapp_8f32a1" />
+                    <Input readOnly className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 cursor-not-allowed" name="appId" value={formData.appId || ''} placeholder="miniapp_core_banking_8f32a1" />
                   </div>
                   <div>
                     <Label>Mini App Name <span className="text-rose-500">*</span></Label>

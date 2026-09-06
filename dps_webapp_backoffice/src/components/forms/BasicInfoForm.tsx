@@ -26,7 +26,7 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {} }
                 readOnly 
                 name="appId" 
                 value={formData.appId || ''} 
-                placeholder="miniapp_core_banking" 
+                placeholder="miniapp_core_banking_8f32a1" 
                 className={`font-mono text-sm bg-slate-50 dark:bg-slate-900/50 text-slate-500 cursor-not-allowed ${allErrors.appId ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}`}
               />
               {allErrors.appId && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors.appId}</p>}

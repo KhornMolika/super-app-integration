@@ -72,7 +72,17 @@ export const generateClientVerificationToken = () => {
   return 'tok_live_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 };
 
-export const generateClientMiniAppId = (name?: string) => {
+export const generateClientRandomSuffix = () => {
+  if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
+    const bytes = new Uint8Array(3);
+    window.crypto.getRandomValues(bytes);
+    return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  return Math.random().toString(36).substring(2, 8);
+};
+
+export const generateClientMiniAppId = (name?: string, suffix?: string) => {
+  const activeSuffix = suffix || generateClientRandomSuffix();
   if (name && name.trim()) {
     const slug = name
       .toLowerCase()
@@ -80,15 +90,10 @@ export const generateClientMiniAppId = (name?: string) => {
       .replace(/[^a-z0-9]+/g, '_')
       .replace(/^_+|_+$/g, '');
     if (slug) {
-      return `miniapp_${slug}`;
+      return `miniapp_${slug}_${activeSuffix}`;
     }
   }
-  if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
-    const bytes = new Uint8Array(3);
-    window.crypto.getRandomValues(bytes);
-    return 'miniapp_' + Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
-  }
-  return 'miniapp_' + Math.random().toString(36).substring(2, 8);
+  return `miniapp_${activeSuffix}`;
 };
 
 export default function IntegrationForm({
