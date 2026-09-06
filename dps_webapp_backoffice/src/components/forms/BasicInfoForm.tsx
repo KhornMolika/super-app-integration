@@ -9,7 +9,7 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {} }
     <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <Label>App Name <span className="text-rose-500">*</span></Label>
+              <Label>Mini App Name <span className="text-rose-500">*</span></Label>
               <Input 
                 required 
                 name="name" 
@@ -21,7 +21,7 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {} }
               {allErrors.name && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors.name}</p>}
             </div>
             <div>
-              <Label>App ID (Auto-generated) <span className="text-rose-500">*</span></Label>
+              <Label>Mini App ID (Auto-generated) <span className="text-rose-500">*</span></Label>
               <Input 
                 readOnly 
                 name="appId" 

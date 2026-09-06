@@ -81,7 +81,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
   useEffect(() => {
     const errors: Record<string, string> = {};
     if (formData.appId && !/^[a-z0-9]+(\.[a-z0-9]+)+$/.test(formData.appId)) {
-      errors.appId = 'App ID must be in reverse-domain format (e.g. com.company.app)';
+      errors.appId = 'Mini App ID must be in reverse-domain format (e.g. com.company.app)';
     }
     if (formData.ownerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.ownerEmail)) {
       errors.ownerEmail = 'Owner Email must be a valid email';
@@ -90,7 +90,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
       errors.supportEmail = 'Support Email must be a valid email';
     }
     if (formData.name && formData.name.length < 2) {
-      errors.name = 'Name must be at least 2 characters';
+      errors.name = 'Mini App Name must be at least 2 characters';
     }
 
     if (formData.integrationMethod === IntegrationMethod.WEBVIEW && formData.integrationConfigWebView?.productionUrl) {
@@ -125,8 +125,8 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
               const data = await res.json();
               setLocalErrors(prev => {
                 const newErrors = { ...prev };
-                if (data.appIdExists) newErrors.appId = 'This App ID is already taken.';
-                if (data.nameExists) newErrors.name = 'This App Name is already taken.';
+                if (data.appIdExists) newErrors.appId = 'This Mini App ID is already taken.';
+                if (data.nameExists) newErrors.name = 'This Mini App Name is already taken.';
                 return newErrors;
               });
             }
@@ -1010,11 +1010,11 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
                 <CardHeader title="General Information" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <Label>App ID <span className="text-rose-500">*</span></Label>
+                    <Label>Mini App ID <span className="text-rose-500">*</span></Label>
                     <Input readOnly className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 cursor-not-allowed" name="appId" value={formData.appId || ''} placeholder="com.fsa..." />
                   </div>
                   <div>
-                    <Label>App Name <span className="text-rose-500">*</span></Label>
+                    <Label>Mini App Name <span className="text-rose-500">*</span></Label>
                     <Input
                       required
                       name="name"

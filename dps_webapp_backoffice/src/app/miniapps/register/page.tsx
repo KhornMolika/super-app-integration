@@ -64,14 +64,14 @@ export default function RegisterMiniAppPage() {
 
     if (currentStep === 1) {
       if (!formData.name || formData.name.trim().length < 2) {
-        errors.name = 'App Name must be at least 2 characters';
+        errors.name = 'Mini App Name must be at least 2 characters';
         isValid = false;
       }
       if (!formData.appId) {
-        errors.appId = 'App ID is required';
+        errors.appId = 'Mini App ID is required';
         isValid = false;
       } else if (!/^[a-z0-9]+(\.[a-z0-9]+)+$/.test(formData.appId)) {
-        errors.appId = 'App ID must be in reverse-domain format (e.g. com.company.app)';
+        errors.appId = 'Mini App ID must be in reverse-domain format (e.g. com.company.app)';
         isValid = false;
       }
       if (!formData.logo || !formData.logo.trim()) {
@@ -322,7 +322,7 @@ export default function RegisterMiniAppPage() {
   useEffect(() => {
     const errors: Record<string, string> = {};
     if (formData.appId && !/^[a-z0-9]+(\.[a-z0-9]+)+$/.test(formData.appId)) {
-      errors.appId = 'App ID must be in reverse-domain format (e.g. com.company.app)';
+      errors.appId = 'Mini App ID must be in reverse-domain format (e.g. com.company.app)';
     }
     if (formData.ownerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.ownerEmail)) {
       errors.ownerEmail = 'Owner Email must be a valid email';
@@ -331,7 +331,7 @@ export default function RegisterMiniAppPage() {
       errors.supportEmail = 'Support Email must be a valid email';
     }
     if (formData.name && formData.name.length < 2) {
-      errors.name = 'Name must be at least 2 characters';
+      errors.name = 'Mini App Name must be at least 2 characters';
     }
 
     if (formData.integrationMethod === IntegrationMethod.WEBVIEW && formData.integrationConfigWebView?.productionUrl) {
@@ -360,8 +360,8 @@ export default function RegisterMiniAppPage() {
               const data = await res.json();
               setLocalErrors(prev => {
                 const newErrors = { ...prev };
-                if (data.appIdExists) newErrors.appId = 'This App ID is already taken.';
-                if (data.nameExists) newErrors.name = 'This App Name is already taken.';
+                if (data.appIdExists) newErrors.appId = 'This Mini App ID is already taken.';
+                if (data.nameExists) newErrors.name = 'This Mini App Name is already taken.';
                 return newErrors;
               });
             }
@@ -654,8 +654,8 @@ export default function RegisterMiniAppPage() {
               <div>
                 <h4 className="font-semibold text-slate-900 dark:text-white border-b pb-2 mb-3">1. Basic Info</h4>
                 <div className="grid grid-cols-2 gap-4">
-                  <div><span className="text-slate-500">App Name:</span> <br />{formData.name || '-'}</div>
-                  <div><span className="text-slate-500">App ID:</span> <br /><span className="font-mono text-xs">{formData.appId || '-'}</span></div>
+                  <div><span className="text-slate-500">Mini App Name:</span> <br />{formData.name || '-'}</div>
+                  <div><span className="text-slate-500">Mini App ID:</span> <br /><span className="font-mono text-xs">{formData.appId || '-'}</span></div>
                   <div><span className="text-slate-500">Category:</span> <br />{formData.category || '-'}</div>
                   <div><span className="text-slate-500">Logo:</span> <br />{formData.logo ? <span className="text-brand-600 truncate block w-full">{formData.logo}</span> : '-'}</div>
                   {formData.shortDescription && (
