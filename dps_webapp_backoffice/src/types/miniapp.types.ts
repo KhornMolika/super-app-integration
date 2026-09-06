@@ -48,7 +48,9 @@ export interface CreateMiniAppDto {
   fullDescription?: string;
   logo?: string;
   termsUrl?: string;
+  termsDescription?: string;
   privacyPolicyUrl?: string;
+  privacyPolicyDescription?: string;
   
   ownerName?: string;
   ownerEmail: string;

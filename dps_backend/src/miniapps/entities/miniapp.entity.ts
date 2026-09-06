@@ -47,8 +47,14 @@ export class MiniApp {
   @Column({ nullable: true })
   termsUrl?: string;
 
+  @Column({ type: 'text', nullable: true })
+  termsDescription?: string;
+
   @Column({ nullable: true })
   privacyPolicyUrl?: string;
+
+  @Column({ type: 'text', nullable: true })
+  privacyPolicyDescription?: string;
 
   @Column({ nullable: true })
   ownerName!: string;

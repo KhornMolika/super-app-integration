@@ -154,7 +154,15 @@ export class CreateMiniAppDto {
 
   @IsString()
   @IsOptional()
+  termsDescription?: string;
+
+  @IsString()
+  @IsOptional()
   privacyPolicyUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  privacyPolicyDescription?: string;
 
   @IsString()
   @IsOptional()

@@ -34,7 +34,9 @@ export default function RegisterMiniAppPage() {
     fullDescription: '',
     logo: '',
     termsUrl: '',
+    termsDescription: '',
     privacyPolicyUrl: '',
+    privacyPolicyDescription: '',
     teamName: '',
     ownerName: '',
     ownerEmail: '',
@@ -663,10 +665,28 @@ export default function RegisterMiniAppPage() {
                     <div className="col-span-2"><span className="text-slate-500">Full Description:</span> <br />{formData.fullDescription}</div>
                   )}
                   {formData.termsUrl && (
-                    <div className="col-span-2"><span className="text-slate-500">Terms & Conditions:</span> <br />{formData.termsUrl}</div>
+                    <div className="col-span-2">
+                      <span className="text-slate-500 font-medium">Terms of Service URL:</span> <br />
+                      <a href={formData.termsUrl} target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400 underline break-all">{formData.termsUrl}</a>
+                    </div>
+                  )}
+                  {formData.termsDescription && (
+                    <div className="col-span-2">
+                      <span className="text-slate-500 font-medium">Terms of Service Description:</span> <br />
+                      <span className="text-slate-700 dark:text-slate-300">{formData.termsDescription}</span>
+                    </div>
                   )}
                   {formData.privacyPolicyUrl && (
-                    <div className="col-span-2"><span className="text-slate-500">Privacy Policy:</span> <br />{formData.privacyPolicyUrl}</div>
+                    <div className="col-span-2">
+                      <span className="text-slate-500 font-medium">Privacy Policy URL:</span> <br />
+                      <a href={formData.privacyPolicyUrl} target="_blank" rel="noopener noreferrer" className="text-brand-600 dark:text-brand-400 underline break-all">{formData.privacyPolicyUrl}</a>
+                    </div>
+                  )}
+                  {formData.privacyPolicyDescription && (
+                    <div className="col-span-2">
+                      <span className="text-slate-500 font-medium">Privacy Policy Description:</span> <br />
+                      <span className="text-slate-700 dark:text-slate-300">{formData.privacyPolicyDescription}</span>
+                    </div>
                   )}
                 </div>
               </div>
