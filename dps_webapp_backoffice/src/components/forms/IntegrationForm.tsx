@@ -110,6 +110,7 @@ export default function IntegrationForm({
   const [copied, setCopied] = useState(false);
   const [copiedToken, setCopiedToken] = useState(false);
   const [copiedJson, setCopiedJson] = useState(false);
+  const [copiedPath, setCopiedPath] = useState(false);
 
   // State for Domain Ownership Verification
   const [isVerifyingDomain, setIsVerifyingDomain] = useState(false);
@@ -761,11 +762,13 @@ export default function IntegrationForm({
           </div>
 
           {/* Domain Ownership Verification Section */}
-          <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
-            <div className="flex items-center justify-between mb-3">
+          <div className="pt-5 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <div>
-                <h4 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span>Domain Ownership Verification</span>
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
+                    Domain Ownership Verification
+                  </h4>
                   {(() => {
                     const currentProdUrl = (formData.integrationConfigWebView?.productionUrl || '').trim();
                     const isActuallyVerified =
@@ -776,35 +779,81 @@ export default function IntegrationForm({
                         verifiedUrl!.trim() === currentProdUrl);
 
                     return isActuallyVerified ? (
-                      <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
-                        ✓ Verified
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                        <svg className="w-3 h-3 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>
+                        Verified
                       </span>
                     ) : (
-                      <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
                         Pending Verification
                       </span>
                     );
                   })()}
-                </h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   Prove administrative control of the target domain by hosting the public association file.
                 </p>
               </div>
 
-              <Button
-                type="button"
-                onClick={handleVerifyDomain}
-                disabled={isVerifyingDomain}
-                className="text-xs px-3 py-1.5 flex items-center gap-1.5"
-              >
-                {isVerifyingDomain && (
-                  <svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                  </svg>
-                )}
-                <span>{isVerifyingDomain ? 'Verifying...' : 'Verify Domain'}</span>
-              </Button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <a
+                  href="/guidelines"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 hover:bg-brand-100 dark:hover:bg-brand-900/50 border border-brand-200 dark:border-brand-800/60 transition shadow-sm"
+                  title="Open Domain Ownership Documentation in new tab"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                  <span>Verification Guide</span>
+                  <svg className="w-3 h-3 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                </a>
+
+                <Button
+                  type="button"
+                  onClick={handleVerifyDomain}
+                  disabled={isVerifyingDomain}
+                  className="text-xs px-3.5 py-1.5 flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg shadow-sm"
+                >
+                  {isVerifyingDomain && (
+                    <svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                  )}
+                  <span>{isVerifyingDomain ? 'Verifying...' : 'Verify Domain'}</span>
+                </Button>
+              </div>
+            </div>
+
+            {/* Step-by-Step Setup Guide Callout */}
+            <div className="p-4 mb-4 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 text-xs text-slate-700 dark:text-slate-300 space-y-2.5">
+              <div className="font-semibold text-slate-900 dark:text-white flex items-center justify-between text-xs">
+                <div className="flex items-center gap-1.5">
+                  <svg className="w-4 h-4 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  <span>How to Host the Domain Association File</span>
+                </div>
+                <a
+                  href="/guidelines"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-brand-600 dark:text-brand-400 hover:underline inline-flex items-center gap-1 font-medium text-[11px]"
+                >
+                  <span>Learn more in documentation</span>
+                  <span>→</span>
+                </a>
+              </div>
+              <ol className="list-decimal list-inside space-y-2 text-slate-600 dark:text-slate-400 leading-relaxed pl-0.5">
+                <li>
+                  <strong className="text-slate-800 dark:text-slate-200">File Name & Directory:</strong> Create a JSON file named <code className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-[11px] text-slate-900 dark:text-slate-100 font-semibold">superapp-miniapp-association.json</code> and place it inside your web application's public root under the <code className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-[11px] text-slate-900 dark:text-slate-100">/.well-known/</code> folder (e.g. <code className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-[11px] text-slate-900 dark:text-slate-100">public/.well-known/superapp-miniapp-association.json</code>).
+                </li>
+                <li>
+                  <strong className="text-slate-800 dark:text-slate-200">Public HTTP/HTTPS Accessibility:</strong> Deploy the file so it is publicly accessible at the exact endpoint URL displayed below. It must return HTTP status <code className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">200 OK</code> with <code className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-[11px] text-slate-900 dark:text-slate-100">Content-Type: application/json</code> (accessible without login, redirects, or IP restrictions).
+                </li>
+                <li>
+                  <strong className="text-slate-800 dark:text-slate-200">Copy JSON & Verify:</strong> Copy the generated JSON manifest below into that file, publish your website, and click <strong>Verify Domain</strong> above.
+                </li>
+              </ol>
             </div>
 
             {(() => {
@@ -880,6 +929,7 @@ export default function IntegrationForm({
 
                 const currentHost = extractHost(prodUrlInput);
                 const currentOrigin = extractOrigin(prodUrlInput);
+                const fullEndpointUrl = `${currentOrigin}/.well-known/superapp-miniapp-association.json`;
 
                 // Parse user-specified allowed domains
                 const rawAllowed = formData.integrationConfigWebView?.allowedDomains;
@@ -937,9 +987,9 @@ export default function IntegrationForm({
                 return (
                   <>
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-slate-400 pb-3 border-b border-slate-800">
-                      <div className="space-y-0.5">
+                      <div className="space-y-1">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-slate-400">Expected Host:</span>
+                          <span className="text-slate-400 font-semibold">Expected Host:</span>
                           <span className="text-sky-300 font-semibold">
                             {currentHost}
                           </span>
@@ -949,10 +999,10 @@ export default function IntegrationForm({
                             </span>
                           )}
                         </div>
-                        <div className="text-[11px] text-slate-400 flex items-center gap-1 flex-wrap">
-                          <span>Endpoint:</span>
+                        <div className="text-[11px] text-slate-400 flex items-center gap-1.5 flex-wrap">
+                          <span className="font-semibold">Endpoint:</span>
                           <span className="text-emerald-400/90 font-mono">
-                            {currentOrigin}/.well-known/superapp-miniapp-association.json
+                            {fullEndpointUrl}
                           </span>
                         </div>
                       </div>
@@ -979,6 +1029,18 @@ export default function IntegrationForm({
                           className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-sky-400 hover:text-sky-300 font-sans text-xs transition"
                         >
                           {copiedToken ? '✓ Copied Token' : 'Copy Token'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText('public/.well-known/superapp-miniapp-association.json');
+                            setCopiedPath(true);
+                            setTimeout(() => setCopiedPath(false), 2000);
+                          }}
+                          className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-purple-400 hover:text-purple-300 font-sans text-xs transition"
+                          title="Copy file path relative to web root"
+                        >
+                          {copiedPath ? '✓ Copied Path' : 'Copy File Path'}
                         </button>
                         <button
                           type="button"
