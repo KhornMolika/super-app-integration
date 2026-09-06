@@ -167,7 +167,7 @@ export default function ChatAssistant({
                   <div
                     className={`max-w-[78%] p-3.5 rounded-2xl leading-relaxed ${
                       m.sender === "user"
-                        ? "liquid-glass-accent-btn text-white rounded-tr-xs"
+                        ? "liquid-glass-accent-surface text-white rounded-tr-xs"
                         : "liquid-glass-nested text-slate-800 dark:text-slate-200 rounded-tl-xs"
                     }`}
                   >

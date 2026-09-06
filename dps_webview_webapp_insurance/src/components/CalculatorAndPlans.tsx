@@ -138,7 +138,7 @@ export default function CalculatorAndPlans({ onSelectPlan }: { onSelectPlan: (pl
         {/* Dynamic Liquid Glass Calculator Box */}
         <LiquidGlassContainer
           variant="rounded"
-          className="max-w-4xl mx-auto mb-20 p-7 sm:p-10 shadow-2xl"
+          className="max-w-4xl mx-auto mb-20 p-7 sm:p-10 shadow-2xl overflow-hidden"
         >
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 pb-8 border-b border-white/20 dark:border-slate-800/80">
             <div>
@@ -200,7 +200,7 @@ export default function CalculatorAndPlans({ onSelectPlan }: { onSelectPlan: (pl
           </div>
 
           {/* Calculator Controls Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-8 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-8 items-stretch">
             <div className="lg:col-span-7 space-y-6">
               
               {/* Coverage Slider */}
@@ -257,19 +257,19 @@ export default function CalculatorAndPlans({ onSelectPlan }: { onSelectPlan: (pl
 
             </div>
 
-            {/* Calculated Result Box - Liquid Glass Accent */}
-            <div className="lg:col-span-5 rounded-3xl liquid-glass-accent-btn p-6 sm:p-8 flex flex-col justify-between shadow-2xl">
-              <div>
-                <span className="text-xs uppercase font-extrabold tracking-wider text-violet-200">
+            {/* Calculated Result Box - Liquid Glass Accent Card */}
+            <div className="lg:col-span-5 rounded-3xl liquid-glass-accent-card p-6 sm:p-8 flex flex-col justify-between shadow-2xl overflow-hidden">
+              <div className="space-y-3">
+                <span className="text-xs uppercase font-extrabold tracking-wider text-violet-200 block">
                   Estimated Premium
                 </span>
-                <div className="flex items-baseline gap-1 mt-2">
-                  <span className="text-5xl font-black text-white">${calculatedPrice}</span>
-                  <span className="text-sm text-violet-200 font-medium">
+                <div className="flex items-baseline gap-1 mt-1">
+                  <span className="text-4xl sm:text-5xl font-black text-white">${calculatedPrice}</span>
+                  <span className="text-xs sm:text-sm text-violet-200 font-medium">
                     /{billingCycle === "yearly" ? "month (billed annually)" : "month"}
                   </span>
                 </div>
-                <p className="text-xs text-violet-100 mt-3 leading-relaxed font-medium">
+                <p className="text-xs text-violet-100 leading-relaxed font-medium whitespace-normal">
                   Includes full accidental damage, loss, drops, and liquid spills. Cancel or adjust anytime in DPS Super App.
                 </p>
               </div>
@@ -291,7 +291,7 @@ export default function CalculatorAndPlans({ onSelectPlan }: { onSelectPlan: (pl
         </LiquidGlassContainer>
 
         {/* Plan Comparison Cards in Liquid Glass */}
-        <div id="plans" className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div id="plans" className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-4">
           {plans.map((plan, idx) => {
             const price = billingCycle === "yearly" ? plan.yearlyPrice : plan.monthlyPrice;
             return (
@@ -299,13 +299,13 @@ export default function CalculatorAndPlans({ onSelectPlan }: { onSelectPlan: (pl
                 key={idx}
                 variant="rounded"
                 interactive
-                className={`p-8 flex flex-col justify-between relative ${
-                  plan.popular ? "ring-2 ring-violet-500/50 shadow-2xl" : ""
+                className={`p-8 flex flex-col justify-between relative !overflow-visible ${
+                  plan.popular ? "ring-2 ring-violet-500/50 shadow-2xl z-20" : "z-10"
                 }`}
               >
                 {/* Popular Pill */}
                 {plan.popular && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-black shadow-md uppercase tracking-wider">
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-30 px-4 py-1 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-black shadow-lg uppercase tracking-wider whitespace-nowrap">
                     {plan.tag}
                   </div>
                 )}

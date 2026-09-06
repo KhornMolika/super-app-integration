@@ -143,7 +143,7 @@ export default function QuickQuoteDrawer({
                       onClick={() => toggleItem(item.id)}
                       className={`p-4 rounded-3xl border text-left flex flex-col justify-between h-32 transition-all cursor-pointer ${
                         isSelected
-                          ? "liquid-glass-accent-btn text-white shadow-lg scale-102"
+                          ? "liquid-glass-accent-card text-white shadow-lg scale-102"
                           : "liquid-glass-nested text-slate-700 dark:text-slate-300 hover:scale-102"
                       }`}
                     >
