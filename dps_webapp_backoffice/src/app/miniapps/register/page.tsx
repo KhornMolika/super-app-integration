@@ -28,7 +28,7 @@ export default function RegisterMiniAppPage() {
   }, [can, router]);
   const [formData, setFormData] = useState<Partial<CreateMiniAppDto>>({
     name: '',
-    appId: generateClientMiniAppId(),
+    appId: '',
     category: 'Insurance',
     shortDescription: '',
     fullDescription: '',
@@ -309,10 +309,15 @@ export default function RegisterMiniAppPage() {
   };
 
   useEffect(() => {
-    if (!formData.appId) {
-      setFormData(prev => ({ ...prev, appId: generateClientMiniAppId() }));
+    if (formData.name && formData.name.trim()) {
+      const generatedId = generateClientMiniAppId(formData.name);
+      if (formData.appId !== generatedId) {
+        setFormData(prev => ({ ...prev, appId: generatedId }));
+      }
+    } else if (formData.appId !== '') {
+      setFormData(prev => ({ ...prev, appId: '' }));
     }
-  }, [formData.appId]);
+  }, [formData.name]);
 
   useEffect(() => {
     const errors: Record<string, string> = {};

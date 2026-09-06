@@ -72,7 +72,17 @@ export const generateClientVerificationToken = () => {
   return 'tok_live_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 };
 
-export const generateClientMiniAppId = () => {
+export const generateClientMiniAppId = (name?: string) => {
+  if (name && name.trim()) {
+    const slug = name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+    if (slug) {
+      return `miniapp_${slug}`;
+    }
+  }
   if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
     const bytes = new Uint8Array(3);
     window.crypto.getRandomValues(bytes);
