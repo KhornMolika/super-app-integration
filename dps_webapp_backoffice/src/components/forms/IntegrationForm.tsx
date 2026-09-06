@@ -822,7 +822,7 @@ export default function IntegrationForm({
 
               <div className="flex items-center gap-2 flex-wrap">
                 <a
-                  href="/guidelines"
+                  href="/guidelines?method=webview#domain-verification"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 hover:bg-brand-100 dark:hover:bg-brand-900/50 border border-brand-200 dark:border-brand-800/60 transition shadow-sm"
@@ -858,7 +858,7 @@ export default function IntegrationForm({
                   <span>How to Host the Domain Association File</span>
                 </div>
                 <a
-                  href="/guidelines"
+                  href="/guidelines?method=webview#domain-verification"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-brand-600 dark:text-brand-400 hover:underline inline-flex items-center gap-1 font-medium text-[11px]"

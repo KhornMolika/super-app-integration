@@ -574,6 +574,43 @@ export default function GuidelinesPage() {
     "webview" | "artifact" | "source" | "native" | "deeplink"
   >("webview");
 
+  // Hash and Query Parameter Deep Linking
+  useEffect(() => {
+    const handleDeepLink = () => {
+      if (typeof window === 'undefined') return;
+
+      const params = new URLSearchParams(window.location.search);
+      const methodParam = params.get('method');
+      if (methodParam && ['webview', 'artifact', 'source', 'native', 'deeplink'].includes(methodParam)) {
+        setActiveMethodTab(methodParam as any);
+        setActiveSection('methods');
+      }
+
+      const hash = window.location.hash.replace('#', '');
+      if (hash === 'domain-verification') {
+        setActiveMethodTab('webview');
+        setActiveSection('methods');
+        setTimeout(() => {
+          const el = document.getElementById('domain-verification');
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 150);
+      } else if (hash) {
+        setTimeout(() => {
+          const el = document.getElementById(hash);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 150);
+      }
+    };
+
+    handleDeepLink();
+    window.addEventListener('hashchange', handleDeepLink);
+    return () => window.removeEventListener('hashchange', handleDeepLink);
+  }, []);
+
   // ScrollSpy for Sidebar
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -1175,6 +1212,103 @@ export default function GuidelinesPage() {
                         (CSP) headers are present.
                       </li>
                     </ul>
+                  </div>
+                </section>
+
+                <section id="domain-verification" className="scroll-mt-28 space-y-4 pt-2">
+                  <div className="p-6 rounded-2xl border-2 border-brand-500/40 dark:border-brand-500/30 bg-gradient-to-br from-brand-50/70 via-slate-50 to-white dark:from-brand-950/30 dark:via-slate-900/60 dark:to-slate-900/40 shadow-sm space-y-5">
+                    <div className="flex items-start justify-between gap-4 flex-wrap">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400">
+                          <GlobeIcon />
+                        </div>
+                        <div>
+                          <h5 className="text-xl font-bold text-slate-900 dark:text-white">
+                            Domain Ownership Verification (.well-known)
+                          </h5>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">
+                            Hosting <code className="text-brand-600 dark:text-brand-400 font-semibold">superapp-miniapp-association.json</code> to prove administrative control
+                          </p>
+                        </div>
+                      </div>
+                      <span className="px-3 py-1 text-xs font-bold rounded-full bg-brand-100 text-brand-800 dark:bg-brand-950 dark:text-brand-300 border border-brand-300 dark:border-brand-800">
+                        Mandatory for WebView
+                      </span>
+                    </div>
+
+                    <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                      To prevent malicious apps from framing unauthorized third-party websites or hijacking WebView sessions, the Super App platform requires all WebView-based Mini Apps to prove domain administrative control before activation.
+                    </p>
+
+                    <div className="space-y-4">
+                      <h6 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
+                        <TargetIcon /> 1. Expected Endpoint URL
+                      </h6>
+                      <div className="p-3.5 bg-slate-900 text-slate-100 rounded-xl font-mono text-xs flex items-center justify-between overflow-x-auto">
+                        <span>https://&lt;your-domain&gt;/.well-known/superapp-miniapp-association.json</span>
+                      </div>
+
+                      <h6 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2 pt-2">
+                        <ClipboardIcon /> 2. Manifest JSON Schema & Payload
+                      </h6>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">
+                        Copy the auto-generated JSON from your Mini App registration page into this file:
+                      </p>
+                      <VSCodeEditor
+                        files={[
+                          {
+                            filename: "superapp-miniapp-association.json",
+                            language: "json",
+                            code: `{\n  "appId": "miniapp_banking_8f32a1",\n  "verificationToken": "tok_live_7e8b91c23f4a012d987e45b6a1c2d3e4",\n  "environment": "DEV",\n  "allowedDomains": [\n    "banking.partner.com",\n    "auth.partner.com"\n  ],\n  "permissions": [\n    "Camera",\n    "Location"\n  ]\n}`,
+                          },
+                          {
+                            filename: "Next.js (App / Pages)",
+                            language: "yaml",
+                            code: `# Place the file in your public directory:\n# your-project/public/.well-known/superapp-miniapp-association.json\n# Next.js will automatically serve it statically at:\n# https://your-domain.com/.well-known/superapp-miniapp-association.json`,
+                          },
+                          {
+                            filename: "nginx.conf",
+                            language: "yaml",
+                            code: `# Nginx location block configuration\nlocation /.well-known/ {\n    root /var/www/html;\n    default_type application/json;\n    add_header Access-Control-Allow-Origin *;\n    try_files $uri =404;\n}`,
+                          },
+                          {
+                            filename: "Express (Node.js)",
+                            language: "dart",
+                            code: `// Express.js static route\napp.use('/.well-known', express.static(path.join(__dirname, 'public/.well-known'), {\n  setHeaders: (res) => {\n    res.setHeader('Content-Type', 'application/json');\n    res.setHeader('Access-Control-Allow-Origin', '*');\n  }\n}));`,
+                          },
+                        ]}
+                      />
+
+                      <h6 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2 pt-2">
+                        <CheckCircleIcon /> 3. Verification HTTP Requirements
+                      </h6>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                        <div className="p-3 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                          <strong className="text-slate-900 dark:text-slate-100 block mb-1">HTTP Status: 200 OK</strong>
+                          <span className="text-slate-600 dark:text-slate-400">Must respond with HTTP 200 without redirects (301/302).</span>
+                        </div>
+                        <div className="p-3 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                          <strong className="text-slate-900 dark:text-slate-100 block mb-1">Content-Type Header</strong>
+                          <span className="text-slate-600 dark:text-slate-400">Must be <code className="text-brand-600 dark:text-brand-400 font-mono">application/json</code> (or text/plain).</span>
+                        </div>
+                        <div className="p-3 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                          <strong className="text-slate-900 dark:text-slate-100 block mb-1">Public Accessibility</strong>
+                          <span className="text-slate-600 dark:text-slate-400">Accessible without Basic Auth, login screens, or VPN blockers.</span>
+                        </div>
+                        <div className="p-3 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                          <strong className="text-slate-900 dark:text-slate-100 block mb-1">CORS Headers</strong>
+                          <span className="text-slate-600 dark:text-slate-400">Include <code className="text-brand-600 dark:text-brand-400 font-mono">Access-Control-Allow-Origin: *</code>.</span>
+                        </div>
+                      </div>
+
+                      <h6 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2 pt-2">
+                        <WrenchIcon /> 4. How to Test Your Endpoint (cURL)
+                      </h6>
+                      <div className="p-3 bg-slate-900 text-slate-200 rounded-xl font-mono text-xs space-y-1">
+                        <p className="text-slate-400"># Run this command in your terminal:</p>
+                        <p className="text-emerald-400">curl -i https://&lt;your-domain&gt;/.well-known/superapp-miniapp-association.json</p>
+                      </div>
+                    </div>
                   </div>
                 </section>
               </div>
