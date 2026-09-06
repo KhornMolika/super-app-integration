@@ -20,7 +20,6 @@ import { CreateMiniAppDto, IntegrationMethod, SourceType } from '@/types/miniapp
 export default function RegisterMiniAppPage() {
   const router = useRouter();
   const { can } = useAuth();
-  const randomSuffixRef = useRef(generateClientRandomSuffix());
 
   useEffect(() => {
     if (!can('miniapp:create')) {
@@ -311,10 +310,8 @@ export default function RegisterMiniAppPage() {
 
   useEffect(() => {
     if (formData.name && formData.name.trim()) {
-      const generatedId = generateClientMiniAppId(formData.name, randomSuffixRef.current);
-      if (formData.appId !== generatedId) {
-        setFormData(prev => ({ ...prev, appId: generatedId }));
-      }
+      const generatedId = generateClientMiniAppId(formData.name);
+      setFormData(prev => ({ ...prev, appId: generatedId }));
     } else if (formData.appId !== '') {
       setFormData(prev => ({ ...prev, appId: '' }));
     }
