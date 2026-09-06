@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+const BACKEND_URL = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 // Allowlist of base routes allowed through the proxy
 const ALLOWED_ROUTES = [
@@ -44,6 +44,8 @@ async function handleProxy(request: Request, { params }: { params: Promise<{ pro
     const headers = new Headers();
     if (token) {
       headers.set('Authorization', `Bearer ${token}`);
+    } else if (process.env.BACKEND_INTERNAL_SECRET) {
+      headers.set('Authorization', `Bearer ${process.env.BACKEND_INTERNAL_SECRET}`);
     }
     
     // Forward Content-Type if present

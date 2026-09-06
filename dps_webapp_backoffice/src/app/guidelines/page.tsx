@@ -817,10 +817,71 @@ export default function GuidelinesPage() {
       badge: "Catalog Architecture",
       content: (
         <div className="space-y-6 text-sm text-slate-600 dark:text-slate-300">
-          <p>
-            To maintain zero security drift, Mini Apps request abstract <strong>Capabilities</strong> (e.g. <code>CAMERA</code>, <code>LOCATION</code>) rather than declaring direct OS manifest permissions.
+          <p className="leading-relaxed">
+            The Super App acts as the <strong>central authority for all Mini App capabilities and permissions</strong>. To maintain zero security drift and strict platform governance, permissions follow a zero-trust runtime access model.
           </p>
 
+          {/* Recommended Rule Box */}
+          <div className="p-4 rounded-xl border-l-4 border-brand-500 bg-brand-50/70 dark:bg-brand-950/30 text-xs text-brand-900 dark:text-brand-200 space-y-1">
+            <span className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px] block">
+              Core Platform Rule
+            </span>
+            <p className="italic font-medium leading-relaxed">
+              &ldquo;A Mini App may request any capability, but it can only use capabilities exposed and supported by the Super App. Supported capabilities are granted to the user at runtime when required.&rdquo;
+            </p>
+          </div>
+
+          {/* Example & Resolution Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Practical Example */}
+            <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
+              <h5 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider">
+                Capability Matching Example
+              </h5>
+              <p className="text-xs text-slate-600 dark:text-slate-400">
+                A Mini App may specify requirements, but only intersections with Super App support will function:
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                <div className="p-2.5 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                  <span className="text-[10px] text-slate-400 font-sans block mb-1 font-semibold uppercase">Super App Supports:</span>
+                  <div className="text-emerald-600 dark:text-emerald-400">• Camera ✅</div>
+                  <div className="text-emerald-600 dark:text-emerald-400">• Location ✅</div>
+                  <div className="text-emerald-600 dark:text-emerald-400">• Notification ✅</div>
+                </div>
+                <div className="p-2.5 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                  <span className="text-[10px] text-slate-400 font-sans block mb-1 font-semibold uppercase">Mini App Requires:</span>
+                  <div className="text-emerald-600 dark:text-emerald-400">• Camera ✅</div>
+                  <div className="text-emerald-600 dark:text-emerald-400">• Location ✅</div>
+                  <div className="text-emerald-600 dark:text-emerald-400">• Notification ✅</div>
+                  <div className="text-rose-500 font-semibold">• Contacts ❌</div>
+                  <div className="text-rose-500 font-semibold">• Microphone ❌</div>
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Result: Camera, Location, and Notification are functional. <strong>Contacts and Microphone will not work</strong> until the Super App explicitly expands support for them.
+              </p>
+            </div>
+
+            {/* Resolution Flow Diagram */}
+            <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
+              <h5 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider">
+                Registration & Runtime Resolution Flow
+              </h5>
+              <div className="p-3 bg-slate-900 text-slate-200 rounded-lg font-mono text-[11px] leading-relaxed">
+                <div className="text-slate-400">1. Mini App Registration</div>
+                <div className="text-slate-500 pl-4">↓ Check Requested Capabilities</div>
+                <div className="text-slate-400">2. Capability Catalog Matching</div>
+                <div className="text-slate-500 pl-4">↓ Compare against Super App Catalog</div>
+                <div className="text-emerald-400 pl-2">✅ Supported → Runtime Prompt → Active</div>
+                <div className="text-rose-400 pl-2">❌ Unsupported → Blocked / Unavailable</div>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                Permissions are requested <strong>at runtime when the user triggers the feature</strong> (just-in-time), rather than requesting all permissions upfront when the Mini App launches.
+              </p>
+            </div>
+          </div>
+
+          {/* Capability Catalog Table */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
               <h5 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-3">
@@ -852,13 +913,17 @@ export default function GuidelinesPage() {
             <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 flex flex-col justify-between space-y-3">
               <div>
                 <h5 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-2">
-                  DAG Resolver & Capability Requests
+                  DAG Resolver & App Store Compliance
                 </h5>
-                <p className="text-xs text-slate-600 dark:text-slate-400 mb-3">
-                  If an unlisted capability is needed, the engine generates a formal request. Composite capabilities (e.g. <code>VIDEO_CALL</code>) automatically resolve required child capabilities (<code>CAMERA</code> + <code>MICROPHONE</code>) via DAG topological sorting.
+                <p className="text-xs text-slate-600 dark:text-slate-400 mb-2 leading-relaxed">
+                  Composite capabilities (e.g. <code>VIDEO_CALL</code>) automatically resolve required child dependencies (<code>CAMERA</code> + <code>MICROPHONE</code>) via DAG topological sorting.
                 </p>
+                <div className="p-3 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-xs space-y-1">
+                  <strong className="text-slate-900 dark:text-white block">App Store & Play Store Publishing Note:</strong>
+                  <span className="text-slate-600 dark:text-slate-400">Having a Mini App request capabilities does not prevent the Super App from being published. Compliance is determined by proper implementation, purpose disclosure strings, and store guidelines.</span>
+                </div>
               </div>
-              <div className="p-3 bg-brand-50/60 dark:bg-brand-950/30 border border-brand-200 dark:border-brand-900/50 rounded-lg text-xs text-brand-800 dark:text-brand-300 font-medium">
+              <div className="p-2.5 bg-brand-50/60 dark:bg-brand-950/30 border border-brand-200 dark:border-brand-900/50 rounded-lg text-[11px] text-brand-800 dark:text-brand-300 font-medium">
                 Tip: Circular dependencies in requested capabilities are automatically rejected by the DAG validation engine.
               </div>
             </div>
