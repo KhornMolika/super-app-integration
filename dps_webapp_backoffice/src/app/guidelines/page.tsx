@@ -308,7 +308,7 @@ const VSCodeEditor = ({
       </div>
 
       {/* Code Content */}
-      <div className="p-4 overflow-x-auto text-xs font-mono leading-relaxed text-slate-200">
+      <div className="p-4 overflow-x-auto no-scrollbar [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] text-xs font-mono leading-relaxed text-slate-200">
         <pre>
           <code
             dangerouslySetInnerHTML={{
@@ -617,7 +617,7 @@ export default function GuidelinesPage() {
           </p>
 
           {/* Interactive Method Tabs */}
-          <div className="flex border-b border-slate-200 dark:border-slate-800 overflow-x-auto gap-1">
+          <div className="flex border-b border-slate-200 dark:border-slate-800 overflow-x-auto no-scrollbar [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] gap-1">
             {[
               { id: "webview", label: "WebView & Domain Verification", icon: <GlobeIcon /> },
               { id: "artifact", label: "Package Artifact", icon: <PackageIcon /> },
@@ -1006,7 +1006,7 @@ export default function GuidelinesPage() {
       {/* 3-Column Layout */}
       <div className="flex flex-1 overflow-hidden relative">
         {/* Left Navigation Sidebar */}
-        <aside className="w-72 border-r border-slate-200 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/60 backdrop-blur-sm overflow-y-auto shrink-0 flex flex-col py-6 px-4 relative z-10">
+        <aside className="w-72 border-r border-slate-200 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/60 backdrop-blur-sm overflow-y-auto no-scrollbar [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] shrink-0 flex flex-col py-6 px-4 relative z-10">
           {/* Search Bar */}
           <div className="relative mb-6">
             <input
@@ -1155,7 +1155,7 @@ export default function GuidelinesPage() {
         </aside>
 
         {/* Center Content Area */}
-        <main className="flex-1 overflow-y-auto bg-white dark:bg-slate-950 relative scroll-smooth px-6 sm:px-10 lg:px-12 py-10">
+        <main className="flex-1 overflow-y-auto no-scrollbar [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] bg-white dark:bg-slate-950 relative scroll-smooth px-6 sm:px-10 lg:px-12 py-10">
           <div className="max-w-4xl mx-auto space-y-16 pb-24">
             {filteredSections.map((sec, index) => (
               <section key={sec.id} id={sec.id} className="scroll-mt-24">
@@ -1192,7 +1192,7 @@ export default function GuidelinesPage() {
         </main>
 
         {/* Right "On This Page" TOC Sidebar */}
-        <aside className="w-60 border-l border-slate-200 dark:border-slate-800/80 bg-white/50 dark:bg-slate-900/40 backdrop-blur-sm overflow-y-auto shrink-0 hidden xl:block py-8 px-5 text-xs">
+        <aside className="w-60 border-l border-slate-200 dark:border-slate-800/80 bg-white/50 dark:bg-slate-900/40 backdrop-blur-sm overflow-y-auto no-scrollbar [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] shrink-0 hidden xl:block py-8 px-5 text-xs">
           <div className="font-semibold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-3">
             On This Page
           </div>
