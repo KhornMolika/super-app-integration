@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { Card } from "@/components/ui/card";
+import Link from "next/link";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import LifecycleFlow from "@/components/ui/LifecycleFlow";
 
@@ -24,314 +24,135 @@ interface Section {
   content: React.ReactNode;
 }
 
-const FolderIcon = () => (
-  <svg
-    className="w-4 h-4 inline-block text-amber-500"
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-1.2-1.8A2 2 0 0 0 7.55 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />
-  </svg>
-);
-const WrenchIcon = () => (
-  <svg
-    className="w-4 h-4 inline-block text-slate-500"
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-  </svg>
-);
-const SparklesIcon = () => (
-  <svg
-    className="w-4 h-4 inline-block text-brand-500"
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
-    <path d="M20 3v4" />
-    <path d="M22 5h-4" />
-    <path d="M4 17v2" />
-    <path d="M5 18H3" />
-  </svg>
-);
-const SearchIcon = () => (
-  <svg
-    className="w-4 h-4 inline-block text-blue-500"
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <circle cx="11" cy="11" r="8" />
-    <path d="m21 21-4.3-4.3" />
-  </svg>
-);
-const TargetIcon = () => (
-  <svg
-    className="w-4 h-4 inline-block text-rose-500"
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+// Minimalist vector icons
+const GlobeIcon = () => (
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="10" />
-    <circle cx="12" cy="12" r="6" />
-    <circle cx="12" cy="12" r="2" />
+    <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+    <path d="M2 12h20" />
   </svg>
 );
-const ClipboardIcon = () => (
-  <svg
-    className="w-4 h-4 inline-block text-emerald-500"
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
-    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-  </svg>
-);
-const SettingsIcon = () => (
-  <svg
-    className="w-4 h-4 inline-block text-slate-500"
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-    <circle cx="12" cy="12" r="3" />
-  </svg>
-);
-const ShieldIcon = () => (
-  <svg
-    className="w-4 h-4 inline-block text-rose-500"
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2-1 4-2 7-2 2.82 0 5.3 1.05 7 2a1 1 0 0 1 1 1v7z" />
-  </svg>
-);
-const LinkIcon = () => (
-  <svg
-    className="w-4 h-4 inline-block text-cyan-500"
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-  </svg>
-);
-const KeyIcon = () => (
-  <svg
-    className="w-4 h-4 inline-block text-amber-500"
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <circle cx="7.5" cy="15.5" r="5.5" />
-    <path d="m21 2-9.6 9.6" />
-    <path d="m15.5 7.5 3 3L22 7l-3-3" />
-  </svg>
-);
+
 const PackageIcon = () => (
-  <svg
-    className="w-4 h-4 inline-block text-purple-500"
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="m7.5 4.27 9 5.15" />
     <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
     <path d="m3.3 7 8.7 5 8.7-5" />
     <path d="M12 22V12" />
   </svg>
 );
+
+const FolderIcon = () => (
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-1.2-1.8A2 2 0 0 0 7.55 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />
+  </svg>
+);
+
+const WrenchIcon = () => (
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+  </svg>
+);
+
+const LinkIcon = () => (
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+  </svg>
+);
+
+const ShieldIcon = () => (
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2-1 4-2 7-2 2.82 0 5.3 1.05 7 2a1 1 0 0 1 1 1v7z" />
+  </svg>
+);
+
+const KeyIcon = () => (
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="7.5" cy="15.5" r="5.5" />
+    <path d="m21 2-9.6 9.6" />
+    <path d="m15.5 7.5 3 3L22 7l-3-3" />
+  </svg>
+);
+
 const CheckCircleIcon = () => (
-  <svg
-    className="w-4 h-4 inline-block text-emerald-500"
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
     <polyline points="22 4 12 14.01 9 11.01" />
   </svg>
 );
-const TagIcon = () => (
-  <svg
-    className="w-4 h-4 inline-block text-indigo-500"
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" />
-    <path d="M7 7h.01" />
+
+const SearchIcon = () => (
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8" />
+    <path d="m21 21-4.3-4.3" />
   </svg>
 );
+
 const UserIcon = () => (
-  <svg
-    className="w-4 h-4 inline-block text-blue-500"
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
     <circle cx="12" cy="7" r="4" />
   </svg>
 );
-const LightbulbIcon = () => (
-  <svg
-    className="w-4 h-4 inline-block text-amber-500"
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.9 1.2 1.5 1.5 2.5" />
-    <path d="M9 18h6" />
-    <path d="M10 22h4" />
+
+const SettingsIcon = () => (
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+    <circle cx="12" cy="12" r="3" />
   </svg>
 );
+
+const ClipboardIcon = () => (
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+  </svg>
+);
+
+const BanIcon = () => (
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <path d="m4.9 4.9 14.2 14.2" />
+  </svg>
+);
+
+const TargetIcon = () => (
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <circle cx="12" cy="12" r="6" />
+    <circle cx="12" cy="12" r="2" />
+  </svg>
+);
+
+const TagIcon = () => (
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" />
+    <path d="M7 7h.01" />
+  </svg>
+);
+
 const HashIcon = () => (
-  <svg
-    className="w-4 h-4 inline-block text-slate-500"
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <line x1="4" x2="20" y1="9" y2="9" />
     <line x1="4" x2="20" y1="15" y2="15" />
     <line x1="10" x2="8" y1="3" y2="21" />
     <line x1="16" x2="14" y1="3" y2="21" />
   </svg>
 );
-const BanIcon = () => (
-  <svg
-    className="w-4 h-4 inline-block text-rose-500"
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <circle cx="12" cy="12" r="10" />
-    <path d="m4.9 4.9 14.2 14.2" />
-  </svg>
-);
-const CheckIcon = () => (
-  <svg
-    className="w-4 h-4 inline-block"
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polyline points="20 6 9 17 4 12" />
-  </svg>
-);
-const FileTextIcon = () => (
-  <svg
-    className="w-4 h-4 inline-block"
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
-    <polyline points="14 2 14 8 20 8" />
-    <line x1="16" x2="8" y1="13" y2="13" />
-    <line x1="16" x2="8" y1="17" y2="17" />
-    <line x1="10" x2="8" y1="9" y2="9" />
-  </svg>
-);
-const AlertCircleIcon = () => <svg></svg>;
 
 const VSCodeEditor = ({
   files,
 }: {
   files: { filename: string; language: string; code: string }[];
 }) => {
-  const [activeFilename, setActiveFilename] = useState(files[0].filename);
+  const [activeFilename, setActiveFilename] = useState(files[0]?.filename || "");
   const [copied, setCopied] = useState(false);
 
-  const activeFile =
-    files.find((f) => f.filename === activeFilename) || files[0];
+  const activeFile = files.find((f) => f.filename === activeFilename) || files[0];
 
   const handleCopy = () => {
+    if (!activeFile) return;
     navigator.clipboard.writeText(activeFile.code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -355,22 +176,16 @@ const VSCodeEditor = ({
         const [full, str, colon, bool, num, bracket] = match;
         if (str) {
           if (colon) {
-            result += `<span class="text-[#9cdcfe]">${escapeHtml(str)}</span>${escapeHtml(colon)}`;
+            result += `<span class="text-sky-300 dark:text-sky-400">${escapeHtml(str)}</span>${escapeHtml(colon)}`;
           } else {
-            result += `<span class="text-[#ce9178]">${escapeHtml(str)}</span>`;
+            result += `<span class="text-amber-300 dark:text-amber-200">${escapeHtml(str)}</span>`;
           }
         } else if (bool) {
-          result += `<span class="text-[#569cd6]">${escapeHtml(bool)}</span>`;
+          result += `<span class="text-blue-400 font-semibold">${escapeHtml(bool)}</span>`;
         } else if (num) {
-          result += `<span class="text-[#b5cea8]">${escapeHtml(num)}</span>`;
+          result += `<span class="text-emerald-300 dark:text-emerald-400">${escapeHtml(num)}</span>`;
         } else if (bracket) {
-          if (bracket === "{" || bracket === "}") {
-            result += `<span class="text-[#ffd700]">${escapeHtml(bracket)}</span>`;
-          } else if (bracket === "[" || bracket === "]") {
-            result += `<span class="text-[#da70d6]">${escapeHtml(bracket)}</span>`;
-          } else {
-            result += escapeHtml(bracket);
-          }
+          result += `<span class="text-slate-400">${escapeHtml(bracket)}</span>`;
         } else {
           result += escapeHtml(full);
         }
@@ -393,28 +208,12 @@ const VSCodeEditor = ({
           const formattedCode = codePart.replace(
             /^(\s*(?:-\s+)?)([a-zA-Z0-9_-]+):(\s*)(.*)$/,
             (_, prefix, key, space, val) => {
-              let valFormatted = escapeHtml(val);
-              if (val.trim()) {
-                if (
-                  /^['"].*['"]$/.test(val.trim()) ||
-                  /^\[.*\]$/.test(val.trim())
-                ) {
-                  valFormatted = `<span class="text-[#ce9178]">${escapeHtml(val)}</span>`;
-                } else if (/^\d+(\.\d+)*$/.test(val.trim())) {
-                  valFormatted = `<span class="text-[#b5cea8]">${escapeHtml(val)}</span>`;
-                } else {
-                  valFormatted = `<span class="text-[#ce9178]">${escapeHtml(val)}</span>`;
-                }
-              }
-              return `${escapeHtml(prefix)}<span class="text-[#9cdcfe]">${escapeHtml(key)}</span>:${escapeHtml(space)}${valFormatted}`;
+              return `${escapeHtml(prefix)}<span class="text-sky-300 dark:text-sky-400">${escapeHtml(key)}</span>:${escapeHtml(space)}<span class="text-amber-300 dark:text-amber-200">${escapeHtml(val)}</span>`;
             },
           );
 
-          const safeCode =
-            formattedCode === codePart ? escapeHtml(codePart) : formattedCode;
-          const safeComment = commentPart
-            ? `<span class="text-[#6A9955]">${escapeHtml(commentPart)}</span>`
-            : "";
+          const safeCode = formattedCode === codePart ? escapeHtml(codePart) : formattedCode;
+          const safeComment = commentPart ? `<span class="text-slate-500 italic">${escapeHtml(commentPart)}</span>` : "";
           return safeCode + safeComment;
         })
         .join("\n");
@@ -435,27 +234,25 @@ const VSCodeEditor = ({
 
         const [full, comment, str, annotation, kw, type, num] = match;
         if (comment) {
-          result += `<span class="text-[#6A9955]">${escapeHtml(comment)}</span>`;
+          result += `<span class="text-slate-500 italic">${escapeHtml(comment)}</span>`;
         } else if (str) {
-          result += `<span class="text-[#ce9178]">${escapeHtml(str)}</span>`;
+          result += `<span class="text-amber-300 dark:text-amber-200">${escapeHtml(str)}</span>`;
         } else if (annotation) {
-          result += `<span class="text-[#c586c0]">${escapeHtml(annotation)}</span>`;
+          result += `<span class="text-purple-400">${escapeHtml(annotation)}</span>`;
         } else if (kw) {
-          result += `<span class="text-[#569cd6]">${escapeHtml(kw)}</span>`;
+          result += `<span class="text-sky-400 font-medium">${escapeHtml(kw)}</span>`;
         } else if (type) {
-          result += `<span class="text-[#4ec9b0]">${escapeHtml(type)}</span>`;
+          result += `<span class="text-emerald-300 dark:text-emerald-400 font-medium">${escapeHtml(type)}</span>`;
         } else if (num) {
-          result += `<span class="text-[#b5cea8]">${escapeHtml(num)}</span>`;
+          result += `<span class="text-rose-300 dark:text-rose-400">${escapeHtml(num)}</span>`;
         } else {
           result += escapeHtml(full);
         }
         lastIndex = dartTokenRegex.lastIndex;
       }
-
       if (lastIndex < text.length) {
         result += escapeHtml(text.slice(lastIndex));
       }
-
       return result;
     }
 
@@ -463,53 +260,59 @@ const VSCodeEditor = ({
   };
 
   return (
-    <div className="rounded-md border border-[#3c3c3c] bg-[#1e1e1e] shadow-xl overflow-hidden my-4 text-[13px] leading-[1.4rem]">
-      {/* VSCode Tab Bar */}
-      <div className="flex items-center justify-between bg-[#252526] pr-2">
-        <div className="flex items-center overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          {files.map((f) => (
-            <button
-              key={f.filename}
-              onClick={() => setActiveFilename(f.filename)}
-              className={`flex items-center gap-2 px-3 py-2 font-sans text-xs border-t transition-colors ${
-                activeFilename === f.filename
-                  ? "bg-[#1e1e1e] text-[#cccccc] border-[#007acc] border-r border-r-[#1e1e1e] -mr-px"
-                  : "bg-[#2d2d2d] text-[#969696] border-transparent border-r border-r-[#252526] hover:bg-[#2b2b2b]"
-              }`}
-            >
-              <svg
-                className="w-3.5 h-3.5 text-[#519aba]"
-                viewBox="0 0 24 24"
-                fill="currentColor"
+    <div className="rounded-xl overflow-hidden border border-slate-800 bg-[#0f172a] shadow-lg">
+      {/* Code Editor Header */}
+      <div className="flex items-center justify-between px-4 py-2.5 bg-[#090d16] border-b border-slate-800/80">
+        <div className="flex items-center gap-3 overflow-x-auto">
+          {/* MacOS Window Dots */}
+          <div className="flex items-center gap-1.5 pr-2 border-r border-slate-800 shrink-0">
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80 inline-block"></span>
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80 inline-block"></span>
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80 inline-block"></span>
+          </div>
+          {/* File Tabs */}
+          <div className="flex items-center gap-1.5">
+            {files.map((file) => (
+              <button
+                key={file.filename}
+                onClick={() => setActiveFilename(file.filename)}
+                className={`px-2.5 py-1 text-xs font-mono rounded-md transition-all ${
+                  activeFilename === file.filename
+                    ? "bg-slate-800 text-slate-100 font-semibold border border-slate-700/80"
+                    : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+                }`}
               >
-                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-7-7z" />
-              </svg>
-              {f.filename}
-            </button>
-          ))}
+                {file.filename}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* Copy Button */}
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#cccccc] hover:bg-[#333333] hover:text-white rounded transition-colors font-sans whitespace-nowrap"
+          className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-md transition border border-slate-700/80"
         >
           {copied ? (
-            <span className="text-[#4ec9b0] flex items-center gap-1">
-              <CheckIcon /> Copied
+            <span className="text-emerald-400 flex items-center gap-1 font-medium">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"/></svg>
+              Copied
             </span>
           ) : (
             <span className="flex items-center gap-1">
-              <ClipboardIcon /> Copy
+              <svg className="w-3.5 h-3.5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+              Copy
             </span>
           )}
         </button>
       </div>
 
-      {/* Code Area */}
-      <div className="p-4 overflow-x-auto min-h-[200px]">
-        <pre className="font-mono text-[#d4d4d4] whitespace-pre">
+      {/* Code Content */}
+      <div className="p-4 overflow-x-auto text-xs font-mono leading-relaxed text-slate-200">
+        <pre>
           <code
             dangerouslySetInnerHTML={{
-              __html: highlight(activeFile.code, activeFile.language),
+              __html: activeFile ? highlight(activeFile.code, activeFile.language) : "",
             }}
           />
         </pre>
@@ -531,87 +334,55 @@ const CodeBlock = ({
     <VSCodeEditor files={[{ filename: filename || "code", language, code }]} />
   );
 };
-<svg
-  className="w-4 h-4 inline-block"
-  xmlns="http://www.w3.org/2000/svg"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  strokeWidth="2"
-  strokeLinecap="round"
-  strokeLinejoin="round"
->
-  <circle cx="12" cy="12" r="10" />
-  <line x1="12" x2="12" y1="8" y2="12" />
-  <line x1="12" x2="12.01" y1="16" y2="16" />
-</svg>;
-const GlobeIcon = () => (
-  <svg
-    className="w-4 h-4 inline-block text-blue-500"
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <circle cx="12" cy="12" r="10" />
-    <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
-    <path d="M2 12h20" />
-  </svg>
-);
 
 export default function GuidelinesPage() {
-  const [activeCategory, setActiveCategory] = useState<string>("ALL");
   const [activeSection, setActiveSection] = useState<string>("overview");
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [copiedIndex, setCopiedIndex] = useState<string | null>(null);
-  const [activeCodeTab, setActiveCodeTab] = useState<
-    "dart" | "yaml" | "manifest" | "plist" | "semgrep"
-  >("dart");
   const [activeMethodTab, setActiveMethodTab] = useState<
     "webview" | "artifact" | "source" | "native" | "deeplink"
   >("webview");
 
-  // Hash and Query Parameter Deep Linking
+  // Hash & Query Parameter Deep Linking
   useEffect(() => {
     const handleDeepLink = () => {
-      if (typeof window === 'undefined') return;
+      if (typeof window === "undefined") return;
 
       const params = new URLSearchParams(window.location.search);
-      const methodParam = params.get('method');
-      if (methodParam && ['webview', 'artifact', 'source', 'native', 'deeplink'].includes(methodParam)) {
+      const methodParam = params.get("method");
+      if (
+        methodParam &&
+        ["webview", "artifact", "source", "native", "deeplink"].includes(methodParam)
+      ) {
         setActiveMethodTab(methodParam as any);
-        setActiveSection('methods');
+        setActiveSection("methods");
       }
 
-      const hash = window.location.hash.replace('#', '');
-      if (hash === 'domain-verification') {
-        setActiveMethodTab('webview');
-        setActiveSection('methods');
+      const hash = window.location.hash.replace("#", "");
+      if (hash === "domain-verification") {
+        setActiveMethodTab("webview");
+        setActiveSection("methods");
         setTimeout(() => {
-          const el = document.getElementById('domain-verification');
+          const el = document.getElementById("domain-verification");
           if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            el.scrollIntoView({ behavior: "smooth", block: "start" });
           }
         }, 150);
       } else if (hash) {
         setTimeout(() => {
           const el = document.getElementById(hash);
           if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            el.scrollIntoView({ behavior: "smooth", block: "start" });
           }
         }, 150);
       }
     };
 
     handleDeepLink();
-    window.addEventListener('hashchange', handleDeepLink);
-    return () => window.removeEventListener('hashchange', handleDeepLink);
+    window.addEventListener("hashchange", handleDeepLink);
+    return () => window.removeEventListener("hashchange", handleDeepLink);
   }, []);
 
-  // ScrollSpy for Sidebar
+  // ScrollSpy for Active Section
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -621,7 +392,7 @@ export default function GuidelinesPage() {
           }
         });
       },
-      { rootMargin: "-20% 0px -60% 0px" },
+      { rootMargin: "-15% 0px -65% 0px" }
     );
 
     const sectionElements = document.querySelectorAll("section[id]");
@@ -632,43 +403,32 @@ export default function GuidelinesPage() {
     };
   }, []);
 
-  const handleCopy = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedIndex(id);
-    setTimeout(() => setCopiedIndex(null), 2000);
-  };
-
   const sections: Section[] = [
     {
       id: "overview",
       number: "01",
       title: "Overview & Ecosystem Roles",
-      shortTitle: "Overview",
+      shortTitle: "Overview & Roles",
       category: "GENERAL",
       summary:
         "Roles, architectural boundaries, and governance across the Mini App onboarding lifecycle.",
       badge: "Core Governance",
       content: (
-        <div className="space-y-4 text-sm text-slate-600 dark:text-slate-300">
+        <div className="space-y-6 text-sm text-slate-600 dark:text-slate-300">
           <p className="leading-relaxed">
-            The Super App Mini App ecosystem provides a high-performance,
-            sandboxed runtime enabling autonomous delivery of vertical services.
-            The platform strictly isolates third-party business logic while
-            enabling standardized access to device features and Super App APIs.
+            The Super App Mini App ecosystem provides a high-performance, sandboxed runtime enabling autonomous delivery of vertical services. The platform strictly isolates third-party business logic while enabling standardized access to device features and Super App APIs.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-            <div className="p-5 rounded-2xl bg-gradient-to-b from-slate-50 to-white dark:from-slate-800/80 dark:to-slate-800/40 border border-slate-200 dark:border-slate-700 shadow-sm hover:border-slate-200 dark:border-slate-700 dark:hover:border-slate-200 dark:border-slate-700 transition-all">
-              <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white flex items-center justify-center font-bold text-lg mb-3 shadow-md shadow-slate-500/10">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-5 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
                 <UserIcon />
               </div>
-              <h4 className="font-bold text-slate-900 dark:text-white text-base">
-                MA Manager
-              </h4>
-              <span className="inline-block px-2 py-0.5 text-xs font-bold rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800/60 dark:text-slate-300 mt-1 mb-2">
+              <h4 className="font-bold text-slate-900 dark:text-white text-base">MA Manager</h4>
+              <span className="inline-block px-2 py-0.5 text-xs font-semibold rounded bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                 External / Mini App Team
               </span>
-              <ul className="text-base space-y-1.5 text-slate-700 dark:text-slate-300">
+              <ul className="text-xs space-y-1.5 text-slate-600 dark:text-slate-400">
                 <li>• Registers Mini App metadata & icon</li>
                 <li>• Configures integration method & source</li>
                 <li>• Reviews detected permission claims</li>
@@ -677,65 +437,37 @@ export default function GuidelinesPage() {
               </ul>
             </div>
 
-            <div className="p-5 rounded-2xl bg-gradient-to-b from-slate-50 to-white dark:from-slate-800/80 dark:to-slate-800/40 border border-slate-200 dark:border-slate-700 shadow-sm hover:border-slate-200 dark:border-slate-700 dark:hover:border-slate-200 dark:border-slate-700 transition-all">
-              <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white flex items-center justify-center font-bold text-lg mb-3 shadow-md shadow-slate-500/10">
+            <div className="p-5 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                 <ShieldIcon />
               </div>
-              <h4 className="font-bold text-slate-900 dark:text-white text-base">
-                SA Admin
-              </h4>
-              <span className="inline-block px-2 py-0.5 text-xs font-bold rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800/60 dark:text-slate-300 mt-1 mb-2">
+              <h4 className="font-bold text-slate-900 dark:text-white text-base">SA Admin</h4>
+              <span className="inline-block px-2 py-0.5 text-xs font-semibold rounded bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                 Super App Platform Owner
               </span>
-              <ul className="text-base space-y-1.5 text-slate-700 dark:text-slate-300">
-                <li>• Reviews integration architecture & contracts</li>
-                <li>• Approves/rejects new capability requests</li>
-                <li>• Audits automated security scans (Gitleaks, Semgrep)</li>
+              <ul className="text-xs space-y-1.5 text-slate-600 dark:text-slate-400">
+                <li>• Reviews integration contracts</li>
+                <li>• Approves new capability requests</li>
+                <li>• Audits automated security scans</li>
                 <li>• Authorizes CI integration builds</li>
-                <li>• Grants final release approval & activates version</li>
+                <li>• Grants final release activation</li>
               </ul>
             </div>
 
-            <div className="p-5 rounded-2xl bg-gradient-to-b from-slate-50 to-white dark:from-slate-800/80 dark:to-slate-800/40 border border-slate-200 dark:border-slate-700 shadow-sm hover:border-slate-200 dark:border-slate-700 dark:hover:border-slate-200 dark:border-slate-700 transition-all">
-              <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white flex items-center justify-center font-bold text-lg mb-3 shadow-md shadow-slate-500/10">
+            <div className="p-5 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="w-9 h-9 rounded-lg bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 flex items-center justify-center">
                 <SettingsIcon />
               </div>
-              <h4 className="font-bold text-slate-900 dark:text-white text-base">
-                System / CI (Jenkins)
-              </h4>
-              <span className="inline-block px-2 py-0.5 text-xs font-bold rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800/60 dark:text-slate-300 mt-1 mb-2">
+              <h4 className="font-bold text-slate-900 dark:text-white text-base">System CI (Jenkins)</h4>
+              <span className="inline-block px-2 py-0.5 text-xs font-semibold rounded bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                 Automated Engine
               </span>
-              <ul className="text-base space-y-1.5 text-slate-700 dark:text-slate-300">
-                <li>
-                  • Receive validation/build jobs triggered by the Backend
-                </li>
-                <li>• Retrieve submitted artifacts/source code from MinIO</li>
-                <li>• Run backend and method-specific validation</li>
-                <li>• Verify Git repository and commit SHA</li>
-                <li>
-                  • Detect required permissions and capabilities, including DAG
-                  dependency resolution
-                </li>
-                <li>
-                  • Compare detected capabilities against the Super App
-                  Capability Catalog
-                </li>
-                <li>• Run security validation and generate SBOM</li>
-                <li>• Analyze dependencies and package requirements</li>
-                <li>• Build and integrate the Mini App</li>
-                <li>• Generate test builds</li>
-                <li>• Run validation/build jobs in isolated Jenkins agents</li>
-                <li>
-                  • Store validation results, SBOMs, and security reports in
-                  MinIO
-                </li>
-                <li>
-                  • On successful validation, publish the trusted package to
-                  Sonatype Nexus
-                </li>
-                <li>• Record validation status and immutable audit logs</li>
-                <li>• Report validation/build results back to the Backend</li>
+              <ul className="text-xs space-y-1.5 text-slate-600 dark:text-slate-400">
+                <li>• Runs backend and method validation</li>
+                <li>• Resolves DAG capabilities and SBOM</li>
+                <li>• Executes SAST and DAST security gates</li>
+                <li>• Generates sandbox test APKs</li>
+                <li>• Promotes trusted packages to Nexus</li>
               </ul>
             </div>
           </div>
@@ -745,83 +477,61 @@ export default function GuidelinesPage() {
     {
       id: "general-requirements",
       number: "02",
-      title: "General Integration Requirements & Metadata",
-      shortTitle: "Requirements",
+      title: "General Integration Requirements",
+      shortTitle: "General Requirements",
       category: "GENERAL",
       summary:
         "Global conventions, naming syntax, SemVer rules, and environment segregation.",
       content: (
-        <div className="space-y-4 text-sm text-slate-600 dark:text-slate-300">
+        <div className="space-y-6 text-sm text-slate-600 dark:text-slate-300">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-slate-50/50 dark:bg-slate-800/30">
+            <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-5 bg-slate-50/50 dark:bg-slate-900/40">
               <h5 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-2">
-                <span className="text-slate-900 dark:text-slate-100">
-                  <TagIcon />
-                </span>{" "}
-                Mini App Identity
+                <TagIcon /> Mini App Identity
               </h5>
-              <p className="text-sm text-slate-700 dark:text-slate-300 mb-3">
-                Every Mini App must register an immutable unique identifier
-                using reverse-domain notation.
+              <p className="text-xs text-slate-600 dark:text-slate-400 mb-3">
+                Every Mini App registers an immutable unique identifier prefixed with <code className="font-mono text-brand-600 dark:text-brand-400">miniapp_</code>.
               </p>
               <div className="bg-slate-900 text-slate-200 px-3 py-2 rounded-lg font-mono text-xs">
-                com.company.module_name
+                miniapp_banking_8f32a1
               </div>
-              <p className="text-sm text-slate-500 mt-2">
-                Allowed: lowercase letters, digits, dots, and underscores.
+              <p className="text-xs text-slate-500 mt-2">
+                Allowed: lowercase letters, digits, and underscores.
               </p>
             </div>
 
-            <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-slate-50/50 dark:bg-slate-800/30">
+            <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-5 bg-slate-50/50 dark:bg-slate-900/40">
               <h5 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-2">
-                <span className="text-slate-900 dark:text-slate-100">
-                  <HashIcon />
-                </span>{" "}
-                Versioning Standard
+                <HashIcon /> Semantic Versioning
               </h5>
-              <p className="text-sm text-slate-700 dark:text-slate-300 mb-3">
-                Strict adherence to Semantic Versioning (SemVer 2.0.0) is
-                mandated for all releases.
+              <p className="text-xs text-slate-600 dark:text-slate-400 mb-3">
+                Strict adherence to SemVer 2.0.0 is mandated for all build artifacts and releases.
               </p>
               <div className="bg-slate-900 text-slate-200 px-3 py-2 rounded-lg font-mono text-xs">
-                MAJOR.MINOR.PATCH (e.g. 2.4.1)
+                MAJOR.MINOR.PATCH (e.g. 1.4.2)
               </div>
-              <p className="text-sm text-slate-500 mt-2">
-                Duplicate version numbers on the same environment are rejected.
+              <p className="text-xs text-slate-500 mt-2">
+                Duplicate version numbers in the same environment are rejected.
               </p>
             </div>
           </div>
 
-          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 space-y-2">
-            <h5 className="font-semibold text-slate-900 dark:text-slate-100 text-xs uppercase tracking-wider">
-              Target Environment Segregation
+          <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 space-y-3">
+            <h5 className="font-semibold text-slate-900 dark:text-white text-xs uppercase tracking-wider">
+              Environment Segregation
             </h5>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div className="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-700/50">
-                <span className="font-bold text-slate-700 dark:text-slate-300">
-                  DEVELOPMENT
-                </span>
-                <p className="text-sm text-slate-700 dark:text-slate-300 mt-1">
-                  For ongoing feature work and local developer test harnesses.
-                </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+              <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800/60">
+                <span className="font-bold text-slate-800 dark:text-slate-200 block mb-1">DEVELOPMENT</span>
+                <p className="text-slate-600 dark:text-slate-400">For ongoing feature work and local developer sandbox harnesses.</p>
               </div>
-              <div className="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-700/50">
-                <span className="font-bold text-slate-700 dark:text-slate-300">
-                  STAGING
-                </span>
-                <p className="text-sm text-slate-700 dark:text-slate-300 mt-1">
-                  Pre-production verification against actual Super App test
-                  builds.
-                </p>
+              <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800/60">
+                <span className="font-bold text-slate-800 dark:text-slate-200 block mb-1">STAGING</span>
+                <p className="text-slate-600 dark:text-slate-400">Pre-production verification against real Super App test builds.</p>
               </div>
-              <div className="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-700/50">
-                <span className="font-bold text-slate-700 dark:text-slate-300">
-                  PRODUCTION
-                </span>
-                <p className="text-sm text-slate-700 dark:text-slate-300 mt-1">
-                  Publicly active release serving live end-users inside the
-                  Super App.
-                </p>
+              <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800/60">
+                <span className="font-bold text-slate-800 dark:text-slate-200 block mb-1">PRODUCTION</span>
+                <p className="text-slate-600 dark:text-slate-400">Publicly active release serving live end-users inside Super App.</p>
               </div>
             </div>
           </div>
@@ -831,29 +541,24 @@ export default function GuidelinesPage() {
     {
       id: "sdk-contract",
       number: "03",
-      title: "Mini App SDK / API Contract & Runtime Constraints",
+      title: "Mini App SDK / API Contract",
       shortTitle: "SDK Contract",
       category: "CONTRACT",
       summary:
         "Required bridge APIs, lifecycle bindings, authentication tokens, and strict runtime prohibitions.",
       badge: "Critical Rule",
       content: (
-        <div className="space-y-4 text-sm text-slate-600 dark:text-slate-300">
+        <div className="space-y-6 text-sm text-slate-600 dark:text-slate-300">
           <p>
-            Mini Apps operate within a controlled sandbox. All platform
-            interactions (authentication, device camera, navigation, network
-            tokens) must pass through the official <code>SuperAppSDK</code>.
-            Direct native access via custom MethodChannels or background process
-            hijacking is forbidden.
+            Mini Apps operate within a controlled sandbox. All platform interactions (authentication, device camera, navigation, network tokens) must pass through the official <code>SuperAppSDK</code>.
           </p>
 
-          {/* VSCode Editor Tabs */}
           <VSCodeEditor
             files={[
               {
                 filename: "entrypoint.dart",
                 language: "dart",
-                code: `import 'package:flutter/material.dart';\nimport 'package:super_app_sdk/super_app_sdk.dart';\n\n// Official Mini App entrypoint contract\nclass MiniAppEntryPoint extends MiniAppWidget {\n  @override\n  Widget build(BuildContext context, MiniAppContext appCtx) {\n    // Retrieve authenticated user and scoped token\n    final user = appCtx.auth.currentUser;\n    final token = appCtx.auth.accessToken;\n\n    return Scaffold(\n      appBar: SuperAppBar(title: 'Food Delivery', appCtx: appCtx),\n      body: MiniAppHomeView(user: user, apiToken: token),\n    );\n  }\n}`,
+                code: `import 'package:flutter/material.dart';\nimport 'package:super_app_sdk/super_app_sdk.dart';\n\n// Official Mini App entrypoint contract\nclass MiniAppEntryPoint extends MiniAppWidget {\n  @override\n  Widget build(BuildContext context, MiniAppContext appCtx) {\n    final user = appCtx.auth.currentUser;\n    final token = appCtx.auth.accessToken;\n\n    return Scaffold(\n      appBar: SuperAppBar(title: 'Food Delivery', appCtx: appCtx),\n      body: MiniAppHomeView(user: user, apiToken: token),\n    );\n  }\n}`,
               },
               {
                 filename: "pubspec.yaml",
@@ -868,42 +573,28 @@ export default function GuidelinesPage() {
             ]}
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 text-xs">
-            <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/60 bg-slate-100 dark:bg-slate-800/20 text-slate-700 dark:text-slate-300">
-              <strong className="block font-bold mb-1 text-slate-700 dark:text-slate-300">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <div className="p-4 rounded-xl border border-rose-200 dark:border-rose-900/40 bg-rose-50/50 dark:bg-rose-950/20 text-rose-900 dark:text-rose-300 space-y-2">
+              <strong className="flex items-center gap-1.5 font-bold text-rose-700 dark:text-rose-400">
                 <BanIcon /> Strictly Prohibited
               </strong>
-              <ul className="space-y-1 list-disc pl-4 text-[12px]">
-                <li>
-                  No <code>void main()</code> or <code>runApp()</code>{" "}
-                  entrypoints
-                </li>
-                <li>
-                  No direct <code>exit(0)</code> or{" "}
-                  <code>SystemNavigator.pop()</code>
-                </li>
-                <li>
-                  No custom unvetted <code>MethodChannel</code> calls
-                </li>
+              <ul className="space-y-1 list-disc pl-4 text-slate-700 dark:text-slate-300">
+                <li>No <code>void main()</code> or <code>runApp()</code> entrypoints</li>
+                <li>No direct <code>exit(0)</code> or <code>SystemNavigator.pop()</code></li>
+                <li>No custom unvetted <code>MethodChannel</code> calls</li>
                 <li>No direct modification of Super App theme globals</li>
               </ul>
             </div>
 
-            <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/60 bg-slate-100 dark:bg-slate-800/20 text-slate-700 dark:text-slate-300">
-              <strong className="block font-bold mb-1 text-slate-700 dark:text-slate-300">
+            <div className="p-4 rounded-xl border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-900 dark:text-emerald-300 space-y-2">
+              <strong className="flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-400">
                 <CheckCircleIcon /> Required Conventions
               </strong>
-              <ul className="space-y-1 list-disc pl-4 text-[12px]">
-                <li>
-                  Extend <code>MiniAppWidget</code> as the root view
-                </li>
-                <li>
-                  Consume <code>MiniAppContext</code> for auth and tokens
-                </li>
-                <li>
-                  Use <code>SuperAppSDK.navigation</code> for host routing
-                </li>
-                <li>Declare all required device features via Capabilities</li>
+              <ul className="space-y-1 list-disc pl-4 text-slate-700 dark:text-slate-300">
+                <li>Extend <code>MiniAppWidget</code> as the root view</li>
+                <li>Consume <code>MiniAppContext</code> for auth and tokens</li>
+                <li>Use <code>SuperAppSDK.navigation</code> for host routing</li>
+                <li>Declare required device features via Capabilities</li>
               </ul>
             </div>
           </div>
@@ -913,767 +604,203 @@ export default function GuidelinesPage() {
     {
       id: "methods",
       number: "04",
-      title: "Supported Integration Methods — Detailed Breakdown",
+      title: "Supported Integration Methods",
       shortTitle: "Integration Methods",
       category: "METHODS",
       summary:
-        "Exhaustive requirements, validation rules, security checks, and specifications for all 5 integration channels.",
+        "Detailed breakdown, requirements, security checks, and specifications for all 5 integration channels.",
       badge: "Comprehensive Matrix",
       content: (
         <div className="space-y-6 text-sm text-slate-600 dark:text-slate-300">
           <p>
-            The Super App platform supports 5 distinct integration methods. The
-            critical architectural distinction lies in{" "}
-            <strong>what the Super App receives</strong> and{" "}
-            <strong>who performs the compilation/build</strong>:
+            The Super App platform supports 5 distinct integration tiers tailored to your deployment strategy and source confidentiality requirements:
           </p>
 
-          {/* Architectural Comparison Table */}
-          <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-700">
-                <tr>
-                  <th className="w-[20%] p-3.5">Method</th>
-                  <th className="w-[20%] p-3.5">Super App Receives</th>
-                  <th className="w-[20%] p-3.5">Who Builds / Hosts?</th>
-                  <th className="w-[20%] p-3.5">Source Confidentiality</th>
-                  <th className="w-[20%] p-3.5">Runtime Performance</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-800/40">
-                <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
-                  <td className="p-3.5 font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <span>
-                      <GlobeIcon />
-                    </span>{" "}
-                    WebView
-                  </td>
-                  <td className="p-3.5 font-mono text-sm">HTTPS URL</td>
-                  <td className="p-3.5 text-slate-700 dark:text-slate-300 font-semibold">
-                    Vendor hosts / builds
-                  </td>
-                  <td className="p-3.5 text-slate-700 dark:text-slate-300 font-medium">
-                    Complete (Remote)
-                  </td>
-                  <td className="p-3.5 text-slate-700 dark:text-slate-300">
-                    Standard Web
-                  </td>
-                </tr>
-                <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
-                  <td className="p-3.5 font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <span>
-                      <PackageIcon />
-                    </span>{" "}
-                    Flutter Artifact
-                  </td>
-                  <td className="p-3.5 font-mono text-sm">
-                    Flutter package archive (.zip / .tar.gz)
-                  </td>
-                  <td className="p-3.5 text-slate-700 dark:text-slate-300 font-semibold">
-                    Super App builds
-                  </td>
-                  <td className="p-3.5 text-slate-700 dark:text-slate-300 font-medium">
-                    Complete (No Git access)
-                  </td>
-                  <td className="p-3.5 text-slate-700 dark:text-slate-300 font-bold">
-                    Native 60fps
-                  </td>
-                </tr>
-                <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
-                  <td className="p-3.5 font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <span>
-                      <FolderIcon />
-                    </span>{" "}
-                    Flutter Source Code
-                  </td>
-                  <td className="p-3.5 font-mono text-sm">
-                    Git Repo (Commit SHA / Tag)
-                  </td>
-                  <td className="p-3.5 text-slate-700 dark:text-slate-300 font-semibold">
-                    Super App builds
-                  </td>
-                  <td className="p-3.5 text-slate-700 dark:text-slate-300 font-medium">
-                    Shared Repository
-                  </td>
-                  <td className="p-3.5 text-slate-700 dark:text-slate-300 font-bold">
-                    Native 60fps
-                  </td>
-                </tr>
-                <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
-                  <td className="p-3.5 font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <span>
-                      <WrenchIcon />
-                    </span>{" "}
-                    Native SDK
-                  </td>
-                  <td className="p-3.5 font-mono text-sm">
-                    .aar / .xcframework binaries
-                  </td>
-                  <td className="p-3.5 text-slate-700 dark:text-slate-300 font-semibold">
-                    Super App links
-                  </td>
-                  <td className="p-3.5 text-slate-700 dark:text-slate-300 font-medium">
-                    Complete (Compiled)
-                  </td>
-                  <td className="p-3.5 text-slate-700 dark:text-slate-300 font-bold">
-                    Native OS
-                  </td>
-                </tr>
-                <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
-                  <td className="p-3.5 font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <span>
-                      <LinkIcon />
-                    </span>{" "}
-                    Deep Link
-                  </td>
-                  <td className="p-3.5 font-mono text-sm">
-                    URI Scheme / App Link Config
-                  </td>
-                  <td className="p-3.5 text-slate-700 dark:text-slate-300 font-semibold">
-                    Target Application
-                  </td>
-                  <td className="p-3.5 text-slate-700 dark:text-slate-300 font-medium">
-                    Complete (External)
-                  </td>
-                  <td className="p-3.5 text-slate-700 dark:text-slate-300 font-bold">
-                    Native OS
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
           {/* Interactive Method Tabs */}
-          <div className="relative mb-8 mt-4">
-            {/* Background Track Line */}
-            <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-slate-200 dark:bg-slate-800 pointer-events-none" />
-
-            <div className="flex overflow-x-auto gap-8 relative z-10 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-              {[
-                {
-                  id: "webview",
-                  label: (
-                    <span className="flex items-center gap-2">
-                      <GlobeIcon /> WebView
-                    </span>
-                  ),
-                  name: "WebView",
-                },
-                {
-                  id: "artifact",
-                  label: (
-                    <span className="flex items-center gap-2">
-                      <PackageIcon /> Flutter Package Artifact
-                    </span>
-                  ),
-                  name: "Package Artifact",
-                },
-                {
-                  id: "source",
-                  label: (
-                    <span className="flex items-center gap-2">
-                      <FolderIcon /> Flutter Source Code
-                    </span>
-                  ),
-                  name: "Source Code",
-                },
-                {
-                  id: "native",
-                  label: (
-                    <span className="flex items-center gap-2">
-                      <WrenchIcon /> Native SDK
-                    </span>
-                  ),
-                  name: "Native SDK",
-                },
-                {
-                  id: "deeplink",
-                  label: (
-                    <span className="flex items-center gap-2">
-                      <LinkIcon /> Deep Link
-                    </span>
-                  ),
-                  name: "Deep Link",
-                },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveMethodTab(tab.id as any)}
-                  className={`pb-4 text-sm font-semibold transition-all duration-300 ease-out flex items-center gap-2 whitespace-nowrap border-b-2 relative ${
-                    activeMethodTab === tab.id
-                      ? "text-brand-600 dark:text-brand-400 border-brand-600 dark:border-brand-400"
-                      : "text-slate-500 dark:text-slate-400 border-transparent hover:text-slate-900 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-600"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+          <div className="flex border-b border-slate-200 dark:border-slate-800 overflow-x-auto gap-1">
+            {[
+              { id: "webview", label: "WebView & Domain Verification", icon: <GlobeIcon /> },
+              { id: "artifact", label: "Package Artifact", icon: <PackageIcon /> },
+              { id: "source", label: "Source Code", icon: <FolderIcon /> },
+              { id: "native", label: "Native SDK", icon: <WrenchIcon /> },
+              { id: "deeplink", label: "Deep Link", icon: <LinkIcon /> },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveMethodTab(tab.id as any)}
+                className={`px-4 py-2.5 text-xs font-semibold rounded-t-lg transition flex items-center gap-2 border-b-2 -mb-px whitespace-nowrap ${
+                  activeMethodTab === tab.id
+                    ? "border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400 bg-brand-50/50 dark:bg-brand-950/30"
+                    : "border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                }`}
+              >
+                {tab.icon} {tab.label}
+              </button>
+            ))}
           </div>
 
           {/* Method 1: WebView */}
           {activeMethodTab === "webview" && (
-            <div className="space-y-8 animate-in fade-in duration-300 pt-4">
-              <div>
-                <h4 className="text-2xl font-extrabold text-slate-900 dark:text-white flex items-center gap-3 mb-4">
-                  <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                    <GlobeIcon />
-                  </div>
-                  WebView Integration Method
-                </h4>
-                <p className="text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
-                  Embeds external web applications into an isolated, secure
-                  Super App WebView container. This container interfaces with
-                  native device features exclusively via a standardized, secure
-                  JavaScript Bridge, completely sandboxng the web context from
-                  the native app memory.
+            <div className="space-y-6 pt-2">
+              <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
+                <h5 className="text-base font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+                  <GlobeIcon /> WebView Integration
+                </h5>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Embeds external web applications into an isolated, secure Super App WebView container. The web application interacts with native features via the standardized JavaScript Bridge.
                 </p>
               </div>
 
-              <div className="space-y-6 text-base text-slate-700 dark:text-slate-300">
-                <section>
-                  <h5 className="text-lg font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                    <TargetIcon /> Purpose & When to Use
-                  </h5>
-                  <p className="leading-relaxed">
-                    Designed for seamlessly rendering responsive web
-                    applications inside the Super App without requiring Dart or
-                    Flutter development. This is the optimal path for
-                    integrating existing web platforms, high-frequency campaign
-                    pages, micro-frontends, or when rapid remote updates without
-                    requiring an app store release are strictly required.
+              {/* Dedicated Domain Verification Callout */}
+              <section id="domain-verification" className="scroll-mt-28 space-y-4">
+                <div className="p-6 rounded-2xl border-2 border-brand-500/40 dark:border-brand-500/30 bg-gradient-to-br from-brand-50/70 via-slate-50 to-white dark:from-brand-950/30 dark:via-slate-900/60 dark:to-slate-900/40 shadow-sm space-y-5">
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400">
+                        <GlobeIcon />
+                      </div>
+                      <div>
+                        <h5 className="text-lg font-bold text-slate-900 dark:text-white">
+                          Domain Ownership Verification (.well-known)
+                        </h5>
+                        <p className="text-xs text-slate-600 dark:text-slate-400">
+                          Host <code className="text-brand-600 dark:text-brand-400 font-semibold font-mono">superapp-miniapp-association.json</code> to prove administrative control
+                        </p>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-brand-100 text-brand-800 dark:bg-brand-950 dark:text-brand-300 border border-brand-300 dark:border-brand-800">
+                      Mandatory for WebView
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                    To prevent malicious framing of third-party websites or hijacking WebView sessions, the Super App requires all WebView Mini Apps to host an association manifest proving origin ownership before activation.
                   </p>
-                </section>
 
-                <section>
-                  <h5 className="text-lg font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                    <ClipboardIcon /> Requirements & Architecture
-                  </h5>
-                  <ul className="list-disc pl-5 space-y-2">
-                    <li>
-                      <strong className="text-slate-900 dark:text-slate-100">
-                        Target Web URL:
-                      </strong>{" "}
-                      Must be strictly HTTPS. HTTP is globally blocked at the
-                      network layer.
-                    </li>
-                    <li>
-                      <strong className="text-slate-900 dark:text-slate-100">
-                        Domain Ownership (.well-known):
-                      </strong>{" "}
-                      The target domain must host a verification file to prove
-                      control over the WebView origin, preventing unauthorized
-                      framing of third-party sites.
-                    </li>
-                    <li>
-                      <strong className="text-slate-900 dark:text-slate-100">
-                        Allowed Domain List:
-                      </strong>{" "}
-                      A strict whitelist of domains the WebView is permitted to
-                      navigate to or fetch resources from.
-                    </li>
-                    <li>
-                      <strong className="text-slate-900 dark:text-slate-100">
-                        Bridge API Version:
-                      </strong>{" "}
-                      Specifies the JavaScript bridge contract version to ensure
-                      backward compatibility.
-                    </li>
-                  </ul>
-                </section>
-
-                <section>
-                  <h5 className="text-lg font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                    <ShieldIcon /> Automated Security Validation
-                  </h5>
-                  <div className="bg-slate-100/50 dark:bg-slate-800/30 rounded-xl p-5 border border-slate-200 dark:border-slate-700/60">
-                    <ul className="list-disc pl-5 space-y-3">
-                      <li>
-                        <strong className="text-slate-900 dark:text-slate-100">
-                          SSRF & DNS Rebinding Protection:
-                        </strong>{" "}
-                        Blocks resolution to private/internal IPs (RFC 1918,
-                        127.0.0.1) to prevent the WebView from accessing
-                        internal APIs.
-                      </li>
-                      <li>
-                        <strong className="text-slate-900 dark:text-slate-100">
-                          Open Redirect Detection:
-                        </strong>{" "}
-                        Verifies that domain navigation strictly stays within
-                        the approved allowlist.
-                      </li>
-                      <li>
-                        <strong className="text-slate-900 dark:text-slate-100">
-                          DAST Scanning:
-                        </strong>{" "}
-                        Automated OWASP ZAP scans are triggered against the URL
-                        to detect XSS and ensure strict Content-Security-Policy
-                        (CSP) headers are present.
-                      </li>
-                    </ul>
-                  </div>
-                </section>
-
-                <section id="domain-verification" className="scroll-mt-28 space-y-4 pt-2">
-                  <div className="p-6 rounded-2xl border-2 border-brand-500/40 dark:border-brand-500/30 bg-gradient-to-br from-brand-50/70 via-slate-50 to-white dark:from-brand-950/30 dark:via-slate-900/60 dark:to-slate-900/40 shadow-sm space-y-5">
-                    <div className="flex items-start justify-between gap-4 flex-wrap">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2.5 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400">
-                          <GlobeIcon />
-                        </div>
-                        <div>
-                          <h5 className="text-xl font-bold text-slate-900 dark:text-white">
-                            Domain Ownership Verification (.well-known)
-                          </h5>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">
-                            Hosting <code className="text-brand-600 dark:text-brand-400 font-semibold">superapp-miniapp-association.json</code> to prove administrative control
-                          </p>
-                        </div>
-                      </div>
-                      <span className="px-3 py-1 text-xs font-bold rounded-full bg-brand-100 text-brand-800 dark:bg-brand-950 dark:text-brand-300 border border-brand-300 dark:border-brand-800">
-                        Mandatory for WebView
-                      </span>
+                  <div className="space-y-4">
+                    <h6 className="font-bold text-slate-900 dark:text-white text-xs flex items-center gap-1.5">
+                      <TargetIcon /> 1. Expected Endpoint URL
+                    </h6>
+                    <div className="p-3 bg-slate-900 text-slate-100 rounded-lg font-mono text-xs overflow-x-auto">
+                      <span>https://&lt;your-domain&gt;/.well-known/superapp-miniapp-association.json</span>
                     </div>
 
-                    <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-                      To prevent malicious apps from framing unauthorized third-party websites or hijacking WebView sessions, the Super App platform requires all WebView-based Mini Apps to prove domain administrative control before activation.
-                    </p>
+                    <h6 className="font-bold text-slate-900 dark:text-white text-xs flex items-center gap-1.5 pt-2">
+                      <ClipboardIcon /> 2. Manifest JSON Schema & Deployment Configs
+                    </h6>
+                    <VSCodeEditor
+                      files={[
+                        {
+                          filename: "superapp-miniapp-association.json",
+                          language: "json",
+                          code: `{\n  "appId": "miniapp_banking_8f32a1",\n  "verificationToken": "tok_live_7e8b91c23f4a012d987e45b6a1c2d3e4",\n  "environment": "DEV",\n  "allowedDomains": [\n    "banking.partner.com",\n    "auth.partner.com"\n  ],\n  "permissions": [\n    "Camera",\n    "Location"\n  ]\n}`,
+                        },
+                        {
+                          filename: "Next.js (App / Pages)",
+                          language: "yaml",
+                          code: `# Place the file in your public directory:\n# your-project/public/.well-known/superapp-miniapp-association.json\n# Next.js will automatically serve it statically at:\n# https://your-domain.com/.well-known/superapp-miniapp-association.json`,
+                        },
+                        {
+                          filename: "nginx.conf",
+                          language: "yaml",
+                          code: `# Nginx location block configuration\nlocation /.well-known/ {\n    root /var/www/html;\n    default_type application/json;\n    add_header Access-Control-Allow-Origin *;\n    try_files $uri =404;\n}`,
+                        },
+                        {
+                          filename: "Express (Node.js)",
+                          language: "dart",
+                          code: `// Express.js static route\napp.use('/.well-known', express.static(path.join(__dirname, 'public/.well-known'), {\n  setHeaders: (res) => {\n    res.setHeader('Content-Type', 'application/json');\n    res.setHeader('Access-Control-Allow-Origin', '*');\n  }\n}));`,
+                        },
+                      ]}
+                    />
 
-                    <div className="space-y-4">
-                      <h6 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
-                        <TargetIcon /> 1. Expected Endpoint URL
-                      </h6>
-                      <div className="p-3.5 bg-slate-900 text-slate-100 rounded-xl font-mono text-xs flex items-center justify-between overflow-x-auto">
-                        <span>https://&lt;your-domain&gt;/.well-known/superapp-miniapp-association.json</span>
+                    <h6 className="font-bold text-slate-900 dark:text-white text-xs flex items-center gap-1.5 pt-2">
+                      <CheckCircleIcon /> 3. Verification HTTP Requirements
+                    </h6>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                      <div className="p-3 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                        <strong className="text-slate-900 dark:text-slate-100 block mb-1">HTTP Status: 200 OK</strong>
+                        <span className="text-slate-600 dark:text-slate-400">Must respond with 200 OK without redirects (301/302).</span>
                       </div>
-
-                      <h6 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2 pt-2">
-                        <ClipboardIcon /> 2. Manifest JSON Schema & Payload
-                      </h6>
-                      <p className="text-xs text-slate-600 dark:text-slate-400">
-                        Copy the auto-generated JSON from your Mini App registration page into this file:
-                      </p>
-                      <VSCodeEditor
-                        files={[
-                          {
-                            filename: "superapp-miniapp-association.json",
-                            language: "json",
-                            code: `{\n  "appId": "miniapp_banking_8f32a1",\n  "verificationToken": "tok_live_7e8b91c23f4a012d987e45b6a1c2d3e4",\n  "environment": "DEV",\n  "allowedDomains": [\n    "banking.partner.com",\n    "auth.partner.com"\n  ],\n  "permissions": [\n    "Camera",\n    "Location"\n  ]\n}`,
-                          },
-                          {
-                            filename: "Next.js (App / Pages)",
-                            language: "yaml",
-                            code: `# Place the file in your public directory:\n# your-project/public/.well-known/superapp-miniapp-association.json\n# Next.js will automatically serve it statically at:\n# https://your-domain.com/.well-known/superapp-miniapp-association.json`,
-                          },
-                          {
-                            filename: "nginx.conf",
-                            language: "yaml",
-                            code: `# Nginx location block configuration\nlocation /.well-known/ {\n    root /var/www/html;\n    default_type application/json;\n    add_header Access-Control-Allow-Origin *;\n    try_files $uri =404;\n}`,
-                          },
-                          {
-                            filename: "Express (Node.js)",
-                            language: "dart",
-                            code: `// Express.js static route\napp.use('/.well-known', express.static(path.join(__dirname, 'public/.well-known'), {\n  setHeaders: (res) => {\n    res.setHeader('Content-Type', 'application/json');\n    res.setHeader('Access-Control-Allow-Origin', '*');\n  }\n}));`,
-                          },
-                        ]}
-                      />
-
-                      <h6 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2 pt-2">
-                        <CheckCircleIcon /> 3. Verification HTTP Requirements
-                      </h6>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                        <div className="p-3 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
-                          <strong className="text-slate-900 dark:text-slate-100 block mb-1">HTTP Status: 200 OK</strong>
-                          <span className="text-slate-600 dark:text-slate-400">Must respond with HTTP 200 without redirects (301/302).</span>
-                        </div>
-                        <div className="p-3 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
-                          <strong className="text-slate-900 dark:text-slate-100 block mb-1">Content-Type Header</strong>
-                          <span className="text-slate-600 dark:text-slate-400">Must be <code className="text-brand-600 dark:text-brand-400 font-mono">application/json</code> (or text/plain).</span>
-                        </div>
-                        <div className="p-3 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
-                          <strong className="text-slate-900 dark:text-slate-100 block mb-1">Public Accessibility</strong>
-                          <span className="text-slate-600 dark:text-slate-400">Accessible without Basic Auth, login screens, or VPN blockers.</span>
-                        </div>
-                        <div className="p-3 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
-                          <strong className="text-slate-900 dark:text-slate-100 block mb-1">CORS Headers</strong>
-                          <span className="text-slate-600 dark:text-slate-400">Include <code className="text-brand-600 dark:text-brand-400 font-mono">Access-Control-Allow-Origin: *</code>.</span>
-                        </div>
+                      <div className="p-3 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                        <strong className="text-slate-900 dark:text-slate-100 block mb-1">Content-Type Header</strong>
+                        <span className="text-slate-600 dark:text-slate-400">Must be <code className="text-brand-600 dark:text-brand-400 font-mono">application/json</code>.</span>
                       </div>
-
-                      <h6 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2 pt-2">
-                        <WrenchIcon /> 4. How to Test Your Endpoint (cURL)
-                      </h6>
-                      <div className="p-3 bg-slate-900 text-slate-200 rounded-xl font-mono text-xs space-y-1">
-                        <p className="text-slate-400"># Run this command in your terminal:</p>
-                        <p className="text-emerald-400">curl -i https://&lt;your-domain&gt;/.well-known/superapp-miniapp-association.json</p>
+                      <div className="p-3 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                        <strong className="text-slate-900 dark:text-slate-100 block mb-1">Public Accessibility</strong>
+                        <span className="text-slate-600 dark:text-slate-400">Accessible without Basic Auth, VPNs, or IP firewalls.</span>
+                      </div>
+                      <div className="p-3 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                        <strong className="text-slate-900 dark:text-slate-100 block mb-1">CORS Headers</strong>
+                        <span className="text-slate-600 dark:text-slate-400">Include <code className="text-brand-600 dark:text-brand-400 font-mono">Access-Control-Allow-Origin: *</code>.</span>
                       </div>
                     </div>
+
+                    <h6 className="font-bold text-slate-900 dark:text-white text-xs flex items-center gap-1.5 pt-2">
+                      <WrenchIcon /> 4. Testing with cURL
+                    </h6>
+                    <div className="p-3 bg-slate-900 text-slate-200 rounded-lg font-mono text-xs space-y-1">
+                      <p className="text-slate-400"># Verify the endpoint response in terminal:</p>
+                      <p className="text-emerald-400">curl -i https://&lt;your-domain&gt;/.well-known/superapp-miniapp-association.json</p>
+                    </div>
                   </div>
-                </section>
-              </div>
+                </div>
+              </section>
             </div>
           )}
 
           {/* Method 2: Flutter Package Artifact */}
           {activeMethodTab === "artifact" && (
-            <div className="space-y-8 animate-in fade-in duration-300 pt-4">
-              <div>
-                <h4 className="text-2xl font-extrabold text-slate-900 dark:text-white flex items-center gap-3 mb-4">
-                  <div className="p-2 rounded-lg bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400">
-                    <PackageIcon />
-                  </div>
-                  Flutter Package Artifact
-                </h4>
-                <p className="text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
-                  Integrates a pre-compiled Flutter package (`.tar.gz` or `.zip`)
-                  directly into the Super App workspace. This method utilizes a
-                  zero-trust upload architecture via MinIO pre-signed URLs to
-                  entirely bypass the Node.js backend.
+            <div className="space-y-4 pt-2">
+              <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
+                <h5 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <PackageIcon /> Flutter Package Artifact (.tar.gz / .zip)
+                </h5>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Integrates a pre-compiled Flutter package archive directly. Uses zero-trust MinIO pre-signed URLs (50MB limit, 5-minute expiry) to upload directly to quarantine storage before inspection.
                 </p>
-              </div>
-
-              <div className="space-y-6 text-base text-slate-700 dark:text-slate-300">
-                <section>
-                  <h5 className="text-lg font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                    <TargetIcon /> Purpose & When to Use
-                  </h5>
-                  <p className="leading-relaxed">
-                    Ideal for teams that require complete obfuscation of their
-                    intellectual property (source code) from the Super App
-                    platform, or teams that have proprietary internal CI/CD
-                    pipelines and only wish to deliver the final compiled
-                    artifact.
-                  </p>
-                </section>
-
-                <section>
-                  <h5 className="text-lg font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                    <ClipboardIcon /> Requirements & Architecture
-                  </h5>
-                  <ul className="list-disc pl-5 space-y-2">
-                    <li>
-                      <strong className="text-slate-900 dark:text-slate-100">
-                        Zero-Trust Upload:
-                      </strong>{" "}
-                      The browser requests a JWT-authorized Pre-Signed MinIO URL
-                      (strict 50MB limit, 5-minute expiry). The artifact is
-                      uploaded directly to an isolated Quarantine bucket,
-                      protecting the backend from memory exhaustion and parsing
-                      exploits.
-                    </li>
-                    <li>
-                      <strong className="text-slate-900 dark:text-slate-100">
-                        pubspec.yaml:
-                      </strong>{" "}
-                      Must accurately declare all dependencies. Overriding
-                      global Super App dependencies is forbidden.
-                    </li>
-                    <li>
-                      <strong className="text-slate-900 dark:text-slate-100">
-                        Trusted Promotion:
-                      </strong>{" "}
-                      Once validated, the artifact is moved from the MinIO
-                      Quarantine bucket to the secure Sonatype Nexus Registry
-                      for consumption by the Super App build pipeline.
-                    </li>
-                  </ul>
-                </section>
-
-                <section>
-                  <h5 className="text-lg font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                    <ShieldIcon /> Automated Security Validation
-                  </h5>
-                  <div className="bg-slate-100/50 dark:bg-slate-800/30 rounded-xl p-5 border border-slate-200 dark:border-slate-700/60">
-                    <ul className="list-disc pl-5 space-y-3">
-                      <li>
-                        <strong className="text-slate-900 dark:text-slate-100">
-                          SBOM Generation:
-                        </strong>{" "}
-                        The system automatically unpacks the artifact in a
-                        sandbox and generates a Software Bill of Materials
-                        (SBOM) to track transitive vulnerabilities.
-                      </li>
-                      <li>
-                        <strong className="text-slate-900 dark:text-slate-100">
-                          Malware & Dependency SCA:
-                        </strong>{" "}
-                        Scanned using Trivy to block artifacts containing known
-                        CVEs in their declared dependencies.
-                      </li>
-                    </ul>
-                  </div>
-                </section>
               </div>
             </div>
           )}
 
-          {/* Method 3: Flutter Package Source Code */}
+          {/* Method 3: Flutter Source Code */}
           {activeMethodTab === "source" && (
-            <div className="space-y-8 animate-in fade-in duration-300 pt-4">
-              <div>
-                <h4 className="text-2xl font-extrabold text-slate-900 dark:text-white flex items-center gap-3 mb-4">
-                  <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-500">
-                    <FolderIcon />
-                  </div>
-                  Flutter Package Source Code
-                </h4>
-                <p className="text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
-                  Directly links a Git repository containing the Mini App source
-                  code to the Super App CI/CD pipeline, enabling automated
-                  compilation, static analysis, and version locking.
+            <div className="space-y-4 pt-2">
+              <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
+                <h5 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <FolderIcon /> Flutter Package Source Code (Git)
+                </h5>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Links a Git repository (GitHub/GitLab) with Commit SHA locking. Allows maximum tree-shaking optimization and runtime performance inside the Super App host shell.
                 </p>
-              </div>
-
-              <div className="space-y-6 text-base text-slate-700 dark:text-slate-300">
-                <section>
-                  <h5 className="text-lg font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                    <TargetIcon /> Purpose & When to Use
-                  </h5>
-                  <p className="leading-relaxed">
-                    The highly recommended approach for deep integrations. It
-                    allows the Super App platform to fully optimize the Dart
-                    compilation (Tree-shaking) alongside the host app, resulting
-                    in the smallest possible binary footprint and highest
-                    runtime performance.
-                  </p>
-                </section>
-
-                <section>
-                  <h5 className="text-lg font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                    <ClipboardIcon /> Requirements & Architecture
-                  </h5>
-                  <ul className="list-disc pl-5 space-y-2">
-                    <li>
-                      <strong className="text-slate-900 dark:text-slate-100">
-                        Git Provider Auth:
-                      </strong>{" "}
-                      Uses GitHub Apps or GitLab OAuth for secure, granular
-                      Read-Only access. Personal Access Tokens (PATs) are
-                      strictly forbidden due to security policies.
-                    </li>
-                    <li>
-                      <strong className="text-slate-900 dark:text-slate-100">
-                        Git SHA Locking:
-                      </strong>{" "}
-                      When integration is requested via a Branch or Tag, the
-                      Super App backend automatically resolves and locks the
-                      integration to the exact Commit SHA. This ensures
-                      subsequent commits cannot bypass the review pipeline.
-                    </li>
-                  </ul>
-                </section>
-
-                <section>
-                  <h5 className="text-lg font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                    <ShieldIcon /> Automated Security Validation
-                  </h5>
-                  <div className="bg-slate-100/50 dark:bg-slate-800/30 rounded-xl p-5 border border-slate-200 dark:border-slate-700/60">
-                    <ul className="list-disc pl-5 space-y-3">
-                      <li>
-                        <strong className="text-slate-900 dark:text-slate-100">
-                          SAST & Secrets Detection:
-                        </strong>{" "}
-                        Semgrep and Gitleaks automatically scan the source code
-                        for hardcoded API keys, passwords, and prohibited Dart
-                        code patterns (e.g., `void main()`, `exit()`).
-                      </li>
-                      <li>
-                        <strong className="text-slate-900 dark:text-slate-100">
-                          Deterministic Build:
-                        </strong>{" "}
-                        The CI engine checks out the locked SHA, executes the
-                        Flutter analyzer, and verifies that the code compiles
-                        cleanly against the Super App SDK interface.
-                      </li>
-                    </ul>
-                  </div>
-                </section>
               </div>
             </div>
           )}
 
           {/* Method 4: Native SDK */}
           {activeMethodTab === "native" && (
-            <div className="space-y-8 animate-in fade-in duration-300 pt-4">
-              <div>
-                <h4 className="text-2xl font-extrabold text-slate-900 dark:text-white flex items-center gap-3 mb-4">
-                  <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-400">
-                    <WrenchIcon />
-                  </div>
-                  Native SDK (AAR / XCFramework)
-                </h4>
-                <p className="text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
-                  Embeds platform-specific binaries (.aar for Android,
-                  .xcframework for iOS) directly into the Super App shell,
-                  requiring custom MethodChannels and platform-side integration.
+            <div className="space-y-4 pt-2">
+              <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
+                <h5 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <WrenchIcon /> Native SDK (.aar / .xcframework)
+                </h5>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Embeds platform-specific binaries for specialized hardware or legacy modules. Requires architectural manual review by the Super App administration team.
                 </p>
-              </div>
-
-              <div className="space-y-6 text-base text-slate-700 dark:text-slate-300">
-                <section>
-                  <h5 className="text-lg font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                    <TargetIcon /> Purpose & When to Use
-                  </h5>
-                  <p className="leading-relaxed">
-                    Reserved exclusively for legacy integrations or specialized
-                    hardware interfaces (e.g., custom biometric scanners, legacy
-                    banking encryption libraries) that cannot be ported to Dart.
-                    Requires heavy manual review and platform engineering
-                    effort.
-                  </p>
-                </section>
-
-                <section>
-                  <h5 className="text-lg font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                    <ClipboardIcon /> Requirements & Architecture
-                  </h5>
-                  <ul className="list-disc pl-5 space-y-2">
-                    <li>
-                      <strong className="text-slate-900 dark:text-slate-100">
-                        Binary Architecture:
-                      </strong>{" "}
-                      iOS frameworks must contain arm64 slices (Bitcode
-                      disabled). Android AARs must support arm64-v8a.
-                    </li>
-                    <li>
-                      <strong className="text-slate-900 dark:text-slate-100">
-                        Wrapper Provisioning:
-                      </strong>{" "}
-                      A Dart wrapper bridging the native `MethodChannels` must
-                      be provided and heavily audited to prevent memory leaks
-                      and threading blocks.
-                    </li>
-                  </ul>
-                </section>
-
-                <section>
-                  <h5 className="text-lg font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                    <ShieldIcon /> Automated Security Validation
-                  </h5>
-                  <div className="bg-slate-100/50 dark:bg-slate-800/30 rounded-xl p-5 border border-slate-200 dark:border-slate-700/60">
-                    <ul className="list-disc pl-5 space-y-3">
-                      <li>
-                        <strong className="text-slate-900 dark:text-slate-100">
-                          Manual Audit Requirement:
-                        </strong>{" "}
-                        Unlike Flutter packages, Native SDKs cannot be fully
-                        analyzed via SAST. They require a mandatory manual
-                        architectural review by the SA Admin team.
-                      </li>
-                      <li>
-                        <strong className="text-slate-900 dark:text-slate-100">
-                          Binary Scanning:
-                        </strong>{" "}
-                        Uploaded binaries are scanned for known malware
-                        signatures and disallowed dynamic library bindings.
-                      </li>
-                    </ul>
-                  </div>
-                </section>
               </div>
             </div>
           )}
 
           {/* Method 5: Deep Link */}
           {activeMethodTab === "deeplink" && (
-            <div className="space-y-8 animate-in fade-in duration-300 pt-4 mb-10">
-              <div>
-                <h4 className="text-2xl font-extrabold text-slate-900 dark:text-white flex items-center gap-3 mb-4">
-                  <div className="p-2 rounded-lg bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-400">
-                    <LinkIcon />
-                  </div>
-                  Deep Link Integration
-                </h4>
-                <p className="text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
-                  A lightweight integration that acts as a router, redirecting
-                  the user out of the Super App context into a standalone native
-                  application installed on their device.
+            <div className="space-y-4 pt-2">
+              <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
+                <h5 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <LinkIcon /> Deep Link Router
+                </h5>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Treats the Super App as a discovery launchpad, redirecting the user to a standalone mobile app installed on the device via registered App Links / Universal Links.
                 </p>
               </div>
-
-              <div className="space-y-6 text-base text-slate-700 dark:text-slate-300">
-                <section>
-                  <h5 className="text-lg font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                    <TargetIcon /> Purpose & When to Use
-                  </h5>
-                  <p className="leading-relaxed">
-                    Utilized when the Partner Application is too massive to
-                    embed, or requires strict OS-level separation. This method
-                    effectively treats the Super App as a discovery portal
-                    rather than a host runtime.
-                  </p>
-                </section>
-
-                <section>
-                  <h5 className="text-lg font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                    <ClipboardIcon /> Requirements & Architecture
-                  </h5>
-                  <ul className="list-disc pl-5 space-y-2">
-                    <li>
-                      <strong className="text-slate-900 dark:text-slate-100">
-                        URI Scheme & App Links:
-                      </strong>{" "}
-                      Must register a unique <code>uriScheme</code> and the
-                      associated Android App Links / iOS Universal Links domain
-                      for seamless routing.
-                    </li>
-                    <li>
-                      <strong className="text-slate-900 dark:text-slate-100">
-                        Fallback Routing:
-                      </strong>{" "}
-                      A <code>fallbackUrl</code> (typically an App Store / Play
-                      Store link) is mandatory in case the user does not have
-                      the standalone app installed.
-                    </li>
-                  </ul>
-                </section>
-
-                <section>
-                  <h5 className="text-lg font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                    <ShieldIcon /> Automated Security Validation
-                  </h5>
-                  <div className="bg-slate-100/50 dark:bg-slate-800/30 rounded-xl p-5 border border-slate-200 dark:border-slate-700/60">
-                    <ul className="list-disc pl-5 space-y-3">
-                      <li>
-                        <strong className="text-slate-900 dark:text-slate-100">
-                          Domain Verification:
-                        </strong>{" "}
-                        Similar to WebViews, the registered App Links domain
-                        must pass an ownership verification check to prevent
-                        deep-link hijacking.
-                      </li>
-                      <li>
-                        <strong className="text-slate-900 dark:text-slate-100">
-                          Scheme Conflict Detection:
-                        </strong>{" "}
-                        The backend verifies that the requested URI scheme is
-                        globally unique across the Super App ecosystem to
-                        prevent intent hijacking.
-                      </li>
-                    </ul>
-                  </div>
-                </section>
-              </div>
-
-              {/* Deep Link Example Payload */}
-              <CodeBlock
-                filename="payload.json"
-                language="json"
-                code={`{
-  "integrationMethod": "DEEP_LINK",
-  "name": "Partner Bank Link",
-  "version": "1.0.0",
-  "deepLinkConfig": {
-    "uriScheme": "partnerbank://",
-    "androidAppLinksDomain": "bank.partner.com",
-    "iosUniversalLinksDomain": "bank.partner.com",
-    "fallbackUrl": "https://bank.partner.com/download",
-    "playStoreId": "com.partner.bank",
-    "appStoreId": "id123456789"
-  }
-}`}
-              />
             </div>
           )}
         </div>
@@ -1683,149 +810,56 @@ export default function GuidelinesPage() {
       id: "capabilities",
       number: "05",
       title: "Permissions & Capability Catalog",
-      shortTitle: "Capabilities",
+      shortTitle: "Capabilities Catalog",
       category: "CAPABILITIES",
       summary:
         "High-level Capability abstraction vs. platform OS permissions, catalog resolution, and approval rules.",
       badge: "Catalog Architecture",
       content: (
-        <div className="space-y-4 text-sm text-slate-600 dark:text-slate-300">
+        <div className="space-y-6 text-sm text-slate-600 dark:text-slate-300">
           <p>
-            To maintain zero security drift, Mini Apps request abstract{" "}
-            <strong>Capabilities</strong> (e.g. <code>CAMERA</code>,{" "}
-            <code>LOCATION</code>) rather than direct Android/iOS manifest
-            permissions. The Super App rule engine safely translates approved
-            capabilities into platform artifacts during build generation.
+            To maintain zero security drift, Mini Apps request abstract <strong>Capabilities</strong> (e.g. <code>CAMERA</code>, <code>LOCATION</code>) rather than declaring direct OS manifest permissions.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
               <h5 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-3">
                 Supported Super App Capabilities
               </h5>
-              <div className="space-y-2.5">
+              <div className="space-y-2">
                 {[
-                  {
-                    code: "CAMERA",
-                    name: "Camera Access",
-                    cat: "Hardware",
-                    desc: "android.permission.CAMERA / NSCameraUsageDescription",
-                    approval: true,
-                  },
-                  {
-                    code: "LOCATION",
-                    name: "Geolocation",
-                    cat: "Sensors",
-                    desc: "ACCESS_FINE_LOCATION / NSLocationWhenInUseUsageDescription",
-                    approval: true,
-                  },
-                  {
-                    code: "MICROPHONE",
-                    name: "Audio Record",
-                    cat: "Hardware",
-                    desc: "RECORD_AUDIO / NSMicrophoneUsageDescription",
-                    approval: true,
-                  },
-                  {
-                    code: "CLIPBOARD",
-                    name: "Clipboard API",
-                    cat: "System",
-                    desc: "SuperAppSDK Clipboard Bridge",
-                    approval: false,
-                  },
-                  {
-                    code: "NOTIFICATION",
-                    name: "Push Alerts",
-                    cat: "System",
-                    desc: "POST_NOTIFICATIONS / APNS Token Scopes",
-                    approval: true,
-                  },
+                  { code: "CAMERA", name: "Camera Access", desc: "android.permission.CAMERA / NSCameraUsageDescription", approval: true },
+                  { code: "LOCATION", name: "Geolocation", desc: "ACCESS_FINE_LOCATION / NSLocationWhenInUseUsageDescription", approval: true },
+                  { code: "MICROPHONE", name: "Audio Record", desc: "RECORD_AUDIO / NSMicrophoneUsageDescription", approval: true },
+                  { code: "CLIPBOARD", name: "Clipboard API", desc: "SuperAppSDK Clipboard Bridge", approval: false },
+                  { code: "NOTIFICATION", name: "Push Alerts", desc: "POST_NOTIFICATIONS / APNS Token Scopes", approval: true },
                 ].map((cap) => (
-                  <div
-                    key={cap.code}
-                    className="p-3 rounded-xl bg-slate-50 dark:bg-slate-700/40 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-4"
-                  >
-                    <div className="min-w-0">
-                      <span className="font-mono font-bold text-[11px] text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
-                        {cap.code}
-                      </span>
-                      <span className="text-xs font-medium text-slate-600 dark:text-slate-300 ml-2">
-                        {cap.name}
-                      </span>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-1.5 break-all leading-relaxed">
-                        {cap.desc}
-                      </p>
+                  <div key={cap.code} className="p-2.5 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2">
+                    <div>
+                      <span className="font-mono font-bold text-xs text-brand-600 dark:text-brand-400">{cap.code}</span>
+                      <span className="text-xs text-slate-600 dark:text-slate-300 ml-2">{cap.name}</span>
                     </div>
-                    <span
-                      className={`shrink-0 text-center text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-full ${
-                        cap.approval
-                          ? "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                          : "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400"
-                      }`}
-                    >
-                      {cap.approval ? "SA Approval" : "Auto"}
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                      cap.approval ? "bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300" : "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400"
+                    }`}>
+                      {cap.approval ? "Approval Required" : "Auto-Approved"}
                     </span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex flex-col justify-between">
+            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 flex flex-col justify-between space-y-3">
               <div>
-                <h5 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-3">
-                  Unsupported Capability Flow
+                <h5 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-2">
+                  DAG Resolver & Capability Requests
                 </h5>
-                <p className="text-sm text-slate-700 dark:text-slate-300 mb-3">
-                  If your Mini App requires a capability not currently in the
-                  catalog (e.g. <code>BLUETOOTH</code>, <code>NFC</code>), the
-                  validation engine generates a formal{" "}
-                  <strong>Capability Request</strong>.
+                <p className="text-xs text-slate-600 dark:text-slate-400 mb-3">
+                  If an unlisted capability is needed, the engine generates a formal request. Composite capabilities (e.g. <code>VIDEO_CALL</code>) automatically resolve required child capabilities (<code>CAMERA</code> + <code>MICROPHONE</code>) via DAG topological sorting.
                 </p>
-                <div className="space-y-2 text-xs">
-                  <div className="flex items-start gap-2">
-                    <span className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center font-bold text-sm shrink-0">
-                      1
-                    </span>
-                    <span>
-                      System triggers <code>CAPABILITY_REQUESTED</code> state.
-                    </span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center font-bold text-sm shrink-0">
-                      2
-                    </span>
-                    <span>
-                      SA Admin evaluates architectural impact and security
-                      posture.
-                    </span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center font-bold text-sm shrink-0">
-                      3
-                    </span>
-                    <span>
-                      If approved, platform team implements & adds capability to
-                      Catalog.
-                    </span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center font-bold text-sm shrink-0">
-                      4
-                    </span>
-                    <span>
-                      Mini App integration automatically resumes validation.
-                    </span>
-                  </div>
-                </div>
               </div>
-
-              <div className="p-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 mt-4">
-                <strong>Directed Acyclic Graph (DAG) Resolver:</strong> Complex
-                capabilities (e.g. <code>VIDEO_CALL</code>) automatically
-                resolve underlying required child capabilities (
-                <code>CAMERA</code> + <code>MICROPHONE</code>). The engine
-                performs topological sorting and strictly rejects circular
-                dependencies.
+              <div className="p-3 bg-brand-50/60 dark:bg-brand-950/30 border border-brand-200 dark:border-brand-900/50 rounded-lg text-xs text-brand-800 dark:text-brand-300 font-medium">
+                Tip: Circular dependencies in requested capabilities are automatically rejected by the DAG validation engine.
               </div>
             </div>
           </div>
@@ -1836,184 +870,33 @@ export default function GuidelinesPage() {
       id: "security-checkpoints",
       number: "06",
       title: "Security Checkpoints & Automated Scanners",
-      shortTitle: "Security",
+      shortTitle: "Security Gates",
       category: "SECURITY",
       summary:
         "Gitleaks secrets detection, Semgrep SAST rules, Trivy SCA, OWASP ZAP DAST, and ClamAV quarantine.",
       badge: "Zero Trust Gate",
       content: (
-        <div className="space-y-4 text-sm text-slate-600 dark:text-slate-300">
+        <div className="space-y-6 text-sm text-slate-600 dark:text-slate-300">
           <p>
-            Security validation is fully automated and non-negotiable.
-            Submissions failing Critical or High severity gates are immediately
-            blocked with actionable line-by-line remediation logs.
+            Security validation is fully automated. Submissions failing Critical or High severity gates are immediately blocked with actionable line-by-line remediation logs.
           </p>
 
-          {/* 5 Security Checkpoints Overview */}
-          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30">
-            <h5 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-3">
-              5 Defense-in-Depth Checkpoints
-            </h5>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 text-xs">
-              <div className="p-2.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                <span className="font-bold text-slate-900 dark:text-white block mb-1">1. Submission Boundary</span>
-                <p className="text-slate-600 dark:text-slate-400">Direct MinIO upload via pre-signed URLs; backend never parses untrusted binaries directly.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {[
+              { name: "Gitleaks", type: "Secrets Detection", desc: "Scans for API keys, AWS/GCP credentials, and JWT private secrets." },
+              { name: "Semgrep", type: "SAST Engine", desc: "Enforces sandbox rules, detects SQLi, and blocks disallowed Dart syntax." },
+              { name: "Trivy", type: "Dependency SCA", desc: "Audits transitive dependencies against official CVE vulnerability databases." },
+              { name: "OWASP ZAP", type: "DAST Scanner", desc: "Performs dynamic web scans for CSP compliance, open redirects, and SSRF." },
+            ].map((scanner) => (
+              <div key={scanner.name} className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
+                <div className="flex items-center justify-between mb-1.5">
+                  <h5 className="font-bold text-slate-900 dark:text-white text-sm">{scanner.name}</h5>
+                  <span className="text-[10px] uppercase font-bold text-brand-600 dark:text-brand-400">Hard Gate</span>
+                </div>
+                <span className="text-xs font-medium text-slate-500 block mb-2">{scanner.type}</span>
+                <p className="text-xs text-slate-600 dark:text-slate-400">{scanner.desc}</p>
               </div>
-              <div className="p-2.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                <span className="font-bold text-slate-900 dark:text-white block mb-1">2. Ephemeral Isolation</span>
-                <p className="text-slate-600 dark:text-slate-400">All scans and builds execute inside ephemeral, isolated CI containers destroyed post-run.</p>
-              </div>
-              <div className="p-2.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                <span className="font-bold text-slate-900 dark:text-white block mb-1">3. Automated Scanning</span>
-                <p className="text-slate-600 dark:text-slate-400">Gitleaks, Semgrep, Trivy SCA, ClamAV, and OWASP ZAP dynamic analysis.</p>
-              </div>
-              <div className="p-2.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                <span className="font-bold text-slate-900 dark:text-white block mb-1">4. Trusted Nexus Gate</span>
-                <p className="text-slate-600 dark:text-slate-400">Only artifacts passing 100% of policy gates are published to Sonatype Nexus for Super App builds.</p>
-              </div>
-              <div className="p-2.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                <span className="font-bold text-slate-900 dark:text-white block mb-1">5. Remediation Loop</span>
-                <p className="text-slate-600 dark:text-slate-400">Detected issues are recorded in the Portal and reset status to DRAFT for resubmission.</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span className="p-1 rounded bg-slate-100 text-slate-700 text-xs">
-                    <KeyIcon />
-                  </span>{" "}
-                  Gitleaks (Secrets Detection)
-                </span>
-                <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                  Hard Block
-                </span>
-              </div>
-              <p className="text-sm text-slate-700 dark:text-slate-300">
-                Scans every commit, archive, and file for private keys, AWS/GCP
-                credentials, JWT secrets, and bearer tokens. Any detected
-                credential immediately fails the build.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span className="p-1 rounded bg-slate-100 text-slate-700 text-xs">
-                    <SearchIcon />
-                  </span>{" "}
-                  Semgrep (SAST Engine)
-                </span>
-                <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                  Hard Block
-                </span>
-              </div>
-              <p className="text-sm text-slate-700 dark:text-slate-300">
-                Executes static security rules enforcing Super App sandbox
-                boundaries, detecting SQL injections, unvalidated redirects, and
-                unauthorized system calls.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span className="p-1 rounded bg-slate-100 text-slate-700 text-xs">
-                    <PackageIcon />
-                  </span>{" "}
-                  Trivy (Dependency SCA)
-                </span>
-                <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                  CVE Audit
-                </span>
-              </div>
-              <p className="text-sm text-slate-700 dark:text-slate-300">
-                Audits direct and transitive dependencies in{" "}
-                <code>pubspec.lock</code>, Android Gradle files, and iOS
-                Podfiles against official CVE vulnerability databases.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span className="p-1 rounded bg-slate-100 text-slate-700 text-xs">
-                    <ShieldIcon />
-                  </span>{" "}
-                  ClamAV (Malware Scan)
-                </span>
-                <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                  Binary Gate
-                </span>
-              </div>
-              <p className="text-sm text-slate-700 dark:text-slate-300">
-                Performs signature and heuristic scanning of uploaded package
-                archives, binaries, and assets to detect malicious payloads prior to build ingestion.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 md:col-span-2">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span className="p-1 rounded bg-slate-100 text-slate-700 text-xs">
-                    <GlobeIcon />
-                  </span>{" "}
-                  OWASP ZAP (DAST for WebView)
-                </span>
-                <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-slate-100 text-slate-700">
-                  Dynamic Gate
-                </span>
-              </div>
-              <p className="text-sm text-slate-700 dark:text-slate-300">
-                Runs headless baseline dynamic scans against WebView URLs
-                testing for missing Content-Security-Policy (CSP), open
-                redirects, XSS, and SSRF vulnerabilities.
-              </p>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs">
-            <h5 className="font-bold text-slate-900 dark:text-white mb-2">
-              Severity Response Policy Matrix
-            </h5>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-              <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700">
-                <span className="font-bold text-rose-600 dark:text-rose-400">
-                  CRITICAL
-                </span>
-                <p className="text-sm text-slate-700 dark:text-slate-300 mt-0.5">
-                  Immediate hard block. Issue logged; integration state resets to{" "}
-                  <code>DRAFT</code> for remediation.
-                </p>
-              </div>
-              <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700">
-                <span className="font-bold text-amber-600 dark:text-amber-400">
-                  HIGH
-                </span>
-                <p className="text-sm text-slate-700 dark:text-slate-300 mt-0.5">
-                  Build blocked. Issue logged; integration state resets to{" "}
-                  <code>DRAFT</code> until resolved and resubmitted.
-                </p>
-              </div>
-              <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700">
-                <span className="font-bold text-slate-700 dark:text-slate-300">
-                  MEDIUM
-                </span>
-                <p className="text-sm text-slate-700 dark:text-slate-300 mt-0.5">
-                  Warning logged. Requires explicit SA Admin review and sign-off.
-                </p>
-              </div>
-              <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700">
-                <span className="font-bold text-slate-700 dark:text-slate-300">
-                  LOW / INFO
-                </span>
-                <p className="text-sm text-slate-700 dark:text-slate-300 mt-0.5">
-                  Informational note recorded in audit log.
-                </p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       ),
@@ -2022,132 +905,18 @@ export default function GuidelinesPage() {
       id: "validation-lifecycle",
       number: "07",
       title: "State Progression & Validation Lifecycle",
-      shortTitle: "Lifecycle",
+      shortTitle: "Validation Lifecycle",
       category: "LIFECYCLE",
       summary:
         "State machine flow from DRAFT submission to CI build, dual manual testing, and final ACTIVATION.",
       content: (
-        <div className="space-y-4 text-sm text-slate-600 dark:text-slate-300">
+        <div className="space-y-6 text-sm text-slate-600 dark:text-slate-300">
           <p>
-            Mini App integrations transition through a strictly governed finite
-            state machine ensuring complete traceability and audit compliance:
+            Mini App integrations transition through a strictly governed finite state machine ensuring complete traceability:
           </p>
 
-          {/* Modern React Flow Lifecycle */}
-          <div className="mb-10 mt-6">
+          <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
             <LifecycleFlow />
-          </div>
-
-          {/* Modern Lifecycle Phases Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8 mb-8">
-            {[
-              {
-                title: "Phase 1: Preparation",
-                icon: <FolderIcon />,
-                colorClass:
-                  "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-500 border-amber-200 dark:border-amber-500/30",
-                states: ["DRAFT", "SUBMITTED"],
-                desc: "Initial payload creation and submission by the MA Manager.",
-              },
-              {
-                title: "Phase 2: Automated Analysis",
-                icon: <ShieldIcon />,
-                colorClass:
-                  "bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-500 border-rose-200 dark:border-rose-500/30",
-                states: [
-                  "BACKEND_VALIDATION",
-                  "METHOD_VALIDATION",
-                  "CAPABILITY_CHECK",
-                  "SECURITY_CHECK",
-                ],
-                desc: "System performs .well-known verification, SBOM generation, and capability DAG sorting.",
-              },
-              {
-                title: "Phase 3: Review & Build",
-                icon: <WrenchIcon />,
-                colorClass:
-                  "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-500 border-blue-200 dark:border-blue-500/30",
-                states: ["IN_REVIEW", "BUILDING"],
-                desc: "SA Admin manual audit (if required) followed by CI/CD artifact generation.",
-              },
-              {
-                title: "Phase 4: Release",
-                icon: <CheckCircleIcon />,
-                colorClass:
-                  "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border-emerald-200 dark:border-emerald-500/30",
-                states: ["TESTING", "ACTIVE"],
-                desc: "Dual manual testing via TestFlight/APK, culminating in global activation.",
-              },
-            ].map((phase, idx) => (
-              <div
-                key={idx}
-                className={`rounded-xl border p-5 ${phase.colorClass} relative overflow-hidden group transition-all hover:shadow-md`}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <h5 className="font-extrabold text-lg flex items-center gap-2">
-                    {phase.icon} {phase.title}
-                  </h5>
-                  <span className="text-3xl opacity-10 font-black">
-                    {idx + 1}
-                  </span>
-                </div>
-                <p className="text-sm opacity-90 mb-4 font-medium leading-relaxed">
-                  {phase.desc}
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {phase.states.map((state) => (
-                    <span
-                      key={state}
-                      className="px-2 py-1 rounded bg-white/60 dark:bg-black/20 text-[10px] font-mono font-bold tracking-wider backdrop-blur-sm border border-black/5 dark:border-white/10"
-                    >
-                      {state}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-base">
-            <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40">
-              <strong className="block font-bold text-slate-900 dark:text-white mb-1.5">
-                Dual Testing Protocol
-              </strong>
-              <p className="text-slate-700 dark:text-slate-300">
-                Once the CI pipeline builds the test Android APK and iOS test
-                package and stores them securely in Sonatype Nexus (promoted
-                from verified MinIO submissions):
-              </p>
-              <ul className="list-disc pl-4 mt-2 space-y-1 text-slate-700 dark:text-slate-300">
-                <li>
-                  <strong>MA Manager:</strong> Validates user journeys, API
-                  calls, and business logic.
-                </li>
-                <li>
-                  <strong>SA Admin:</strong> Validates Super App frame
-                  navigation, back stack, and permissions.
-                </li>
-              </ul>
-            </div>
-
-            <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40">
-              <strong className="block font-bold text-slate-900 dark:text-white mb-1.5">
-                Issue & Fix Remediation Loop
-              </strong>
-              <p className="text-slate-700 dark:text-slate-300">
-                If validation, security, or testing detects an issue:
-              </p>
-              <ul className="list-disc pl-4 mt-2 space-y-1 text-slate-700 dark:text-slate-300">
-                <li>
-                  Integration state resets to <code>DRAFT</code> with attached
-                  error logs.
-                </li>
-                <li>MA Manager pushes fix commit or updated artifact.</li>
-                <li>
-                  Resubmission triggers automatic re-scan of affected stages.
-                </li>
-              </ul>
-            </div>
           </div>
         </div>
       ),
@@ -2164,53 +933,25 @@ export default function GuidelinesPage() {
         <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
           {[
             {
-              issue:
-                "BUILD_FAILED: Multiple conflicting versions of Flutter SDK",
-              cause:
-                "Mini App pubspec.yaml specifies an incompatible SDK range.",
+              issue: "BUILD_FAILED: Multiple conflicting versions of Flutter SDK",
+              cause: "Mini App pubspec.yaml specifies an incompatible SDK range.",
               fix: 'Align environment constraint to match Super App runtime (e.g. sdk: ">=3.2.0 <4.0.0").',
             },
             {
-              issue:
-                "SECURITY_CHECK_FAILED: Gitleaks detected sensitive key in assets",
-              cause:
-                "Hardcoded staging/dev API secret or private key committed in source repository.",
-              fix: "Remove token from Git history, rotate the compromised credential, and retrieve keys dynamically via SuperAppSDK auth context.",
+              issue: "SECURITY_CHECK_FAILED: Gitleaks detected sensitive key in assets",
+              cause: "Hardcoded staging/dev API secret or private key committed in source repository.",
+              fix: "Remove token from Git history, rotate credential, and retrieve keys via SuperAppSDK auth context.",
             },
             {
-              issue:
-                "CAPABILITY_UNSUPPORTED: Camera requested but not configured",
-              cause:
-                "Mini App attempts to invoke device camera without registering the CAMERA capability.",
-              fix: "Add CAMERA in Mini App configuration claim during submission to trigger automatic permission generation.",
-            },
-            {
-              issue:
-                "WEBVIEW_SSRF_DETECTED: Destination points to RFC 1918 private IP",
-              cause:
-                "Target URL resolves to private internal subnets (e.g. 192.168.x.x or 10.x.x.x).",
+              issue: "WEBVIEW_SSRF_DETECTED: Destination points to RFC 1918 private IP",
+              cause: "Target URL resolves to private internal subnets (e.g. 192.168.x.x or 10.x.x.x).",
               fix: "Provide a publicly reachable HTTPS domain with valid TLS certificates.",
             },
           ].map((item, idx) => (
-            <div
-              key={idx}
-              className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
-            >
-              <div className="font-mono font-bold text-slate-700 dark:text-slate-300 mb-1">
-                {item.issue}
-              </div>
-              <p className="text-slate-700 dark:text-slate-300 mb-1">
-                <span className="font-semibold text-slate-800 dark:text-slate-200">
-                  Root Cause:
-                </span>{" "}
-                {item.cause}
-              </p>
-              <p className="text-slate-700 dark:text-slate-300">
-                <span className="font-semibold text-slate-700 dark:text-slate-300">
-                  Remedy:
-                </span>{" "}
-                {item.fix}
-              </p>
+            <div key={idx} className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 space-y-1.5">
+              <div className="font-mono font-bold text-xs text-rose-600 dark:text-rose-400">{item.issue}</div>
+              <p className="text-xs text-slate-700 dark:text-slate-300"><span className="font-semibold text-slate-900 dark:text-white">Cause: </span>{item.cause}</p>
+              <p className="text-xs text-slate-700 dark:text-slate-300"><span className="font-semibold text-emerald-600 dark:text-emerald-400">Fix: </span>{item.fix}</p>
             </div>
           ))}
         </div>
@@ -2218,172 +959,260 @@ export default function GuidelinesPage() {
     },
   ];
 
-  const categories = [
-    { key: "ALL", label: "All Sections" },
-    { key: "GENERAL", label: "General & Roles" },
-    { key: "CONTRACT", label: "SDK Contract" },
-    { key: "METHODS", label: "Methods" },
-    { key: "CAPABILITIES", label: "Capabilities" },
-    { key: "SECURITY", label: "Security Scans" },
-    { key: "LIFECYCLE", label: "Lifecycle" },
-    { key: "SUPPORT", label: "Troubleshooting" },
-  ];
-
   const filteredSections = sections.filter((sec) => {
-    const matchesCategory =
-      activeCategory === "ALL" || sec.category === activeCategory;
-    const matchesSearch =
-      sec.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      sec.summary.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return sec.title.toLowerCase().includes(q) || sec.summary.toLowerCase().includes(q);
   });
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 font-sans h-screen overflow-hidden">
-      {/* Top Navbar */}
-      <header className="h-20 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-10 shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md relative z-10">
-        <div className="flex items-center gap-2">
-          <span className="text-xl font-extrabold text-slate-900 dark:text-white tracking-widest flex items-center gap-1.5">
-            <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center overflow-hidden">
-              <Image
-                src="/fsa-logo.png"
-                alt="FSA Logo"
-                width={24}
-                height={24}
-                className="object-cover"
-              />
+    <div className="fixed inset-0 z-[100] flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-sans h-screen overflow-hidden antialiased">
+      {/* Sleek Top Navbar */}
+      <header className="h-16 border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between px-6 lg:px-8 shrink-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md relative z-20">
+        <div className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-2.5 font-bold text-slate-900 dark:text-white hover:opacity-90 transition">
+            <div className="w-7 h-7 rounded-lg bg-brand-600 text-white flex items-center justify-center font-extrabold text-sm shadow-sm">
+              <Image src="/fsa-logo.png" alt="FSA Logo" width={20} height={20} className="object-cover rounded-full" />
             </div>
-            FinTech
-            <span className="text-brand-600 dark:text-brand-400 font-light">
-              Docs
+            <span className="text-base tracking-tight font-extrabold text-slate-900 dark:text-white">
+              Super App <span className="text-brand-600 dark:text-brand-400 font-medium">Docs</span>
             </span>
+          </Link>
+          <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono font-medium border border-slate-200 dark:border-slate-700">
+            v2.4
           </span>
         </div>
-        <div className="flex items-center gap-8 text-sm font-medium text-slate-700 dark:text-slate-300">
-          <a
-            href="/"
-            className="hover:text-slate-900 dark:hover:text-white transition-colors"
+
+        {/* Global Action Links */}
+        <div className="flex items-center gap-4 text-xs font-medium">
+          <Link
+            href="/miniapps/register"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-semibold transition shadow-sm"
           >
-            Super App Back Office
-          </a>
-          <a href="#docs" className="text-brand-600 dark:text-brand-400">
-            Documentation
-          </a>
-          <div className="h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
+            Register Mini App
+          </Link>
+          <div className="h-4 w-px bg-slate-200 dark:bg-slate-800 hidden sm:block"></div>
           <ThemeToggle />
-          <a
+          <Link
             href="/"
-            className="inline-flex items-center gap-2 text-slate-900 dark:text-white hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
+            className="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition"
           >
-            Back to Dashboard{" "}
-            <svg
-              className="w-4 h-4"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M5 12h14" />
-              <path d="m12 5 7 7-7 7" />
-            </svg>
-          </a>
+            <span>Dashboard</span>
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </Link>
         </div>
       </header>
 
+      {/* 3-Column Layout */}
       <div className="flex flex-1 overflow-hidden relative">
-        {/* Left Sidebar */}
-        <aside className="w-72 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 overflow-y-auto shrink-0 flex flex-col py-8 relative z-10">
-          <div className="mb-8 px-4">
-            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 px-3">
-              Getting Started
-            </h4>
-            <nav className="space-y-0.5">
-              {sections.slice(0, 2).map((sec) => (
-                <a
-                  key={sec.id}
-                  href={`#${sec.id}`}
-                  onClick={() => setActiveSection(sec.id)}
-                  className={`block px-3 py-2 text-base font-medium leading-snug transition-all border-l-2 ${activeSection === sec.id ? "text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/10 border-brand-500 dark:border-brand-400 shadow-sm" : "text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border-transparent"}`}
-                >
-                  {sec.shortTitle || sec.title}
-                </a>
-              ))}
-            </nav>
+        {/* Left Navigation Sidebar */}
+        <aside className="w-72 border-r border-slate-200 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/60 backdrop-blur-sm overflow-y-auto shrink-0 flex flex-col py-6 px-4 relative z-10">
+          {/* Search Bar */}
+          <div className="relative mb-6">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search documentation..."
+              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-500 transition"
+            />
+            <div className="absolute left-2.5 top-2 text-slate-400">
+              <SearchIcon />
+            </div>
           </div>
 
-          <div className="mb-8 px-4">
-            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 px-3">
-              Integrations
-            </h4>
-            <nav className="space-y-0.5">
-              {sections.slice(2, 4).map((sec) => (
-                <a
-                  key={sec.id}
-                  href={`#${sec.id}`}
-                  onClick={() => setActiveSection(sec.id)}
-                  className={`block px-3 py-2 text-base font-medium leading-snug transition-all border-l-2 ${activeSection === sec.id ? "text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/10 border-brand-500 dark:border-brand-400 shadow-sm" : "text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border-transparent"}`}
-                >
-                  {sec.shortTitle || sec.title}
-                </a>
-              ))}
-            </nav>
-          </div>
+          {/* Navigation Tree */}
+          <div className="space-y-6 text-xs">
+            <div>
+              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-2">Getting Started</div>
+              <nav className="space-y-0.5">
+                {sections.slice(0, 2).map((sec) => (
+                  <a
+                    key={sec.id}
+                    href={`#${sec.id}`}
+                    onClick={() => setActiveSection(sec.id)}
+                    className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg font-medium transition ${
+                      activeSection === sec.id
+                        ? "bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 font-semibold"
+                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200"
+                    }`}
+                  >
+                    <span className="w-4 h-4 opacity-70"><FolderIcon /></span>
+                    <span>{sec.shortTitle || sec.title}</span>
+                  </a>
+                ))}
+              </nav>
+            </div>
 
-          <div className="mb-8 px-4">
-            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 px-3">
-              Core Concepts
-            </h4>
-            <nav className="space-y-0.5">
-              {sections.slice(4).map((sec) => (
+            <div>
+              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-2">Integration Methods</div>
+              <nav className="space-y-0.5">
                 <a
-                  key={sec.id}
-                  href={`#${sec.id}`}
-                  onClick={() => setActiveSection(sec.id)}
-                  className={`block px-3 py-2 text-base font-medium leading-snug transition-all border-l-2 ${activeSection === sec.id ? "text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/10 border-brand-500 dark:border-brand-400 shadow-sm" : "text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border-transparent"}`}
+                  href="#methods"
+                  onClick={() => { setActiveSection("methods"); setActiveMethodTab("webview"); }}
+                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg font-medium transition ${
+                    activeSection === "methods" && activeMethodTab === "webview"
+                      ? "bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 font-semibold"
+                      : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  }`}
                 >
-                  {sec.shortTitle || sec.title}
+                  <span className="w-4 h-4 opacity-70"><GlobeIcon /></span>
+                  <span>WebView & Domain Verify</span>
                 </a>
-              ))}
-            </nav>
+                <a
+                  href="#methods"
+                  onClick={() => { setActiveSection("methods"); setActiveMethodTab("artifact"); }}
+                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg font-medium transition ${
+                    activeSection === "methods" && activeMethodTab === "artifact"
+                      ? "bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 font-semibold"
+                      : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  <span className="w-4 h-4 opacity-70"><PackageIcon /></span>
+                  <span>Package Artifact</span>
+                </a>
+                <a
+                  href="#methods"
+                  onClick={() => { setActiveSection("methods"); setActiveMethodTab("source"); }}
+                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg font-medium transition ${
+                    activeSection === "methods" && activeMethodTab === "source"
+                      ? "bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 font-semibold"
+                      : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  <span className="w-4 h-4 opacity-70"><FolderIcon /></span>
+                  <span>Source Code (Git)</span>
+                </a>
+                <a
+                  href="#methods"
+                  onClick={() => { setActiveSection("methods"); setActiveMethodTab("native"); }}
+                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg font-medium transition ${
+                    activeSection === "methods" && activeMethodTab === "native"
+                      ? "bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 font-semibold"
+                      : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  <span className="w-4 h-4 opacity-70"><WrenchIcon /></span>
+                  <span>Native SDK</span>
+                </a>
+                <a
+                  href="#methods"
+                  onClick={() => { setActiveSection("methods"); setActiveMethodTab("deeplink"); }}
+                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg font-medium transition ${
+                    activeSection === "methods" && activeMethodTab === "deeplink"
+                      ? "bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 font-semibold"
+                      : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  <span className="w-4 h-4 opacity-70"><LinkIcon /></span>
+                  <span>Deep Link</span>
+                </a>
+              </nav>
+            </div>
+
+            <div>
+              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-2">Architecture & Rules</div>
+              <nav className="space-y-0.5">
+                {sections.slice(2, 3).concat(sections.slice(4, 6)).map((sec) => (
+                  <a
+                    key={sec.id}
+                    href={`#${sec.id}`}
+                    onClick={() => setActiveSection(sec.id)}
+                    className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg font-medium transition ${
+                      activeSection === sec.id
+                        ? "bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 font-semibold"
+                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200"
+                    }`}
+                  >
+                    <span className="w-4 h-4 opacity-70"><ShieldIcon /></span>
+                    <span>{sec.shortTitle || sec.title}</span>
+                  </a>
+                ))}
+              </nav>
+            </div>
+
+            <div>
+              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-2">Operations & Support</div>
+              <nav className="space-y-0.5">
+                {sections.slice(6).map((sec) => (
+                  <a
+                    key={sec.id}
+                    href={`#${sec.id}`}
+                    onClick={() => setActiveSection(sec.id)}
+                    className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg font-medium transition ${
+                      activeSection === sec.id
+                        ? "bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 font-semibold"
+                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200"
+                    }`}
+                  >
+                    <span className="w-4 h-4 opacity-70"><SettingsIcon /></span>
+                    <span>{sec.shortTitle || sec.title}</span>
+                  </a>
+                ))}
+              </nav>
+            </div>
           </div>
         </aside>
 
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-white dark:bg-slate-950 relative scroll-smooth">
-          {/* Subtle background glow */}
+        {/* Center Content Area */}
+        <main className="flex-1 overflow-y-auto bg-white dark:bg-slate-950 relative scroll-smooth px-6 sm:px-10 lg:px-12 py-10">
+          <div className="max-w-4xl mx-auto space-y-16 pb-24">
+            {filteredSections.map((sec, index) => (
+              <section key={sec.id} id={sec.id} className="scroll-mt-24">
+                {/* Clean Header Bar */}
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs font-mono font-bold text-brand-600 dark:text-brand-400">
+                    Section {sec.number}
+                  </span>
+                  <span className="text-slate-300 dark:text-slate-700">•</span>
+                  <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    {sec.category}
+                  </span>
+                </div>
 
-          <div className="p-4 sm:p-6 lg:p-10 w-full relative z-10">
-            <div className="space-y-20 pb-20">
-              {sections.map((sec, index) => (
-                <section key={sec.id} id={sec.id} className="scroll-mt-24">
-                  {/* Cyberpunk Badge */}
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-brand-200 dark:border-brand-800 bg-brand-50 dark:bg-brand-950/30 text-brand-600 dark:text-brand-400 text-xs font-bold tracking-widest uppercase mb-4 shadow-sm">
-                    <span className="w-1.5 h-1.5 rounded-full bg-brand-500 dark:bg-brand-400 "></span>{" "}
-                    {sec.category || "Documentation"}
-                  </div>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-3">
+                  {sec.title}
+                </h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 leading-relaxed">
+                  {sec.summary}
+                </p>
 
-                  {/* Section Heading */}
-                  <h2 className="text-3xl lg:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-6">
-                    {sec.shortTitle || sec.title}
-                  </h2>
+                {/* Section Content */}
+                <div className="pt-2">
+                  {sec.content}
+                </div>
 
-                  {/* Section Body */}
-                  <div className="text-slate-600 dark:text-slate-300 leading-relaxed text-lg space-y-6">
-                    {sec.content}
-                  </div>
-
-                  {/* Subtle Divider */}
-                  {index !== sections.length - 1 && (
-                    <div className="mt-20 h-px bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-800 to-transparent w-full" />
-                  )}
-                </section>
-              ))}
-            </div>
+                {/* Subtle Divider */}
+                {index !== filteredSections.length - 1 && (
+                  <div className="mt-16 h-px bg-slate-100 dark:bg-slate-800/80 w-full" />
+                )}
+              </section>
+            ))}
           </div>
         </main>
+
+        {/* Right "On This Page" TOC Sidebar */}
+        <aside className="w-60 border-l border-slate-200 dark:border-slate-800/80 bg-white/50 dark:bg-slate-900/40 backdrop-blur-sm overflow-y-auto shrink-0 hidden xl:block py-8 px-5 text-xs">
+          <div className="font-semibold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-3">
+            On This Page
+          </div>
+          <nav className="space-y-1.5 text-slate-600 dark:text-slate-400">
+            {sections.map((sec) => (
+              <a
+                key={sec.id}
+                href={`#${sec.id}`}
+                onClick={() => setActiveSection(sec.id)}
+                className={`block py-1 transition ${
+                  activeSection === sec.id
+                    ? "text-brand-600 dark:text-brand-400 font-semibold translate-x-1"
+                    : "hover:text-slate-900 dark:hover:text-slate-200"
+                }`}
+              >
+                {sec.shortTitle || sec.title}
+              </a>
+            ))}
+          </nav>
+        </aside>
       </div>
     </div>
   );
