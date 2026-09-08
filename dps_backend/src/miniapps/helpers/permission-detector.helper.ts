@@ -262,4 +262,64 @@ export class PermissionDetectorHelper {
       count: detected.length,
     };
   }
+
+  /**
+   * Discovers required native permissions by analyzing Flutter package pubspec.yaml dependencies.
+   */
+  detectFromPubspecDependencies(
+    dependencies: Record<string, any> = {},
+    appName?: string
+  ): DetectedPermissionResult[] {
+    const detected: DetectedPermissionResult[] = [];
+    const addedTypes = new Set<string>();
+    const appLabel = appName?.trim() || '$(PRODUCT_NAME)';
+
+    const formatPurpose = (type: string, reason: string): string => {
+      return `${appLabel} requires ${type.toLowerCase()} access ${reason}.`;
+    };
+
+    const add = (type: string, reason: string, plugin: string) => {
+      const normalized = type.charAt(0).toUpperCase() + type.slice(1);
+      if (!addedTypes.has(normalized.toLowerCase())) {
+        addedTypes.add(normalized.toLowerCase());
+        detected.push({
+          type: normalized,
+          purpose: formatPurpose(normalized, reason),
+          source: `Flutter Plugin (${plugin})`,
+          confidence: 'HIGH',
+        });
+      }
+    };
+
+    const depKeys = Object.keys(dependencies || {}).map((k) => k.toLowerCase());
+
+    for (const dep of depKeys) {
+      if (dep === 'nfc_manager' || dep.includes('nfc')) {
+        add('NFC', 'to read NFC smart cards and contactless security tokens', dep);
+      }
+      if (dep === 'camera' || dep === 'qr_code_scanner' || dep === 'mobile_scanner') {
+        add('Camera', 'to scan codes and capture verification photos', dep);
+      }
+      if (dep === 'image_picker') {
+        add('Camera', 'to select and upload verification photos', dep);
+      }
+      if (dep === 'geolocator' || dep === 'location' || dep.includes('geoloc')) {
+        add('Location', 'to verify geographic location and provide localized services', dep);
+      }
+      if (dep === 'local_auth' || dep.includes('biometric')) {
+        add('Biometrics', 'to securely authenticate the user and authorize operations', dep);
+      }
+      if (dep === 'record' || dep === 'audioplayers' || dep === 'flutter_sound') {
+        add('Microphone', 'to capture audio recordings and voice input', dep);
+      }
+      if (dep === 'flutter_blue_plus' || dep === 'flutter_bluetooth_serial' || dep.includes('bluetooth')) {
+        add('Bluetooth', 'to communicate with nearby peripheral devices', dep);
+      }
+      if (dep === 'contacts_service' || dep === 'flutter_contacts') {
+        add('Contacts', 'to access address book contacts for beneficiary selection', dep);
+      }
+    }
+
+    return detected;
+  }
 }

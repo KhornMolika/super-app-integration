@@ -1,4 +1,5 @@
-import { Controller, HttpException, BadRequestException, Get, Post, Body, Patch, Param, Delete, Query, ParseUUIDPipe, UseGuards, Req } from '@nestjs/common';
+import { Controller, HttpException, BadRequestException, Get, Post, Body, Patch, Param, Delete, Query, ParseUUIDPipe, UseGuards, Req, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import * as net from 'net';
 import { MiniappsService } from './miniapps.service';
 import { CreateMiniAppDto } from './dto/create-miniapp.dto';
@@ -196,6 +197,20 @@ export class MiniappsController {
       body.appId,
       body.verificationToken
     );
+  }
+
+  @Post('upload-artifact')
+  @RequirePermissions('miniapp:create')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadArtifact(
+    @UploadedFile() file: Express.Multer.File,
+    @Body('miniAppId') miniAppId?: string,
+    @Body('version') version?: string,
+  ) {
+    if (!file) {
+      throw new BadRequestException('Package archive file (.zip / .tar.gz) is required.');
+    }
+    return this.miniappService.uploadPackageArtifact(file, miniAppId, version);
   }
 
   @Post('detect-permissions')

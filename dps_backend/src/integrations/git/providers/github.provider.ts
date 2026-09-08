@@ -314,6 +314,32 @@ export class GitHubProvider implements GitProvider {
     }
   }
 
+  async resolveCommitSha(urlOrSlug: string, ref: string, token?: string): Promise<string> {
+    const parsed = this.parseUrl(urlOrSlug);
+    const trimmedRef = (ref || '').trim();
+    if (!trimmedRef) {
+      const repo = await this.getRepository(urlOrSlug, token);
+      return this.resolveCommitSha(urlOrSlug, repo.defaultBranch || 'main', token);
+    }
+
+    // 40-character hex string is already a full SHA
+    if (/^[0-9a-f]{40}$/i.test(trimmedRef)) {
+      return trimmedRef;
+    }
+
+    const apiUrl = `${this.getBaseApiUrl()}/repos/${parsed.fullName}/commits/${encodeURIComponent(trimmedRef)}`;
+    const res = await fetch(apiUrl, {
+      headers: this.getAuthHeaders(token),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Failed to resolve commit SHA for '${trimmedRef}' in '${parsed.fullName}': ${res.statusText}`);
+    }
+
+    const data = (await res.json()) as any;
+    return data.sha;
+  }
+
   generateDependencySnippet(options: {
     packageName?: string;
     url: string;

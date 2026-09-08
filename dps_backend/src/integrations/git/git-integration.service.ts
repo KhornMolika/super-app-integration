@@ -10,6 +10,8 @@ import {
 } from './git-provider.interface';
 import { GitHubProvider } from './providers/github.provider';
 import { GitLabProvider } from './providers/gitlab.provider';
+import { GitHubAppService } from './github-app.service';
+import { GitLabOAuthService } from './gitlab-oauth.service';
 
 @Injectable()
 export class GitIntegrationService {
@@ -20,6 +22,8 @@ export class GitIntegrationService {
     private readonly configService: ConfigService,
     private readonly githubProvider: GitHubProvider,
     private readonly gitlabProvider: GitLabProvider,
+    private readonly githubAppService: GitHubAppService,
+    private readonly gitlabOAuthService: GitLabOAuthService,
   ) {
     this.providers.set('github', githubProvider);
     this.providers.set('gitlab', gitlabProvider);
@@ -165,5 +169,47 @@ export class GitIntegrationService {
       snippet,
       provider: provider.type,
     };
+  }
+
+  async resolveCommitSha(
+    url: string,
+    ref: string,
+    explicitProvider?: GitProviderType,
+    token?: string
+  ): Promise<{ provider: GitProviderType; commitSha: string }> {
+    const provider = this.resolveProvider(url, explicitProvider);
+    const commitSha = await provider.resolveCommitSha(url, ref, token);
+    return {
+      provider: provider.type,
+      commitSha,
+    };
+  }
+
+  getAuthStatus(): {
+    githubAppConfigured: boolean;
+    gitlabOAuthConfigured: boolean;
+    gitlabAuthUrl?: string;
+  } {
+    const githubAppConfigured = this.githubAppService.isAppConfigured();
+    const gitlabOAuthConfigured = this.gitlabOAuthService.isOAuthConfigured();
+    let gitlabAuthUrl: string | undefined = undefined;
+    if (gitlabOAuthConfigured) {
+      try {
+        gitlabAuthUrl = this.gitlabOAuthService.getAuthorizationUrl();
+      } catch {}
+    }
+    return {
+      githubAppConfigured,
+      gitlabOAuthConfigured,
+      gitlabAuthUrl,
+    };
+  }
+
+  getGitLabAuthUrl(state?: string): string {
+    return this.gitlabOAuthService.getAuthorizationUrl(state);
+  }
+
+  async handleGitLabOAuthCallback(code: string) {
+    return this.gitlabOAuthService.exchangeCodeForToken(code);
   }
 }

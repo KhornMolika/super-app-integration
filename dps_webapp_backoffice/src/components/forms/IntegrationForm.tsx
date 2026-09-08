@@ -129,6 +129,14 @@ export default function IntegrationForm({
   const [isNexusValidating, setIsNexusValidating] = useState(false);
   const [nexusValidationResult, setNexusValidationResult] = useState<any>(null);
 
+  // State for Flutter Package Archive Upload (.zip / .tar.gz)
+  const [isUploadingArchive, setIsUploadingArchive] = useState(false);
+  const [archiveUploadSuccess, setArchiveUploadSuccess] = useState<any>(null);
+  const [archiveUploadError, setArchiveUploadError] = useState<string | null>(null);
+
+  // State for Git SHA Locking
+  const [lockedCommitSha, setLockedCommitSha] = useState<string>('');
+
   // Snippet and copy state
   const [generatedSnippet, setGeneratedSnippet] = useState<string>('');
   const [copied, setCopied] = useState(false);
@@ -596,6 +604,83 @@ export default function IntegrationForm({
       }
     }
   }, [formData.integrationMethod, flutterConfig, selectedRef, gitValidationResult]);
+
+  // Effect to resolve and lock Git commit SHA
+  useEffect(() => {
+    if (flutterConfig.sourceType === SourceType.GIT && flutterConfig.gitUrl) {
+      const ref = selectedRef || flutterConfig.gitBranch || 'main';
+      fetch('/api/integrations/git/resolve-sha', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: flutterConfig.gitUrl,
+          ref,
+        }),
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.commitSha) {
+            setLockedCommitSha(data.commitSha);
+            if (handleFlutterChange) {
+              handleFlutterChange({ target: { name: 'lockedCommitSha', value: data.commitSha } });
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [flutterConfig.gitUrl, selectedRef, flutterConfig.gitBranch, flutterConfig.sourceType]);
+
+  const handleArchiveFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingArchive(true);
+    setArchiveUploadError(null);
+    setArchiveUploadSuccess(null);
+
+    const data = new FormData();
+    data.append('file', file);
+    if (formData.appId) data.append('miniAppId', formData.appId);
+    if (formData.name) data.append('name', formData.name);
+
+    try {
+      const res = await fetch('/api/mini-apps/upload-artifact', {
+        method: 'POST',
+        body: data,
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.message || 'Failed to upload and parse package archive.');
+      }
+
+      const result = await res.json();
+      setArchiveUploadSuccess(result);
+
+      if (handleFlutterChange) {
+        if (result.pubspec?.name) {
+          handleFlutterChange({ target: { name: 'packageName', value: result.pubspec.name } });
+        }
+        if (result.pubspec?.version) {
+          handleFlutterChange({ target: { name: 'versionConstraint', value: `^${result.pubspec.version}` } });
+        }
+        if (result.minioUrl) {
+          handleFlutterChange({ target: { name: 'archiveMinioUrl', value: result.minioUrl } });
+        }
+        if (result.sha256) {
+          handleFlutterChange({ target: { name: 'archiveChecksum', value: result.sha256 } });
+        }
+      }
+
+      if (onDomainVerified && result.detectedPermissions && result.detectedPermissions.length > 0) {
+        onDomainVerified({ detectedPermissions: result.detectedPermissions });
+      }
+    } catch (err: any) {
+      setArchiveUploadError(err.message || 'Error uploading archive');
+    } finally {
+      setIsUploadingArchive(false);
+    }
+  };
 
   const copyToClipboard = () => {
     if (generatedSnippet) {
@@ -1134,6 +1219,87 @@ export default function IntegrationForm({
 
           {flutterConfig?.sourceType === SourceType.ARTIFACT ? (
             <div className="space-y-6">
+              {/* Direct Package Archive (.zip / .tar.gz) Upload Section */}
+              <div className="p-5 bg-gradient-to-br from-indigo-50/50 via-white to-sky-50/50 dark:from-slate-900/60 dark:via-slate-900/30 dark:to-indigo-950/20 rounded-2xl border-2 border-dashed border-indigo-200 dark:border-indigo-800/60 hover:border-indigo-400 transition-colors">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-2xl font-bold shadow-inner">
+                      📦
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                        Upload Flutter Package Archive (.zip / .tar.gz)
+                      </h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Zero credentials required. Upload your zipped package bundle to auto-extract metadata & capabilities.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 w-full sm:w-auto">
+                    <label className={`cursor-pointer w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-semibold shadow-sm transition-all flex items-center justify-center gap-2 ${
+                      isUploadingArchive
+                        ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                        : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                    }`}>
+                      {isUploadingArchive ? (
+                        <>
+                          <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                          </svg>
+                          <span>Extracting pubspec...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                          </svg>
+                          <span>Choose Archive</span>
+                        </>
+                      )}
+                      <input
+                        type="file"
+                        accept=".zip,.tar.gz,.tgz,application/zip,application/gzip,application/x-tar"
+                        onChange={handleArchiveFileChange}
+                        disabled={isUploadingArchive}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {archiveUploadSuccess && (
+                  <div className="mt-4 p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs text-emerald-800 dark:text-emerald-200">
+                    <div className="flex items-center justify-between font-semibold mb-1">
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-emerald-600">✓</span>
+                        <span>Archive Ingested & Stored in MinIO: {archiveUploadSuccess.filename}</span>
+                      </span>
+                      <span className="font-mono text-[10px] text-slate-500">
+                        SHA: {archiveUploadSuccess.sha256?.substring(0, 12)}...
+                      </span>
+                    </div>
+                    {archiveUploadSuccess.detectedPermissions?.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-emerald-200/50 dark:border-emerald-800/40 flex items-center gap-1.5 flex-wrap">
+                        <span className="text-slate-500 font-medium">Auto-detected Capabilities:</span>
+                        {archiveUploadSuccess.detectedPermissions.map((p: any) => (
+                          <span key={p.type} className="px-2 py-0.5 rounded-full bg-emerald-200/70 dark:bg-emerald-900/60 font-bold text-[10px]">
+                            {p.type}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {archiveUploadError && (
+                  <div className="mt-4 p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 rounded-xl text-xs text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
+                    <span>✕</span>
+                    <span>{archiveUploadError}</span>
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <div className="flex items-center justify-between mb-1">
@@ -1167,7 +1333,7 @@ export default function IntegrationForm({
                       ) : (
                         <p className="text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
                           <span>✗</span>
-                          <span>Package &quot;{flutterConfig?.packageName}&quot; not found in Nexus pub-group. It must be published before review approval.</span>
+                          <span>Package &quot;{flutterConfig?.packageName}&quot; not found in Nexus pub-group. It will be validated and published to Nexus during review.</span>
                         </p>
                       )}
                     </div>
@@ -1254,7 +1420,7 @@ export default function IntegrationForm({
                               : 'bg-orange-100 text-orange-800 dark:bg-orange-950/60 dark:text-orange-300'
                           }`}
                         >
-                          {detectedProvider === 'github' ? 'GitHub Detected' : 'GitLab Detected'}
+                          {detectedProvider === 'github' ? 'GitHub App Enabled' : 'GitLab OAuth Enabled'}
                         </span>
                       )}
                     </div>
@@ -1351,15 +1517,25 @@ export default function IntegrationForm({
                   )}
                 </div>
 
-                <div className="col-span-1 md:col-span-2">
-                  <Label>Personal Access Token (Optional for Private Repositories)</Label>
-                  <Input
-                    name="gitAccessToken"
-                    type="password"
-                    value={flutterConfig?.gitAccessToken || ''}
-                    onChange={handleFlutterChange}
-                    placeholder="Leave empty to use server default credentials"
-                  />
+                {/* Tokenless Architecture Banner with Git SHA Locking */}
+                <div className="col-span-1 md:col-span-2 p-3.5 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">🛡️</span>
+                    <div>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">
+                        Tokenless Git Authorization:
+                      </span>{' '}
+                      <span className="text-slate-500 dark:text-slate-400">
+                        Authenticated via Platform GitHub App / GitLab OAuth (No personal PATs required).
+                      </span>
+                    </div>
+                  </div>
+                  {lockedCommitSha && (
+                    <div className="px-2.5 py-1 bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-mono font-bold rounded-lg shrink-0 flex items-center gap-1.5">
+                      <span>🔒 Locked SHA:</span>
+                      <span>{lockedCommitSha.substring(0, 8)}...</span>
+                    </div>
+                  )}
                 </div>
               </div>
 

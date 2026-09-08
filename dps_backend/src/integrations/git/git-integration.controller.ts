@@ -53,4 +53,28 @@ export class GitIntegrationController {
   generateSnippet(@Body() dto: GenerateGitSnippetDto) {
     return this.gitService.generateSnippet(dto);
   }
+
+  @Post('resolve-sha')
+  @HttpCode(HttpStatus.OK)
+  resolveCommitSha(@Body() dto: { url: string; ref: string; provider?: any; token?: string }) {
+    return this.gitService.resolveCommitSha(dto.url, dto.ref, dto.provider, dto.token);
+  }
+
+  @Post('auth-status')
+  @HttpCode(HttpStatus.OK)
+  getAuthStatus() {
+    return this.gitService.getAuthStatus();
+  }
+
+  @Post('gitlab/authorize')
+  @HttpCode(HttpStatus.OK)
+  getGitLabAuthUrl(@Body() body: { state?: string }) {
+    return { url: this.gitService.getGitLabAuthUrl(body?.state) };
+  }
+
+  @Post('gitlab/callback')
+  @HttpCode(HttpStatus.OK)
+  handleGitLabCallback(@Body() body: { code: string }) {
+    return this.gitService.handleGitLabOAuthCallback(body.code);
+  }
 }

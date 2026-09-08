@@ -479,4 +479,16 @@ export class MiniappsService {
   async detectPermissions(body: { productionUrl?: string; category?: string; name?: string; appId?: string }) {
     return this.permissionDetectorHelper.detect(body);
   }
+
+  async uploadPackageArtifact(file: Express.Multer.File, miniAppId?: string, version?: string) {
+    const res = await this.storageService.uploadPackageArchive(file, miniAppId, version);
+    const detected = this.permissionDetectorHelper.detectFromPubspecDependencies(
+      res.pubspec?.dependencies || {},
+      res.pubspec?.name
+    );
+    return {
+      ...res,
+      detectedPermissions: detected,
+    };
+  }
 }

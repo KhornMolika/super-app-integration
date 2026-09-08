@@ -4,6 +4,8 @@ import { GitIntegrationController } from './git/git-integration.controller';
 import { GitIntegrationService } from './git/git-integration.service';
 import { GitHubProvider } from './git/providers/github.provider';
 import { GitLabProvider } from './git/providers/gitlab.provider';
+import { GitHubAppService } from './git/github-app.service';
+import { GitLabOAuthService } from './git/gitlab-oauth.service';
 import { NexusIntegrationController } from './nexus/nexus-integration.controller';
 import { NexusIntegrationService } from './nexus/nexus-integration.service';
 
@@ -38,6 +40,8 @@ import { JenkinsService } from './jenkins/jenkins.service';
     GitIntegrationService,
     GitHubProvider,
     GitLabProvider,
+    GitHubAppService,
+    GitLabOAuthService,
     NexusIntegrationService,
     ReleaseAssemblyVerificationService,
     DomainVerificationService,
@@ -47,6 +51,8 @@ import { JenkinsService } from './jenkins/jenkins.service';
     GitIntegrationService,
     GitHubProvider,
     GitLabProvider,
+    GitHubAppService,
+    GitLabOAuthService,
     NexusIntegrationService,
     ReleaseAssemblyVerificationService,
     DomainVerificationService,

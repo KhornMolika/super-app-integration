@@ -124,4 +124,91 @@ export class StorageService implements OnModuleInit {
     this.logger.log(`Uploaded base64 image to MinIO: ${url}`);
     return url;
   }
+
+  /**
+   * Uploads and inspects a Flutter package archive (.zip / .tar.gz)
+   */
+  async uploadPackageArchive(
+    file: Express.Multer.File,
+    miniAppId = 'draft',
+    versionHint = '1.0.0'
+  ): Promise<{
+    minioUrl: string;
+    minioKey: string;
+    sha256: string;
+    filename: string;
+    size: number;
+    pubspec: {
+      name?: string;
+      version?: string;
+      description?: string;
+      dependencies?: Record<string, any>;
+      environment?: Record<string, any>;
+    };
+  }> {
+    const submissionsBucket = this.configService.get<string>('MINIO_SUBMISSIONS_BUCKET', 'submissions');
+    
+    // Ensure submissions bucket exists
+    try {
+      const exists = await this.minioClient.bucketExists(submissionsBucket);
+      if (!exists) {
+        await this.minioClient.makeBucket(submissionsBucket, 'us-east-1');
+        this.logger.log(`Created MinIO bucket "${submissionsBucket}"`);
+      }
+    } catch (err: any) {
+      this.logger.warn(`Could not ensure submissions bucket: ${err.message}`);
+    }
+
+    const sha256 = require('crypto').createHash('sha256').update(file.buffer).digest('hex');
+    const cleanOrigName = (file.originalname || 'package.zip').replace(/[^a-zA-Z0-9.-]/g, '_');
+    const minioKey = `pending/${miniAppId}/${versionHint}/${Date.now()}-${cleanOrigName}`;
+
+    await this.minioClient.putObject(
+      submissionsBucket,
+      minioKey,
+      file.buffer,
+      file.size,
+      { 'Content-Type': file.mimetype || 'application/zip' }
+    );
+
+    const minioUrl = `${this.publicUrl}/${submissionsBucket}/${minioKey}`;
+
+    // Extract pubspec.yaml from zip
+    let parsedPubspec: any = {};
+    try {
+      const AdmZip = require('adm-zip');
+      const zip = new AdmZip(file.buffer);
+      const zipEntries = zip.getEntries();
+
+      // Look for pubspec.yaml either at root or nested one level
+      const pubspecEntry = zipEntries.find(
+        (entry: any) =>
+          entry.entryName.toLowerCase() === 'pubspec.yaml' ||
+          entry.entryName.toLowerCase().endsWith('/pubspec.yaml')
+      );
+
+      if (pubspecEntry) {
+        const yamlText = pubspecEntry.getData().toString('utf8');
+        const yaml = require('yaml');
+        parsedPubspec = yaml.parse(yamlText) || {};
+      }
+    } catch (err: any) {
+      this.logger.warn(`Could not extract pubspec.yaml from archive: ${err.message}`);
+    }
+
+    return {
+      minioUrl,
+      minioKey,
+      sha256,
+      filename: cleanOrigName,
+      size: file.size,
+      pubspec: {
+        name: parsedPubspec.name,
+        version: parsedPubspec.version,
+        description: parsedPubspec.description,
+        dependencies: parsedPubspec.dependencies,
+        environment: parsedPubspec.environment,
+      },
+    };
+  }
 }
