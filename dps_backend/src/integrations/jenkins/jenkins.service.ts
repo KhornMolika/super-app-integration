@@ -58,11 +58,13 @@ export class JenkinsService {
     targetUrl: string;
     allowedDomains?: string[];
     allowLocal?: boolean;
+    checks?: string[];
   }): Promise<{ success: boolean; message: string }> {
     const jobName = 'webview-validation';
     const callbackUrl = `${this.callbackBaseUrl}/api/integrations/validation/callback`;
     const allowedDomainsStr = (options.allowedDomains || []).join(',');
     const allowLocalStr = options.allowLocal ? 'true' : 'false';
+    const checksStr = (options.checks || []).join(',');
 
     const params = new URLSearchParams({
       MINIAPP_ID: options.miniAppId,
@@ -70,6 +72,7 @@ export class JenkinsService {
       ALLOWED_DOMAINS: allowedDomainsStr,
       CALLBACK_URL: callbackUrl,
       ALLOW_LOCAL: allowLocalStr,
+      CHECKS: checksStr,
     });
 
     const triggerUrl = `${this.jenkinsUrl}/job/${jobName}/buildWithParameters?${params.toString()}`;

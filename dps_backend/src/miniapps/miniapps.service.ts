@@ -413,6 +413,7 @@ export class MiniappsService {
           targetUrl: app.integrationConfig.productionUrl,
           allowedDomains,
           allowLocal,
+          checks: app.securityChecks || [],
         }).catch(err => this.logger.error(`Jenkins trigger error: ${err.message}`));
 
         await this.notificationsService.createNotification(app.ownerId || '', 'Validation Running', `${app.name || 'Mini App'} automated security scans initiated on Jenkins.`, 'SCAN_STARTED', app.id);
@@ -763,6 +764,7 @@ export class MiniappsService {
       targetUrl,
       allowedDomains,
       allowLocal,
+      checks: app.securityChecks || [],
     }).catch(err => this.logger.error(`Jenkins rescan trigger failed: ${err.message}`));
 
     await this.notificationsService.createNotification(

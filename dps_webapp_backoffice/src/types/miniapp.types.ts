@@ -66,4 +66,5 @@ export interface CreateMiniAppDto {
   domainVerifiedAt?: string;
   
   permissions?: PermissionDto[];
+  securityChecks?: string[];
 }

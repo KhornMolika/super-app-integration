@@ -48,6 +48,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
     integrationConfigFlutter: { sourceType: SourceType.ARTIFACT, packageName: '', versionConstraint: '' },
     integrationConfigDeepLink: { urlScheme: '', packageName: '', appStoreUrl: '' },
     permissions: [],
+    securityChecks: [],
     status: 'DRAFT',
     validationErrors: undefined as Record<string, string> | undefined,
   });

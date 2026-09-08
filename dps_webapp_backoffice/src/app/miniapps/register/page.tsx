@@ -49,7 +49,8 @@ export default function RegisterMiniAppPage() {
     },
     integrationConfigFlutter: { sourceType: SourceType.ARTIFACT, packageName: '', versionConstraint: '' },
     integrationConfigDeepLink: { urlScheme: '', packageName: '', appStoreUrl: '' },
-    permissions: []
+    permissions: [],
+    securityChecks: [],
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -731,9 +732,9 @@ export default function RegisterMiniAppPage() {
               </div>
 
               <div>
-                <h4 className="font-semibold text-slate-900 dark:text-white border-b pb-2 mb-3">4. Permissions</h4>
+                <h4 className="font-semibold text-slate-900 dark:text-white border-b pb-2 mb-3">4. Permissions & Capabilities</h4>
                 {formData.permissions && formData.permissions.length > 0 ? (
-                  <ul className="space-y-2">
+                  <ul className="space-y-2 mb-4">
                     {formData.permissions.map((p, i) => (
                       <li key={i} className="bg-slate-50 dark:bg-slate-900/40 p-3 rounded-lg border border-slate-100 dark:border-slate-800">
                         <strong>{p.type}</strong>
@@ -742,7 +743,20 @@ export default function RegisterMiniAppPage() {
                     ))}
                   </ul>
                 ) : (
-                  <span className="text-slate-500">No special permissions requested.</span>
+                  <p className="text-slate-500 mb-4">No special permissions requested.</p>
+                )}
+
+                <h5 className="font-medium text-xs text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">Automated Security Checks Selected:</h5>
+                {formData.securityChecks && formData.securityChecks.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {formData.securityChecks.map((chk, idx) => (
+                      <span key={idx} className="px-2.5 py-1 rounded-md text-xs font-mono bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                        ✓ {chk}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-xs text-slate-400">Default baseline scans will be applied.</span>
                 )}
               </div>
 

@@ -210,6 +210,11 @@ export class CreateMiniAppDto {
   @IsOptional()
   permissions?: PermissionDto[];
 
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  securityChecks?: string[];
+
   @IsString()
   @IsOptional()
   verificationToken?: string;

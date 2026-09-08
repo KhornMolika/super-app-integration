@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Input, Label, Button } from '@/components/ui/inputs';
 import { useAuth } from '@/lib/auth';
+import SecurityValidationSelector from './SecurityValidationSelector';
 
 export const PERMISSION_STORE_MAP: Record<string, { iosKey: string; androidPermission: string; defaultAction: string }> = {
   camera: {
@@ -478,6 +479,19 @@ export default function PermissionsForm({
             Add Request
           </Button>
         </div>
+      </div>
+
+      {/* Security Validation Checks Profile */}
+      <div className="mt-8 border-t border-slate-200 dark:border-slate-700/50 pt-6">
+        <SecurityValidationSelector
+          integrationMethod={formData.integrationMethod}
+          selectedChecks={formData.securityChecks || []}
+          onChange={(checks) => {
+            if (setFormData) {
+              setFormData((prev: any) => ({ ...prev, securityChecks: checks }));
+            }
+          }}
+        />
       </div>
     </div>
   );

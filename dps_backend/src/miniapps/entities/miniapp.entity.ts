@@ -105,6 +105,9 @@ export class MiniApp {
   @Column({ type: 'jsonb', nullable: true, default: () => "'[]'" })
   permissions!: any[];
 
+  @Column({ type: 'jsonb', nullable: true, default: () => "'[]'" })
+  securityChecks?: string[];
+
   @OneToMany(() => MiniAppIssue, issue => issue.miniApp, { cascade: true, eager: true })
   issues!: MiniAppIssue[];
 
