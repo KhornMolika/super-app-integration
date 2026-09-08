@@ -247,6 +247,23 @@ export default function PermissionsForm({
         </Button>
       </div>
 
+      {/* Store Approval Policy Callout */}
+      <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 space-y-2.5 shadow-sm">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-amber-400 font-bold text-sm">🛡️</span>
+            <span className="font-bold text-white text-xs uppercase tracking-wider">Super App Store Approval & Capability Policy</span>
+          </div>
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800/60 font-semibold">
+            Apple 4.7 & Google Play Policy
+          </span>
+        </div>
+        <p className="text-slate-400 leading-relaxed text-[11px]">
+          The Super App is the central capability gatekeeper. Any capability not supported by the Super App is technically inaccessible.
+          If an unsupported capability is marked as <strong className="text-rose-400">Required</strong>, the Mini App will be <strong className="text-rose-400">rejected</strong> during review. If marked as <strong className="text-emerald-400">Optional</strong>, the Mini App can be approved with that specific feature disabled.
+        </p>
+      </div>
+
       {detectionNotice && (
         <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 text-emerald-800 dark:text-emerald-300 text-xs flex items-center gap-2">
           <svg className="w-4 h-4 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -261,6 +278,8 @@ export default function PermissionsForm({
         {allAvailableTypes.map((type) => {
           const activePerm = formData.permissions?.find((p: any) => p.type.toLowerCase() === type.toLowerCase());
           const isActive = !!activePerm;
+          const isSupported = ['Camera', 'Location', 'Biometrics', 'Microphone'].includes(type);
+          const isRequired = activePerm ? activePerm.required !== false : true;
           const purposeError = getPermError(type, 'purpose');
           const detectedSource = detectedMeta?.sources[type];
 
@@ -292,9 +311,9 @@ export default function PermissionsForm({
                       </span>
                     )}
 
-                    {!['Camera', 'Location', 'Biometrics', 'Microphone'].includes(type) && (
+                    {!isSupported && (
                       <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700/50">
-                        Custom Proposal
+                        Custom / Unsupported
                       </span>
                     )}
                   </div>
@@ -303,6 +322,52 @@ export default function PermissionsForm({
 
               {isActive && (
                 <div className="mt-3 pt-3 border-t border-brand-200 dark:border-brand-500/20 space-y-3">
+                  {/* Requirement Level Toggle */}
+                  <div className="flex items-center justify-between gap-3 p-2.5 rounded-lg bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 flex-wrap">
+                    <div>
+                      <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 block">Requirement Level</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Is this capability mandatory for your core functionality?</span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handlePermissionFieldChange(type, 'required', true)}
+                        className={`px-2.5 py-1 text-xs font-semibold rounded-md transition ${
+                          isRequired
+                            ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 dark:border-rose-800 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        }`}
+                      >
+                        ● Required (Core)
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handlePermissionFieldChange(type, 'required', false)}
+                        className={`px-2.5 py-1 text-xs font-semibold rounded-md transition ${
+                          !isRequired
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        }`}
+                      >
+                        ○ Optional (Enhancement)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Warning if unsupported and marked Required */}
+                  {!isSupported && isRequired && (
+                    <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 text-xs space-y-1">
+                      <strong className="font-bold flex items-center gap-1 text-rose-700 dark:text-rose-400">
+                        ⚠️ Store Policy Alert: Automatic Rejection Trigger
+                      </strong>
+                      <p className="leading-relaxed">
+                        &quot;{type}&quot; is currently <strong>not exposed by the Super App bridge</strong>. Marking an unsupported capability as <strong>Required</strong> will lead to automatic rejection during review because the app cannot function without it. Mark as <strong>Optional</strong> if your Mini App can gracefully degrade.
+                      </p>
+                    </div>
+                  )}
+
                   <div>
                     {(() => {
                       const storeInfo = PERMISSION_STORE_MAP[type.toLowerCase()];

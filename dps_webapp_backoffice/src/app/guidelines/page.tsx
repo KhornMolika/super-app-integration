@@ -821,17 +821,84 @@ export default function GuidelinesPage() {
             The Super App acts as the <strong>central authority for all Mini App capabilities and permissions</strong>. To maintain zero security drift and strict platform governance, permissions follow a zero-trust runtime access model.
           </p>
 
-          {/* Recommended Rule Box */}
-          <div className="p-4 rounded-xl border-l-4 border-brand-500 bg-brand-50/70 dark:bg-brand-950/30 text-xs text-brand-900 dark:text-brand-200 space-y-1">
+          {/* Core Gatekeeper Banner */}
+          <div className="p-5 rounded-xl border-l-4 border-brand-500 bg-brand-50/70 dark:bg-brand-950/30 text-xs text-brand-900 dark:text-brand-200 space-y-2">
             <span className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px] block">
-              Core Platform Rule
+              Core Platform Principle: Capability Gatekeeper
             </span>
             <p className="italic font-medium leading-relaxed">
-              &ldquo;A Mini App may request any capability, but it can only use capabilities exposed and supported by the Super App. Supported capabilities are granted to the user at runtime when required.&rdquo;
+              &ldquo;The Super App is the single central gatekeeper for all Mini App capabilities. A Mini App may request any capability, but it can only use capabilities exposed and supported by the Super App. Unsupported capabilities must be genuinely inaccessible.&rdquo;
             </p>
           </div>
 
-          {/* Example & Resolution Grid */}
+          {/* Strategy to Maximize App Store & Google Play Approval */}
+          <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h5 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider flex items-center gap-2">
+                <span>🛡️ Maximizing App Store & Google Play Approval Probability</span>
+              </h5>
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                Apple Guideline 4.7 & Google Play Host Policy
+              </span>
+            </div>
+            
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Apple and Google review the host application, metadata, third-party code, permissions, and runtime behavior. To maximize approval probability and prevent platform rejection, the Super App implements seven mandatory architectural pillars:
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+              <div className="p-3.5 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-1">
+                <strong className="text-slate-900 dark:text-white font-bold block">1. Super App as Central Gatekeeper</strong>
+                <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                  If a Mini App declares 5 capabilities and the Super App exposes 3, the remaining 2 are <strong>genuinely unavailable</strong>—not secretly accessible through raw native APIs or hidden bridge hooks.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-1">
+                <strong className="text-slate-900 dark:text-white font-bold block">2. Separate Required vs. Optional Capabilities</strong>
+                <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                  If a Mini App requires an unsupported capability for its <strong>core function</strong> → <strong>Reject the Mini App</strong>. If it is <strong>optional</strong> → Integrate it, but disable that specific feature cleanly.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-1">
+                <strong className="text-slate-900 dark:text-white font-bold block">3. Just-in-Time Runtime Requests</strong>
+                <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Runtime permission requests apply only to supported capabilities. Prompt the user <strong>at runtime when the feature is actually used</strong> (Google Play compliance requirement).
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-1">
+                <strong className="text-slate-900 dark:text-white font-bold block">4. Strict Capability Layer Isolation</strong>
+                <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Host app is 100% legally and technically responsible for hosted software under Apple rules and must never expose native platform APIs/technologies without authorization.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-1">
+                <strong className="text-slate-900 dark:text-white font-bold block">5. Pre-Publish Automated Validation</strong>
+                <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Validate every Mini App before publishing (capabilities, privacy/data use, URLs, TLS, prohibited content, and actual behavior) to protect host app integrity.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-1">
+                <strong className="text-slate-900 dark:text-white font-bold block">6. Accurate Data Disclosures</strong>
+                <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Clearly disclose what data is collected, why, and with whom it is shared across Info.plist usage descriptions and Google Play Prominent In-App Disclosures.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-lg bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-900/50 text-xs space-y-1">
+              <strong className="text-indigo-950 dark:text-indigo-200 font-bold block">7. Apple Guideline 4.7 & Manifest Compliance</strong>
+              <p className="text-indigo-900 dark:text-indigo-300 leading-relaxed">
+                Implements structured Mini App manifest declarations (bundle metadata, version constraints, age rating, and sandboxed bridge scopes) aligned with Apple&apos;s Mini Apps Partner Program.
+              </p>
+            </div>
+          </div>
+
+          {/* Practical Example & Decision Flow */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Practical Example */}
             <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
@@ -839,7 +906,7 @@ export default function GuidelinesPage() {
                 Capability Matching Example
               </h5>
               <p className="text-xs text-slate-600 dark:text-slate-400">
-                A Mini App may specify requirements, but only intersections with Super App support will function:
+                Evaluating declared capabilities against Super App platform support:
               </p>
               <div className="grid grid-cols-2 gap-2 text-xs font-mono">
                 <div className="p-2.5 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
@@ -849,34 +916,37 @@ export default function GuidelinesPage() {
                   <div className="text-emerald-600 dark:text-emerald-400">• Notification ✅</div>
                 </div>
                 <div className="p-2.5 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
-                  <span className="text-[10px] text-slate-400 font-sans block mb-1 font-semibold uppercase">Mini App Requires:</span>
-                  <div className="text-emerald-600 dark:text-emerald-400">• Camera ✅</div>
-                  <div className="text-emerald-600 dark:text-emerald-400">• Location ✅</div>
-                  <div className="text-emerald-600 dark:text-emerald-400">• Notification ✅</div>
-                  <div className="text-rose-500 font-semibold">• Contacts ❌</div>
-                  <div className="text-rose-500 font-semibold">• Microphone ❌</div>
+                  <span className="text-[10px] text-slate-400 font-sans block mb-1 font-semibold uppercase">Mini App Requests (5):</span>
+                  <div className="text-emerald-600 dark:text-emerald-400">• Camera (Req) ✅</div>
+                  <div className="text-emerald-600 dark:text-emerald-400">• Location (Req) ✅</div>
+                  <div className="text-emerald-600 dark:text-emerald-400">• Notification (Opt) ✅</div>
+                  <div className="text-rose-500 font-semibold">• Contacts (Opt) ❌</div>
+                  <div className="text-rose-500 font-semibold">• Microphone (Req) ⚠️</div>
                 </div>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Result: Camera, Location, and Notification are functional. <strong>Contacts and Microphone will not work</strong> until the Super App explicitly expands support for them.
+                Outcome: If Microphone is <strong>Required</strong>, the Mini App is <strong>REJECTED</strong>. If marked <strong>Optional</strong>, the Mini App is approved with Camera/Location/Notification active and Contacts/Microphone safely disabled.
               </p>
             </div>
 
-            {/* Resolution Flow Diagram */}
+            {/* Decision Flowchart */}
             <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
               <h5 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider">
-                Registration & Runtime Resolution Flow
+                The Final Decision Rule Flow
               </h5>
               <div className="p-3 bg-slate-900 text-slate-200 rounded-lg font-mono text-[11px] leading-relaxed">
-                <div className="text-slate-400">1. Mini App Registration</div>
-                <div className="text-slate-500 pl-4">↓ Check Requested Capabilities</div>
-                <div className="text-slate-400">2. Capability Catalog Matching</div>
-                <div className="text-slate-500 pl-4">↓ Compare against Super App Catalog</div>
-                <div className="text-emerald-400 pl-2">✅ Supported → Runtime Prompt → Active</div>
-                <div className="text-rose-400 pl-2">❌ Unsupported → Blocked / Unavailable</div>
+                <div className="text-slate-400">Mini App requests N capabilities</div>
+                <div className="text-slate-500 pl-4">↓ Compare with Super App catalog (M supported)</div>
+                <div className="text-amber-400">Required capability unsupported?</div>
+                <div className="text-rose-400 pl-4">├── Yes → ❌ REJECT Mini App</div>
+                <div className="text-emerald-400 pl-4">└── No  → ✅ Continue (Optional features disabled)</div>
+                <div className="text-slate-400 pl-8">↓</div>
+                <div className="text-indigo-300 pl-8">M supported capabilities exposed</div>
+                <div className="text-slate-400 pl-8">↓</div>
+                <div className="text-emerald-300 pl-8">Runtime JIT permission prompt → Allowed</div>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                Permissions are requested <strong>at runtime when the user triggers the feature</strong> (just-in-time), rather than requesting all permissions upfront when the Mini App launches.
+                Unsupported capabilities are <strong>technically inaccessible</strong> in the sandbox, ensuring host stability and zero store policy violations.
               </p>
             </div>
           </div>
