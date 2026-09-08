@@ -69,6 +69,51 @@ export class MiniappLifecycleHelper {
           checks: app.securityChecks || [],
         })
         .catch((err) => this.logger.error(`Jenkins trigger failed: ${err.message}`));
+    } else if (app.integrationMethod === 'FLUTTER_PACKAGE') {
+      const initialStages = {
+        ingest: { id: 'ingest', name: '1. Ingestion & Integrity Verification', status: 'RUNNING', details: 'Unpacking source & verifying cryptographic checksum...' },
+        secrets: { id: 'secrets', name: '2. Secret & Credential Leak Detection', status: 'PENDING', details: 'Awaiting Gitleaks secret scan...' },
+        malware_sast: { id: 'malware_sast', name: '3. Malware & Static Code Analysis (SAST)', status: 'PENDING', details: 'Awaiting Dart analyzer & code safety audit...' },
+        sca: { id: 'sca', name: '4. Software Composition Analysis (SCA)', status: 'PENDING', details: 'Awaiting dependency CVE scan...' },
+        capability_gate: { id: 'capability_gate', name: '5. Host Capability Gatekeeper Audit', status: 'PENDING', details: 'Awaiting Super App capability compliance check...' },
+      };
+      app.validationStages = initialStages;
+      app.status = 'SUBMITTED';
+      app.validationStatus = 'RUNNING';
+      await this.miniappRepository.save(app);
+
+      const cfg = app.integrationConfig || {};
+      const integrationType = cfg.packageStoragePath ? 'ARTIFACT' : 'SOURCE_CODE';
+      const repoUrl = cfg.repoUrl || (cfg.repoOwner && cfg.repoName ? `https://github.com/${cfg.repoOwner}/${cfg.repoName}` : '');
+      const commitSha = cfg.commitSha || cfg.branch || 'main';
+      const gitProvider = (cfg.provider || 'GITHUB').toUpperCase();
+
+      const declaredPerms = Array.isArray(app.permissions)
+        ? app.permissions.map((p: any) => typeof p === 'string' ? p : p.name || p.id).filter(Boolean)
+        : [];
+      const requiredPerms = Array.isArray(app.permissions)
+        ? app.permissions.filter((p: any) => p.isRequired).map((p: any) => p.name || p.id).filter(Boolean)
+        : [];
+
+      const allowedCaps = declaredPerms.length > 0 ? declaredPerms : ['camera', 'geolocator', 'local_auth'];
+      const requiredCaps = requiredPerms;
+      const packageName = cfg.packageName || cfg.name || app.name;
+      const packageVersion = cfg.packageVersion || cfg.version || '1.0.0';
+
+      this.jenkinsService
+        .triggerPackageValidation({
+          miniAppId: id,
+          packageName,
+          version: packageVersion,
+          integrationType: integrationType as 'ARTIFACT' | 'SOURCE_CODE',
+          sourceStoragePath: cfg.packageStoragePath || '',
+          repoUrl,
+          commitSha,
+          gitProvider,
+          allowedCapabilities: allowedCaps,
+          requiredCapabilities: requiredCaps,
+        })
+        .catch((err) => this.logger.error(`Jenkins package trigger failed: ${err.message}`));
     } else {
       app.status = 'IN_REVIEW';
       await this.miniappRepository.save(app);
@@ -102,6 +147,78 @@ export class MiniappLifecycleHelper {
     ) => Promise<void>
   ) {
     const id = app.id;
+
+    if (app.integrationMethod === 'FLUTTER_PACKAGE') {
+      const initialStages = {
+        ingest: { id: 'ingest', name: '1. Ingestion & Integrity Verification', status: 'RUNNING', details: 'Unpacking source & verifying cryptographic checksum...' },
+        secrets: { id: 'secrets', name: '2. Secret & Credential Leak Detection', status: 'PENDING', details: 'Awaiting Gitleaks secret scan...' },
+        malware_sast: { id: 'malware_sast', name: '3. Malware & Static Code Analysis (SAST)', status: 'PENDING', details: 'Awaiting Dart analyzer & code safety audit...' },
+        sca: { id: 'sca', name: '4. Software Composition Analysis (SCA)', status: 'PENDING', details: 'Awaiting dependency CVE scan...' },
+        capability_gate: { id: 'capability_gate', name: '5. Host Capability Gatekeeper Audit', status: 'PENDING', details: 'Awaiting Super App capability compliance check...' },
+      };
+
+      app.validationStages = initialStages;
+      app.validationStatus = 'RUNNING';
+      await this.miniappRepository.save(app);
+
+      const cfg = app.integrationConfig || {};
+      const integrationType = cfg.packageStoragePath ? 'ARTIFACT' : 'SOURCE_CODE';
+      const repoUrl = cfg.repoUrl || (cfg.repoOwner && cfg.repoName ? `https://github.com/${cfg.repoOwner}/${cfg.repoName}` : '');
+      const commitSha = cfg.commitSha || cfg.branch || 'main';
+      const gitProvider = (cfg.provider || 'GITHUB').toUpperCase();
+
+      const declaredPerms = Array.isArray(app.permissions)
+        ? app.permissions.map((p: any) => typeof p === 'string' ? p : p.name || p.id).filter(Boolean)
+        : [];
+      const requiredPerms = Array.isArray(app.permissions)
+        ? app.permissions.filter((p: any) => p.isRequired).map((p: any) => p.name || p.id).filter(Boolean)
+        : [];
+
+      const allowedCaps = declaredPerms.length > 0 ? declaredPerms : ['camera', 'geolocator', 'local_auth'];
+      const requiredCaps = requiredPerms;
+      const packageName = cfg.packageName || cfg.name || app.name;
+      const packageVersion = cfg.packageVersion || cfg.version || '1.0.0';
+
+      this.jenkinsService
+        .triggerPackageValidation({
+          miniAppId: id,
+          packageName,
+          version: packageVersion,
+          integrationType: integrationType as 'ARTIFACT' | 'SOURCE_CODE',
+          sourceStoragePath: cfg.packageStoragePath || '',
+          repoUrl,
+          commitSha,
+          gitProvider,
+          allowedCapabilities: allowedCaps,
+          requiredCapabilities: requiredCaps,
+        })
+        .catch((err) => this.logger.error(`Jenkins package rescan trigger failed: ${err.message}`));
+
+      await this.notificationsService.createNotification(
+        app.ownerId || '',
+        'Scan Re-run',
+        `Automated security scan re-initiated for Flutter Package "${app.name || 'Mini App'}".`,
+        'SCAN_STARTED',
+        app.id
+      );
+
+      await logActivityFn(
+        id,
+        actorId,
+        'VALIDATION',
+        'Scan Re-run',
+        'Flutter Package automated security scan re-triggered on Jenkins',
+        'RESCAN_MINI_APP',
+        null,
+        app
+      );
+
+      return {
+        success: true,
+        message: 'Flutter package security validation triggered successfully on Jenkins.',
+      };
+    }
+
     const targetUrl = (app.integrationConfig?.productionUrl || '').trim();
     if (!targetUrl) {
       throw new BadRequestException('Mini App does not have a configured production URL to scan');
@@ -158,7 +275,7 @@ export class MiniappLifecycleHelper {
 
     return {
       success: true,
-      message: 'Automated security scan re-initiated on Jenkins',
+      message: 'Automated security scan triggered successfully on Jenkins.',
       validationStatus: 'RUNNING',
       validationStages: initialStages,
     };

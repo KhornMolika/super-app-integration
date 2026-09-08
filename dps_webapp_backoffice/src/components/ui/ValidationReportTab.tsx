@@ -44,32 +44,71 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
     }
   });
 
-  const defaultStages = [
-    {
-      id: 'ssrf',
-      name: '1. Pre-Flight & SSRF Defense',
-      defaultTitle: 'DNS & IP Routing Audit',
-      icon: '🌐'
-    },
-    {
-      id: 'tls',
-      name: '2. TLS & HTTPS Security',
-      defaultTitle: 'SSL/TLS Cipher Suite Audit',
-      icon: '🔒'
-    },
-    {
-      id: 'zap',
-      name: '3. OWASP ZAP DAST Scan',
-      defaultTitle: 'DAST, XSS & CSP Audit',
-      icon: '⚡'
-    },
-    {
-      id: 'nuclei',
-      name: '4. Exposure & Vulnerability Audit',
-      defaultTitle: 'Secret & CVE Exposure Check',
-      icon: '🔍'
-    }
-  ];
+  const isFlutterPackage = miniApp.integrationMethod === 'FLUTTER_PACKAGE';
+
+  const defaultStages = isFlutterPackage
+    ? [
+        {
+          id: 'ingest',
+          name: '1. Ingestion & Integrity Verification',
+          defaultTitle: 'Source Unpack & SHA-256 Digest',
+          icon: '📦'
+        },
+        {
+          id: 'secrets',
+          name: '2. Secret & Credential Leak Detection',
+          defaultTitle: 'Gitleaks & API Key Scan',
+          icon: '🔑'
+        },
+        {
+          id: 'malware_sast',
+          name: '3. Malware & Static Code Analysis (SAST)',
+          defaultTitle: 'Dart AST & Sandbox Guard',
+          icon: '🛡️'
+        },
+        {
+          id: 'sca',
+          name: '4. Software Composition Analysis (SCA)',
+          defaultTitle: 'Dependency Vulnerability (CVE) Audit',
+          icon: '🔍'
+        },
+        {
+          id: 'capability_gate',
+          name: '5. Host Capability Gatekeeper Audit',
+          defaultTitle: 'Super App Capability Boundary Verification',
+          icon: '🚪'
+        }
+      ]
+    : [
+        {
+          id: 'ssrf',
+          name: '1. Pre-Flight & SSRF Defense',
+          defaultTitle: 'DNS & IP Routing Audit',
+          icon: '🌐'
+        },
+        {
+          id: 'tls',
+          name: '2. TLS & HTTPS Security',
+          defaultTitle: 'SSL/TLS Cipher Suite Audit',
+          icon: '🔒'
+        },
+        {
+          id: 'zap',
+          name: '3. OWASP ZAP DAST Scan',
+          defaultTitle: 'DAST, XSS & CSP Audit',
+          icon: '⚡'
+        },
+        {
+          id: 'nuclei',
+          name: '4. Exposure & Vulnerability Audit',
+          defaultTitle: 'Secret & CVE Exposure Check',
+          icon: '🔍'
+        }
+      ];
+
+  const jenkinsJobUrl = isFlutterPackage
+    ? 'http://localhost:8085/job/package-validation/'
+    : 'http://localhost:8085/job/webview-validation/';
 
   const handleReScan = async () => {
     setIsReScanning(true);
@@ -181,6 +220,14 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
     ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800'
     : 'bg-rose-50 border-rose-200 dark:bg-rose-950/30 dark:border-rose-800';
 
+  const scannedTargetLabel = isFlutterPackage
+    ? (miniApp.integrationConfig?.packageStoragePath
+        ? `MinIO Package: ${miniApp.integrationConfig.packageStoragePath}`
+        : miniApp.integrationConfig?.repoUrl
+        ? `Git Repo: ${miniApp.integrationConfig.repoUrl}${miniApp.integrationConfig.commitSha ? ` @ ${miniApp.integrationConfig.commitSha.substring(0, 7)}` : ''}`
+        : 'Flutter Package Ingestion')
+    : (miniApp.integrationConfig?.productionUrl || miniApp.integrationConfigWebView?.productionUrl || 'N/A');
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Executive Security Summary Card */}
@@ -196,7 +243,7 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
             <div>
               <div className="flex items-center gap-3">
                 <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                  Automated Security & Compliance Report
+                  {isFlutterPackage ? 'Package Security & Compliance Report' : 'Automated Security & Compliance Report'}
                 </h3>
                 <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
                   valStatus === 'PASSED'
@@ -211,8 +258,8 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
                 </span>
               </div>
               <p className="text-sm text-slate-500 mt-1">
-                Scanned Target: <code className="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-700 dark:text-slate-300">
-                  {miniApp.integrationConfig?.productionUrl || miniApp.integrationConfigWebView?.productionUrl || 'N/A'}
+                Target: <code className="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-700 dark:text-slate-300">
+                  {scannedTargetLabel}
                 </code>
               </p>
               {report?.completedAt && (
@@ -259,71 +306,139 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
         </div>
 
         {/* Security Controls Overview Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-          <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/30">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Network & SSRF</span>
-              {report?.checks?.ssrf?.passed ? (
-                <span className="text-emerald-600 font-bold text-xs bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">PASSED</span>
-              ) : valStatus === 'RUNNING' ? (
-                <span className="text-brand-600 text-xs animate-pulse">CHECKING...</span>
-              ) : (
-                <span className="text-rose-600 font-bold text-xs bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded">FAILED</span>
-              )}
+        {isFlutterPackage ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+            <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/30">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Ingest & Checksum</span>
+                {report?.checks?.ingest?.passed ? (
+                  <span className="text-emerald-600 font-bold text-xs bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">PASSED</span>
+                ) : valStatus === 'RUNNING' ? (
+                  <span className="text-brand-600 text-xs animate-pulse">CHECKING...</span>
+                ) : (
+                  <span className="text-rose-600 font-bold text-xs bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded">FAILED</span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500">
+                {report?.checks?.ingest?.details || (valStatus === 'FAILED' ? 'Archive digest verification failed.' : 'SHA-256 digest & structure verified.')}
+              </p>
             </div>
-            <p className="text-xs text-slate-500">
-              {report?.checks?.ssrf?.details || (valStatus === 'FAILED' ? 'Scan interrupted or failed.' : 'Private RFC 1918 & metadata protection verified.')}
-            </p>
-          </div>
 
-          <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/30">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">TLS Encryption</span>
-              {report?.checks?.tls?.passed ? (
-                <span className="text-emerald-600 font-bold text-xs bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">PASSED</span>
-              ) : valStatus === 'RUNNING' ? (
-                <span className="text-brand-600 text-xs animate-pulse">CHECKING...</span>
-              ) : (
-                <span className="text-rose-600 font-bold text-xs bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded">FAILED</span>
-              )}
+            <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/30">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Secrets (Gitleaks)</span>
+                {report?.checks?.secrets?.passed ? (
+                  <span className="text-emerald-600 font-bold text-xs bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">PASSED</span>
+                ) : valStatus === 'RUNNING' ? (
+                  <span className="text-brand-600 text-xs animate-pulse">CHECKING...</span>
+                ) : (
+                  <span className="text-rose-600 font-bold text-xs bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded">FAILED</span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500">
+                {report?.checks?.secrets?.details || (valStatus === 'FAILED' ? 'Awaiting Gitleaks secret scan.' : 'No hardcoded API keys, JWTs, or private keys.')}
+              </p>
             </div>
-            <p className="text-xs text-slate-500">
-              {report?.checks?.tls?.details || (valStatus === 'FAILED' ? 'Awaiting cipher suite verification.' : 'TLS 1.2+ & secure cipher suites enforced.')}
-            </p>
-          </div>
 
-          <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/30">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">DAST & CSP (ZAP)</span>
-              {report?.checks?.dast?.passed ? (
-                <span className="text-emerald-600 font-bold text-xs bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">PASSED</span>
-              ) : valStatus === 'RUNNING' ? (
-                <span className="text-brand-600 text-xs animate-pulse">CHECKING...</span>
-              ) : (
-                <span className="text-rose-600 font-bold text-xs bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded">FAILED</span>
-              )}
+            <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/30">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">SAST & Sandbox</span>
+                {report?.checks?.sast?.passed ? (
+                  <span className="text-emerald-600 font-bold text-xs bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">PASSED</span>
+                ) : valStatus === 'RUNNING' ? (
+                  <span className="text-brand-600 text-xs animate-pulse">CHECKING...</span>
+                ) : (
+                  <span className="text-rose-600 font-bold text-xs bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded">FAILED</span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500">
+                {report?.checks?.sast?.details || (valStatus === 'FAILED' ? 'Awaiting AST & code analysis.' : 'No prohibited mirrors, eval, or OS process execution.')}
+              </p>
             </div>
-            <p className="text-xs text-slate-500">
-              {report?.checks?.dast?.details || (valStatus === 'FAILED' ? 'Awaiting XSS & CSP header audit.' : 'No high severity cross-site scripting or missing CSP.')}
-            </p>
-          </div>
 
-          <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/30">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Exposure (Nuclei)</span>
-              {report?.checks?.exposure?.passed ? (
-                <span className="text-emerald-600 font-bold text-xs bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">PASSED</span>
-              ) : valStatus === 'RUNNING' ? (
-                <span className="text-brand-600 text-xs animate-pulse">CHECKING...</span>
-              ) : (
-                <span className="text-rose-600 font-bold text-xs bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded">FAILED</span>
-              )}
+            <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/30">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Capability Gate</span>
+                {report?.checks?.capability_gate?.passed ? (
+                  <span className="text-emerald-600 font-bold text-xs bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">PASSED</span>
+                ) : valStatus === 'RUNNING' ? (
+                  <span className="text-brand-600 text-xs animate-pulse">CHECKING...</span>
+                ) : (
+                  <span className="text-rose-600 font-bold text-xs bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded">FAILED</span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500">
+                {report?.checks?.capability_gate?.details || (valStatus === 'FAILED' ? 'Awaiting capability gate check.' : 'Declared plugins comply with host catalog.')}
+              </p>
             </div>
-            <p className="text-xs text-slate-500">
-              {report?.checks?.exposure?.details || (valStatus === 'FAILED' ? 'Awaiting CVE & endpoint check.' : 'No sensitive .env, .git, or CVE endpoints exposed.')}
-            </p>
           </div>
-        </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+            <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/30">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Network & SSRF</span>
+                {report?.checks?.ssrf?.passed ? (
+                  <span className="text-emerald-600 font-bold text-xs bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">PASSED</span>
+                ) : valStatus === 'RUNNING' ? (
+                  <span className="text-brand-600 text-xs animate-pulse">CHECKING...</span>
+                ) : (
+                  <span className="text-rose-600 font-bold text-xs bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded">FAILED</span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500">
+                {report?.checks?.ssrf?.details || (valStatus === 'FAILED' ? 'Scan interrupted or failed.' : 'Private RFC 1918 & metadata protection verified.')}
+              </p>
+            </div>
+
+            <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/30">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">TLS Encryption</span>
+                {report?.checks?.tls?.passed ? (
+                  <span className="text-emerald-600 font-bold text-xs bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">PASSED</span>
+                ) : valStatus === 'RUNNING' ? (
+                  <span className="text-brand-600 text-xs animate-pulse">CHECKING...</span>
+                ) : (
+                  <span className="text-rose-600 font-bold text-xs bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded">FAILED</span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500">
+                {report?.checks?.tls?.details || (valStatus === 'FAILED' ? 'Awaiting cipher suite verification.' : 'TLS 1.2+ & secure cipher suites enforced.')}
+              </p>
+            </div>
+
+            <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/30">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">DAST & CSP (ZAP)</span>
+                {report?.checks?.dast?.passed ? (
+                  <span className="text-emerald-600 font-bold text-xs bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">PASSED</span>
+                ) : valStatus === 'RUNNING' ? (
+                  <span className="text-brand-600 text-xs animate-pulse">CHECKING...</span>
+                ) : (
+                  <span className="text-rose-600 font-bold text-xs bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded">FAILED</span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500">
+                {report?.checks?.dast?.details || (valStatus === 'FAILED' ? 'Awaiting XSS & CSP header audit.' : 'No high severity cross-site scripting or missing CSP.')}
+              </p>
+            </div>
+
+            <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/30">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Exposure (Nuclei)</span>
+                {report?.checks?.exposure?.passed ? (
+                  <span className="text-emerald-600 font-bold text-xs bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">PASSED</span>
+                ) : valStatus === 'RUNNING' ? (
+                  <span className="text-brand-600 text-xs animate-pulse">CHECKING...</span>
+                ) : (
+                  <span className="text-rose-600 font-bold text-xs bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded">FAILED</span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500">
+                {report?.checks?.exposure?.details || (valStatus === 'FAILED' ? 'Awaiting CVE & endpoint check.' : 'No sensitive .env, .git, or CVE endpoints exposed.')}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Prominent Failure Banner if pipeline or validation failed */}
@@ -344,7 +459,7 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <a
-              href="http://localhost:8085/job/webview-validation/"
+              href={jenkinsJobUrl}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200 dark:border-rose-800 bg-white dark:bg-slate-900 text-xs font-semibold text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shadow-sm"

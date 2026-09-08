@@ -138,6 +138,83 @@ export class JenkinsService {
   }
 
   /**
+   * Triggers the package-validation parameterized pipeline in Jenkins for Flutter Packages
+   */
+  async triggerPackageValidation(options: {
+    miniAppId: string;
+    packageName?: string;
+    version?: string;
+    integrationType?: 'ARTIFACT' | 'SOURCE_CODE';
+    sourceStoragePath?: string;
+    repoUrl?: string;
+    commitSha?: string;
+    gitProvider?: string;
+    allowedCapabilities?: string[];
+    requiredCapabilities?: string[];
+  }): Promise<{ success: boolean; message: string }> {
+    const jobName = 'package-validation';
+    const callbackUrl = `${this.callbackBaseUrl}/api/integrations/validation/callback`;
+    const allowedCapsStr = (options.allowedCapabilities || ['camera', 'geolocator', 'local_auth']).join(',');
+    const requiredCapsStr = (options.requiredCapabilities || []).join(',');
+
+    const params = new URLSearchParams({
+      MINIAPP_ID: options.miniAppId,
+      PACKAGE_NAME: options.packageName || '',
+      VERSION: options.version || '1.0.0',
+      INTEGRATION_TYPE: options.integrationType || 'ARTIFACT',
+      SOURCE_STORAGE_PATH: options.sourceStoragePath || '',
+      REPO_URL: options.repoUrl || '',
+      COMMIT_SHA: options.commitSha || '',
+      GIT_PROVIDER: options.gitProvider || 'GITHUB',
+      ALLOWED_CAPABILITIES: allowedCapsStr,
+      REQUIRED_CAPABILITIES: requiredCapsStr,
+      CALLBACK_URL: callbackUrl,
+    });
+
+    const triggerUrl = `${this.jenkinsUrl}/job/${jobName}/buildWithParameters?${params.toString()}`;
+    this.logger.log(`Triggering Jenkins Flutter Package validation pipeline: ${triggerUrl}`);
+
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      };
+
+      const authHeader = this.getAuthHeader();
+      if (authHeader) {
+        headers['Authorization'] = authHeader;
+      }
+
+      const crumbData = await this.getCrumb();
+      if (crumbData) {
+        headers[crumbData.headerName] = crumbData.crumb;
+        if (crumbData.cookie) {
+          headers['Cookie'] = crumbData.cookie;
+        }
+      }
+
+      const response = await fetch(triggerUrl, {
+        method: 'POST',
+        headers,
+      });
+
+      if (response.status === 201 || response.status === 200) {
+        this.logger.log(`Jenkins job "${jobName}" triggered successfully for Mini App ${options.miniAppId}`);
+        return { success: true, message: 'Jenkins package validation pipeline triggered successfully' };
+      }
+
+      const responseBody = await response.text();
+      this.logger.warn(`Jenkins trigger returned HTTP ${response.status}: ${responseBody.substring(0, 300)}`);
+      return {
+        success: false,
+        message: `Jenkins returned HTTP ${response.status}: ${responseBody.substring(0, 150)}`,
+      };
+    } catch (err: any) {
+      this.logger.error(`Failed to trigger Jenkins package validation: ${err.message}`);
+      return { success: false, message: `Could not connect to Jenkins: ${err.message}` };
+    }
+  }
+
+  /**
    * Triggers the superapp-test-build parameterized pipeline in Jenkins
    */
   async triggerSuperAppBuild(options: {
