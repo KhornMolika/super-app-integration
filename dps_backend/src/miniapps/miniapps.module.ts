@@ -16,6 +16,10 @@ import { AuditModule } from '../audit/audit.module';
 import { IntegrationsModule } from '../integrations/integrations.module';
 import { StorageModule } from '../storage/storage.module';
 
+import { PermissionDetectorHelper } from './helpers/permission-detector.helper';
+import { MiniappValidationHelper } from './helpers/miniapp-validation.helper';
+import { MiniappLifecycleHelper } from './helpers/miniapp-lifecycle.helper';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -34,6 +38,17 @@ import { StorageModule } from '../storage/storage.module';
     StorageModule,
   ],
   controllers: [MiniappsController],
-  providers: [MiniappsService],
+  providers: [
+    MiniappsService,
+    PermissionDetectorHelper,
+    MiniappValidationHelper,
+    MiniappLifecycleHelper,
+  ],
+  exports: [
+    MiniappsService,
+    PermissionDetectorHelper,
+    MiniappValidationHelper,
+    MiniappLifecycleHelper,
+  ],
 })
 export class MiniappsModule {}
