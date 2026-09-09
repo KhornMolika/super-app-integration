@@ -51,15 +51,26 @@ services:
       MINIO_LICENSE: ${MINIO_AISTOR_LICENSE:-${MINIO_SUBNET_LICENSE:-}}
     entrypoint: >
       /bin/sh -c "
-      sleep 2;
-      /usr/bin/mc alias set myminio http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD;
+      echo 'Waiting for MinIO AIStor server...';
+      sleep 3;
+      /usr/bin/mc alias set myminio http://minio:9000 \$$MINIO_ROOT_USER \$$MINIO_ROOT_PASSWORD;
       
-      # 1. Public bucket for UI assets (logos/banners)
-      /usr/bin/mc mb myminio/mini-app-logos --ignore-existing;
-      /usr/bin/mc anonymous set download myminio/mini-app-logos;
+      # 1. Automatically register / update license if provided in environment
+      if [ -n \"\$$MINIO_AISTOR_LICENSE\" ]; then
+        echo 'Applying MinIO AIStor license key from environment...';
+        /usr/bin/mc license update myminio \"\$$MINIO_AISTOR_LICENSE\" || /usr/bin/mc license register myminio \"\$$MINIO_AISTOR_LICENSE\" || true;
+      elif [ -f /license/license.jwt ]; then
+        echo 'Applying MinIO AIStor license from /license/license.jwt...';
+        /usr/bin/mc license update myminio /license/license.jwt || true;
+      fi;
 
-      # 2. Strictly PRIVATE quarantine bucket for untrusted uploaded packages
-      /usr/bin/mc mb myminio/submissions --ignore-existing;
+      # 2. Public bucket for UI assets (logos/banners)
+      /usr/bin/mc mb myminio/mini-app-logos --ignore-existing || true;
+      /usr/bin/mc anonymous set download myminio/mini-app-logos || true;
+
+      # 3. Strictly PRIVATE quarantine bucket for untrusted uploaded packages
+      /usr/bin/mc mb myminio/submissions --ignore-existing || true;
+      echo 'MinIO AIStor initialization complete.';
       exit 0;
       "
 
