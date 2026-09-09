@@ -29,9 +29,9 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-admin1234}
-      MINIO_AISTOR_LICENSE: ${MINIO_AISTOR_LICENSE:-${MINIO_SUBNET_LICENSE:-}}
-      MINIO_SUBNET_LICENSE: ${MINIO_AISTOR_LICENSE:-${MINIO_SUBNET_LICENSE:-}}
-      MINIO_LICENSE: ${MINIO_AISTOR_LICENSE:-${MINIO_SUBNET_LICENSE:-}}
+      MINIO_SUBNET_LICENSE: ${MINIO_SUBNET_LICENSE:-}
+      MINIO_AISTOR_LICENSE: ${MINIO_SUBNET_LICENSE:-}
+      MINIO_LICENSE: ${MINIO_SUBNET_LICENSE:-}
     ports:
       - '${MINIO_PORT:-9000}:9000'
       - '${MINIO_CONSOLE_PORT:-9001}:9001'
@@ -46,19 +46,20 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-admin1234}
-      MINIO_AISTOR_LICENSE: ${MINIO_AISTOR_LICENSE:-${MINIO_SUBNET_LICENSE:-}}
-      MINIO_SUBNET_LICENSE: ${MINIO_AISTOR_LICENSE:-${MINIO_SUBNET_LICENSE:-}}
-      MINIO_LICENSE: ${MINIO_AISTOR_LICENSE:-${MINIO_SUBNET_LICENSE:-}}
+      MINIO_SUBNET_LICENSE: ${MINIO_SUBNET_LICENSE:-}
+      MINIO_AISTOR_LICENSE: ${MINIO_SUBNET_LICENSE:-}
+      MINIO_LICENSE: ${MINIO_SUBNET_LICENSE:-}
     entrypoint: >
       /bin/sh -c "
       echo 'Waiting for MinIO AIStor server...';
       sleep 3;
       /usr/bin/mc alias set myminio http://minio:9000 \$$MINIO_ROOT_USER \$$MINIO_ROOT_PASSWORD;
       
-      # 1. Automatically register / update license if provided in environment
-      if [ -n \"\$$MINIO_AISTOR_LICENSE\" ]; then
-        echo 'Applying MinIO AIStor license key from environment...';
-        /usr/bin/mc license update myminio \"\$$MINIO_AISTOR_LICENSE\" || /usr/bin/mc license register myminio \"\$$MINIO_AISTOR_LICENSE\" || true;
+      # 1. Automatically register / update license from MINIO_SUBNET_LICENSE
+      TARGET_LICENSE=\"\$$MINIO_SUBNET_LICENSE\"
+      if [ -n \"\$$TARGET_LICENSE\" ]; then
+        echo 'Applying MinIO AIStor license key from MINIO_SUBNET_LICENSE...';
+        /usr/bin/mc license update myminio \"\$$TARGET_LICENSE\" || /usr/bin/mc license register myminio \"\$$TARGET_LICENSE\" || true;
       elif [ -f /license/license.jwt ]; then
         echo 'Applying MinIO AIStor license from /license/license.jwt...';
         /usr/bin/mc license update myminio /license/license.jwt || true;
