@@ -28,7 +28,7 @@ export class StorageService implements OnModuleInit {
     );
     const secretKey = this.configService.get<string>(
       'MINIO_SECRET_KEY',
-      'admin123',
+      'admin1234',
     );
 
     this.bucketName = this.configService.get<string>(

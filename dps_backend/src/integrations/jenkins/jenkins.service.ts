@@ -16,7 +16,7 @@ export class JenkinsService {
     this.jenkinsUser = this.configService.get<string>('JENKINS_USER', 'admin');
     this.jenkinsApiToken = this.configService.get<string>(
       'JENKINS_API_TOKEN',
-      '',
+      'admin1234',
     );
     this.callbackBaseUrl = this.configService
       .get<string>('CALLBACK_BASE_URL', 'http://host.docker.internal:3000')
