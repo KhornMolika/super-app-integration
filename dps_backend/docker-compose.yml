@@ -22,7 +22,7 @@ services:
       - nexus-data:/nexus-data
 
   minio:
-    image: minio/minio:latest
+    image: ${MINIO_IMAGE:-quay.io/minio/aistor/minio:RELEASE.2026-09-07T08-39-31Z}
     container_name: dps-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
