@@ -47,33 +47,9 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-admin1234}
       MINIO_SUBNET_LICENSE: ${MINIO_SUBNET_LICENSE:-}
-      MINIO_AISTOR_LICENSE: ${MINIO_SUBNET_LICENSE:-}
-      MINIO_LICENSE: ${MINIO_SUBNET_LICENSE:-}
-    entrypoint: >
-      /bin/sh -c "
-      echo 'Waiting for MinIO AIStor server...';
-      sleep 3;
-      /usr/bin/mc alias set myminio http://minio:9000 \$$MINIO_ROOT_USER \$$MINIO_ROOT_PASSWORD;
-      
-      # 1. Automatically register / update license from MINIO_SUBNET_LICENSE
-      TARGET_LICENSE=\"\$$MINIO_SUBNET_LICENSE\"
-      if [ -n \"\$$TARGET_LICENSE\" ]; then
-        echo 'Applying MinIO AIStor license key from MINIO_SUBNET_LICENSE...';
-        /usr/bin/mc license update myminio \"\$$TARGET_LICENSE\" || /usr/bin/mc license register myminio \"\$$TARGET_LICENSE\" || true;
-      elif [ -f /license/license.jwt ]; then
-        echo 'Applying MinIO AIStor license from /license/license.jwt...';
-        /usr/bin/mc license update myminio /license/license.jwt || true;
-      fi;
-
-      # 2. Public bucket for UI assets (logos/banners)
-      /usr/bin/mc mb myminio/mini-app-logos --ignore-existing || true;
-      /usr/bin/mc anonymous set download myminio/mini-app-logos || true;
-
-      # 3. Strictly PRIVATE quarantine bucket for untrusted uploaded packages
-      /usr/bin/mc mb myminio/submissions --ignore-existing || true;
-      echo 'MinIO AIStor initialization complete.';
-      exit 0;
-      "
+    volumes:
+      - ./scripts/minio-init.sh:/minio-init.sh:ro
+    entrypoint: ["/bin/sh", "/minio-init.sh"]
 
 volumes:
   pgdata:
