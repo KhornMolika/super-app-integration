@@ -14,7 +14,7 @@ pipeline {
         string(name: 'REQUIRED_CAPABILITIES', defaultValue: '', description: 'Comma-separated Mini App declared required capabilities')
         string(name: 'CALLBACK_URL', defaultValue: 'http://host.docker.internal:3000/api/integrations/validation/callback', description: 'NestJS Backend Webhook Callback URL')
         string(name: 'MINIO_ENDPOINT', defaultValue: 'http://host.docker.internal:9000', description: 'MinIO S3 Endpoint')
-        string(name: 'MINIO_BUCKET', defaultValue: 'miniapp-packages', description: 'MinIO Bucket Name')
+        string(name: 'MINIO_BUCKET', defaultValue: 'submissions', description: 'MinIO Bucket Name')
     }
 
     environment {
