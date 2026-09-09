@@ -15,4 +15,3 @@ export class AuditService {
     return this.auditLogRepository.save(entry);
   }
 }
-

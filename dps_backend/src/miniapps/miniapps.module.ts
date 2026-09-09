@@ -22,11 +22,7 @@ import { MiniappLifecycleHelper } from './helpers/miniapp-lifecycle.helper';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
-      MiniApp,
-      MiniAppIssue,
-      MiniAppActivity,
-    ]),
+    TypeOrmModule.forFeature([MiniApp, MiniAppIssue, MiniAppActivity]),
     MailModule,
     AuthModule,
     NotificationsModule,

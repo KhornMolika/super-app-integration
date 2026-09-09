@@ -1,4 +1,20 @@
-import { Controller, HttpException, BadRequestException, Get, Post, Body, Patch, Param, Delete, Query, ParseUUIDPipe, UseGuards, Req, UseInterceptors, UploadedFile } from '@nestjs/common';
+import {
+  Controller,
+  HttpException,
+  BadRequestException,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  ParseUUIDPipe,
+  UseGuards,
+  Req,
+  UseInterceptors,
+  UploadedFile,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as net from 'net';
 import { MiniappsService } from './miniapps.service';
@@ -29,15 +45,23 @@ export class MiniappsController {
       dataToSave.integrationConfig = createData.integrationConfigWebView;
       if (createData.isDomainVerified !== undefined) {
         dataToSave.isDomainVerified = createData.isDomainVerified;
-      } else if (createData.integrationConfigWebView?.isDomainVerified !== undefined) {
-        dataToSave.isDomainVerified = createData.integrationConfigWebView.isDomainVerified;
+      } else if (
+        createData.integrationConfigWebView?.isDomainVerified !== undefined
+      ) {
+        dataToSave.isDomainVerified =
+          createData.integrationConfigWebView.isDomainVerified;
       }
       if (createData.domainVerifiedAt !== undefined) {
         dataToSave.domainVerifiedAt = createData.domainVerifiedAt;
-      } else if (createData.integrationConfigWebView?.domainVerifiedAt !== undefined) {
-        dataToSave.domainVerifiedAt = createData.integrationConfigWebView.domainVerifiedAt;
+      } else if (
+        createData.integrationConfigWebView?.domainVerifiedAt !== undefined
+      ) {
+        dataToSave.domainVerifiedAt =
+          createData.integrationConfigWebView.domainVerifiedAt;
       }
-      const token = createData.verificationToken || createData.integrationConfigWebView?.verificationToken;
+      const token =
+        createData.verificationToken ||
+        createData.integrationConfigWebView?.verificationToken;
       if (token) {
         dataToSave.verificationToken = token;
         if (dataToSave.integrationConfig) {
@@ -59,22 +83,30 @@ export class MiniappsController {
   @RequirePermissions('miniapp:create')
   create(@Body() createData: CreateMiniAppDto, @Req() req: any) {
     const dataToSave: any = { ...createData, status: MiniAppStatus.IN_REVIEW };
-    
+
     // Assign the ownerId from the authenticated user token payload
     dataToSave.ownerId = req.user.sub;
     if (createData.integrationMethod === 'WEBVIEW') {
       dataToSave.integrationConfig = createData.integrationConfigWebView;
       if (createData.isDomainVerified !== undefined) {
         dataToSave.isDomainVerified = createData.isDomainVerified;
-      } else if (createData.integrationConfigWebView?.isDomainVerified !== undefined) {
-        dataToSave.isDomainVerified = createData.integrationConfigWebView.isDomainVerified;
+      } else if (
+        createData.integrationConfigWebView?.isDomainVerified !== undefined
+      ) {
+        dataToSave.isDomainVerified =
+          createData.integrationConfigWebView.isDomainVerified;
       }
       if (createData.domainVerifiedAt !== undefined) {
         dataToSave.domainVerifiedAt = createData.domainVerifiedAt;
-      } else if (createData.integrationConfigWebView?.domainVerifiedAt !== undefined) {
-        dataToSave.domainVerifiedAt = createData.integrationConfigWebView.domainVerifiedAt;
+      } else if (
+        createData.integrationConfigWebView?.domainVerifiedAt !== undefined
+      ) {
+        dataToSave.domainVerifiedAt =
+          createData.integrationConfigWebView.domainVerifiedAt;
       }
-      const token = createData.verificationToken || createData.integrationConfigWebView?.verificationToken;
+      const token =
+        createData.verificationToken ||
+        createData.integrationConfigWebView?.verificationToken;
       if (token) {
         dataToSave.verificationToken = token;
         if (dataToSave.integrationConfig) {
@@ -86,7 +118,7 @@ export class MiniappsController {
     } else if (createData.integrationMethod === 'DEEP_LINK') {
       dataToSave.integrationConfig = createData.integrationConfigDeepLink;
     }
-    
+
     // Clean up DTO specific fields
     delete dataToSave.integrationConfigWebView;
     delete dataToSave.integrationConfigFlutter;
@@ -103,12 +135,18 @@ export class MiniappsController {
       return await this.miniappService.findAll(query);
     } catch (error: any) {
       console.error('FIND ALL ERROR:', error);
-      throw new HttpException({ message: error?.message || 'Error', stack: error?.stack }, 500);
+      throw new HttpException(
+        { message: error?.message || 'Error', stack: error?.stack },
+        500,
+      );
     }
   }
 
-
-  private probeTcp(host: string, port: number, timeoutMs = 1200): Promise<boolean> {
+  private probeTcp(
+    host: string,
+    port: number,
+    timeoutMs = 1200,
+  ): Promise<boolean> {
     return new Promise((resolve) => {
       const socket = new net.Socket();
       socket.setTimeout(timeoutMs);
@@ -146,19 +184,31 @@ export class MiniappsController {
     } catch {
       return { reachable: false, message: 'Invalid URL format' };
     }
-    
+
     // Skip git repository URLs as they often block simple HEAD/GET requests
-    if (url.includes('github.com') || url.includes('gitlab.com') || url.includes('bitbucket.org') || url.endsWith('.git')) {
+    if (
+      url.includes('github.com') ||
+      url.includes('gitlab.com') ||
+      url.includes('bitbucket.org') ||
+      url.endsWith('.git')
+    ) {
       return { reachable: true };
     }
 
-    const port = parsed.port ? Number(parsed.port) : (parsed.protocol === 'https:' ? 443 : 80);
+    const port = parsed.port
+      ? Number(parsed.port)
+      : parsed.protocol === 'https:'
+        ? 443
+        : 80;
     const host = parsed.hostname;
 
     // Fast TCP probe (1200ms max timeout)
     const isPortOpen = await this.probeTcp(host, port, 1200);
     if (!isPortOpen) {
-      return { reachable: false, message: `Could not connect to ${host}:${port} (server offline or unreachable)` };
+      return {
+        reachable: false,
+        message: `Could not connect to ${host}:${port} (server offline or unreachable)`,
+      };
     }
 
     return { reachable: true, host, port };
@@ -166,11 +216,13 @@ export class MiniappsController {
 
   @Get('check-exists')
   @RequirePermissions('miniapp:read')
-  checkExists(@Query('appId') appId?: string, @Query('name') name?: string, @Query('excludeId') excludeId?: string) {
+  checkExists(
+    @Query('appId') appId?: string,
+    @Query('name') name?: string,
+    @Query('excludeId') excludeId?: string,
+  ) {
     return this.miniappService.checkExists(appId, name, excludeId);
   }
-
-
 
   @Get('generate-token')
   @RequirePermissions('miniapp:create')
@@ -181,7 +233,12 @@ export class MiniappsController {
   @Post('verify-domain')
   @RequirePermissions('miniapp:create')
   verifyDomainStandalone(
-    @Body() body: { productionUrl: string; appId: string; verificationToken: string }
+    @Body()
+    body: {
+      productionUrl: string;
+      appId: string;
+      verificationToken: string;
+    },
   ) {
     if (!body?.productionUrl) {
       throw new BadRequestException('productionUrl is required.');
@@ -195,7 +252,7 @@ export class MiniappsController {
     return this.miniappService.verifyDomainStandalone(
       body.productionUrl,
       body.appId,
-      body.verificationToken
+      body.verificationToken,
     );
   }
 
@@ -208,7 +265,9 @@ export class MiniappsController {
     @Body('version') version?: string,
   ) {
     if (!file) {
-      throw new BadRequestException('Package archive file (.zip / .tar.gz) is required.');
+      throw new BadRequestException(
+        'Package archive file (.zip / .tar.gz) is required.',
+      );
     }
     return this.miniappService.uploadPackageArtifact(file, miniAppId, version);
   }
@@ -216,7 +275,13 @@ export class MiniappsController {
   @Post('detect-permissions')
   @RequirePermissions('miniapp:create')
   detectPermissions(
-    @Body() body: { productionUrl?: string; category?: string; name?: string; appId?: string }
+    @Body()
+    body: {
+      productionUrl?: string;
+      category?: string;
+      name?: string;
+      appId?: string;
+    },
   ) {
     return this.miniappService.detectPermissions(body);
   }
@@ -247,7 +312,10 @@ export class MiniappsController {
 
   @Post(':id/verify-domain')
   @RequirePermissions('miniapp:update')
-  verifyDomain(@Param('id', ParseUUIDPipe) id: string, @Body() body?: { productionUrl?: string }) {
+  verifyDomain(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body?: { productionUrl?: string },
+  ) {
     return this.miniappService.verifyDomain(id, body?.productionUrl);
   }
 
@@ -277,13 +345,21 @@ export class MiniappsController {
 
   @Post(':id/reject')
   @RequirePermissions('miniapp:reject')
-  reject(@Param('id', ParseUUIDPipe) id: string, @Body('reason') reason: string, @Req() req: any) {
+  reject(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body('reason') reason: string,
+    @Req() req: any,
+  ) {
     return this.miniappService.reject(id, reason, req.user.sub);
   }
 
   @Post(':id/request-changes')
   @RequirePermissions('miniapp:reject')
-  requestChanges(@Param('id', ParseUUIDPipe) id: string, @Body('reason') reason: string, @Req() req: any) {
+  requestChanges(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body('reason') reason: string,
+    @Req() req: any,
+  ) {
     return this.miniappService.requestChanges(id, reason, req.user.sub);
   }
 
@@ -319,16 +395,22 @@ export class MiniappsController {
 
   @Patch(':id')
   @RequirePermissions('miniapp:update')
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateData: UpdateMiniAppDto, @Req() req: any) {
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateData: UpdateMiniAppDto,
+    @Req() req: any,
+  ) {
     const dataToSave: any = { ...updateData };
     if (updateData.integrationMethod === 'WEBVIEW') {
       dataToSave.integrationConfig = updateData.integrationConfigWebView;
     } else if (updateData.integrationMethod === 'FLUTTER_PACKAGE') {
       dataToSave.integrationConfig = updateData.integrationConfigFlutter;
     } else if (updateData.integrationMethod === 'DEEP_LINK') {
-      dataToSave.integrationConfig = (updateData as any).integrationConfigDeepLink;
+      dataToSave.integrationConfig = (
+        updateData as any
+      ).integrationConfigDeepLink;
     }
-    
+
     // Clean up DTO specific fields
     delete dataToSave.integrationConfigWebView;
     delete dataToSave.integrationConfigFlutter;

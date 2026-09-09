@@ -39,7 +39,9 @@ describe('GitIntegrationService & Providers', () => {
 
   describe('URL Auto-Detection', () => {
     it('should auto-detect GitHub HTTPS URL', () => {
-      const result = service.detect('https://github.com/company/payment-miniapp.git');
+      const result = service.detect(
+        'https://github.com/company/payment-miniapp.git',
+      );
       expect(result.provider).toBe('github');
       expect(result.parsed.owner).toBe('company');
       expect(result.parsed.repo).toBe('payment-miniapp');
@@ -61,7 +63,9 @@ describe('GitIntegrationService & Providers', () => {
     });
 
     it('should auto-detect GitLab HTTPS URL with nested namespaces', () => {
-      const result = service.detect('https://gitlab.company.com/mobile/banking/payment-miniapp.git');
+      const result = service.detect(
+        'https://gitlab.company.com/mobile/banking/payment-miniapp.git',
+      );
       expect(result.provider).toBe('gitlab');
       expect(result.parsed.owner).toBe('mobile/banking');
       expect(result.parsed.repo).toBe('payment-miniapp');
@@ -69,14 +73,19 @@ describe('GitIntegrationService & Providers', () => {
     });
 
     it('should auto-detect GitLab.com URL', () => {
-      const result = service.detect('https://gitlab.com/enterprise/job-miniapp');
+      const result = service.detect(
+        'https://gitlab.com/enterprise/job-miniapp',
+      );
       expect(result.provider).toBe('gitlab');
       expect(result.parsed.owner).toBe('enterprise');
       expect(result.parsed.repo).toBe('job-miniapp');
     });
 
     it('should allow explicit provider override', () => {
-      const result = service.detect('https://custom-git.internal/org/repo.git', 'gitlab');
+      const result = service.detect(
+        'https://custom-git.internal/org/repo.git',
+        'gitlab',
+      );
       expect(result.provider).toBe('gitlab');
     });
   });
@@ -93,7 +102,9 @@ describe('GitIntegrationService & Providers', () => {
       expect(provider).toBe('github');
       expect(snippet).toContain('payment_miniapp:');
       expect(snippet).toContain('git:');
-      expect(snippet).toContain('url: https://github.com/company/payment-miniapp.git');
+      expect(snippet).toContain(
+        'url: https://github.com/company/payment-miniapp.git',
+      );
       expect(snippet).toContain('ref: v1.0.0');
     });
 
@@ -108,7 +119,9 @@ describe('GitIntegrationService & Providers', () => {
       expect(provider).toBe('gitlab');
       expect(snippet).toContain('payment_miniapp:');
       expect(snippet).toContain('git:');
-      expect(snippet).toContain('url: https://gitlab.company.com/mobile/payment-miniapp.git');
+      expect(snippet).toContain(
+        'url: https://gitlab.company.com/mobile/payment-miniapp.git',
+      );
       expect(snippet).toContain('ref: a1b2c3d4e5f6');
     });
 

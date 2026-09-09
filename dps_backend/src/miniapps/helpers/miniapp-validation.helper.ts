@@ -14,6 +14,7 @@ import { GitIntegrationService } from '../../integrations/git/git-integration.se
 import { NexusIntegrationService } from '../../integrations/nexus/nexus-integration.service';
 import { DomainVerificationService } from '../../integrations/webview/domain-verification.service';
 import { JenkinsService } from '../../integrations/jenkins/jenkins.service';
+import { LocalSecurityScannerService } from '../../integrations/validation/local-security-scanner.service';
 
 @Injectable()
 export class MiniappValidationHelper {
@@ -35,6 +36,7 @@ export class MiniappValidationHelper {
     private nexusService: NexusIntegrationService,
     private domainVerificationService: DomainVerificationService,
     private jenkinsService: JenkinsService,
+    private localSecurityScannerService: LocalSecurityScannerService,
   ) {}
 
   async validateMiniAppAsync(
@@ -47,8 +49,8 @@ export class MiniappValidationHelper {
       description: string,
       auditAction: string,
       oldVal?: any,
-      newVal?: any
-    ) => Promise<void>
+      newVal?: any,
+    ) => Promise<void>,
   ) {
     const id = app.id;
     const errors: Record<string, string> = {};
@@ -63,23 +65,34 @@ export class MiniappValidationHelper {
     }
 
     if (app.logo && app.logo.trim() !== '') {
-      if (app.logo.startsWith('data:image/') || app.logo.startsWith('/uploads/')) {
+      if (
+        app.logo.startsWith('data:image/') ||
+        app.logo.startsWith('/uploads/')
+      ) {
         // Uploaded image format is valid
       } else {
         checks.push(
           urlValidator.validate(app.logo, null as any).then((isValid) => {
-            if (!isValid) errors.logo = 'logo must be a reachable and accessible URL.';
-          })
+            if (!isValid)
+              errors.logo = 'logo must be a reachable and accessible URL.';
+          }),
         );
       }
     }
 
     if (app.integrationMethod === 'WEBVIEW') {
-      const envVal = (process.env.ENVIRONMENT || process.env.NODE_ENV || '').toUpperCase();
-      const isDev = envVal === 'DEV' || envVal === 'DEVELOPMENT' || process.env.NODE_ENV !== 'PROD';
+      const envVal = (
+        process.env.ENVIRONMENT ||
+        process.env.NODE_ENV ||
+        ''
+      ).toUpperCase();
+      const isDev =
+        envVal !== 'PROD' &&
+        (envVal === 'DEV' || process.env.NODE_ENV !== 'PROD');
 
       if (!app.integrationConfig?.productionUrl) {
-        errors['integrationConfigWebView.productionUrl'] = 'productionUrl is required for WebView integration.';
+        errors['integrationConfigWebView.productionUrl'] =
+          'productionUrl is required for WebView integration.';
       } else {
         const prodUrl = app.integrationConfig.productionUrl;
         let isValidProdUrl = true;
@@ -88,17 +101,23 @@ export class MiniappValidationHelper {
         try {
           parsedUrl = new URL(prodUrl);
         } catch {
-          errors['integrationConfigWebView.productionUrl'] = 'Production URL has an invalid URL format.';
+          errors['integrationConfigWebView.productionUrl'] =
+            'Production URL has an invalid URL format.';
           isValidProdUrl = false;
         }
 
         if (parsedUrl) {
           if (!isDev) {
             if (parsedUrl.protocol !== 'https:') {
-              errors['integrationConfigWebView.productionUrl'] = 'Production URL must use HTTPS.';
+              errors['integrationConfigWebView.productionUrl'] =
+                'Production URL must use HTTPS in PROD mode.';
               isValidProdUrl = false;
-            } else if (parsedUrl.hostname === 'localhost' || parsedUrl.hostname === '127.0.0.1') {
-              errors['integrationConfigWebView.productionUrl'] = 'Production URL cannot be localhost in production.';
+            } else if (
+              parsedUrl.hostname === 'localhost' ||
+              parsedUrl.hostname === '127.0.0.1'
+            ) {
+              errors['integrationConfigWebView.productionUrl'] =
+                'Production URL cannot be localhost in PROD mode.';
               isValidProdUrl = false;
             }
           }
@@ -107,8 +126,10 @@ export class MiniappValidationHelper {
         if (isValidProdUrl) {
           checks.push(
             urlValidator.validate(prodUrl, null as any).then((isValid) => {
-              if (!isValid) errors['integrationConfigWebView.productionUrl'] = 'productionUrl must be a reachable and accessible URL.';
-            })
+              if (!isValid)
+                errors['integrationConfigWebView.productionUrl'] =
+                  'productionUrl must be a reachable and accessible URL.';
+            }),
           );
         }
       }
@@ -122,20 +143,24 @@ export class MiniappValidationHelper {
         try {
           parsedStaging = new URL(stagingUrl);
         } catch {
-          errors['integrationConfigWebView.stagingUrl'] = 'Staging URL has an invalid URL format.';
+          errors['integrationConfigWebView.stagingUrl'] =
+            'Staging URL has an invalid URL format.';
           isValidStaging = false;
         }
 
         if (parsedStaging && !isDev && parsedStaging.protocol !== 'https:') {
-          errors['integrationConfigWebView.stagingUrl'] = 'Staging URL must use HTTPS.';
+          errors['integrationConfigWebView.stagingUrl'] =
+            'Staging URL must use HTTPS.';
           isValidStaging = false;
         }
 
         if (isValidStaging) {
           checks.push(
             urlValidator.validate(stagingUrl, null as any).then((isValid) => {
-              if (!isValid) errors['integrationConfigWebView.stagingUrl'] = 'stagingUrl must be a reachable and accessible URL.';
-            })
+              if (!isValid)
+                errors['integrationConfigWebView.stagingUrl'] =
+                  'stagingUrl must be a reachable and accessible URL.';
+            }),
           );
         }
       }
@@ -151,13 +176,20 @@ export class MiniappValidationHelper {
                 if (result.success) {
                   app.isDomainVerified = true;
                   app.domainVerifiedAt = result.verifiedAt || new Date();
-                  if (result.allowedDomains && result.allowedDomains.length > 0) {
-                    const currentAllowed = Array.isArray(app.integrationConfig?.allowedDomains)
+                  if (
+                    result.allowedDomains &&
+                    result.allowedDomains.length > 0
+                  ) {
+                    const currentAllowed = Array.isArray(
+                      app.integrationConfig?.allowedDomains,
+                    )
                       ? app.integrationConfig.allowedDomains
                       : [];
                     app.integrationConfig = {
                       ...app.integrationConfig,
-                      allowedDomains: Array.from(new Set([...currentAllowed, ...result.allowedDomains])),
+                      allowedDomains: Array.from(
+                        new Set([...currentAllowed, ...result.allowedDomains]),
+                      ),
                     };
                   }
                 } else {
@@ -169,7 +201,7 @@ export class MiniappValidationHelper {
               .catch(() => {
                 errors['integrationConfigWebView.domainVerification'] =
                   'Domain ownership has not been verified. Please host the verification token at /.well-known/superapp-miniapp-association.json and verify.';
-              })
+              }),
           );
         } else {
           errors['integrationConfigWebView.domainVerification'] =
@@ -178,10 +210,18 @@ export class MiniappValidationHelper {
       }
 
       // Check allowed domains format
-      if (app.integrationConfig?.allowedDomains && Array.isArray(app.integrationConfig.allowedDomains)) {
+      if (
+        app.integrationConfig?.allowedDomains &&
+        Array.isArray(app.integrationConfig.allowedDomains)
+      ) {
         for (const domain of app.integrationConfig.allowedDomains) {
-          if (typeof domain !== 'string' || domain.includes('/') || domain.includes('://')) {
-            errors['integrationConfigWebView.allowedDomains'] = `Invalid domain "${domain}". allowedDomains must only contain valid hostnames (e.g. "api.domain.com").`;
+          if (
+            typeof domain !== 'string' ||
+            domain.includes('/') ||
+            domain.includes('://')
+          ) {
+            errors['integrationConfigWebView.allowedDomains'] =
+              `Invalid domain "${domain}". allowedDomains must only contain valid hostnames (e.g. "api.domain.com").`;
             break;
           }
         }
@@ -189,12 +229,14 @@ export class MiniappValidationHelper {
     } else if (app.integrationMethod === 'FLUTTER_PACKAGE') {
       const flutterConfig = app.integrationConfig || {};
       const isArtifact =
-        flutterConfig.sourceType === 'ARTIFACT' || (!flutterConfig.sourceType && flutterConfig.packageName);
+        flutterConfig.sourceType === 'ARTIFACT' ||
+        (!flutterConfig.sourceType && flutterConfig.packageName);
 
       if (isArtifact) {
         const packageName = flutterConfig.packageName?.trim();
         if (!packageName) {
-          errors['integrationConfigFlutter.packageName'] = 'Package name is required for Artifact integration.';
+          errors['integrationConfigFlutter.packageName'] =
+            'Package name is required for Artifact integration.';
         } else {
           checks.push(
             this.nexusService
@@ -208,13 +250,14 @@ export class MiniappValidationHelper {
               .catch((err) => {
                 errors['integrationConfigFlutter.packageName'] =
                   `Could not verify package "${packageName}" on Nexus: ${err.message}`;
-              })
+              }),
           );
         }
       } else {
         const gitUrl = flutterConfig.gitUrl?.trim();
         if (!gitUrl) {
-          errors['integrationConfigFlutter.gitUrl'] = 'Git URL is required for Source Code integration.';
+          errors['integrationConfigFlutter.gitUrl'] =
+            'Git URL is required for Source Code integration.';
         } else {
           checks.push(
             this.gitService
@@ -223,36 +266,43 @@ export class MiniappValidationHelper {
                 flutterConfig.gitBranch || flutterConfig.ref,
                 flutterConfig.gitProvider || flutterConfig.provider,
                 flutterConfig.gitAccessToken || flutterConfig.token,
-                flutterConfig.gitPath || flutterConfig.path
+                flutterConfig.gitPath || flutterConfig.path,
               )
               .then(async (result) => {
                 if (!result.validation.isValid) {
                   errors['integrationConfigFlutter.gitUrl'] =
-                    result.validation.error || `Git repository or pubspec.yaml could not be verified for ${gitUrl}.`;
+                    result.validation.error ||
+                    `Git repository or pubspec.yaml could not be verified for ${gitUrl}.`;
                 } else {
                   this.logger.log(
-                    `Git repository metadata verified for ${gitUrl}. Automated security scanning and build integration will be orchestrated via Jenkins.`
+                    `Git repository metadata verified for ${gitUrl}. Automated security scanning and build integration will be orchestrated via Jenkins.`,
                   );
                 }
               })
               .catch((err) => {
                 errors['integrationConfigFlutter.gitUrl'] =
                   `Could not verify Git repository "${gitUrl}": ${err.message}`;
-              })
+              }),
           );
         }
       }
     } else if (app.integrationMethod === 'DEEP_LINK') {
       if (!app.integrationConfig?.urlScheme) {
-        errors['integrationConfigDeepLink.urlScheme'] = 'urlScheme is required for Deep Link integration.';
+        errors['integrationConfigDeepLink.urlScheme'] =
+          'urlScheme is required for Deep Link integration.';
       }
-      if (app.integrationConfig?.appStoreUrl && app.integrationConfig.appStoreUrl.trim() !== '') {
+      if (
+        app.integrationConfig?.appStoreUrl &&
+        app.integrationConfig.appStoreUrl.trim() !== ''
+      ) {
         checks.push(
-          urlValidator.validate(app.integrationConfig.appStoreUrl, null as any).then((isValid) => {
-            if (!isValid)
-              errors['integrationConfigDeepLink.appStoreUrl'] =
-                'App Store fallback URL must be a valid, reachable URL.';
-          })
+          urlValidator
+            .validate(app.integrationConfig.appStoreUrl, null as any)
+            .then((isValid) => {
+              if (!isValid)
+                errors['integrationConfigDeepLink.appStoreUrl'] =
+                  'App Store fallback URL must be a valid, reachable URL.';
+            }),
         );
       }
     }
@@ -261,18 +311,21 @@ export class MiniappValidationHelper {
       checks.push(
         urlValidator.validate(app.termsUrl, null as any).then((isValid) => {
           if (!isValid)
-            errors.termsUrl = 'The Terms & Conditions URL is unreachable. Please verify the link is publicly accessible.';
-        })
+            errors.termsUrl =
+              'The Terms & Conditions URL is unreachable. Please verify the link is publicly accessible.';
+        }),
       );
     }
 
     if (app.privacyPolicyUrl && app.privacyPolicyUrl.trim() !== '') {
       checks.push(
-        urlValidator.validate(app.privacyPolicyUrl, null as any).then((isValid) => {
-          if (!isValid)
-            errors.privacyPolicyUrl =
-              'The Privacy Policy URL is unreachable. Please verify the link is publicly accessible.';
-        })
+        urlValidator
+          .validate(app.privacyPolicyUrl, null as any)
+          .then((isValid) => {
+            if (!isValid)
+              errors.privacyPolicyUrl =
+                'The Privacy Policy URL is unreachable. Please verify the link is publicly accessible.';
+          }),
       );
     }
 
@@ -282,7 +335,8 @@ export class MiniappValidationHelper {
         const permKey = perm.type || 'unknown';
 
         if (!perm.purpose || perm.purpose.trim() === '') {
-          errors[`permissions.${index}.purpose`] = `Please describe why your Mini App requires ${permKey} access.`;
+          errors[`permissions.${index}.purpose`] =
+            `Please describe why your Mini App requires ${permKey} access.`;
         }
 
         // Permission Catalog & Compatibility Check
@@ -292,11 +346,13 @@ export class MiniappValidationHelper {
           // UNKNOWN PERMISSION -> create proposal in permission_proposals
           await this.createPermissionProposal(app, permKey);
           if (perm.required) {
-            errors[`permissions.${index}.unsupported`] = `The requested permission "${permKey}" is not currently supported in the platform catalog. A proposal has been created for review.`;
+            errors[`permissions.${index}.unsupported`] =
+              `The requested permission "${permKey}" is not currently supported in the platform catalog. A proposal has been created for review.`;
           }
         } else {
           // Known permission, check Super App Runtime Compatibility
-          const latestCapability = await this.superAppService.findLatestCapability();
+          const latestCapability =
+            await this.superAppService.findLatestCapability();
           const supportedCaps = latestCapability
             ? (Array.isArray(latestCapability.capabilities)
                 ? latestCapability.capabilities
@@ -309,9 +365,14 @@ export class MiniappValidationHelper {
             supportedCaps.includes(permissionDef.name.toLowerCase());
 
           if (!isSupported) {
-            await this.createPermissionProposal(app, permissionDef.key, permissionDef.name);
+            await this.createPermissionProposal(
+              app,
+              permissionDef.key,
+              permissionDef.name,
+            );
             if (perm.required) {
-              errors[`permissions.${index}.unsupported`] = `The requested permission "${permissionDef.key}" is not supported by the current Super App runtime. A proposal has been created for review.`;
+              errors[`permissions.${index}.unsupported`] =
+                `The requested permission "${permissionDef.key}" is not supported by the current Super App runtime. A proposal has been created for review.`;
             }
           }
         }
@@ -348,7 +409,7 @@ export class MiniappValidationHelper {
         'Validation Failed',
         `${app.name || 'Mini App'} has ${issues.length} validation issue(s).`,
         'ISSUE_CREATED',
-        app.id
+        app.id,
       );
       await logActivityFn(
         id,
@@ -358,23 +419,46 @@ export class MiniappValidationHelper {
         `Found ${issues.length} issues`,
         'VALIDATE_MINI_APP',
         app,
-        await this.miniappRepository.findOne({ where: { id } })
+        await this.miniappRepository.findOne({ where: { id } }),
       );
 
       if (app.ownerEmail) {
         await this.mailService.sendRegistrationFailureEmail(
           app.ownerEmail,
           app.name || app.appId || 'Unknown App',
-          errors
+          errors,
         );
       }
     } else {
-      if (app.integrationMethod === 'WEBVIEW' && app.integrationConfig?.productionUrl) {
+      if (
+        app.integrationMethod === 'WEBVIEW' &&
+        app.integrationConfig?.productionUrl
+      ) {
         const initialStages = {
-          ssrf: { id: 'ssrf', name: '1. Pre-Flight & SSRF Defense', status: 'RUNNING', details: 'Resolving DNS & verifying IP routes...' },
-          tls: { id: 'tls', name: '2. TLS & HTTPS Security', status: 'PENDING', details: 'Awaiting cipher suite verification...' },
-          zap: { id: 'zap', name: '3. OWASP ZAP DAST Scan', status: 'PENDING', details: 'Awaiting XSS & CSP header audit...' },
-          nuclei: { id: 'nuclei', name: '4. Exposure & Vulnerability Audit', status: 'PENDING', details: 'Awaiting CVE & endpoint check...' },
+          ssrf: {
+            id: 'ssrf',
+            name: '1. Pre-Flight & SSRF Defense',
+            status: 'RUNNING',
+            details: 'Resolving DNS & verifying IP routes...',
+          },
+          tls: {
+            id: 'tls',
+            name: '2. TLS & HTTPS Security',
+            status: 'PENDING',
+            details: 'Awaiting cipher suite verification...',
+          },
+          zap: {
+            id: 'zap',
+            name: '3. OWASP ZAP DAST Scan',
+            status: 'PENDING',
+            details: 'Awaiting XSS & CSP header audit...',
+          },
+          nuclei: {
+            id: 'nuclei',
+            name: '4. Exposure & Vulnerability Audit',
+            status: 'PENDING',
+            details: 'Awaiting CVE & endpoint check...',
+          },
         };
         await this.miniappRepository.update(id, {
           status: 'SUBMITTED',
@@ -383,16 +467,20 @@ export class MiniappValidationHelper {
           validationErrors: null as any,
         });
 
-        const allowedDomains = Array.isArray(app.integrationConfig.allowedDomains)
+        const allowedDomains = Array.isArray(
+          app.integrationConfig.allowedDomains,
+        )
           ? app.integrationConfig.allowedDomains
-          : (typeof app.integrationConfig.allowedDomains === 'string'
-              ? app.integrationConfig.allowedDomains.split(',')
-              : []);
+          : typeof app.integrationConfig.allowedDomains === 'string'
+            ? app.integrationConfig.allowedDomains.split(',')
+            : [];
 
         const envVal = (process.env.ENVIRONMENT || '').toUpperCase();
-        const allowLocal = envVal === 'DEV' || envVal === 'DEVELOPMENT';
+        const allowLocal = envVal === 'DEV';
 
-        this.logger.log(`Triggering Jenkins automated security scan for Mini App ${id}...`);
+        this.logger.log(
+          `Triggering Jenkins automated security scan for Mini App ${id}...`,
+        );
         this.jenkinsService
           .triggerWebViewValidation({
             miniAppId: id,
@@ -401,14 +489,29 @@ export class MiniappValidationHelper {
             allowLocal,
             checks: app.securityChecks || [],
           })
-          .catch((err) => this.logger.error(`Jenkins trigger error: ${err.message}`));
+          .then(async (res) => {
+            if (!res?.success) {
+              const reason = res?.message || 'Jenkins returned an unsuccessful status';
+              this.logger.warn(
+                `Jenkins unavailable (${reason}). Falling back to local security scanner.`,
+              );
+              await this.localSecurityScannerService.scanWebView(id, { fallbackReason: reason });
+            }
+          })
+          .catch(async (err) => {
+            const reason = `Jenkins connection failed: ${err.message}`;
+            this.logger.error(
+              `Jenkins trigger error: ${err.message}. Falling back to local security scanner.`,
+            );
+            await this.localSecurityScannerService.scanWebView(id, { fallbackReason: reason });
+          });
 
         await this.notificationsService.createNotification(
           app.ownerId || '',
           'Validation Running',
           `${app.name || 'Mini App'} automated security scans initiated on Jenkins.`,
           'SCAN_STARTED',
-          app.id
+          app.id,
         );
         await logActivityFn(
           id,
@@ -418,7 +521,7 @@ export class MiniappValidationHelper {
           'Automated security scan pipeline triggered on Jenkins',
           'VALIDATE_MINI_APP',
           app,
-          await this.miniappRepository.findOne({ where: { id } })
+          await this.miniappRepository.findOne({ where: { id } }),
         );
       } else {
         await this.miniappRepository.update(id, {
@@ -431,7 +534,7 @@ export class MiniappValidationHelper {
           'Validation Passed',
           `${app.name || 'Mini App'} has passed validation and is now ready for review.`,
           'REVIEW_STARTED',
-          app.id
+          app.id,
         );
         await logActivityFn(
           id,
@@ -441,21 +544,26 @@ export class MiniappValidationHelper {
           'No issues found',
           'VALIDATE_MINI_APP',
           app,
-          await this.miniappRepository.findOne({ where: { id } })
+          await this.miniappRepository.findOne({ where: { id } }),
         );
 
         if (app.ownerEmail) {
           await this.mailService.sendRegistrationSuccessEmail(
             app.ownerEmail,
-            app.name || app.appId || 'Unknown App'
+            app.name || app.appId || 'Unknown App',
           );
         }
       }
     }
   }
 
-  async createPermissionProposal(app: MiniApp, permissionKey: string, permissionName?: string) {
-    const [existing] = await this.permissionProposalsService.findPendingByKey(permissionKey);
+  async createPermissionProposal(
+    app: MiniApp,
+    permissionKey: string,
+    permissionName?: string,
+  ) {
+    const [existing] =
+      await this.permissionProposalsService.findPendingByKey(permissionKey);
     if (existing) {
       return existing;
     }
@@ -472,7 +580,7 @@ export class MiniappValidationHelper {
       'New Permission Proposed',
       `Mini App "${app.name || app.appId}" proposed a new capability: "${permissionKey}".`,
       'PROPOSAL_CREATED',
-      app.id
+      app.id,
     );
 
     return proposal;

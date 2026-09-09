@@ -28,7 +28,9 @@ describe('ReleaseAssemblyVerificationService', () => {
       ],
     }).compile();
 
-    service = module.get<ReleaseAssemblyVerificationService>(ReleaseAssemblyVerificationService);
+    service = module.get<ReleaseAssemblyVerificationService>(
+      ReleaseAssemblyVerificationService,
+    );
   });
 
   it('should be defined', () => {

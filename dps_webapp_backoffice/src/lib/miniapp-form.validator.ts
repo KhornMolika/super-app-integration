@@ -1,5 +1,6 @@
 import { API_URL } from '@/lib/config';
 import { CreateMiniAppDto, IntegrationMethod, PermissionDto, SourceType } from '@/types/miniapp.types';
+import { validateUrlFormat } from '@/components/ui/ValidatedUrlInput';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -41,13 +42,19 @@ export async function validateMiniAppStep(
       errors.logo = 'Logo must be an uploaded image or valid URL';
       isValid = false;
     }
-    if (formData.termsUrl && !formData.termsUrl.startsWith('http')) {
-      errors.termsUrl = 'Terms & Conditions URL must be a valid URL (e.g. https://...)';
-      isValid = false;
+    if (formData.termsUrl && formData.termsUrl.trim()) {
+      const termsRes = validateUrlFormat(formData.termsUrl, 'Terms of Service URL', true);
+      if (!termsRes.valid && termsRes.error) {
+        errors.termsUrl = termsRes.error;
+        isValid = false;
+      }
     }
-    if (formData.privacyPolicyUrl && !formData.privacyPolicyUrl.startsWith('http')) {
-      errors.privacyPolicyUrl = 'Privacy Policy URL must be a valid URL (e.g. https://...)';
-      isValid = false;
+    if (formData.privacyPolicyUrl && formData.privacyPolicyUrl.trim()) {
+      const privacyRes = validateUrlFormat(formData.privacyPolicyUrl, 'Privacy Policy URL', true);
+      if (!privacyRes.valid && privacyRes.error) {
+        errors.privacyPolicyUrl = privacyRes.error;
+        isValid = false;
+      }
     }
   }
 
@@ -72,14 +79,23 @@ export async function validateMiniAppStep(
         errors['integrationConfigWebView.productionUrl'] = 'Production URL is required';
         isValid = false;
       } else {
+        const envVal = (
+          process.env.NEXT_PUBLIC_ENVIRONMENT ||
+          process.env.ENVIRONMENT ||
+          process.env.NODE_ENV ||
+          ''
+        ).toUpperCase();
         const isDev =
-          process.env.NEXT_PUBLIC_ENVIRONMENT === 'DEV' ||
-          process.env.NODE_ENV !== 'production' ||
-          (typeof window !== 'undefined' &&
-            (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'));
+          envVal !== 'PROD' &&
+          (envVal === 'DEV' ||
+            (typeof window !== 'undefined' &&
+              (window.location.hostname === 'localhost' ||
+                window.location.hostname === '127.0.0.1' ||
+                window.location.hostname.endsWith('.local') ||
+                window.location.hostname.endsWith('.orb.local'))));
 
         if (!isDev && !prodUrl.startsWith('https://')) {
-          errors['integrationConfigWebView.productionUrl'] = 'Production URL must use HTTPS in production';
+          errors['integrationConfigWebView.productionUrl'] = 'Production URL must use HTTPS in PROD mode';
           isValid = false;
         }
 
@@ -96,6 +112,13 @@ export async function validateMiniAppStep(
             isValid = false;
           }
         }
+      }
+
+      // Domain ownership verification is strictly required for WebView integration
+      if (!formData.isDomainVerified) {
+        errors['integrationConfigWebView.domainVerification'] =
+          'Domain ownership has not been verified. Please host the verification association file and verify domain ownership before proceeding to the next step.';
+        isValid = false;
       }
     }
 

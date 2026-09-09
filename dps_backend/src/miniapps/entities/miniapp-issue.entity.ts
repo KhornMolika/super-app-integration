@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { MiniApp } from './miniapp.entity';
 
 @Entity()
@@ -24,7 +32,9 @@ export class MiniAppIssue {
   @Column({ type: 'jsonb', nullable: true })
   metadata!: any;
 
-  @ManyToOne(() => MiniApp, miniApp => miniApp.issues, { onDelete: 'CASCADE' })
+  @ManyToOne(() => MiniApp, (miniApp) => miniApp.issues, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'miniAppId' })
   miniApp!: MiniApp;
 

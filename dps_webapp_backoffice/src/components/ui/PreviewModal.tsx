@@ -194,17 +194,17 @@ export default function PreviewModal({
       <div className="flex flex-wrap items-center justify-between p-3.5 bg-slate-900 border-b border-slate-800 text-slate-100 shadow-sm z-20">
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 rounded-xl bg-indigo-600/30 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold">
+            <div className="w-9 h-9 rounded-xl bg-indigo-600/30 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold text-lg">
               📱
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h3 className="font-semibold text-sm text-slate-100">{title}</h3>
-                <span className="text-[10px] bg-indigo-500/20 text-indigo-300 font-semibold px-2 py-0.5 rounded-full border border-indigo-500/30">
+                <h3 className="font-bold text-base text-slate-100">{title}</h3>
+                <span className="text-xs bg-indigo-500/20 text-indigo-300 font-semibold px-2.5 py-0.5 rounded-full border border-indigo-500/30">
                   {isFlutter ? 'Flutter Package' : 'WebView Sandbox'}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 font-mono truncate max-w-[260px]">{effectiveUrl}</p>
+              <p className="text-xs text-slate-400 font-mono truncate max-w-[280px] mt-0.5">{effectiveUrl}</p>
             </div>
           </div>
 
@@ -216,9 +216,9 @@ export default function PreviewModal({
               <button
                 key={d}
                 onClick={() => setDevice(d)}
-                className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-colors ${
+                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
                   device === d 
-                    ? 'bg-indigo-600 text-white shadow-sm' 
+                    ? 'bg-indigo-600 text-white shadow-sm font-semibold' 
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
                 }`}
               >
@@ -231,10 +231,10 @@ export default function PreviewModal({
           {activeDeviceType === 'Phone' && (
             <button
               onClick={() => setOrientation(orientation === 'Portrait' ? 'Landscape' : 'Portrait')}
-              className="px-2.5 py-1 text-xs font-medium rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors flex items-center space-x-1.5"
+              className="px-3 py-1.5 text-sm font-medium rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors flex items-center space-x-1.5"
               title="Rotate Device"
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
               <span>{orientation}</span>
             </button>
           )}
@@ -245,13 +245,13 @@ export default function PreviewModal({
           {/* Zoom Controls */}
           <div className="flex items-center bg-slate-800/80 rounded-lg p-0.5 border border-slate-700">
             <button onClick={handleZoomOut} className="p-1.5 text-slate-400 hover:text-slate-200 rounded hover:bg-slate-700">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 12H4" /></svg>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 12H4" /></svg>
             </button>
-            <button onClick={handleZoomReset} className="px-2.5 py-1 text-xs font-mono text-slate-300 hover:bg-slate-700 rounded">
+            <button onClick={handleZoomReset} className="px-3 py-1 text-sm font-mono text-slate-300 hover:bg-slate-700 rounded">
               {zoom}%
             </button>
             <button onClick={handleZoomIn} className="p-1.5 text-slate-400 hover:text-slate-200 rounded hover:bg-slate-700">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
             </button>
           </div>
 
@@ -260,42 +260,42 @@ export default function PreviewModal({
             <button
               type="button"
               onClick={() => setCurrentScreen('flutter-web')}
-              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
                 currentScreen === 'flutter-web'
                   ? 'bg-brand-600 text-white shadow-sm font-semibold'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <svg className="w-3.5 h-3.5 text-sky-400" viewBox="0 0 24 24" fill="currentColor">
+              <svg className="w-4 h-4 text-sky-400" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M14.314 0L2.3 12 6 15.7 21.686 0h-7.372zm.072 10.301L8.171 16.514 14.386 22.7 21.686 22.7l-7.3-7.299 7.3-5.1z" />
               </svg>
               <span>Flutter Super App</span>
-              <span className="px-1.5 py-0.2 text-[9px] font-bold bg-emerald-500/20 text-emerald-300 rounded border border-emerald-500/30">
+              <span className="px-1.5 py-0.5 text-[10px] font-bold bg-emerald-500/20 text-emerald-300 rounded border border-emerald-500/30">
                 Web Build
               </span>
             </button>
             <button
               type="button"
               onClick={() => setCurrentScreen('miniapp')}
-              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
                 currentScreen === 'miniapp'
                   ? 'bg-brand-600 text-white shadow-sm font-semibold'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
               <span>Mini App View</span>
             </button>
             <button
               type="button"
               onClick={() => setCurrentScreen('home')}
-              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
                 currentScreen === 'home'
                   ? 'bg-brand-600 text-white shadow-sm font-semibold'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
               <span>Mock Home</span>
             </button>
           </div>
@@ -305,10 +305,10 @@ export default function PreviewModal({
             <a
               href={apkUrl}
               download="superapp-debug.apk"
-              className="h-8 px-3 text-xs font-semibold rounded-lg bg-emerald-600/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-600 hover:text-white transition-colors flex items-center gap-1.5 shadow-sm"
+              className="h-9 px-3.5 text-sm font-semibold rounded-lg bg-emerald-600/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-600 hover:text-white transition-colors flex items-center gap-1.5 shadow-sm"
               title="Download Super App Test Build APK (Nexus)"
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
               <span>Download Test APK</span>
             </a>
           )}
@@ -317,19 +317,19 @@ export default function PreviewModal({
           <Button
             variant="outline"
             onClick={() => setShowInspector(!showInspector)}
-            className={`h-8 px-3 text-xs font-medium border-slate-700 flex items-center gap-1.5 ${
+            className={`h-9 px-3.5 text-sm font-medium border-slate-700 flex items-center gap-1.5 ${
               showInspector ? 'bg-indigo-600/30 text-indigo-300 border-indigo-500/40' : 'text-slate-400 hover:text-white'
             }`}
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
             <span>Controls & Logs</span>
           </Button>
 
-          <Button variant="outline" onClick={handleReload} className="!p-1.5 h-8 w-8 text-slate-400 hover:text-white border-slate-700" title="Reload Frame">
+          <Button variant="outline" onClick={handleReload} className="!p-2 h-9 w-9 text-slate-400 hover:text-white border-slate-700" title="Reload Frame">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
           </Button>
 
-          <Button onClick={onClose} className="!p-1.5 h-8 w-8 bg-slate-800 text-slate-300 hover:bg-rose-600 hover:text-white rounded-full transition-colors" title="Close Preview">
+          <Button onClick={onClose} className="!p-2 h-9 w-9 bg-slate-800 text-slate-300 hover:bg-rose-600 hover:text-white rounded-full transition-colors" title="Close Preview">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
           </Button>
         </div>

@@ -43,12 +43,12 @@ export default function ValidationIssuesButton({ errors, onNavigate }: Validatio
       <button 
         onClick={handleClick}
         type="button"
-        className="flex items-center space-x-2 bg-rose-600 hover:bg-rose-700 text-white px-5 py-3 rounded-full shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 group"
+        className="flex items-center space-x-2.5 bg-rose-600 hover:bg-rose-700 text-white px-6 py-3.5 rounded-full shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 group"
       >
-        <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">
+        <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold">
           {errorKeys.length}
         </div>
-        <span className="font-semibold text-sm">
+        <span className="font-semibold text-base">
           Next Issue ({safeIndex + 1}/{errorKeys.length})
         </span>
         <svg className="w-4 h-4 ml-1 transition-transform group-active:translate-y-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">

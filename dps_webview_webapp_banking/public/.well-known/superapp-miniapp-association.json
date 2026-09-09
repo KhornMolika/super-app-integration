@@ -1,11 +1,12 @@
 {
-  "appId": "com.fsa.testbuild3",
-  "verificationToken": "dev-miniapp-verification-token",
+  "appId": "miniapp_bb_f5c385",
+  "verificationToken": "tok_live_7e1f7c7500fc526f8b290ae4ac5cda10",
   "environment": "DEV",
   "allowedDomains": [
     "localhost"
   ],
   "permissions": [
-    "Camera"
+    "Camera",
+    "Biometrics"
   ]
 }

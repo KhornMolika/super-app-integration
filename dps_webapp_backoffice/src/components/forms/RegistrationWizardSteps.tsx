@@ -15,7 +15,7 @@ export default function RegistrationWizardSteps({ currentStep }: RegistrationWiz
         {[1, 2, 3, 4, 5].map((s) => (
           <div key={s} className="flex flex-col items-center flex-1">
             <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
+              className={`w-9 h-9 rounded-full flex items-center justify-center text-base font-bold transition-colors ${
                 currentStep === s
                   ? 'bg-brand-600 text-white shadow-sm'
                   : currentStep > s
@@ -25,7 +25,11 @@ export default function RegistrationWizardSteps({ currentStep }: RegistrationWiz
             >
               {currentStep > s ? '✓' : s}
             </div>
-            <span className="text-xs mt-2 text-slate-500 hidden sm:block font-medium">
+            <span className={`text-sm mt-2 hidden sm:block ${
+              currentStep === s
+                ? 'font-bold text-slate-900 dark:text-slate-100'
+                : 'font-medium text-slate-500 dark:text-slate-400'
+            }`}>
               {STEP_LABELS[s - 1]}
             </span>
           </div>

@@ -22,7 +22,10 @@ export class GitHubProvider implements GitProvider {
   }
 
   private getBaseApiUrl(): string {
-    return this.configService.get<string>('GITHUB_BASE_URL') || 'https://api.github.com';
+    return (
+      this.configService.get<string>('GITHUB_BASE_URL') ||
+      'https://api.github.com'
+    );
   }
 
   matchesUrl(url: string): boolean {
@@ -31,7 +34,9 @@ export class GitHubProvider implements GitProvider {
     return (
       lower.includes('github.com') ||
       lower.startsWith('github:') ||
-      (!lower.includes('gitlab') && lower.split('/').length === 2 && !lower.includes('.'))
+      (!lower.includes('gitlab') &&
+        lower.split('/').length === 2 &&
+        !lower.includes('.'))
     );
   }
 
@@ -52,18 +57,27 @@ export class GitHubProvider implements GitProvider {
         owner = match[2];
         repo = match[3];
       }
-    } else if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    } else if (
+      trimmed.startsWith('http://') ||
+      trimmed.startsWith('https://')
+    ) {
       // https://github.com/owner/repo.git or https://github.com/owner/repo or https://github.com/owner/repo/tree/main/subpath
       try {
         const parsedUrl = new URL(trimmed);
         host = parsedUrl.host;
-        const segments = parsedUrl.pathname.replace(/^\//, '').replace(/\.git$/, '').split('/');
+        const segments = parsedUrl.pathname
+          .replace(/^\//, '')
+          .replace(/\.git$/, '')
+          .split('/');
         if (segments.length >= 2) {
           owner = segments[0];
           repo = segments[1];
 
           // Check for tree / blob deep path: e.g. /owner/repo/tree/main/sub/path
-          if (segments.length >= 4 && (segments[2] === 'tree' || segments[2] === 'blob')) {
+          if (
+            segments.length >= 4 &&
+            (segments[2] === 'tree' || segments[2] === 'blob')
+          ) {
             extractedRef = segments[3];
             if (segments.length > 4) {
               extractedPath = segments.slice(4).join('/');
@@ -72,7 +86,9 @@ export class GitHubProvider implements GitProvider {
         }
       } catch {
         // Fallback simple regex
-        const match = trimmed.match(/https?:\/\/[^/]+\/([^/]+)\/([^/]+?)(\.git)?$/);
+        const match = trimmed.match(
+          /https?:\/\/[^/]+\/([^/]+)\/([^/]+?)(\.git)?$/,
+        );
         if (match) {
           owner = match[1];
           repo = match[2];
@@ -80,7 +96,11 @@ export class GitHubProvider implements GitProvider {
       }
     } else if (trimmed.includes('/')) {
       // owner/repo or owner/repo/path
-      const cleanParts = trimmed.replace(/^\/+|\/+$/g, '').replace(/\.git$/, '').split('/').filter(Boolean);
+      const cleanParts = trimmed
+        .replace(/^\/+|\/+$/g, '')
+        .replace(/\.git$/, '')
+        .split('/')
+        .filter(Boolean);
       if (cleanParts.length >= 2) {
         owner = cleanParts[0];
         repo = cleanParts[1];
@@ -123,7 +143,10 @@ export class GitHubProvider implements GitProvider {
     return headers;
   }
 
-  async getRepository(urlOrSlug: string, token?: string): Promise<GitRepositoryInfo> {
+  async getRepository(
+    urlOrSlug: string,
+    token?: string,
+  ): Promise<GitRepositoryInfo> {
     const parsed = this.parseUrl(urlOrSlug);
     const apiUrl = `${this.getBaseApiUrl()}/repos/${parsed.fullName}`;
 
@@ -133,12 +156,14 @@ export class GitHubProvider implements GitProvider {
 
     if (!res.ok) {
       if (res.status === 404) {
-        throw new Error(`GitHub repository '${parsed.fullName}' not found or access denied.`);
+        throw new Error(
+          `GitHub repository '${parsed.fullName}' not found or access denied.`,
+        );
       }
       throw new Error(`GitHub API error (${res.status}): ${await res.text()}`);
     }
 
-    const data = (await res.json()) as any;
+    const data = await res.json();
     return {
       id: data.id,
       name: data.name,
@@ -162,7 +187,9 @@ export class GitHubProvider implements GitProvider {
     });
 
     if (!res.ok) {
-      throw new Error(`Failed to fetch branches for '${parsed.fullName}': ${res.statusText}`);
+      throw new Error(
+        `Failed to fetch branches for '${parsed.fullName}': ${res.statusText}`,
+      );
     }
 
     const data = (await res.json()) as any[];
@@ -178,7 +205,9 @@ export class GitHubProvider implements GitProvider {
     });
 
     if (!res.ok) {
-      throw new Error(`Failed to fetch tags for '${parsed.fullName}': ${res.statusText}`);
+      throw new Error(
+        `Failed to fetch tags for '${parsed.fullName}': ${res.statusText}`,
+      );
     }
 
     const data = (await res.json()) as any[];
@@ -202,7 +231,9 @@ export class GitHubProvider implements GitProvider {
     });
 
     if (!res.ok) {
-      throw new Error(`Failed to fetch commits for '${parsed.fullName}': ${res.statusText}`);
+      throw new Error(
+        `Failed to fetch commits for '${parsed.fullName}': ${res.statusText}`,
+      );
     }
 
     const data = (await res.json()) as any[];
@@ -234,12 +265,16 @@ export class GitHubProvider implements GitProvider {
 
     if (!res.ok) {
       if (res.status === 404) {
-        throw new Error(`File '${filePath}' not found in repository '${parsed.fullName}' (ref: ${ref || 'default'}).`);
+        throw new Error(
+          `File '${filePath}' not found in repository '${parsed.fullName}' (ref: ${ref || 'default'}).`,
+        );
       }
-      throw new Error(`GitHub API error while fetching '${filePath}' (${res.status}): ${await res.text()}`);
+      throw new Error(
+        `GitHub API error while fetching '${filePath}' (${res.status}): ${await res.text()}`,
+      );
     }
 
-    const data = (await res.json()) as any;
+    const data = await res.json();
     if (data.encoding === 'base64' && data.content) {
       return Buffer.from(data.content, 'base64').toString('utf8');
     }
@@ -265,11 +300,21 @@ export class GitHubProvider implements GitProvider {
     try {
       const parsed = this.parseUrl(urlOrSlug);
       const effectiveRef = ref || parsed.extractedRef || undefined;
-      const rawSubPath = path !== undefined && path !== null && path.trim() !== '' ? path.trim() : (parsed.extractedPath || '');
+      const rawSubPath =
+        path !== undefined && path !== null && path.trim() !== ''
+          ? path.trim()
+          : parsed.extractedPath || '';
       const effectivePath = rawSubPath.replace(/^\/+|\/+$/g, '');
-      const targetFile = effectivePath ? `${effectivePath}/pubspec.yaml` : 'pubspec.yaml';
+      const targetFile = effectivePath
+        ? `${effectivePath}/pubspec.yaml`
+        : 'pubspec.yaml';
 
-      const pubspecRaw = await this.getFileContent(urlOrSlug, targetFile, effectiveRef, token);
+      const pubspecRaw = await this.getFileContent(
+        urlOrSlug,
+        targetFile,
+        effectiveRef,
+        token,
+      );
       const parsedYaml = YAML.parse(pubspecRaw);
 
       if (!parsedYaml || typeof parsedYaml !== 'object') {
@@ -314,12 +359,20 @@ export class GitHubProvider implements GitProvider {
     }
   }
 
-  async resolveCommitSha(urlOrSlug: string, ref: string, token?: string): Promise<string> {
+  async resolveCommitSha(
+    urlOrSlug: string,
+    ref: string,
+    token?: string,
+  ): Promise<string> {
     const parsed = this.parseUrl(urlOrSlug);
     const trimmedRef = (ref || '').trim();
     if (!trimmedRef) {
       const repo = await this.getRepository(urlOrSlug, token);
-      return this.resolveCommitSha(urlOrSlug, repo.defaultBranch || 'main', token);
+      return this.resolveCommitSha(
+        urlOrSlug,
+        repo.defaultBranch || 'main',
+        token,
+      );
     }
 
     // 40-character hex string is already a full SHA
@@ -333,10 +386,12 @@ export class GitHubProvider implements GitProvider {
     });
 
     if (!res.ok) {
-      throw new Error(`Failed to resolve commit SHA for '${trimmedRef}' in '${parsed.fullName}': ${res.statusText}`);
+      throw new Error(
+        `Failed to resolve commit SHA for '${trimmedRef}' in '${parsed.fullName}': ${res.statusText}`,
+      );
     }
 
-    const data = (await res.json()) as any;
+    const data = await res.json();
     return data.sha;
   }
 
@@ -348,7 +403,9 @@ export class GitHubProvider implements GitProvider {
     path?: string;
   }): string {
     const parsed = this.parseUrl(options.url);
-    const pkgName = options.packageName || parsed.repo.replace(/[-_]miniapp$/, '').replace(/[-_]package$/, '');
+    const pkgName =
+      options.packageName ||
+      parsed.repo.replace(/[-_]miniapp$/, '').replace(/[-_]package$/, '');
     const cleanUrl = parsed.rawUrl;
     const effectiveRef = options.ref || parsed.extractedRef;
     const effectivePath = options.path || parsed.extractedPath;

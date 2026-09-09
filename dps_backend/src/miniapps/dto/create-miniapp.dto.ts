@@ -1,4 +1,15 @@
-import { IsString, IsNotEmpty, IsEmail, IsOptional, IsEnum, IsUrl, IsArray, ValidateNested, ValidateIf, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsEmail,
+  IsOptional,
+  IsEnum,
+  IsUrl,
+  IsArray,
+  ValidateNested,
+  ValidateIf,
+  IsBoolean,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export enum IntegrationMethod {
@@ -62,38 +73,37 @@ export class FlutterPackageConfigDto {
   sourceType?: SourceType;
 
   // If GIT
-  @ValidateIf(o => o.sourceType === SourceType.GIT)
+  @ValidateIf((o) => o.sourceType === SourceType.GIT)
   @IsString()
   @IsOptional()
   gitUrl?: string;
 
-  @ValidateIf(o => o.sourceType === SourceType.GIT)
+  @ValidateIf((o) => o.sourceType === SourceType.GIT)
   @IsString()
   @IsOptional()
   gitBranch?: string;
 
-  @ValidateIf(o => o.sourceType === SourceType.GIT)
+  @ValidateIf((o) => o.sourceType === SourceType.GIT)
   @IsString()
   @IsOptional()
   gitAccessToken?: string;
 
-  @ValidateIf(o => o.sourceType === SourceType.GIT)
+  @ValidateIf((o) => o.sourceType === SourceType.GIT)
   @IsString()
   @IsOptional()
   gitPath?: string;
 
   // If ARTIFACT
-  @ValidateIf(o => o.sourceType === SourceType.ARTIFACT)
+  @ValidateIf((o) => o.sourceType === SourceType.ARTIFACT)
   @IsString()
   @IsOptional()
   packageName?: string;
 
-  @ValidateIf(o => o.sourceType === SourceType.ARTIFACT)
+  @ValidateIf((o) => o.sourceType === SourceType.ARTIFACT)
   @IsString()
   @IsOptional()
   versionConstraint?: string;
 }
-
 
 export class PermissionDto {
   @IsString()
@@ -184,19 +194,19 @@ export class CreateMiniAppDto {
   @IsNotEmpty()
   integrationMethod!: IntegrationMethod;
 
-  @ValidateIf(o => o.integrationMethod === IntegrationMethod.WEBVIEW)
+  @ValidateIf((o) => o.integrationMethod === IntegrationMethod.WEBVIEW)
   @ValidateNested()
   @Type(() => WebViewConfigDto)
   @IsNotEmpty()
   integrationConfigWebView?: WebViewConfigDto;
 
-  @ValidateIf(o => o.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE)
+  @ValidateIf((o) => o.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE)
   @ValidateNested()
   @Type(() => FlutterPackageConfigDto)
   @IsNotEmpty()
   integrationConfigFlutter?: FlutterPackageConfigDto;
 
-  @ValidateIf(o => o.integrationMethod === IntegrationMethod.DEEP_LINK)
+  @ValidateIf((o) => o.integrationMethod === IntegrationMethod.DEEP_LINK)
   @ValidateNested()
   @Type(() => DeepLinkConfigDto)
   @IsNotEmpty()

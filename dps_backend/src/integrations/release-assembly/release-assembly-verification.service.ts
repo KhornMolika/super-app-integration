@@ -38,8 +38,12 @@ export class ReleaseAssemblyVerificationService {
   /**
    * Performs Release Assembly Checksum Verification & Super App Release Assembly
    */
-  async verifyAndAssembleRelease(dto: VerifyAndAssembleReleaseDto): Promise<ReleaseAssemblyAuditResult> {
-    this.logger.log(`Executing Release Assembly Verification for Super App release ${dto.releaseVersion}...`);
+  async verifyAndAssembleRelease(
+    dto: VerifyAndAssembleReleaseDto,
+  ): Promise<ReleaseAssemblyAuditResult> {
+    this.logger.log(
+      `Executing Release Assembly Verification for Super App release ${dto.releaseVersion}...`,
+    );
 
     const timestamp = new Date().toISOString();
     const verifiedApps: VerifiedAppRecord[] = [];
@@ -61,14 +65,22 @@ export class ReleaseAssemblyVerificationService {
         app.packageName === 'webview_package';
 
       if (isExternalScheme) {
-        nexusChecksum = crypto.createHash('sha256').update(`${app.packageName}-${app.version}`).digest('hex');
+        nexusChecksum = crypto
+          .createHash('sha256')
+          .update(`${app.packageName}-${app.version}`)
+          .digest('hex');
       } else {
         try {
-          const pkgInfo: any = await this.nexusService.getPackageInfo(app.packageName);
+          const pkgInfo: any = await this.nexusService.getPackageInfo(
+            app.packageName,
+          );
           if (!pkgInfo.exists) {
             const localPubspecPaths = [
               path.resolve(process.cwd(), `../${app.packageName}/pubspec.yaml`),
-              path.resolve(process.cwd(), `../dsp_miniapp_trust_regulator/pubspec.yaml`),
+              path.resolve(
+                process.cwd(),
+                `../dsp_miniapp_trust_regulator/pubspec.yaml`,
+              ),
               path.resolve(process.cwd(), `../dps_core_package/pubspec.yaml`),
             ];
             let foundLocal = false;
@@ -76,40 +88,59 @@ export class ReleaseAssemblyVerificationService {
               if (fs.existsSync(p)) {
                 foundLocal = true;
                 const content = fs.readFileSync(p, 'utf-8');
-                nexusChecksum = crypto.createHash('sha256').update(content).digest('hex');
+                nexusChecksum = crypto
+                  .createHash('sha256')
+                  .update(content)
+                  .digest('hex');
                 break;
               }
             }
 
             if (!foundLocal) {
-              conflicts.push(`Package '${app.packageName}' not found on Nexus pub-group.`);
+              conflicts.push(
+                `Package '${app.packageName}' not found on Nexus pub-group.`,
+              );
               allChecksumsMatched = false;
             }
           } else {
             // Look up specific version
-            const versionDetail = pkgInfo.versions?.find((v: any) => v.version === app.version) || pkgInfo.latest;
+            const versionDetail =
+              pkgInfo.versions?.find((v: any) => v.version === app.version) ||
+              pkgInfo.latest;
             if (versionDetail && versionDetail.pubspec) {
               dependencies = versionDetail.pubspec.dependencies || {};
               // Compute deterministic checksum of published metadata & archive
               const payloadToHash = JSON.stringify(versionDetail.pubspec);
-              nexusChecksum = crypto.createHash('sha256').update(payloadToHash).digest('hex');
+              nexusChecksum = crypto
+                .createHash('sha256')
+                .update(payloadToHash)
+                .digest('hex');
             } else {
-              nexusChecksum = crypto.createHash('sha256').update(`${app.packageName}-${app.version}`).digest('hex');
+              nexusChecksum = crypto
+                .createHash('sha256')
+                .update(`${app.packageName}-${app.version}`)
+                .digest('hex');
             }
           }
         } catch (err: any) {
-          this.logger.warn(`Could not verify Nexus package ${app.packageName}: ${err.message}`);
-          nexusChecksum = crypto.createHash('sha256').update(`${app.packageName}-${app.version}`).digest('hex');
+          this.logger.warn(
+            `Could not verify Nexus package ${app.packageName}: ${err.message}`,
+          );
+          nexusChecksum = crypto
+            .createHash('sha256')
+            .update(`${app.packageName}-${app.version}`)
+            .digest('hex');
         }
       }
 
       // Checksum matching
       const approvedChecksum = app.approvedChecksum || nexusChecksum;
-      const checksumMatched = nexusChecksum === approvedChecksum || !app.approvedChecksum;
+      const checksumMatched =
+        nexusChecksum === approvedChecksum || !app.approvedChecksum;
       if (!checksumMatched) {
         allChecksumsMatched = false;
         conflicts.push(
-          `Checksum Mismatch for '${app.packageName}': Approved [${approvedChecksum.substring(0, 12)}...] != Nexus Artifact [${nexusChecksum.substring(0, 12)}...]`
+          `Checksum Mismatch for '${app.packageName}': Approved [${approvedChecksum.substring(0, 12)}...] != Nexus Artifact [${nexusChecksum.substring(0, 12)}...]`,
         );
       }
 
@@ -143,7 +174,7 @@ export class ReleaseAssemblyVerificationService {
     for (const [depName, versionSet] of sharedDependencyMap.entries()) {
       if (versionSet.size > 1) {
         conflicts.push(
-          `Dependency Version Collision on '${depName}': Found conflicting constraints [${Array.from(versionSet).join(', ')}]`
+          `Dependency Version Collision on '${depName}': Found conflicting constraints [${Array.from(versionSet).join(', ')}]`,
         );
       }
     }
@@ -151,7 +182,7 @@ export class ReleaseAssemblyVerificationService {
     const passed = allChecksumsMatched && conflicts.length === 0;
 
     // Generate Release Manifest
-    const bundledMiniApps = verifiedApps.map(app => ({
+    const bundledMiniApps = verifiedApps.map((app) => ({
       id: app.id,
       packageName: app.packageName,
       version: app.version,
@@ -167,7 +198,10 @@ export class ReleaseAssemblyVerificationService {
       consolidatedPermissions,
     });
 
-    const integrityDigest = crypto.createHash('sha256').update(manifestPayload).digest('hex');
+    const integrityDigest = crypto
+      .createHash('sha256')
+      .update(manifestPayload)
+      .digest('hex');
 
     const manifest = {
       superAppVersion: dto.releaseVersion,
@@ -179,8 +213,15 @@ export class ReleaseAssemblyVerificationService {
 
     if (passed) {
       try {
-        const releaseManifestPath = path.resolve(process.cwd(), '../dps_mobile_app/super_app_release.json');
-        fs.writeFileSync(releaseManifestPath, JSON.stringify(manifest, null, 2), 'utf-8');
+        const releaseManifestPath = path.resolve(
+          process.cwd(),
+          '../dps_mobile_app/super_app_release.json',
+        );
+        fs.writeFileSync(
+          releaseManifestPath,
+          JSON.stringify(manifest, null, 2),
+          'utf-8',
+        );
         this.logger.log(`Wrote release manifest to ${releaseManifestPath}`);
       } catch (err: any) {
         this.logger.warn(`Could not write manifest to disk: ${err.message}`);
@@ -189,7 +230,9 @@ export class ReleaseAssemblyVerificationService {
       // Transition approved apps to BUILDING
       for (const appDto of dto.miniApps) {
         try {
-          await this.miniappRepository.update(appDto.id, { status: 'BUILDING' });
+          await this.miniappRepository.update(appDto.id, {
+            status: 'BUILDING',
+          });
         } catch (_) {}
       }
 
@@ -221,21 +264,29 @@ export class ReleaseAssemblyVerificationService {
    * Handles build callback from Jenkins pipeline
    */
   async handleBuildCallback(body: any) {
-    this.logger.log(`Received build callback from Jenkins for release ${body.releaseVersion}: ${body.status}`);
+    this.logger.log(
+      `Received build callback from Jenkins for release ${body.releaseVersion}: ${body.status}`,
+    );
     if (body.status === 'COMPLETED' || body.status === 'SUCCESS') {
       const buildingApps = await this.miniappRepository.find({
-        where: { status: 'BUILDING' as any },
+        where: { status: 'BUILDING' },
       });
 
-      await this.miniappRepository.createQueryBuilder()
+      await this.miniappRepository
+        .createQueryBuilder()
         .update(MiniApp)
         .set({ status: 'TESTING' })
         .where("status = 'BUILDING'")
         .execute();
 
-      const repoName = body.buildType === 'release' ? 'apk-releases' : 'apk-test-builds';
-      const filename = body.filename || (body.buildType === 'release' ? 'app-release.apk' : 'app-debug.apk');
-      const apkUrl = body.apkUrl || `http://localhost:8081/repository/${repoName}/superapp/${body.releaseVersion}/${filename}`;
+      const repoName =
+        body.buildType === 'release' ? 'apk-releases' : 'apk-test-builds';
+      const filename =
+        body.filename ||
+        (body.buildType === 'release' ? 'app-release.apk' : 'app-debug.apk');
+      const apkUrl =
+        body.apkUrl ||
+        `http://localhost:8081/repository/${repoName}/superapp/${body.releaseVersion}/${filename}`;
 
       for (const app of buildingApps) {
         if (app.ownerId) {

@@ -18,10 +18,7 @@ import { StorageModule } from './storage/storage.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: [
-        `.env.${process.env.NODE_ENV || 'development'}`,
-        '.env',
-      ],
+      envFilePath: [`.env.${process.env.NODE_ENV || 'development'}`, '.env'],
     }),
 
     TypeOrmModule.forRootAsync({
@@ -51,5 +48,4 @@ import { StorageModule } from './storage/storage.module';
     StorageModule,
   ],
 })
-
 export class AppModule {}

@@ -16,20 +16,32 @@ export class SuperAppService implements OnApplicationBootstrap {
 
   private async seedInitialCapabilities() {
     const version = '2.0.0';
-    const count = await this.superAppCapabilityRepository.count({ where: { superAppVersion: version } });
+    const count = await this.superAppCapabilityRepository.count({
+      where: { superAppVersion: version },
+    });
     if (count > 0) return;
 
-    const initialCapabilities = ['camera', 'location', 'storage', 'microphone', 'biometrics'];
-    
+    const initialCapabilities = [
+      'camera',
+      'location',
+      'storage',
+      'microphone',
+      'biometrics',
+    ];
+
     await this.superAppCapabilityRepository.save({
       superAppVersion: version,
       platform: 'ALL',
-      capabilities: initialCapabilities
+      capabilities: initialCapabilities,
     });
   }
 
-  async findCapabilitiesForVersion(version: string): Promise<SuperAppCapability[]> {
-    return this.superAppCapabilityRepository.find({ where: { superAppVersion: version } });
+  async findCapabilitiesForVersion(
+    version: string,
+  ): Promise<SuperAppCapability[]> {
+    return this.superAppCapabilityRepository.find({
+      where: { superAppVersion: version },
+    });
   }
 
   async findLatestCapability(): Promise<SuperAppCapability | null> {

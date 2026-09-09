@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToMany, JoinTable } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToMany,
+  JoinTable,
+} from 'typeorm';
 import { User } from './user.entity';
 import { Permission } from './permission.entity';
 
@@ -16,10 +24,13 @@ export class Role {
   @Column({ default: true })
   isActive!: boolean;
 
-  @ManyToMany(() => User, user => user.roles)
+  @ManyToMany(() => User, (user) => user.roles)
   users!: User[];
 
-  @ManyToMany(() => Permission, permission => permission.roles, { cascade: true, eager: true })
+  @ManyToMany(() => Permission, (permission) => permission.roles, {
+    cascade: true,
+    eager: true,
+  })
   @JoinTable({ name: 'role_permissions' })
   permissions!: Permission[];
 

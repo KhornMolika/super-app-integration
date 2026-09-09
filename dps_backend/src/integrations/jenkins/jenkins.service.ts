@@ -10,15 +10,24 @@ export class JenkinsService {
   private readonly callbackBaseUrl: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.jenkinsUrl = this.configService.get<string>('JENKINS_URL', 'http://localhost:8085').replace(/\/$/, '');
+    this.jenkinsUrl = this.configService
+      .get<string>('JENKINS_URL', 'http://localhost:8085')
+      .replace(/\/$/, '');
     this.jenkinsUser = this.configService.get<string>('JENKINS_USER', 'admin');
-    this.jenkinsApiToken = this.configService.get<string>('JENKINS_API_TOKEN', '');
-    this.callbackBaseUrl = this.configService.get<string>('CALLBACK_BASE_URL', 'http://host.docker.internal:3000').replace(/\/$/, '');
+    this.jenkinsApiToken = this.configService.get<string>(
+      'JENKINS_API_TOKEN',
+      '',
+    );
+    this.callbackBaseUrl = this.configService
+      .get<string>('CALLBACK_BASE_URL', 'http://host.docker.internal:3000')
+      .replace(/\/$/, '');
   }
 
   private getAuthHeader(): string | null {
     if (this.jenkinsUser && this.jenkinsApiToken) {
-      const credentials = Buffer.from(`${this.jenkinsUser}:${this.jenkinsApiToken}`).toString('base64');
+      const credentials = Buffer.from(
+        `${this.jenkinsUser}:${this.jenkinsApiToken}`,
+      ).toString('base64');
       return `Basic ${credentials}`;
     }
     return null;
@@ -27,13 +36,19 @@ export class JenkinsService {
   /**
    * Fetches a CSRF Crumb from Jenkins if required
    */
-  private async getCrumb(): Promise<{ headerName: string; crumb: string; cookie?: string } | null> {
+  private async getCrumb(): Promise<{
+    headerName: string;
+    crumb: string;
+    cookie?: string;
+  } | null> {
     try {
       const headers: Record<string, string> = {};
       const authHeader = this.getAuthHeader();
       if (authHeader) headers['Authorization'] = authHeader;
 
-      const res = await fetch(`${this.jenkinsUrl}/crumbIssuer/api/json`, { headers });
+      const res = await fetch(`${this.jenkinsUrl}/crumbIssuer/api/json`, {
+        headers,
+      });
       if (!res.ok) {
         return null;
       }
@@ -45,7 +60,9 @@ export class JenkinsService {
         cookie,
       };
     } catch (e: any) {
-      this.logger.debug(`Crumb issuer check skipped or unavailable: ${e.message}`);
+      this.logger.debug(
+        `Crumb issuer check skipped or unavailable: ${e.message}`,
+      );
       return null;
     }
   }
@@ -103,19 +120,29 @@ export class JenkinsService {
       });
 
       if (response.status === 201 || response.status === 200) {
-        this.logger.log(`Jenkins job "${jobName}" triggered successfully for Mini App ${options.miniAppId}`);
-        return { success: true, message: 'Jenkins pipeline triggered successfully' };
+        this.logger.log(
+          `Jenkins job "${jobName}" triggered successfully for Mini App ${options.miniAppId}`,
+        );
+        return {
+          success: true,
+          message: 'Jenkins pipeline triggered successfully',
+        };
       }
 
       const responseBody = await response.text();
-      this.logger.warn(`Jenkins trigger returned HTTP ${response.status}: ${responseBody.substring(0, 300)}`);
+      this.logger.warn(
+        `Jenkins trigger returned HTTP ${response.status}: ${responseBody.substring(0, 300)}`,
+      );
       return {
         success: false,
         message: `Jenkins returned HTTP ${response.status}: ${responseBody.substring(0, 150)}`,
       };
     } catch (err: any) {
       this.logger.error(`Failed to trigger Jenkins pipeline: ${err.message}`);
-      return { success: false, message: `Could not connect to Jenkins: ${err.message}` };
+      return {
+        success: false,
+        message: `Could not connect to Jenkins: ${err.message}`,
+      };
     }
   }
 
@@ -128,11 +155,16 @@ export class JenkinsService {
       const authHeader = this.getAuthHeader();
       if (authHeader) headers['Authorization'] = authHeader;
 
-      const res = await fetch(`${this.jenkinsUrl}/job/${jobName}/lastBuild/api/json`, { headers });
+      const res = await fetch(
+        `${this.jenkinsUrl}/job/${jobName}/lastBuild/api/json`,
+        { headers },
+      );
       if (!res.ok) return null;
       return await res.json();
     } catch (e: any) {
-      this.logger.debug(`Could not fetch last build from Jenkins: ${e.message}`);
+      this.logger.debug(
+        `Could not fetch last build from Jenkins: ${e.message}`,
+      );
       return null;
     }
   }
@@ -154,7 +186,9 @@ export class JenkinsService {
   }): Promise<{ success: boolean; message: string }> {
     const jobName = 'package-validation';
     const callbackUrl = `${this.callbackBaseUrl}/api/integrations/validation/callback`;
-    const allowedCapsStr = (options.allowedCapabilities || ['camera', 'geolocator', 'local_auth']).join(',');
+    const allowedCapsStr = (
+      options.allowedCapabilities || ['camera', 'geolocator', 'local_auth']
+    ).join(',');
     const requiredCapsStr = (options.requiredCapabilities || []).join(',');
 
     const params = new URLSearchParams({
@@ -172,7 +206,9 @@ export class JenkinsService {
     });
 
     const triggerUrl = `${this.jenkinsUrl}/job/${jobName}/buildWithParameters?${params.toString()}`;
-    this.logger.log(`Triggering Jenkins Flutter Package validation pipeline: ${triggerUrl}`);
+    this.logger.log(
+      `Triggering Jenkins Flutter Package validation pipeline: ${triggerUrl}`,
+    );
 
     try {
       const headers: Record<string, string> = {
@@ -198,19 +234,31 @@ export class JenkinsService {
       });
 
       if (response.status === 201 || response.status === 200) {
-        this.logger.log(`Jenkins job "${jobName}" triggered successfully for Mini App ${options.miniAppId}`);
-        return { success: true, message: 'Jenkins package validation pipeline triggered successfully' };
+        this.logger.log(
+          `Jenkins job "${jobName}" triggered successfully for Mini App ${options.miniAppId}`,
+        );
+        return {
+          success: true,
+          message: 'Jenkins package validation pipeline triggered successfully',
+        };
       }
 
       const responseBody = await response.text();
-      this.logger.warn(`Jenkins trigger returned HTTP ${response.status}: ${responseBody.substring(0, 300)}`);
+      this.logger.warn(
+        `Jenkins trigger returned HTTP ${response.status}: ${responseBody.substring(0, 300)}`,
+      );
       return {
         success: false,
         message: `Jenkins returned HTTP ${response.status}: ${responseBody.substring(0, 150)}`,
       };
     } catch (err: any) {
-      this.logger.error(`Failed to trigger Jenkins package validation: ${err.message}`);
-      return { success: false, message: `Could not connect to Jenkins: ${err.message}` };
+      this.logger.error(
+        `Failed to trigger Jenkins package validation: ${err.message}`,
+      );
+      return {
+        success: false,
+        message: `Could not connect to Jenkins: ${err.message}`,
+      };
     }
   }
 
@@ -236,7 +284,9 @@ export class JenkinsService {
     });
 
     const triggerUrl = `${this.jenkinsUrl}/job/${jobName}/buildWithParameters?${params.toString()}`;
-    this.logger.log(`Triggering Jenkins Super App build pipeline: ${triggerUrl}`);
+    this.logger.log(
+      `Triggering Jenkins Super App build pipeline: ${triggerUrl}`,
+    );
 
     try {
       const headers: Record<string, string> = {
@@ -262,20 +312,29 @@ export class JenkinsService {
       });
 
       if (response.status === 201 || response.status === 200) {
-        this.logger.log(`Jenkins job "${jobName}" triggered successfully for release ${options.releaseVersion}`);
-        return { success: true, message: 'Super App build pipeline triggered successfully' };
+        this.logger.log(
+          `Jenkins job "${jobName}" triggered successfully for release ${options.releaseVersion}`,
+        );
+        return {
+          success: true,
+          message: 'Super App build pipeline triggered successfully',
+        };
       }
 
       const responseBody = await response.text();
-      this.logger.warn(`Jenkins trigger returned HTTP ${response.status}: ${responseBody.substring(0, 300)}`);
+      this.logger.warn(
+        `Jenkins trigger returned HTTP ${response.status}: ${responseBody.substring(0, 300)}`,
+      );
       return {
         success: false,
         message: `Jenkins returned HTTP ${response.status}: ${responseBody.substring(0, 150)}`,
       };
     } catch (err: any) {
       this.logger.error(`Failed to trigger Jenkins build: ${err.message}`);
-      return { success: false, message: `Could not connect to Jenkins: ${err.message}` };
+      return {
+        success: false,
+        message: `Could not connect to Jenkins: ${err.message}`,
+      };
     }
   }
 }
-

@@ -16,11 +16,16 @@ export class GitLabOAuthService {
   }
 
   private getRedirectUri(): string {
-    return this.configService.get<string>('GITLAB_OAUTH_REDIRECT_URI') || 'http://localhost:3000/api/integrations/git/gitlab/callback';
+    return (
+      this.configService.get<string>('GITLAB_OAUTH_REDIRECT_URI') ||
+      'http://localhost:3000/api/integrations/git/gitlab/callback'
+    );
   }
 
   private getBaseUrl(): string {
-    return this.configService.get<string>('GITLAB_BASE_URL') || 'https://gitlab.com';
+    return (
+      this.configService.get<string>('GITLAB_BASE_URL') || 'https://gitlab.com'
+    );
   }
 
   isOAuthConfigured(): boolean {
@@ -41,7 +46,11 @@ export class GitLabOAuthService {
     return url;
   }
 
-  async exchangeCodeForToken(code: string): Promise<{ accessToken: string; refreshToken?: string; expiresIn?: number }> {
+  async exchangeCodeForToken(code: string): Promise<{
+    accessToken: string;
+    refreshToken?: string;
+    expiresIn?: number;
+  }> {
     const clientId = this.getClientId();
     const clientSecret = this.getClientSecret();
     if (!clientId || !clientSecret) {
@@ -65,10 +74,12 @@ export class GitLabOAuthService {
     });
 
     if (!res.ok) {
-      throw new Error(`GitLab OAuth token exchange failed (${res.status}): ${await res.text()}`);
+      throw new Error(
+        `GitLab OAuth token exchange failed (${res.status}): ${await res.text()}`,
+      );
     }
 
-    const data = (await res.json()) as any;
+    const data = await res.json();
     return {
       accessToken: data.access_token,
       refreshToken: data.refresh_token,

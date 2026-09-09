@@ -44,11 +44,17 @@ export class MiniappsService {
     description: string,
     auditAction: string,
     oldVal?: any,
-    newVal?: any
+    newVal?: any,
   ) {
     try {
       await this.activityRepository.save(
-        this.activityRepository.create({ miniAppId, actorId, type: actionType, title, description })
+        this.activityRepository.create({
+          miniAppId,
+          actorId,
+          type: actionType,
+          title,
+          description,
+        }),
       );
     } catch (e: any) {
       this.logger.warn(`Failed to log activity: ${e.message}`);
@@ -69,10 +75,18 @@ export class MiniappsService {
     delete data.status;
     data.status = 'PROCESSING';
 
-    // Automatically upload base64 image data to MinIO object storage
-    if (data.logo && (data.logo.startsWith('data:image/') || data.logo.length > 500)) {
+    // Automatically upload base64 image data to MinIO object storage on submission
+    const isBase64Logo =
+      data.logo &&
+      (data.logo.startsWith('data:') ||
+        (data.logo.length > 500 && !data.logo.startsWith('http')));
+    if (isBase64Logo) {
       try {
-        data.logo = await this.storageService.uploadBase64(data.logo, `${data.name || 'logo'}.png`);
+        const targetId = data.appId || `miniapp_${Date.now()}`;
+        data.logo = await this.storageService.uploadBase64(
+          data.logo!,
+          `mini-app-assets/${targetId}/logo.png`,
+        );
       } catch (err: any) {
         this.logger.error(`Failed to store logo in MinIO: ${err.message}`);
       }
@@ -85,7 +99,8 @@ export class MiniappsService {
     if (data.integrationMethod === 'WEBVIEW') {
       if (!data.verificationToken) {
         data.verificationToken =
-          data.integrationConfig?.verificationToken || this.domainVerificationService.generateVerificationToken();
+          data.integrationConfig?.verificationToken ||
+          this.domainVerificationService.generateVerificationToken();
       }
       if (data.integrationConfig) {
         data.integrationConfig.verificationToken = data.verificationToken;
@@ -98,14 +113,19 @@ export class MiniappsService {
       savedApp = await this.miniappRepository.save(app);
     } catch (error: any) {
       if (error.code === '23505') {
-        throw new BadRequestException('An app with this App ID already exists.');
+        throw new BadRequestException(
+          'An app with this App ID already exists.',
+        );
       }
       throw error;
     }
 
     // Kick off async validation
     this.validateMiniAppAsync(savedApp.id).catch((err) => {
-      this.logger.error(`Error in async validation for app ${savedApp.id}:`, err);
+      this.logger.error(
+        `Error in async validation for app ${savedApp.id}:`,
+        err,
+      );
     });
 
     await this.logActivity(
@@ -116,7 +136,7 @@ export class MiniappsService {
       'Initial draft creation',
       'CREATE_MINI_APP',
       null,
-      savedApp
+      savedApp,
     );
 
     return savedApp;
@@ -125,8 +145,10 @@ export class MiniappsService {
   async validateMiniAppAsync(id: string, initialData?: any) {
     const app = await this.findOne(id);
     if (!app) return;
-    return this.validationHelper.validateMiniAppAsync(app, (mId, aId, aType, t, d, aAction, oVal, nVal) =>
-      this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal)
+    return this.validationHelper.validateMiniAppAsync(
+      app,
+      (mId, aId, aType, t, d, aAction, oVal, nVal) =>
+        this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal),
     );
   }
 
@@ -141,7 +163,8 @@ export class MiniappsService {
       let miniAppId = issue.miniApp?.appId || issue.miniAppId;
 
       if (!issue.miniApp) {
-        if (issue.metadata?.miniAppName) miniAppName = issue.metadata.miniAppName;
+        if (issue.metadata?.miniAppName)
+          miniAppName = issue.metadata.miniAppName;
         if (issue.metadata?.miniAppId) miniAppId = issue.metadata.miniAppId;
       }
 
@@ -163,15 +186,19 @@ export class MiniappsService {
   async checkExists(appId?: string, name?: string, excludeId?: string) {
     let appIdExists = false;
     let nameExists = false;
-    
+
     if (appId) {
-      const qb = this.miniappRepository.createQueryBuilder('app').where('app.appId = :appId', { appId });
+      const qb = this.miniappRepository
+        .createQueryBuilder('app')
+        .where('app.appId = :appId', { appId });
       if (excludeId) qb.andWhere('app.id != :excludeId', { excludeId });
       appIdExists = (await qb.getCount()) > 0;
     }
 
     if (name) {
-      const qb = this.miniappRepository.createQueryBuilder('app').where('LOWER(app.name) = LOWER(:name)', { name });
+      const qb = this.miniappRepository
+        .createQueryBuilder('app')
+        .where('LOWER(app.name) = LOWER(:name)', { name });
       if (excludeId) qb.andWhere('app.id != :excludeId', { excludeId });
       nameExists = (await qb.getCount()) > 0;
     }
@@ -194,7 +221,10 @@ export class MiniappsService {
     return app;
   }
 
-  async findAll(queryOrOwnerId?: { status?: string } | string, roles?: string[]) {
+  async findAll(
+    queryOrOwnerId?: { status?: string } | string,
+    roles?: string[],
+  ) {
     if (typeof queryOrOwnerId === 'object' && queryOrOwnerId !== null) {
       const where: any = {};
       if (queryOrOwnerId.status) {
@@ -207,7 +237,8 @@ export class MiniappsService {
       });
     }
 
-    const ownerId = typeof queryOrOwnerId === 'string' ? queryOrOwnerId : undefined;
+    const ownerId =
+      typeof queryOrOwnerId === 'string' ? queryOrOwnerId : undefined;
     const isElevated =
       roles?.includes('SUPER_ADMIN') ||
       roles?.includes('SECURITY_ADMIN') ||
@@ -231,8 +262,11 @@ export class MiniappsService {
   async cancelValidation(id: string, actorId = 'system') {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
-    return this.lifecycleHelper.cancelValidation(app, actorId, (mId, aId, aType, t, d, aAction, oVal, nVal) =>
-      this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal)
+    return this.lifecycleHelper.cancelValidation(
+      app,
+      actorId,
+      (mId, aId, aType, t, d, aAction, oVal, nVal) =>
+        this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal),
     );
   }
 
@@ -243,15 +277,25 @@ export class MiniappsService {
 
     if (data.permissions && Array.isArray(data.permissions)) {
       // Deduplicate permissions array by type
-      data.permissions = Array.from(new Map(data.permissions.map((p: any) => [p.type, p])).values());
+      data.permissions = Array.from(
+        new Map(data.permissions.map((p: any) => [p.type, p])).values(),
+      );
     }
 
     data.status = 'PROCESSING';
 
-    // Automatically upload base64 image data to MinIO object storage
-    if (data.logo && (data.logo.startsWith('data:image/') || data.logo.length > 500)) {
+    // Automatically upload base64 image data to MinIO object storage on submission
+    const isBase64Logo =
+      data.logo &&
+      (data.logo.startsWith('data:') ||
+        (data.logo.length > 500 && !data.logo.startsWith('http')));
+    if (isBase64Logo) {
       try {
-        data.logo = await this.storageService.uploadBase64(data.logo, `${data.name || existing.name || 'logo'}.png`);
+        const targetId = data.appId || existing.appId || existing.id;
+        data.logo = await this.storageService.uploadBase64(
+          data.logo!,
+          `mini-app-assets/${targetId}/logo.png`,
+        );
       } catch (err: any) {
         this.logger.error(`Failed to store logo in MinIO: ${err.message}`);
       }
@@ -263,8 +307,8 @@ export class MiniappsService {
     }
 
     // Reset domain verification status if productionUrl changes
-    const oldProdUrl = (existing.integrationConfig as any)?.productionUrl;
-    const newProdUrl = (data.integrationConfig as any)?.productionUrl;
+    const oldProdUrl = existing.integrationConfig?.productionUrl;
+    const newProdUrl = data.integrationConfig?.productionUrl;
     if (newProdUrl && oldProdUrl && newProdUrl.trim() !== oldProdUrl.trim()) {
       merged.isDomainVerified = false;
       merged.domainVerifiedAt = null as any;
@@ -278,14 +322,32 @@ export class MiniappsService {
     });
 
     const updated = await this.findOne(id);
-    await this.logActivity(id, actorId || 'system', 'UPDATE', `App updated`, 'Draft changes saved', 'UPDATE_MINI_APP', existing, updated);
+    await this.logActivity(
+      id,
+      actorId || 'system',
+      'UPDATE',
+      `App updated`,
+      'Draft changes saved',
+      'UPDATE_MINI_APP',
+      existing,
+      updated,
+    );
     return updated;
   }
 
   async remove(id: string, actorId?: string) {
     const existing = await this.findOne(id);
     if (existing) {
-      await this.logActivity(id, actorId || 'system', 'DELETE', `App ${existing.name || existing.appId} Deleted`, 'App removed', 'DELETE_MINI_APP', existing, null);
+      await this.logActivity(
+        id,
+        actorId || 'system',
+        'DELETE',
+        `App ${existing.name || existing.appId} Deleted`,
+        'App removed',
+        'DELETE_MINI_APP',
+        existing,
+        null,
+      );
     }
     return this.miniappRepository.delete(id);
   }
@@ -293,64 +355,90 @@ export class MiniappsService {
   async submitForReview(id: string, actorId: string) {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
-    return this.lifecycleHelper.submitForReview(app, actorId, (mId, aId, aType, t, d, aAction, oVal, nVal) =>
-      this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal)
+    return this.lifecycleHelper.submitForReview(
+      app,
+      actorId,
+      (mId, aId, aType, t, d, aAction, oVal, nVal) =>
+        this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal),
     );
   }
 
   async rescan(id: string, actorId = 'system') {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
-    return this.lifecycleHelper.rescan(app, actorId, (mId, aId, aType, t, d, aAction, oVal, nVal) =>
-      this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal)
+    return this.lifecycleHelper.rescan(
+      app,
+      actorId,
+      (mId, aId, aType, t, d, aAction, oVal, nVal) =>
+        this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal),
     );
   }
 
   async approve(id: string, actorId: string) {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
-    return this.lifecycleHelper.approve(app, actorId, (mId, aId, aType, t, d, aAction, oVal, nVal) =>
-      this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal)
+    return this.lifecycleHelper.approve(
+      app,
+      actorId,
+      (mId, aId, aType, t, d, aAction, oVal, nVal) =>
+        this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal),
     );
   }
 
   async reject(id: string, reason: string, actorId: string) {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
-    return this.lifecycleHelper.reject(app, reason, actorId, (mId, aId, aType, t, d, aAction, oVal, nVal) =>
-      this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal)
+    return this.lifecycleHelper.reject(
+      app,
+      reason,
+      actorId,
+      (mId, aId, aType, t, d, aAction, oVal, nVal) =>
+        this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal),
     );
   }
 
   async requestChanges(id: string, reason: string, actorId: string) {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
-    return this.lifecycleHelper.requestChanges(app, reason, actorId, (mId, aId, aType, t, d, aAction, oVal, nVal) =>
-      this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal)
+    return this.lifecycleHelper.requestChanges(
+      app,
+      reason,
+      actorId,
+      (mId, aId, aType, t, d, aAction, oVal, nVal) =>
+        this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal),
     );
   }
 
   async startTesting(id: string, actorId: string) {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
-    return this.lifecycleHelper.startTesting(app, actorId, (mId, aId, aType, t, d, aAction, oVal, nVal) =>
-      this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal)
+    return this.lifecycleHelper.startTesting(
+      app,
+      actorId,
+      (mId, aId, aType, t, d, aAction, oVal, nVal) =>
+        this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal),
     );
   }
 
   async activate(id: string, actorId: string) {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
-    return this.lifecycleHelper.activate(app, actorId, (mId, aId, aType, t, d, aAction, oVal, nVal) =>
-      this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal)
+    return this.lifecycleHelper.activate(
+      app,
+      actorId,
+      (mId, aId, aType, t, d, aAction, oVal, nVal) =>
+        this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal),
     );
   }
 
   async suspend(id: string, actorId: string) {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
-    return this.lifecycleHelper.suspend(app, actorId, (mId, aId, aType, t, d, aAction, oVal, nVal) =>
-      this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal)
+    return this.lifecycleHelper.suspend(
+      app,
+      actorId,
+      (mId, aId, aType, t, d, aAction, oVal, nVal) =>
+        this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal),
     );
   }
 
@@ -358,23 +446,28 @@ export class MiniappsService {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
     if (app.integrationMethod !== 'WEBVIEW') {
-      throw new BadRequestException('Domain verification is only applicable to WebView mini-apps');
+      throw new BadRequestException(
+        'Domain verification is only applicable to WebView mini-apps',
+      );
     }
 
-    const prodUrl = overrideUrl || (app.integrationConfig as any)?.productionUrl;
+    const prodUrl = overrideUrl || app.integrationConfig?.productionUrl;
     if (!prodUrl) {
-      throw new BadRequestException('No productionUrl found in integrationConfig');
+      throw new BadRequestException(
+        'No productionUrl found in integrationConfig',
+      );
     }
 
     if (!app.verificationToken) {
-      app.verificationToken = this.domainVerificationService.generateVerificationToken();
+      app.verificationToken =
+        this.domainVerificationService.generateVerificationToken();
       await this.miniappRepository.save(app);
     }
 
     const result = await this.domainVerificationService.verifyDomainOwnership(
       prodUrl,
       app.appId,
-      app.verificationToken
+      app.verificationToken,
     );
 
     if (result.success) {
@@ -382,27 +475,40 @@ export class MiniappsService {
       app.domainVerifiedAt = result.verifiedAt || new Date();
 
       if (result.allowedDomains && result.allowedDomains.length > 0) {
-        const currentAllowed = Array.isArray((app.integrationConfig as any)?.allowedDomains)
-          ? (app.integrationConfig as any).allowedDomains
+        const currentAllowed = Array.isArray(
+          app.integrationConfig?.allowedDomains,
+        )
+          ? app.integrationConfig.allowedDomains
           : [];
         app.integrationConfig = {
           ...(app.integrationConfig || {}),
-          allowedDomains: Array.from(new Set([...currentAllowed, ...result.allowedDomains])),
+          allowedDomains: Array.from(
+            new Set([...currentAllowed, ...result.allowedDomains]),
+          ),
         };
       }
 
       if (result.permissions && result.permissions.length > 0) {
-        const currentPerms = Array.isArray(app.permissions) ? app.permissions : [];
+        const currentPerms = Array.isArray(app.permissions)
+          ? app.permissions
+          : [];
         const newPerms = [...currentPerms];
         for (const p of result.permissions) {
           const permType = typeof p === 'string' ? p : (p as any)?.type;
-          const permPurpose = typeof p === 'string' ? undefined : (p as any)?.purpose;
+          const permPurpose =
+            typeof p === 'string' ? undefined : (p as any)?.purpose;
           if (!permType) continue;
-          const exists = newPerms.some((existing) => (existing.type || existing)?.toLowerCase() === permType.toLowerCase());
+          const exists = newPerms.some(
+            (existing) =>
+              (existing.type || existing)?.toLowerCase() ===
+              permType.toLowerCase(),
+          );
           if (!exists) {
             newPerms.push({
               type: permType,
-              purpose: permPurpose || `Required by ${app.name} as declared in domain association file`,
+              purpose:
+                permPurpose ||
+                `Required by ${app.name} as declared in domain association file`,
               termsUrl: app.termsUrl || 'https://privacy.example.com',
             });
           }
@@ -416,7 +522,7 @@ export class MiniappsService {
         verified: true,
         message: result.message,
         domainVerifiedAt: app.domainVerifiedAt,
-        allowedDomains: (app.integrationConfig as any)?.allowedDomains,
+        allowedDomains: app.integrationConfig?.allowedDomains,
         permissions: app.permissions,
       };
     } else {
@@ -430,11 +536,15 @@ export class MiniappsService {
     }
   }
 
-  async verifyDomainStandalone(prodUrl: string, appId: string, verificationToken: string) {
+  async verifyDomainStandalone(
+    prodUrl: string,
+    appId: string,
+    verificationToken: string,
+  ) {
     const result = await this.domainVerificationService.verifyDomainOwnership(
       prodUrl,
       appId,
-      verificationToken
+      verificationToken,
     );
 
     if (result.success) {
@@ -476,16 +586,30 @@ export class MiniappsService {
     return this.notificationsService.delete(id);
   }
 
-  async detectPermissions(body: { productionUrl?: string; category?: string; name?: string; appId?: string }) {
+  async detectPermissions(body: {
+    productionUrl?: string;
+    category?: string;
+    name?: string;
+    appId?: string;
+  }) {
     return this.permissionDetectorHelper.detect(body);
   }
 
-  async uploadPackageArtifact(file: Express.Multer.File, miniAppId?: string, version?: string) {
-    const res = await this.storageService.uploadPackageArchive(file, miniAppId, version);
-    const detected = this.permissionDetectorHelper.detectFromPubspecDependencies(
-      res.pubspec?.dependencies || {},
-      res.pubspec?.name
+  async uploadPackageArtifact(
+    file: Express.Multer.File,
+    miniAppId?: string,
+    version?: string,
+  ) {
+    const res = await this.storageService.uploadPackageArchive(
+      file,
+      miniAppId,
+      version,
     );
+    const detected =
+      this.permissionDetectorHelper.detectFromPubspecDependencies(
+        res.pubspec?.dependencies || {},
+        res.pubspec?.name,
+      );
     return {
       ...res,
       detectedPermissions: detected,

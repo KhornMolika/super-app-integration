@@ -105,7 +105,7 @@ export default function MiniAppDetailTabs({
             key={tab.id}
             type="button"
             onClick={() => onSelectTab(tab.id)}
-            className={`flex items-center gap-2 py-3 px-4 font-semibold text-xs tracking-tight transition-all border-b-2 whitespace-nowrap rounded-t-xl ${
+            className={`flex items-center gap-2 py-3 px-4.5 font-semibold text-sm tracking-tight transition-all border-b-2 whitespace-nowrap rounded-t-xl ${
               isActive
                 ? 'border-brand-600 text-brand-700 dark:text-brand-300 bg-brand-50/50 dark:bg-brand-950/20'
                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/40'
@@ -124,7 +124,7 @@ export default function MiniAppDetailTabs({
             {/* Tab specific badges */}
             {tab.id === 'report' && validationStatus && (
               <span
-                className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold uppercase ${
+                className={`text-xs px-2 py-0.5 rounded-full font-bold uppercase ${
                   validationStatus === 'PASSED'
                     ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300'
                     : validationStatus === 'RUNNING'

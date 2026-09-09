@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { MiniApp } from './miniapp.entity';
 
 @Entity('miniapp_activities')
@@ -9,7 +16,9 @@ export class MiniAppActivity {
   @Column()
   miniAppId!: string;
 
-  @ManyToOne(() => MiniApp, miniApp => miniApp.activities, { onDelete: 'CASCADE' })
+  @ManyToOne(() => MiniApp, (miniApp) => miniApp.activities, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'miniAppId' })
   miniApp!: MiniApp;
 
@@ -31,4 +40,3 @@ export class MiniAppActivity {
   @CreateDateColumn()
   createdAt!: Date;
 }
-

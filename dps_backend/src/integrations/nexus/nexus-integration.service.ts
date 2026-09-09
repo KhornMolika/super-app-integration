@@ -20,14 +20,18 @@ export class NexusIntegrationService {
   private getPubGroupUrl(): string {
     const configured = this.configService.get<string>('NEXUS_PUB_GROUP_URL');
     if (configured) return configured.replace(/\/+$/, '');
-    const baseUrl = this.configService.get<string>('NEXUS_BASE_URL') || 'http://localhost:8081';
+    const baseUrl =
+      this.configService.get<string>('NEXUS_BASE_URL') ||
+      'http://localhost:8081';
     return `${baseUrl.replace(/\/+$/, '')}/repository/pub-group`;
   }
 
   private getPubHostedUrl(): string {
     const configured = this.configService.get<string>('NEXUS_PUB_HOSTED_URL');
     if (configured) return configured.replace(/\/+$/, '');
-    const baseUrl = this.configService.get<string>('NEXUS_BASE_URL') || 'http://localhost:8081';
+    const baseUrl =
+      this.configService.get<string>('NEXUS_BASE_URL') ||
+      'http://localhost:8081';
     return `${baseUrl.replace(/\/+$/, '')}/repository/pub-hosted`;
   }
 
@@ -74,16 +78,20 @@ export class NexusIntegrationService {
         };
       }
 
-      const data = (await res.json()) as any;
+      const data = await res.json();
       const versions = Array.isArray(data.versions)
-        ? data.versions.map((v: any) => (typeof v === 'string' ? v : v.version || v)).filter(Boolean).reverse()
+        ? data.versions
+            .map((v: any) => (typeof v === 'string' ? v : v.version || v))
+            .filter(Boolean)
+            .reverse()
         : [];
 
       return {
         isValid: true,
         packageName: data.name || trimmed,
         exists: true,
-        latestVersion: data.latest?.version || (versions.length > 0 ? versions[0] : '1.0.0'),
+        latestVersion:
+          data.latest?.version || (versions.length > 0 ? versions[0] : '1.0.0'),
         versions,
         description: data.latest?.pubspec?.description,
       };
@@ -97,7 +105,10 @@ export class NexusIntegrationService {
     }
   }
 
-  generateSnippet(options: { packageName: string; versionConstraint?: string }): string {
+  generateSnippet(options: {
+    packageName: string;
+    versionConstraint?: string;
+  }): string {
     const pkg = options.packageName.trim() || 'package_name';
     const ver = options.versionConstraint?.trim() || '^1.0.0';
     const groupUrl = this.getPubGroupUrl();

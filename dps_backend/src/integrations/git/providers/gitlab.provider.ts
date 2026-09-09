@@ -22,7 +22,9 @@ export class GitLabProvider implements GitProvider {
   }
 
   private getConfiguredBaseUrl(): string {
-    return this.configService.get<string>('GITLAB_BASE_URL') || 'https://gitlab.com';
+    return (
+      this.configService.get<string>('GITLAB_BASE_URL') || 'https://gitlab.com'
+    );
   }
 
   private getApiBaseUrl(host?: string): string {
@@ -66,17 +68,25 @@ export class GitLabProvider implements GitProvider {
         owner = match[2];
         repo = match[3];
       }
-    } else if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    } else if (
+      trimmed.startsWith('http://') ||
+      trimmed.startsWith('https://')
+    ) {
       try {
         const parsedUrl = new URL(trimmed);
         host = parsedUrl.host;
-        const segments = parsedUrl.pathname.replace(/^\//, '').replace(/\.git$/, '').split('/');
+        const segments = parsedUrl.pathname
+          .replace(/^\//, '')
+          .replace(/\.git$/, '')
+          .split('/');
         if (segments.length >= 2) {
           repo = segments[segments.length - 1];
           owner = segments.slice(0, segments.length - 1).join('/');
         }
       } catch {
-        const match = trimmed.match(/https?:\/\/[^/]+\/(.+?)\/([^/]+?)(\.git)?$/);
+        const match = trimmed.match(
+          /https?:\/\/[^/]+\/(.+?)\/([^/]+?)(\.git)?$/,
+        );
         if (match) {
           owner = match[1];
           repo = match[2];
@@ -123,7 +133,10 @@ export class GitLabProvider implements GitProvider {
     return headers;
   }
 
-  async getRepository(urlOrSlug: string, token?: string): Promise<GitRepositoryInfo> {
+  async getRepository(
+    urlOrSlug: string,
+    token?: string,
+  ): Promise<GitRepositoryInfo> {
     const parsed = this.parseUrl(urlOrSlug);
     const projectId = this.getProjectIdentifier(parsed);
     const apiUrl = `${this.getApiBaseUrl(parsed.host)}/projects/${projectId}`;
@@ -134,12 +147,14 @@ export class GitLabProvider implements GitProvider {
 
     if (!res.ok) {
       if (res.status === 404) {
-        throw new Error(`GitLab project '${parsed.fullName}' not found or access denied.`);
+        throw new Error(
+          `GitLab project '${parsed.fullName}' not found or access denied.`,
+        );
       }
       throw new Error(`GitLab API error (${res.status}): ${await res.text()}`);
     }
 
-    const data = (await res.json()) as any;
+    const data = await res.json();
     return {
       id: data.id,
       name: data.name || parsed.repo,
@@ -164,7 +179,9 @@ export class GitLabProvider implements GitProvider {
     });
 
     if (!res.ok) {
-      throw new Error(`Failed to fetch branches for GitLab project '${parsed.fullName}': ${res.statusText}`);
+      throw new Error(
+        `Failed to fetch branches for GitLab project '${parsed.fullName}': ${res.statusText}`,
+      );
     }
 
     const data = (await res.json()) as any[];
@@ -181,7 +198,9 @@ export class GitLabProvider implements GitProvider {
     });
 
     if (!res.ok) {
-      throw new Error(`Failed to fetch tags for GitLab project '${parsed.fullName}': ${res.statusText}`);
+      throw new Error(
+        `Failed to fetch tags for GitLab project '${parsed.fullName}': ${res.statusText}`,
+      );
     }
 
     const data = (await res.json()) as any[];
@@ -206,7 +225,9 @@ export class GitLabProvider implements GitProvider {
     });
 
     if (!res.ok) {
-      throw new Error(`Failed to fetch commits for GitLab project '${parsed.fullName}': ${res.statusText}`);
+      throw new Error(
+        `Failed to fetch commits for GitLab project '${parsed.fullName}': ${res.statusText}`,
+      );
     }
 
     const data = (await res.json()) as any[];
@@ -240,9 +261,13 @@ export class GitLabProvider implements GitProvider {
 
     if (!res.ok) {
       if (res.status === 404) {
-        throw new Error(`File '${filePath}' not found in GitLab project '${parsed.fullName}' (ref: ${ref || 'default'}).`);
+        throw new Error(
+          `File '${filePath}' not found in GitLab project '${parsed.fullName}' (ref: ${ref || 'default'}).`,
+        );
       }
-      throw new Error(`GitLab API error fetching '${filePath}' (${res.status}): ${await res.text()}`);
+      throw new Error(
+        `GitLab API error fetching '${filePath}' (${res.status}): ${await res.text()}`,
+      );
     }
 
     return await res.text();
@@ -257,11 +282,21 @@ export class GitLabProvider implements GitProvider {
     try {
       const parsed = this.parseUrl(urlOrSlug);
       const effectiveRef = ref || parsed.extractedRef || undefined;
-      const rawSubPath = path !== undefined && path !== null && path.trim() !== '' ? path.trim() : (parsed.extractedPath || '');
+      const rawSubPath =
+        path !== undefined && path !== null && path.trim() !== ''
+          ? path.trim()
+          : parsed.extractedPath || '';
       const effectivePath = rawSubPath.replace(/^\/+|\/+$/g, '');
-      const targetFile = effectivePath ? `${effectivePath}/pubspec.yaml` : 'pubspec.yaml';
+      const targetFile = effectivePath
+        ? `${effectivePath}/pubspec.yaml`
+        : 'pubspec.yaml';
 
-      const pubspecRaw = await this.getFileContent(urlOrSlug, targetFile, effectiveRef, token);
+      const pubspecRaw = await this.getFileContent(
+        urlOrSlug,
+        targetFile,
+        effectiveRef,
+        token,
+      );
       const parsedYaml = YAML.parse(pubspecRaw);
 
       if (!parsedYaml || typeof parsedYaml !== 'object') {
@@ -306,13 +341,21 @@ export class GitLabProvider implements GitProvider {
     }
   }
 
-  async resolveCommitSha(urlOrSlug: string, ref: string, token?: string): Promise<string> {
+  async resolveCommitSha(
+    urlOrSlug: string,
+    ref: string,
+    token?: string,
+  ): Promise<string> {
     const parsed = this.parseUrl(urlOrSlug);
     const projectId = this.getProjectIdentifier(parsed);
     const trimmedRef = (ref || '').trim();
     if (!trimmedRef) {
       const repo = await this.getRepository(urlOrSlug, token);
-      return this.resolveCommitSha(urlOrSlug, repo.defaultBranch || 'main', token);
+      return this.resolveCommitSha(
+        urlOrSlug,
+        repo.defaultBranch || 'main',
+        token,
+      );
     }
 
     if (/^[0-9a-f]{40}$/i.test(trimmedRef)) {
@@ -325,10 +368,12 @@ export class GitLabProvider implements GitProvider {
     });
 
     if (!res.ok) {
-      throw new Error(`Failed to resolve commit SHA for '${trimmedRef}' in GitLab project '${parsed.fullName}': ${res.statusText}`);
+      throw new Error(
+        `Failed to resolve commit SHA for '${trimmedRef}' in GitLab project '${parsed.fullName}': ${res.statusText}`,
+      );
     }
 
-    const data = (await res.json()) as any;
+    const data = await res.json();
     return data.id;
   }
 
@@ -340,7 +385,9 @@ export class GitLabProvider implements GitProvider {
     path?: string;
   }): string {
     const parsed = this.parseUrl(options.url);
-    const pkgName = options.packageName || parsed.repo.replace(/[-_]miniapp$/, '').replace(/[-_]package$/, '');
+    const pkgName =
+      options.packageName ||
+      parsed.repo.replace(/[-_]miniapp$/, '').replace(/[-_]package$/, '');
     const cleanUrl = parsed.rawUrl;
     const effectiveRef = options.ref || parsed.extractedRef;
     const effectivePath = options.path || parsed.extractedPath;

@@ -349,7 +349,7 @@ export default function FlutterPackageIntegrationForm({
           <option value={SourceType.ARTIFACT}>Package Artifact (.zip / Nexus Private Pub Registry)</option>
           <option value={SourceType.GIT}>Source Code (GitHub / GitLab Repository)</option>
         </Select>
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
           {flutterConfig?.sourceType === SourceType.GIT
             ? 'Integrates source code directly from a Git repository or monorepo subfolder using branch, tag, or commit SHA.'
             : 'Upload a .zip/.tar.gz package bundle or consume versioned artifacts hosted on Sonatype Nexus private registry.'}
@@ -364,11 +364,11 @@ export default function FlutterPackageIntegrationForm({
                 <Label>Git Repository URL <span className="text-rose-500">*</span></Label>
                 <div className="flex items-center gap-2">
                   {isGitValidating && (
-                    <span className="text-xs text-blue-500 animate-pulse">Validating repository...</span>
+                    <span className="text-sm text-blue-500 animate-pulse font-medium">Validating repository...</span>
                   )}
                   {detectedProvider && (
                     <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
                         detectedProvider === 'github'
                           ? 'bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300'
                           : 'bg-orange-100 text-orange-800 dark:bg-orange-950/60 dark:text-orange-300'
@@ -394,7 +394,7 @@ export default function FlutterPackageIntegrationForm({
                     : ''
                 }
               />
-              <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+              <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
                 Tip: You can paste repository root or direct subfolder links (e.g. <code>.../tree/main/packages/miniapp</code>).
               </p>
             </div>
@@ -409,7 +409,7 @@ export default function FlutterPackageIntegrationForm({
                 disabled={!isEditable}
                 placeholder="e.g. dsp_miniapp_trust_regulator or packages/miniapp"
               />
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
                 If your repository is a monorepo, specify the relative path to the folder containing <code>pubspec.yaml</code>.
               </p>
             </div>
@@ -473,9 +473,9 @@ export default function FlutterPackageIntegrationForm({
             </div>
 
             {/* Tokenless Architecture Banner with Git SHA Locking */}
-            <div className="col-span-1 md:col-span-2 p-3.5 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="col-span-1 md:col-span-2 p-3.5 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm">
               <div className="flex items-center gap-2">
-                <span className="text-base">🛡️</span>
+                <span className="text-lg">🛡️</span>
                 <div>
                   <span className="font-semibold text-slate-800 dark:text-slate-200">
                     Tokenless Git Authorization:
@@ -486,7 +486,7 @@ export default function FlutterPackageIntegrationForm({
                 </div>
               </div>
               {lockedCommitSha && (
-                <div className="px-2.5 py-1 bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-mono font-bold rounded-lg shrink-0 flex items-center gap-1.5">
+                <div className="px-3 py-1 bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-mono font-bold rounded-lg shrink-0 flex items-center gap-1.5 text-xs sm:text-sm">
                   <span>🔒 Locked SHA:</span>
                   <span>{lockedCommitSha.substring(0, 8)}...</span>
                 </div>
@@ -497,7 +497,7 @@ export default function FlutterPackageIntegrationForm({
           {/* Real-Time Git Validation Feedback Card */}
           {gitValidationResult && (
             <div
-              className={`p-4 rounded-xl border text-xs transition-all duration-200 ${
+              className={`p-4 rounded-xl border text-sm transition-all duration-200 ${
                 gitValidationResult.isValid
                   ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200'
                   : 'bg-rose-50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200'
@@ -509,12 +509,12 @@ export default function FlutterPackageIntegrationForm({
                   <span>{gitValidationResult.isValid ? 'Repository & pubspec.yaml Verified' : 'Validation Error'}</span>
                 </span>
                 {gitValidationResult.packageName && (
-                  <span className="font-mono bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 rounded text-[11px]">
+                  <span className="font-mono bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 rounded text-xs">
                     Package: {gitValidationResult.packageName}
                   </span>
                 )}
               </div>
-              {gitValidationResult.error && <p className="mt-1">{gitValidationResult.error}</p>}
+              {gitValidationResult.error && <p className="mt-1 text-sm">{gitValidationResult.error}</p>}
             </div>
           )}
         </div>
@@ -528,17 +528,17 @@ export default function FlutterPackageIntegrationForm({
                   📦
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                  <h4 className="text-base font-bold text-slate-900 dark:text-white">
                     Upload Flutter Package Archive (.zip / .tar.gz)
                   </h4>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
                     Zero credentials required. Upload your zipped package bundle to auto-extract metadata & capabilities.
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-3 w-full sm:w-auto">
                 <label
-                  className={`cursor-pointer w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-semibold shadow-sm transition-all flex items-center justify-center gap-2 ${
+                  className={`cursor-pointer w-full sm:w-auto px-4 py-2.5 rounded-xl text-sm font-semibold shadow-sm transition-all flex items-center justify-center gap-2 ${
                     isUploadingArchive || !isEditable
                       ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
                       : 'bg-indigo-600 hover:bg-indigo-700 text-white'
@@ -572,13 +572,13 @@ export default function FlutterPackageIntegrationForm({
             </div>
 
             {archiveUploadSuccess && (
-              <div className="mt-4 p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs text-emerald-800 dark:text-emerald-200">
+              <div className="mt-4 p-3.5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl text-sm text-emerald-800 dark:text-emerald-200">
                 <div className="flex items-center justify-between font-semibold mb-1">
                   <span className="flex items-center gap-1.5">
-                    <span className="text-emerald-600">✓</span>
+                    <span className="text-emerald-600 font-bold">✓</span>
                     <span>Archive Ingested & Stored in MinIO: {archiveUploadSuccess.filename}</span>
                   </span>
-                  <span className="font-mono text-[10px] text-slate-500">
+                  <span className="font-mono text-xs text-slate-500">
                     SHA: {archiveUploadSuccess.sha256?.substring(0, 12)}...
                   </span>
                 </div>
@@ -586,7 +586,7 @@ export default function FlutterPackageIntegrationForm({
             )}
 
             {archiveUploadError && (
-              <div className="mt-4 p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 rounded-xl text-xs text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
+              <div className="mt-4 p-3.5 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 rounded-xl text-sm text-rose-700 dark:text-rose-300 flex items-center gap-1.5 font-medium">
                 <span>✕</span>
                 <span>{archiveUploadError}</span>
               </div>
@@ -598,7 +598,7 @@ export default function FlutterPackageIntegrationForm({
               <div className="flex items-center justify-between mb-1">
                 <Label>Package Name <span className="text-rose-500">*</span></Label>
                 {isNexusValidating && (
-                  <span className="text-xs text-blue-500 animate-pulse">Checking Nexus...</span>
+                  <span className="text-sm text-blue-500 animate-pulse font-medium">Checking Nexus...</span>
                 )}
               </div>
               <Input
@@ -617,14 +617,14 @@ export default function FlutterPackageIntegrationForm({
                 }
               />
               {nexusValidationResult && !isNexusValidating && (
-                <div className="mt-1.5 text-xs">
+                <div className="mt-1.5 text-sm font-medium">
                   {nexusValidationResult.exists ? (
-                    <p className="text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+                    <p className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                       <span>✓</span>
                       <span>Found on Nexus (Latest: {nexusValidationResult.latestVersion || '1.0.0'})</span>
                     </p>
                   ) : (
-                    <p className="text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
+                    <p className="text-rose-600 dark:text-rose-400 flex items-center gap-1">
                       <span>✗</span>
                       <span>Package &quot;{flutterConfig?.packageName}&quot; not found in Nexus pub-group. It will be validated and published to Nexus during review.</span>
                     </p>
@@ -657,7 +657,7 @@ export default function FlutterPackageIntegrationForm({
                       } as any)
                     }
                     disabled={!isEditable}
-                    className="w-36 text-xs"
+                    className="w-36 text-sm"
                   >
                     <option value="">Versions ▼</option>
                     {nexusValidationResult.versions.map((v: string) => (
@@ -682,16 +682,16 @@ export default function FlutterPackageIntegrationForm({
                 />
               )}
               {allErrors['integrationConfigFlutter.versionConstraint'] && (
-                <p className="mt-1.5 text-xs text-rose-600 font-medium">
+                <p className="mt-1.5 text-sm text-rose-600 font-medium">
                   {allErrors['integrationConfigFlutter.versionConstraint']}
                 </p>
               )}
             </div>
           </div>
 
-          <div className="p-4 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-xl border border-emerald-200 dark:border-emerald-800/40 text-xs text-emerald-800 dark:text-emerald-300">
+          <div className="p-4 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-xl border border-emerald-200 dark:border-emerald-800/40 text-sm text-emerald-800 dark:text-emerald-300">
             <span className="font-semibold">Nexus Endpoint:</span> Resolves packages through{' '}
-            <code className="bg-emerald-100 dark:bg-emerald-900/60 px-1 py-0.5 rounded">
+            <code className="bg-emerald-100 dark:bg-emerald-900/60 px-1.5 py-0.5 rounded font-mono font-medium">
               http://localhost:8081/repository/pub-group
             </code>
           </div>
@@ -702,7 +702,7 @@ export default function FlutterPackageIntegrationForm({
       {generatedSnippet && (
         <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
               Super App Generated Dependency Snippet:
             </span>
             <button
@@ -712,12 +712,12 @@ export default function FlutterPackageIntegrationForm({
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);
               }}
-              className="text-xs text-brand-600 dark:text-brand-400 hover:underline"
+              className="text-sm font-semibold text-brand-600 dark:text-brand-400 hover:underline"
             >
               {copied ? '✓ Copied' : 'Copy'}
             </button>
           </div>
-          <pre className="bg-slate-900 text-slate-100 p-3.5 rounded-xl text-xs font-mono overflow-x-auto">
+          <pre className="bg-slate-900 text-slate-100 p-4 rounded-xl text-xs sm:text-sm font-mono overflow-x-auto">
             {generatedSnippet}
           </pre>
         </div>

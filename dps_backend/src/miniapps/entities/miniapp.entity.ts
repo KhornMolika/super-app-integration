@@ -1,4 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { User } from '../../access-control/entities/user.entity';
 import { MiniAppActivity } from './miniapp-activity.entity';
 import { MiniAppIssue } from './miniapp-issue.entity';
@@ -62,7 +71,10 @@ export class MiniApp {
   @Column({ nullable: true })
   ownerEmail!: string;
 
-  @ManyToOne(() => User, user => user.ownedMiniApps, { nullable: true, eager: true })
+  @ManyToOne(() => User, (user) => user.ownedMiniApps, {
+    nullable: true,
+    eager: true,
+  })
   @JoinColumn({ name: 'ownerId' })
   owner!: User;
 
@@ -108,10 +120,15 @@ export class MiniApp {
   @Column({ type: 'jsonb', nullable: true, default: () => "'[]'" })
   securityChecks?: string[];
 
-  @OneToMany(() => MiniAppIssue, issue => issue.miniApp, { cascade: true, eager: true })
+  @OneToMany(() => MiniAppIssue, (issue) => issue.miniApp, {
+    cascade: true,
+    eager: true,
+  })
   issues!: MiniAppIssue[];
 
-  @OneToMany(() => Notification, notification => notification.miniApp, { cascade: true })
+  @OneToMany(() => Notification, (notification) => notification.miniApp, {
+    cascade: true,
+  })
   notifications!: Notification[];
 
   @CreateDateColumn()
@@ -120,6 +137,6 @@ export class MiniApp {
   @UpdateDateColumn()
   updatedAt!: Date;
 
-  @OneToMany(() => MiniAppActivity, activity => activity.miniApp)
+  @OneToMany(() => MiniAppActivity, (activity) => activity.miniApp)
   activities!: MiniAppActivity[];
 }

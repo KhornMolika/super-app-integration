@@ -158,14 +158,14 @@ export default function SecurityValidationSelector({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80">
         <div>
           <div className="flex items-center gap-2">
-            <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+            <h4 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
               <span>Security Validation Profile</span>
             </h4>
-            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-brand-100 text-brand-800 dark:bg-brand-900/40 dark:text-brand-300 border border-brand-200 dark:border-brand-800/50">
+            <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-brand-100 text-brand-800 dark:bg-brand-900/40 dark:text-brand-300 border border-brand-200 dark:border-brand-800/50">
               {selectedCount} of {availableChecks.length} Selected
             </span>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
             Configure the automated security checks Jenkins will execute for this Mini App.
           </p>
         </div>
@@ -176,7 +176,7 @@ export default function SecurityValidationSelector({
             variant="outline"
             onClick={handleSelectRecommended}
             disabled={disabled}
-            className="text-xs h-7 !px-2.5 !py-0 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 shadow-none"
+            className="text-sm h-8 !px-3 font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 shadow-none"
           >
             ★ Select Recommended
           </Button>
@@ -185,7 +185,7 @@ export default function SecurityValidationSelector({
             variant="outline"
             onClick={handleSelectAll}
             disabled={disabled}
-            className="text-xs h-7 !px-2.5 !py-0 text-slate-700 dark:text-slate-300 shadow-none"
+            className="text-sm h-8 !px-3 font-semibold text-slate-700 dark:text-slate-300 shadow-none"
           >
             Select All
           </Button>
@@ -194,7 +194,7 @@ export default function SecurityValidationSelector({
             variant="outline"
             onClick={handleClearAll}
             disabled={disabled}
-            className="text-xs h-7 !px-2.5 !py-0 text-slate-500 dark:text-slate-400 shadow-none"
+            className="text-sm h-8 !px-3 font-semibold text-slate-500 dark:text-slate-400 shadow-none"
           >
             Clear
           </Button>
@@ -211,7 +211,7 @@ export default function SecurityValidationSelector({
             <div
               key={check.id}
               onClick={() => toggleCheck(check.id)}
-              className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-start gap-3 select-none ${
+              className={`p-4 rounded-xl border transition-all cursor-pointer flex items-start gap-3 select-none ${
                 isChecked
                   ? 'border-brand-500 ring-1 ring-brand-500 bg-brand-50/40 dark:bg-brand-950/20'
                   : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-800/80 hover:border-slate-300 dark:hover:border-slate-600'
@@ -229,22 +229,22 @@ export default function SecurityValidationSelector({
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                  <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
                     {check.name}
                   </span>
 
                   {isRec && (
-                    <span className="px-1.5 py-0.2 text-[10px] font-semibold rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                    <span className="px-2 py-0.5 text-xs font-semibold rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                       Recommended
                     </span>
                   )}
 
-                  <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 ml-auto">
+                  <span className="text-xs font-mono text-slate-400 dark:text-slate-500 ml-auto">
                     {check.tool}
                   </span>
                 </div>
 
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
                   {check.description}
                 </p>
               </div>

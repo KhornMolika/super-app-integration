@@ -12,9 +12,11 @@ export class MailService {
     if (apiKey && apiKey !== 're_dummy_key_replace_me') {
       this.resend = new Resend(apiKey);
     } else {
-      this.logger.warn('RESEND_API_KEY is missing or invalid. Emails will not be sent.');
+      this.logger.warn(
+        'RESEND_API_KEY is missing or invalid. Emails will not be sent.',
+      );
     }
-    
+
     if (process.env.RESEND_FROM_EMAIL) {
       this.fromEmail = process.env.RESEND_FROM_EMAIL;
     }
@@ -22,7 +24,9 @@ export class MailService {
 
   async sendRegistrationSuccessEmail(toEmail: string, appName: string) {
     if (!this.resend) {
-      this.logger.log(`[DUMMY] Would have sent Success Email to ${toEmail} for ${appName}`);
+      this.logger.log(
+        `[DUMMY] Would have sent Success Email to ${toEmail} for ${appName}`,
+      );
       return;
     }
 
@@ -50,9 +54,16 @@ export class MailService {
     }
   }
 
-  async sendValidationPassedEmail(toEmail: string, appName: string, score: number, detailsUrl: string) {
+  async sendValidationPassedEmail(
+    toEmail: string,
+    appName: string,
+    score: number,
+    detailsUrl: string,
+  ) {
     if (!this.resend) {
-      this.logger.log(`[DUMMY] Would have sent Security Passed Email to ${toEmail} for ${appName} (Score: ${score}/100)`);
+      this.logger.log(
+        `[DUMMY] Would have sent Security Passed Email to ${toEmail} for ${appName} (Score: ${score}/100)`,
+      );
       return;
     }
 
@@ -96,9 +107,14 @@ export class MailService {
           </div>
         `,
       });
-      this.logger.log(`Security validation passed email sent to ${toEmail} for ${appName}`);
+      this.logger.log(
+        `Security validation passed email sent to ${toEmail} for ${appName}`,
+      );
     } catch (error) {
-      this.logger.error(`Failed to send security passed email to ${toEmail}:`, error);
+      this.logger.error(
+        `Failed to send security passed email to ${toEmail}:`,
+        error,
+      );
     }
   }
 
@@ -106,22 +122,33 @@ export class MailService {
     toEmail: string,
     appName: string,
     score: number,
-    findings: Array<{ severity: string; title: string; description: string; recommendation?: string }>,
-    detailsUrl: string
+    findings: Array<{
+      severity: string;
+      title: string;
+      description: string;
+      recommendation?: string;
+    }>,
+    detailsUrl: string,
   ) {
     if (!this.resend) {
-      this.logger.log(`[DUMMY] Would have sent Security Failed Email to ${toEmail} for ${appName} (Score: ${score}, Findings: ${findings.length})`);
+      this.logger.log(
+        `[DUMMY] Would have sent Security Failed Email to ${toEmail} for ${appName} (Score: ${score}, Findings: ${findings.length})`,
+      );
       return;
     }
 
-    const findingsHtml = findings.map(f => `
+    const findingsHtml = findings
+      .map(
+        (f) => `
       <li style="margin-bottom: 12px; font-size: 13px;">
         <span style="display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; background: ${f.severity === 'CRITICAL' ? '#fee2e2; color: #991b1b' : '#fef3c7; color: #92400e'}">${f.severity}</span>
         <strong>${f.title}</strong>
         <p style="margin: 4px 0 0 0; color: #475569;">${f.description}</p>
         ${f.recommendation ? `<p style="margin: 2px 0 0 0; font-size: 11px; color: #059669;"><strong>Fix:</strong> ${f.recommendation}</p>` : ''}
       </li>
-    `).join('');
+    `,
+      )
+      .join('');
 
     try {
       await this.resend.emails.send({
@@ -160,20 +187,33 @@ export class MailService {
           </div>
         `,
       });
-      this.logger.log(`Security validation failed email sent to ${toEmail} for ${appName}`);
+      this.logger.log(
+        `Security validation failed email sent to ${toEmail} for ${appName}`,
+      );
     } catch (error) {
-      this.logger.error(`Failed to send security failed email to ${toEmail}:`, error);
+      this.logger.error(
+        `Failed to send security failed email to ${toEmail}:`,
+        error,
+      );
     }
   }
 
-  async sendRegistrationFailureEmail(toEmail: string, appName: string, errors: Record<string, string>) {
+  async sendRegistrationFailureEmail(
+    toEmail: string,
+    appName: string,
+    errors: Record<string, string>,
+  ) {
     if (!this.resend) {
-      this.logger.log(`[DUMMY] Would have sent Failure Email to ${toEmail} for ${appName} with errors: ${JSON.stringify(errors)}`);
+      this.logger.log(
+        `[DUMMY] Would have sent Failure Email to ${toEmail} for ${appName} with errors: ${JSON.stringify(errors)}`,
+      );
       return;
     }
 
     const errorListHtml = Object.entries(errors)
-      .map(([field, message]) => `<li><strong>${field}:</strong> ${message}</li>`)
+      .map(
+        ([field, message]) => `<li><strong>${field}:</strong> ${message}</li>`,
+      )
       .join('');
 
     try {
@@ -211,7 +251,9 @@ export class MailService {
     sandboxUrl: string,
   ) {
     if (!this.resend) {
-      this.logger.log(`[DUMMY] Would have sent Test Build Email to ${toEmail} for ${appName} (APK: ${apkUrl})`);
+      this.logger.log(
+        `[DUMMY] Would have sent Test Build Email to ${toEmail} for ${appName} (APK: ${apkUrl})`,
+      );
       return;
     }
 
@@ -259,7 +301,10 @@ export class MailService {
       });
       this.logger.log(`Test build email sent to ${toEmail} for app ${appName}`);
     } catch (error) {
-      this.logger.error(`Failed to send test build email to ${toEmail}:`, error);
+      this.logger.error(
+        `Failed to send test build email to ${toEmail}:`,
+        error,
+      );
     }
   }
 }

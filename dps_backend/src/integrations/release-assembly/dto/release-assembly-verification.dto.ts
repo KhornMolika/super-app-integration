@@ -69,6 +69,5 @@ export interface ReleaseAssemblyAuditResult {
   apkUrl?: string;
 }
 
-
 // Backwards compatibility alias
 export type Gate2AuditResult = ReleaseAssemblyAuditResult;

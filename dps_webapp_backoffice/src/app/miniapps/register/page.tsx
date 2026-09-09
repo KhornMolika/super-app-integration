@@ -12,11 +12,12 @@ import SubmissionModal, { SubmissionModalState } from '@/components/ui/Submissio
 import BasicInfoForm from '@/components/forms/BasicInfoForm';
 import TeamForm from '@/components/forms/TeamForm';
 import IntegrationForm, { generateClientVerificationToken, generateClientMiniAppId } from '@/components/forms/IntegrationForm';
-import PermissionsForm from '@/components/forms/PermissionsForm';
+import PermissionsForm, { formatCompliantPurpose } from '@/components/forms/PermissionsForm';
 import ReviewSummaryStep from '@/components/forms/ReviewSummaryStep';
 import RegistrationWizardSteps from '@/components/forms/RegistrationWizardSteps';
 import ValidationIssuesButton from '@/components/ValidationIssuesButton';
 import { validateMiniAppStep } from '@/lib/miniapp-form.validator';
+import { validateUrlFormat } from '@/components/ui/ValidatedUrlInput';
 import { CreateMiniAppDto, IntegrationMethod, SourceType } from '@/types/miniapp.types';
 
 export default function RegisterMiniAppPage() {
@@ -113,10 +114,11 @@ export default function RegisterMiniAppPage() {
   const prevStep = () => setStep((prev) => prev - 1);
 
   const handleDomainVerified = (data: any) => {
+    const isVerified = Boolean(data.verified === true || data.isDomainVerified === true);
     setFormData((prev) => ({
       ...prev,
-      isDomainVerified: true,
-      domainVerifiedAt: data.domainVerifiedAt || new Date().toISOString(),
+      isDomainVerified: isVerified,
+      domainVerifiedAt: isVerified ? (data.domainVerifiedAt || new Date().toISOString()) : undefined,
       verificationToken: data.verificationToken || prev.verificationToken,
       integrationConfigWebView: {
         productionUrl: prev.integrationConfigWebView?.productionUrl || '',
@@ -130,7 +132,12 @@ export default function RegisterMiniAppPage() {
     }));
     setLocalErrors((prev) => {
       const next = { ...prev };
-      delete next['integrationConfigWebView.domainVerification'];
+      if (isVerified) {
+        delete next['integrationConfigWebView.domainVerification'];
+      } else {
+        next['integrationConfigWebView.domainVerification'] =
+          'Domain ownership has not been verified. Please host the verification association file and verify domain ownership before proceeding to the next step.';
+      }
       return next;
     });
   };
@@ -161,12 +168,41 @@ export default function RegisterMiniAppPage() {
 
     if (formData.integrationMethod === IntegrationMethod.WEBVIEW && formData.integrationConfigWebView?.productionUrl) {
       const prodUrl = formData.integrationConfigWebView.productionUrl;
-      if (!prodUrl.startsWith('https://')) {
-        if (prodUrl.startsWith('http://localhost') || prodUrl.startsWith('http://127.0.0.1')) {
-          // Let localhost pass the HTTPS check on frontend in dev mode
-        } else {
-          errors['integrationConfigWebView.productionUrl'] = 'Production URL must use HTTPS.';
+      const envVal = (
+        process.env.NEXT_PUBLIC_ENVIRONMENT ||
+        process.env.ENVIRONMENT ||
+        process.env.NODE_ENV ||
+        ''
+      ).toUpperCase();
+      const isDev =
+        envVal !== 'PROD' &&
+        (envVal === 'DEV' ||
+          (typeof window !== 'undefined' &&
+            (window.location.hostname === 'localhost' ||
+              window.location.hostname === '127.0.0.1' ||
+              window.location.hostname.endsWith('.local') ||
+              window.location.hostname.endsWith('.orb.local'))));
+
+      if (!isDev) {
+        if (!prodUrl.startsWith('https://')) {
+          errors['integrationConfigWebView.productionUrl'] = 'Production URL must use HTTPS in PROD mode.';
+        } else if (prodUrl.includes('localhost') || prodUrl.includes('127.0.0.1')) {
+          errors['integrationConfigWebView.productionUrl'] = 'Production URL cannot be localhost in PROD mode.';
         }
+      }
+    }
+
+    if (formData.termsUrl && formData.termsUrl.trim()) {
+      const v = validateUrlFormat(formData.termsUrl, 'Terms of Service URL', true);
+      if (!v.valid && v.error) {
+        errors.termsUrl = v.error;
+      }
+    }
+
+    if (formData.privacyPolicyUrl && formData.privacyPolicyUrl.trim()) {
+      const v = validateUrlFormat(formData.privacyPolicyUrl, 'Privacy Policy URL', true);
+      if (!v.valid && v.error) {
+        errors.privacyPolicyUrl = v.error;
       }
     }
 
@@ -195,7 +231,7 @@ export default function RegisterMiniAppPage() {
       }, 600);
       return () => clearTimeout(timeoutId);
     }
-  }, [formData.appId, formData.name, formData.ownerEmail, formData.supportEmail, formData.logo]);
+  }, [formData.appId, formData.name, formData.ownerEmail, formData.supportEmail, formData.logo, formData.termsUrl, formData.privacyPolicyUrl]);
 
   const handleNavigateToIssue = (field: string) => {
     if (field === 'name' || field === 'appId' || field === 'category' || field === 'logo') setStep(1);
@@ -213,10 +249,19 @@ export default function RegisterMiniAppPage() {
   };
 
   const handleWebViewChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      integrationConfigWebView: { ...formData.integrationConfigWebView!, [e.target.name]: e.target.value },
-    });
+    const isUrlChange = e.target.name === 'productionUrl';
+    setFormData((prev) => ({
+      ...prev,
+      isDomainVerified: isUrlChange ? false : prev.isDomainVerified,
+      integrationConfigWebView: { ...prev.integrationConfigWebView!, [e.target.name]: e.target.value },
+    }));
+    if (isUrlChange) {
+      setLocalErrors((prev) => ({
+        ...prev,
+        'integrationConfigWebView.domainVerification':
+          'Domain ownership has not been verified. Please host the verification association file and verify domain ownership before proceeding to the next step.',
+      }));
+    }
   };
 
   const handleFlutterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -238,9 +283,10 @@ export default function RegisterMiniAppPage() {
     if (exists) {
       setFormData({ ...formData, permissions: formData.permissions?.filter((p) => p.type !== type) });
     } else {
+      const defaultPurpose = formatCompliantPurpose(type, '', formData.name);
       setFormData({
         ...formData,
-        permissions: [...(formData.permissions || []), { type, purpose: '', termsUrl: '' }],
+        permissions: [...(formData.permissions || []), { type, purpose: defaultPurpose, termsUrl: '' }],
       });
     }
   };
@@ -256,10 +302,13 @@ export default function RegisterMiniAppPage() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const valid = await validateStep(4);
-    if (!valid) {
-      setIsSubmitting(false);
-      return;
+    for (let s = 1; s <= 4; s++) {
+      const valid = await validateStep(s);
+      if (!valid) {
+        setIsSubmitting(false);
+        setStep(s);
+        return;
+      }
     }
 
     setModalState((prev) => ({ isOpen: true, status: 'loading', createdId: prev.createdId }));
@@ -418,7 +467,7 @@ export default function RegisterMiniAppPage() {
           </Link>
           <div>
             <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Register Mini App</h2>
-            <p className="text-slate-500 mt-1 text-sm">Deploy a new service to the Super App gateway</p>
+            <p className="text-slate-500 dark:text-slate-400 mt-1 text-base">Deploy a new service to the Super App gateway</p>
           </div>
         </div>
 
@@ -544,21 +593,30 @@ export default function RegisterMiniAppPage() {
             </Card>
           )}
 
+          {step === 3 && allErrors['integrationConfigWebView.domainVerification'] && (
+            <div className="mb-4 p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-sm font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-2">
+              <svg className="w-5 h-5 text-rose-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <span>{allErrors['integrationConfigWebView.domainVerification']}</span>
+            </div>
+          )}
+
           <div className="flex justify-between space-x-4 border-t border-slate-200 dark:border-slate-800 pt-6">
-            <Button type="button" variant="outline" onClick={step === 1 ? () => router.push('/miniapps') : prevStep}>
+            <Button type="button" variant="outline" className="h-11 px-6 text-base font-medium" onClick={step === 1 ? () => router.push('/miniapps') : prevStep}>
               {step === 1 ? 'Cancel' : 'Back'}
             </Button>
             {step < 5 ? (
               <div className="flex space-x-3">
-                <Button type="button" variant="outline" onClick={handleSaveDraft} disabled={isSubmitting}>
+                <Button type="button" variant="outline" className="h-11 px-5 text-base font-medium" onClick={handleSaveDraft} disabled={isSubmitting}>
                   Save as Draft
                 </Button>
-                <Button type="button" onClick={nextStep} disabled={isSubmitting}>
+                <Button type="button" className="h-11 px-6 text-base font-semibold" onClick={nextStep} disabled={isSubmitting}>
                   Next Step
                 </Button>
               </div>
             ) : (
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" className="h-11 px-6 text-base font-semibold" disabled={isSubmitting}>
                 {isSubmitting ? 'Submitting...' : 'Register Mini App'}
               </Button>
             )}

@@ -1,14 +1,12 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15
     container_name: dps-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-dps_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dps_password}
-      POSTGRES_DB: ${POSTGRES_DB:-dps_db}
+      POSTGRES_USER: ${POSTGRES_USER:-${DB_USERNAME}}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-${DB_PASSWORD}}
+      POSTGRES_DB: ${POSTGRES_DB:-${DB_DATABASE}}
     ports:
       - '${POSTGRES_PORT:-5432}:5432'
     volumes:
@@ -29,9 +27,9 @@ services:
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-adminadmin}
-      MINIO_SUBNET_LICENSE: ${MINIO_SUBNET_LICENSE:-}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_SUBNET_LICENSE: ${MINIO_SUBNET_LICENSE}
     ports:
       - '${MINIO_PORT:-9000}:9000'
       - '${MINIO_CONSOLE_PORT:-9001}:9001'
@@ -43,14 +41,21 @@ services:
     container_name: dps-minio-init
     depends_on:
       - minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_SUBNET_LICENSE: ${MINIO_SUBNET_LICENSE}
     entrypoint: >
       /bin/sh -c "
       sleep 2;
-      /usr/bin/mc alias set myminio http://minio:9000 $${MINIO_ROOT_USER:-admin} $${MINIO_ROOT_PASSWORD:-adminadmin};
+      /usr/bin/mc alias set myminio http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD;
+      
+      # 1. Public bucket for UI assets (logos/banners)
       /usr/bin/mc mb myminio/mini-app-logos --ignore-existing;
       /usr/bin/mc anonymous set download myminio/mini-app-logos;
-      /usr/bin/mc mb myminio/releases --ignore-existing;
-      /usr/bin/mc anonymous set download myminio/releases;
+
+      # 2. Strictly PRIVATE quarantine bucket for untrusted uploaded packages
+      /usr/bin/mc mb myminio/submissions --ignore-existing;
       exit 0;
       "
 

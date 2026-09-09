@@ -25,7 +25,7 @@ export default function DeepLinkIntegrationForm({
           <Label>
             URL Scheme / Deep Link URI <span className="text-rose-500">*</span>
           </Label>
-          <span className="text-xs text-slate-400 font-mono">e.g. trustregulator:// or myapp://open</span>
+          <span className="text-sm text-slate-400 font-mono">e.g. trustregulator:// or myapp://open</span>
         </div>
         <Input
           name="urlScheme"
@@ -40,11 +40,11 @@ export default function DeepLinkIntegrationForm({
           }
         />
         {allErrors['integrationConfigDeepLink.urlScheme'] && (
-          <p className="mt-1.5 text-xs text-rose-600 font-medium">
+          <p className="mt-1.5 text-sm text-rose-600 font-medium">
             {allErrors['integrationConfigDeepLink.urlScheme']}
           </p>
         )}
-        <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+        <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
           The custom URI scheme or universal app link invoked by the Super App to launch this Mini App externally.
         </p>
       </div>
@@ -58,7 +58,7 @@ export default function DeepLinkIntegrationForm({
           onChange={handleDeepLinkChange}
           placeholder="com.fsa.trustregulator"
         />
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
           Android package name or iOS bundle ID for native app installation checks.
         </p>
       </div>
@@ -73,7 +73,7 @@ export default function DeepLinkIntegrationForm({
           type="url"
           placeholder="https://play.google.com/store/apps/details?id=..."
         />
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
           Web store redirect URL if the target app is not installed on the user&apos;s device.
         </p>
       </div>

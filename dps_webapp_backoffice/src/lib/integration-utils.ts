@@ -14,17 +14,28 @@ export const validateProductionUrlFormat = (url: string) => {
   }
 
   // Protocol check
+  const envVal = (
+    process.env.NEXT_PUBLIC_ENVIRONMENT ||
+    process.env.ENVIRONMENT ||
+    process.env.NODE_ENV ||
+    ''
+  ).toUpperCase();
   const isDev =
-    process.env.NEXT_PUBLIC_ENVIRONMENT === 'DEV' ||
-    process.env.NEXT_PUBLIC_ALLOW_LOCAL_PROD_URLS === 'true' ||
-    process.env.NODE_ENV !== 'production';
+    envVal !== 'PROD' &&
+    (envVal === 'DEV' ||
+      process.env.NEXT_PUBLIC_ALLOW_LOCAL_PROD_URLS === 'true' ||
+      (typeof window !== 'undefined' &&
+        (window.location.hostname === 'localhost' ||
+          window.location.hostname === '127.0.0.1' ||
+          window.location.hostname.endsWith('.local') ||
+          window.location.hostname.endsWith('.orb.local'))));
 
   if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
     return { valid: false, error: 'URL must start with http:// or https://' };
   }
 
   if (!isDev && trimmed.startsWith('http://')) {
-    return { valid: false, error: 'Production URL strictly requires HTTPS in production mode.' };
+    return { valid: false, error: 'Production URL strictly requires HTTPS in PROD mode.' };
   }
 
   // Check for IPv4 out-of-range octets (e.g. 172.20.684.1)
@@ -55,7 +66,7 @@ export const validateProductionUrlFormat = (url: string) => {
 
     if (!isDev) {
       if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
-        return { valid: false, error: 'Localhost is not allowed in production.' };
+        return { valid: false, error: 'Localhost is not allowed in PROD mode.' };
       }
       if (!parsed.hostname.includes('.')) {
         return {

@@ -53,7 +53,7 @@ export default function ActivityTab({ miniAppId }: ActivityTabProps) {
     return (
       <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
         <svg className="w-10 h-10 text-slate-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-        <p className="text-slate-500 font-medium">No activity history yet.</p>
+        <p className="text-base text-slate-500 font-medium">No activity history yet.</p>
       </div>
     );
   }
@@ -99,7 +99,7 @@ export default function ActivityTab({ miniAppId }: ActivityTabProps) {
     <div className="space-y-8">
       {Object.entries(grouped).map(([date, acts]) => (
         <div key={date}>
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">{date}</h3>
+          <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-4">{date}</h3>
           <div className="space-y-6 relative before:absolute before:inset-0 before:ml-4 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-200 dark:before:via-slate-700 before:to-transparent">
             {acts.map((act, index) => (
               <div key={act.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
@@ -109,22 +109,22 @@ export default function ActivityTab({ miniAppId }: ActivityTabProps) {
                 
                 <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800 shadow-sm">
                   <div className="flex items-center justify-between mb-1">
-                    <h4 className="font-semibold text-slate-800 dark:text-slate-200 text-sm">{act.title}</h4>
-                    <span className="text-xs text-slate-400 font-medium">{new Date(act.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    <h4 className="font-bold text-slate-900 dark:text-slate-100 text-base">{act.title}</h4>
+                    <span className="text-xs sm:text-sm text-slate-400 font-medium">{new Date(act.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
-                  {act.description && <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{act.description}</p>}
+                  {act.description && <p className="text-base text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">{act.description}</p>}
                   
                   {act.actorId && (
                     <div className="flex items-center mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/50">
-                      <div className="w-5 h-5 rounded-full bg-brand-100 dark:bg-brand-900/50 flex items-center justify-center text-brand-600 dark:text-brand-400 text-[10px] font-bold mr-2">
+                      <div className="w-6 h-6 rounded-full bg-brand-100 dark:bg-brand-900/50 flex items-center justify-center text-brand-600 dark:text-brand-400 text-xs font-bold mr-2">
                         {act.actorId.substring(0, 2).toUpperCase()}
                       </div>
-                      <span className="text-xs font-medium text-slate-500">{act.actorId}</span>
+                      <span className="text-sm font-medium text-slate-500">{act.actorId}</span>
                     </div>
                   )}
 
                   {act.metadata && act.metadata.comment && (
-                    <div className="mt-2 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg text-sm text-slate-700 dark:text-slate-300 italic border-l-2 border-brand-500">
+                    <div className="mt-2 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg text-base text-slate-700 dark:text-slate-300 italic border-l-2 border-brand-500 leading-relaxed">
                       "{act.metadata.comment}"
                     </div>
                   )}

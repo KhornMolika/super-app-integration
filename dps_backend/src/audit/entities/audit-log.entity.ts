@@ -1,4 +1,9 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+} from 'typeorm';
 
 @Entity('audit_logs')
 export class AuditLog {
@@ -35,4 +40,3 @@ export class AuditLog {
   @CreateDateColumn()
   createdAt!: Date;
 }
-

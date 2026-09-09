@@ -37,8 +37,8 @@ export default function MiniAppLifecycleBanners({
               </svg>
             </div>
             <div>
-              <h4 className="text-sm font-bold text-blue-900 dark:text-blue-200">SA Admin Review Required</h4>
-              <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">
+              <h4 className="text-base font-bold text-blue-900 dark:text-blue-200">SA Admin Review Required</h4>
+              <p className="text-sm text-blue-800 dark:text-blue-200 mt-1 leading-relaxed">
                 Automated security validation has <strong>PASSED</strong>. Review the integration configuration,
                 permissions, and report below, then Approve or Request Changes.
               </p>
@@ -49,9 +49,9 @@ export default function MiniAppLifecycleBanners({
               type="button"
               onClick={() => onLifecycleAction('approve')}
               disabled={isSubmitting}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3.5 py-2 font-semibold shadow-sm flex items-center gap-1.5"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-4 py-2 font-semibold shadow-sm flex items-center gap-1.5"
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
               </svg>
               <span>Approve Mini App</span>
@@ -61,7 +61,7 @@ export default function MiniAppLifecycleBanners({
               variant="outline"
               onClick={() => onLifecycleAction('request-changes')}
               disabled={isSubmitting}
-              className="border-amber-300 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-950/50 text-xs px-3 py-2 font-medium"
+              className="border-amber-300 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-950/50 text-sm px-3.5 py-2 font-medium"
             >
               Request Changes
             </Button>
@@ -70,7 +70,7 @@ export default function MiniAppLifecycleBanners({
               variant="outline"
               onClick={() => onLifecycleAction('reject')}
               disabled={isSubmitting}
-              className="border-rose-300 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-950/50 text-xs px-3 py-2 font-medium"
+              className="border-rose-300 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-950/50 text-sm px-3.5 py-2 font-medium"
             >
               Reject
             </Button>
@@ -88,10 +88,10 @@ export default function MiniAppLifecycleBanners({
               </svg>
             </div>
             <div>
-              <h4 className="text-sm font-bold text-teal-900 dark:text-teal-200">
+              <h4 className="text-base font-bold text-teal-900 dark:text-teal-200">
                 Mini App Approved — Build & Assembly Required
               </h4>
-              <p className="text-xs text-teal-700 dark:text-teal-300 mt-0.5">
+              <p className="text-sm text-teal-800 dark:text-teal-200 mt-1 leading-relaxed">
                 Integration review approved by SA Admin. Build and validate the Super App test container before moving
                 to the TESTING phase for APK download.
               </p>
@@ -102,9 +102,9 @@ export default function MiniAppLifecycleBanners({
               type="button"
               onClick={() => onLifecycleAction('start-testing')}
               disabled={isSubmitting}
-              className="bg-purple-600 hover:bg-purple-700 text-white text-xs px-3.5 py-2 font-semibold shadow-sm flex items-center gap-1.5"
+              className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-4 py-2 font-semibold shadow-sm flex items-center gap-1.5"
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -129,13 +129,13 @@ export default function MiniAppLifecycleBanners({
               </svg>
             </div>
             <div>
-              <h4 className="text-sm font-bold text-indigo-900 dark:text-indigo-200 flex items-center gap-2">
+              <h4 className="text-base font-bold text-indigo-900 dark:text-indigo-200 flex items-center gap-2">
                 <span>Super App Test Build in Progress...</span>
-                <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300 animate-pulse">
+                <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300 animate-pulse">
                   Compiling & Validating
                 </span>
               </h4>
-              <p className="text-xs text-indigo-700 dark:text-indigo-300 mt-0.5">
+              <p className="text-sm text-indigo-800 dark:text-indigo-200 mt-1 leading-relaxed">
                 The Super App container is assembling dependencies and compiling the test APK. Once validation succeeds,
                 the Mini App will automatically advance to <strong>TESTING</strong> where the test APK will be
                 available for download.
@@ -148,7 +148,7 @@ export default function MiniAppLifecycleBanners({
                 type="button"
                 onClick={() => onLifecycleAction('start-testing')}
                 disabled={isSubmitting}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3.5 py-2 font-semibold shadow-sm flex items-center gap-1.5"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 font-semibold shadow-sm flex items-center gap-1.5"
               >
                 <span>Advance to Testing</span>
               </Button>
@@ -172,10 +172,10 @@ export default function MiniAppLifecycleBanners({
               </svg>
             </div>
             <div>
-              <h4 className="text-sm font-bold text-purple-900 dark:text-purple-200">
+              <h4 className="text-base font-bold text-purple-900 dark:text-purple-200">
                 Manual Sandbox Testing Phase
               </h4>
-              <p className="text-xs text-purple-700 dark:text-purple-300 mt-0.5">
+              <p className="text-sm text-purple-800 dark:text-purple-200 mt-1 leading-relaxed">
                 The test container has been compiled. Test the Mini App using the <strong>Sandbox Preview</strong> or{' '}
                 <strong>Download Test APK</strong> on Android devices. When verified, SA Admin can Activate the app.
               </p>
@@ -186,9 +186,9 @@ export default function MiniAppLifecycleBanners({
               <a
                 href="/api/download-apk?type=test&version=v1.1.0"
                 download="superapp-test-build.apk"
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold shadow-sm transition-all"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold shadow-sm transition-all"
               >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -203,7 +203,7 @@ export default function MiniAppLifecycleBanners({
               type="button"
               variant="outline"
               onClick={onOpenSandbox}
-              className="border-purple-300 text-purple-800 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-950/50 text-xs px-3 py-2 font-medium"
+              className="border-purple-300 text-purple-800 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-950/50 text-sm px-3.5 py-2 font-medium"
             >
               Launch Sandbox
             </Button>
@@ -212,7 +212,7 @@ export default function MiniAppLifecycleBanners({
                 type="button"
                 onClick={() => onLifecycleAction('activate')}
                 disabled={isSubmitting}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3.5 py-2 font-semibold shadow-sm"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-4 py-2 font-semibold shadow-sm"
               >
                 Activate Mini App
               </Button>

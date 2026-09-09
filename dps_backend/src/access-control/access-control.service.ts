@@ -13,13 +13,13 @@ export class AccessControlService {
   async findByEmailWithPermissions(email: string): Promise<User | null> {
     return this.userRepository.findOne({
       where: { email },
-      relations: { roles: { permissions: true } }
+      relations: { roles: { permissions: true } },
     });
   }
 
   async findAllUsers(): Promise<User[]> {
     return this.userRepository.find({
-      relations: { roles: true }
+      relations: { roles: true },
     });
   }
 }

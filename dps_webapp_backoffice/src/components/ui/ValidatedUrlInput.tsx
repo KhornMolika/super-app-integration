@@ -16,13 +16,28 @@ export const validateUrlFormat = (url: string, fieldName: string = 'URL', isOpti
   }
 
   // Protocol check
-  const isDev = process.env.NEXT_PUBLIC_ENVIRONMENT === 'DEV';
+  const envVal = (
+    process.env.NEXT_PUBLIC_ENVIRONMENT ||
+    process.env.ENVIRONMENT ||
+    process.env.NODE_ENV ||
+    ''
+  ).toUpperCase();
+  const isDev =
+    envVal !== 'PROD' &&
+    (envVal === 'DEV' ||
+      process.env.NEXT_PUBLIC_ALLOW_LOCAL_PROD_URLS === 'true' ||
+      (typeof window !== 'undefined' &&
+        (window.location.hostname === 'localhost' ||
+          window.location.hostname === '127.0.0.1' ||
+          window.location.hostname.endsWith('.local') ||
+          window.location.hostname.endsWith('.orb.local'))));
+
   if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
     return { valid: false, error: `${fieldName} must start with http:// or https://` };
   }
 
   if (!isDev && trimmed.startsWith('http://')) {
-    return { valid: false, error: `${fieldName} strictly requires HTTPS in production mode.` };
+    return { valid: false, error: `${fieldName} strictly requires HTTPS in PROD mode.` };
   }
 
   // Check for IPv4 out-of-range octets (e.g. 172.20.684.1)
@@ -50,7 +65,7 @@ export const validateUrlFormat = (url: string, fieldName: string = 'URL', isOpti
 
     if (!isDev) {
       if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
-        return { valid: false, error: 'Localhost is not allowed in production.' };
+        return { valid: false, error: 'Localhost is not allowed in PROD mode.' };
       }
       if (!parsed.hostname.includes('.')) {
         return { valid: false, error: `${fieldName} must be a fully qualified domain (e.g. https://example.com).` };
@@ -180,7 +195,7 @@ export function ValidatedUrlInput({
         </Label>
         {validation.status !== 'idle' ? (
           <span
-            className={`text-[11px] font-medium flex items-center gap-1 ${
+            className={`text-xs font-semibold flex items-center gap-1.5 ${
               validation.status === 'valid'
                 ? 'text-emerald-600 dark:text-emerald-400'
                 : validation.status === 'checking'
@@ -191,7 +206,7 @@ export function ValidatedUrlInput({
             }`}
           >
             {validation.status === 'checking' && (
-              <svg className="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+              <svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
               </svg>
@@ -201,7 +216,7 @@ export function ValidatedUrlInput({
             {validation.status === 'invalid' && '✕ Format Error'}
           </span>
         ) : isOptional ? (
-          <span className="text-[11px] text-slate-400 font-medium">Optional</span>
+          <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Optional</span>
         ) : null}
       </div>
 
@@ -250,27 +265,27 @@ export function ValidatedUrlInput({
 
       {/* Dynamic Real-Time Feedback Messages */}
       {validation.status === 'invalid' && (
-        <p className="mt-1.5 text-xs text-rose-600 font-medium flex items-center gap-1">
+        <p className="mt-1.5 text-sm text-rose-600 font-medium flex items-center gap-1">
           <span>✕</span> {validation.message}
         </p>
       )}
       {validation.status === 'unreachable' && (
-        <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1">
+        <p className="mt-1.5 text-sm text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1">
           <span>⚠</span> {validation.message}
         </p>
       )}
       {validation.status === 'valid' && (
-        <p className="mt-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+        <p className="mt-1.5 text-sm text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
           <span>✓</span> {validation.message}
         </p>
       )}
       {validation.status === 'idle' && externalError && (
-        <p className="mt-1.5 text-xs text-rose-600 font-medium">
+        <p className="mt-1.5 text-sm text-rose-600 font-medium">
           {externalError}
         </p>
       )}
       {helperText && (
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
           {helperText}
         </p>
       )}

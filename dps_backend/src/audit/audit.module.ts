@@ -9,4 +9,3 @@ import { AuditLog } from './entities/audit-log.entity';
   exports: [AuditService],
 })
 export class AuditModule {}
-

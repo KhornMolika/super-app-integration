@@ -9,14 +9,14 @@ export default function TeamForm({ formData, handleChange, allErrors = {} }: any
             <div>
               <div className="flex items-center justify-between mb-1">
                 <Label>Team Name</Label>
-                <span className="text-[11px] text-slate-400 font-medium">Optional</span>
+                <span className="text-xs text-slate-400 font-medium">Optional</span>
               </div>
               <Input name="teamName" value={formData.teamName} onChange={handleChange} placeholder="e.g. Core Banking Team" />
             </div>
             <div>
               <div className="flex items-center justify-between mb-1">
                 <Label>Owner Name</Label>
-                <span className="text-[11px] text-slate-400 font-medium">Optional</span>
+                <span className="text-xs text-slate-400 font-medium">Optional</span>
               </div>
               <Input name="ownerName" value={formData.ownerName} onChange={handleChange} placeholder="John Doe" />
             </div>
@@ -31,12 +31,12 @@ export default function TeamForm({ formData, handleChange, allErrors = {} }: any
                 placeholder="john.doe@fsa.gov" 
                 className={allErrors.ownerEmail ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
               />
-              {allErrors.ownerEmail && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors.ownerEmail}</p>}
+              {allErrors.ownerEmail && <p className="mt-1.5 text-sm text-rose-600 font-medium">{allErrors.ownerEmail}</p>}
             </div>
             <div>
               <div className="flex items-center justify-between mb-1">
                 <Label>Support Email</Label>
-                <span className="text-[11px] text-slate-400 font-medium">Optional</span>
+                <span className="text-xs text-slate-400 font-medium">Optional</span>
               </div>
               <Input 
                 name="supportEmail" 
@@ -46,7 +46,7 @@ export default function TeamForm({ formData, handleChange, allErrors = {} }: any
                 placeholder="support@fsa.gov" 
                 className={allErrors.supportEmail ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
               />
-              {allErrors.supportEmail && <p className="mt-1.5 text-xs text-rose-600 font-medium">{allErrors.supportEmail}</p>}
+              {allErrors.supportEmail && <p className="mt-1.5 text-sm text-rose-600 font-medium">{allErrors.supportEmail}</p>}
             </div>
           </div>
         

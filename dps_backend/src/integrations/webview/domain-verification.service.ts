@@ -41,7 +41,12 @@ export class DomainVerificationService {
     }
 
     // IPv6 checks
-    if (ip === '::1' || ip.toLowerCase().startsWith('fe80:') || ip.toLowerCase().startsWith('fc00:') || ip.toLowerCase().startsWith('fd00:')) {
+    if (
+      ip === '::1' ||
+      ip.toLowerCase().startsWith('fe80:') ||
+      ip.toLowerCase().startsWith('fc00:') ||
+      ip.toLowerCase().startsWith('fd00:')
+    ) {
       return true;
     }
 
@@ -54,10 +59,13 @@ export class DomainVerificationService {
   async verifyDomainOwnership(
     productionUrl: string,
     expectedAppId: string,
-    expectedToken: string
+    expectedToken: string,
   ): Promise<DomainVerificationResult> {
     if (!productionUrl) {
-      return { success: false, message: 'Production URL is required for domain verification.' };
+      return {
+        success: false,
+        message: 'Production URL is required for domain verification.',
+      };
     }
 
     let parsedUrl: URL;
@@ -67,24 +75,38 @@ export class DomainVerificationService {
       return { success: false, message: 'Invalid URL format provided.' };
     }
 
-    const envVal = (process.env.ENVIRONMENT || process.env.NODE_ENV || '').toUpperCase();
-    const isDev = envVal === 'DEV' || envVal === 'DEVELOPMENT' || process.env.NODE_ENV !== 'PROD';
-    const isLocalhost = parsedUrl.hostname === 'localhost' || parsedUrl.hostname === '127.0.0.1';
+    const envVal = (
+      process.env.ENVIRONMENT ||
+      process.env.NODE_ENV ||
+      ''
+    ).toUpperCase();
+    const isDev =
+      envVal !== 'PROD' &&
+      (envVal === 'DEV' || process.env.NODE_ENV !== 'PROD');
+    const isLocalhost =
+      parsedUrl.hostname === 'localhost' || parsedUrl.hostname === '127.0.0.1';
 
-    // In production, enforce HTTPS strictly. In DEV mode, allow HTTP.
+    // In PROD mode, enforce HTTPS strictly. In DEV mode, allow HTTP.
     if (!isDev && !isLocalhost) {
       if (parsedUrl.protocol !== 'https:') {
-        return { success: false, message: 'Domain verification requires an HTTPS URL in production.' };
+        return {
+          success: false,
+          message: 'Domain verification requires an HTTPS URL in PROD mode.',
+        };
       }
     }
 
     // 1. SSRF Protection: In production, assert no private/internal IPs
     if (!isDev && !isLocalhost) {
       try {
-        const addresses = await dns.promises.lookup(parsedUrl.hostname, { all: true });
+        const addresses = await dns.promises.lookup(parsedUrl.hostname, {
+          all: true,
+        });
         for (const addr of addresses) {
           if (this.isPrivateOrRestrictedIp(addr.address)) {
-            this.logger.warn(`SSRF Block: Domain ${parsedUrl.hostname} resolves to restricted IP ${addr.address}`);
+            this.logger.warn(
+              `SSRF Block: Domain ${parsedUrl.hostname} resolves to restricted IP ${addr.address}`,
+            );
             return {
               success: false,
               message: `Domain ${parsedUrl.hostname} resolves to restricted address ${addr.address} (SSRF protection enforced).`,
@@ -101,7 +123,9 @@ export class DomainVerificationService {
 
     // 2. Fetch the association file
     const associationUrl = `${parsedUrl.origin}/.well-known/superapp-miniapp-association.json`;
-    this.logger.log(`Fetching domain association verification from: ${associationUrl}`);
+    this.logger.log(
+      `Fetching domain association verification from: ${associationUrl}`,
+    );
 
     try {
       const controller = new AbortController();
@@ -144,25 +168,35 @@ export class DomainVerificationService {
       }
 
       // 4. Check verificationToken
-      if (!payload.verificationToken || payload.verificationToken !== expectedToken) {
+      if (
+        !payload.verificationToken ||
+        payload.verificationToken !== expectedToken
+      ) {
         return {
           success: false,
           message: `verificationToken mismatch in association file: Expected "${expectedToken}", found "${payload.verificationToken || 'none'}".`,
         };
       }
 
-      const allowedList = Array.isArray(payload.allowedDomains) && payload.allowedDomains.length > 0
-        ? payload.allowedDomains
-        : [parsedUrl.hostname];
+      const allowedList =
+        Array.isArray(payload.allowedDomains) &&
+        payload.allowedDomains.length > 0
+          ? payload.allowedDomains
+          : [parsedUrl.hostname];
 
-      const otherDomains = allowedList.filter((d: string) => d !== parsedUrl.hostname);
-      const messageDetails = otherDomains.length > 0
-        ? `Domain ownership verified successfully for ${parsedUrl.hostname} (Whitelisted: ${otherDomains.join(', ')}).`
-        : `Domain ownership verified successfully for ${parsedUrl.hostname}.`;
+      const otherDomains = allowedList.filter(
+        (d: string) => d !== parsedUrl.hostname,
+      );
+      const messageDetails =
+        otherDomains.length > 0
+          ? `Domain ownership verified successfully for ${parsedUrl.hostname} (Whitelisted: ${otherDomains.join(', ')}).`
+          : `Domain ownership verified successfully for ${parsedUrl.hostname}.`;
 
       const detectedPerms = Array.isArray(payload.permissions)
         ? payload.permissions
-        : (Array.isArray(payload.requestedPermissions) ? payload.requestedPermissions : []);
+        : Array.isArray(payload.requestedPermissions)
+          ? payload.requestedPermissions
+          : [];
 
       return {
         success: true,

@@ -33,13 +33,17 @@ export class GitIntegrationService {
    * Resolves the appropriate Git provider automatically by inspecting the URL
    * or using the explicit provider override.
    */
-  resolveProvider(url: string, explicitProvider?: GitProviderType): GitProvider {
+  resolveProvider(
+    url: string,
+    explicitProvider?: GitProviderType,
+  ): GitProvider {
     if (explicitProvider && this.providers.has(explicitProvider)) {
       return this.providers.get(explicitProvider)!;
     }
 
     if (!url) {
-      const defaultProvider = (this.configService.get<string>('GIT_PROVIDER') || 'github') as GitProviderType;
+      const defaultProvider = (this.configService.get<string>('GIT_PROVIDER') ||
+        'github') as GitProviderType;
       return this.providers.get(defaultProvider) || this.githubProvider;
     }
 
@@ -50,14 +54,18 @@ export class GitIntegrationService {
     }
 
     // Default fallback based on environment setting or github
-    const envProvider = (this.configService.get<string>('GIT_PROVIDER') || 'github') as GitProviderType;
+    const envProvider = (this.configService.get<string>('GIT_PROVIDER') ||
+      'github') as GitProviderType;
     return this.providers.get(envProvider) || this.githubProvider;
   }
 
   /**
    * Detects provider information and parses repository metadata from a URL.
    */
-  detect(url: string, explicitProvider?: GitProviderType): { provider: GitProviderType; parsed: ParsedGitUrl } {
+  detect(
+    url: string,
+    explicitProvider?: GitProviderType,
+  ): { provider: GitProviderType; parsed: ParsedGitUrl } {
     const provider = this.resolveProvider(url, explicitProvider);
     try {
       const parsed = provider.parseUrl(url);
@@ -66,7 +74,9 @@ export class GitIntegrationService {
         parsed,
       };
     } catch (err: any) {
-      throw new BadRequestException(err.message || 'Failed to parse Git repository URL.');
+      throw new BadRequestException(
+        err.message || 'Failed to parse Git repository URL.',
+      );
     }
   }
 
@@ -136,7 +146,12 @@ export class GitIntegrationService {
     snippet?: string;
   }> {
     const provider = this.resolveProvider(url, explicitProvider);
-    const validation = await provider.validateFlutterPackage(url, ref, token, path);
+    const validation = await provider.validateFlutterPackage(
+      url,
+      ref,
+      token,
+      path,
+    );
 
     let snippet: string | undefined;
     if (validation.isValid) {
@@ -175,7 +190,7 @@ export class GitIntegrationService {
     url: string,
     ref: string,
     explicitProvider?: GitProviderType,
-    token?: string
+    token?: string,
   ): Promise<{ provider: GitProviderType; commitSha: string }> {
     const provider = this.resolveProvider(url, explicitProvider);
     const commitSha = await provider.resolveCommitSha(url, ref, token);

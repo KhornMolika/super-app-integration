@@ -11,7 +11,7 @@ export class AuthService implements OnModuleInit {
 
   constructor(
     private jwtService: JwtService,
-    private accessControlService: AccessControlService
+    private accessControlService: AccessControlService,
   ) {}
 
   onModuleInit() {
@@ -20,12 +20,12 @@ export class AuthService implements OnModuleInit {
       modulusLength: 2048,
       publicKeyEncoding: {
         type: 'spki',
-        format: 'pem'
+        format: 'pem',
       },
       privateKeyEncoding: {
         type: 'pkcs8',
-        format: 'pem'
-      }
+        format: 'pem',
+      },
     });
 
     this.privateKey = privateKey;
@@ -34,25 +34,27 @@ export class AuthService implements OnModuleInit {
     // Convert public key to JWK format
     const pubKeyObject = crypto.createPublicKey(this.publicKey);
     const jwkFormat = pubKeyObject.export({ format: 'jwk' }) as any;
-    
+
     // Add kid (key ID) and alg (algorithm)
     this.jwk = {
       ...jwkFormat,
       kid: 'dps-poc-key-1',
       alg: 'RS256',
-      use: 'sig'
+      use: 'sig',
     };
   }
 
   getJwks() {
     return {
-      keys: [this.jwk]
+      keys: [this.jwk],
     };
   }
 
   async login(body: any) {
     // Find user in DB
-    const user = await this.accessControlService.findByEmailWithPermissions(body.email);
+    const user = await this.accessControlService.findByEmailWithPermissions(
+      body.email,
+    );
 
     if (!user) {
       return { success: false, message: 'Invalid credentials' };
@@ -60,16 +62,16 @@ export class AuthService implements OnModuleInit {
 
     // Extract all permissions from roles
     const permissions = new Set<string>();
-    user.roles.forEach(role => {
-      role.permissions.forEach(p => permissions.add(p.name));
+    user.roles.forEach((role) => {
+      role.permissions.forEach((p) => permissions.add(p.name));
     });
 
-    const payload = { 
-      sub: user.id, 
-      email: user.email, 
-      name: user.name, 
-      roles: user.roles.map(r => r.name),
-      permissions: Array.from(permissions)
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      name: user.name,
+      roles: user.roles.map((r) => r.name),
+      permissions: Array.from(permissions),
     };
 
     return {
@@ -78,7 +80,7 @@ export class AuthService implements OnModuleInit {
       access_token: this.jwtService.sign(payload, {
         privateKey: this.privateKey,
         algorithm: 'RS256',
-        keyid: 'dps-poc-key-1'
+        keyid: 'dps-poc-key-1',
       }),
       expires_in: 3600,
       user: {
@@ -86,8 +88,8 @@ export class AuthService implements OnModuleInit {
         email: user.email,
         name: user.name,
         roles: payload.roles,
-        permissions: payload.permissions
-      }
+        permissions: payload.permissions,
+      },
     };
   }
 }

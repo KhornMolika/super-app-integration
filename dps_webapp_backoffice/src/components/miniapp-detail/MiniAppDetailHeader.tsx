@@ -54,7 +54,7 @@ export default function MiniAppDetailHeader({
             </h2>
             {/* Status Pill Badge */}
             <span
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs sm:text-sm font-semibold uppercase tracking-wider ${
                 status === 'ACTIVE'
                   ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
                   : status === 'APPROVED'
@@ -69,7 +69,7 @@ export default function MiniAppDetailHeader({
               }`}
             >
               <span
-                className={`w-1.5 h-1.5 rounded-full ${
+                className={`w-2 h-2 rounded-full ${
                   status === 'ACTIVE'
                     ? 'bg-emerald-500'
                     : status === 'APPROVED'
@@ -86,8 +86,8 @@ export default function MiniAppDetailHeader({
               <span>{status}</span>
             </span>
           </div>
-          <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 dark:text-slate-400">
-            <span className="font-mono text-slate-600 dark:text-slate-300">{formData.appId || 'com.app'}</span>
+          <div className="flex items-center gap-2 mt-1.5 text-sm text-slate-500 dark:text-slate-400">
+            <span className="font-mono text-slate-700 dark:text-slate-300 font-medium">{formData.appId || 'com.app'}</span>
             <span>•</span>
             <span>
               {formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE
@@ -114,10 +114,10 @@ export default function MiniAppDetailHeader({
             type="button"
             variant="outline"
             onClick={onOpenSandbox}
-            className="h-9 px-3.5 text-xs font-semibold border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center gap-1.5 shadow-sm"
+            className="h-10 px-4 text-sm font-semibold border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center gap-1.5 shadow-sm"
             title="Launch Super App Sandbox Preview"
           >
-            <svg className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
             </svg>
             <span>Sandbox Preview</span>
@@ -129,10 +129,10 @@ export default function MiniAppDetailHeader({
           <a
             href="/api/download-apk?type=test&version=v1.1.0"
             download="superapp-test-build.apk"
-            className="h-9 px-3.5 text-xs font-semibold rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-all flex items-center gap-1.5 shadow-sm"
+            className="h-10 px-4 text-sm font-semibold rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-all flex items-center gap-1.5 shadow-sm"
             title="Download Super App Test Build APK (Nexus)"
           >
-            <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
             <span>Download Test APK</span>
@@ -145,7 +145,7 @@ export default function MiniAppDetailHeader({
             type="button"
             variant={isEditingUnlocked ? 'primary' : 'outline'}
             onClick={onToggleEditing}
-            className={`h-9 px-3.5 text-xs font-medium transition-all ${
+            className={`h-10 px-4 text-sm font-medium transition-all ${
               isEditingUnlocked
                 ? 'bg-brand-600 text-white hover:bg-brand-700'
                 : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'

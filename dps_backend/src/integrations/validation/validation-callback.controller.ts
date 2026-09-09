@@ -1,4 +1,12 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
@@ -45,12 +53,21 @@ export class ValidationCallbackController {
   @Post('stage')
   @HttpCode(HttpStatus.OK)
   async handleStageUpdate(
-    @Body() body: { miniAppId: string; stageId: string; stageName: string; status: string; details?: string }
+    @Body()
+    body: {
+      miniAppId: string;
+      stageId: string;
+      stageName: string;
+      status: string;
+      details?: string;
+    },
   ) {
     const { miniAppId, stageId, stageName, status, details } = body;
     if (!miniAppId || !stageId) return { ok: false };
 
-    const app = await this.miniappRepository.findOne({ where: { id: miniAppId } });
+    const app = await this.miniappRepository.findOne({
+      where: { id: miniAppId },
+    });
     if (!app) return { ok: false };
 
     const stages = app.validationStages || {};
@@ -71,23 +88,34 @@ export class ValidationCallbackController {
       stages,
     });
 
-    this.logger.log(`Stage update [${miniAppId}] ${stageId} (${stageName}) -> ${status}`);
+    this.logger.log(
+      `Stage update [${miniAppId}] ${stageId} (${stageName}) -> ${status}`,
+    );
     return { ok: true };
   }
 
   @Post('callback')
   @HttpCode(HttpStatus.OK)
   async handleValidationCallback(@Body() dto: ValidationCallbackDto) {
-    this.logger.log(`Received validation callback for Mini App ${dto.miniAppId}: status = ${dto.status}, score = ${dto.score}`);
+    this.logger.log(
+      `Received validation callback for Mini App ${dto.miniAppId}: status = ${dto.status}, score = ${dto.score}`,
+    );
 
-    const app = await this.miniappRepository.findOne({ where: { id: dto.miniAppId } });
+    const app = await this.miniappRepository.findOne({
+      where: { id: dto.miniAppId },
+    });
     if (!app) {
-      this.logger.error(`Validation callback failed: Mini App ${dto.miniAppId} not found`);
+      this.logger.error(
+        `Validation callback failed: Mini App ${dto.miniAppId} not found`,
+      );
       throw new NotFoundException(`Mini App ${dto.miniAppId} not found`);
     }
 
     // Clear old validation issues
-    await this.issueRepository.delete({ miniAppId: app.id, type: 'SECURITY_CHECK' });
+    await this.issueRepository.delete({
+      miniAppId: app.id,
+      type: 'SECURITY_CHECK',
+    });
 
     app.validationReport = {
       score: dto.score,
@@ -111,7 +139,7 @@ export class ValidationCallbackController {
         'Automated Validation Passed',
         `${app.name || 'Mini App'} passed automated ${dto.method} security validation (Score: ${dto.score}/100) and is now In Review.`,
         'REVIEW_STARTED',
-        app.id
+        app.id,
       );
 
       if (app.ownerEmail) {
@@ -128,10 +156,18 @@ export class ValidationCallbackController {
         action: 'VALIDATION_PASSED',
         resourceType: 'MiniApp',
         resourceId: app.id,
-        newValue: { status: 'IN_REVIEW', validationStatus: 'PASSED', score: dto.score },
+        newValue: {
+          status: 'IN_REVIEW',
+          validationStatus: 'PASSED',
+          score: dto.score,
+        },
       });
 
-      return { success: true, newStatus: 'IN_REVIEW', validationStatus: 'PASSED' };
+      return {
+        success: true,
+        newStatus: 'IN_REVIEW',
+        validationStatus: 'PASSED',
+      };
     } else {
       app.validationStatus = 'FAILED';
       app.status = 'DRAFT'; // Auto-reset to DRAFT for remediation
@@ -139,25 +175,33 @@ export class ValidationCallbackController {
       // Mark running/pending stages as FAILED
       const stages = app.validationStages || {};
       let updatedAny = false;
-      Object.keys(stages).forEach(key => {
+      Object.keys(stages).forEach((key) => {
         if (stages[key].status === 'RUNNING') {
           stages[key].status = 'FAILED';
-          stages[key].details = dto.checks?.pipeline?.details || stages[key].details || 'Stage failed or scanner error encountered.';
+          stages[key].details =
+            dto.checks?.pipeline?.details ||
+            stages[key].details ||
+            'Stage failed or scanner error encountered.';
           updatedAny = true;
         }
       });
       if (!updatedAny && Object.keys(stages).length > 0) {
-        const firstIncomplete = Object.keys(stages).find(k => stages[k].status !== 'COMPLETED');
+        const firstIncomplete = Object.keys(stages).find(
+          (k) => stages[k].status !== 'COMPLETED',
+        );
         if (firstIncomplete) {
           stages[firstIncomplete].status = 'FAILED';
-          stages[firstIncomplete].details = dto.checks?.pipeline?.details || 'Stage failed.';
+          stages[firstIncomplete].details =
+            dto.checks?.pipeline?.details || 'Stage failed.';
         }
       }
       app.validationStages = stages;
 
       // Log findings as MiniAppIssues
       const issuesToCreate: MiniAppIssue[] = [];
-      const criticalOrHigh = (dto.findings || []).filter(f => f.severity === 'CRITICAL' || f.severity === 'HIGH');
+      const criticalOrHigh = (dto.findings || []).filter(
+        (f) => f.severity === 'CRITICAL' || f.severity === 'HIGH',
+      );
 
       for (const finding of criticalOrHigh) {
         issuesToCreate.push(
@@ -168,7 +212,7 @@ export class ValidationCallbackController {
             description: `[${finding.id}] ${finding.title}: ${finding.description}. Remediation: ${finding.recommendation || 'N/A'}`,
             status: 'OPEN',
             metadata: { findingId: finding.id, category: finding.category },
-          })
+          }),
         );
       }
 
@@ -190,7 +234,7 @@ export class ValidationCallbackController {
         'Automated Validation Failed',
         `${app.name || 'Mini App'} failed automated ${dto.method} security checks with ${criticalOrHigh.length} blocking issue(s). Status reset to DRAFT.`,
         'ISSUE_CREATED',
-        app.id
+        app.id,
       );
 
       if (app.ownerEmail) {
@@ -198,7 +242,9 @@ export class ValidationCallbackController {
           app.ownerEmail,
           app.name || app.appId || 'Mini App',
           dto.score ?? 0,
-          (dto.findings || []).filter(f => f.severity === 'CRITICAL' || f.severity === 'HIGH'),
+          (dto.findings || []).filter(
+            (f) => f.severity === 'CRITICAL' || f.severity === 'HIGH',
+          ),
           `http://localhost:3002/miniapps/${app.id}`,
         );
       }
@@ -208,10 +254,19 @@ export class ValidationCallbackController {
         action: 'VALIDATION_FAILED',
         resourceType: 'MiniApp',
         resourceId: app.id,
-        newValue: { status: 'DRAFT', validationStatus: 'FAILED', issuesCount: criticalOrHigh.length },
+        newValue: {
+          status: 'DRAFT',
+          validationStatus: 'FAILED',
+          issuesCount: criticalOrHigh.length,
+        },
       });
 
-      return { success: true, newStatus: 'DRAFT', validationStatus: 'FAILED', issuesCount: criticalOrHigh.length };
+      return {
+        success: true,
+        newStatus: 'DRAFT',
+        validationStatus: 'FAILED',
+        issuesCount: criticalOrHigh.length,
+      };
     }
   }
 }

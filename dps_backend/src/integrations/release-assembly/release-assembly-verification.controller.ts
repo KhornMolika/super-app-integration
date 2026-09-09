@@ -7,11 +7,15 @@ import {
 
 @Controller(['release-assembly', 'api/release-assembly'])
 export class ReleaseAssemblyVerificationController {
-  constructor(private readonly releaseService: ReleaseAssemblyVerificationService) {}
+  constructor(
+    private readonly releaseService: ReleaseAssemblyVerificationService,
+  ) {}
 
   @Post('verify')
   @HttpCode(HttpStatus.OK)
-  async verify(@Body() dto: VerifyAndAssembleReleaseDto): Promise<ReleaseAssemblyAuditResult> {
+  async verify(
+    @Body() dto: VerifyAndAssembleReleaseDto,
+  ): Promise<ReleaseAssemblyAuditResult> {
     return this.releaseService.verifyAndAssembleRelease(dto);
   }
 
@@ -21,4 +25,3 @@ export class ReleaseAssemblyVerificationController {
     return this.releaseService.handleBuildCallback(body);
   }
 }
-

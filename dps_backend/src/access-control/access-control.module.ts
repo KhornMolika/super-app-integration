@@ -9,7 +9,10 @@ import { SeederService } from './seeder.service';
 import { UsersController } from './users.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, Role, Permission]), forwardRef(() => AuthModule)],
+  imports: [
+    TypeOrmModule.forFeature([User, Role, Permission]),
+    forwardRef(() => AuthModule),
+  ],
   controllers: [UsersController],
   providers: [AccessControlService, SeederService],
   exports: [AccessControlService, TypeOrmModule],

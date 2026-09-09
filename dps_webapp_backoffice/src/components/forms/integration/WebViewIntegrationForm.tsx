@@ -35,6 +35,7 @@ export default function WebViewIntegrationForm({
   // State for Domain Ownership Verification
   const [isVerifyingDomain, setIsVerifyingDomain] = useState(false);
   const [domainVerificationMsg, setDomainVerificationMsg] = useState<string | null>(null);
+  const [domainVerificationMsgType, setDomainVerificationMsgType] = useState<'info' | 'success' | 'error' | null>(null);
   const [domainVerificationSuccess, setDomainVerificationSuccess] = useState<boolean | null>(null);
   const [verifiedUrl, setVerifiedUrl] = useState<string | null>(
     formData.isDomainVerified ? (formData.integrationConfigWebView?.productionUrl || '') : null
@@ -76,6 +77,7 @@ export default function WebViewIntegrationForm({
     setDomainVerificationSuccess(false);
     setVerifiedUrl(null);
     setDomainVerificationMsg('New verification token generated. Please update your association file and verify domain.');
+    setDomainVerificationMsgType('info');
     if (onDomainVerified) {
       onDomainVerified({ verified: false, isDomainVerified: false, verificationToken: newToken });
     }
@@ -83,10 +85,11 @@ export default function WebViewIntegrationForm({
 
   const onWebViewInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.name === 'productionUrl') {
-      const newVal = e.target.value;
-      if (verifiedUrl && newVal !== verifiedUrl) {
+      const newVal = e.target.value.trim();
+      if (!verifiedUrl || newVal !== verifiedUrl.trim()) {
         setDomainVerificationSuccess(false);
         setDomainVerificationMsg(null);
+        setDomainVerificationMsgType(null);
         if (onDomainVerified) {
           onDomainVerified({ verified: false, isDomainVerified: false });
         }
@@ -99,6 +102,7 @@ export default function WebViewIntegrationForm({
     const targetUrl = formData.integrationConfigWebView?.productionUrl;
     if (!targetUrl || !targetUrl.trim()) {
       setDomainVerificationMsg('Please enter a Production URL first.');
+      setDomainVerificationMsgType('error');
       setDomainVerificationSuccess(false);
       return;
     }
@@ -120,6 +124,7 @@ export default function WebViewIntegrationForm({
 
     setIsVerifyingDomain(true);
     setDomainVerificationMsg(null);
+    setDomainVerificationMsgType(null);
     try {
       let res: Response;
       if (formData.id) {
@@ -145,6 +150,7 @@ export default function WebViewIntegrationForm({
         setDomainVerificationSuccess(true);
         setVerifiedUrl(targetUrl.trim());
         setDomainVerificationMsg(data.message || 'Domain ownership verified successfully.');
+        setDomainVerificationMsgType('success');
         if (onDomainVerified) {
           onDomainVerified({
             ...data,
@@ -162,6 +168,7 @@ export default function WebViewIntegrationForm({
         setDomainVerificationSuccess(false);
         setVerifiedUrl(null);
         setDomainVerificationMsg(data.message || 'Domain verification failed.');
+        setDomainVerificationMsgType('error');
         if (onDomainVerified) {
           onDomainVerified({
             verified: false,
@@ -174,6 +181,7 @@ export default function WebViewIntegrationForm({
       setDomainVerificationSuccess(false);
       setVerifiedUrl(null);
       setDomainVerificationMsg(err.message || 'Failed to connect to verification service.');
+      setDomainVerificationMsgType('error');
       if (onDomainVerified) {
         onDomainVerified({ verified: false, isDomainVerified: false });
       }
@@ -307,26 +315,26 @@ export default function WebViewIntegrationForm({
 
           {/* Dynamic Real-Time Feedback Messages */}
           {prodUrlValidation.status === 'invalid' && (
-            <p className="mt-1.5 text-xs text-rose-600 font-medium flex items-center gap-1">
+            <p className="mt-1.5 text-sm text-rose-600 font-medium flex items-center gap-1">
               <span>✕</span> {prodUrlValidation.message}
             </p>
           )}
           {prodUrlValidation.status === 'unreachable' && (
-            <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1">
+            <p className="mt-1.5 text-sm text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1">
               <span>⚠</span> {prodUrlValidation.message}
             </p>
           )}
           {prodUrlValidation.status === 'valid' && (
-            <p className="mt-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+            <p className="mt-1.5 text-sm text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
               <span>✓</span> {prodUrlValidation.message}
             </p>
           )}
           {prodUrlValidation.status === 'idle' && allErrors['integrationConfigWebView.productionUrl'] && (
-            <p className="mt-1.5 text-xs text-rose-600 font-medium">
+            <p className="mt-1.5 text-sm text-rose-600 font-medium">
               {allErrors['integrationConfigWebView.productionUrl']}
             </p>
           )}
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
             Primary HTTPS endpoint loaded by the Super App WebView container.
           </p>
         </div>
@@ -341,7 +349,7 @@ export default function WebViewIntegrationForm({
             type="url"
             placeholder="https://staging-banking.example.com/app"
           />
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
             Secondary endpoint used during internal test builds and staging.
           </p>
         </div>
@@ -352,7 +360,7 @@ export default function WebViewIntegrationForm({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div>
             <div className="flex items-center gap-2.5 flex-wrap">
-              <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
+              <h4 className="text-base font-bold text-slate-900 dark:text-white">
                 Domain Ownership Verification
               </h4>
               {(() => {
@@ -365,19 +373,19 @@ export default function WebViewIntegrationForm({
                     verifiedUrl!.trim() === currentProdUrl);
 
                 return isActuallyVerified ? (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                    <svg className="w-3 h-3 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>
+                  <span className="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                    <svg className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>
                     Verified
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
-                    Pending Verification
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                    Pending Verification (Required)
                   </span>
                 );
               })()}
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
               Prove administrative control of the target domain by hosting the public association file.
             </p>
           </div>
@@ -387,22 +395,22 @@ export default function WebViewIntegrationForm({
               href="/guidelines?method=webview#domain-verification"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 hover:bg-brand-100 dark:hover:bg-brand-900/50 border border-brand-200 dark:border-brand-800/60 transition shadow-sm"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 hover:bg-brand-100 dark:hover:bg-brand-900/50 border border-brand-200 dark:border-brand-800/60 transition shadow-sm"
               title="Open Domain Ownership Documentation in new tab"
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
               <span>Verification Guide</span>
-              <svg className="w-3 h-3 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+              <svg className="w-3.5 h-3.5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
             </a>
 
             <Button
               type="button"
               onClick={handleVerifyDomain}
               disabled={isVerifyingDomain || !isEditable}
-              className="text-xs px-3.5 py-1.5 flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg shadow-sm"
+              className="text-sm px-4 py-2 font-semibold flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg shadow-sm"
             >
               {isVerifyingDomain && (
-                <svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                 </svg>
@@ -413,9 +421,9 @@ export default function WebViewIntegrationForm({
         </div>
 
         {/* Step-by-Step Setup Guide Callout */}
-        <div className="p-4 mb-4 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 text-xs text-slate-700 dark:text-slate-300 space-y-2.5">
-          <div className="font-semibold text-slate-900 dark:text-white flex items-center justify-between text-xs">
-            <div className="flex items-center gap-1.5">
+        <div className="p-4 mb-4 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 text-sm text-slate-700 dark:text-slate-300 space-y-3">
+          <div className="font-bold text-slate-900 dark:text-white flex items-center justify-between text-base">
+            <div className="flex items-center gap-2">
               <svg className="w-4 h-4 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               <span>How to Host the Domain Association File</span>
             </div>
@@ -423,18 +431,18 @@ export default function WebViewIntegrationForm({
               href="/guidelines?method=webview#domain-verification"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-brand-600 dark:text-brand-400 hover:underline inline-flex items-center gap-1 font-medium text-[11px]"
+              className="text-brand-600 dark:text-brand-400 hover:underline inline-flex items-center gap-1 font-semibold text-sm"
             >
               <span>Learn more in documentation</span>
               <span>→</span>
             </a>
           </div>
-          <ol className="list-decimal list-inside space-y-2 text-slate-600 dark:text-slate-400 leading-relaxed pl-0.5">
+          <ol className="list-decimal list-inside space-y-2.5 text-slate-600 dark:text-slate-300 text-sm leading-relaxed pl-0.5">
             <li>
-              <strong className="text-slate-800 dark:text-slate-200">File Name & Directory:</strong> Create a JSON file named <code className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-[11px] text-slate-900 dark:text-slate-100 font-semibold">superapp-miniapp-association.json</code> and place it inside your web application's public root under the <code className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-[11px] text-slate-900 dark:text-slate-100">/.well-known/</code> folder.
+              <strong className="text-slate-800 dark:text-slate-200">File Name & Directory:</strong> Create a JSON file named <code className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-sm text-slate-900 dark:text-slate-100 font-semibold">superapp-miniapp-association.json</code> and place it inside your web application's public root under the <code className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-sm text-slate-900 dark:text-slate-100 font-semibold">/.well-known/</code> folder.
             </li>
             <li>
-              <strong className="text-slate-800 dark:text-slate-200">Public HTTP/HTTPS Accessibility:</strong> Deploy the file so it is publicly accessible returning HTTP status <code className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">200 OK</code> with <code className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-[11px] text-slate-900 dark:text-slate-100">Content-Type: application/json</code>.
+              <strong className="text-slate-800 dark:text-slate-200">Public HTTP/HTTPS Accessibility:</strong> Deploy the file so it is publicly accessible returning HTTP status <code className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-sm text-emerald-600 dark:text-emerald-400 font-semibold">200 OK</code> with <code className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-sm text-slate-900 dark:text-slate-100 font-semibold">Content-Type: application/json</code>.
             </li>
             <li>
               <strong className="text-slate-800 dark:text-slate-200">Copy JSON & Verify:</strong> Copy the generated JSON manifest below into that file, publish your website, and click <strong>Verify Domain</strong> above.
@@ -452,10 +460,25 @@ export default function WebViewIntegrationForm({
               verifiedUrl!.trim() === currentProdUrl);
 
           if (domainVerificationMsg) {
+            const isInfo =
+              domainVerificationMsgType === 'info' ||
+              domainVerificationMsg.toLowerCase().includes('token generated');
+
+            if (isInfo) {
+              return (
+                <div className="p-3.5 mb-4 rounded-xl text-sm font-medium bg-sky-50 text-sky-800 dark:bg-sky-950/40 dark:text-sky-300 border border-sky-200 dark:border-sky-800 flex items-center gap-2">
+                  <svg className="w-5 h-5 shrink-0 text-sky-600 dark:text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>{domainVerificationMsg}</span>
+                </div>
+              );
+            }
+
             if (isActuallyVerified && domainVerificationSuccess === true) {
               return (
-                <div className="p-3 mb-4 rounded-xl text-xs font-medium bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-2">
-                  <svg className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="p-3.5 mb-4 rounded-xl text-sm font-medium bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-2">
+                  <svg className="w-5 h-5 shrink-0 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                   </svg>
                   <span>{domainVerificationMsg}</span>
@@ -464,8 +487,8 @@ export default function WebViewIntegrationForm({
             }
 
             return (
-              <div className="p-3 mb-4 rounded-xl text-xs font-medium bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800 flex items-center gap-2">
-                <svg className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-3.5 mb-4 rounded-xl text-sm font-medium bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800 flex items-center gap-2">
+                <svg className="w-5 h-5 shrink-0 text-rose-600 dark:text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
                 <span>{domainVerificationMsg}</span>
@@ -475,10 +498,12 @@ export default function WebViewIntegrationForm({
 
           if (!isActuallyVerified && allErrors['integrationConfigWebView.domainVerification']) {
             return (
-              <p className="mb-3 text-xs text-rose-600 font-medium flex items-center gap-1.5">
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-rose-500" />
-                {allErrors['integrationConfigWebView.domainVerification']}
-              </p>
+              <div className="p-3.5 mb-4 rounded-xl text-sm font-medium bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800 flex items-center gap-2">
+                <svg className="w-5 h-5 shrink-0 text-rose-600 dark:text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span>{allErrors['integrationConfigWebView.domainVerification']}</span>
+              </div>
             );
           }
 
@@ -486,7 +511,7 @@ export default function WebViewIntegrationForm({
         })()}
 
         {/* Verification JSON Code View */}
-        <div className="bg-slate-900 text-slate-200 p-4 rounded-xl text-xs space-y-2 font-mono">
+        <div className="bg-slate-900 text-slate-200 p-4 rounded-xl text-sm space-y-2 font-mono">
           {(() => {
             const prodUrlInput = formData.integrationConfigWebView?.productionUrl || '';
 
@@ -534,7 +559,7 @@ export default function WebViewIntegrationForm({
 
             const dynamicEnv =
               formData.environment ||
-              (process.env.NEXT_PUBLIC_ENVIRONMENT === 'DEV' ? 'DEV' : 'PRODUCTION');
+              (process.env.NEXT_PUBLIC_ENVIRONMENT === 'DEV' ? 'DEV' : 'PROD');
 
             const defaultCategoryPerms: Record<string, string[]> = {
               insurance: ['Camera'],
@@ -571,8 +596,8 @@ export default function WebViewIntegrationForm({
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-slate-400 pb-3 border-b border-slate-800">
                   <div className="space-y-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-slate-400">Endpoint:</span>
-                      <code className="text-indigo-300 font-bold bg-slate-800/80 px-1.5 py-0.5 rounded text-[11px] break-all">
+                      <span className="text-slate-400 font-semibold text-sm">Endpoint:</span>
+                      <code className="text-indigo-300 font-bold bg-slate-800/80 px-2 py-0.5 rounded text-xs sm:text-sm break-all">
                         {fullEndpointUrl}
                       </code>
                     </div>
@@ -585,7 +610,7 @@ export default function WebViewIntegrationForm({
                         setCopiedPath(true);
                         setTimeout(() => setCopiedPath(false), 2000);
                       }}
-                      className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-200 transition flex items-center gap-1"
+                      className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm text-slate-200 font-semibold transition flex items-center gap-1"
                     >
                       {copiedPath ? '✓ Copied URL' : 'Copy URL'}
                     </button>
@@ -596,7 +621,7 @@ export default function WebViewIntegrationForm({
                         setCopiedJson(true);
                         setTimeout(() => setCopiedJson(false), 2000);
                       }}
-                      className="px-2.5 py-1 rounded bg-brand-600 hover:bg-brand-500 text-[11px] text-white font-medium transition flex items-center gap-1 shadow-sm"
+                      className="px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-xs sm:text-sm text-white font-semibold transition flex items-center gap-1 shadow-sm"
                     >
                       {copiedJson ? '✓ Copied JSON' : 'Copy JSON'}
                     </button>
@@ -604,24 +629,24 @@ export default function WebViewIntegrationForm({
                 </div>
 
                 <div className="relative pt-2">
-                  <pre className="text-slate-300 overflow-x-auto leading-relaxed text-[11px] max-h-56 scrollbar-thin">
+                  <pre className="text-slate-300 overflow-x-auto leading-relaxed text-xs sm:text-sm max-h-56 scrollbar-thin font-mono">
                     {dynamicJsonString}
                   </pre>
                 </div>
 
                 <div className="pt-3 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-slate-400">
                   <div className="flex items-center gap-2">
-                    <span className="text-slate-400 text-[11px]">Verification Token:</span>
-                    <span className="font-semibold text-emerald-400 font-mono text-[11px]">
+                    <span className="text-slate-400 text-xs sm:text-sm">Verification Token:</span>
+                    <span className="font-semibold text-emerald-400 font-mono text-xs sm:text-sm">
                       {dynamicPayload.verificationToken}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     {isEditable && (
                       <button
                         type="button"
                         onClick={handleGenerateToken}
-                        className="text-[11px] text-indigo-400 hover:text-indigo-300 underline font-sans"
+                        className="text-xs sm:text-sm text-indigo-400 hover:text-indigo-300 underline font-sans font-medium"
                       >
                         Regenerate Token
                       </button>
@@ -633,7 +658,7 @@ export default function WebViewIntegrationForm({
                         setCopiedToken(true);
                         setTimeout(() => setCopiedToken(false), 2000);
                       }}
-                      className="text-[11px] text-slate-400 hover:text-slate-200 underline font-sans"
+                      className="text-xs sm:text-sm text-slate-400 hover:text-slate-200 underline font-sans font-medium"
                     >
                       {copiedToken ? '✓ Copied' : 'Copy Token'}
                     </button>
@@ -655,7 +680,7 @@ export default function WebViewIntegrationForm({
           disabled={!isEditable}
           placeholder="banking.example.com, auth.example.com, cdn.example.com"
         />
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
           Comma-separated allowlist of external domains that the WebView is permitted to navigate to.
         </p>
       </div>

@@ -39,13 +39,25 @@ export class GitIntegrationController {
   @Post('commits')
   @HttpCode(HttpStatus.OK)
   getCommits(@Body() dto: GitCommitsQueryDto) {
-    return this.gitService.getCommits(dto.url, dto.ref, dto.limit, dto.provider, dto.token);
+    return this.gitService.getCommits(
+      dto.url,
+      dto.ref,
+      dto.limit,
+      dto.provider,
+      dto.token,
+    );
   }
 
   @Post('validate')
   @HttpCode(HttpStatus.OK)
   validatePackage(@Body() dto: ValidateGitPackageDto) {
-    return this.gitService.validatePackage(dto.url, dto.ref, dto.provider, dto.token, dto.path);
+    return this.gitService.validatePackage(
+      dto.url,
+      dto.ref,
+      dto.provider,
+      dto.token,
+      dto.path,
+    );
   }
 
   @Post('snippet')
@@ -56,8 +68,15 @@ export class GitIntegrationController {
 
   @Post('resolve-sha')
   @HttpCode(HttpStatus.OK)
-  resolveCommitSha(@Body() dto: { url: string; ref: string; provider?: any; token?: string }) {
-    return this.gitService.resolveCommitSha(dto.url, dto.ref, dto.provider, dto.token);
+  resolveCommitSha(
+    @Body() dto: { url: string; ref: string; provider?: any; token?: string },
+  ) {
+    return this.gitService.resolveCommitSha(
+      dto.url,
+      dto.ref,
+      dto.provider,
+      dto.token,
+    );
   }
 
   @Post('auth-status')

@@ -54,10 +54,29 @@ export interface GitProvider {
   getRepository(urlOrSlug: string, token?: string): Promise<GitRepositoryInfo>;
   getBranches(urlOrSlug: string, token?: string): Promise<string[]>;
   getTags(urlOrSlug: string, token?: string): Promise<string[]>;
-  getCommits(urlOrSlug: string, ref?: string, limit?: number, token?: string): Promise<GitCommitInfo[]>;
-  getFileContent(urlOrSlug: string, filePath: string, ref?: string, token?: string): Promise<string>;
-  validateFlutterPackage(urlOrSlug: string, ref?: string, token?: string, path?: string): Promise<FlutterPackageValidation>;
-  resolveCommitSha(urlOrSlug: string, ref: string, token?: string): Promise<string>;
+  getCommits(
+    urlOrSlug: string,
+    ref?: string,
+    limit?: number,
+    token?: string,
+  ): Promise<GitCommitInfo[]>;
+  getFileContent(
+    urlOrSlug: string,
+    filePath: string,
+    ref?: string,
+    token?: string,
+  ): Promise<string>;
+  validateFlutterPackage(
+    urlOrSlug: string,
+    ref?: string,
+    token?: string,
+    path?: string,
+  ): Promise<FlutterPackageValidation>;
+  resolveCommitSha(
+    urlOrSlug: string,
+    ref: string,
+    token?: string,
+  ): Promise<string>;
   generateDependencySnippet(options: {
     packageName?: string;
     url: string;

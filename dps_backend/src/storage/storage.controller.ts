@@ -43,7 +43,10 @@ export class StorageController {
     if (!body?.base64) {
       throw new BadRequestException('Base64 image data is required');
     }
-    const url = await this.storageService.uploadBase64(body.base64, body.nameHint);
+    const url = await this.storageService.uploadBase64(
+      body.base64,
+      body.nameHint,
+    );
     return {
       success: true,
       url,

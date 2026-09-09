@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Param, Body, UseGuards, Request, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Body,
+  UseGuards,
+  Request,
+  NotFoundException,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RbacGuard } from '../access-control/guards/rbac.guard';
 import { RequirePermissions } from '../access-control/decorators/require-permissions.decorator';
@@ -26,7 +35,7 @@ export class PermissionProposalsController {
     if (!proposal) throw new NotFoundException('Proposal not found');
 
     const { decision, reason, targetVersion } = body;
-    
+
     await this.permissionProposalsService.update(id, {
       status: decision,
       adminDecisionReason: reason,
@@ -47,15 +56,15 @@ export class PermissionProposalsController {
         message = `Your proposal for '${proposal.permissionKey}' was rejected. Reason: ${reason || 'N/A'}`;
         type = 'proposal_rejected';
       }
-        
+
       await this.notificationsService.createNotification(
         proposal.requestedBy.id,
         `Permission Proposal ${decision === 'IN_DEVELOPMENT' ? 'In Development' : decision}`,
         message,
-        type
+        type,
       );
     }
-    
+
     return { success: true };
   }
 }

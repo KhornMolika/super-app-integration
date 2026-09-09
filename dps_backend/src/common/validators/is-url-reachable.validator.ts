@@ -12,14 +12,32 @@ export class IsUrlReachableConstraint implements ValidatorConstraintInterface {
     if (typeof url !== 'string') return false;
 
     // Skip git repository URLs as they often block simple HEAD/GET requests (especially private ones)
-    if (url.includes('github.com') || url.includes('gitlab.com') || url.includes('bitbucket.org') || url.endsWith('.git')) {
+    if (
+      url.includes('github.com') ||
+      url.includes('gitlab.com') ||
+      url.includes('bitbucket.org') ||
+      url.endsWith('.git')
+    ) {
       return true;
     }
 
     // In local development / testing, allow localhost and test URLs
-    const envVal = (process.env.ENVIRONMENT || process.env.NODE_ENV || '').toUpperCase();
-    const isDev = envVal === 'DEV' || envVal === 'DEVELOPMENT' || process.env.NODE_ENV !== 'PROD';
-    if (isDev && (url.includes('localhost') || url.includes('127.0.0.1') || url.startsWith('http://localhost') || url.startsWith('https://example.com') || url.startsWith('http://example.com'))) {
+    const envVal = (
+      process.env.ENVIRONMENT ||
+      process.env.NODE_ENV ||
+      ''
+    ).toUpperCase();
+    const isDev =
+      envVal !== 'PROD' &&
+      (envVal === 'DEV' || process.env.NODE_ENV !== 'PROD');
+    if (
+      isDev &&
+      (url.includes('localhost') ||
+        url.includes('127.0.0.1') ||
+        url.startsWith('http://localhost') ||
+        url.startsWith('https://example.com') ||
+        url.startsWith('http://example.com'))
+    ) {
       return true;
     }
 
@@ -29,7 +47,7 @@ export class IsUrlReachableConstraint implements ValidatorConstraintInterface {
 
       const response = await fetch(url, {
         method: 'HEAD',
-        signal: controller.signal as any,
+        signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
@@ -44,7 +62,7 @@ export class IsUrlReachableConstraint implements ValidatorConstraintInterface {
 
         const response = await fetch(url, {
           method: 'GET',
-          signal: controller.signal as any,
+          signal: controller.signal,
         });
 
         clearTimeout(timeoutId);
@@ -62,7 +80,7 @@ export class IsUrlReachableConstraint implements ValidatorConstraintInterface {
 }
 
 export function IsUrlReachable(validationOptions?: ValidationOptions) {
-  return function (object: Object, propertyName: string) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       target: object.constructor,
       propertyName: propertyName,

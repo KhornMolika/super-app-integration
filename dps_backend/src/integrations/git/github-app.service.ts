@@ -49,8 +49,12 @@ export class GitHubAppService {
 
     const header = { alg: 'RS256', typ: 'JWT' };
 
-    const encodedHeader = Buffer.from(JSON.stringify(header)).toString('base64url');
-    const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
+    const encodedHeader = Buffer.from(JSON.stringify(header)).toString(
+      'base64url',
+    );
+    const encodedPayload = Buffer.from(JSON.stringify(payload)).toString(
+      'base64url',
+    );
     const dataToSign = `${encodedHeader}.${encodedPayload}`;
 
     const signer = crypto.createSign('RSA-SHA256');
@@ -64,12 +68,16 @@ export class GitHubAppService {
    * Obtains a short-lived installation access token for a repository or installation
    */
   async getInstallationAccessToken(installationId?: string): Promise<string> {
-    const baseApi = this.configService.get<string>('GITHUB_BASE_URL') || 'https://api.github.com';
+    const baseApi =
+      this.configService.get<string>('GITHUB_BASE_URL') ||
+      'https://api.github.com';
     const fallbackToken = this.configService.get<string>('GITHUB_TOKEN');
 
     if (!this.isAppConfigured()) {
       if (fallbackToken) return fallbackToken;
-      throw new Error('GitHub App is not configured and no fallback GITHUB_TOKEN provided.');
+      throw new Error(
+        'GitHub App is not configured and no fallback GITHUB_TOKEN provided.',
+      );
     }
 
     const appJwt = this.generateAppJwt();
@@ -84,7 +92,9 @@ export class GitHubAppService {
         },
       });
       if (!instRes.ok) {
-        throw new Error(`Failed to fetch GitHub App installations: ${instRes.statusText}`);
+        throw new Error(
+          `Failed to fetch GitHub App installations: ${instRes.statusText}`,
+        );
       }
       const installations = (await instRes.json()) as any[];
       if (!installations || installations.length === 0) {
@@ -94,20 +104,23 @@ export class GitHubAppService {
       targetInstallationId = String(installations[0].id);
     }
 
-    const res = await fetch(`${baseApi}/app/installations/${targetInstallationId}/access_tokens`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${appJwt}`,
-        Accept: 'application/vnd.github+json',
+    const res = await fetch(
+      `${baseApi}/app/installations/${targetInstallationId}/access_tokens`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${appJwt}`,
+          Accept: 'application/vnd.github+json',
+        },
       },
-    });
+    );
 
     if (!res.ok) {
       if (fallbackToken) return fallbackToken;
       throw new Error(`Failed to create installation token: ${res.statusText}`);
     }
 
-    const data = (await res.json()) as any;
+    const data = await res.json();
     return data.token;
   }
 }

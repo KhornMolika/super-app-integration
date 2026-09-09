@@ -3,7 +3,7 @@
 import React from 'react';
 
 export const Label = ({ className = '', children, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) => (
-  <label className={`block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5 transition-colors ${className}`} {...props}>
+  <label className={`block text-[15px] font-semibold text-slate-800 dark:text-slate-200 mb-1.5 transition-colors ${className}`} {...props}>
     {children}
   </label>
 );
@@ -12,7 +12,7 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
   ({ className = '', ...props }, ref) => (
     <input
       ref={ref}
-      className={`text-slate-800 dark:text-slate-200 w-full px-4 py-3 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-slate-400 disabled:opacity-50 ${className}`}
+      className={`text-base text-slate-800 dark:text-slate-100 w-full px-4 py-3 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-slate-400 disabled:opacity-50 ${className}`}
       {...props}
     />
   )
@@ -23,7 +23,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTML
   ({ className = '', ...props }, ref) => (
     <textarea
       ref={ref}
-      className={`text-slate-800 dark:text-slate-200 w-full px-4 py-3 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-slate-400 disabled:opacity-50 resize-none ${className}`}
+      className={`text-base text-slate-800 dark:text-slate-100 w-full px-4 py-3 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-slate-400 disabled:opacity-50 resize-none ${className}`}
       {...props}
     />
   )
@@ -35,7 +35,7 @@ export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttrib
     <div className="relative">
       <select
         ref={ref}
-        className={`appearance-none text-slate-800 dark:text-slate-200 w-full px-4 py-3 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all cursor-pointer disabled:opacity-50 ${className}`}
+        className={`appearance-none text-base text-slate-800 dark:text-slate-100 w-full px-4 py-3 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all cursor-pointer disabled:opacity-50 ${className}`}
         {...props}
       >
         {children}

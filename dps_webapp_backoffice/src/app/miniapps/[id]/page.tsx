@@ -12,7 +12,7 @@ import SubmissionModal, { SubmissionModalState } from '@/components/ui/Submissio
 import BasicInfoForm from '@/components/forms/BasicInfoForm';
 import TeamForm from '@/components/forms/TeamForm';
 import IntegrationForm from '@/components/forms/IntegrationForm';
-import PermissionsForm from '@/components/forms/PermissionsForm';
+import PermissionsForm, { formatCompliantPurpose } from '@/components/forms/PermissionsForm';
 import ValidationIssuesButton from '@/components/ValidationIssuesButton';
 import ActivityTab from '@/components/ui/ActivityTab';
 import ValidationReportTab from '@/components/ui/ValidationReportTab';
@@ -20,6 +20,7 @@ import MiniAppDetailHeader from '@/components/miniapp-detail/MiniAppDetailHeader
 import MiniAppLifecycleBanners from '@/components/miniapp-detail/MiniAppLifecycleBanners';
 import MiniAppDetailTabs, { MiniAppTabType } from '@/components/miniapp-detail/MiniAppDetailTabs';
 import { CreateMiniAppDto, IntegrationMethod, SourceType } from '@/types/miniapp.types';
+import { validateUrlFormat } from '@/components/ui/ValidatedUrlInput';
 
 export default function ManageMiniAppPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -80,16 +81,26 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
 
     if (formData.integrationMethod === IntegrationMethod.WEBVIEW && formData.integrationConfigWebView?.productionUrl) {
       const prodUrl = formData.integrationConfigWebView.productionUrl;
+      const envVal = (
+        process.env.NEXT_PUBLIC_ENVIRONMENT ||
+        process.env.ENVIRONMENT ||
+        process.env.NODE_ENV ||
+        ''
+      ).toUpperCase();
       const isDev =
-        process.env.NEXT_PUBLIC_ENVIRONMENT === 'DEV' ||
-        process.env.NODE_ENV !== 'production' ||
-        (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'));
+        envVal !== 'PROD' &&
+        (envVal === 'DEV' ||
+          (typeof window !== 'undefined' &&
+            (window.location.hostname === 'localhost' ||
+              window.location.hostname === '127.0.0.1' ||
+              window.location.hostname.endsWith('.local') ||
+              window.location.hostname.endsWith('.orb.local'))));
 
       if (!isDev) {
         if (!prodUrl.startsWith('https://')) {
-          errors['integrationConfigWebView.productionUrl'] = 'Production URL must use HTTPS.';
+          errors['integrationConfigWebView.productionUrl'] = 'Production URL must use HTTPS in PROD mode.';
         } else if (prodUrl.includes('localhost') || prodUrl.includes('127.0.0.1')) {
-          errors['integrationConfigWebView.productionUrl'] = 'Production URL cannot be localhost in production.';
+          errors['integrationConfigWebView.productionUrl'] = 'Production URL cannot be localhost in PROD mode.';
         }
       }
     }
@@ -224,6 +235,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
 
   const handleWebViewChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const fieldName = e.target.name;
+    const isProdUrlChange = fieldName === 'productionUrl';
     setFormData((prev) => {
       const nextValidationErrors = prev.validationErrors ? { ...prev.validationErrors } : undefined;
       if (nextValidationErrors) {
@@ -231,10 +243,18 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
       }
       return {
         ...prev,
+        isDomainVerified: isProdUrlChange ? false : prev.isDomainVerified,
         integrationConfigWebView: { ...prev.integrationConfigWebView!, [fieldName]: e.target.value },
         validationErrors: nextValidationErrors,
       };
     });
+    if (isProdUrlChange) {
+      setLocalErrors((prev) => ({
+        ...prev,
+        'integrationConfigWebView.domainVerification':
+          'Domain ownership has not been verified. Please verify domain ownership before submitting.',
+      }));
+    }
   };
 
   const handleFlutterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -283,7 +303,8 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
       if (exists) {
         updatedPermissions = prev.permissions?.filter((p) => p.type !== type);
       } else {
-        updatedPermissions = [...(prev.permissions || []), { type, purpose: '', termsUrl: '' }];
+        const defaultPurpose = formatCompliantPurpose(type, '', prev.name);
+        updatedPermissions = [...(prev.permissions || []), { type, purpose: defaultPurpose, termsUrl: '' }];
       }
 
       return {
@@ -295,13 +316,16 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
   };
 
   const handleDomainVerified = (data: any) => {
+    const isVerified = Boolean(data.verified === true || data.isDomainVerified === true);
     setFormData((prev) => {
       const nextErrors = prev.validationErrors ? { ...prev.validationErrors } : {};
-      delete nextErrors['integrationConfigWebView.domainVerification'];
+      if (isVerified) {
+        delete nextErrors['integrationConfigWebView.domainVerification'];
+      }
       return {
         ...prev,
-        isDomainVerified: true,
-        domainVerifiedAt: data.domainVerifiedAt || new Date().toISOString(),
+        isDomainVerified: isVerified,
+        domainVerifiedAt: isVerified ? (data.domainVerifiedAt || new Date().toISOString()) : undefined,
         integrationConfigWebView: {
           productionUrl: prev.integrationConfigWebView?.productionUrl || '',
           ...prev.integrationConfigWebView,
@@ -314,7 +338,12 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
     });
     setLocalErrors((prev) => {
       const next = { ...prev };
-      delete next['integrationConfigWebView.domainVerification'];
+      if (isVerified) {
+        delete next['integrationConfigWebView.domainVerification'];
+      } else {
+        next['integrationConfigWebView.domainVerification'] =
+          'Domain ownership has not been verified. Please verify domain ownership before submitting.';
+      }
       return next;
     });
   };
@@ -345,6 +374,31 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
 
   const handleSave = async (e: React.FormEvent, isDraftOnly = false) => {
     if (e && e.preventDefault) e.preventDefault();
+
+    if (formData.termsUrl && formData.termsUrl.trim()) {
+      const v = validateUrlFormat(formData.termsUrl, 'Terms of Service URL', true);
+      if (!v.valid && v.error) {
+        setLocalErrors((prev) => ({ ...prev, termsUrl: v.error }));
+        return;
+      }
+    }
+    if (formData.privacyPolicyUrl && formData.privacyPolicyUrl.trim()) {
+      const v = validateUrlFormat(formData.privacyPolicyUrl, 'Privacy Policy URL', true);
+      if (!v.valid && v.error) {
+        setLocalErrors((prev) => ({ ...prev, privacyPolicyUrl: v.error }));
+        return;
+      }
+    }
+
+    if (!isDraftOnly && formData.integrationMethod === IntegrationMethod.WEBVIEW && !formData.isDomainVerified) {
+      setLocalErrors((prev) => ({
+        ...prev,
+        'integrationConfigWebView.domainVerification':
+          'Domain ownership has not been verified. Please host the verification association file and verify domain ownership before submitting.',
+      }));
+      return;
+    }
+
     setIsSubmitting(true);
     setModalState({ isOpen: true, status: 'loading' });
 
@@ -690,6 +744,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
               variant="outline"
               onClick={(e) => handleSave(e, true)}
               disabled={isSubmitting}
+              className="h-11 px-6 text-base font-semibold"
             >
               Save as Draft
             </Button>
@@ -697,6 +752,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
               type="button"
               onClick={(e) => handleSave(e, false)}
               disabled={isSubmitting}
+              className="h-11 px-6 text-base font-semibold"
             >
               {isSubmitting ? 'Saving...' : 'Save & Submit Changes'}
             </Button>

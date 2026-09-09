@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 import { User } from '../../access-control/entities/user.entity';
 
@@ -22,14 +30,19 @@ export class Notification {
   @Column({ type: 'jsonb', nullable: true })
   metadata!: any;
 
-  @ManyToOne(() => User, user => user.notifications, { nullable: true, onDelete: 'CASCADE' })
+  @ManyToOne(() => User, (user) => user.notifications, {
+    nullable: true,
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'userId' })
   user!: User;
 
   @Column({ nullable: true })
   userId!: string;
 
-  @ManyToOne(() => MiniApp, miniApp => miniApp.notifications, { onDelete: 'CASCADE' })
+  @ManyToOne(() => MiniApp, (miniApp) => miniApp.notifications, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'miniAppId' })
   miniApp!: MiniApp;
 

@@ -207,16 +207,16 @@ export default function PermissionsForm({
       <div className="p-4 rounded-xl bg-gradient-to-r from-slate-50 via-slate-100 to-indigo-50/30 dark:from-slate-800/80 dark:via-slate-800/50 dark:to-indigo-950/20 border border-slate-200 dark:border-slate-700/70 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="space-y-0.5">
           <div className="flex items-center gap-2">
-            <h4 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
+            <h4 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
               <span>Smart Permission Discovery</span>
             </h4>
             {detectedMeta && (
-              <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50">
+              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50">
                 ✓ {detectedMeta.count} Auto-Detected
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-slate-600 dark:text-slate-300">
             Automatically scans Mini App endpoint, association file, and category capabilities to auto-tick required native permissions.
           </p>
         </div>
@@ -226,11 +226,11 @@ export default function PermissionsForm({
           variant="outline"
           onClick={handleAutoDetect}
           disabled={isDetecting}
-          className="shrink-0 text-xs px-3.5 py-1.5 flex items-center gap-1.5 border-brand-500/60 hover:bg-brand-50 text-brand-600 dark:text-brand-400 dark:hover:bg-brand-950/30 transition-all shadow-sm"
+          className="shrink-0 text-sm px-4 py-2 font-semibold flex items-center gap-1.5 border-brand-500/60 hover:bg-brand-50 text-brand-600 dark:text-brand-400 dark:hover:bg-brand-950/30 transition-all shadow-sm"
         >
           {isDetecting ? (
             <>
-              <svg className="animate-spin w-3.5 h-3.5 text-brand-500" fill="none" viewBox="0 0 24 24">
+              <svg className="animate-spin w-4 h-4 text-brand-500" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
               </svg>
@@ -238,7 +238,7 @@ export default function PermissionsForm({
             </>
           ) : (
             <>
-              <svg className="w-3.5 h-3.5 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
               </svg>
               <span>Auto-Detect Permissions</span>
@@ -248,24 +248,24 @@ export default function PermissionsForm({
       </div>
 
       {/* Store Approval Policy Callout */}
-      <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 space-y-2.5 shadow-sm">
+      <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 text-sm text-slate-200 space-y-3 shadow-sm">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <span className="text-amber-400 font-bold text-sm">🛡️</span>
-            <span className="font-bold text-white text-xs uppercase tracking-wider">Super App Store Approval & Capability Policy</span>
+            <span className="text-amber-400 font-bold text-lg">🛡️</span>
+            <span className="font-bold text-white text-base uppercase tracking-wider">Super App Store Approval & Capability Policy</span>
           </div>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800/60 font-semibold">
+          <span className="text-xs font-mono px-2.5 py-1 rounded bg-indigo-950 text-indigo-300 border border-indigo-800/60 font-semibold">
             Apple 4.7 & Google Play Policy
           </span>
         </div>
-        <p className="text-slate-400 leading-relaxed text-[11px]">
+        <p className="text-slate-300 leading-relaxed text-sm">
           The Super App is the central capability gatekeeper. Any capability not supported by the Super App is technically inaccessible.
           If an unsupported capability is marked as <strong className="text-rose-400">Required</strong>, the Mini App will be <strong className="text-rose-400">rejected</strong> during review. If marked as <strong className="text-emerald-400">Optional</strong>, the Mini App can be approved with that specific feature disabled.
         </p>
       </div>
 
       {detectionNotice && (
-        <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 text-emerald-800 dark:text-emerald-300 text-xs flex items-center gap-2">
+        <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 text-emerald-800 dark:text-emerald-300 text-sm flex items-center gap-2 font-medium">
           <svg className="w-4 h-4 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
           </svg>
@@ -301,18 +301,18 @@ export default function PermissionsForm({
                       onChange={() => togglePermission(type)}
                       className="w-5 h-5 text-brand-600 border-slate-300 rounded focus:ring-brand-600 cursor-pointer"
                     />
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">{type}</span>
+                    <span className="font-semibold text-base text-slate-900 dark:text-slate-100">{type}</span>
 
                     {/* Auto-detected badge */}
                     {detectedSource && isActive && (
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/60 flex items-center gap-1">
+                      <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/60 flex items-center gap-1">
                         <span>⚡ Auto-Detected</span>
                         <span className="opacity-75 font-normal">({detectedSource})</span>
                       </span>
                     )}
 
                     {!isSupported && (
-                      <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700/50">
+                      <span className="text-xs uppercase font-bold tracking-wider px-2.5 py-1 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700/50">
                         Custom / Unsupported
                       </span>
                     )}
@@ -323,17 +323,17 @@ export default function PermissionsForm({
               {isActive && (
                 <div className="mt-3 pt-3 border-t border-brand-200 dark:border-brand-500/20 space-y-3">
                   {/* Requirement Level Toggle */}
-                  <div className="flex items-center justify-between gap-3 p-2.5 rounded-lg bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 flex-wrap">
+                  <div className="flex items-center justify-between gap-3 p-3.5 rounded-lg bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 flex-wrap">
                     <div>
-                      <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 block">Requirement Level</span>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400">Is this capability mandatory for your core functionality?</span>
+                      <span className="text-base font-bold text-slate-800 dark:text-slate-200 block">Requirement Level</span>
+                      <span className="text-sm text-slate-500 dark:text-slate-400">Is this capability mandatory for your core functionality?</span>
                     </div>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => handlePermissionFieldChange(type, 'required', true)}
-                        className={`px-2.5 py-1 text-xs font-semibold rounded-md transition ${
+                        className={`px-3.5 py-1.5 text-sm font-semibold rounded-md transition ${
                           isRequired
                             ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 dark:border-rose-800 shadow-sm'
                             : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -345,7 +345,7 @@ export default function PermissionsForm({
                       <button
                         type="button"
                         onClick={() => handlePermissionFieldChange(type, 'required', false)}
-                        className={`px-2.5 py-1 text-xs font-semibold rounded-md transition ${
+                        className={`px-3.5 py-1.5 text-sm font-semibold rounded-md transition ${
                           !isRequired
                             ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 shadow-sm'
                             : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -358,11 +358,11 @@ export default function PermissionsForm({
 
                   {/* Warning if unsupported and marked Required */}
                   {!isSupported && isRequired && (
-                    <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 text-xs space-y-1">
-                      <strong className="font-bold flex items-center gap-1 text-rose-700 dark:text-rose-400">
+                    <div className="p-3.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-sm space-y-1">
+                      <strong className="font-bold flex items-center gap-1 text-rose-700 dark:text-rose-400 text-base">
                         ⚠️ Store Policy Alert: Automatic Rejection Trigger
                       </strong>
-                      <p className="leading-relaxed">
+                      <p className="leading-relaxed text-sm">
                         &quot;{type}&quot; is currently <strong>not exposed by the Super App bridge</strong>. Marking an unsupported capability as <strong>Required</strong> will lead to automatic rejection during review because the app cannot function without it. Mark as <strong>Optional</strong> if your Mini App can gracefully degrade.
                       </p>
                     </div>
@@ -375,15 +375,15 @@ export default function PermissionsForm({
 
                       return (
                         <>
-                          <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
-                            <Label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                              <span>Purpose (App Store & Play Store Disclosure)</span>
+                          <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                            <Label className="text-base font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                              <span>Usage Description / Purpose (App Store & Play Store Disclosure)</span>
                               <span className="text-rose-500 font-bold">*</span>
                             </Label>
 
                             <div className="flex items-center gap-2">
                               {compliant ? (
-                                <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-100/70 dark:bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-800/60 flex items-center gap-1">
+                                <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-100/70 dark:bg-emerald-950/60 px-2.5 py-1 rounded border border-emerald-300 dark:border-emerald-800/60 flex items-center gap-1">
                                   ✓ Store Compliant (Info.plist & Play Store)
                                 </span>
                               ) : (
@@ -393,7 +393,7 @@ export default function PermissionsForm({
                                     const formatted = formatCompliantPurpose(type, activePerm.purpose, formData.name);
                                     handlePermissionFieldChange(type, 'purpose', formatted);
                                   }}
-                                  className="text-[10px] font-semibold text-brand-700 dark:text-brand-300 bg-brand-100/70 dark:bg-brand-950/60 hover:bg-brand-200 dark:hover:bg-brand-900/60 px-2 py-0.5 rounded border border-brand-300 dark:border-brand-700/60 flex items-center gap-1 transition"
+                                  className="text-xs font-semibold text-brand-700 dark:text-brand-300 bg-brand-100/70 dark:bg-brand-950/60 hover:bg-brand-200 dark:hover:bg-brand-900/60 px-2.5 py-1 rounded border border-brand-300 dark:border-brand-700/60 flex items-center gap-1 transition"
                                   title="Format into compliant App Store & Play Store sentence"
                                 >
                                   ✨ Format for Info.plist & Play Store
@@ -414,13 +414,13 @@ export default function PermissionsForm({
                               }
                             }}
                             placeholder={`e.g. ${formData.name || '$(PRODUCT_NAME)'} requires access to your ${type.toLowerCase()} to photograph accident evidence and upload policy claim documents.`}
-                            className={`h-9 text-sm ${
+                            className={`h-10 text-base ${
                               purposeError ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''
                             }`}
                           />
 
                           {purposeError && (
-                            <p className="mt-1.5 text-xs text-rose-600 font-medium">{purposeError}</p>
+                            <p className="mt-1.5 text-sm text-rose-600 font-medium">{purposeError}</p>
                           )}
 
                           {storeInfo && (() => {
@@ -430,20 +430,20 @@ export default function PermissionsForm({
                             };
 
                             return (
-                              <div className="mt-2.5 rounded-xl bg-slate-900 border border-slate-800 text-[11px] overflow-hidden shadow-inner">
+                              <div className="mt-2.5 rounded-xl bg-slate-900 border border-slate-800 text-sm overflow-hidden shadow-inner">
                                 {/* Tabs Header */}
-                                <div className="flex items-center justify-between px-3 py-2 bg-slate-950/80 border-b border-slate-800/80 flex-wrap gap-2">
-                                  <div className="flex items-center space-x-1.5">
+                                <div className="flex items-center justify-between px-3.5 py-2.5 bg-slate-950/80 border-b border-slate-800/80 flex-wrap gap-2">
+                                  <div className="flex items-center space-x-2">
                                     <button
                                       type="button"
                                       onClick={() => setPlatform('ios')}
-                                      className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition flex items-center gap-1.5 ${
+                                      className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 ${
                                         currentPlatform === 'ios'
                                           ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 shadow-sm'
                                           : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
                                       }`}
                                     >
-                                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                                         <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.63-.77 1.06-1.85.94-2.93-1 .04-2.22.67-2.93 1.5-.63.73-1.18 1.83-1.03 2.9 1.12.09 2.29-.58 3.02-1.47z"/>
                                       </svg>
                                       <span>iOS (Info.plist)</span>
@@ -452,20 +452,20 @@ export default function PermissionsForm({
                                     <button
                                       type="button"
                                       onClick={() => setPlatform('android')}
-                                      className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition flex items-center gap-1.5 ${
+                                      className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 ${
                                         currentPlatform === 'android'
                                           ? 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 shadow-sm'
                                           : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
                                       }`}
                                     >
-                                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                                         <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.551 0 .9993.4482.9993.9993.0001.5511-.4483.9997-.9993.9997m-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993 0 .5511-.4482.9997-.9993.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5902 8.411 13.8559 8.082 12 8.082s-3.5902.329-5.1368.8677L4.8409 5.4467a.4161.4161 0 00-.5677-.1521.4157.4157 0 00-.1521.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3432-4.1021-2.6889-7.5743-6.1185-9.4396"/>
                                       </svg>
                                       <span>Android (APK / Manifest)</span>
                                     </button>
                                   </div>
 
-                                  <div className="text-[10px] text-slate-400 font-mono">
+                                  <div className="text-xs sm:text-sm text-slate-400 font-mono">
                                     {currentPlatform === 'ios' ? (
                                       <span>Key: <strong className="text-indigo-400">{storeInfo.iosKey}</strong></span>
                                     ) : (
@@ -475,22 +475,22 @@ export default function PermissionsForm({
                                 </div>
 
                                 {/* Tab Content */}
-                                <div className="p-3 font-mono text-[11px] leading-relaxed overflow-x-auto text-slate-300">
+                                <div className="p-3.5 font-mono text-xs sm:text-sm leading-relaxed overflow-x-auto text-slate-300">
                                   {currentPlatform === 'ios' ? (
                                     <div className="space-y-1">
-                                      <div className="text-[10px] text-slate-500">// ios/Runner/Info.plist</div>
+                                      <div className="text-xs text-slate-500">// ios/Runner/Info.plist</div>
                                       <div className="text-indigo-300">&lt;key&gt;{storeInfo.iosKey}&lt;/key&gt;</div>
                                       <div className="text-emerald-300">&lt;string&gt;{activePerm.purpose || formatCompliantPurpose(type, '', formData.name)}&lt;/string&gt;</div>
                                     </div>
                                   ) : (
                                     <div className="space-y-2">
                                       <div className="space-y-1">
-                                        <div className="text-[10px] text-slate-500">// android/app/src/main/AndroidManifest.xml (APK)</div>
+                                        <div className="text-xs text-slate-500">// android/app/src/main/AndroidManifest.xml (APK)</div>
                                         <div className="text-amber-300">&lt;uses-permission android:name=&quot;{storeInfo.androidPermission}&quot; /&gt;</div>
                                       </div>
-                                      <div className="pt-1.5 border-t border-slate-800 space-y-1">
-                                        <div className="text-[10px] text-slate-500">// Google Play Store Prominent In-App Disclosure Dialog</div>
-                                        <div className="text-slate-300 bg-slate-950/60 p-2 rounded border border-slate-800 text-[10px]">
+                                      <div className="pt-2 border-t border-slate-800 space-y-1">
+                                        <div className="text-xs text-slate-500">// Google Play Store Prominent In-App Disclosure Dialog</div>
+                                        <div className="text-slate-300 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800 text-xs sm:text-sm">
                                           &quot;{activePerm.purpose || formatCompliantPurpose(type, '', formData.name)}&quot;
                                         </div>
                                       </div>
@@ -513,8 +513,8 @@ export default function PermissionsForm({
 
       {/* Request Custom Permission */}
       <div className="mt-8 border-t border-slate-200 dark:border-slate-700/50 pt-6">
-        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-1">Request New Capability</h3>
-        <p className="text-xs text-slate-500 mb-4">
+        <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1">Request New Capability</h3>
+        <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
           If your Mini App requires a capability not listed above, specify it here to generate a Permission Proposal for the Super App review committee.
         </p>
         <div className="flex space-x-3">
@@ -522,6 +522,7 @@ export default function PermissionsForm({
             value={customPermission}
             onChange={(e) => setCustomPermission(e.target.value)}
             placeholder="e.g. Bluetooth, NFC, Contacts, Storage"
+            className="h-11 text-base"
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
@@ -534,6 +535,7 @@ export default function PermissionsForm({
           />
           <Button
             type="button"
+            className="h-11 px-6 text-base font-semibold shrink-0"
             onClick={() => {
               if (customPermission && !formData.permissions?.find((p: any) => p.type.toLowerCase() === customPermission.toLowerCase())) {
                 togglePermission(customPermission);

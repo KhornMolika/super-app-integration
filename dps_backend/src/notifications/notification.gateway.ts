@@ -1,4 +1,9 @@
-import { WebSocketGateway, WebSocketServer, OnGatewayConnection, OnGatewayDisconnect } from '@nestjs/websockets';
+import {
+  WebSocketGateway,
+  WebSocketServer,
+  OnGatewayConnection,
+  OnGatewayDisconnect,
+} from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 
@@ -7,7 +12,9 @@ import { Logger } from '@nestjs/common';
     origin: '*',
   },
 })
-export class NotificationGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class NotificationGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server!: Server;
 

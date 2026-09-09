@@ -13,20 +13,20 @@ export class PermissionProposalsService {
   async findAll(): Promise<PermissionProposal[]> {
     return this.permissionProposalRepository.find({
       relations: { miniApp: true, requestedBy: true },
-      order: { createdAt: 'DESC' }
+      order: { createdAt: 'DESC' },
     });
   }
 
   async findOne(id: string): Promise<PermissionProposal | null> {
     return this.permissionProposalRepository.findOne({
       where: { id },
-      relations: { miniApp: true, requestedBy: true }
+      relations: { miniApp: true, requestedBy: true },
     });
   }
 
   async findPendingByKey(permissionKey: string): Promise<PermissionProposal[]> {
     return this.permissionProposalRepository.find({
-      where: { permissionKey, status: 'PENDING_REVIEW' }
+      where: { permissionKey, status: 'PENDING_REVIEW' },
     });
   }
 

@@ -522,7 +522,7 @@ export default function GuidelinesPage() {
             </h5>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
               <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800/60">
-                <span className="font-bold text-slate-800 dark:text-slate-200 block mb-1">DEVELOPMENT</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200 block mb-1">DEV</span>
                 <p className="text-slate-600 dark:text-slate-400">For ongoing feature work and local developer sandbox harnesses.</p>
               </div>
               <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800/60">
@@ -530,7 +530,7 @@ export default function GuidelinesPage() {
                 <p className="text-slate-600 dark:text-slate-400">Pre-production verification against real Super App test builds.</p>
               </div>
               <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800/60">
-                <span className="font-bold text-slate-800 dark:text-slate-200 block mb-1">PRODUCTION</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200 block mb-1">PROD</span>
                 <p className="text-slate-600 dark:text-slate-400">Publicly active release serving live end-users inside Super App.</p>
               </div>
             </div>

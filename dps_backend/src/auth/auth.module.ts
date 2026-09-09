@@ -6,10 +6,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { AccessControlModule } from '../access-control/access-control.module';
 
 @Module({
-  imports: [
-    forwardRef(() => AccessControlModule),
-    JwtModule.register({})
-  ],
+  imports: [forwardRef(() => AccessControlModule), JwtModule.register({})],
   controllers: [AuthController],
   providers: [AuthService, JwtAuthGuard],
   exports: [JwtAuthGuard, AuthService, JwtModule],

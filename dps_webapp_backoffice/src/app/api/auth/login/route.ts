@@ -29,10 +29,18 @@ export async function POST(request: Request) {
     // Await the cookies() promise in Next.js 15
     const cookieStore = await cookies();
     
+    const envVal = (
+      process.env.NEXT_PUBLIC_ENVIRONMENT ||
+      process.env.ENVIRONMENT ||
+      process.env.NODE_ENV ||
+      ''
+    ).toUpperCase();
+    const isProd = envVal === 'PROD';
+
     // Set the token in an HttpOnly cookie
     cookieStore.set('auth_token', data.access_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isProd,
       sameSite: 'lax', 
       path: '/',
       maxAge: 60 * 60 * 24 // 1 day

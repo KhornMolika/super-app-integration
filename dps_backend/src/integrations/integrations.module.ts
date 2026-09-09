@@ -18,9 +18,11 @@ import { MiniAppIssue } from '../miniapps/entities/miniapp-issue.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { AuditModule } from '../audit/audit.module';
 import { MailModule } from '../mail/mail.module';
+import { PermissionsModule } from '../permissions/permissions.module';
 import { DomainVerificationService } from './webview/domain-verification.service';
 import { ValidationCallbackController } from './validation/validation-callback.controller';
 import { JenkinsService } from './jenkins/jenkins.service';
+import { LocalSecurityScannerService } from './validation/local-security-scanner.service';
 
 @Module({
   imports: [
@@ -29,6 +31,7 @@ import { JenkinsService } from './jenkins/jenkins.service';
     NotificationsModule,
     AuditModule,
     MailModule,
+    PermissionsModule,
   ],
   controllers: [
     GitIntegrationController,
@@ -46,6 +49,7 @@ import { JenkinsService } from './jenkins/jenkins.service';
     ReleaseAssemblyVerificationService,
     DomainVerificationService,
     JenkinsService,
+    LocalSecurityScannerService,
   ],
   exports: [
     GitIntegrationService,
@@ -57,6 +61,7 @@ import { JenkinsService } from './jenkins/jenkins.service';
     ReleaseAssemblyVerificationService,
     DomainVerificationService,
     JenkinsService,
+    LocalSecurityScannerService,
   ],
 })
 export class IntegrationsModule {}
