@@ -3,6 +3,8 @@ services:
     image: postgres:15
     container_name: dps-postgres
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-${DB_USERNAME:-admin}}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-${DB_PASSWORD:-admin1234}}
@@ -16,6 +18,8 @@ services:
     image: sonatype/nexus3:latest
     container_name: nexus
     restart: unless-stopped
+    env_file:
+      - .env
     ports:
       - '${NEXUS_PORT:-8081}:8081'
     volumes:
@@ -26,9 +30,11 @@ services:
     container_name: dps-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
+    env_file:
+      - .env
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-admin1234}
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-${MINIO_ROOT_USER:-admin}}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-${MINIO_ROOT_PASSWORD:-admin1234}}
       MINIO_SUBNET_LICENSE: ${MINIO_SUBNET_LICENSE:-}
       MINIO_AISTOR_LICENSE: ${MINIO_SUBNET_LICENSE:-}
       MINIO_LICENSE: ${MINIO_SUBNET_LICENSE:-}
@@ -43,9 +49,13 @@ services:
     container_name: dps-minio-init
     depends_on:
       - minio
+    env_file:
+      - .env
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-admin1234}
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-${MINIO_ROOT_USER:-admin}}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-${MINIO_ROOT_PASSWORD:-admin1234}}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-${MINIO_ROOT_USER:-admin}}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-${MINIO_ROOT_PASSWORD:-admin1234}}
       MINIO_SUBNET_LICENSE: ${MINIO_SUBNET_LICENSE:-}
     volumes:
       - ./scripts/minio-init.sh:/minio-init.sh:ro

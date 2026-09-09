@@ -1,8 +1,11 @@
 #!/bin/sh
 set -e
 
+USER="${MINIO_ACCESS_KEY:-${MINIO_ROOT_USER:-admin}}"
+PASS="${MINIO_SECRET_KEY:-${MINIO_ROOT_PASSWORD:-admin1234}}"
+
 echo "Waiting for MinIO AIStor server at http://minio:9000..."
-until /usr/bin/mc alias set myminio http://minio:9000 "${MINIO_ROOT_USER:-admin}" "${MINIO_ROOT_PASSWORD:-admin1234}"; do
+until /usr/bin/mc alias set myminio http://minio:9000 "$USER" "$PASS"; do
   echo "MinIO server not ready yet, retrying in 2 seconds..."
   sleep 2
 done
