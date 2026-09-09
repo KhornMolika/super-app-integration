@@ -1,5 +1,6 @@
 import {
   Controller,
+  Get,
   Post,
   UseInterceptors,
   UploadedFile,
@@ -14,6 +15,25 @@ import { StorageService } from './storage.service';
 @Controller('storage')
 export class StorageController {
   constructor(private readonly storageService: StorageService) {}
+
+  @Get('license-status')
+  getLicenseStatus() {
+    return this.storageService.getLicenseStatus();
+  }
+
+  @Post('update-license')
+  @HttpCode(HttpStatus.OK)
+  updateLicense(@Body() body: { licenseKey: string }) {
+    if (!body || typeof body.licenseKey !== 'string') {
+      throw new BadRequestException('License key string is required');
+    }
+    const status = this.storageService.setAistorLicense(body.licenseKey);
+    return {
+      success: true,
+      message: 'MinIO AIStor license key updated successfully',
+      ...status,
+    };
+  }
 
   @Post('upload')
   @HttpCode(HttpStatus.OK)

@@ -39,6 +39,12 @@ export class StorageService implements OnModuleInit {
       .get<string>('MINIO_PUBLIC_URL', `http://${endPoint}:${port}`)
       .replace(/\/$/, '');
 
+    this.aistorLicenseKey =
+      this.configService.get<string>('MINIO_AISTOR_LICENSE') ||
+      this.configService.get<string>('MINIO_SUBNET_LICENSE') ||
+      this.configService.get<string>('MINIO_LICENSE') ||
+      '';
+
     this.minioClient = new MinioClient({
       endPoint,
       port,
@@ -46,6 +52,27 @@ export class StorageService implements OnModuleInit {
       accessKey,
       secretKey,
     });
+  }
+
+  private aistorLicenseKey: string;
+
+  getLicenseStatus() {
+    const hasLicense = Boolean(this.aistorLicenseKey && this.aistorLicenseKey.trim());
+    return {
+      configured: hasLicense,
+      maskedKey: hasLicense
+        ? `${this.aistorLicenseKey.substring(0, 6)}...${this.aistorLicenseKey.substring(Math.max(0, this.aistorLicenseKey.length - 4))}`
+        : null,
+      licenseType: hasLicense ? 'MinIO AIStor Enterprise' : 'Community / Free Edition',
+      endpoint: `${this.configService.get<string>('MINIO_ENDPOINT', 'localhost')}:${this.configService.get<string>('MINIO_PORT', '9000')}`,
+      bucket: this.bucketName,
+    };
+  }
+
+  setAistorLicense(licenseKey: string) {
+    this.aistorLicenseKey = (licenseKey || '').trim();
+    this.logger.log('MinIO AIStor license key updated successfully.');
+    return this.getLicenseStatus();
   }
 
   async onModuleInit() {
