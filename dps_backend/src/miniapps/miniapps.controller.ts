@@ -327,8 +327,12 @@ export class MiniappsController {
 
   @Post(':id/rescan')
   @RequirePermissions('miniapp:update')
-  rescan(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
-    return this.miniappService.rescan(id, req.user?.sub);
+  rescan(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: { securityChecks?: string[] },
+    @Req() req: any,
+  ) {
+    return this.miniappService.rescan(id, req.user?.sub, body?.securityChecks);
   }
 
   @Post(':id/cancel-validation')

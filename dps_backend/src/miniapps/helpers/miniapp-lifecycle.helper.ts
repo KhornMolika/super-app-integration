@@ -5,7 +5,11 @@ import { MiniApp } from '../entities/miniapp.entity';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { MailService } from '../../mail/mail.service';
 import { JenkinsService } from '../../integrations/jenkins/jenkins.service';
-import { LocalSecurityScannerService } from '../../integrations/validation/local-security-scanner.service';
+import {
+  LocalSecurityScannerService,
+  buildDynamicValidationStages,
+  getDefaultChecksForMethod,
+} from '../../integrations/validation/local-security-scanner.service';
 
 @Injectable()
 export class MiniappLifecycleHelper {
@@ -45,32 +49,10 @@ export class MiniappLifecycleHelper {
       app.integrationMethod === 'WEBVIEW' &&
       app.integrationConfig?.productionUrl
     ) {
-      const initialStages = {
-        ssrf: {
-          id: 'ssrf',
-          name: '1. Pre-Flight & SSRF Defense',
-          status: 'RUNNING',
-          details: 'Resolving DNS & verifying IP routes...',
-        },
-        tls: {
-          id: 'tls',
-          name: '2. TLS & HTTPS Security',
-          status: 'PENDING',
-          details: 'Awaiting cipher suite verification...',
-        },
-        zap: {
-          id: 'zap',
-          name: '3. OWASP ZAP DAST Scan',
-          status: 'PENDING',
-          details: 'Awaiting XSS & CSP header audit...',
-        },
-        nuclei: {
-          id: 'nuclei',
-          name: '4. Exposure & Vulnerability Audit',
-          status: 'PENDING',
-          details: 'Awaiting CVE & endpoint check...',
-        },
-      };
+      const initialStages = buildDynamicValidationStages(
+        'WEBVIEW',
+        app.securityChecks,
+      );
       app.validationStages = initialStages;
       app.status = 'SUBMITTED';
       app.validationStatus = 'RUNNING';
@@ -91,7 +73,7 @@ export class MiniappLifecycleHelper {
           targetUrl: app.integrationConfig.productionUrl,
           allowedDomains,
           allowLocal,
-          checks: app.securityChecks || [],
+          checks: app.securityChecks || getDefaultChecksForMethod('WEBVIEW'),
         })
         .then(async (res) => {
           if (!res?.success) {
@@ -99,7 +81,7 @@ export class MiniappLifecycleHelper {
             this.logger.warn(
               `Jenkins unavailable (${reason}). Falling back to local security scanner.`,
             );
-            await this.localSecurityScannerService.scanWebView(id, { fallbackReason: reason });
+            await this.localSecurityScannerService.scanWebView(id, { fallbackReason: reason, securityChecks: app.securityChecks });
           }
         })
         .catch(async (err) => {
@@ -107,41 +89,13 @@ export class MiniappLifecycleHelper {
           this.logger.error(
             `${reason}. Falling back to local security scanner.`,
           );
-          await this.localSecurityScannerService.scanWebView(id, { fallbackReason: reason });
+          await this.localSecurityScannerService.scanWebView(id, { fallbackReason: reason, securityChecks: app.securityChecks });
         });
     } else if (app.integrationMethod === 'FLUTTER_PACKAGE') {
-      const initialStages = {
-        ingest: {
-          id: 'ingest',
-          name: '1. Ingestion & Integrity Verification',
-          status: 'RUNNING',
-          details: 'Unpacking source & verifying cryptographic checksum...',
-        },
-        secrets: {
-          id: 'secrets',
-          name: '2. Secret & Credential Leak Detection',
-          status: 'PENDING',
-          details: 'Awaiting Gitleaks secret scan...',
-        },
-        malware_sast: {
-          id: 'malware_sast',
-          name: '3. Malware & Static Code Analysis (SAST)',
-          status: 'PENDING',
-          details: 'Awaiting Dart analyzer & code safety audit...',
-        },
-        sca: {
-          id: 'sca',
-          name: '4. Software Composition Analysis (SCA)',
-          status: 'PENDING',
-          details: 'Awaiting dependency CVE scan...',
-        },
-        capability_gate: {
-          id: 'capability_gate',
-          name: '5. Host Capability Gatekeeper Audit',
-          status: 'PENDING',
-          details: 'Awaiting Super App capability compliance check...',
-        },
-      };
+      const initialStages = buildDynamicValidationStages(
+        'FLUTTER_PACKAGE',
+        app.securityChecks,
+      );
       app.validationStages = initialStages;
       app.status = 'SUBMITTED';
       app.validationStatus = 'RUNNING';
@@ -239,42 +193,25 @@ export class MiniappLifecycleHelper {
       oldVal?: any,
       newVal?: any,
     ) => Promise<void>,
+    customChecks?: string[],
   ) {
     const id = app.id;
 
+    if (customChecks && customChecks.length > 0) {
+      app.securityChecks = customChecks;
+      await this.miniappRepository.save(app);
+    }
+
+    const activeChecks =
+      app.securityChecks && app.securityChecks.length > 0
+        ? app.securityChecks
+        : getDefaultChecksForMethod(app.integrationMethod);
+
     if (app.integrationMethod === 'FLUTTER_PACKAGE') {
-      const initialStages = {
-        ingest: {
-          id: 'ingest',
-          name: '1. Ingestion & Integrity Verification',
-          status: 'RUNNING',
-          details: 'Unpacking source & verifying cryptographic checksum...',
-        },
-        secrets: {
-          id: 'secrets',
-          name: '2. Secret & Credential Leak Detection',
-          status: 'PENDING',
-          details: 'Awaiting Gitleaks secret scan...',
-        },
-        malware_sast: {
-          id: 'malware_sast',
-          name: '3. Malware & Static Code Analysis (SAST)',
-          status: 'PENDING',
-          details: 'Awaiting Dart analyzer & code safety audit...',
-        },
-        sca: {
-          id: 'sca',
-          name: '4. Software Composition Analysis (SCA)',
-          status: 'PENDING',
-          details: 'Awaiting dependency CVE scan...',
-        },
-        capability_gate: {
-          id: 'capability_gate',
-          name: '5. Host Capability Gatekeeper Audit',
-          status: 'PENDING',
-          details: 'Awaiting Super App capability compliance check...',
-        },
-      };
+      const initialStages = buildDynamicValidationStages(
+        'FLUTTER_PACKAGE',
+        activeChecks,
+      );
 
       app.validationStages = initialStages;
       app.validationStatus = 'RUNNING';
@@ -338,6 +275,7 @@ export class MiniappLifecycleHelper {
 
         this.localSecurityScannerService.scanFlutterPackage(id, {
           fallbackReason: failureReason,
+          securityChecks: activeChecks,
         });
 
         await this.notificationsService.createNotification(
@@ -404,32 +342,10 @@ export class MiniappLifecycleHelper {
       );
     }
 
-    const initialStages = {
-      ssrf: {
-        id: 'ssrf',
-        name: '1. Pre-Flight & SSRF Defense',
-        status: 'RUNNING',
-        details: 'Resolving DNS & verifying IP routes...',
-      },
-      tls: {
-        id: 'tls',
-        name: '2. TLS & HTTPS Security',
-        status: 'PENDING',
-        details: 'Awaiting cipher suite verification...',
-      },
-      zap: {
-        id: 'zap',
-        name: '3. OWASP ZAP DAST Scan',
-        status: 'PENDING',
-        details: 'Awaiting XSS & CSP header audit...',
-      },
-      nuclei: {
-        id: 'nuclei',
-        name: '4. Exposure & Vulnerability Audit',
-        status: 'PENDING',
-        details: 'Awaiting CVE & endpoint check...',
-      },
-    };
+    const initialStages = buildDynamicValidationStages(
+      'WEBVIEW',
+      activeChecks,
+    );
 
     app.validationStages = initialStages;
     app.validationStatus = 'RUNNING';
@@ -450,7 +366,7 @@ export class MiniappLifecycleHelper {
         targetUrl,
         allowedDomains,
         allowLocal,
-        checks: app.securityChecks || [],
+        checks: activeChecks,
       })
       .catch((err) => ({
         success: false,
@@ -465,6 +381,7 @@ export class MiniappLifecycleHelper {
 
       this.localSecurityScannerService.scanWebView(id, {
         fallbackReason: failureReason,
+        securityChecks: activeChecks,
       });
 
       await this.notificationsService.createNotification(

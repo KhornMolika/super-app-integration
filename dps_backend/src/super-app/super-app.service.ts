@@ -15,24 +15,51 @@ export class SuperAppService implements OnApplicationBootstrap {
   }
 
   private async seedInitialCapabilities() {
-    const version = '2.0.0';
-    const count = await this.superAppCapabilityRepository.count({
-      where: { superAppVersion: version },
-    });
-    if (count > 0) return;
-
-    const initialCapabilities = [
-      'camera',
-      'location',
-      'storage',
-      'microphone',
-      'biometrics',
+    const versions = [
+      {
+        version: 'v2.4.0',
+        platform: 'ALL',
+        capabilities: [
+          'camera',
+          'location',
+          'biometrics',
+          'microphone',
+          'nfc',
+          'bluetooth',
+          'contacts',
+          'storage',
+        ],
+      },
+      {
+        version: 'v2.0.0',
+        platform: 'ALL',
+        capabilities: [
+          'camera',
+          'location',
+          'storage',
+          'microphone',
+          'biometrics',
+        ],
+      },
     ];
 
-    await this.superAppCapabilityRepository.save({
-      superAppVersion: version,
-      platform: 'ALL',
-      capabilities: initialCapabilities,
+    for (const item of versions) {
+      const exists = await this.superAppCapabilityRepository.findOne({
+        where: { superAppVersion: item.version },
+      });
+      if (!exists) {
+        await this.superAppCapabilityRepository.save({
+          superAppVersion: item.version,
+          platform: item.platform,
+          capabilities: item.capabilities,
+        });
+      }
+    }
+  }
+
+  async findAllCapabilities(): Promise<SuperAppCapability[]> {
+    return this.superAppCapabilityRepository.find({
+      order: { createdAt: 'DESC' },
     });
   }
 
@@ -50,5 +77,40 @@ export class SuperAppService implements OnApplicationBootstrap {
       take: 1,
     });
     return list[0] || null;
+  }
+
+  async getEcosystemStatus(): Promise<any> {
+    const latest = await this.findLatestCapability();
+    const capabilities = latest ? latest.capabilities : [
+      'camera',
+      'location',
+      'biometrics',
+      'microphone',
+      'nfc',
+      'bluetooth',
+      'contacts',
+      'storage',
+    ];
+
+    return {
+      superAppVersion: latest?.superAppVersion || 'v2.4.0',
+      kernelStatus: 'OPERATIONAL',
+      bridgeProtocolVersion: '2.0.0',
+      securityGateEnforcement: 'STRICT',
+      supportedPlatforms: ['iOS 15+', 'Android 10+', 'Flutter Web 3.x'],
+      activeSecurityChecks: [
+        'domain_tls_audit',
+        'csp_headers_audit',
+        'dast_zap',
+        'secret_scan',
+        'sast',
+        'dependency_scan',
+        'capability_gate',
+        'sbom',
+      ],
+      capabilities,
+      storageEngine: 'MinIO AIStor Enterprise S3',
+      containerSandbox: 'Wasm / Iframe Web Sandbox & Dart AST Isolate Sandbox',
+    };
   }
 }

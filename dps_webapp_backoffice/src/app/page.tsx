@@ -1,11 +1,9 @@
 "use client";
-import { API_URL } from '@/lib/config';
 
+import { API_URL } from '@/lib/config';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { useEffect, useState } from 'react';
-
-
 
 export default function Dashboard() {
   const { can } = useAuth();
@@ -13,31 +11,35 @@ export default function Dashboard() {
     totalMiniApps: 0,
     pendingReviews: 0,
     supportedPermissions: 0,
-    superAppVersion: 'v2.4.0', // Still hardcoded as there's no endpoint for this yet
+    superAppVersion: 'v2.4.0',
   });
 
   useEffect(() => {
     async function fetchMetrics() {
       try {
-        const [miniAppsRes, proposalsRes, permissionsRes] = await Promise.all([
+        const [miniAppsRes, proposalsRes, permissionsRes, ecosystemRes] = await Promise.all([
           fetch(`${API_URL}/mini-apps`).catch(() => null),
           fetch(`${API_URL}/permission-proposals`).catch(() => null),
           fetch(`${API_URL}/permissions`).catch(() => null),
+          fetch(`${API_URL}/super-app/ecosystem-status`).catch(() => null),
         ]);
 
-        const [miniApps, proposals, permissions] = await Promise.all([
+        const [miniApps, proposals, permissions, ecosystem] = await Promise.all([
           miniAppsRes?.ok ? miniAppsRes.json() : [],
           proposalsRes?.ok ? proposalsRes.json() : [],
           permissionsRes?.ok ? permissionsRes.json() : [],
+          ecosystemRes?.ok ? ecosystemRes.json() : null,
         ]);
 
-        const pendingProposals = proposals.filter((p: any) => p.status === 'PENDING_REVIEW' || p.status === 'Pending').length;
+        const pendingProposals = Array.isArray(proposals)
+          ? proposals.filter((p: any) => p.status === 'PENDING_REVIEW' || p.status === 'Pending').length
+          : 0;
 
         setMetrics({
-          totalMiniApps: miniApps.length || 0,
-          pendingReviews: pendingProposals || 0,
-          supportedPermissions: permissions.length || 0,
-          superAppVersion: 'v2.4.0',
+          totalMiniApps: Array.isArray(miniApps) ? miniApps.length : 0,
+          pendingReviews: pendingProposals,
+          supportedPermissions: Array.isArray(permissions) ? permissions.length : 0,
+          superAppVersion: ecosystem?.superAppVersion || 'v2.4.0',
         });
       } catch (e) {
         console.error('Failed to fetch metrics', e);
@@ -112,7 +114,6 @@ export default function Dashboard() {
           </Link>
         )}
       </div>
-
     </div>
   );
 }

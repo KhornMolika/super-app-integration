@@ -363,7 +363,7 @@ export class MiniappsService {
     );
   }
 
-  async rescan(id: string, actorId = 'system') {
+  async rescan(id: string, actorId = 'system', customChecks?: string[]) {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
     return this.lifecycleHelper.rescan(
@@ -371,6 +371,7 @@ export class MiniappsService {
       actorId,
       (mId, aId, aType, t, d, aAction, oVal, nVal) =>
         this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal),
+      customChecks,
     );
   }
 

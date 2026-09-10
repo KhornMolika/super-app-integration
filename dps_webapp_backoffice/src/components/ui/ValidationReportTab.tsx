@@ -1,20 +1,180 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { io } from 'socket.io-client';
 import { Button } from '@/components/ui/inputs';
 import { Card, CardHeader } from '@/components/ui/card';
 import { API_URL } from '@/lib/config';
+import SecurityValidationSelector, { ALL_SECURITY_CHECKS, getRecommendedChecksForMethod } from '@/components/forms/SecurityValidationSelector';
 
 export interface ValidationReportProps {
   miniApp: any;
   onRefresh?: () => void;
 }
 
+interface StageCatalogItem {
+  id: string;
+  name: string;
+  tool: string;
+  icon: string;
+  defaultTitle: string;
+  description: string;
+}
+
+const STAGE_CATALOG: Record<string, StageCatalogItem> = {
+  ingest: {
+    id: 'ingest',
+    name: 'Ingestion & Integrity Verification',
+    tool: 'Cryptographic SHA-256 Digest',
+    icon: '📦',
+    defaultTitle: 'Source Unpack & SHA-256 Digest',
+    description: 'Unpacks package source and verifies cryptographic checksum and manifest structure.',
+  },
+  ssrf: {
+    id: 'ssrf',
+    name: 'Pre-Flight & SSRF Defense',
+    tool: 'DNS / IP Routing Filter',
+    icon: '🌐',
+    defaultTitle: 'DNS & IP Routing Audit',
+    description: 'Resolves DNS and verifies routing to prevent server-side request forgery.',
+  },
+  dependency_scan: {
+    id: 'dependency_scan',
+    name: 'Dependency Vulnerability Scan (SCA / CVE)',
+    tool: 'Trivy / OSV Audit',
+    icon: '📦',
+    defaultTitle: 'Dependency Vulnerability (CVE) Audit',
+    description: 'Scans third-party packages and dependencies for known CVE vulnerabilities.',
+  },
+  secret_scan: {
+    id: 'secret_scan',
+    name: 'Secret & API Key Leak Detection',
+    tool: 'Gitleaks / TruffleHog',
+    icon: '🔑',
+    defaultTitle: 'Gitleaks & API Key Scan',
+    description: 'Detects exposed private keys, JWT secrets, and hardcoded API tokens.',
+  },
+  sast: {
+    id: 'sast',
+    name: 'Static Application Security Testing (SAST)',
+    tool: 'Semgrep / SonarQube / AST Guard',
+    icon: '🛡️',
+    defaultTitle: 'Dart AST & Sandbox Guard',
+    description: 'Analyzes source code for security flaws, unsafe memory operations, and prohibited native calls.',
+  },
+  sbom: {
+    id: 'sbom',
+    name: 'Software Bill of Materials (SBOM)',
+    tool: 'Syft / CycloneDX',
+    icon: '📋',
+    defaultTitle: 'CycloneDX & SPDX Manifest Generation',
+    description: 'Generates cryptographic CycloneDX & SPDX SBOM manifests of all dependencies.',
+  },
+  domain_tls_audit: {
+    id: 'domain_tls_audit',
+    name: 'Domain TLS/SSL & Transport Security',
+    tool: 'testssl.sh / SSL Labs',
+    icon: '🔒',
+    defaultTitle: 'SSL/TLS Cipher Suite Audit',
+    description: 'Audits TLS 1.2/1.3 cipher suites, HTTPS certificates, HSTS headers, and SSRF routing.',
+  },
+  csp_headers_audit: {
+    id: 'csp_headers_audit',
+    name: 'Security Headers & CSP Audit',
+    tool: 'SecurityHeaders / ZAP Audit',
+    icon: '🛡️',
+    defaultTitle: 'Security Headers & CSP Audit',
+    description: 'Verifies Content-Security-Policy, X-Frame-Options, CORS origins, and cookie security flags.',
+  },
+  dast_zap: {
+    id: 'dast_zap',
+    name: 'Dynamic Application Security Scan (DAST)',
+    tool: 'OWASP ZAP DAST',
+    icon: '⚡',
+    defaultTitle: 'DAST, XSS & CSP Audit',
+    description: 'Dynamic probing for cross-site scripting (XSS), CSRF, and sensitive endpoint exposure.',
+  },
+  malware_scan: {
+    id: 'malware_scan',
+    name: 'Malware & Binary Signature Scan',
+    tool: 'ClamAV / YARA',
+    icon: '🦠',
+    defaultTitle: 'Malware & Binary Signature Heuristics',
+    description: 'Deep signature inspection of compiled binaries and assets for malicious payloads.',
+  },
+  license_compliance: {
+    id: 'license_compliance',
+    name: 'Open Source License Compliance',
+    tool: 'FOSSA / License-Checker',
+    icon: '📜',
+    defaultTitle: 'License IP & Copyleft Compliance',
+    description: 'Verifies dependency licenses against platform IP guidelines and copyleft restrictions.',
+  },
+  capability_gate: {
+    id: 'capability_gate',
+    name: 'Host Capability Gatekeeper Audit',
+    tool: 'Super App Gatekeeper',
+    icon: '🚪',
+    defaultTitle: 'Super App Capability Boundary Verification',
+    description: 'Verifies declared host capabilities against platform policies and app store guidelines.',
+  },
+  // Legacy aliases for backward compatibility with old reports
+  secrets: {
+    id: 'secrets',
+    name: 'Secret & API Key Leak Detection',
+    tool: 'Gitleaks / TruffleHog',
+    icon: '🔑',
+    defaultTitle: 'Gitleaks & API Key Scan',
+    description: 'Detects exposed private keys, JWT secrets, and hardcoded API tokens.',
+  },
+  malware_sast: {
+    id: 'malware_sast',
+    name: 'Malware & Static Code Analysis (SAST)',
+    tool: 'Dart AST & Sandbox Guard',
+    icon: '🛡️',
+    defaultTitle: 'Dart AST & Sandbox Guard',
+    description: 'Analyzes source code for security flaws and prohibited native calls.',
+  },
+  sca: {
+    id: 'sca',
+    name: 'Software Composition Analysis (SCA)',
+    tool: 'Dependency Vulnerability (CVE) Audit',
+    icon: '🔍',
+    defaultTitle: 'Dependency Vulnerability (CVE) Audit',
+    description: 'Scans third-party packages for known CVE vulnerabilities.',
+  },
+  tls: {
+    id: 'tls',
+    name: 'TLS & HTTPS Security',
+    tool: 'SSL/TLS Cipher Suite Audit',
+    icon: '🔒',
+    defaultTitle: 'SSL/TLS Cipher Suite Audit',
+    description: 'Audits TLS 1.2/1.3 cipher suites and HTTPS encryption.',
+  },
+  zap: {
+    id: 'zap',
+    name: 'OWASP ZAP DAST Scan',
+    tool: 'OWASP ZAP DAST',
+    icon: '⚡',
+    defaultTitle: 'DAST, XSS & CSP Audit',
+    description: 'Dynamic probing for cross-site scripting and security headers.',
+  },
+  nuclei: {
+    id: 'nuclei',
+    name: 'Exposure & Vulnerability Audit',
+    tool: 'Secret & CVE Exposure Check',
+    icon: '🔍',
+    defaultTitle: 'Secret & CVE Exposure Check',
+    description: 'Probes for exposed endpoints, secrets, and CVE vulnerabilities.',
+  },
+};
+
 export default function ValidationReportTab({ miniApp, onRefresh }: ValidationReportProps) {
   const [isReScanning, setIsReScanning] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [reScanMessage, setReScanMessage] = useState<string | null>(null);
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [configuredChecks, setConfiguredChecks] = useState<string[]>(miniApp.securityChecks || []);
 
   const report = miniApp.validationReport || null;
   const stages = miniApp.validationStages || {};
@@ -22,6 +182,14 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
   const findings = report?.findings || [];
   const score = report?.score ?? (miniApp.validationStatus === 'PASSED' ? 100 : miniApp.validationStatus === 'FAILED' ? 45 : null);
   const valStatus = (miniApp.validationStatus || 'PENDING').toUpperCase();
+  const isFlutterPackage = miniApp.integrationMethod === 'FLUTTER_PACKAGE';
+
+  // Keep configured checks synced with miniApp prop
+  useEffect(() => {
+    if (miniApp.securityChecks && Array.isArray(miniApp.securityChecks)) {
+      setConfiguredChecks(miniApp.securityChecks);
+    }
+  }, [miniApp.securityChecks]);
 
   // Combine findings from report & database issues
   const allFindings: Array<{
@@ -33,93 +201,84 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
   }> = [...findings];
 
   issues.forEach((iss: any) => {
-    if (!allFindings.some(f => f.id === iss.metadata?.findingId || f.description === iss.description)) {
+    if (!allFindings.some((f) => f.id === iss.metadata?.findingId || f.description === iss.description)) {
       allFindings.push({
         id: iss.metadata?.findingId || iss.type || 'ISSUE',
         severity: iss.severity || 'HIGH',
         title: iss.classification || iss.type || 'Platform Issue',
         description: iss.description || '',
-        recommendation: iss.metadata?.recommendation || 'Remediate this finding in accordance with Super App security policies.'
+        recommendation: iss.metadata?.recommendation || 'Remediate this finding in accordance with Super App security policies.',
       });
     }
   });
 
-  const isFlutterPackage = miniApp.integrationMethod === 'FLUTTER_PACKAGE';
+  // Dynamically resolve active validation stages
+  const activeStages = useMemo(() => {
+    const rawStageKeys = Object.keys(stages);
+    let stageKeyOrder: string[] = [];
 
-  const defaultStages = isFlutterPackage
-    ? [
-        {
-          id: 'ingest',
-          name: '1. Ingestion & Integrity Verification',
-          defaultTitle: 'Source Unpack & SHA-256 Digest',
-          icon: '📦'
-        },
-        {
-          id: 'secrets',
-          name: '2. Secret & Credential Leak Detection',
-          defaultTitle: 'Gitleaks & API Key Scan',
-          icon: '🔑'
-        },
-        {
-          id: 'malware_sast',
-          name: '3. Malware & Static Code Analysis (SAST)',
-          defaultTitle: 'Dart AST & Sandbox Guard',
-          icon: '🛡️'
-        },
-        {
-          id: 'sca',
-          name: '4. Software Composition Analysis (SCA)',
-          defaultTitle: 'Dependency Vulnerability (CVE) Audit',
-          icon: '🔍'
-        },
-        {
-          id: 'capability_gate',
-          name: '5. Host Capability Gatekeeper Audit',
-          defaultTitle: 'Super App Capability Boundary Verification',
-          icon: '🚪'
+    if (rawStageKeys.length > 0) {
+      stageKeyOrder = rawStageKeys;
+    } else {
+      const userSelected = miniApp.securityChecks && miniApp.securityChecks.length > 0
+        ? miniApp.securityChecks
+        : getRecommendedChecksForMethod(miniApp.integrationMethod);
+
+      if (isFlutterPackage) {
+        stageKeyOrder = ['ingest', ...userSelected];
+        if (!stageKeyOrder.includes('capability_gate')) {
+          stageKeyOrder.push('capability_gate');
         }
-      ]
-    : [
-        {
-          id: 'ssrf',
-          name: '1. Pre-Flight & SSRF Defense',
-          defaultTitle: 'DNS & IP Routing Audit',
-          icon: '🌐'
-        },
-        {
-          id: 'tls',
-          name: '2. TLS & HTTPS Security',
-          defaultTitle: 'SSL/TLS Cipher Suite Audit',
-          icon: '🔒'
-        },
-        {
-          id: 'zap',
-          name: '3. OWASP ZAP DAST Scan',
-          defaultTitle: 'DAST, XSS & CSP Audit',
-          icon: '⚡'
-        },
-        {
-          id: 'nuclei',
-          name: '4. Exposure & Vulnerability Audit',
-          defaultTitle: 'Secret & CVE Exposure Check',
-          icon: '🔍'
-        }
-      ];
+      } else {
+        stageKeyOrder = ['ssrf', ...userSelected];
+      }
+      stageKeyOrder = Array.from(new Set(stageKeyOrder));
+    }
+
+    return stageKeyOrder.map((key, idx) => {
+      const meta = STAGE_CATALOG[key] || {
+        id: key,
+        name: key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+        tool: 'Security Engine',
+        icon: '🔍',
+        defaultTitle: 'Security Audit Check',
+        description: 'Automated platform security audit.',
+      };
+
+      const recorded = stages[key] || null;
+      return {
+        id: key,
+        index: idx + 1,
+        name: recorded?.name || `${idx + 1}. ${meta.name.replace(/^\d+\.\s*/, '')}`,
+        defaultTitle: meta.defaultTitle,
+        icon: recorded?.icon || meta.icon,
+        tool: recorded?.tool || meta.tool,
+        description: meta.description,
+        recorded,
+      };
+    });
+  }, [stages, miniApp.securityChecks, miniApp.integrationMethod, isFlutterPackage]);
 
   const jenkinsJobUrl = isFlutterPackage
     ? 'http://localhost:8085/job/package-validation/'
     : 'http://localhost:8085/job/webview-validation/';
 
-  const handleReScan = async () => {
+  const handleReScan = async (checksToRun?: string[]) => {
     setIsReScanning(true);
+    setShowConfigModal(false);
     setReScanMessage('Initiating security scan...');
     try {
+      const payload = checksToRun && checksToRun.length > 0 ? { securityChecks: checksToRun } : {};
       let res = await fetch(`/api/mini-apps/${miniApp.id}/rescan`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
       if (!res.ok && res.status === 404) {
         res = await fetch(`${API_URL}/mini-apps/${miniApp.id}/rescan`, {
           method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
         });
       }
 
@@ -222,6 +381,23 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
         : 'Flutter Package Ingestion')
     : (miniApp.integrationConfig?.productionUrl || miniApp.integrationConfigWebView?.productionUrl || 'N/A');
 
+  // Selected Security Checks list for profile badges
+  const activeProfileChecks = useMemo(() => {
+    const checks = miniApp.securityChecks && miniApp.securityChecks.length > 0
+      ? miniApp.securityChecks
+      : getRecommendedChecksForMethod(miniApp.integrationMethod);
+
+    return checks.map((cId: string) => {
+      const checkMeta = ALL_SECURITY_CHECKS.find((c) => c.id === cId) || STAGE_CATALOG[cId];
+      return {
+        id: cId,
+        name: checkMeta?.name || cId,
+        tool: checkMeta?.tool || 'Security Engine',
+        icon: STAGE_CATALOG[cId]?.icon || '🛡️',
+      };
+    });
+  }, [miniApp.securityChecks, miniApp.integrationMethod]);
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Executive Security Summary Card */}
@@ -289,10 +465,24 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
                 <span>{isCancelling ? 'Stopping...' : 'Stop / Reset Scan'}</span>
               </Button>
             )}
+
             <Button
               type="button"
               variant="outline"
-              onClick={handleReScan}
+              onClick={() => setShowConfigModal(true)}
+              disabled={isReScanning || isCancelling}
+              className="flex items-center gap-1.5 text-sm font-semibold h-10 px-3.5"
+            >
+              <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+              </svg>
+              <span>Configure Checks</span>
+            </Button>
+
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => handleReScan()}
               disabled={isReScanning || isCancelling}
               className="flex items-center gap-2 text-sm font-semibold h-10 px-4"
             >
@@ -304,140 +494,87 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
           </div>
         </div>
 
-        {/* Security Controls Overview Cards */}
-        {isFlutterPackage ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-            <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/30">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-base font-semibold text-slate-800 dark:text-slate-200">Ingest & Checksum</span>
-                {report?.checks?.ingest?.passed ? (
-                  <span className="text-emerald-600 font-bold text-xs sm:text-sm bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded">PASSED</span>
-                ) : valStatus === 'RUNNING' ? (
-                  <span className="text-brand-600 text-xs sm:text-sm font-bold animate-pulse">CHECKING...</span>
-                ) : (
-                  <span className="text-rose-600 font-bold text-xs sm:text-sm bg-rose-50 dark:bg-rose-950/40 px-2.5 py-0.5 rounded">FAILED</span>
-                )}
-              </div>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                {report?.checks?.ingest?.details || (valStatus === 'FAILED' ? 'Archive digest verification failed.' : 'SHA-256 digest & structure verified.')}
-              </p>
-            </div>
-
-            <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/30">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-base font-semibold text-slate-800 dark:text-slate-200">Secrets (Gitleaks)</span>
-                {report?.checks?.secrets?.passed ? (
-                  <span className="text-emerald-600 font-bold text-xs sm:text-sm bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded">PASSED</span>
-                ) : valStatus === 'RUNNING' ? (
-                  <span className="text-brand-600 text-xs sm:text-sm font-bold animate-pulse">CHECKING...</span>
-                ) : (
-                  <span className="text-rose-600 font-bold text-xs sm:text-sm bg-rose-50 dark:bg-rose-950/40 px-2.5 py-0.5 rounded">FAILED</span>
-                )}
-              </div>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                {report?.checks?.secrets?.details || (valStatus === 'FAILED' ? 'Awaiting Gitleaks secret scan.' : 'No hardcoded API keys, JWTs, or private keys.')}
-              </p>
-            </div>
-
-            <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/30">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-base font-semibold text-slate-800 dark:text-slate-200">SAST & Sandbox</span>
-                {report?.checks?.sast?.passed ? (
-                  <span className="text-emerald-600 font-bold text-xs sm:text-sm bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded">PASSED</span>
-                ) : valStatus === 'RUNNING' ? (
-                  <span className="text-brand-600 text-xs sm:text-sm font-bold animate-pulse">CHECKING...</span>
-                ) : (
-                  <span className="text-rose-600 font-bold text-xs sm:text-sm bg-rose-50 dark:bg-rose-950/40 px-2.5 py-0.5 rounded">FAILED</span>
-                )}
-              </div>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                {report?.checks?.sast?.details || (valStatus === 'FAILED' ? 'Awaiting AST & code analysis.' : 'No prohibited mirrors, eval, or OS process execution.')}
-              </p>
-            </div>
-
-            <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/30">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-base font-semibold text-slate-800 dark:text-slate-200">Capability Gate</span>
-                {report?.checks?.capability_gate?.passed ? (
-                  <span className="text-emerald-600 font-bold text-xs sm:text-sm bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded">PASSED</span>
-                ) : valStatus === 'RUNNING' ? (
-                  <span className="text-brand-600 text-xs sm:text-sm font-bold animate-pulse">CHECKING...</span>
-                ) : (
-                  <span className="text-rose-600 font-bold text-xs sm:text-sm bg-rose-50 dark:bg-rose-950/40 px-2.5 py-0.5 rounded">FAILED</span>
-                )}
-              </div>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                {report?.checks?.capability_gate?.details || (valStatus === 'FAILED' ? 'Awaiting capability gate check.' : 'Declared plugins comply with host catalog.')}
-              </p>
-            </div>
+        {/* Active Security Profile Tags */}
+        <div className="mt-4 pt-4 border-b border-slate-100 dark:border-slate-800/80">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+              <span>🛡️</span> Active Security Scan Profile ({activeProfileChecks.length} checks enabled)
+            </span>
+            <button
+              onClick={() => setShowConfigModal(true)}
+              className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-semibold"
+            >
+              Edit Checks
+            </button>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-            <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/30">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-base font-semibold text-slate-800 dark:text-slate-200">Network & SSRF</span>
-                {report?.checks?.ssrf?.passed ? (
-                  <span className="text-emerald-600 font-bold text-xs sm:text-sm bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded">PASSED</span>
-                ) : valStatus === 'RUNNING' ? (
-                  <span className="text-brand-600 text-xs sm:text-sm font-bold animate-pulse">CHECKING...</span>
-                ) : (
-                  <span className="text-rose-600 font-bold text-xs sm:text-sm bg-rose-50 dark:bg-rose-950/40 px-2.5 py-0.5 rounded">FAILED</span>
-                )}
-              </div>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                {report?.checks?.ssrf?.details || (valStatus === 'FAILED' ? 'Scan interrupted or failed.' : 'Private RFC 1918 & metadata protection verified.')}
-              </p>
-            </div>
-
-            <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/30">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-base font-semibold text-slate-800 dark:text-slate-200">TLS Encryption</span>
-                {report?.checks?.tls?.passed ? (
-                  <span className="text-emerald-600 font-bold text-xs sm:text-sm bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded">PASSED</span>
-                ) : valStatus === 'RUNNING' ? (
-                  <span className="text-brand-600 text-xs sm:text-sm font-bold animate-pulse">CHECKING...</span>
-                ) : (
-                  <span className="text-rose-600 font-bold text-xs sm:text-sm bg-rose-50 dark:bg-rose-950/40 px-2.5 py-0.5 rounded">FAILED</span>
-                )}
-              </div>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                {report?.checks?.tls?.details || (valStatus === 'FAILED' ? 'Awaiting cipher suite verification.' : 'TLS 1.2+ & secure cipher suites enforced.')}
-              </p>
-            </div>
-
-            <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/30">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-base font-semibold text-slate-800 dark:text-slate-200">DAST & CSP (ZAP)</span>
-                {report?.checks?.dast?.passed ? (
-                  <span className="text-emerald-600 font-bold text-xs sm:text-sm bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded">PASSED</span>
-                ) : valStatus === 'RUNNING' ? (
-                  <span className="text-brand-600 text-xs sm:text-sm font-bold animate-pulse">CHECKING...</span>
-                ) : (
-                  <span className="text-rose-600 font-bold text-xs sm:text-sm bg-rose-50 dark:bg-rose-950/40 px-2.5 py-0.5 rounded">FAILED</span>
-                )}
-              </div>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                {report?.checks?.dast?.details || (valStatus === 'FAILED' ? 'Awaiting XSS & CSP header audit.' : 'No high severity cross-site scripting or missing CSP.')}
-              </p>
-            </div>
-
-            <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/30">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-base font-semibold text-slate-800 dark:text-slate-200">Exposure (Nuclei)</span>
-                {report?.checks?.exposure?.passed ? (
-                  <span className="text-emerald-600 font-bold text-xs sm:text-sm bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded">PASSED</span>
-                ) : valStatus === 'RUNNING' ? (
-                  <span className="text-brand-600 text-xs sm:text-sm font-bold animate-pulse">CHECKING...</span>
-                ) : (
-                  <span className="text-rose-600 font-bold text-xs sm:text-sm bg-rose-50 dark:bg-rose-950/40 px-2.5 py-0.5 rounded">FAILED</span>
-                )}
-              </div>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                {report?.checks?.exposure?.details || (valStatus === 'FAILED' ? 'Awaiting CVE & endpoint check.' : 'No sensitive .env, .git, or CVE endpoints exposed.')}
-              </p>
-            </div>
+          <div className="flex flex-wrap gap-2">
+            {activeProfileChecks.map((chk: any) => (
+              <span
+                key={chk.id}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+              >
+                <span>{chk.icon}</span>
+                <span>{chk.name}</span>
+                <span className="text-[10px] text-slate-400 bg-slate-200/60 dark:bg-slate-700/60 px-1.5 py-0.5 rounded">
+                  {chk.tool}
+                </span>
+              </span>
+            ))}
           </div>
-        )}
+        </div>
+
+        {/* Dynamic Security Controls Overview Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-6">
+          {activeStages.map((st) => {
+            const recorded = st.recorded;
+            const checkData = report?.checks?.[st.id] || (st.id === 'sast' ? report?.checks?.malware_sast : null) || (st.id === 'dependency_scan' ? report?.checks?.sca : null) || (st.id === 'dast_zap' ? report?.checks?.dast : null) || (st.id === 'domain_tls_audit' ? report?.checks?.tls : null) || (st.id === 'secret_scan' ? report?.checks?.secrets : null);
+            
+            const isPassed = checkData?.passed === true || recorded?.status === 'COMPLETED';
+            const isRunning = valStatus === 'RUNNING' && (recorded?.status === 'RUNNING' || !recorded);
+            const isFailed = checkData?.passed === false || recorded?.status === 'FAILED' || (valStatus === 'FAILED' && !isPassed);
+
+            return (
+              <div
+                key={st.id}
+                className="p-4 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/30 flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">{st.icon}</span>
+                      <span className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">
+                        {st.name.replace(/^\d+\.\s*/, '')}
+                      </span>
+                    </div>
+                    {isPassed ? (
+                      <span className="text-emerald-600 font-bold text-xs bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">
+                        PASSED
+                      </span>
+                    ) : isRunning ? (
+                      <span className="text-brand-600 text-xs font-bold animate-pulse">
+                        CHECKING...
+                      </span>
+                    ) : isFailed ? (
+                      <span className="text-rose-600 font-bold text-xs bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded">
+                        FAILED
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 font-bold text-xs bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                        PENDING
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                    {recorded?.details || checkData?.details || (valStatus === 'FAILED' && isFailed ? 'Check failed or reported security concerns.' : st.description)}
+                  </p>
+                </div>
+                <div className="mt-3 pt-2 border-t border-slate-200/50 dark:border-slate-800/50 flex items-center justify-between text-[11px] text-slate-400">
+                  <span className="font-mono">{st.tool}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Jenkins Offline Fallback Notice Banner */}
@@ -516,9 +653,8 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
         </p>
 
         <div className="space-y-3">
-          {defaultStages.map((st) => {
-            const recorded = stages[st.id] || null;
-            // If overall validation is FAILED, any running stage should display FAILED
+          {activeStages.map((st) => {
+            const recorded = st.recorded;
             const stageStatus = recorded
               ? (valStatus === 'FAILED' && recorded.status === 'RUNNING' ? 'FAILED' : recorded.status)
               : (valStatus === 'PASSED' ? 'COMPLETED' : 'PENDING');
@@ -542,9 +678,14 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
                 <div className="flex items-start gap-3">
                   <div className="mt-0.5 text-xl">{st.icon}</div>
                   <div>
-                    <h4 className="text-base font-bold text-slate-900 dark:text-white">
-                      {st.name}
-                    </h4>
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-base font-bold text-slate-900 dark:text-white">
+                        {st.name}
+                      </h4>
+                      <span className="text-xs font-mono text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                        {st.tool}
+                      </span>
+                    </div>
                     <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                       {recorded?.details || (valStatus === 'FAILED' && isFailed ? 'Execution failed or scanner encountered an error.' : st.defaultTitle)}
                     </p>
@@ -569,7 +710,6 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
           })}
         </div>
       </Card>
-
 
       {/* Security Findings & Remediation */}
       <Card>
@@ -637,6 +777,69 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
           </div>
         )}
       </Card>
+
+      {/* Security Checks Re-Configuration Modal */}
+      {showConfigModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl flex flex-col">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold text-lg">
+                  🛡️
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                    Re-Configure Security Scan Profile
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Select the automated security audits to run for this Mini App ({miniApp.integrationMethod})
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowConfigModal(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="py-2">
+              <SecurityValidationSelector
+                integrationMethod={miniApp.integrationMethod}
+                selectedChecks={configuredChecks}
+                onChange={setConfiguredChecks}
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-5 border-t border-slate-100 dark:border-slate-800 mt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowConfigModal(false)}
+                className="text-sm px-4"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                disabled={configuredChecks.length === 0}
+                onClick={() => handleReScan(configuredChecks)}
+                className="text-sm px-5 flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Run Custom Scan ({configuredChecks.length} checks)</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
