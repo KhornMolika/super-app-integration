@@ -33,7 +33,7 @@ class LoginView extends GetView<LoginController> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF6366F1).withOpacity(0.4),
+                          color: const Color(0xFF6366F1).withValues(alpha: 0.4),
                           blurRadius: 24,
                           offset: const Offset(0, 8),
                         ),
@@ -81,12 +81,12 @@ class LoginView extends GetView<LoginController> {
                 Container(
                   padding: const EdgeInsets.all(22),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0F172A).withOpacity(0.8),
+                    color: const Color(0xFF0F172A).withValues(alpha: 0.8),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: const Color(0xFF1E293B), width: 1.2),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
+                        color: Colors.black.withValues(alpha: 0.3),
                         blurRadius: 16,
                         offset: const Offset(0, 6),
                       ),
@@ -116,7 +116,7 @@ class LoginView extends GetView<LoginController> {
                           labelStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
                           prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF38BDF8), size: 20),
                           filled: true,
-                          fillColor: const Color(0xFF1E293B).withOpacity(0.6),
+                          fillColor: const Color(0xFF1E293B).withValues(alpha: 0.6),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -140,7 +140,7 @@ class LoginView extends GetView<LoginController> {
                           labelStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
                           prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF38BDF8), size: 20),
                           filled: true,
-                          fillColor: const Color(0xFF1E293B).withOpacity(0.6),
+                          fillColor: const Color(0xFF1E293B).withValues(alpha: 0.6),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -164,7 +164,7 @@ class LoginView extends GetView<LoginController> {
                             backgroundColor: const Color(0xFF2563EB),
                             foregroundColor: Colors.white,
                             elevation: 4,
-                            shadowColor: const Color(0xFF2563EB).withOpacity(0.5),
+                            shadowColor: const Color(0xFF2563EB).withValues(alpha: 0.5),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
