@@ -45,128 +45,103 @@ export class MiniappLifecycleHelper {
     }
 
     const id = app.id;
-    if (
-      app.integrationMethod === 'WEBVIEW' &&
-      app.integrationConfig?.productionUrl
-    ) {
-      const initialStages = buildDynamicValidationStages(
-        'WEBVIEW',
-        app.securityChecks,
-      );
-      app.validationStages = initialStages;
-      app.status = 'SUBMITTED';
-      app.validationStatus = 'RUNNING';
-      await this.miniappRepository.save(app);
+    const method = (app.integrationMethod || 'WEBVIEW') as 'WEBVIEW' | 'FLUTTER_PACKAGE' | 'NATIVE_SDK' | 'DEEP_LINK';
+    const initialStages = buildDynamicValidationStages(
+      method,
+      app.securityChecks,
+    );
+    app.validationStages = initialStages;
+    app.status = 'SUBMITTED';
+    app.validationStatus = 'RUNNING';
+    await this.miniappRepository.save(app);
 
-      const allowedDomains = Array.isArray(app.integrationConfig.allowedDomains)
-        ? app.integrationConfig.allowedDomains
-        : typeof app.integrationConfig.allowedDomains === 'string'
-          ? app.integrationConfig.allowedDomains.split(',')
-          : [];
+    const cfg = app.integrationConfig || {};
+    const envVal = (process.env.ENVIRONMENT || '').toUpperCase();
+    const allowLocal = envVal === 'DEV';
 
-      const envVal = (process.env.ENVIRONMENT || '').toUpperCase();
-      const allowLocal = envVal === 'DEV';
+    const declaredPerms = Array.isArray(app.permissions)
+      ? app.permissions
+          .map((p: any) => (typeof p === 'string' ? p : p.name || p.id))
+          .filter(Boolean)
+      : [];
+    const requiredPerms = Array.isArray(app.permissions)
+      ? app.permissions
+          .filter((p: any) => p.isRequired)
+          .map((p: any) => p.name || p.id)
+          .filter(Boolean)
+      : [];
 
-      this.jenkinsService
-        .triggerWebViewValidation({
-          miniAppId: id,
-          targetUrl: app.integrationConfig.productionUrl,
-          allowedDomains,
-          allowLocal,
-          checks: app.securityChecks || getDefaultChecksForMethod('WEBVIEW'),
-        })
-        .then(async (res) => {
-          if (!res?.success) {
-            const reason = res?.message || 'Jenkins returned an unsuccessful status';
-            this.logger.warn(
-              `Jenkins unavailable (${reason}). Falling back to local security scanner.`,
-            );
-            await this.localSecurityScannerService.scanWebView(id, { fallbackReason: reason, securityChecks: app.securityChecks });
-          }
-        })
-        .catch(async (err) => {
-          const reason = `Jenkins connection failed: ${err.message}`;
-          this.logger.error(
-            `${reason}. Falling back to local security scanner.`,
-          );
-          await this.localSecurityScannerService.scanWebView(id, { fallbackReason: reason, securityChecks: app.securityChecks });
-        });
-    } else if (app.integrationMethod === 'FLUTTER_PACKAGE') {
-      const initialStages = buildDynamicValidationStages(
-        'FLUTTER_PACKAGE',
-        app.securityChecks,
-      );
-      app.validationStages = initialStages;
-      app.status = 'SUBMITTED';
-      app.validationStatus = 'RUNNING';
-      await this.miniappRepository.save(app);
+    const allowedCaps =
+      declaredPerms.length > 0
+        ? declaredPerms
+        : ['camera', 'geolocator', 'local_auth'];
+    const requiredCaps = requiredPerms;
 
-      const cfg = app.integrationConfig || {};
-      const integrationType = cfg.packageStoragePath
-        ? 'ARTIFACT'
-        : 'SOURCE_CODE';
-      const repoUrl =
-        cfg.repoUrl ||
-        (cfg.repoOwner && cfg.repoName
-          ? `https://github.com/${cfg.repoOwner}/${cfg.repoName}`
-          : '');
-      const commitSha = cfg.commitSha || cfg.branch || 'main';
-      const gitProvider = (cfg.provider || 'GITHUB').toUpperCase();
-
-      const declaredPerms = Array.isArray(app.permissions)
-        ? app.permissions
-            .map((p: any) => (typeof p === 'string' ? p : p.name || p.id))
-            .filter(Boolean)
-        : [];
-      const requiredPerms = Array.isArray(app.permissions)
-        ? app.permissions
-            .filter((p: any) => p.isRequired)
-            .map((p: any) => p.name || p.id)
-            .filter(Boolean)
+    const allowedDomains = Array.isArray(cfg.allowedDomains)
+      ? cfg.allowedDomains
+      : typeof cfg.allowedDomains === 'string'
+        ? cfg.allowedDomains.split(',')
         : [];
 
-      const allowedCaps =
-        declaredPerms.length > 0
-          ? declaredPerms
-          : ['camera', 'geolocator', 'local_auth'];
-      const requiredCaps = requiredPerms;
-      const packageName = cfg.packageName || cfg.name || app.name;
-      const packageVersion = cfg.packageVersion || cfg.version || '1.0.0';
+    const integrationType = cfg.packageStoragePath
+      ? 'ARTIFACT'
+      : 'SOURCE_CODE';
+    const repoUrl =
+      cfg.repoUrl ||
+      (cfg.repoOwner && cfg.repoName
+        ? `https://github.com/${cfg.repoOwner}/${cfg.repoName}`
+        : '');
+    const commitSha = cfg.commitSha || cfg.branch || 'main';
+    const gitProvider = (cfg.provider || 'GITHUB').toUpperCase();
+    const packageName = cfg.packageName || cfg.name || app.name;
+    const packageVersion = cfg.packageVersion || cfg.version || '1.0.0';
 
-      this.jenkinsService
-        .triggerPackageValidation({
-          miniAppId: id,
-          packageName,
-          version: packageVersion,
-          integrationType: integrationType,
-          sourceStoragePath: cfg.packageStoragePath || '',
-          repoUrl,
-          commitSha,
-          gitProvider,
-          allowedCapabilities: allowedCaps,
-          requiredCapabilities: requiredCaps,
-          checks: app.securityChecks || getDefaultChecksForMethod('FLUTTER_PACKAGE'),
-        })
-        .then(async (res) => {
-          if (!res?.success) {
-            const reason = res?.message || 'Jenkins returned an unsuccessful status';
-            this.logger.warn(
-              `Jenkins package validation unavailable (${reason}). Falling back to local scanner.`,
-            );
-            await this.localSecurityScannerService.scanFlutterPackage(id, { fallbackReason: reason, securityChecks: app.securityChecks });
-          }
-        })
-        .catch(async (err) => {
-          const reason = `Jenkins connection failed: ${err.message}`;
-          this.logger.error(
-            `${reason}. Falling back to local scanner.`,
+    this.logger.log(
+      `Triggering universal Jenkins validation pipeline for ${method} Mini App ${id}...`,
+    );
+
+    this.jenkinsService
+      .triggerMiniAppValidation({
+        miniAppId: id,
+        integrationMethod: method,
+        targetUrl: cfg.productionUrl || cfg.url,
+        urlScheme: cfg.urlScheme,
+        appStoreUrl: cfg.appStoreUrl,
+        allowedDomains,
+        allowLocal,
+        packageName,
+        version: packageVersion,
+        integrationType,
+        sourceStoragePath: cfg.packageStoragePath || '',
+        repoUrl,
+        commitSha,
+        gitProvider,
+        allowedCapabilities: allowedCaps,
+        requiredCapabilities: requiredCaps,
+        checks: app.securityChecks || getDefaultChecksForMethod(method),
+      })
+      .then(async (res) => {
+        if (!res?.success) {
+          const reason = res?.message || 'Jenkins returned an unsuccessful status';
+          this.logger.warn(
+            `Jenkins unavailable (${reason}). Falling back to local security scanner for ${method}.`,
           );
-          await this.localSecurityScannerService.scanFlutterPackage(id, { fallbackReason: reason, securityChecks: app.securityChecks });
+          await this.localSecurityScannerService.scanMiniApp(id, method, {
+            fallbackReason: reason,
+            securityChecks: app.securityChecks,
+          });
+        }
+      })
+      .catch(async (err) => {
+        const reason = `Jenkins connection failed: ${err.message}`;
+        this.logger.error(
+          `Jenkins trigger error: ${err.message}. Falling back to local security scanner for ${method}.`,
+        );
+        await this.localSecurityScannerService.scanMiniApp(id, method, {
+          fallbackReason: reason,
+          securityChecks: app.securityChecks,
         });
-    } else {
-      app.status = 'IN_REVIEW';
-      await this.miniappRepository.save(app);
-    }
+      });
 
     await logActivityFn(
       id,
@@ -203,149 +178,14 @@ export class MiniappLifecycleHelper {
       await this.miniappRepository.save(app);
     }
 
+    const method = (app.integrationMethod || 'WEBVIEW') as 'WEBVIEW' | 'FLUTTER_PACKAGE' | 'NATIVE_SDK' | 'DEEP_LINK';
     const activeChecks =
       app.securityChecks && app.securityChecks.length > 0
         ? app.securityChecks
-        : getDefaultChecksForMethod(app.integrationMethod);
-
-    if (app.integrationMethod === 'FLUTTER_PACKAGE') {
-      const initialStages = buildDynamicValidationStages(
-        'FLUTTER_PACKAGE',
-        activeChecks,
-      );
-
-      app.validationStages = initialStages;
-      app.validationStatus = 'RUNNING';
-      await this.miniappRepository.save(app);
-
-      const cfg = app.integrationConfig || {};
-      const integrationType = cfg.packageStoragePath
-        ? 'ARTIFACT'
-        : 'SOURCE_CODE';
-      const repoUrl =
-        cfg.repoUrl ||
-        (cfg.repoOwner && cfg.repoName
-          ? `https://github.com/${cfg.repoOwner}/${cfg.repoName}`
-          : '');
-      const commitSha = cfg.commitSha || cfg.branch || 'main';
-      const gitProvider = (cfg.provider || 'GITHUB').toUpperCase();
-
-      const declaredPerms = Array.isArray(app.permissions)
-        ? app.permissions
-            .map((p: any) => (typeof p === 'string' ? p : p.name || p.id))
-            .filter(Boolean)
-        : [];
-      const requiredPerms = Array.isArray(app.permissions)
-        ? app.permissions
-            .filter((p: any) => p.isRequired)
-            .map((p: any) => p.name || p.id)
-            .filter(Boolean)
-        : [];
-
-      const allowedCaps =
-        declaredPerms.length > 0
-          ? declaredPerms
-          : ['camera', 'geolocator', 'local_auth'];
-      const requiredCaps = requiredPerms;
-      const packageName = cfg.packageName || cfg.name || app.name;
-      const packageVersion = cfg.packageVersion || cfg.version || '1.0.0';
-
-      const jenkinsRes = await this.jenkinsService
-        .triggerPackageValidation({
-          miniAppId: id,
-          packageName,
-          version: packageVersion,
-          integrationType: integrationType,
-          sourceStoragePath: cfg.packageStoragePath || '',
-          repoUrl,
-          commitSha,
-          gitProvider,
-          allowedCapabilities: allowedCaps,
-          requiredCapabilities: requiredCaps,
-          checks: activeChecks,
-        })
-        .catch((err) => ({
-          success: false,
-          message: `Could not connect to Jenkins: ${err.message}`,
-        }));
-
-      if (!jenkinsRes.success) {
-        const failureReason = jenkinsRes.message || 'Connection refused at Jenkins CI';
-        this.logger.warn(
-          `Jenkins package rescan unavailable (${failureReason}). Falling back to local scanner.`,
-        );
-
-        this.localSecurityScannerService.scanFlutterPackage(id, {
-          fallbackReason: failureReason,
-          securityChecks: activeChecks,
-        });
-
-        await this.notificationsService.createNotification(
-          app.ownerId || '',
-          'Local Security Scan Running',
-          `Jenkins CI is unavailable (${failureReason}). Package security audit running via Local Security Engine.`,
-          'SCAN_STARTED',
-          app.id,
-        );
-
-        await logActivityFn(
-          id,
-          actorId,
-          'VALIDATION',
-          'Jenkins Offline - Local Fallback',
-          `Jenkins CI is unavailable (${failureReason}). Package audit initiated using Local Security Engine.`,
-          'RESCAN_MINI_APP',
-          null,
-          app,
-        );
-
-        return {
-          success: true,
-          engine: 'LOCAL',
-          message: `Jenkins CI is offline (${failureReason}). Automated scan is running via Local Security Engine.`,
-          validationStatus: 'RUNNING',
-          validationStages: initialStages,
-        };
-      }
-
-      await this.notificationsService.createNotification(
-        app.ownerId || '',
-        'Scan Re-run',
-        `Automated security scan re-initiated for Flutter Package "${app.name || 'Mini App'}".`,
-        'SCAN_STARTED',
-        app.id,
-      );
-
-      await logActivityFn(
-        id,
-        actorId,
-        'VALIDATION',
-        'Scan Re-run',
-        'Flutter Package automated security scan re-triggered on Jenkins',
-        'RESCAN_MINI_APP',
-        null,
-        app,
-      );
-
-      return {
-        success: true,
-        engine: 'JENKINS',
-        message:
-          'Flutter package security validation triggered successfully on Jenkins.',
-        validationStatus: 'RUNNING',
-        validationStages: initialStages,
-      };
-    }
-
-    const targetUrl = (app.integrationConfig?.productionUrl || '').trim();
-    if (!targetUrl) {
-      throw new BadRequestException(
-        'Mini App does not have a configured production URL to scan',
-      );
-    }
+        : getDefaultChecksForMethod(method);
 
     const initialStages = buildDynamicValidationStages(
-      'WEBVIEW',
+      method,
       activeChecks,
     );
 
@@ -353,21 +193,69 @@ export class MiniappLifecycleHelper {
     app.validationStatus = 'RUNNING';
     await this.miniappRepository.save(app);
 
-    const allowedDomains = Array.isArray(app.integrationConfig.allowedDomains)
-      ? app.integrationConfig.allowedDomains
-      : typeof app.integrationConfig.allowedDomains === 'string'
-        ? app.integrationConfig.allowedDomains.split(',')
-        : [];
-
+    const cfg = app.integrationConfig || {};
     const envVal = (process.env.ENVIRONMENT || '').toUpperCase();
     const allowLocal = envVal === 'DEV';
 
+    const declaredPerms = Array.isArray(app.permissions)
+      ? app.permissions
+          .map((p: any) => (typeof p === 'string' ? p : p.name || p.id))
+          .filter(Boolean)
+      : [];
+    const requiredPerms = Array.isArray(app.permissions)
+      ? app.permissions
+          .filter((p: any) => p.isRequired)
+          .map((p: any) => p.name || p.id)
+          .filter(Boolean)
+      : [];
+
+    const allowedCaps =
+      declaredPerms.length > 0
+        ? declaredPerms
+        : ['camera', 'geolocator', 'local_auth'];
+    const requiredCaps = requiredPerms;
+
+    const allowedDomains = Array.isArray(cfg.allowedDomains)
+      ? cfg.allowedDomains
+      : typeof cfg.allowedDomains === 'string'
+        ? cfg.allowedDomains.split(',')
+        : [];
+
+    const integrationType = cfg.packageStoragePath
+      ? 'ARTIFACT'
+      : 'SOURCE_CODE';
+    const repoUrl =
+      cfg.repoUrl ||
+      (cfg.repoOwner && cfg.repoName
+        ? `https://github.com/${cfg.repoOwner}/${cfg.repoName}`
+        : '');
+    const commitSha = cfg.commitSha || cfg.branch || 'main';
+    const gitProvider = (cfg.provider || 'GITHUB').toUpperCase();
+    const packageName = cfg.packageName || cfg.name || app.name;
+    const packageVersion = cfg.packageVersion || cfg.version || '1.0.0';
+
+    this.logger.log(
+      `Re-triggering universal Jenkins validation pipeline for ${method} Mini App ${id}...`,
+    );
+
     const jenkinsRes = await this.jenkinsService
-      .triggerWebViewValidation({
+      .triggerMiniAppValidation({
         miniAppId: id,
-        targetUrl,
+        integrationMethod: method,
+        targetUrl: cfg.productionUrl || cfg.url,
+        urlScheme: cfg.urlScheme,
+        appStoreUrl: cfg.appStoreUrl,
         allowedDomains,
         allowLocal,
+        packageName,
+        version: packageVersion,
+        integrationType,
+        sourceStoragePath: cfg.packageStoragePath || '',
+        repoUrl,
+        commitSha,
+        gitProvider,
+        allowedCapabilities: allowedCaps,
+        requiredCapabilities: requiredCaps,
         checks: activeChecks,
       })
       .catch((err) => ({
@@ -378,10 +266,10 @@ export class MiniappLifecycleHelper {
     if (!jenkinsRes.success) {
       const failureReason = jenkinsRes.message || 'Connection refused at Jenkins CI';
       this.logger.warn(
-        `Jenkins rescan unavailable (${failureReason}). Falling back to local scanner.`,
+        `Jenkins rescan unavailable (${failureReason}). Falling back to local scanner for ${method}.`,
       );
 
-      this.localSecurityScannerService.scanWebView(id, {
+      this.localSecurityScannerService.scanMiniApp(id, method, {
         fallbackReason: failureReason,
         securityChecks: activeChecks,
       });
@@ -413,6 +301,33 @@ export class MiniappLifecycleHelper {
         validationStages: initialStages,
       };
     }
+
+    await this.notificationsService.createNotification(
+      app.ownerId || '',
+      'Scan Re-run',
+      `Automated security scan re-initiated for "${app.name || 'Mini App'}" on Jenkins (${method}).`,
+      'SCAN_STARTED',
+      app.id,
+    );
+
+    await logActivityFn(
+      id,
+      actorId,
+      'VALIDATION',
+      'Scan Re-run',
+      `Automated ${method} security scan re-triggered on Jenkins`,
+      'RESCAN_MINI_APP',
+      null,
+      app,
+    );
+
+    return {
+      success: true,
+      engine: 'JENKINS',
+      message: `Universal security validation triggered successfully on Jenkins (${method}).`,
+      validationStatus: 'RUNNING',
+      validationStages: initialStages,
+    };
 
     await this.notificationsService.createNotification(
       app.ownerId || '',

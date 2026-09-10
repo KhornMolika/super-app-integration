@@ -434,203 +434,124 @@ export class MiniappValidationHelper {
         );
       }
     } else {
-      if (
-        app.integrationMethod === 'WEBVIEW' &&
-        app.integrationConfig?.productionUrl
-      ) {
-        const initialStages = buildDynamicValidationStages(
-          'WEBVIEW',
-          app.securityChecks,
-        );
-        await this.miniappRepository.update(id, {
-          status: 'SUBMITTED',
-          validationStatus: 'RUNNING',
-          validationStages: initialStages as any,
-          validationErrors: null as any,
-        });
+      const method = (app.integrationMethod || 'WEBVIEW') as 'WEBVIEW' | 'FLUTTER_PACKAGE' | 'NATIVE_SDK' | 'DEEP_LINK';
+      const initialStages = buildDynamicValidationStages(
+        method,
+        app.securityChecks,
+      );
 
-        const allowedDomains = Array.isArray(
-          app.integrationConfig.allowedDomains,
-        )
-          ? app.integrationConfig.allowedDomains
-          : typeof app.integrationConfig.allowedDomains === 'string'
-            ? app.integrationConfig.allowedDomains.split(',')
-            : [];
+      await this.miniappRepository.update(id, {
+        status: 'SUBMITTED',
+        validationStatus: 'RUNNING',
+        validationStages: initialStages as any,
+        validationErrors: null as any,
+      });
 
-        const envVal = (process.env.ENVIRONMENT || '').toUpperCase();
-        const allowLocal = envVal === 'DEV';
+      const envVal = (process.env.ENVIRONMENT || '').toUpperCase();
+      const allowLocal = envVal === 'DEV';
+      const cfg = app.integrationConfig || {};
 
-        this.logger.log(
-          `Triggering Jenkins automated security scan for Mini App ${id}...`,
-        );
-        this.jenkinsService
-          .triggerWebViewValidation({
-            miniAppId: id,
-            targetUrl: app.integrationConfig.productionUrl,
-            allowedDomains,
-            allowLocal,
-            checks: app.securityChecks || getDefaultChecksForMethod('WEBVIEW'),
-          })
-          .then(async (res) => {
-            if (!res?.success) {
-              const reason = res?.message || 'Jenkins returned an unsuccessful status';
-              this.logger.warn(
-                `Jenkins unavailable (${reason}). Falling back to local security scanner.`,
-              );
-              await this.localSecurityScannerService.scanWebView(id, { fallbackReason: reason, securityChecks: app.securityChecks });
-            }
-          })
-          .catch(async (err) => {
-            const reason = `Jenkins connection failed: ${err.message}`;
-            this.logger.error(
-              `Jenkins trigger error: ${err.message}. Falling back to local security scanner.`,
-            );
-            await this.localSecurityScannerService.scanWebView(id, { fallbackReason: reason, securityChecks: app.securityChecks });
-          });
+      const declaredPerms = Array.isArray(app.permissions)
+        ? app.permissions
+            .map((p: any) => (typeof p === 'string' ? p : p.name || p.id))
+            .filter(Boolean)
+        : [];
+      const requiredPerms = Array.isArray(app.permissions)
+        ? app.permissions
+            .filter((p: any) => p.isRequired)
+            .map((p: any) => p.name || p.id)
+            .filter(Boolean)
+        : [];
 
-        await this.notificationsService.createNotification(
-          app.ownerId || '',
-          'Validation Running',
-          `${app.name || 'Mini App'} automated security scans initiated on Jenkins.`,
-          'SCAN_STARTED',
-          app.id,
-        );
-        await logActivityFn(
-          id,
-          'system',
-          'VALIDATION',
-          'Validation Running',
-          'Automated security scan pipeline triggered on Jenkins',
-          'VALIDATE_MINI_APP',
-          app,
-          await this.miniappRepository.findOne({ where: { id } }),
-        );
-      } else if (app.integrationMethod === 'FLUTTER_PACKAGE') {
-        const initialStages = buildDynamicValidationStages(
-          'FLUTTER_PACKAGE',
-          app.securityChecks,
-        );
-        await this.miniappRepository.update(id, {
-          status: 'SUBMITTED',
-          validationStatus: 'RUNNING',
-          validationStages: initialStages as any,
-          validationErrors: null as any,
-        });
+      const allowedCaps =
+        declaredPerms.length > 0
+          ? declaredPerms
+          : ['camera', 'geolocator', 'local_auth'];
+      const requiredCaps = requiredPerms;
 
-        const cfg = app.integrationConfig || {};
-        const integrationType = cfg.packageStoragePath
-          ? 'ARTIFACT'
-          : 'SOURCE_CODE';
-        const repoUrl =
-          cfg.repoUrl ||
-          (cfg.repoOwner && cfg.repoName
-            ? `https://github.com/${cfg.repoOwner}/${cfg.repoName}`
-            : '');
-        const commitSha = cfg.commitSha || cfg.branch || 'main';
-        const gitProvider = (cfg.provider || 'GITHUB').toUpperCase();
-
-        const declaredPerms = Array.isArray(app.permissions)
-          ? app.permissions
-              .map((p: any) => (typeof p === 'string' ? p : p.name || p.id))
-              .filter(Boolean)
-          : [];
-        const requiredPerms = Array.isArray(app.permissions)
-          ? app.permissions
-              .filter((p: any) => p.isRequired)
-              .map((p: any) => p.name || p.id)
-              .filter(Boolean)
+      const allowedDomains = Array.isArray(cfg.allowedDomains)
+        ? cfg.allowedDomains
+        : typeof cfg.allowedDomains === 'string'
+          ? cfg.allowedDomains.split(',')
           : [];
 
-        const allowedCaps =
-          declaredPerms.length > 0
-            ? declaredPerms
-            : ['camera', 'geolocator', 'local_auth'];
-        const requiredCaps = requiredPerms;
-        const packageName = cfg.packageName || cfg.name || app.name;
-        const packageVersion = cfg.packageVersion || cfg.version || '1.0.0';
+      const integrationType = cfg.packageStoragePath
+        ? 'ARTIFACT'
+        : 'SOURCE_CODE';
+      const repoUrl =
+        cfg.repoUrl ||
+        (cfg.repoOwner && cfg.repoName
+          ? `https://github.com/${cfg.repoOwner}/${cfg.repoName}`
+          : '');
+      const commitSha = cfg.commitSha || cfg.branch || 'main';
+      const gitProvider = (cfg.provider || 'GITHUB').toUpperCase();
+      const packageName = cfg.packageName || cfg.name || app.name;
+      const packageVersion = cfg.packageVersion || cfg.version || '1.0.0';
 
-        this.logger.log(
-          `Triggering Jenkins package security scan for Mini App ${id}...`,
-        );
-        this.jenkinsService
-          .triggerPackageValidation({
-            miniAppId: id,
-            packageName,
-            version: packageVersion,
-            integrationType: integrationType,
-            sourceStoragePath: cfg.packageStoragePath || '',
-            repoUrl,
-            commitSha,
-            gitProvider,
-            allowedCapabilities: allowedCaps,
-            requiredCapabilities: requiredCaps,
-            checks: app.securityChecks || getDefaultChecksForMethod('FLUTTER_PACKAGE'),
-          })
-          .then(async (res) => {
-            if (!res?.success) {
-              const reason = res?.message || 'Jenkins returned an unsuccessful status';
-              this.logger.warn(
-                `Jenkins package validation unavailable (${reason}). Falling back to local scanner.`,
-              );
-              await this.localSecurityScannerService.scanFlutterPackage(id, { fallbackReason: reason, securityChecks: app.securityChecks });
-            }
-          })
-          .catch(async (err) => {
-            const reason = `Jenkins connection failed: ${err.message}`;
-            this.logger.error(
-              `${reason}. Falling back to local scanner.`,
+      this.logger.log(
+        `Triggering universal Jenkins security scan for ${method} Mini App ${id}...`,
+      );
+
+      this.jenkinsService
+        .triggerMiniAppValidation({
+          miniAppId: id,
+          integrationMethod: method,
+          targetUrl: cfg.productionUrl || cfg.url,
+          urlScheme: cfg.urlScheme,
+          appStoreUrl: cfg.appStoreUrl,
+          allowedDomains,
+          allowLocal,
+          packageName,
+          version: packageVersion,
+          integrationType,
+          sourceStoragePath: cfg.packageStoragePath || '',
+          repoUrl,
+          commitSha,
+          gitProvider,
+          allowedCapabilities: allowedCaps,
+          requiredCapabilities: requiredCaps,
+          checks: app.securityChecks || getDefaultChecksForMethod(method),
+        })
+        .then(async (res) => {
+          if (!res?.success) {
+            const reason = res?.message || 'Jenkins returned an unsuccessful status';
+            this.logger.warn(
+              `Jenkins unavailable (${reason}). Falling back to local security scanner for ${method}.`,
             );
-            await this.localSecurityScannerService.scanFlutterPackage(id, { fallbackReason: reason, securityChecks: app.securityChecks });
-          });
-
-        await this.notificationsService.createNotification(
-          app.ownerId || '',
-          'Validation Running',
-          `${app.name || 'Mini App'} automated package security scans initiated on Jenkins.`,
-          'SCAN_STARTED',
-          app.id,
-        );
-        await logActivityFn(
-          id,
-          'system',
-          'VALIDATION',
-          'Validation Running',
-          'Automated package validation pipeline triggered on Jenkins',
-          'VALIDATE_MINI_APP',
-          app,
-          await this.miniappRepository.findOne({ where: { id } }),
-        );
-      } else {
-        await this.miniappRepository.update(id, {
-          status: 'IN_REVIEW',
-          validationErrors: null as any,
-        });
-
-        await this.notificationsService.createNotification(
-          app.ownerId || '',
-          'Validation Passed',
-          `${app.name || 'Mini App'} has passed validation and is now ready for review.`,
-          'REVIEW_STARTED',
-          app.id,
-        );
-        await logActivityFn(
-          id,
-          'system',
-          'VALIDATION',
-          'Validation Passed',
-          'No issues found',
-          'VALIDATE_MINI_APP',
-          app,
-          await this.miniappRepository.findOne({ where: { id } }),
-        );
-
-        if (app.ownerEmail) {
-          await this.mailService.sendRegistrationSuccessEmail(
-            app.ownerEmail,
-            app.name || app.appId || 'Unknown App',
+            await this.localSecurityScannerService.scanMiniApp(id, method, {
+              fallbackReason: reason,
+              securityChecks: app.securityChecks,
+            });
+          }
+        })
+        .catch(async (err) => {
+          const reason = `Jenkins connection failed: ${err.message}`;
+          this.logger.error(
+            `Jenkins trigger error: ${err.message}. Falling back to local security scanner for ${method}.`,
           );
-        }
-      }
+          await this.localSecurityScannerService.scanMiniApp(id, method, {
+            fallbackReason: reason,
+            securityChecks: app.securityChecks,
+          });
+        });
+
+      await this.notificationsService.createNotification(
+        app.ownerId || '',
+        'Validation Running',
+        `${app.name || 'Mini App'} automated security scans initiated on Jenkins (${method}).`,
+        'SCAN_STARTED',
+        app.id,
+      );
+      await logActivityFn(
+        id,
+        'system',
+        'VALIDATION',
+        'Validation Running',
+        `Automated ${method} validation pipeline triggered on Jenkins`,
+        'VALIDATE_MINI_APP',
+        app,
+        await this.miniappRepository.findOne({ where: { id } }),
+      );
     }
   }
 

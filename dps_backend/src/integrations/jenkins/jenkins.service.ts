@@ -68,32 +68,60 @@ export class JenkinsService {
   }
 
   /**
-   * Triggers the webview-validation parameterized pipeline in Jenkins
+   * Universal parameterized pipeline trigger for all Mini App integration methods
+   * (WEBVIEW, FLUTTER_PACKAGE, NATIVE_SDK, DEEP_LINK)
    */
-  async triggerWebViewValidation(options: {
+  async triggerMiniAppValidation(options: {
     miniAppId: string;
-    targetUrl: string;
-    allowedDomains?: string[];
-    allowLocal?: boolean;
+    integrationMethod: 'WEBVIEW' | 'FLUTTER_PACKAGE' | 'NATIVE_SDK' | 'DEEP_LINK';
     checks?: string[];
+    targetUrl?: string;
+    urlScheme?: string;
+    appStoreUrl?: string;
+    allowedDomains?: string[];
+    packageName?: string;
+    version?: string;
+    integrationType?: 'ARTIFACT' | 'SOURCE_CODE';
+    sourceStoragePath?: string;
+    repoUrl?: string;
+    commitSha?: string;
+    gitProvider?: string;
+    allowedCapabilities?: string[];
+    requiredCapabilities?: string[];
+    allowLocal?: boolean;
   }): Promise<{ success: boolean; message: string }> {
-    const jobName = 'webview-validation';
+    // Try universal job first, or method-specific fallback job
+    const jobName = 'miniapp-validation';
     const callbackUrl = `${this.callbackBaseUrl}/api/integrations/validation/callback`;
     const allowedDomainsStr = (options.allowedDomains || []).join(',');
-    const allowLocalStr = options.allowLocal ? 'true' : 'false';
+    const allowedCapsStr = (options.allowedCapabilities || ['camera', 'geolocator', 'local_auth']).join(',');
+    const requiredCapsStr = (options.requiredCapabilities || []).join(',');
     const checksStr = (options.checks || []).join(',');
+    const allowLocalStr = options.allowLocal ? 'true' : 'false';
 
     const params = new URLSearchParams({
       MINIAPP_ID: options.miniAppId,
-      TARGET_URL: options.targetUrl,
+      INTEGRATION_METHOD: options.integrationMethod,
+      CHECKS: checksStr,
+      TARGET_URL: options.targetUrl || '',
+      URL_SCHEME: options.urlScheme || '',
+      APP_STORE_URL: options.appStoreUrl || '',
       ALLOWED_DOMAINS: allowedDomainsStr,
+      PACKAGE_NAME: options.packageName || '',
+      VERSION: options.version || '1.0.0',
+      INTEGRATION_TYPE: options.integrationType || 'ARTIFACT',
+      SOURCE_STORAGE_PATH: options.sourceStoragePath || '',
+      REPO_URL: options.repoUrl || '',
+      COMMIT_SHA: options.commitSha || 'main',
+      GIT_PROVIDER: options.gitProvider || 'GITHUB',
+      ALLOWED_CAPABILITIES: allowedCapsStr,
+      REQUIRED_CAPABILITIES: requiredCapsStr,
       CALLBACK_URL: callbackUrl,
       ALLOW_LOCAL: allowLocalStr,
-      CHECKS: checksStr,
     });
 
     const triggerUrl = `${this.jenkinsUrl}/job/${jobName}/buildWithParameters?${params.toString()}`;
-    this.logger.log(`Triggering Jenkins pipeline: ${triggerUrl}`);
+    this.logger.log(`Triggering universal Jenkins validation pipeline (${options.integrationMethod}): ${triggerUrl}`);
 
     try {
       const headers: Record<string, string> = {
@@ -105,7 +133,6 @@ export class JenkinsService {
         headers['Authorization'] = authHeader;
       }
 
-      // If crumb is available, include it
       const crumbData = await this.getCrumb();
       if (crumbData) {
         headers[crumbData.headerName] = crumbData.crumb;
@@ -121,12 +148,22 @@ export class JenkinsService {
 
       if (response.status === 201 || response.status === 200) {
         this.logger.log(
-          `Jenkins job "${jobName}" triggered successfully for Mini App ${options.miniAppId}`,
+          `Universal Jenkins job "${jobName}" triggered successfully for ${options.integrationMethod} Mini App ${options.miniAppId}`,
         );
         return {
           success: true,
-          message: 'Jenkins pipeline triggered successfully',
+          message: 'Universal Jenkins pipeline triggered successfully',
         };
+      }
+
+      // If universal job not yet created on Jenkins instance, fallback to legacy specific jobs
+      if (response.status === 404) {
+        this.logger.warn(`Universal job "${jobName}" not found (404). Falling back to method-specific pipeline.`);
+        if (options.integrationMethod === 'WEBVIEW') {
+          return this.triggerLegacyWebViewValidation(options);
+        } else if (options.integrationMethod === 'FLUTTER_PACKAGE') {
+          return this.triggerLegacyPackageValidation(options);
+        }
       }
 
       const responseBody = await response.text();
@@ -138,7 +175,7 @@ export class JenkinsService {
         message: `Jenkins returned HTTP ${response.status}: ${responseBody.substring(0, 150)}`,
       };
     } catch (err: any) {
-      this.logger.error(`Failed to trigger Jenkins pipeline: ${err.message}`);
+      this.logger.error(`Failed to trigger universal Jenkins pipeline: ${err.message}`);
       return {
         success: false,
         message: `Could not connect to Jenkins: ${err.message}`,
@@ -147,25 +184,61 @@ export class JenkinsService {
   }
 
   /**
-   * Fetches latest build info from Jenkins for a job
+   * Triggers the webview-validation parameterized pipeline in Jenkins
    */
-  async getLastBuild(jobName = 'webview-validation'): Promise<any> {
+  async triggerWebViewValidation(options: {
+    miniAppId: string;
+    targetUrl: string;
+    allowedDomains?: string[];
+    allowLocal?: boolean;
+    checks?: string[];
+  }): Promise<{ success: boolean; message: string }> {
+    return this.triggerMiniAppValidation({
+      miniAppId: options.miniAppId,
+      integrationMethod: 'WEBVIEW',
+      targetUrl: options.targetUrl,
+      allowedDomains: options.allowedDomains,
+      allowLocal: options.allowLocal,
+      checks: options.checks,
+    });
+  }
+
+  private async triggerLegacyWebViewValidation(options: {
+    miniAppId: string;
+    targetUrl?: string;
+    allowedDomains?: string[];
+    allowLocal?: boolean;
+    checks?: string[];
+  }): Promise<{ success: boolean; message: string }> {
+    const jobName = 'webview-validation';
+    const callbackUrl = `${this.callbackBaseUrl}/api/integrations/validation/callback`;
+    const allowedDomainsStr = (options.allowedDomains || []).join(',');
+    const allowLocalStr = options.allowLocal ? 'true' : 'false';
+    const checksStr = (options.checks || []).join(',');
+
+    const params = new URLSearchParams({
+      MINIAPP_ID: options.miniAppId,
+      TARGET_URL: options.targetUrl || '',
+      ALLOWED_DOMAINS: allowedDomainsStr,
+      CALLBACK_URL: callbackUrl,
+      ALLOW_LOCAL: allowLocalStr,
+      CHECKS: checksStr,
+    });
+
+    const triggerUrl = `${this.jenkinsUrl}/job/${jobName}/buildWithParameters?${params.toString()}`;
     try {
-      const headers: Record<string, string> = {};
+      const headers: Record<string, string> = { 'Content-Type': 'application/x-www-form-urlencoded' };
       const authHeader = this.getAuthHeader();
       if (authHeader) headers['Authorization'] = authHeader;
-
-      const res = await fetch(
-        `${this.jenkinsUrl}/job/${jobName}/lastBuild/api/json`,
-        { headers },
-      );
-      if (!res.ok) return null;
-      return await res.json();
+      const crumbData = await this.getCrumb();
+      if (crumbData) {
+        headers[crumbData.headerName] = crumbData.crumb;
+        if (crumbData.cookie) headers['Cookie'] = crumbData.cookie;
+      }
+      const res = await fetch(triggerUrl, { method: 'POST', headers });
+      return { success: res.status === 201 || res.status === 200, message: `Status: ${res.status}` };
     } catch (e: any) {
-      this.logger.debug(
-        `Could not fetch last build from Jenkins: ${e.message}`,
-      );
-      return null;
+      return { success: false, message: e.message };
     }
   }
 
@@ -185,11 +258,38 @@ export class JenkinsService {
     requiredCapabilities?: string[];
     checks?: string[];
   }): Promise<{ success: boolean; message: string }> {
+    return this.triggerMiniAppValidation({
+      miniAppId: options.miniAppId,
+      integrationMethod: 'FLUTTER_PACKAGE',
+      packageName: options.packageName,
+      version: options.version,
+      integrationType: options.integrationType,
+      sourceStoragePath: options.sourceStoragePath,
+      repoUrl: options.repoUrl,
+      commitSha: options.commitSha,
+      gitProvider: options.gitProvider,
+      allowedCapabilities: options.allowedCapabilities,
+      requiredCapabilities: options.requiredCapabilities,
+      checks: options.checks,
+    });
+  }
+
+  private async triggerLegacyPackageValidation(options: {
+    miniAppId: string;
+    packageName?: string;
+    version?: string;
+    integrationType?: 'ARTIFACT' | 'SOURCE_CODE';
+    sourceStoragePath?: string;
+    repoUrl?: string;
+    commitSha?: string;
+    gitProvider?: string;
+    allowedCapabilities?: string[];
+    requiredCapabilities?: string[];
+    checks?: string[];
+  }): Promise<{ success: boolean; message: string }> {
     const jobName = 'package-validation';
     const callbackUrl = `${this.callbackBaseUrl}/api/integrations/validation/callback`;
-    const allowedCapsStr = (
-      options.allowedCapabilities || ['camera', 'geolocator', 'local_auth']
-    ).join(',');
+    const allowedCapsStr = (options.allowedCapabilities || ['camera', 'geolocator', 'local_auth']).join(',');
     const requiredCapsStr = (options.requiredCapabilities || []).join(',');
     const checksStr = (options.checks || []).join(',');
 
@@ -200,7 +300,7 @@ export class JenkinsService {
       INTEGRATION_TYPE: options.integrationType || 'ARTIFACT',
       SOURCE_STORAGE_PATH: options.sourceStoragePath || '',
       REPO_URL: options.repoUrl || '',
-      COMMIT_SHA: options.commitSha || '',
+      COMMIT_SHA: options.commitSha || 'main',
       GIT_PROVIDER: options.gitProvider || 'GITHUB',
       ALLOWED_CAPABILITIES: allowedCapsStr,
       REQUIRED_CAPABILITIES: requiredCapsStr,
@@ -209,59 +309,19 @@ export class JenkinsService {
     });
 
     const triggerUrl = `${this.jenkinsUrl}/job/${jobName}/buildWithParameters?${params.toString()}`;
-    this.logger.log(
-      `Triggering Jenkins Flutter Package validation pipeline: ${triggerUrl}`,
-    );
-
     try {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      };
-
+      const headers: Record<string, string> = { 'Content-Type': 'application/x-www-form-urlencoded' };
       const authHeader = this.getAuthHeader();
-      if (authHeader) {
-        headers['Authorization'] = authHeader;
-      }
-
+      if (authHeader) headers['Authorization'] = authHeader;
       const crumbData = await this.getCrumb();
       if (crumbData) {
         headers[crumbData.headerName] = crumbData.crumb;
-        if (crumbData.cookie) {
-          headers['Cookie'] = crumbData.cookie;
-        }
+        if (crumbData.cookie) headers['Cookie'] = crumbData.cookie;
       }
-
-      const response = await fetch(triggerUrl, {
-        method: 'POST',
-        headers,
-      });
-
-      if (response.status === 201 || response.status === 200) {
-        this.logger.log(
-          `Jenkins job "${jobName}" triggered successfully for Mini App ${options.miniAppId}`,
-        );
-        return {
-          success: true,
-          message: 'Jenkins package validation pipeline triggered successfully',
-        };
-      }
-
-      const responseBody = await response.text();
-      this.logger.warn(
-        `Jenkins trigger returned HTTP ${response.status}: ${responseBody.substring(0, 300)}`,
-      );
-      return {
-        success: false,
-        message: `Jenkins returned HTTP ${response.status}: ${responseBody.substring(0, 150)}`,
-      };
-    } catch (err: any) {
-      this.logger.error(
-        `Failed to trigger Jenkins package validation: ${err.message}`,
-      );
-      return {
-        success: false,
-        message: `Could not connect to Jenkins: ${err.message}`,
-      };
+      const res = await fetch(triggerUrl, { method: 'POST', headers });
+      return { success: res.status === 201 || res.status === 200, message: `Status: ${res.status}` };
+    } catch (e: any) {
+      return { success: false, message: e.message };
     }
   }
 
