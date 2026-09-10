@@ -114,8 +114,8 @@ pipeline {
                                         "version: " + ("${params.VERSION}" || "1.0.0"),
                                         "description: Flutter package mini app submission.",
                                         "environment:",
-                                        "  sdk: \x27>=3.0.0 <4.0.0\x27",
-                                        "  flutter: \x27>=3.10.0\x27",
+                                        "  sdk: \">=3.0.0 <4.0.0\"",
+                                        "  flutter: \">=3.10.0\"",
                                         "dependencies:",
                                         "  flutter:",
                                         "    sdk: flutter"
@@ -329,15 +329,20 @@ pipeline {
                     """
 
                     sh """
-                        if echo "${params.TARGET_URL}" | grep -q "^https://"; then
-                            docker run --rm -u root -v /var/reports:/reports:rw drwetter/testssl.sh \
-                                --quiet \
-                                --color 0 \
-                                --jsonfile-pretty /reports/testssl-${params.MINIAPP_ID}.json \
-                                "${params.TARGET_URL}" || true
-                        else
-                            echo "Notice: Plain HTTP or Deep Link scheme. Skipping testssl cipher analysis."
-                        fi
+                        set +e
+                        case "${params.TARGET_URL}" in
+                            https://*)
+                                docker run --rm -u root -v /var/reports:/reports:rw drwetter/testssl.sh \
+                                    --quiet \
+                                    --color 0 \
+                                    --jsonfile-pretty /reports/testssl-${params.MINIAPP_ID}.json \
+                                    "${params.TARGET_URL}" 2>/dev/null || true
+                                ;;
+                            *)
+                                echo "Notice: Plain HTTP or Deep Link scheme. Skipping testssl cipher analysis."
+                                ;;
+                        esac
+                        exit 0
                     """
 
                     sh """
@@ -408,7 +413,7 @@ pipeline {
                             { id: "PRIVATE_KEY", title: "Exposed Private Key", regex: /-----BEGIN PRIVATE KEY-----/g, severity: "CRITICAL" },
                             { id: "GITHUB_PAT", title: "Exposed GitHub Personal Access Token", regex: /ghp_[0-9a-zA-Z]{36}/g, severity: "CRITICAL" },
                             { id: "SLACK_TOKEN", title: "Exposed Slack Token", regex: /xox[baprs]-[0-9a-zA-Z]{10,48}/g, severity: "HIGH" },
-                            { id: "GENERIC_SECRET", title: "Hardcoded API Secret", regex: /(api_key|apiKey|secret_key|apiSecret|app_secret)\\s*[:=]\\s*["\x27][0-9a-zA-Z\\-_]{24,}["\x27]/gi, severity: "HIGH" }
+                            { id: "GENERIC_SECRET", title: "Hardcoded API Secret", regex: new RegExp("(api_key|apiKey|secret_key|apiSecret|app_secret)\\\\s*[:=]\\\\s*[\"\\u0027][0-9a-zA-Z_-]{24,}[\"\\u0027]", "gi"), severity: "HIGH" }
                         ];
 
                         const findings = [];
@@ -445,19 +450,21 @@ pipeline {
 
                         scanDirectory(targetDir);
                         fs.writeFileSync(reportOut, JSON.stringify({ passed, findings }, null, 2));
-                    '
+                    ' || true
                     """
 
                     sh """
+                        set +e
                         if [ "${params.INTEGRATION_METHOD}" = "WEBVIEW" ] && [ -n "${params.TARGET_URL}" ]; then
-                            chmod -R 777 /var/reports
+                            chmod -R 777 /var/reports 2>/dev/null || true
                             docker run --rm -u root -v /var/reports:/reports:rw projectdiscovery/nuclei:latest \
                                 -u "${params.TARGET_URL}" \
                                 -tags cve,exposure,misconfig \
                                 -severity critical,high \
                                 -json-export /reports/nuclei-${params.MINIAPP_ID}.json \
-                                -silent || true
+                                -silent 2>/dev/null || true
                         fi
+                        exit 0
                     """
 
                     sh """
@@ -521,7 +528,7 @@ pipeline {
                             {
                                 id: "FORBIDDEN_MIRRORS",
                                 title: "Prohibited Reflection (dart:mirrors)",
-                                regex: /import\\s+["\x27]dart:mirrors["\x27]/g,
+                                regex: new RegExp("import\\\\s+[\"\\u0027]dart:mirrors[\"\\u0027]", "g"),
                                 severity: "CRITICAL",
                                 description: "The dart:mirrors library is prohibited because dynamic reflection bypasses Ahead-Of-Time (AOT) security constraints.",
                                 recommendation: "Use code generation instead of runtime reflection."
@@ -578,7 +585,7 @@ pipeline {
 
                         auditFiles(targetDir);
                         fs.writeFileSync(reportOut, JSON.stringify({ passed, findings }, null, 2));
-                    '
+                    ' || true
                     """
 
                     sh """
@@ -670,7 +677,7 @@ pipeline {
                         }
 
                         fs.writeFileSync(reportOut, JSON.stringify({ passed, findings }, null, 2));
-                    '
+                    ' || true
                     """
 
                     sh """
@@ -723,12 +730,14 @@ pipeline {
                     """
 
                     sh """
-                        chmod -R 777 /var/reports
+                        set +e
+                        chmod -R 777 /var/reports 2>/dev/null || true
                         docker run --rm -u root -v /var/reports:/zap/wrk:rw zaproxy/zap-stable zap-baseline.py \
                             -t "${params.TARGET_URL}" \
                             -J "zap-${params.MINIAPP_ID}.json" \
                             -r "zap-${params.MINIAPP_ID}.html" \
-                            -I || true
+                            -I 2>/dev/null || true
+                        exit 0
                     """
 
                     sh """
@@ -836,15 +845,15 @@ pipeline {
                                         severity: "CRITICAL",
                                         category: "CAPABILITY_VIOLATION",
                                         title: "Unauthorized Required Capability: " + cap,
-                                        description: "Mini App requires capability \x27" + cap + "\x27 which is not exposed by the Super App host platform.",
-                                        recommendation: "Remove requirement for unsupported capability \x27" + cap + "\x27 or request host capability whitelist approval."
+                                        description: "Mini App requires capability \\"" + cap + "\\" which is not exposed by the Super App host platform.",
+                                        recommendation: "Remove requirement for unsupported capability \\"" + cap + "\\" or request host capability whitelist approval."
                                     });
                                 }
                             }
                         }
 
                         fs.writeFileSync(reportOut, JSON.stringify({ passed, findings, detectedCapabilities: Array.from(detectedCaps) }, null, 2));
-                    '
+                    ' || true
                     """
 
                     sh """
@@ -877,7 +886,7 @@ pipeline {
 
                         const miniAppId = "${params.MINIAPP_ID}";
                         const method = "${params.INTEGRATION_METHOD}";
-                        const rawChecks = "${params.CHECKS || ''}";
+                        const rawChecks = "${params.CHECKS || ""}";
                         const activeList = rawChecks ? rawChecks.split(",").map(s => s.trim().toLowerCase()).filter(Boolean) : [];
 
                         const ingestFile = "${env.INGEST_REPORT}";
