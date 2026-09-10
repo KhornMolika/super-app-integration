@@ -145,6 +145,7 @@ export class MiniappLifecycleHelper {
           gitProvider,
           allowedCapabilities: allowedCaps,
           requiredCapabilities: requiredCaps,
+          checks: app.securityChecks || getDefaultChecksForMethod('FLUTTER_PACKAGE'),
         })
         .then(async (res) => {
           if (!res?.success) {
@@ -152,7 +153,7 @@ export class MiniappLifecycleHelper {
             this.logger.warn(
               `Jenkins package validation unavailable (${reason}). Falling back to local scanner.`,
             );
-            await this.localSecurityScannerService.scanFlutterPackage(id, { fallbackReason: reason });
+            await this.localSecurityScannerService.scanFlutterPackage(id, { fallbackReason: reason, securityChecks: app.securityChecks });
           }
         })
         .catch(async (err) => {
@@ -160,7 +161,7 @@ export class MiniappLifecycleHelper {
           this.logger.error(
             `${reason}. Falling back to local scanner.`,
           );
-          await this.localSecurityScannerService.scanFlutterPackage(id, { fallbackReason: reason });
+          await this.localSecurityScannerService.scanFlutterPackage(id, { fallbackReason: reason, securityChecks: app.securityChecks });
         });
     } else {
       app.status = 'IN_REVIEW';
@@ -261,6 +262,7 @@ export class MiniappLifecycleHelper {
           gitProvider,
           allowedCapabilities: allowedCaps,
           requiredCapabilities: requiredCaps,
+          checks: activeChecks,
         })
         .catch((err) => ({
           success: false,

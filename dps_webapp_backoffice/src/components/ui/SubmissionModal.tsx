@@ -39,15 +39,26 @@ export default function SubmissionModal({ state, onClose, onRunInBackground, onS
   const router = useRouter();
   if (!state.isOpen) return null;
 
-  const stageList = ORDERED_STAGES.map((item) => {
-    const recorded = state.stages?.[item.id];
-    return {
-      id: item.id,
-      name: item.name,
-      status: recorded?.status || (item.id === 'ssrf' ? 'RUNNING' : 'PENDING'),
-      details: recorded?.details || item.defaultDetails,
-    };
-  });
+  const stageList: Array<{ id: string; name: string; status: string; details?: string; icon?: string; tool?: string }> = React.useMemo(() => {
+    if (state.stages && Object.keys(state.stages).length > 0) {
+      return Object.values(state.stages).map((s: any) => ({
+        id: s.id || s.name,
+        name: s.name || s.id,
+        status: s.status || 'PENDING',
+        details: s.details,
+        icon: s.icon,
+        tool: s.tool,
+      }));
+    }
+    return ORDERED_STAGES.map((item) => {
+      return {
+        id: item.id,
+        name: item.name,
+        status: item.id === 'ssrf' ? 'RUNNING' : 'PENDING',
+        details: item.defaultDetails,
+      };
+    });
+  }, [state.stages]);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">

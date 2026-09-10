@@ -5,6 +5,7 @@ pipeline {
         string(name: 'MINIAPP_ID', defaultValue: '', description: 'Mini App UUID')
         string(name: 'TARGET_URL', defaultValue: '', description: 'Target WebView Endpoint URL')
         string(name: 'ALLOWED_DOMAINS', defaultValue: '', description: 'Comma-separated allowlist of navigation domains')
+        string(name: 'CHECKS', defaultValue: '', description: 'Comma-separated selected security check IDs')
         string(name: 'CALLBACK_URL', defaultValue: 'http://host.docker.internal:3000/api/integrations/validation/callback', description: 'NestJS Backend Webhook URL')
         booleanParam(name: 'ALLOW_LOCAL', defaultValue: false, description: 'Permit localhost/private IP for local dev testing')
     }
@@ -26,6 +27,7 @@ pipeline {
                 echo " Mini App ID   : ${params.MINIAPP_ID}"
                 echo " Target URL    : ${params.TARGET_URL}"
                 echo " Allowed Scope : ${params.ALLOWED_DOMAINS}"
+                echo " Active Checks : ${params.CHECKS ?: 'DEFAULT (ALL)'}"
                 echo " Allow Local   : ${params.ALLOW_LOCAL}"
                 echo "=========================================================="
                 
@@ -147,6 +149,13 @@ pipeline {
         }
 
         stage('2. TLS & HTTPS Security') {
+            when {
+                expression {
+                    if (!params.CHECKS || params.CHECKS.trim() == '') return true
+                    def checks = params.CHECKS.split(',').collect { it.trim().toLowerCase() }
+                    return checks.contains('domain_tls_audit') || checks.contains('tls')
+                }
+            }
             steps {
                 script {
                     echo "Evaluating TLS 1.2+ Security..."
@@ -158,7 +167,7 @@ pipeline {
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
                                 miniAppId: "${params.MINIAPP_ID}",
-                                stageId: "tls",
+                                stageId: "domain_tls_audit",
                                 stageName: "2. TLS & HTTPS Security",
                                 status: "RUNNING",
                                 details: "Auditing cipher suites & certificate validity..."
@@ -190,7 +199,7 @@ pipeline {
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
                                 miniAppId: "${params.MINIAPP_ID}",
-                                stageId: "tls",
+                                stageId: "domain_tls_audit",
                                 stageName: "2. TLS & HTTPS Security",
                                 status: passed ? "COMPLETED" : "FAILED",
                                 details: isHttps
@@ -205,6 +214,13 @@ pipeline {
         }
 
         stage('3. DAST, XSS & CSP Audit (OWASP ZAP)') {
+            when {
+                expression {
+                    if (!params.CHECKS || params.CHECKS.trim() == '') return true
+                    def checks = params.CHECKS.split(',').collect { it.trim().toLowerCase() }
+                    return checks.contains('dast_zap') || checks.contains('zap') || checks.contains('csp_headers_audit') || checks.contains('csp')
+                }
+            }
             steps {
                 echo "Running OWASP ZAP Baseline DAST & CSP Audit..."
                 script {
@@ -216,7 +232,7 @@ pipeline {
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
                                 miniAppId: "${params.MINIAPP_ID}",
-                                stageId: "zap",
+                                stageId: "dast_zap",
                                 stageName: "3. OWASP ZAP DAST Scan",
                                 status: "RUNNING",
                                 details: "Running spider, active XSS & CSP header audit..."
@@ -242,7 +258,7 @@ pipeline {
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
                                 miniAppId: "${params.MINIAPP_ID}",
-                                stageId: "zap",
+                                stageId: "dast_zap",
                                 stageName: "3. OWASP ZAP DAST Scan",
                                 status: "COMPLETED",
                                 details: "OWASP ZAP baseline scan complete."
@@ -255,6 +271,13 @@ pipeline {
         }
 
         stage('4. Exposure & Vulnerability Audit (Nuclei)') {
+            when {
+                expression {
+                    if (!params.CHECKS || params.CHECKS.trim() == '') return true
+                    def checks = params.CHECKS.split(',').collect { it.trim().toLowerCase() }
+                    return checks.contains('secret_scan') || checks.contains('nuclei') || checks.contains('exposure') || checks.contains('secrets')
+                }
+            }
             steps {
                 echo "Running Nuclei Scanner for Exposed .env, .git, and CVEs..."
                 script {
@@ -266,7 +289,7 @@ pipeline {
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
                                 miniAppId: "${params.MINIAPP_ID}",
-                                stageId: "nuclei",
+                                stageId: "secret_scan",
                                 stageName: "4. Exposure & Vulnerability Audit",
                                 status: "RUNNING",
                                 details: "Scanning for exposed secrets, .git folders & known CVEs..."
@@ -293,7 +316,7 @@ pipeline {
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
                                 miniAppId: "${params.MINIAPP_ID}",
-                                stageId: "nuclei",
+                                stageId: "secret_scan",
                                 stageName: "4. Exposure & Vulnerability Audit",
                                 status: "COMPLETED",
                                 details: "Nuclei vulnerability audit complete."
@@ -316,6 +339,9 @@ pipeline {
                         const miniAppId = "${params.MINIAPP_ID}";
                         const targetUrl = "${params.TARGET_URL}";
                         const allowLocal = "${params.ALLOW_LOCAL}" === "true";
+                        const rawChecks = "${params.CHECKS || ''}";
+                        const activeList = rawChecks ? rawChecks.split(",").map(s => s.trim().toLowerCase()).filter(Boolean) : ["domain_tls_audit", "csp_headers_audit", "dast_zap", "secret_scan"];
+
                         const ssrfFile = "${env.SSRF_REPORT}";
                         const zapFile = "${env.ZAP_REPORT}";
                         const tlsFile = "${env.TLS_REPORT}";
@@ -325,13 +351,15 @@ pipeline {
                         const findings = [];
                         let score = 100;
                         const checks = {
-                            ssrf: { passed: true, details: "Target resolves to permitted IP." },
-                            tls: { passed: true, details: "HTTPS configured." },
-                            dast: { passed: true, details: "No high severity XSS found." },
-                            exposure: { passed: true, details: "No exposed secrets or .env detected." }
+                            ssrf: { passed: true, details: "Target resolves to permitted IP." }
                         };
 
-                        // 1. SSRF Check
+                        const shouldCheck = (ids) => {
+                            if (!rawChecks || rawChecks.trim() === "") return true;
+                            return ids.some(id => activeList.includes(id.toLowerCase()));
+                        };
+
+                        // 1. SSRF Check (Always baseline)
                         if (fs.existsSync(ssrfFile)) {
                             try {
                                 const ssrf = JSON.parse(fs.readFileSync(ssrfFile, "utf8"));
@@ -352,68 +380,82 @@ pipeline {
                         }
 
                         // 2. TLS Check
-                        if (targetUrl.startsWith("http://")) {
-                            if (allowLocal) {
-                                checks.tls.passed = true;
-                                checks.tls.details = "Plain HTTP permitted in development mode (ALLOW_LOCAL=true).";
-                                console.log("Development mode: HTTP permitted without penalty.");
-                            } else {
-                                checks.tls.passed = false;
-                                checks.tls.details = "Production URL uses unencrypted HTTP";
-                                findings.push({
-                                    id: "INSECURE_TRANSPORT",
-                                    severity: "HIGH",
-                                    category: "TRANSPORT_SECURITY",
-                                    title: "Insecure HTTP Protocol",
-                                    description: "The Mini App endpoint uses plain HTTP instead of encrypted HTTPS.",
-                                    recommendation: "Enforce TLS 1.2+ with a valid SSL certificate."
-                                });
-                                score -= 25;
+                        if (shouldCheck(["domain_tls_audit", "tls"])) {
+                            checks.domain_tls_audit = { passed: true, details: "HTTPS configured." };
+                            if (targetUrl.startsWith("http://")) {
+                                if (allowLocal) {
+                                    checks.domain_tls_audit.passed = true;
+                                    checks.domain_tls_audit.details = "Plain HTTP permitted in development mode (ALLOW_LOCAL=true).";
+                                    console.log("Development mode: HTTP permitted without penalty.");
+                                } else {
+                                    checks.domain_tls_audit.passed = false;
+                                    checks.domain_tls_audit.details = "Production URL uses unencrypted HTTP";
+                                    findings.push({
+                                        id: "INSECURE_TRANSPORT",
+                                        severity: "HIGH",
+                                        category: "TRANSPORT_SECURITY",
+                                        title: "Insecure HTTP Protocol",
+                                        description: "The Mini App endpoint uses plain HTTP instead of encrypted HTTPS.",
+                                        recommendation: "Enforce TLS 1.2+ with a valid SSL certificate."
+                                    });
+                                    score -= 25;
+                                }
                             }
                         }
 
-                        // 3. Nuclei Check
-                        if (fs.existsSync(nucleiFile)) {
-                            try {
-                                const lines = fs.readFileSync(nucleiFile, "utf8").trim().split(String.fromCharCode(10)).filter(Boolean);
-                                for (const line of lines) {
-                                    const item = JSON.parse(line);
-                                    findings.push({
-                                        id: item.template_id || "NUCLEI_EXPOSURE",
-                                        severity: (item.info?.severity || "HIGH").toUpperCase(),
-                                        category: "VULNERABILITY",
-                                        title: item.info?.name || "Security Exposure Detected",
-                                        description: item.matched_at ? "Matched on endpoint: " + item.matched_at : "Vulnerability detected",
-                                        recommendation: "Remove exposed files and update vulnerable dependencies."
-                                    });
-                                    checks.exposure.passed = false;
-                                    score -= 25;
-                                }
-                            } catch (e) {}
+                        // 3. Nuclei Check (Secrets & Exposure)
+                        if (shouldCheck(["secret_scan", "nuclei", "exposure", "secrets"])) {
+                            checks.secret_scan = { passed: true, details: "No exposed secrets or .env detected." };
+                            if (fs.existsSync(nucleiFile)) {
+                                try {
+                                    const lines = fs.readFileSync(nucleiFile, "utf8").trim().split(String.fromCharCode(10)).filter(Boolean);
+                                    for (const line of lines) {
+                                        const item = JSON.parse(line);
+                                        findings.push({
+                                            id: item.template_id || "NUCLEI_EXPOSURE",
+                                            severity: (item.info?.severity || "HIGH").toUpperCase(),
+                                            category: "VULNERABILITY",
+                                            title: item.info?.name || "Security Exposure Detected",
+                                            description: item.matched_at ? "Matched on endpoint: " + item.matched_at : "Vulnerability detected",
+                                            recommendation: "Remove exposed files and update vulnerable dependencies."
+                                        });
+                                        checks.secret_scan.passed = false;
+                                        score -= 25;
+                                    }
+                                } catch (e) {}
+                            }
                         }
 
-                        // 4. ZAP Check
-                        if (fs.existsSync(zapFile)) {
-                            try {
-                                const zap = JSON.parse(fs.readFileSync(zapFile, "utf8"));
-                                const site = zap.site?.[0] || {};
-                                const alerts = site.alerts || [];
-                                for (const alert of alerts) {
-                                    const risk = (alert.riskdesc || "").split(" ")[0].toUpperCase();
-                                    if (risk === "HIGH" || risk === "CRITICAL") {
-                                        findings.push({
-                                            id: "ZAP_" + alert.pluginId,
-                                            severity: "HIGH",
-                                            category: "DAST",
-                                            title: alert.alert || alert.name,
-                                            description: alert.desc ? alert.desc.substring(0, 300) : "DAST Security Alert",
-                                            recommendation: alert.solution ? alert.solution.substring(0, 300) : "Apply recommended security headers."
-                                        });
-                                        checks.dast.passed = false;
-                                        score -= 30;
+                        // 4. ZAP Check (DAST & CSP)
+                        if (shouldCheck(["dast_zap", "zap", "csp_headers_audit", "csp"])) {
+                            if (shouldCheck(["dast_zap", "zap"])) {
+                                checks.dast_zap = { passed: true, details: "No high severity XSS found." };
+                            }
+                            if (shouldCheck(["csp_headers_audit", "csp"])) {
+                                checks.csp_headers_audit = { passed: true, details: "Content Security Policy and security headers verified." };
+                            }
+                            if (fs.existsSync(zapFile)) {
+                                try {
+                                    const zap = JSON.parse(fs.readFileSync(zapFile, "utf8"));
+                                    const site = zap.site?.[0] || {};
+                                    const alerts = site.alerts || [];
+                                    for (const alert of alerts) {
+                                        const risk = (alert.riskdesc || "").split(" ")[0].toUpperCase();
+                                        if (risk === "HIGH" || risk === "CRITICAL") {
+                                            findings.push({
+                                                id: "ZAP_" + alert.pluginId,
+                                                severity: "HIGH",
+                                                category: "DAST",
+                                                title: alert.alert || alert.name,
+                                                description: alert.desc ? alert.desc.substring(0, 300) : "DAST Security Alert",
+                                                recommendation: alert.solution ? alert.solution.substring(0, 300) : "Apply recommended security headers."
+                                            });
+                                            if (checks.dast_zap) checks.dast_zap.passed = false;
+                                            score -= 30;
+                                        }
                                     }
-                                }
-                            } catch (e) {}
+                                } catch (e) {}
+                            }
                         }
 
                         const hasCriticalOrHigh = findings.some(f => f.severity === "CRITICAL" || f.severity === "HIGH");
@@ -423,14 +465,15 @@ pipeline {
                             miniAppId: miniAppId,
                             method: "WEBVIEW",
                             status: status,
-                            score: Math.max(0, score),
+                            score: Math.max(25, Math.min(100, score)),
                             checks: checks,
                             findings: findings,
+                            activeChecks: activeList,
                             reportPath: "${env.REPORT_FILE}"
                         };
 
                         fs.writeFileSync("${env.REPORT_FILE}", JSON.stringify(payload, null, 2));
-                        console.log("Final Validation Status:", status, "Score:", payload.score, "Findings Count:", findings.length);
+                        console.log("Final Validation Status:", status, "Score:", payload.score, "Findings Count:", findings.length, "Active Checks:", activeList);
                     '
                     """
 

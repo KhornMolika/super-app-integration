@@ -183,6 +183,7 @@ export class JenkinsService {
     gitProvider?: string;
     allowedCapabilities?: string[];
     requiredCapabilities?: string[];
+    checks?: string[];
   }): Promise<{ success: boolean; message: string }> {
     const jobName = 'package-validation';
     const callbackUrl = `${this.callbackBaseUrl}/api/integrations/validation/callback`;
@@ -190,6 +191,7 @@ export class JenkinsService {
       options.allowedCapabilities || ['camera', 'geolocator', 'local_auth']
     ).join(',');
     const requiredCapsStr = (options.requiredCapabilities || []).join(',');
+    const checksStr = (options.checks || []).join(',');
 
     const params = new URLSearchParams({
       MINIAPP_ID: options.miniAppId,
@@ -203,6 +205,7 @@ export class JenkinsService {
       ALLOWED_CAPABILITIES: allowedCapsStr,
       REQUIRED_CAPABILITIES: requiredCapsStr,
       CALLBACK_URL: callbackUrl,
+      CHECKS: checksStr,
     });
 
     const triggerUrl = `${this.jenkinsUrl}/job/${jobName}/buildWithParameters?${params.toString()}`;

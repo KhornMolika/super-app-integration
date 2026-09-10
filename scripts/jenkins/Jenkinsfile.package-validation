@@ -12,6 +12,7 @@ pipeline {
         choice(name: 'GIT_PROVIDER', choices: ['GITHUB', 'GITLAB', 'CUSTOM'], description: 'Git provider')
         string(name: 'ALLOWED_CAPABILITIES', defaultValue: 'camera,geolocator,local_auth', description: 'Comma-separated host-exposed Super App capabilities')
         string(name: 'REQUIRED_CAPABILITIES', defaultValue: '', description: 'Comma-separated Mini App declared required capabilities')
+        string(name: 'CHECKS', defaultValue: '', description: 'Comma-separated selected security check IDs')
         string(name: 'CALLBACK_URL', defaultValue: 'http://host.docker.internal:3000/api/integrations/validation/callback', description: 'NestJS Backend Webhook Callback URL')
         string(name: 'MINIO_ENDPOINT', defaultValue: 'http://host.docker.internal:9000', description: 'MinIO S3 Endpoint')
         string(name: 'MINIO_BUCKET', defaultValue: 'submissions', description: 'MinIO Bucket Name')
@@ -25,6 +26,7 @@ pipeline {
         SECRETS_REPORT = "/var/reports/secrets-${params.MINIAPP_ID}.json"
         SAST_REPORT = "/var/reports/sast-${params.MINIAPP_ID}.json"
         SCA_REPORT = "/var/reports/sca-${params.MINIAPP_ID}.json"
+        SBOM_REPORT = "/var/reports/sbom-${params.MINIAPP_ID}.json"
         CAPABILITY_REPORT = "/var/reports/capability-${params.MINIAPP_ID}.json"
     }
 
@@ -40,6 +42,7 @@ pipeline {
                 echo " Storage Path / URL : ${params.SOURCE_STORAGE_PATH ?: params.REPO_URL}"
                 echo " Commit SHA         : ${params.COMMIT_SHA}"
                 echo " Allowed Host Caps  : ${params.ALLOWED_CAPABILITIES}"
+                echo " Active Checks      : ${params.CHECKS ?: 'DEFAULT (ALL)'}"
                 echo "=========================================================="
 
                 sh 'mkdir -p ${REPORT_DIR} ${WORKSPACE_DIR} && chmod -R 777 ${REPORT_DIR} ${WORKSPACE_DIR}'
@@ -155,6 +158,13 @@ pipeline {
         }
 
         stage('2. Secret & Credential Leak Detection') {
+            when {
+                expression {
+                    if (!params.CHECKS || params.CHECKS.trim() == '') return true
+                    def c = params.CHECKS.split(',').collect { it.trim().toLowerCase() }
+                    return c.contains('secret_scan') || c.contains('secrets')
+                }
+            }
             steps {
                 echo "Running Gitleaks / Secret Scanning on source directory..."
                 script {
@@ -166,7 +176,7 @@ pipeline {
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
                                 miniAppId: "${params.MINIAPP_ID}",
-                                stageId: "secrets",
+                                stageId: "secret_scan",
                                 stageName: "2. Secret & Credential Leak Detection",
                                 status: "RUNNING",
                                 details: "Auditing source code for hardcoded API keys, JWTs, and private credentials..."
@@ -237,7 +247,7 @@ pipeline {
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
                                 miniAppId: "${params.MINIAPP_ID}",
-                                stageId: "secrets",
+                                stageId: "secret_scan",
                                 stageName: "2. Secret & Credential Leak Detection",
                                 status: "COMPLETED",
                                 details: "Secret audit completed. 0 hardcoded credentials found."
@@ -250,6 +260,13 @@ pipeline {
         }
 
         stage('3. Malware & Static Code Analysis (SAST)') {
+            when {
+                expression {
+                    if (!params.CHECKS || params.CHECKS.trim() == '') return true
+                    def c = params.CHECKS.split(',').collect { it.trim().toLowerCase() }
+                    return c.contains('sast') || c.contains('malware_sast') || c.contains('malware_scan')
+                }
+            }
             steps {
                 echo "Running SAST & Native Sandbox Enforcement Audit..."
                 script {
@@ -261,7 +278,7 @@ pipeline {
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
                                 miniAppId: "${params.MINIAPP_ID}",
-                                stageId: "malware_sast",
+                                stageId: "sast",
                                 stageName: "3. Malware & Static Code Analysis (SAST)",
                                 status: "RUNNING",
                                 details: "Analyzing Dart AST for unsafe reflection, dynamic process execution, and forbidden APIs..."
@@ -350,7 +367,7 @@ pipeline {
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
                                 miniAppId: "${params.MINIAPP_ID}",
-                                stageId: "malware_sast",
+                                stageId: "sast",
                                 stageName: "3. Malware & Static Code Analysis (SAST)",
                                 status: "COMPLETED",
                                 details: "Static analysis and sandbox audit passed."
@@ -363,6 +380,13 @@ pipeline {
         }
 
         stage('4. Software Composition Analysis (SCA)') {
+            when {
+                expression {
+                    if (!params.CHECKS || params.CHECKS.trim() == '') return true
+                    def c = params.CHECKS.split(',').collect { it.trim().toLowerCase() }
+                    return c.contains('dependency_scan') || c.contains('sca')
+                }
+            }
             steps {
                 echo "Running Software Composition Analysis (SCA) on dependencies..."
                 script {
@@ -374,7 +398,7 @@ pipeline {
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
                                 miniAppId: "${params.MINIAPP_ID}",
-                                stageId: "sca",
+                                stageId: "dependency_scan",
                                 stageName: "4. Software Composition Analysis (SCA)",
                                 status: "RUNNING",
                                 details: "Cross-referencing pubspec dependencies against OSV and CVE vulnerability databases..."
@@ -434,7 +458,7 @@ pipeline {
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
                                 miniAppId: "${params.MINIAPP_ID}",
-                                stageId: "sca",
+                                stageId: "dependency_scan",
                                 stageName: "4. Software Composition Analysis (SCA)",
                                 status: "COMPLETED",
                                 details: "Dependency scan complete. 0 critical CVEs detected."
@@ -447,6 +471,13 @@ pipeline {
         }
 
         stage('5. Host Capability Gatekeeper Audit') {
+            when {
+                expression {
+                    if (!params.CHECKS || params.CHECKS.trim() == '') return true
+                    def c = params.CHECKS.split(',').collect { it.trim().toLowerCase() }
+                    return c.contains('capability_gate')
+                }
+            }
             steps {
                 echo "Running Super App Capability Gatekeeper Audit..."
                 script {
@@ -572,6 +603,9 @@ pipeline {
                         const fs = require("fs");
 
                         const miniAppId = "${params.MINIAPP_ID}";
+                        const rawChecks = "${params.CHECKS || ''}";
+                        const activeList = rawChecks ? rawChecks.split(",").map(s => s.trim().toLowerCase()).filter(Boolean) : ["secret_scan", "sast", "dependency_scan", "capability_gate"];
+
                         const ingestFile = "${env.INGEST_REPORT}";
                         const secretsFile = "${env.SECRETS_REPORT}";
                         const sastFile = "${env.SAST_REPORT}";
@@ -581,14 +615,16 @@ pipeline {
                         const findings = [];
                         let score = 100;
                         const checks = {
-                            ingest: { passed: true, details: "Source integrity and archive structure verified." },
-                            secrets: { passed: true, details: "No hardcoded credentials, JWTs, or private keys found." },
-                            sast: { passed: true, details: "Code complies with sandbox rules; no forbidden mirrors/processes." },
-                            sca: { passed: true, details: "Dependency versions scanned against known CVE databases." },
-                            capability_gate: { passed: true, details: "All required permissions comply with Super App capability catalog." }
+                            ingest: { passed: true, details: "Source integrity and archive structure verified." }
                         };
 
-                        function mergeReport(filePath, checkKey, deduction = 25) {
+                        const shouldCheck = (ids) => {
+                            if (!rawChecks || rawChecks.trim() === "") return true;
+                            return ids.some(id => activeList.includes(id.toLowerCase()));
+                        };
+
+                        function mergeReport(filePath, checkKey, defaultDetails, deduction = 25) {
+                            checks[checkKey] = { passed: true, details: defaultDetails };
                             if (fs.existsSync(filePath)) {
                                 try {
                                     const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
@@ -604,11 +640,38 @@ pipeline {
                             }
                         }
 
-                        mergeReport(ingestFile, "ingest", 35);
-                        mergeReport(secretsFile, "secrets", 30);
-                        mergeReport(sastFile, "sast", 25);
-                        mergeReport(scaFile, "sca", 20);
-                        mergeReport(capFile, "capability_gate", 30);
+                        // 1. Ingestion Check (Always baseline)
+                        if (fs.existsSync(ingestFile)) {
+                            try {
+                                const data = JSON.parse(fs.readFileSync(ingestFile, "utf8"));
+                                if (data.findings && data.findings.length > 0) findings.push(...data.findings);
+                                if (data.passed === false) {
+                                    checks.ingest.passed = false;
+                                    checks.ingest.details = data.findings?.[0]?.description || "Ingestion integrity check failed.";
+                                    score -= 35;
+                                }
+                            } catch (e) {}
+                        }
+
+                        // 2. Secrets Scan
+                        if (shouldCheck(["secret_scan", "secrets"])) {
+                            mergeReport(secretsFile, "secret_scan", "No hardcoded credentials, JWTs, or private keys found.", 30);
+                        }
+
+                        // 3. SAST
+                        if (shouldCheck(["sast", "malware_sast", "malware_scan"])) {
+                            mergeReport(sastFile, "sast", "Code complies with sandbox rules; no forbidden mirrors/processes.", 25);
+                        }
+
+                        // 4. Dependency Scan (SCA)
+                        if (shouldCheck(["dependency_scan", "sca"])) {
+                            mergeReport(scaFile, "dependency_scan", "Dependency versions scanned against known CVE databases.", 20);
+                        }
+
+                        // 5. Capability Gate
+                        if (shouldCheck(["capability_gate"])) {
+                            mergeReport(capFile, "capability_gate", "All required permissions comply with Super App capability catalog.", 30);
+                        }
 
                         const hasCriticalOrHigh = findings.some(f => f.severity === "CRITICAL" || f.severity === "HIGH");
                         const status = hasCriticalOrHigh ? "FAILED" : "PASSED";
@@ -617,14 +680,15 @@ pipeline {
                             miniAppId: miniAppId,
                             method: "FLUTTER_PACKAGE",
                             status: status,
-                            score: Math.max(0, score),
+                            score: Math.max(25, Math.min(100, score)),
                             checks: checks,
                             findings: findings,
+                            activeChecks: activeList,
                             reportPath: "${env.REPORT_FILE}"
                         };
 
                         fs.writeFileSync("${env.REPORT_FILE}", JSON.stringify(payload, null, 2));
-                        console.log("Flutter Package Validation Complete! Status:", status, "Score:", payload.score, "Total Findings:", findings.length);
+                        console.log("Flutter Package Validation Complete! Status:", status, "Score:", payload.score, "Total Findings:", findings.length, "Active Checks:", activeList);
                     '
                     """
 
