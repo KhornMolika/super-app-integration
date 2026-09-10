@@ -1106,9 +1106,13 @@ export default function GuidelinesPage() {
       <header className="h-16 border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between px-6 lg:px-8 shrink-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md relative z-20">
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2.5 font-bold text-slate-900 dark:text-white hover:opacity-90 transition">
-            <div className="w-7 h-7 rounded-lg bg-brand-600 text-white flex items-center justify-center font-extrabold text-sm shadow-sm">
-              <Image src="/fsa-logo.png" alt="FSA Logo" width={20} height={20} className="object-cover rounded-full" />
-            </div>
+            <Image
+              src="/fsa-logo.png"
+              alt="FSA Logo"
+              width={28}
+              height={28}
+              className="w-7 h-7 object-cover rounded-full shadow-sm"
+            />
             <span className="text-base tracking-tight font-extrabold text-slate-900 dark:text-white">
               Super App <span className="text-brand-600 dark:text-brand-400 font-medium">Docs</span>
             </span>
