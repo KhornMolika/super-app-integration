@@ -69,6 +69,32 @@ export class SuperAppService implements OnApplicationBootstrap {
   }
 
   /**
+   * Computes the next version tag using single-digit 3-octet rollover (0-9 per position)
+   * Example sequence: v0.0.8 -> v0.0.9 -> v0.1.0 -> v0.1.1 -> ... -> v0.9.9 -> v1.0.0
+   */
+  computeNextVersion(currentVer?: string): string {
+    if (!currentVer) return 'v0.0.1';
+    const match = currentVer.match(/^v?(\d+)\.(\d+)\.(\d+)/);
+    if (!match) return 'v0.0.1';
+
+    let major = parseInt(match[1], 10) || 0;
+    let minor = parseInt(match[2], 10) || 0;
+    let patch = parseInt(match[3], 10) || 0;
+
+    patch += 1;
+    if (patch > 9) {
+      minor += Math.floor(patch / 10);
+      patch = patch % 10;
+    }
+    if (minor > 9) {
+      major += Math.floor(minor / 10);
+      minor = minor % 10;
+    }
+
+    return `v${major}.${minor}.${patch}`;
+  }
+
+  /**
    * Generates and persists the next incremented Super App release / test build version (starting from v0.0.1)
    */
   async getAndRegisterNextVersion(targetVersion?: string): Promise<string> {
@@ -112,15 +138,7 @@ export class SuperAppService implements OnApplicationBootstrap {
     }
 
     const currentVer = latest.superAppVersion || 'v0.0.1';
-    const match = currentVer.match(/^v?(\d+)\.(\d+)\.(\d+)(.*)$/);
-    let nextVersion = 'v0.0.1';
-
-    if (match) {
-      const major = parseInt(match[1], 10);
-      const minor = parseInt(match[2], 10);
-      const patch = parseInt(match[3], 10) + 1;
-      nextVersion = `v${major}.${minor}.${patch}`;
-    }
+    const nextVersion = this.computeNextVersion(currentVer);
 
     // Persist new version to advance sequence
     await this.superAppCapabilityRepository.save({
@@ -139,14 +157,7 @@ export class SuperAppService implements OnApplicationBootstrap {
     const latest = await this.findLatestCapability();
     if (!latest) return 'v0.0.1';
     const currentVer = latest.superAppVersion || 'v0.0.1';
-    const match = currentVer.match(/^v?(\d+)\.(\d+)\.(\d+)(.*)$/);
-    if (match) {
-      const major = parseInt(match[1], 10);
-      const minor = parseInt(match[2], 10);
-      const patch = parseInt(match[3], 10) + 1;
-      return `v${major}.${minor}.${patch}`;
-    }
-    return 'v0.0.1';
+    return this.computeNextVersion(currentVer);
   }
 
   async getEcosystemStatus(): Promise<any> {
