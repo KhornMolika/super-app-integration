@@ -63,7 +63,7 @@ dsp-poc/
 ├── scripts/
 │   ├── jenkins/
 │   │   ├── Jenkinsfile.superapp-test-build # CI/CD pipeline for APK & Web builds
-│   │   └── Jenkinsfile.webview-validation  # Automated security gate pipeline
+│   │   └── Jenkinsfile.miniapp-validation  # Universal security gate pipeline (all methods)
 │   ├── download-test-apk.ps1       # One-click Windows PowerShell download script
 │   └── download-test-apk.sh        # Bash download script for Linux/macOS
 └── doc/
@@ -107,7 +107,7 @@ dsp-poc/
 
 ### 4.2. Two-Stage Mini App Lifecycle
 1. **DRAFT / SUBMITTED**: Partner submits Mini App metadata, URLs, and requested native permissions.
-2. **SECURITY VALIDATION**: Jenkins runs automated domain validation and sandbox tests (`webview-validation`).
+2. **SECURITY VALIDATION**: Jenkins runs automated validation & security audits (`miniapp-validation`).
 3. **APPROVED (Ready for Test)**: SA Admin approves the Mini App for testing.
 4. **BUILDING**:
    * Backend triggers Jenkins pipeline `superapp-test-build` with parameter `BUILD_TYPE: debug`.

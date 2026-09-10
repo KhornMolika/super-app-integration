@@ -271,9 +271,7 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
     });
   }, [stages, miniApp.securityChecks, miniApp.integrationMethod, isFlutterPackage]);
 
-  const jenkinsJobUrl = isFlutterPackage
-    ? 'http://localhost:8085/job/package-validation/'
-    : 'http://localhost:8085/job/webview-validation/';
+  const jenkinsJobUrl = 'http://localhost:8085/job/miniapp-validation/';
 
   const handleReScan = async (checksToRun?: string[]) => {
     setIsReScanning(true);

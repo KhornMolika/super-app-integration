@@ -219,9 +219,8 @@ pnpm install && pnpm run dev
 | Script | Path | Purpose |
 | :--- | :--- | :--- |
 | `download-test-apk.ps1` | [`scripts/download-test-apk.ps1`](file:///d:/Projects/fintect/dsp-poc/scripts/download-test-apk.ps1) | Downloads the latest test build APK from Nexus to Windows Downloads with live progress bar. |
-| `download-test-apk.sh` | [`scripts/download-test-apk.sh`](file:///d:/Projects/fintect/dsp-poc/scripts/download-test-apk.sh) | Bash script to download test build APK on Linux / macOS / CI runners. |
 | `Jenkinsfile.superapp-test-build` | [`scripts/jenkins/Jenkinsfile.superapp-test-build`](file:///d:/Projects/fintect/dsp-poc/scripts/jenkins/Jenkinsfile.superapp-test-build) | Jenkins pipeline compiling multi-arch APKs and Flutter Web artifacts to Nexus. |
-| `Jenkinsfile.webview-validation` | [`scripts/jenkins/Jenkinsfile.webview-validation`](file:///d:/Projects/fintect/dsp-poc/scripts/jenkins/Jenkinsfile.webview-validation) | Jenkins pipeline verifying domain security and URL reachability. |
+| `Jenkinsfile.miniapp-validation` | [`scripts/jenkins/Jenkinsfile.miniapp-validation`](file:///d:/Projects/fintect/dsp-poc/scripts/jenkins/Jenkinsfile.miniapp-validation) | Unified Jenkins security validation pipeline for all Mini App integration methods. |
 
 ---
 
