@@ -9,10 +9,20 @@ import 'package:local_auth/local_auth.dart';
 import 'package:dps_mobile_app/app/config/api_config.dart';
 
 class MiniappController extends GetxController {
-  late WebViewController webViewController;
+  WebViewController? webViewController;
   String targetUrl = 'https://flutter.dev';
+  String finalUrl = 'https://flutter.dev';
+  String viewTypeId = 'miniapp-iframe';
   List<String> permissions = [];
   String appName = 'Mini App';
+
+  bool hasPermission(String perm) {
+    final needle = perm.toLowerCase();
+    return permissions.any((p) {
+      final lp = p.toLowerCase();
+      return lp == needle || lp.contains(needle);
+    });
+  }
 
   @override
   void onInit() {
@@ -20,9 +30,19 @@ class MiniappController extends GetxController {
     
     final args = Get.arguments;
     if (args is Map) {
-      targetUrl = args['url'] ?? 'https://flutter.dev';
-      permissions = List<String>.from(args['permissions'] ?? []);
-      appName = args['name'] ?? 'Mini App';
+      targetUrl = args['url']?.toString() ?? 'https://flutter.dev';
+      final rawPerms = args['permissions'];
+      if (rawPerms is List) {
+        permissions = rawPerms.map((p) {
+          if (p is Map) {
+            return (p['type'] ?? p['name'] ?? p['permission'] ?? '').toString();
+          }
+          return p.toString();
+        }).where((p) => p.isNotEmpty).toList();
+      } else {
+        permissions = [];
+      }
+      appName = args['name']?.toString() ?? 'Mini App';
     } else if (args is String) {
       targetUrl = args;
       permissions = [];
@@ -40,12 +60,21 @@ class MiniappController extends GetxController {
 
     // Append token as query parameter
     final uri = Uri.parse(parsedTargetUrl);
-    final finalUrl = uri.replace(queryParameters: {
+    finalUrl = uri.replace(queryParameters: {
       ...uri.queryParameters,
-      'token': token,
+      if (token.isNotEmpty) 'token': token,
     }).toString();
 
-    webViewController = WebViewController()
+    viewTypeId = 'miniapp-iframe-${DateTime.now().millisecondsSinceEpoch}';
+
+    if (!kIsWeb) {
+      _initMobileWebViewController();
+    }
+  }
+
+  void _initMobileWebViewController() {
+    late final WebViewController ctrl;
+    ctrl = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..addJavaScriptChannel(
         'DSPNativeBridge',
@@ -56,10 +85,10 @@ class MiniappController extends GetxController {
             final callbackId = data['callbackId'];
 
             if (action == 'getLocation') {
-              if (!permissions.contains('Location')) {
+              if (!hasPermission('Location') && !hasPermission('Geolocation')) {
                 debugPrint('Super App blocked Location access for this Mini App.');
                 final blockedLocation = '{"lat": 0, "lng": 0, "error": "Permission denied by Super App settings"}';
-                webViewController.runJavaScript(
+                ctrl.runJavaScript(
                   "if (window.dspCallback) window.dspCallback('$callbackId', $blockedLocation);"
                 );
                 return;
@@ -88,23 +117,23 @@ class MiniappController extends GetxController {
                 final realLocation = '{"lat": ${position.latitude}, "lng": ${position.longitude}}';
                 
                 // Send the real response back to the WebView asynchronously
-                webViewController.runJavaScript(
+                ctrl.runJavaScript(
                   "if (window.dspCallback) window.dspCallback('$callbackId', $realLocation);"
                 );
               } catch (locationError) {
                 debugPrint('Location Error: $locationError');
                 // You could also send an error object back to the JS side here
                 final fallbackLocation = '{"lat": 0, "lng": 0, "error": "${locationError.toString().replaceAll('"', "'")}"}';
-                webViewController.runJavaScript(
+                ctrl.runJavaScript(
                   "if (window.dspCallback) window.dspCallback('$callbackId', $fallbackLocation);"
                 );
               }
             }
 
             if (action == 'openCamera') {
-              if (!permissions.contains('Camera')) {
+              if (!hasPermission('Camera')) {
                 final blocked = '{"error": "Camera permission denied by Super App settings"}';
-                webViewController.runJavaScript("if (window.dspCallback) window.dspCallback('$callbackId', $blocked);");
+                ctrl.runJavaScript("if (window.dspCallback) window.dspCallback('$callbackId', $blocked);");
                 return;
               }
 
@@ -116,21 +145,21 @@ class MiniappController extends GetxController {
                   final bytes = await image.readAsBytes();
                   final base64Image = base64Encode(bytes);
                   final response = '{"image": "data:image/jpeg;base64,$base64Image"}';
-                  webViewController.runJavaScript("if (window.dspCallback) window.dspCallback('$callbackId', $response);");
+                  ctrl.runJavaScript("if (window.dspCallback) window.dspCallback('$callbackId', $response);");
                 } else {
                   final response = '{"error": "User cancelled camera"}';
-                  webViewController.runJavaScript("if (window.dspCallback) window.dspCallback('$callbackId', $response);");
+                  ctrl.runJavaScript("if (window.dspCallback) window.dspCallback('$callbackId', $response);");
                 }
               } catch (e) {
                 final errorResp = '{"error": "Failed to open camera: ${e.toString().replaceAll('"', "'")}"}';
-                webViewController.runJavaScript("if (window.dspCallback) window.dspCallback('$callbackId', $errorResp);");
+                ctrl.runJavaScript("if (window.dspCallback) window.dspCallback('$callbackId', $errorResp);");
               }
             }
 
             if (action == 'authenticate') {
-              if (!permissions.contains('Biometrics')) {
+              if (!hasPermission('Biometrics') && !hasPermission('Auth')) {
                 final blocked = '{"error": "Biometrics permission denied by Super App settings"}';
-                webViewController.runJavaScript("if (window.dspCallback) window.dspCallback('$callbackId', $blocked);");
+                ctrl.runJavaScript("if (window.dspCallback) window.dspCallback('$callbackId', $blocked);");
                 return;
               }
 
@@ -141,7 +170,7 @@ class MiniappController extends GetxController {
                 
                 if (!canAuthenticate) {
                   final errorResp = '{"error": "Device does not support biometrics"}';
-                  webViewController.runJavaScript("if (window.dspCallback) window.dspCallback('$callbackId', $errorResp);");
+                  ctrl.runJavaScript("if (window.dspCallback) window.dspCallback('$callbackId', $errorResp);");
                   return;
                 }
 
@@ -152,10 +181,10 @@ class MiniappController extends GetxController {
 
                 if (didAuthenticate) {
                   final response = '{"success": true}';
-                  webViewController.runJavaScript("if (window.dspCallback) window.dspCallback('$callbackId', $response);");
+                  ctrl.runJavaScript("if (window.dspCallback) window.dspCallback('$callbackId', $response);");
                 } else {
                   final response = '{"error": "Authentication failed or cancelled"}';
-                  webViewController.runJavaScript("if (window.dspCallback) window.dspCallback('$callbackId', $response);");
+                  ctrl.runJavaScript("if (window.dspCallback) window.dspCallback('$callbackId', $response);");
                 }
               } catch (e) {
                 String errorMessage = e.toString().replaceAll('"', "'");
@@ -166,7 +195,7 @@ class MiniappController extends GetxController {
                 }
                 
                 final errorResp = '{"error": "$errorMessage"}';
-                webViewController.runJavaScript("if (window.dspCallback) window.dspCallback('$callbackId', $errorResp);");
+                ctrl.runJavaScript("if (window.dspCallback) window.dspCallback('$callbackId', $errorResp);");
               }
             }
           } catch (e) {
@@ -175,5 +204,6 @@ class MiniappController extends GetxController {
         },
       )
       ..loadRequest(Uri.parse(finalUrl));
+    webViewController = ctrl;
   }
 }

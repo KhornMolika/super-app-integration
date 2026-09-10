@@ -17,7 +17,7 @@ export class SuperAppService implements OnApplicationBootstrap {
   private async seedInitialCapabilities() {
     const versions = [
       {
-        version: 'v2.4.0',
+        version: 'v0.0.1',
         platform: 'ALL',
         capabilities: [
           'camera',
@@ -28,17 +28,6 @@ export class SuperAppService implements OnApplicationBootstrap {
           'bluetooth',
           'contacts',
           'storage',
-        ],
-      },
-      {
-        version: 'v2.0.0',
-        platform: 'ALL',
-        capabilities: [
-          'camera',
-          'location',
-          'storage',
-          'microphone',
-          'biometrics',
         ],
       },
     ];
@@ -79,6 +68,87 @@ export class SuperAppService implements OnApplicationBootstrap {
     return list[0] || null;
   }
 
+  /**
+   * Generates and persists the next incremented Super App release / test build version (starting from v0.0.1)
+   */
+  async getAndRegisterNextVersion(targetVersion?: string): Promise<string> {
+    const latest = await this.findLatestCapability();
+    const capabilities = latest?.capabilities || [
+      'camera',
+      'location',
+      'storage',
+      'microphone',
+      'biometrics',
+      'nfc',
+      'bluetooth',
+    ];
+
+    if (targetVersion && /^v?\d+\.\d+(\.\d+)?/.test(targetVersion)) {
+      const formatted = targetVersion.startsWith('v')
+        ? targetVersion
+        : `v${targetVersion}`;
+
+      const exists = await this.superAppCapabilityRepository.findOne({
+        where: { superAppVersion: formatted },
+      });
+      if (!exists) {
+        await this.superAppCapabilityRepository.save({
+          superAppVersion: formatted,
+          platform: 'ALL',
+          capabilities,
+        });
+      }
+      return formatted;
+    }
+
+    if (!latest) {
+      const initialVer = 'v0.0.1';
+      await this.superAppCapabilityRepository.save({
+        superAppVersion: initialVer,
+        platform: 'ALL',
+        capabilities,
+      });
+      return initialVer;
+    }
+
+    const currentVer = latest.superAppVersion || 'v0.0.1';
+    const match = currentVer.match(/^v?(\d+)\.(\d+)\.(\d+)(.*)$/);
+    let nextVersion = 'v0.0.1';
+
+    if (match) {
+      const major = parseInt(match[1], 10);
+      const minor = parseInt(match[2], 10);
+      const patch = parseInt(match[3], 10) + 1;
+      nextVersion = `v${major}.${minor}.${patch}`;
+    }
+
+    // Persist new version to advance sequence
+    await this.superAppCapabilityRepository.save({
+      superAppVersion: nextVersion,
+      platform: 'ALL',
+      capabilities,
+    });
+
+    return nextVersion;
+  }
+
+  /**
+   * Preview the next suggested version tag without immediately saving
+   */
+  async getNextSuggestedVersion(): Promise<string> {
+    const latest = await this.findLatestCapability();
+    if (!latest) return 'v0.0.1';
+    const currentVer = latest.superAppVersion || 'v0.0.1';
+    const match = currentVer.match(/^v?(\d+)\.(\d+)\.(\d+)(.*)$/);
+    if (match) {
+      const major = parseInt(match[1], 10);
+      const minor = parseInt(match[2], 10);
+      const patch = parseInt(match[3], 10) + 1;
+      return `v${major}.${minor}.${patch}`;
+    }
+    return 'v0.0.1';
+  }
+
   async getEcosystemStatus(): Promise<any> {
     const latest = await this.findLatestCapability();
     const capabilities = latest ? latest.capabilities : [
@@ -93,7 +163,7 @@ export class SuperAppService implements OnApplicationBootstrap {
     ];
 
     return {
-      superAppVersion: latest?.superAppVersion || 'v2.4.0',
+      superAppVersion: latest?.superAppVersion || 'v0.0.1',
       kernelStatus: 'OPERATIONAL',
       bridgeProtocolVersion: '2.0.0',
       securityGateEnforcement: 'STRICT',

@@ -116,7 +116,7 @@ export default function SecurityGateCard({ miniApp }: SecurityGateCardProps) {
           ],
           conflicts: [],
           manifest: {
-            superAppVersion: 'v1.1.0',
+            superAppVersion: 'v0.0.1',
             integrityDigest: `DEEP_LINK_SCHEME://${urlScheme}`,
             consolidatedPermissions: (miniApp?.permissions || []).map((p: any) => p.type || p),
           }
@@ -126,7 +126,7 @@ export default function SecurityGateCard({ miniApp }: SecurityGateCardProps) {
 
       const pkgName = flutterConfig.packageName || (isFlutter ? 'dps_miniapp_mobile_trust_regulator' : 'webview_package');
       const payload = {
-        releaseVersion: 'v1.1.0',
+        releaseVersion: 'v0.0.1',
         miniApps: [
           {
             id: miniApp?.id || 'miniapp-1',

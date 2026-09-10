@@ -13,21 +13,28 @@ export class JenkinsService {
     this.jenkinsUrl = this.configService
       .get<string>('JENKINS_URL', 'http://localhost:8085')
       .replace(/\/$/, '');
-    this.jenkinsUser = this.configService.get<string>('JENKINS_USER', 'admin');
-    this.jenkinsApiToken = this.configService.get<string>(
-      'JENKINS_API_TOKEN',
-      'admin1234',
-    );
+    this.jenkinsUser = this.configService.get<string>('JENKINS_USER') || '';
+    this.jenkinsApiToken =
+      this.configService.get<string>('JENKINS_API_TOKEN') ||
+      this.configService.get<string>('JENKINS_PASSWORD') ||
+      '';
     this.callbackBaseUrl = this.configService
       .get<string>('CALLBACK_BASE_URL', 'http://host.docker.internal:3000')
       .replace(/\/$/, '');
   }
 
   private getAuthHeader(): string | null {
-    if (this.jenkinsUser && this.jenkinsApiToken) {
-      const credentials = Buffer.from(
-        `${this.jenkinsUser}:${this.jenkinsApiToken}`,
-      ).toString('base64');
+    const user =
+      this.configService.get<string>('JENKINS_USER') ||
+      process.env.JENKINS_USER ||
+      this.jenkinsUser;
+    const token =
+      this.configService.get<string>('JENKINS_API_TOKEN') ||
+      this.configService.get<string>('JENKINS_PASSWORD') ||
+      process.env.JENKINS_API_TOKEN ||
+      this.jenkinsApiToken;
+    if (user && token) {
+      const credentials = Buffer.from(`${user}:${token}`).toString('base64');
       return `Basic ${credentials}`;
     }
     return null;
@@ -90,6 +97,10 @@ export class JenkinsService {
     requiredCapabilities?: string[];
     allowLocal?: boolean;
   }): Promise<{ success: boolean; message: string }> {
+    if (options.integrationMethod === 'WEBVIEW') {
+      return this.triggerLegacyWebViewValidation(options);
+    }
+
     // Try universal job first, or method-specific fallback job
     const jobName = 'miniapp-validation';
     const callbackUrl = `${this.callbackBaseUrl}/api/integrations/validation/callback`;
@@ -159,9 +170,7 @@ export class JenkinsService {
       // If universal job not yet created on Jenkins instance, fallback to legacy specific jobs
       if (response.status === 404) {
         this.logger.warn(`Universal job "${jobName}" not found (404). Falling back to method-specific pipeline.`);
-        if (options.integrationMethod === 'WEBVIEW') {
-          return this.triggerLegacyWebViewValidation(options);
-        } else if (options.integrationMethod === 'FLUTTER_PACKAGE') {
+        if (options.integrationMethod === 'FLUTTER_PACKAGE') {
           return this.triggerLegacyPackageValidation(options);
         }
       }

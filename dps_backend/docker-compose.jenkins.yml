@@ -13,10 +13,11 @@ services:
       - "8085:8080"
       - "50000:50000"
     environment:
+      - TZ=Asia/Phnom_Penh
       - DOCKER_HOST=tcp://docker:2376
       - DOCKER_CERT_PATH=/certs/client
       - DOCKER_TLS_VERIFY=1
-      - JAVA_OPTS=-Xmx2048m -Xms1024m
+      - JAVA_OPTS=-Xmx2048m -Xms1024m -Duser.timezone=Asia/Phnom_Penh
     volumes:
       - jenkins_data:/var/jenkins_home
       - jenkins_certs:/certs/client:ro

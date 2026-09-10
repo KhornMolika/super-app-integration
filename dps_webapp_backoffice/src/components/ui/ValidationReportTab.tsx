@@ -218,7 +218,19 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
     let stageKeyOrder: string[] = [];
 
     if (rawStageKeys.length > 0) {
-      stageKeyOrder = rawStageKeys;
+      stageKeyOrder = [...rawStageKeys].sort((a, b) => {
+        const orderA = stages[a]?.order !== undefined
+          ? Number(stages[a].order)
+          : (typeof stages[a]?.name === 'string' && stages[a]?.name.match(/^(\d+)\./)
+              ? parseInt(stages[a].name.match(/^(\d+)\./)[1], 10)
+              : 999);
+        const orderB = stages[b]?.order !== undefined
+          ? Number(stages[b].order)
+          : (typeof stages[b]?.name === 'string' && stages[b]?.name.match(/^(\d+)\./)
+              ? parseInt(stages[b].name.match(/^(\d+)\./)[1], 10)
+              : 999);
+        return orderA - orderB;
+      });
     } else {
       const userSelected = miniApp.securityChecks && miniApp.securityChecks.length > 0
         ? miniApp.securityChecks

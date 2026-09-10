@@ -171,7 +171,7 @@ export class MiniappValidationHelper {
 
       // Check domain verification
       const prodUrl = app.integrationConfig?.productionUrl;
-      if (!app.isDomainVerified) {
+      if (!app.isDomainVerified && !isDev) {
         if (prodUrl && app.verificationToken && app.appId) {
           checks.push(
             this.domainVerificationService

@@ -3,7 +3,7 @@ pipeline {
 
     parameters {
         string(name: 'APP_NAME', defaultValue: 'superapp', description: 'Application Name / Sub-folder for Nexus repository')
-        string(name: 'RELEASE_VERSION', defaultValue: 'v1.1.0', description: 'Super App Release Tag')
+        string(name: 'RELEASE_VERSION', defaultValue: 'v0.0.1', description: 'Super App Release Tag')
         choice(name: 'BUILD_TYPE', choices: ['debug', 'release'], description: 'Target build mode: debug or release')
         string(name: 'CALLBACK_URL', defaultValue: 'http://host.docker.internal:3000/api/release-assembly/build-callback', description: 'NestJS Backend Webhook Callback URL')
         string(name: 'NEXUS_URL', defaultValue: 'http://host.docker.internal:8081', description: 'Sonatype Nexus URL')
@@ -99,7 +99,7 @@ pipeline {
                 APK_FILE="/var/reports/app-debug.apk"
                 REPO_NAME="${params.BUILD_TYPE == 'release' ? 'apk-releases' : 'apk-test-builds'}"
                 TARGET_NAME="${params.BUILD_TYPE == 'release' ? 'app-release.apk' : 'app-debug.apk'}"
-                NEXUS_AUTH="\${NEXUS_USER:-admin}:\${NEXUS_PASSWORD:-admin1234}"
+                NEXUS_AUTH="\${NEXUS_USER:-admin}:\${NEXUS_PASSWORD}"
                 if [ -f "\$APK_FILE" ]; then
                     echo "Uploading \${TARGET_NAME} to Nexus repository \${REPO_NAME} at ${params.NEXUS_URL}/repository/\${REPO_NAME}/${params.APP_NAME}/${params.RELEASE_VERSION}/\${TARGET_NAME}..."
                     if [ -n "\$NEXUS_PASSWORD" ]; then

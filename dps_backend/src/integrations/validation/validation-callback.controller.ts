@@ -71,12 +71,16 @@ export class ValidationCallbackController {
     if (!app) return { ok: false };
 
     const stages = app.validationStages || {};
+    const existing = stages[stageId] || {};
     stages[stageId] = {
       id: stageId,
-      name: stageName,
+      order: existing.order !== undefined ? existing.order : undefined,
+      name: stageName || existing.name || stageId,
       status,
       details: details || '',
       updatedAt: new Date().toISOString(),
+      ...(existing.tool ? { tool: existing.tool } : {}),
+      ...(existing.icon ? { icon: existing.icon } : {}),
     };
 
     app.validationStages = stages;

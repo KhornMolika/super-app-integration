@@ -114,10 +114,20 @@ class HomeController extends GetxController {
       return;
     }
 
-    String url = app['url'] ?? 
-        (app['integrationConfig'] is Map ? app['integrationConfig']['productionUrl'] : null) ?? 
-        ApiConfig.baseUrl;
+    dynamic config = app['integrationConfig'];
+    if (config is String) {
+      try {
+        config = jsonDecode(config);
+      } catch (_) {}
+    }
+
+    String? extractedUrl = app['url'];
+    if (config is Map) {
+      extractedUrl ??= config['productionUrl'] ?? config['stagingUrl'] ?? config['url'];
+    }
+    String url = extractedUrl ?? (kIsWeb ? 'http://localhost:3003' : ApiConfig.baseUrl);
     url = ApiConfig.resolveUrl(url);
+
     Get.toNamed(Routes.MINIAPP, arguments: {
       'url': url,
       'permissions': app['permissions'] ?? [],

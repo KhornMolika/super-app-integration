@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/home_controller.dart';
 import '../../../routes/app_pages.dart';
+import 'package:dps_mobile_app/app/config/api_config.dart';
 
 class HomeView extends GetView<HomeController> {
   const HomeView({super.key});
@@ -548,16 +550,34 @@ class HomeView extends GetView<HomeController> {
 
   Widget _buildMiniAppLogo(String? logoUrl, String name, double width, double height) {
     if (logoUrl != null && logoUrl.isNotEmpty) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Image.network(
-          logoUrl,
-          width: width,
-          height: height,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _buildFallbackAvatar(name, width, height),
-        ),
-      );
+      if (logoUrl.startsWith('data:image')) {
+        try {
+          final base64Str = logoUrl.split(',').last;
+          final bytes = base64Decode(base64Str);
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Image.memory(
+              bytes,
+              width: width,
+              height: height,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _buildFallbackAvatar(name, width, height),
+            ),
+          );
+        } catch (_) {}
+      } else {
+        final resolvedUrl = ApiConfig.resolveUrl(logoUrl);
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Image.network(
+            resolvedUrl,
+            width: width,
+            height: height,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _buildFallbackAvatar(name, width, height),
+          ),
+        );
+      }
     }
     return _buildFallbackAvatar(name, width, height);
   }

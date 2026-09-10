@@ -7,12 +7,18 @@ import '../../../services/auth_service.dart';
 import 'package:dps_mobile_app/app/config/api_config.dart';
 
 class LoginController extends GetxController {
-  final emailController = TextEditingController();
-  final passwordController = TextEditingController();
+  final emailController = TextEditingController(text: 'admin@example.com');
+  final passwordController = TextEditingController(text: 'admin123');
 
   @override
   void onInit() {
     super.onInit();
+    if (emailController.text.isEmpty) {
+      emailController.text = 'admin@example.com';
+    }
+    if (passwordController.text.isEmpty) {
+      passwordController.text = 'admin123';
+    }
     ApiConfig.autoDetectServer();
   }
 

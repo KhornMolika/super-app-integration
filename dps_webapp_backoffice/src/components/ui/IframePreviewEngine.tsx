@@ -34,20 +34,20 @@ export default function IframePreviewEngine({ url, reloadKey }: IframePreviewEng
         return;
       }
 
-      // 2. Block Localhost and Private IPs (in production/strict mode)
+      // 2. Block Localhost and Private IPs only if explicitly blocked
       const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0' || hostname === '[::1]';
       const isMetadataEndpoint = hostname === '169.254.169.254';
       
-      const allowLocalhost = process.env.NEXT_PUBLIC_PREVIEW_ALLOW_LOCALHOST === 'true';
+      const blockLocalhost = process.env.NEXT_PUBLIC_PREVIEW_BLOCK_LOCALHOST === 'true';
 
-      if ((isLocalhost && !allowLocalhost) || isMetadataEndpoint) {
+      if ((isLocalhost && blockLocalhost) || isMetadataEndpoint) {
         setSecurityError(`Access to internal network (${hostname}) is blocked for security reasons.`);
         return;
       }
 
       // 3. Optional: Enforce HTTPS only
       const requireHttps = process.env.NEXT_PUBLIC_PREVIEW_REQUIRE_HTTPS === 'true';
-      if (requireHttps && parsedUrl.protocol !== 'https:') {
+      if (requireHttps && parsedUrl.protocol !== 'https:' && !isLocalhost) {
         setSecurityError('Only HTTPS URLs are allowed.');
         return;
       }

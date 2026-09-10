@@ -20,7 +20,7 @@ if (Test-Path $EnvFile) {
 
 $baseUrl = if ($env:NEXUS_BASE_URL) { $env:NEXUS_BASE_URL } else { "http://localhost:8081" }
 $adminUser = if ($env:NEXUS_ADMIN_USER) { $env:NEXUS_ADMIN_USER } else { "admin" }
-$targetPassword = if ($env:NEXUS_ADMIN_PASSWORD) { $env:NEXUS_ADMIN_PASSWORD } else { "admin1234" }
+$targetPassword = $env:NEXUS_ADMIN_PASSWORD
 
 Write-Host "Connecting to Nexus at: $baseUrl"
 
@@ -103,6 +103,31 @@ try {
     Write-Host "Active realms configured with PubToken."
 } catch {
     Write-Warning "Could not update active realms: $_"
+}
+
+# 2.5 Create raw repositories for Super App APKs
+Write-Host "Configuring raw APK repositories (apk-test-builds, apk-releases)..."
+$apkRepos = @("apk-test-builds", "apk-releases")
+foreach ($apkRepo in $apkRepos) {
+    try {
+        $rawPayload = @{
+            name = $apkRepo
+            online = $true
+            storage = @{
+                blobStoreName = "default"
+                strictContentTypeValidation = $false
+                writePolicy = "ALLOW"
+            }
+        } | ConvertTo-Json -Depth 5
+        Invoke-RestMethod -Uri "$baseUrl/service/rest/v1/repositories/raw/hosted" -Headers $authHeader -Method Post -ContentType "application/json" -Body $rawPayload
+        Write-Host "Created repository: $apkRepo"
+    } catch {
+        if ($_.Exception.Response.StatusCode.value__ -eq 400 -or $_.Exception.Message -like "*already exists*") {
+            Write-Host "Repository $apkRepo already exists."
+        } else {
+            Write-Warning "$apkRepo creation response: $_"
+        }
+    }
 }
 
 # 3. Create pub-hosted repository

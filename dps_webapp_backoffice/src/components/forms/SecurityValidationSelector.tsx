@@ -30,25 +30,9 @@ export const ALL_SECURITY_CHECKS: SecurityCheckItem[] = [
     isRecommended: () => true,
   },
   {
-    id: 'sbom',
-    name: 'Software Bill of Materials (SBOM)',
-    description: 'Generates cryptographic CycloneDX & SPDX SBOM manifests of all software packages and sub-dependencies.',
-    tool: 'Syft / CycloneDX',
-    methods: ['FLUTTER_PACKAGE', 'NATIVE_SDK'],
-    isRecommended: (method) => ['FLUTTER_PACKAGE', 'NATIVE_SDK'].includes(method),
-  },
-  {
-    id: 'sast',
-    name: 'Static Application Security Testing (SAST)',
-    description: 'Analyzes source code for security flaws, unsafe memory operations, and OWASP Top 10 vulnerabilities.',
-    tool: 'Semgrep / SonarQube',
-    methods: ['FLUTTER_PACKAGE', 'NATIVE_SDK'],
-    isRecommended: (method) => ['FLUTTER_PACKAGE', 'NATIVE_SDK'].includes(method),
-  },
-  {
     id: 'domain_tls_audit',
     name: 'Domain TLS/SSL & Transport Security',
-    description: 'Audits TLS 1.2/1.3 cipher suites, HTTPS certificate validity, HSTS headers, and SSRF routing.',
+    description: 'Audits TLS 1.2/1.3 cipher suites, HTTPS certificate validity, HSTS headers, and network routing.',
     tool: 'testssl.sh / SSL Labs',
     methods: ['WEBVIEW', 'DEEP_LINK'],
     isRecommended: (method) => ['WEBVIEW', 'DEEP_LINK'].includes(method),
@@ -68,6 +52,30 @@ export const ALL_SECURITY_CHECKS: SecurityCheckItem[] = [
     tool: 'OWASP ZAP DAST',
     methods: ['WEBVIEW'],
     isRecommended: (method) => method === 'WEBVIEW',
+  },
+  {
+    id: 'sast',
+    name: 'Static Application Security Testing (SAST)',
+    description: 'Analyzes source code for security flaws, unsafe memory operations, and prohibited native calls.',
+    tool: 'Semgrep / AST Guard',
+    methods: ['FLUTTER_PACKAGE', 'NATIVE_SDK'],
+    isRecommended: (method) => ['FLUTTER_PACKAGE', 'NATIVE_SDK'].includes(method),
+  },
+  {
+    id: 'capability_gate',
+    name: 'Host Capability Gatekeeper Audit',
+    description: 'Verifies requested native capabilities and permissions against Super App security policies.',
+    tool: 'Super App Gatekeeper',
+    methods: ['FLUTTER_PACKAGE', 'NATIVE_SDK', 'DEEP_LINK'],
+    isRecommended: (method) => ['FLUTTER_PACKAGE', 'NATIVE_SDK', 'DEEP_LINK'].includes(method),
+  },
+  {
+    id: 'sbom',
+    name: 'Software Bill of Materials (SBOM)',
+    description: 'Generates cryptographic CycloneDX & SPDX SBOM manifests of all software packages and sub-dependencies.',
+    tool: 'Syft / CycloneDX',
+    methods: ['FLUTTER_PACKAGE', 'NATIVE_SDK'],
+    isRecommended: (method) => ['FLUTTER_PACKAGE', 'NATIVE_SDK'].includes(method),
   },
   {
     id: 'malware_scan',
@@ -199,6 +207,28 @@ export default function SecurityValidationSelector({
             Clear
           </Button>
         </div>
+      </div>
+
+      {/* Mandatory Check Banner */}
+      <div className="p-3.5 rounded-xl bg-slate-100/80 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/60 flex items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2">
+          <span className="text-base">
+            {normMethod === 'FLUTTER_PACKAGE' || normMethod === 'NATIVE_SDK' ? '📦' : '🌐'}
+          </span>
+          <div>
+            <span className="font-bold text-slate-800 dark:text-slate-200">
+              {normMethod === 'FLUTTER_PACKAGE' || normMethod === 'NATIVE_SDK'
+                ? 'Mandatory Stage 1: Ingestion & Integrity Verification (SHA-256 Digest)'
+                : 'Mandatory Stage 1: Pre-Flight & SSRF Defense (DNS & Network Scope)'}
+            </span>
+            <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5">
+              Automatically enforced by the CI/CD pipeline for all {normMethod.replace('_', ' ')} submissions.
+            </p>
+          </div>
+        </div>
+        <span className="px-2 py-0.5 rounded font-bold uppercase tracking-wider bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] shrink-0">
+          Enforced
+        </span>
       </div>
 
       {/* Security Checks Grid */}

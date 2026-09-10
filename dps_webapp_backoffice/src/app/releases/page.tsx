@@ -7,9 +7,20 @@ import { Button } from '@/components/ui/inputs';
 export default function ReleasesPage() {
   const [apps, setApps] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [releaseVersion, setReleaseVersion] = useState('v1.1.0');
+  const [releaseVersion, setReleaseVersion] = useState('v1.1.1');
   const [isAssembling, setIsAssembling] = useState(false);
   const [gate2Result, setGate2Result] = useState<any>(null);
+
+  const fetchNextVersion = () => {
+    fetch('/api/super-app/next-version')
+      .then(res => res.json())
+      .then(data => {
+        if (data?.nextVersion) {
+          setReleaseVersion(data.nextVersion);
+        }
+      })
+      .catch(() => {});
+  };
 
   useEffect(() => {
     fetch('/api/mini-apps')
@@ -22,6 +33,8 @@ export default function ReleasesPage() {
         setIsLoading(false);
       })
       .catch(() => setIsLoading(false));
+
+    fetchNextVersion();
   }, []);
 
   const handleRunGate2 = async () => {
@@ -46,6 +59,9 @@ export default function ReleasesPage() {
 
       const data = await res.json();
       setGate2Result(data);
+      if (data?.success || data?.status === 'ASSEMBLY_STARTED') {
+        fetchNextVersion();
+      }
     } catch (err) {
       console.error('Failed to run Gate 2 assembly', err);
     } finally {
@@ -162,7 +178,7 @@ export default function ReleasesPage() {
                   <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
                     Super App Android APK Ready
                     <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 rounded-full">
-                      v1.1.0 • Sonatype Nexus Trusted Registry
+                      {releaseVersion} • Sonatype Nexus Trusted Registry
                     </span>
                   </h4>
                   <p className="text-xs text-slate-600 dark:text-slate-400">

@@ -7,6 +7,7 @@ export interface MiniAppLifecycleBannersProps {
   status: string;
   can: (action: string) => boolean;
   role?: string;
+  testVersion?: string;
   isSubmitting: boolean;
   onLifecycleAction: (action: 'submit' | 'approve' | 'reject' | 'request-changes' | 'start-testing' | 'activate' | 'suspend') => void;
   onOpenSandbox: () => void;
@@ -16,6 +17,7 @@ export default function MiniAppLifecycleBanners({
   status,
   can,
   role,
+  testVersion = 'v1.1.1',
   isSubmitting,
   onLifecycleAction,
   onOpenSandbox,
@@ -184,8 +186,8 @@ export default function MiniAppLifecycleBanners({
           <div className="flex items-center gap-2 flex-shrink-0">
             {(status !== 'TESTING' || role === 'MINI_APP_MANAGER') && (
               <a
-                href="/api/download-apk?type=test&version=v1.1.0"
-                download="superapp-test-build.apk"
+                href={`/api/download-apk?type=test&version=${encodeURIComponent(testVersion)}`}
+                download={`superapp-test-${testVersion}.apk`}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold shadow-sm transition-all"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -196,7 +198,7 @@ export default function MiniAppLifecycleBanners({
                     d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                   />
                 </svg>
-                <span>Download Test APK</span>
+                <span>Download Test APK ({testVersion})</span>
               </a>
             )}
             <Button

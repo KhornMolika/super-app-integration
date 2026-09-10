@@ -22,14 +22,14 @@ export class StorageService implements OnModuleInit {
     );
     const useSSL =
       this.configService.get<string>('MINIO_USE_SSL', 'false') === 'true';
-    const accessKey = this.configService.get<string>(
-      'MINIO_ACCESS_KEY',
-      'admin',
-    );
-    const secretKey = this.configService.get<string>(
-      'MINIO_SECRET_KEY',
-      'admin1234',
-    );
+    const accessKey =
+      this.configService.get<string>('MINIO_ACCESS_KEY') ||
+      this.configService.get<string>('MINIO_ROOT_USER') ||
+      '';
+    const secretKey =
+      this.configService.get<string>('MINIO_SECRET_KEY') ||
+      this.configService.get<string>('MINIO_ROOT_PASSWORD') ||
+      '';
 
     this.bucketName = this.configService.get<string>(
       'MINIO_BUCKET_NAME',

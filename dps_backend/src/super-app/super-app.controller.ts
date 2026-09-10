@@ -10,6 +10,12 @@ export class SuperAppController {
     return this.superAppService.getEcosystemStatus();
   }
 
+  @Get('next-version')
+  async getNextVersion() {
+    const nextVersion = await this.superAppService.getNextSuggestedVersion();
+    return { nextVersion };
+  }
+
   @Get('capabilities')
   async getAllCapabilities() {
     return this.superAppService.findAllCapabilities();

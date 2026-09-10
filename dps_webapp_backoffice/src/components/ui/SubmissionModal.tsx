@@ -39,23 +39,31 @@ export default function SubmissionModal({ state, onClose, onRunInBackground, onS
   const router = useRouter();
   if (!state.isOpen) return null;
 
-  const stageList: Array<{ id: string; name: string; status: string; details?: string; icon?: string; tool?: string }> = React.useMemo(() => {
+  const stageList: Array<{ id: string; name: string; status: string; details?: string; icon?: string; tool?: string; order?: number }> = React.useMemo(() => {
     if (state.stages && Object.keys(state.stages).length > 0) {
-      return Object.values(state.stages).map((s: any) => ({
-        id: s.id || s.name,
-        name: s.name || s.id,
-        status: s.status || 'PENDING',
-        details: s.details,
-        icon: s.icon,
-        tool: s.tool,
-      }));
+      const list = Object.values(state.stages).map((s: any) => {
+        const numMatch = typeof s.name === 'string' ? s.name.match(/^(\d+)\./) : null;
+        const parsedOrder = s.order !== undefined ? Number(s.order) : (numMatch ? parseInt(numMatch[1], 10) : 999);
+        return {
+          id: s.id || s.name,
+          name: s.name || s.id,
+          status: s.status || 'PENDING',
+          details: s.details,
+          icon: s.icon,
+          tool: s.tool,
+          order: parsedOrder,
+        };
+      });
+
+      return list.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
     }
-    return ORDERED_STAGES.map((item) => {
+    return ORDERED_STAGES.map((item, idx) => {
       return {
         id: item.id,
         name: item.name,
         status: item.id === 'ssrf' ? 'RUNNING' : 'PENDING',
         details: item.defaultDetails,
+        order: idx + 1,
       };
     });
   }, [state.stages]);

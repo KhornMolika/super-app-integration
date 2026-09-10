@@ -2,7 +2,7 @@
 set -e
 
 USER="${MINIO_ACCESS_KEY:-${MINIO_ROOT_USER:-admin}}"
-PASS="${MINIO_SECRET_KEY:-${MINIO_ROOT_PASSWORD:-admin1234}}"
+PASS="${MINIO_SECRET_KEY:-${MINIO_ROOT_PASSWORD}}"
 
 echo "Waiting for MinIO AIStor server at http://minio:9000..."
 until /usr/bin/mc alias set myminio http://minio:9000 "$USER" "$PASS"; do

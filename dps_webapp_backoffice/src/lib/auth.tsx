@@ -60,11 +60,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
     try {
-      // Hit our new BFF proxy
+      const defaultPassword = process.env.NEXT_PUBLIC_DEFAULT_PASSWORD || '';
+      // Hit our BFF proxy
       await fetch(`/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password: 'admin1234' })
+        body: JSON.stringify({ email, password: defaultPassword })
       });
     } catch(e) {
       console.error('Login failed', e);

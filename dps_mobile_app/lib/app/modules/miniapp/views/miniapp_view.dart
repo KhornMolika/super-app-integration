@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 import '../controllers/miniapp_controller.dart';
+import '../widgets/miniapp_iframe.dart';
 
 class MiniappView extends GetView<MiniappController> {
   const MiniappView({super.key});
@@ -16,7 +16,11 @@ class MiniappView extends GetView<MiniappController> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: WebViewWidget(controller: controller.webViewController),
+      body: buildMiniAppIframe(
+        url: controller.finalUrl,
+        viewTypeId: controller.viewTypeId,
+        controller: controller.webViewController,
+      ),
     );
   }
 }

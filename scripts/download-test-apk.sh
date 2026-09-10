@@ -1,7 +1,7 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 # Shell script to download Super App Test Build APK
 OUTPUT="${HOME}/Downloads/superapp-test-build.apk"
-URL="http://localhost:8081/repository/apk-test-builds/superapp/v1.1.0/app-debug.apk"
+URL="http://localhost:8081/repository/apk-test-builds/superapp/v0.0.1/app-debug.apk"
 
 echo "Downloading Super App Universal Test APK from Nexus..."
 mkdir -p "${HOME}/Downloads"

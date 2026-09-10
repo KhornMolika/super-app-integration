@@ -99,7 +99,7 @@ export const SECURITY_CHECK_METADATA: Record<string, SecurityCheckMetadata> = {
     tool: 'Super App Gatekeeper',
     icon: '🚪',
     description: 'Verifies declared host capabilities against platform policies and app store guidelines.',
-    methods: ['FLUTTER_PACKAGE', 'NATIVE_SDK'],
+    methods: ['FLUTTER_PACKAGE', 'NATIVE_SDK', 'DEEP_LINK'],
   },
   ssrf: {
     id: 'ssrf',
@@ -122,12 +122,12 @@ export const SECURITY_CHECK_METADATA: Record<string, SecurityCheckMetadata> = {
 export function getDefaultChecksForMethod(method: string): string[] {
   const norm = (method || 'WEBVIEW').toUpperCase();
   if (norm === 'FLUTTER_PACKAGE' || norm === 'NATIVE_SDK') {
-    return ['secret_scan', 'sast', 'dependency_scan', 'capability_gate'];
+    return ['secret_scan', 'sast', 'dependency_scan', 'capability_gate', 'sbom'];
   }
   if (norm === 'DEEP_LINK') {
     return ['domain_tls_audit', 'secret_scan', 'capability_gate'];
   }
-  return ['domain_tls_audit', 'csp_headers_audit', 'dast_zap', 'secret_scan'];
+  return ['domain_tls_audit', 'csp_headers_audit', 'dast_zap', 'secret_scan', 'dependency_scan'];
 }
 
 export function buildDynamicValidationStages(
@@ -179,6 +179,7 @@ export function buildDynamicValidationStages(
 
     stages[key] = {
       id: key,
+      order: idx + 1,
       name: `${idx + 1}. ${meta.name}`,
       tool: meta.tool,
       icon: meta.icon,

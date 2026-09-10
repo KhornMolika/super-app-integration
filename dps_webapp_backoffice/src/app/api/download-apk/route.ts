@@ -1,9 +1,9 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const type = searchParams.get('type') || 'test';
-  const version = searchParams.get('version') || 'v1.1.0';
+  const version = searchParams.get('version') || 'v0.0.1';
   const appName = searchParams.get('appName') || 'superapp';
 
   const repoName = type === 'release' ? 'apk-releases' : 'apk-test-builds';

@@ -5,6 +5,7 @@ import { MiniApp } from '../entities/miniapp.entity';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { MailService } from '../../mail/mail.service';
 import { JenkinsService } from '../../integrations/jenkins/jenkins.service';
+import { SuperAppService } from '../../super-app/super-app.service';
 import {
   LocalSecurityScannerService,
   buildDynamicValidationStages,
@@ -22,6 +23,7 @@ export class MiniappLifecycleHelper {
     private notificationsService: NotificationsService,
     private mailService: MailService,
     private jenkinsService: JenkinsService,
+    private superAppService: SuperAppService,
     private localSecurityScannerService: LocalSecurityScannerService,
   ) {}
 
@@ -549,14 +551,19 @@ export class MiniappLifecycleHelper {
 
     if (app.status === 'APPROVED' || app.status === 'IN_REVIEW') {
       app.status = 'BUILDING';
+
+      // Auto-increment dynamic Super App test version (e.g. v1.1.1, v1.1.2, etc.)
+      const releaseVersion = await this.superAppService.getAndRegisterNextVersion();
+      app.integrationConfig = {
+        ...(app.integrationConfig || {}),
+        superAppTestVersion: releaseVersion,
+      };
+
       await this.miniappRepository.save(app);
 
-      const releaseVersion = (app as any).version
-        ? `v${(app as any).version}`
-        : 'v1.1.0';
       try {
         this.logger.log(
-          `Triggering Jenkins Super App test build for Mini App ${app.name} (${app.id})...`,
+          `Triggering Jenkins Super App test build for Mini App ${app.name} (${app.id}) with dynamic version ${releaseVersion}...`,
         );
         const jenkinsResult = await this.jenkinsService.triggerSuperAppBuild({
           releaseVersion,
@@ -590,11 +597,12 @@ export class MiniappLifecycleHelper {
 
     app.status = 'TESTING';
     await this.miniappRepository.save(app);
+    const activeTestVer = app.integrationConfig?.superAppTestVersion || 'v0.0.1';
     if (app.ownerId) {
       await this.notificationsService.createNotification(
         app.ownerId,
         'Testing Phase Started',
-        `Mini App "${app.name}" has completed test build compilation and is ready for manual testing.`,
+        `Mini App "${app.name}" has completed test build compilation (${activeTestVer}) and is ready for manual testing.`,
         'TESTING_STARTED',
         app.id,
       );
@@ -603,8 +611,8 @@ export class MiniappLifecycleHelper {
       await this.mailService.sendTestBuildReadyEmail(
         app.ownerEmail,
         app.name || app.appId,
-        (app as any).version || '1.0.0',
-        'http://localhost:8081/repository/apk-test-builds/superapp/v1.1.0/app-debug.apk',
+        activeTestVer,
+        `http://localhost:8081/repository/apk-test-builds/superapp/${activeTestVer}/app-debug.apk`,
         `http://localhost:3002/miniapps/${app.id}`,
       );
     }
@@ -613,7 +621,7 @@ export class MiniappLifecycleHelper {
       actorId,
       'STATUS_CHANGE',
       'Testing Started',
-      'Mini App promoted to manual sandbox testing phase',
+      `Mini App promoted to manual sandbox testing phase (Super App build ${activeTestVer})`,
       'START_TESTING',
       null,
       app,
@@ -643,12 +651,16 @@ export class MiniappLifecycleHelper {
       );
     }
 
-    const releaseVersion = (app as any).version
-      ? `v${(app as any).version}`
-      : 'v1.1.0';
+    const releaseVersion = await this.superAppService.getAndRegisterNextVersion();
+    app.integrationConfig = {
+      ...(app.integrationConfig || {}),
+      superAppReleaseVersion: releaseVersion,
+    };
+    await this.miniappRepository.save(app);
+
     try {
       this.logger.log(
-        `Triggering Jenkins Production Release build for Mini App ${app.name} (${app.id})...`,
+        `Triggering Jenkins Production Release build for Mini App ${app.name} (${app.id}) with version ${releaseVersion}...`,
       );
       await this.jenkinsService.triggerSuperAppBuild({
         releaseVersion,

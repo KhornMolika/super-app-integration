@@ -637,6 +637,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
           status={formData.status || 'DRAFT'}
           can={can}
           role={role}
+          testVersion={(formData as any).integrationConfig?.superAppTestVersion || 'v1.1.1'}
           isSubmitting={isSubmitting}
           onLifecycleAction={handleLifecycleAction}
           onOpenSandbox={openSandboxPreview}
