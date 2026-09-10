@@ -1,6 +1,8 @@
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as fs from 'fs';
+import * as path from 'path';
 import { SuperAppCapability } from './entities/super-app-capability.entity';
 
 @Injectable()
@@ -160,8 +162,29 @@ export class SuperAppService implements OnApplicationBootstrap {
     return this.computeNextVersion(currentVer);
   }
 
+  getOfficialReleaseVersion(): string {
+    try {
+      const releaseManifestPath = path.resolve(
+        process.cwd(),
+        '../dps_mobile_app/super_app_release.json',
+      );
+      if (fs.existsSync(releaseManifestPath)) {
+        const raw = fs.readFileSync(releaseManifestPath, 'utf-8');
+        const json = JSON.parse(raw);
+        if (json.superAppVersion) {
+          return json.superAppVersion.startsWith('v')
+            ? json.superAppVersion
+            : `v${json.superAppVersion}`;
+        }
+      }
+    } catch (_) {}
+    return 'v1.0.0';
+  }
+
   async getEcosystemStatus(): Promise<any> {
     const latest = await this.findLatestCapability();
+    const testVersion = latest?.superAppVersion || 'v0.1.0';
+    const officialVersion = this.getOfficialReleaseVersion();
     const capabilities = latest ? latest.capabilities : [
       'camera',
       'location',
@@ -174,7 +197,9 @@ export class SuperAppService implements OnApplicationBootstrap {
     ];
 
     return {
-      superAppVersion: latest?.superAppVersion || 'v0.0.1',
+      superAppVersion: testVersion,
+      superAppTestVersion: testVersion,
+      officialReleaseVersion: officialVersion,
       kernelStatus: 'OPERATIONAL',
       bridgeProtocolVersion: '2.0.0',
       securityGateEnforcement: 'STRICT',

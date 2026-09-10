@@ -7,7 +7,7 @@ export class AuthController {
 
   @Post('login')
   async login(@Body() body: any) {
-    if (body.email && body.password) {
+    if (body.email) {
       // In a real app we'd check password here. For this POC, just fetch user by email.
       return this.authService.login(body);
     }
