@@ -276,7 +276,7 @@ const VSCodeEditor = ({
               <button
                 key={file.filename}
                 onClick={() => setActiveFilename(file.filename)}
-                className={`px-2.5 py-1 text-xs font-mono rounded-md transition-all ${
+                className={`px-3 py-1.5 text-sm font-mono rounded-md transition-all ${
                   activeFilename === file.filename
                     ? "bg-slate-800 text-slate-100 font-semibold border border-slate-700/80"
                     : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
@@ -291,7 +291,7 @@ const VSCodeEditor = ({
         {/* Copy Button */}
         <button
           onClick={handleCopy}
-          className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-md transition border border-slate-700/80"
+          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-md transition border border-slate-700/80"
         >
           {copied ? (
             <span className="text-emerald-400 flex items-center gap-1 font-medium">
@@ -308,7 +308,7 @@ const VSCodeEditor = ({
       </div>
 
       {/* Code Content */}
-      <div className="p-4 overflow-x-auto no-scrollbar [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] text-xs font-mono leading-relaxed text-slate-200">
+      <div className="p-4 overflow-x-auto no-scrollbar [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] text-sm font-mono leading-relaxed text-slate-200">
         <pre>
           <code
             dangerouslySetInnerHTML={{
@@ -337,7 +337,7 @@ const CodeBlock = ({
 
 export default function GuidelinesPage() {
   const [activeSection, setActiveSection] = useState<string>("overview");
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState<string>("" );
   const [activeMethodTab, setActiveMethodTab] = useState<
     "webview" | "artifact" | "source" | "native" | "deeplink"
   >("webview");
@@ -414,7 +414,7 @@ export default function GuidelinesPage() {
         "Roles, architectural boundaries, and governance across the Mini App onboarding lifecycle.",
       badge: "Core Governance",
       content: (
-        <div className="space-y-6 text-sm text-slate-600 dark:text-slate-300">
+        <div className="space-y-6 text-base text-slate-600 dark:text-slate-300">
           <p className="leading-relaxed">
             The Super App Mini App ecosystem provides a high-performance, sandboxed runtime enabling autonomous delivery of vertical services. The platform strictly isolates third-party business logic while enabling standardized access to device features and Super App APIs.
           </p>
@@ -424,11 +424,11 @@ export default function GuidelinesPage() {
               <div className="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
                 <UserIcon />
               </div>
-              <h4 className="font-bold text-slate-900 dark:text-white text-base">MA Manager</h4>
-              <span className="inline-block px-2 py-0.5 text-xs font-semibold rounded bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+              <h4 className="font-bold text-slate-900 dark:text-white text-lg">MA Manager</h4>
+              <span className="inline-block px-2.5 py-0.5 text-sm font-semibold rounded bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                 External / Mini App Team
               </span>
-              <ul className="text-xs space-y-1.5 text-slate-600 dark:text-slate-400">
+              <ul className="text-sm space-y-2 text-slate-600 dark:text-slate-400">
                 <li>• Registers Mini App metadata & icon</li>
                 <li>• Configures integration method & source</li>
                 <li>• Reviews detected permission claims</li>
@@ -441,11 +441,11 @@ export default function GuidelinesPage() {
               <div className="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                 <ShieldIcon />
               </div>
-              <h4 className="font-bold text-slate-900 dark:text-white text-base">SA Admin</h4>
-              <span className="inline-block px-2 py-0.5 text-xs font-semibold rounded bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+              <h4 className="font-bold text-slate-900 dark:text-white text-lg">SA Admin</h4>
+              <span className="inline-block px-2.5 py-0.5 text-sm font-semibold rounded bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                 Super App Platform Owner
               </span>
-              <ul className="text-xs space-y-1.5 text-slate-600 dark:text-slate-400">
+              <ul className="text-sm space-y-2 text-slate-600 dark:text-slate-400">
                 <li>• Reviews integration contracts</li>
                 <li>• Approves new capability requests</li>
                 <li>• Audits automated security scans</li>
@@ -458,11 +458,11 @@ export default function GuidelinesPage() {
               <div className="w-9 h-9 rounded-lg bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 flex items-center justify-center">
                 <SettingsIcon />
               </div>
-              <h4 className="font-bold text-slate-900 dark:text-white text-base">System CI (Jenkins)</h4>
-              <span className="inline-block px-2 py-0.5 text-xs font-semibold rounded bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+              <h4 className="font-bold text-slate-900 dark:text-white text-lg">System CI (Jenkins)</h4>
+              <span className="inline-block px-2.5 py-0.5 text-sm font-semibold rounded bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                 Automated Engine
               </span>
-              <ul className="text-xs space-y-1.5 text-slate-600 dark:text-slate-400">
+              <ul className="text-sm space-y-2 text-slate-600 dark:text-slate-400">
                 <li>• Runs backend and method validation</li>
                 <li>• Resolves DAG capabilities and SBOM</li>
                 <li>• Executes SAST and DAST security gates</li>
@@ -483,53 +483,53 @@ export default function GuidelinesPage() {
       summary:
         "Global conventions, naming syntax, SemVer rules, and environment segregation.",
       content: (
-        <div className="space-y-6 text-sm text-slate-600 dark:text-slate-300">
+        <div className="space-y-6 text-base text-slate-600 dark:text-slate-300">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-5 bg-slate-50/50 dark:bg-slate-900/40">
-              <h5 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-2">
+              <h5 className="font-bold text-slate-900 dark:text-white text-base flex items-center gap-2 mb-2">
                 <TagIcon /> Mini App Identity
               </h5>
-              <p className="text-xs text-slate-600 dark:text-slate-400 mb-3">
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-3 leading-relaxed">
                 Every Mini App registers an immutable unique identifier prefixed with <code className="font-mono text-brand-600 dark:text-brand-400">miniapp_</code>.
               </p>
-              <div className="bg-slate-900 text-slate-200 px-3 py-2 rounded-lg font-mono text-xs">
+              <div className="bg-slate-900 text-slate-200 px-3 py-2 rounded-lg font-mono text-sm">
                 miniapp_banking_8f32a1
               </div>
-              <p className="text-xs text-slate-500 mt-2">
+              <p className="text-sm text-slate-500 mt-2">
                 Allowed: lowercase letters, digits, and underscores.
               </p>
             </div>
 
             <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-5 bg-slate-50/50 dark:bg-slate-900/40">
-              <h5 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-2">
+              <h5 className="font-bold text-slate-900 dark:text-white text-base flex items-center gap-2 mb-2">
                 <HashIcon /> Semantic Versioning
               </h5>
-              <p className="text-xs text-slate-600 dark:text-slate-400 mb-3">
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-3 leading-relaxed">
                 Strict adherence to SemVer 2.0.0 is mandated for all build artifacts and releases.
               </p>
-              <div className="bg-slate-900 text-slate-200 px-3 py-2 rounded-lg font-mono text-xs">
+              <div className="bg-slate-900 text-slate-200 px-3 py-2 rounded-lg font-mono text-sm">
                 MAJOR.MINOR.PATCH (e.g. 1.4.2)
               </div>
-              <p className="text-xs text-slate-500 mt-2">
+              <p className="text-sm text-slate-500 mt-2">
                 Duplicate version numbers in the same environment are rejected.
               </p>
             </div>
           </div>
 
           <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 space-y-3">
-            <h5 className="font-semibold text-slate-900 dark:text-white text-xs uppercase tracking-wider">
+            <h5 className="font-semibold text-slate-900 dark:text-white text-sm uppercase tracking-wider">
               Environment Segregation
             </h5>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-              <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800/60">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+              <div className="p-3.5 rounded-lg bg-slate-100 dark:bg-slate-800/60">
                 <span className="font-bold text-slate-800 dark:text-slate-200 block mb-1">DEV</span>
                 <p className="text-slate-600 dark:text-slate-400">For ongoing feature work and local developer sandbox harnesses.</p>
               </div>
-              <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800/60">
+              <div className="p-3.5 rounded-lg bg-slate-100 dark:bg-slate-800/60">
                 <span className="font-bold text-slate-800 dark:text-slate-200 block mb-1">STAGING</span>
                 <p className="text-slate-600 dark:text-slate-400">Pre-production verification against real Super App test builds.</p>
               </div>
-              <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800/60">
+              <div className="p-3.5 rounded-lg bg-slate-100 dark:bg-slate-800/60">
                 <span className="font-bold text-slate-800 dark:text-slate-200 block mb-1">PROD</span>
                 <p className="text-slate-600 dark:text-slate-400">Publicly active release serving live end-users inside Super App.</p>
               </div>
@@ -548,8 +548,8 @@ export default function GuidelinesPage() {
         "Required bridge APIs, lifecycle bindings, authentication tokens, and strict runtime prohibitions.",
       badge: "Critical Rule",
       content: (
-        <div className="space-y-6 text-sm text-slate-600 dark:text-slate-300">
-          <p>
+        <div className="space-y-6 text-base text-slate-600 dark:text-slate-300">
+          <p className="leading-relaxed">
             Mini Apps operate within a controlled sandbox. All platform interactions (authentication, device camera, navigation, network tokens) must pass through the official <code>SuperAppSDK</code>.
           </p>
 
@@ -573,12 +573,12 @@ export default function GuidelinesPage() {
             ]}
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div className="p-4 rounded-xl border border-rose-200 dark:border-rose-900/40 bg-rose-50/50 dark:bg-rose-950/20 text-rose-900 dark:text-rose-300 space-y-2">
-              <strong className="flex items-center gap-1.5 font-bold text-rose-700 dark:text-rose-400">
+              <strong className="flex items-center gap-1.5 font-bold text-rose-700 dark:text-rose-400 text-base">
                 <BanIcon /> Strictly Prohibited
               </strong>
-              <ul className="space-y-1 list-disc pl-4 text-slate-700 dark:text-slate-300">
+              <ul className="space-y-1.5 list-disc pl-4 text-slate-700 dark:text-slate-300">
                 <li>No <code>void main()</code> or <code>runApp()</code> entrypoints</li>
                 <li>No direct <code>exit(0)</code> or <code>SystemNavigator.pop()</code></li>
                 <li>No custom unvetted <code>MethodChannel</code> calls</li>
@@ -587,10 +587,10 @@ export default function GuidelinesPage() {
             </div>
 
             <div className="p-4 rounded-xl border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-900 dark:text-emerald-300 space-y-2">
-              <strong className="flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-400">
+              <strong className="flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-400 text-base">
                 <CheckCircleIcon /> Required Conventions
               </strong>
-              <ul className="space-y-1 list-disc pl-4 text-slate-700 dark:text-slate-300">
+              <ul className="space-y-1.5 list-disc pl-4 text-slate-700 dark:text-slate-300">
                 <li>Extend <code>MiniAppWidget</code> as the root view</li>
                 <li>Consume <code>MiniAppContext</code> for auth and tokens</li>
                 <li>Use <code>SuperAppSDK.navigation</code> for host routing</li>
@@ -611,8 +611,8 @@ export default function GuidelinesPage() {
         "Detailed breakdown, requirements, security checks, and specifications for all 5 integration channels.",
       badge: "Comprehensive Matrix",
       content: (
-        <div className="space-y-6 text-sm text-slate-600 dark:text-slate-300">
-          <p>
+        <div className="space-y-6 text-base text-slate-600 dark:text-slate-300">
+          <p className="leading-relaxed">
             The Super App platform supports 5 distinct integration tiers tailored to your deployment strategy and source confidentiality requirements:
           </p>
 
@@ -628,7 +628,7 @@ export default function GuidelinesPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveMethodTab(tab.id as any)}
-                className={`px-4 py-2.5 text-xs font-semibold rounded-t-lg transition flex items-center gap-2 border-b-2 -mb-px whitespace-nowrap ${
+                className={`px-4 py-2.5 text-sm font-semibold rounded-t-lg transition flex items-center gap-2 border-b-2 -mb-px whitespace-nowrap ${
                   activeMethodTab === tab.id
                     ? "border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400 bg-brand-50/50 dark:bg-brand-950/30"
                     : "border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
@@ -643,10 +643,10 @@ export default function GuidelinesPage() {
           {activeMethodTab === "webview" && (
             <div className="space-y-6 pt-2">
               <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
-                <h5 className="text-base font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+                <h5 className="text-lg font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
                   <GlobeIcon /> WebView Integration
                 </h5>
-                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
                   Embeds external web applications into an isolated, secure Super App WebView container. The web application interacts with native features via the standardized JavaScript Bridge.
                 </p>
               </div>
@@ -660,32 +660,32 @@ export default function GuidelinesPage() {
                         <GlobeIcon />
                       </div>
                       <div>
-                        <h5 className="text-lg font-bold text-slate-900 dark:text-white">
+                        <h5 className="text-xl font-bold text-slate-900 dark:text-white">
                           Domain Ownership Verification (.well-known)
                         </h5>
-                        <p className="text-xs text-slate-600 dark:text-slate-400">
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
                           Host <code className="text-brand-600 dark:text-brand-400 font-semibold font-mono">superapp-miniapp-association.json</code> to prove administrative control
                         </p>
                       </div>
                     </div>
-                    <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-brand-100 text-brand-800 dark:bg-brand-950 dark:text-brand-300 border border-brand-300 dark:border-brand-800">
+                    <span className="px-3 py-1 text-sm font-bold rounded-full bg-brand-100 text-brand-800 dark:bg-brand-950 dark:text-brand-300 border border-brand-300 dark:border-brand-800">
                       Mandatory for WebView
                     </span>
                   </div>
 
-                  <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                  <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
                     To prevent malicious framing of third-party websites or hijacking WebView sessions, the Super App requires all WebView Mini Apps to host an association manifest proving origin ownership before activation.
                   </p>
 
                   <div className="space-y-4">
-                    <h6 className="font-bold text-slate-900 dark:text-white text-xs flex items-center gap-1.5">
+                    <h6 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-1.5">
                       <TargetIcon /> 1. Expected Endpoint URL
                     </h6>
-                    <div className="p-3 bg-slate-900 text-slate-100 rounded-lg font-mono text-xs overflow-x-auto">
+                    <div className="p-3.5 bg-slate-900 text-slate-100 rounded-lg font-mono text-sm overflow-x-auto">
                       <span>https://&lt;your-domain&gt;/.well-known/superapp-miniapp-association.json</span>
                     </div>
 
-                    <h6 className="font-bold text-slate-900 dark:text-white text-xs flex items-center gap-1.5 pt-2">
+                    <h6 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-1.5 pt-2">
                       <ClipboardIcon /> 2. Manifest JSON Schema & Deployment Configs
                     </h6>
                     <VSCodeEditor
@@ -713,32 +713,32 @@ export default function GuidelinesPage() {
                       ]}
                     />
 
-                    <h6 className="font-bold text-slate-900 dark:text-white text-xs flex items-center gap-1.5 pt-2">
+                    <h6 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-1.5 pt-2">
                       <CheckCircleIcon /> 3. Verification HTTP Requirements
                     </h6>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                      <div className="p-3 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                      <div className="p-3.5 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
                         <strong className="text-slate-900 dark:text-slate-100 block mb-1">HTTP Status: 200 OK</strong>
                         <span className="text-slate-600 dark:text-slate-400">Must respond with 200 OK without redirects (301/302).</span>
                       </div>
-                      <div className="p-3 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                      <div className="p-3.5 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
                         <strong className="text-slate-900 dark:text-slate-100 block mb-1">Content-Type Header</strong>
                         <span className="text-slate-600 dark:text-slate-400">Must be <code className="text-brand-600 dark:text-brand-400 font-mono">application/json</code>.</span>
                       </div>
-                      <div className="p-3 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                      <div className="p-3.5 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
                         <strong className="text-slate-900 dark:text-slate-100 block mb-1">Public Accessibility</strong>
                         <span className="text-slate-600 dark:text-slate-400">Accessible without Basic Auth, VPNs, or IP firewalls.</span>
                       </div>
-                      <div className="p-3 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                      <div className="p-3.5 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
                         <strong className="text-slate-900 dark:text-slate-100 block mb-1">CORS Headers</strong>
                         <span className="text-slate-600 dark:text-slate-400">Include <code className="text-brand-600 dark:text-brand-400 font-mono">Access-Control-Allow-Origin: *</code>.</span>
                       </div>
                     </div>
 
-                    <h6 className="font-bold text-slate-900 dark:text-white text-xs flex items-center gap-1.5 pt-2">
+                    <h6 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-1.5 pt-2">
                       <WrenchIcon /> 4. Testing with cURL
                     </h6>
-                    <div className="p-3 bg-slate-900 text-slate-200 rounded-lg font-mono text-xs space-y-1">
+                    <div className="p-3.5 bg-slate-900 text-slate-200 rounded-lg font-mono text-sm space-y-1">
                       <p className="text-slate-400"># Verify the endpoint response in terminal:</p>
                       <p className="text-emerald-400">curl -i https://&lt;your-domain&gt;/.well-known/superapp-miniapp-association.json</p>
                     </div>
@@ -752,10 +752,10 @@ export default function GuidelinesPage() {
           {activeMethodTab === "artifact" && (
             <div className="space-y-4 pt-2">
               <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
-                <h5 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <h5 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <PackageIcon /> Flutter Package Artifact (.tar.gz / .zip)
                 </h5>
-                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
                   Integrates a pre-compiled Flutter package archive directly. Uses zero-trust MinIO pre-signed URLs (50MB limit, 5-minute expiry) to upload directly to quarantine storage before inspection.
                 </p>
               </div>
@@ -766,10 +766,10 @@ export default function GuidelinesPage() {
           {activeMethodTab === "source" && (
             <div className="space-y-4 pt-2">
               <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
-                <h5 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <h5 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <FolderIcon /> Flutter Package Source Code (Git)
                 </h5>
-                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
                   Links a Git repository (GitHub/GitLab) with Commit SHA locking. Allows maximum tree-shaking optimization and runtime performance inside the Super App host shell.
                 </p>
               </div>
@@ -780,10 +780,10 @@ export default function GuidelinesPage() {
           {activeMethodTab === "native" && (
             <div className="space-y-4 pt-2">
               <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
-                <h5 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <h5 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <WrenchIcon /> Native SDK (.aar / .xcframework)
                 </h5>
-                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
                   Embeds platform-specific binaries for specialized hardware or legacy modules. Requires architectural manual review by the Super App administration team.
                 </p>
               </div>
@@ -794,10 +794,10 @@ export default function GuidelinesPage() {
           {activeMethodTab === "deeplink" && (
             <div className="space-y-4 pt-2">
               <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
-                <h5 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <h5 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <LinkIcon /> Deep Link Router
                 </h5>
-                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
                   Treats the Super App as a discovery launchpad, redirecting the user to a standalone mobile app installed on the device via registered App Links / Universal Links.
                 </p>
               </div>
@@ -816,14 +816,14 @@ export default function GuidelinesPage() {
         "High-level Capability abstraction vs. platform OS permissions, catalog resolution, and approval rules.",
       badge: "Catalog Architecture",
       content: (
-        <div className="space-y-6 text-sm text-slate-600 dark:text-slate-300">
+        <div className="space-y-6 text-base text-slate-600 dark:text-slate-300">
           <p className="leading-relaxed">
             The Super App acts as the <strong>central authority for all Mini App capabilities and permissions</strong>. To maintain zero security drift and strict platform governance, permissions follow a zero-trust runtime access model.
           </p>
 
           {/* Core Gatekeeper Banner */}
-          <div className="p-5 rounded-xl border-l-4 border-brand-500 bg-brand-50/70 dark:bg-brand-950/30 text-xs text-brand-900 dark:text-brand-200 space-y-2">
-            <span className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px] block">
+          <div className="p-5 rounded-xl border-l-4 border-brand-500 bg-brand-50/70 dark:bg-brand-950/30 text-sm text-brand-900 dark:text-brand-200 space-y-2">
+            <span className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-xs block">
               Core Platform Principle: Capability Gatekeeper
             </span>
             <p className="italic font-medium leading-relaxed">
@@ -834,55 +834,55 @@ export default function GuidelinesPage() {
           {/* Strategy to Maximize App Store & Google Play Approval */}
           <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <h5 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider flex items-center gap-2">
+              <h5 className="font-bold text-slate-900 dark:text-white text-sm uppercase tracking-wider flex items-center gap-2">
                 <span>🛡️ Maximizing App Store & Google Play Approval Probability</span>
               </h5>
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
                 Apple Guideline 4.7 & Google Play Host Policy
               </span>
             </div>
             
-            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+            <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
               Apple and Google review the host application, metadata, third-party code, permissions, and runtime behavior. To maximize approval probability and prevent platform rejection, the Super App implements seven mandatory architectural pillars:
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-              <div className="p-3.5 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+              <div className="p-4 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-1">
                 <strong className="text-slate-900 dark:text-white font-bold block">1. Super App as Central Gatekeeper</strong>
                 <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
                   If a Mini App declares 5 capabilities and the Super App exposes 3, the remaining 2 are <strong>genuinely unavailable</strong>—not secretly accessible through raw native APIs or hidden bridge hooks.
                 </p>
               </div>
 
-              <div className="p-3.5 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-1">
+              <div className="p-4 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-1">
                 <strong className="text-slate-900 dark:text-white font-bold block">2. Separate Required vs. Optional Capabilities</strong>
                 <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
                   If a Mini App requires an unsupported capability for its <strong>core function</strong> → <strong>Reject the Mini App</strong>. If it is <strong>optional</strong> → Integrate it, but disable that specific feature cleanly.
                 </p>
               </div>
 
-              <div className="p-3.5 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-1">
+              <div className="p-4 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-1">
                 <strong className="text-slate-900 dark:text-white font-bold block">3. Just-in-Time Runtime Requests</strong>
                 <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
                   Runtime permission requests apply only to supported capabilities. Prompt the user <strong>at runtime when the feature is actually used</strong> (Google Play compliance requirement).
                 </p>
               </div>
 
-              <div className="p-3.5 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-1">
+              <div className="p-4 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-1">
                 <strong className="text-slate-900 dark:text-white font-bold block">4. Strict Capability Layer Isolation</strong>
                 <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
                   Host app is 100% legally and technically responsible for hosted software under Apple rules and must never expose native platform APIs/technologies without authorization.
                 </p>
               </div>
 
-              <div className="p-3.5 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-1">
+              <div className="p-4 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-1">
                 <strong className="text-slate-900 dark:text-white font-bold block">5. Pre-Publish Automated Validation</strong>
                 <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
                   Validate every Mini App before publishing (capabilities, privacy/data use, URLs, TLS, prohibited content, and actual behavior) to protect host app integrity.
                 </p>
               </div>
 
-              <div className="p-3.5 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-1">
+              <div className="p-4 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-1">
                 <strong className="text-slate-900 dark:text-white font-bold block">6. Accurate Data Disclosures</strong>
                 <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
                   Clearly disclose what data is collected, why, and with whom it is shared across Info.plist usage descriptions and Google Play Prominent In-App Disclosures.
@@ -890,7 +890,7 @@ export default function GuidelinesPage() {
               </div>
             </div>
 
-            <div className="p-3.5 rounded-lg bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-900/50 text-xs space-y-1">
+            <div className="p-4 rounded-lg bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-900/50 text-sm space-y-1">
               <strong className="text-indigo-950 dark:text-indigo-200 font-bold block">7. Apple Guideline 4.7 & Manifest Compliance</strong>
               <p className="text-indigo-900 dark:text-indigo-300 leading-relaxed">
                 Implements structured Mini App manifest declarations (bundle metadata, version constraints, age rating, and sandboxed bridge scopes) aligned with Apple&apos;s Mini Apps Partner Program.
@@ -902,21 +902,21 @@ export default function GuidelinesPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Practical Example */}
             <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
-              <h5 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider">
+              <h5 className="font-bold text-slate-900 dark:text-white text-sm uppercase tracking-wider">
                 Capability Matching Example
               </h5>
-              <p className="text-xs text-slate-600 dark:text-slate-400">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
                 Evaluating declared capabilities against Super App platform support:
               </p>
-              <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-                <div className="p-2.5 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
-                  <span className="text-[10px] text-slate-400 font-sans block mb-1 font-semibold uppercase">Super App Supports:</span>
+              <div className="grid grid-cols-2 gap-2 text-sm font-mono">
+                <div className="p-3 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                  <span className="text-xs text-slate-400 font-sans block mb-1 font-semibold uppercase">Super App Supports:</span>
                   <div className="text-emerald-600 dark:text-emerald-400">• Camera ✅</div>
                   <div className="text-emerald-600 dark:text-emerald-400">• Location ✅</div>
                   <div className="text-emerald-600 dark:text-emerald-400">• Notification ✅</div>
                 </div>
-                <div className="p-2.5 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
-                  <span className="text-[10px] text-slate-400 font-sans block mb-1 font-semibold uppercase">Mini App Requests (5):</span>
+                <div className="p-3 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                  <span className="text-xs text-slate-400 font-sans block mb-1 font-semibold uppercase">Mini App Requests (5):</span>
                   <div className="text-emerald-600 dark:text-emerald-400">• Camera (Req) ✅</div>
                   <div className="text-emerald-600 dark:text-emerald-400">• Location (Req) ✅</div>
                   <div className="text-emerald-600 dark:text-emerald-400">• Notification (Opt) ✅</div>
@@ -924,17 +924,17 @@ export default function GuidelinesPage() {
                   <div className="text-rose-500 font-semibold">• Microphone (Req) ⚠️</div>
                 </div>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                 Outcome: If Microphone is <strong>Required</strong>, the Mini App is <strong>REJECTED</strong>. If marked <strong>Optional</strong>, the Mini App is approved with Camera/Location/Notification active and Contacts/Microphone safely disabled.
               </p>
             </div>
 
             {/* Decision Flowchart */}
             <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
-              <h5 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider">
+              <h5 className="font-bold text-slate-900 dark:text-white text-sm uppercase tracking-wider">
                 The Final Decision Rule Flow
               </h5>
-              <div className="p-3 bg-slate-900 text-slate-200 rounded-lg font-mono text-[11px] leading-relaxed">
+              <div className="p-3.5 bg-slate-900 text-slate-200 rounded-lg font-mono text-xs leading-relaxed">
                 <div className="text-slate-400">Mini App requests N capabilities</div>
                 <div className="text-slate-500 pl-4">↓ Compare with Super App catalog (M supported)</div>
                 <div className="text-amber-400">Required capability unsupported?</div>
@@ -945,7 +945,7 @@ export default function GuidelinesPage() {
                 <div className="text-slate-400 pl-8">↓</div>
                 <div className="text-emerald-300 pl-8">Runtime JIT permission prompt → Allowed</div>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                 Unsupported capabilities are <strong>technically inaccessible</strong> in the sandbox, ensuring host stability and zero store policy violations.
               </p>
             </div>
@@ -953,11 +953,11 @@ export default function GuidelinesPage() {
 
           {/* Capability Catalog Table */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
-              <h5 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-3">
+            <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
+              <h5 className="font-bold text-slate-900 dark:text-white text-sm uppercase tracking-wider mb-3">
                 Supported Super App Capabilities
               </h5>
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {[
                   { code: "CAMERA", name: "Camera Access", desc: "android.permission.CAMERA / NSCameraUsageDescription", approval: true },
                   { code: "LOCATION", name: "Geolocation", desc: "ACCESS_FINE_LOCATION / NSLocationWhenInUseUsageDescription", approval: true },
@@ -965,12 +965,12 @@ export default function GuidelinesPage() {
                   { code: "CLIPBOARD", name: "Clipboard API", desc: "SuperAppSDK Clipboard Bridge", approval: false },
                   { code: "NOTIFICATION", name: "Push Alerts", desc: "POST_NOTIFICATIONS / APNS Token Scopes", approval: true },
                 ].map((cap) => (
-                  <div key={cap.code} className="p-2.5 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2">
+                  <div key={cap.code} className="p-3 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2">
                     <div>
-                      <span className="font-mono font-bold text-xs text-brand-600 dark:text-brand-400">{cap.code}</span>
-                      <span className="text-xs text-slate-600 dark:text-slate-300 ml-2">{cap.name}</span>
+                      <span className="font-mono font-bold text-sm text-brand-600 dark:text-brand-400">{cap.code}</span>
+                      <span className="text-sm text-slate-600 dark:text-slate-300 ml-2">{cap.name}</span>
                     </div>
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                    <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
                       cap.approval ? "bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300" : "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400"
                     }`}>
                       {cap.approval ? "Approval Required" : "Auto-Approved"}
@@ -980,20 +980,20 @@ export default function GuidelinesPage() {
               </div>
             </div>
 
-            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 flex flex-col justify-between space-y-3">
+            <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 flex flex-col justify-between space-y-3">
               <div>
-                <h5 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-2">
+                <h5 className="font-bold text-slate-900 dark:text-white text-sm uppercase tracking-wider mb-2">
                   DAG Resolver & App Store Compliance
                 </h5>
-                <p className="text-xs text-slate-600 dark:text-slate-400 mb-2 leading-relaxed">
+                <p className="text-sm text-slate-600 dark:text-slate-400 mb-2 leading-relaxed">
                   Composite capabilities (e.g. <code>VIDEO_CALL</code>) automatically resolve required child dependencies (<code>CAMERA</code> + <code>MICROPHONE</code>) via DAG topological sorting.
                 </p>
-                <div className="p-3 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-xs space-y-1">
+                <div className="p-3.5 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-sm space-y-1">
                   <strong className="text-slate-900 dark:text-white block">App Store & Play Store Publishing Note:</strong>
                   <span className="text-slate-600 dark:text-slate-400">Having a Mini App request capabilities does not prevent the Super App from being published. Compliance is determined by proper implementation, purpose disclosure strings, and store guidelines.</span>
                 </div>
               </div>
-              <div className="p-2.5 bg-brand-50/60 dark:bg-brand-950/30 border border-brand-200 dark:border-brand-900/50 rounded-lg text-[11px] text-brand-800 dark:text-brand-300 font-medium">
+              <div className="p-3 bg-brand-50/60 dark:bg-brand-950/30 border border-brand-200 dark:border-brand-900/50 rounded-lg text-xs text-brand-800 dark:text-brand-300 font-medium">
                 Tip: Circular dependencies in requested capabilities are automatically rejected by the DAG validation engine.
               </div>
             </div>
@@ -1011,8 +1011,8 @@ export default function GuidelinesPage() {
         "Gitleaks secrets detection, Semgrep SAST rules, Trivy SCA, OWASP ZAP DAST, and ClamAV quarantine.",
       badge: "Zero Trust Gate",
       content: (
-        <div className="space-y-6 text-sm text-slate-600 dark:text-slate-300">
-          <p>
+        <div className="space-y-6 text-base text-slate-600 dark:text-slate-300">
+          <p className="leading-relaxed">
             Security validation is fully automated. Submissions failing Critical or High severity gates are immediately blocked with actionable line-by-line remediation logs.
           </p>
 
@@ -1025,11 +1025,11 @@ export default function GuidelinesPage() {
             ].map((scanner) => (
               <div key={scanner.name} className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
                 <div className="flex items-center justify-between mb-1.5">
-                  <h5 className="font-bold text-slate-900 dark:text-white text-sm">{scanner.name}</h5>
-                  <span className="text-[10px] uppercase font-bold text-brand-600 dark:text-brand-400">Hard Gate</span>
+                  <h5 className="font-bold text-slate-900 dark:text-white text-base">{scanner.name}</h5>
+                  <span className="text-xs uppercase font-bold text-brand-600 dark:text-brand-400">Hard Gate</span>
                 </div>
-                <span className="text-xs font-medium text-slate-500 block mb-2">{scanner.type}</span>
-                <p className="text-xs text-slate-600 dark:text-slate-400">{scanner.desc}</p>
+                <span className="text-sm font-medium text-slate-500 block mb-2">{scanner.type}</span>
+                <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{scanner.desc}</p>
               </div>
             ))}
           </div>
@@ -1045,8 +1045,8 @@ export default function GuidelinesPage() {
       summary:
         "State machine flow from DRAFT submission to CI build, dual manual testing, and final ACTIVATION.",
       content: (
-        <div className="space-y-6 text-sm text-slate-600 dark:text-slate-300">
-          <p>
+        <div className="space-y-6 text-base text-slate-600 dark:text-slate-300">
+          <p className="leading-relaxed">
             Mini App integrations transition through a strictly governed finite state machine ensuring complete traceability:
           </p>
 
@@ -1065,7 +1065,7 @@ export default function GuidelinesPage() {
       summary:
         "Actionable solutions for frequent validation errors, dependency conflicts, and bridge misconfigurations.",
       content: (
-        <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
+        <div className="space-y-3 text-base text-slate-600 dark:text-slate-300">
           {[
             {
               issue: "BUILD_FAILED: Multiple conflicting versions of Flutter SDK",
@@ -1083,10 +1083,10 @@ export default function GuidelinesPage() {
               fix: "Provide a publicly reachable HTTPS domain with valid TLS certificates.",
             },
           ].map((item, idx) => (
-            <div key={idx} className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 space-y-1.5">
-              <div className="font-mono font-bold text-xs text-rose-600 dark:text-rose-400">{item.issue}</div>
-              <p className="text-xs text-slate-700 dark:text-slate-300"><span className="font-semibold text-slate-900 dark:text-white">Cause: </span>{item.cause}</p>
-              <p className="text-xs text-slate-700 dark:text-slate-300"><span className="font-semibold text-emerald-600 dark:text-emerald-400">Fix: </span>{item.fix}</p>
+            <div key={idx} className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 space-y-2">
+              <div className="font-mono font-bold text-sm text-rose-600 dark:text-rose-400">{item.issue}</div>
+              <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed"><span className="font-semibold text-slate-900 dark:text-white">Cause: </span>{item.cause}</p>
+              <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed"><span className="font-semibold text-emerald-600 dark:text-emerald-400">Fix: </span>{item.fix}</p>
             </div>
           ))}
         </div>
@@ -1113,16 +1113,16 @@ export default function GuidelinesPage() {
               Super App <span className="text-brand-600 dark:text-brand-400 font-medium">Docs</span>
             </span>
           </Link>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono font-medium border border-slate-200 dark:border-slate-700">
+          <span className="text-sm px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono font-medium border border-slate-200 dark:border-slate-700">
             v2.4
           </span>
         </div>
 
         {/* Global Action Links */}
-        <div className="flex items-center gap-4 text-xs font-medium">
+        <div className="flex items-center gap-4 text-sm font-medium">
           <Link
             href="/miniapps/register"
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-semibold transition shadow-sm"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-semibold transition shadow-sm text-sm"
           >
             Register Mini App
           </Link>
@@ -1130,10 +1130,10 @@ export default function GuidelinesPage() {
           <ThemeToggle />
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition"
+            className="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition text-sm"
           >
             <span>Dashboard</span>
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
           </Link>
         </div>
       </header>
@@ -1149,17 +1149,17 @@ export default function GuidelinesPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search documentation..."
-              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-500 transition"
+              className="w-full pl-8 pr-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-500 transition"
             />
-            <div className="absolute left-2.5 top-2 text-slate-400">
+            <div className="absolute left-2.5 top-2.5 text-slate-400">
               <SearchIcon />
             </div>
           </div>
 
           {/* Navigation Tree */}
-          <div className="space-y-6 text-xs">
+          <div className="space-y-6 text-sm">
             <div>
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-2">Getting Started</div>
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider px-2 mb-2">Getting Started</div>
               <nav className="space-y-0.5">
                 {sections.slice(0, 2).map((sec) => (
                   <a
@@ -1180,7 +1180,7 @@ export default function GuidelinesPage() {
             </div>
 
             <div>
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-2">Integration Methods</div>
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider px-2 mb-2">Integration Methods</div>
               <nav className="space-y-0.5">
                 <a
                   href="#methods"
@@ -1246,7 +1246,7 @@ export default function GuidelinesPage() {
             </div>
 
             <div>
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-2">Architecture & Rules</div>
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider px-2 mb-2">Architecture & Rules</div>
               <nav className="space-y-0.5">
                 {sections.slice(2, 3).concat(sections.slice(4, 6)).map((sec) => (
                   <a
@@ -1267,7 +1267,7 @@ export default function GuidelinesPage() {
             </div>
 
             <div>
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-2">Operations & Support</div>
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider px-2 mb-2">Operations & Support</div>
               <nav className="space-y-0.5">
                 {sections.slice(6).map((sec) => (
                   <a
@@ -1296,11 +1296,11 @@ export default function GuidelinesPage() {
               <section key={sec.id} id={sec.id} className="scroll-mt-24">
                 {/* Clean Header Bar */}
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs font-mono font-bold text-brand-600 dark:text-brand-400">
+                  <span className="text-sm font-mono font-bold text-brand-600 dark:text-brand-400">
                     Section {sec.number}
                   </span>
                   <span className="text-slate-300 dark:text-slate-700">•</span>
-                  <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  <span className="text-sm font-medium text-slate-500 uppercase tracking-wider">
                     {sec.category}
                   </span>
                 </div>
@@ -1308,7 +1308,7 @@ export default function GuidelinesPage() {
                 <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-3">
                   {sec.title}
                 </h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 leading-relaxed">
+                <p className="text-base text-slate-500 dark:text-slate-400 mb-6 leading-relaxed">
                   {sec.summary}
                 </p>
 
@@ -1327,11 +1327,11 @@ export default function GuidelinesPage() {
         </main>
 
         {/* Right "On This Page" TOC Sidebar */}
-        <aside className="w-60 border-l border-slate-200 dark:border-slate-800/80 bg-white/50 dark:bg-slate-900/40 backdrop-blur-sm overflow-y-auto no-scrollbar [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] shrink-0 hidden xl:block py-8 px-5 text-xs">
-          <div className="font-semibold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-3">
+        <aside className="w-64 border-l border-slate-200 dark:border-slate-800/80 bg-white/50 dark:bg-slate-900/40 backdrop-blur-sm overflow-y-auto no-scrollbar [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] shrink-0 hidden xl:block py-8 px-5 text-sm">
+          <div className="font-semibold text-slate-900 dark:text-white text-sm uppercase tracking-wider mb-3">
             On This Page
           </div>
-          <nav className="space-y-1.5 text-slate-600 dark:text-slate-400">
+          <nav className="space-y-2 text-slate-600 dark:text-slate-400">
             {sections.map((sec) => (
               <a
                 key={sec.id}

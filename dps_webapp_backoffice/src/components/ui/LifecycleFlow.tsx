@@ -16,7 +16,7 @@ import '@xyflow/react/dist/style.css';
 
 const StateNode = ({ data }: { data: any }) => {
   return (
-    <div className={`px-3 py-2 rounded shadow-sm border-2 font-mono text-[11px] tracking-wider font-bold text-center ${data.colorClass} min-w-[150px]`}>
+    <div className={`px-3 py-2 rounded shadow-sm border-2 font-mono text-xs tracking-wider font-bold text-center ${data.colorClass} min-w-[150px]`}>
       {data.targetHandle && <Handle type="target" position={data.targetHandle} className="!w-1.5 !h-1.5 !bg-slate-400 !border-0" />}
       {data.label}
       {data.sourceHandle && <Handle type="source" position={data.sourceHandle} className="!w-1.5 !h-1.5 !bg-slate-400 !border-0" />}
