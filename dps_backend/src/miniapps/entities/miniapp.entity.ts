@@ -85,6 +85,9 @@ export class MiniApp {
   supportEmail!: string;
 
   @Column({ nullable: true })
+  teamTelegramChatId?: string;
+
+  @Column({ nullable: true })
   teamName!: string;
 
   @Column({ nullable: true })

@@ -41,6 +41,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
     ownerName: '',
     ownerEmail: '',
     supportEmail: '',
+    teamTelegramChatId: '',
     integrationMethod: IntegrationMethod.WEBVIEW,
     integrationConfigWebView: { productionUrl: '' },
     integrationConfigFlutter: { sourceType: SourceType.ARTIFACT, packageName: '', versionConstraint: '' },
@@ -466,6 +467,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
       ownerName: formData.ownerName,
       ownerEmail: formData.ownerEmail,
       supportEmail: formData.supportEmail,
+      teamTelegramChatId: formData.teamTelegramChatId,
       integrationMethod: formData.integrationMethod,
       permissions: cleanPermissions,
     };

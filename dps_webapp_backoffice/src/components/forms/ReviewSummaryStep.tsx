@@ -125,6 +125,16 @@ export default function ReviewSummaryStep({ formData }: ReviewSummaryStepProps) 
             <br />
             <span className="text-slate-800 dark:text-slate-200 font-medium">{formData.supportEmail || '-'}</span>
           </div>
+          {formData.teamTelegramChatId && (
+            <div className="col-span-1 sm:col-span-2">
+              <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Team Telegram Channel:</span>
+              <br />
+              <span className="inline-flex items-center gap-1.5 font-mono text-xs font-semibold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/50 px-2.5 py-1 rounded-md border border-sky-200 dark:border-sky-800">
+                <span>✈️</span>
+                <span>{formData.teamTelegramChatId}</span>
+              </span>
+            </div>
+          )}
         </div>
       </div>
 

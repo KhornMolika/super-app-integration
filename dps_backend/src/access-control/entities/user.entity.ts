@@ -32,6 +32,15 @@ export class User {
   @Column({ default: true })
   isActive!: boolean;
 
+  @Column({ nullable: true })
+  telegramChatId?: string;
+
+  @Column({ nullable: true })
+  telegramUsername?: string;
+
+  @Column({ nullable: true, type: 'timestamp' })
+  telegramConnectedAt?: Date;
+
   @ManyToMany(() => Role, (role) => role.users, { cascade: true, eager: true })
   @JoinTable({ name: 'user_roles' })
   roles!: Role[];

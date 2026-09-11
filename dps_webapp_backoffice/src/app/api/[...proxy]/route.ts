@@ -18,6 +18,7 @@ const ALLOWED_ROUTES = [
   'release-assembly',
   'security',
   'storage',
+  'telegram',
   'api',
 ];
 

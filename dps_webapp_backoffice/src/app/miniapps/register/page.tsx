@@ -45,6 +45,7 @@ export default function RegisterMiniAppPage() {
     ownerName: '',
     ownerEmail: '',
     supportEmail: '',
+    teamTelegramChatId: '',
     integrationMethod: IntegrationMethod.WEBVIEW,
     verificationToken: generateClientVerificationToken(),
     integrationConfigWebView: {

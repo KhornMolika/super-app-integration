@@ -56,6 +56,7 @@ export interface CreateMiniAppDto {
   ownerEmail: string;
   supportEmail?: string;
   teamName?: string;
+  teamTelegramChatId?: string;
   
   integrationMethod: IntegrationMethod;
   integrationConfigWebView?: WebViewConfigDto;

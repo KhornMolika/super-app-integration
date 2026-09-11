@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from './entities/notification.entity';
+import { User } from '../access-control/entities/user.entity';
+import { MiniApp } from '../miniapps/entities/miniapp.entity';
 import { NotificationGateway } from './notification.gateway';
 import { TelegramService } from './telegram.service';
 
@@ -12,6 +14,10 @@ export class NotificationsService {
   constructor(
     @InjectRepository(Notification)
     private notificationRepository: Repository<Notification>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+    @InjectRepository(MiniApp)
+    private miniAppRepository: Repository<MiniApp>,
     private notificationGateway: NotificationGateway,
     private telegramService: TelegramService,
   ) {}
@@ -38,21 +44,42 @@ export class NotificationsService {
       data: saved,
     });
 
-    // 2. Dispatch Telegram direct message to MA Manager & SA Admin
+    // 2. Dispatch Telegram direct messages to MA Manager & MiniApp Team Group
     try {
+      const targetChatIds: string[] = [];
+
+      // Check target user's personal Telegram
+      if (userId) {
+        const user = await this.userRepository.findOne({ where: { id: userId } });
+        if (user?.telegramChatId) {
+          targetChatIds.push(user.telegramChatId);
+        }
+      }
+
+      // Check MiniApp team Telegram group & owner's Telegram
       let miniAppName: string | undefined;
       if (miniAppId) {
-        const loaded = await this.notificationRepository.findOne({
-          where: { id: saved.id },
-          relations: { miniApp: true },
+        const miniApp = await this.miniAppRepository.findOne({
+          where: { id: miniAppId },
+          relations: { owner: true },
         });
-        miniAppName = loaded?.miniApp?.name;
+        if (miniApp) {
+          miniAppName = miniApp.name;
+          if (miniApp.teamTelegramChatId && !targetChatIds.includes(miniApp.teamTelegramChatId)) {
+            targetChatIds.push(miniApp.teamTelegramChatId);
+          }
+          if (miniApp.owner?.telegramChatId && !targetChatIds.includes(miniApp.owner.telegramChatId)) {
+            targetChatIds.push(miniApp.owner.telegramChatId);
+          }
+        }
       }
+
       await this.telegramService.notifyNotificationCreated(
         title,
         message,
         type,
         miniAppName,
+        targetChatIds,
       );
     } catch (err: any) {
       this.logger.warn(`Failed to deliver Telegram alert: ${err.message}`);

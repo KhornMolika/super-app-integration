@@ -190,6 +190,10 @@ export class CreateMiniAppDto {
   @IsOptional()
   teamName?: string;
 
+  @IsString()
+  @IsOptional()
+  teamTelegramChatId?: string;
+
   @IsEnum(IntegrationMethod)
   @IsNotEmpty()
   integrationMethod!: IntegrationMethod;
