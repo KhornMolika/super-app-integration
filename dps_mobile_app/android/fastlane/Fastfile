@@ -39,4 +39,25 @@ platform :android do
   lane :build_production do |options|
     sh("cd ../.. && flutter build appbundle --release")
   end
+
+  desc "Build a release APK and distribute it to Firebase App Distribution (internal-testers)"
+  lane :distribute_firebase do
+    # fastlane's `sh` runs from android/fastlane/, so ../.. is the Flutter project root (dps_mobile_app/)
+    flutter_root = "../.."
+    apk_path = "#{flutter_root}/build/app/outputs/flutter-apk/app-release.apk"
+
+    sh("cd #{flutter_root} && flutter pub get && flutter build apk --release")
+
+    UI.user_error!("APK not found at #{apk_path}") unless File.exist?(apk_path)
+    UI.success("Built #{apk_path} (#{(File.size(apk_path) / 1024.0 / 1024.0).round(1)} MB)")
+
+    firebase_app_distribution(
+      app: ENV.fetch("FIREBASE_APP_ID"),
+      service_credentials_file: ENV["GOOGLE_APPLICATION_CREDENTIALS"],
+      android_artifact_type: "APK",
+      android_artifact_path: apk_path,
+      groups: "internal-testers",
+      release_notes: "CI: #{ENV['GITHUB_REF_NAME'] || 'local'} @ #{(ENV['GITHUB_SHA'] || 'dev')[0, 7]}"
+    )
+  end
 end
