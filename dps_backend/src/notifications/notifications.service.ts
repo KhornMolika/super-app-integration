@@ -44,14 +44,14 @@ export class NotificationsService {
       data: saved,
     });
 
-    // 2. Dispatch Telegram direct messages to MA Manager & MiniApp Team Group
+    // 2. Dispatch Telegram direct messages to MA Manager, MiniApp Team Group & SA Admins
     try {
       const targetChatIds: string[] = [];
 
-      // Check target user's personal Telegram
+      // Check target user's personal Telegram (e.g. MA Manager or actor)
       if (userId) {
         const user = await this.userRepository.findOne({ where: { id: userId } });
-        if (user?.telegramChatId) {
+        if (user?.telegramChatId && !targetChatIds.includes(user.telegramChatId)) {
           targetChatIds.push(user.telegramChatId);
         }
       }
@@ -71,6 +71,21 @@ export class NotificationsService {
           if (miniApp.owner?.telegramChatId && !targetChatIds.includes(miniApp.owner.telegramChatId)) {
             targetChatIds.push(miniApp.owner.telegramChatId);
           }
+        }
+      }
+
+      // Check Super Admins & Platform Admins personal Telegram and Ops Group
+      const allUsers = await this.userRepository.find();
+      const adminUsers = allUsers.filter((u) =>
+        u.roles?.some((r) => r.name === 'SUPER_ADMIN' || r.name === 'ADMIN'),
+      );
+
+      for (const admin of adminUsers) {
+        if (admin.telegramChatId && !targetChatIds.includes(admin.telegramChatId)) {
+          targetChatIds.push(admin.telegramChatId);
+        }
+        if (admin.teamTelegramChatId && !targetChatIds.includes(admin.teamTelegramChatId)) {
+          targetChatIds.push(admin.teamTelegramChatId);
         }
       }
 
