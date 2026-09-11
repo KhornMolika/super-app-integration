@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Button, Input, Label } from '@/components/ui/inputs';
 
 export default function SettingsPage() {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
 
   // Telegram States
   const [telegramStatus, setTelegramStatus] = useState<{
@@ -57,7 +57,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     fetchTelegramStatus();
-  }, []);
+  }, [role]);
 
   const handleOneClickConnect = async () => {
     try {
@@ -180,47 +180,35 @@ export default function SettingsPage() {
     setTimeout(() => setCopiedChatId(false), 2000);
   };
 
-  const userDisplayName =
-    telegramStatus?.user?.name ||
-    (role === 'MINI_APP_MANAGER'
-      ? 'Mini App Manager'
-      : role === 'ADMIN'
-      ? 'Super App Administrator'
-      : role === 'SUPER_ADMIN'
-      ? 'System Super Admin'
-      : 'Developer');
-
-  const userEmail =
-    telegramStatus?.user?.email ||
-    (role === 'MINI_APP_MANAGER'
-      ? 'manager@example.com'
-      : role === 'ADMIN'
-      ? 'admin@example.com'
-      : role === 'SUPER_ADMIN'
-      ? 'superadmin@example.com'
-      : 'dev@example.com');
+  const userDisplayName = telegramStatus?.user?.name || user.name;
+  const userEmail = telegramStatus?.user?.email || user.email;
 
   const roleBadgeStyle =
     role === 'MINI_APP_MANAGER'
       ? 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/50 dark:text-sky-300 dark:border-sky-800'
       : role === 'SUPER_ADMIN'
       ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/50 dark:text-purple-300 dark:border-purple-800'
+      : role === 'DEVELOPER'
+      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800'
       : 'bg-brand-50 text-brand-700 border-brand-200 dark:bg-brand-950/50 dark:text-brand-300 dark:border-brand-800';
 
-  const roleBadgeLabel =
-    role === 'MINI_APP_MANAGER'
-      ? 'Mini App Manager'
-      : role === 'ADMIN'
-      ? 'Administrator'
-      : role === 'SUPER_ADMIN'
-      ? 'Super Admin'
-      : 'Developer';
+  const roleBadgeLabel = role
+    .split('_')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
+
+  const initials = userDisplayName
+    .split(' ')
+    .map((w) => w.charAt(0))
+    .join('')
+    .substring(0, 2)
+    .toUpperCase();
 
   const isConnected = Boolean(telegramStatus?.user?.isConnected);
 
   return (
     <ProtectedRoute>
-      <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out space-y-8 max-w-5xl">
+      <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out space-y-8 w-full">
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4">
           <div>
@@ -286,7 +274,7 @@ export default function SettingsPage() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-500 to-indigo-600 text-white flex items-center justify-center font-bold text-2xl shadow-sm shrink-0">
-                {userDisplayName.charAt(0).toUpperCase()}
+                {initials}
               </div>
               <div>
                 <div className="flex flex-wrap items-center gap-2.5">

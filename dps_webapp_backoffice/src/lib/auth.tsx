@@ -38,8 +38,34 @@ const ROLE_PERMISSIONS: Record<Role, string[]> = {
   ]
 };
 
+export interface AuthUser {
+  name: string;
+  email: string;
+  role: Role;
+}
+
+export const ROLE_USER_PROFILES: Record<Role, { name: string; email: string }> = {
+  SUPER_ADMIN: {
+    name: 'Super Admin',
+    email: 'superadmin@example.com',
+  },
+  ADMIN: {
+    name: 'Admin User',
+    email: 'admin@example.com',
+  },
+  MINI_APP_MANAGER: {
+    name: 'Mini App Manager',
+    email: 'manager@example.com',
+  },
+  DEVELOPER: {
+    name: 'Developer User',
+    email: 'dev@example.com',
+  },
+};
+
 interface AuthContextType {
   role: Role;
+  user: AuthUser;
   setRole: (role: Role) => void;
   can: (permission: string) => boolean;
   hasRole: (role: Role) => boolean;
@@ -51,13 +77,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRoleState] = useState<Role>('SUPER_ADMIN');
   const [mounted, setMounted] = useState(false);
 
-  
   const performLogin = async (currentRole: Role) => {
-    let email = 'dev@example.com';
-    if (currentRole === 'SUPER_ADMIN') email = 'superadmin@example.com';
-    else if (currentRole === 'ADMIN') email = 'admin@example.com';
-    else if (currentRole === 'MINI_APP_MANAGER') email = 'manager@example.com';
-
+    const profile = ROLE_USER_PROFILES[currentRole] || ROLE_USER_PROFILES.SUPER_ADMIN;
+    const email = profile.email;
 
     try {
       const defaultPassword = process.env.NEXT_PUBLIC_DEFAULT_PASSWORD || '';
@@ -99,8 +121,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   if (!mounted) return null;
 
+  const user: AuthUser = {
+    ...(ROLE_USER_PROFILES[role] || { name: 'Super Admin', email: 'superadmin@example.com' }),
+    role,
+  };
+
   return (
-    <AuthContext.Provider value={{ role, setRole, can, hasRole }}>
+    <AuthContext.Provider value={{ role, user, setRole, can, hasRole }}>
       {children}
     </AuthContext.Provider>
   );
