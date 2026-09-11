@@ -1,5 +1,6 @@
 /doc
 /fix-errors
+.superpowers/
 .env.development
 .env.production
 .env.local
