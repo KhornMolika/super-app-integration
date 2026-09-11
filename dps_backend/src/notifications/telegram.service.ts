@@ -178,6 +178,15 @@ export class TelegramService {
     return true;
   }
 
+  async saveUserTeamChatId(userId: string, teamChatId?: string | null): Promise<User | null> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) return null;
+
+    user.teamTelegramChatId = teamChatId ? teamChatId.trim() : undefined;
+    await this.userRepository.save(user);
+    return user;
+  }
+
   // Structured dispatching for notifications
   async notifyNotificationCreated(
     title: string,

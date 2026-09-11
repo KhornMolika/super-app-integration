@@ -4,6 +4,7 @@ import { Input, Label, Button } from '@/components/ui/inputs';
 
 export default function TeamForm({ formData, handleChange, allErrors = {}, isEditable = true }: any) {
   const [isTesting, setIsTesting] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const handleTestTeamAlert = async () => {
@@ -110,7 +111,16 @@ export default function TeamForm({ formData, handleChange, allErrors = {}, isEdi
               </svg>
               <span className="font-semibold text-slate-800 dark:text-slate-200">Team Telegram Channel / Group ID</span>
             </Label>
-            <span className="text-xs text-slate-400 font-medium">Optional</span>
+            <button
+              type="button"
+              onClick={() => setShowGuide(!showGuide)}
+              className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-semibold flex items-center gap-1"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>{showGuide ? 'Hide Guide' : 'How to get Group ID?'}</span>
+            </button>
           </div>
           <div className="flex gap-2">
             <Input
@@ -147,6 +157,20 @@ export default function TeamForm({ formData, handleChange, allErrors = {}, isEdi
               <span>{testResult.message}</span>
             </div>
           )}
+
+          {/* Collapsible Helper Guide */}
+          {showGuide && (
+            <div className="mt-3 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs space-y-2 text-slate-700 dark:text-slate-300 animate-in fade-in duration-200">
+              <div className="font-bold text-slate-900 dark:text-slate-100">Quick Guide: Setup Team Group Alerts</div>
+              <ol className="list-decimal list-inside space-y-1 text-[11px] leading-relaxed">
+                <li><strong>Enable bot in BotFather:</strong> Open <code>@BotFather</code> in Telegram &rarr; <code>/mybots</code> &rarr; select bot &rarr; <em>Bot Settings</em> &rarr; <em>Allow Groups?</em> &rarr; <strong>Turn groups on</strong>.</li>
+                <li><strong>Create group &amp; add bot:</strong> Create a Telegram group with your team and add <code>@superapp_notification_bot</code>.</li>
+                <li><strong>Find Group ID:</strong> Add <code>@RawDataBot</code> into the group. Copy the ID starting with <code>-100...</code> from the JSON message and paste it above.</li>
+                <li><strong>Click &quot;Test Channel Alert&quot;</strong> to confirm instant delivery!</li>
+              </ol>
+            </div>
+          )}
+
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             Automated security scan reports, CI/CD test builds, and release updates for this Mini App will be broadcast directly to your team channel. (Add <code>@superapp_notification_bot</code> to your group/channel first).
           </p>

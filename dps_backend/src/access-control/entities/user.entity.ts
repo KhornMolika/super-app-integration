@@ -41,6 +41,9 @@ export class User {
   @Column({ nullable: true, type: 'timestamp' })
   telegramConnectedAt?: Date;
 
+  @Column({ nullable: true })
+  teamTelegramChatId?: string;
+
   @ManyToMany(() => Role, (role) => role.users, { cascade: true, eager: true })
   @JoinTable({ name: 'user_roles' })
   roles!: Role[];

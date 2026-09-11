@@ -32,6 +32,7 @@ export class TelegramController {
         telegramChatId: dbUser?.telegramChatId || null,
         telegramUsername: dbUser?.telegramUsername || null,
         telegramConnectedAt: dbUser?.telegramConnectedAt || null,
+        teamTelegramChatId: dbUser?.teamTelegramChatId || null,
         isConnected: !!dbUser?.telegramChatId,
       },
     };
@@ -82,6 +83,23 @@ export class TelegramController {
     return { success: true, user };
   }
 
+  @Post('save-team-chat')
+  @UseGuards(JwtAuthGuard)
+  async saveTeamChat(
+    @Req() req: any,
+    @Body() body: { teamTelegramChatId?: string },
+  ) {
+    const userId = req.user?.sub || req.user?.id;
+    if (!userId) throw new BadRequestException('User ID not found');
+
+    const user = await this.telegramService.saveUserTeamChatId(
+      userId,
+      body.teamTelegramChatId?.trim() || null,
+    );
+
+    return { success: true, teamTelegramChatId: user?.teamTelegramChatId || null };
+  }
+
   @Post('disconnect')
   @UseGuards(JwtAuthGuard)
   async disconnect(@Req() req: any) {
@@ -115,16 +133,21 @@ export class TelegramController {
   @Post('test-team')
   @UseGuards(JwtAuthGuard)
   async testTeamAlert(
-    @Body() body: { chatId: string; miniAppName?: string },
+    @Req() req: any,
+    @Body() body: { chatId?: string; miniAppName?: string },
   ) {
-    if (!body.chatId?.trim()) {
+    const userId = req.user?.sub || req.user?.id;
+    const dbUser = userId ? await this.telegramService.getUser(userId) : null;
+    const targetChat = body.chatId?.trim() || dbUser?.teamTelegramChatId;
+
+    if (!targetChat) {
       throw new BadRequestException('Team Telegram Chat ID is required');
     }
 
-    const appName = body.miniAppName || 'Mini App';
+    const appName = body.miniAppName || 'Platform Ops & Dev Team Channel';
     const success = await this.telegramService.sendMessage(
-      `<b>Test Notification: Team Channel Alert</b>\n\n<b>Mini App:</b> ${appName}\n<b>Channel:</b> <code>${body.chatId}</code>\n\nThis channel is configured to receive automated security scan results, CI/CD test builds, and production release announcements.`,
-      body.chatId.trim(),
+      `<b>Test Notification: Team Channel Alert</b>\n\n<b>Channel:</b> <code>${targetChat}</code>\n<b>Target:</b> ${appName}\n\nThis group channel is connected to receive automated security scan results, review status updates, and CI/CD test build APK alerts from the DPS Super App Gateway.`,
+      targetChat,
     );
 
     return { success };
