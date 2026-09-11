@@ -369,9 +369,14 @@ export class MailService {
     apkUrl: string,
     sandboxUrl: string,
   ) {
+    const rawVersion = version || '1.0.0';
+    const displayVersion = rawVersion.startsWith('v')
+      ? rawVersion
+      : `v${rawVersion}`;
+
     if (!this.resend) {
       this.logger.log(
-        `[DUMMY] Would have sent Test Build Email to ${toEmail} for ${appName} (APK: ${apkUrl})`,
+        `[DUMMY] Would have sent Test Build Email to ${toEmail} for ${appName} (APK: ${apkUrl}, Version: ${displayVersion})`,
       );
       return;
     }
@@ -380,7 +385,7 @@ export class MailService {
       await this.resend.emails.send({
         from: `Super App Platform <${this.fromEmail}>`,
         to: toEmail,
-        subject: `Test Build Available: Mini App "${appName}" (v${version})`,
+        subject: `Test Build Available: Mini App "${appName}" (${displayVersion})`,
         html: `
           <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
             <div style="background: #0f172a; padding: 32px 24px; text-align: left; color: #ffffff; border-bottom: 3px solid #6366f1;">
@@ -390,7 +395,7 @@ export class MailService {
             <div style="padding: 32px 24px;">
               <p style="font-size: 14px; line-height: 1.6; margin-top: 0;">Hello,</p>
               <p style="font-size: 14px; line-height: 1.6;">
-                Mini App <strong>"${appName}"</strong> (version <code>v${version}</code>) has been approved for integration verification in the Super App sandbox environment.
+                Mini App <strong>"${appName}"</strong> (version <code>${displayVersion}</code>) has been approved for integration verification in the Super App sandbox environment.
               </p>
 
               <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 24px 0;">
@@ -605,9 +610,14 @@ export class MailService {
     version: string,
     detailsUrl: string,
   ) {
+    const rawVersion = version || '1.0.0';
+    const displayVersion = rawVersion.startsWith('v')
+      ? rawVersion
+      : `v${rawVersion}`;
+
     if (!this.resend) {
       this.logger.log(
-        `[DUMMY] Would have sent Activated Email to ${toEmail} for ${appName} (v${version})`,
+        `[DUMMY] Would have sent Activated Email to ${toEmail} for ${appName} (${displayVersion})`,
       );
       return;
     }
@@ -616,7 +626,7 @@ export class MailService {
       await this.resend.emails.send({
         from: `Super App Governance <${this.fromEmail}>`,
         to: toEmail,
-        subject: `Mini App Live in Catalog: "${appName}" (v${version})`,
+        subject: `Mini App Live in Catalog: "${appName}" (${displayVersion})`,
         html: `
           <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
             <div style="background: #0f172a; padding: 32px 24px; text-align: left; color: #ffffff; border-bottom: 3px solid #10b981;">
@@ -626,7 +636,7 @@ export class MailService {
             <div style="padding: 32px 24px;">
               <p style="font-size: 14px; line-height: 1.6; margin-top: 0;">Hello,</p>
               <p style="font-size: 14px; line-height: 1.6;">
-                Mini App <strong>"${appName}"</strong> (version <code>v${version}</code>) is now officially <strong>LIVE and ACTIVE</strong> in the Super App store catalog.
+                Mini App <strong>"${appName}"</strong> (version <code>${displayVersion}</code>) is now officially <strong>LIVE and ACTIVE</strong> in the Super App store catalog.
               </p>
               
               <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 18px; margin: 24px 0;">
