@@ -180,8 +180,8 @@ export default function SettingsPage() {
     setTimeout(() => setCopiedChatId(false), 2000);
   };
 
-  const userDisplayName = telegramStatus?.user?.name || user.name;
-  const userEmail = telegramStatus?.user?.email || user.email;
+  const userDisplayName = user.name;
+  const userEmail = user.email;
 
   const roleBadgeStyle =
     role === 'MINI_APP_MANAGER'
@@ -203,6 +203,15 @@ export default function SettingsPage() {
     .join('')
     .substring(0, 2)
     .toUpperCase();
+
+  const accessScopeLabel =
+    role === 'SUPER_ADMIN'
+      ? 'Super App Global Administration & Root Governance'
+      : role === 'ADMIN'
+      ? 'Super App Platform Administration'
+      : role === 'MINI_APP_MANAGER'
+      ? 'Mini App Submissions & Management'
+      : 'Mini App Development & Integration';
 
   const isConnected = Boolean(telegramStatus?.user?.isConnected);
 
@@ -326,9 +335,7 @@ export default function SettingsPage() {
             <div className="p-4 rounded-xl bg-slate-50/70 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80">
               <span className="text-xs uppercase font-bold text-slate-400 block tracking-wider">Access Scope</span>
               <div className="font-bold text-slate-800 dark:text-slate-200 text-sm mt-1.5 truncate">
-                {role === 'MINI_APP_MANAGER'
-                  ? 'Mini App Submissions & Management'
-                  : 'Super App Platform Administration'}
+                {accessScopeLabel}
               </div>
             </div>
           </div>

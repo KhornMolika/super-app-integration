@@ -103,10 +103,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     performLogin(saved || 'SUPER_ADMIN');
   }, []);
 
-  const setRole = (newRole: Role) => {
-    setRoleState(newRole);
+  const setRole = async (newRole: Role) => {
     localStorage.setItem('dps_mock_role', newRole);
-    performLogin(newRole);
+    await performLogin(newRole);
+    setRoleState(newRole);
   };
 
   const can = (permission: string) => {
