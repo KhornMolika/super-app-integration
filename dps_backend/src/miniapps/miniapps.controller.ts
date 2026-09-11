@@ -379,6 +379,18 @@ export class MiniappsController {
     return this.miniappService.activate(id, req.user.sub);
   }
 
+  @Post(':id/publish-revision')
+  @RequirePermissions('miniapp:approve')
+  publishRevision(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    return this.miniappService.publishRevision(id, req.user.sub);
+  }
+
+  @Post(':id/discard-revision')
+  @RequirePermissions('miniapp:update')
+  discardRevision(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    return this.miniappService.discardRevision(id, req.user.sub);
+  }
+
   @Post(':id/suspend')
   @RequirePermissions('miniapp:suspend')
   suspend(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {

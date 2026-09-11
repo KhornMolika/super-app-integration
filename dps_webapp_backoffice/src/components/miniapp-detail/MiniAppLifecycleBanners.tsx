@@ -9,8 +9,9 @@ export interface MiniAppLifecycleBannersProps {
   role?: string;
   testVersion?: string;
   isSubmitting: boolean;
-  onLifecycleAction: (action: 'submit' | 'approve' | 'reject' | 'request-changes' | 'start-testing' | 'activate' | 'suspend') => void;
+  onLifecycleAction: (action: 'submit' | 'approve' | 'reject' | 'request-changes' | 'start-testing' | 'activate' | 'suspend' | 'publish-revision' | 'discard-revision') => void;
   onOpenSandbox: () => void;
+  pendingRevision?: any;
 }
 
 export default function MiniAppLifecycleBanners({
@@ -21,9 +22,62 @@ export default function MiniAppLifecycleBanners({
   isSubmitting,
   onLifecycleAction,
   onOpenSandbox,
+  pendingRevision,
 }: MiniAppLifecycleBannersProps) {
   return (
     <>
+      {/* 0. Staged Revision in Review Banner for ACTIVE Apps */}
+      {status === 'ACTIVE' && pendingRevision && (
+        <div className="mb-6 p-4 rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/80 dark:bg-amber-950/40 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm animate-in fade-in">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400 flex items-center justify-center flex-shrink-0 border border-amber-200 dark:border-amber-800">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-base font-bold text-amber-900 dark:text-amber-200">
+                  Pending Staged Revision
+                </h4>
+                <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
+                  Live Version Active in Super App
+                </span>
+                <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
+                  Revision {pendingRevision.revisionStatus || 'IN_REVIEW'}
+                </span>
+              </div>
+              <p className="text-sm text-amber-800 dark:text-amber-200 mt-1 leading-relaxed">
+                You have staged updates pending publication. The current live version remains active for users in the Super App until this revision is published.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {can('miniapp:approve') && (
+              <Button
+                type="button"
+                onClick={() => onLifecycleAction('publish-revision')}
+                disabled={isSubmitting}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-4 py-2 font-semibold shadow-sm flex items-center gap-1.5"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>Publish Revision to Live</span>
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onLifecycleAction('discard-revision')}
+              disabled={isSubmitting}
+              className="border-rose-300 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-950/50 text-sm px-3.5 py-2 font-medium"
+            >
+              Discard Revision
+            </Button>
+          </div>
+        </div>
+      )}
       {/* 1. SA Admin Review & Action Banner for IN_REVIEW */}
       {can('miniapp:approve') && status === 'IN_REVIEW' && (
         <div className="mb-6 p-4 rounded-2xl border border-blue-200 dark:border-blue-900/50 bg-blue-50/80 dark:bg-blue-950/40 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm animate-in fade-in">

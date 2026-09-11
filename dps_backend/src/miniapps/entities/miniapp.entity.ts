@@ -120,6 +120,9 @@ export class MiniApp {
   @Column({ type: 'jsonb', nullable: true, default: () => "'[]'" })
   securityChecks?: string[];
 
+  @Column({ type: 'jsonb', nullable: true })
+  pendingRevision?: any;
+
   @OneToMany(() => MiniAppIssue, (issue) => issue.miniApp, {
     cascade: true,
     eager: true,

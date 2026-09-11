@@ -71,6 +71,23 @@ export default function SubmissionModal({ state, onClose, onRunInBackground, onS
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-8 w-full max-w-2xl relative flex flex-col items-center">
+        <button
+          type="button"
+          onClick={() => {
+            if (state.status === 'success' && onSuccessContinue) {
+              onSuccessContinue();
+            } else {
+              onClose();
+            }
+          }}
+          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700"
+          aria-label="Close"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
         {state.status === 'loading' && (
           <div className="w-full flex flex-col items-center">
             <div className="w-14 h-14 rounded-full bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center mb-3">
@@ -180,12 +197,12 @@ export default function SubmissionModal({ state, onClose, onRunInBackground, onS
             </div>
             <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Success!</h3>
             <p className="text-slate-600 dark:text-slate-400 text-center text-base mb-6 leading-relaxed">
-              {mode === 'register' ? 'Your mini app has been registered successfully.' : 'Your changes have been saved successfully.'}
+              {state.message || (mode === 'register' ? 'Your mini app has been registered successfully.' : 'Your changes have been saved successfully.')}
             </p>
             {mode === 'register' ? (
               <p className="text-brand-600 text-base font-semibold animate-pulse">Redirecting to management page...</p>
             ) : (
-              <Button onClick={onSuccessContinue} className="h-11 px-6 text-base font-semibold">Continue Managing</Button>
+              <Button onClick={onSuccessContinue || onClose} className="h-11 px-6 text-base font-semibold">Continue Managing</Button>
             )}
           </>
         )}

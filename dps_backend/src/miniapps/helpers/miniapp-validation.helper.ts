@@ -388,11 +388,23 @@ export class MiniappValidationHelper {
     // Clear old issues
     await this.issueRepository.delete({ miniAppId: id });
 
+    const isLive = app.status === 'ACTIVE' || app.status === 'TESTING' || Boolean(app.pendingRevision);
+
     if (Object.keys(errors).length > 0) {
-      await this.miniappRepository.update(id, {
-        status: 'DRAFT',
+      const updatePayload: any = {
         validationErrors: errors as any,
-      });
+        validationStatus: 'FAILED',
+      };
+      if (!isLive) {
+        updatePayload.status = 'DRAFT';
+      } else if (app.pendingRevision) {
+        updatePayload.pendingRevision = {
+          ...app.pendingRevision,
+          validationStatus: 'FAILED',
+          validationErrors: errors,
+        };
+      }
+      await this.miniappRepository.update(id, updatePayload);
 
       // Create persistent issues
       const issues = Object.entries(errors).map(([key, value]) => {
@@ -440,12 +452,21 @@ export class MiniappValidationHelper {
         app.securityChecks,
       );
 
-      await this.miniappRepository.update(id, {
-        status: 'SUBMITTED',
+      const updatePayload: any = {
         validationStatus: 'RUNNING',
         validationStages: initialStages as any,
         validationErrors: null as any,
-      });
+      };
+      if (!isLive) {
+        updatePayload.status = 'SUBMITTED';
+      } else if (app.pendingRevision) {
+        updatePayload.pendingRevision = {
+          ...app.pendingRevision,
+          validationStatus: 'RUNNING',
+          validationStages: initialStages,
+        };
+      }
+      await this.miniappRepository.update(id, updatePayload);
 
       const envVal = (process.env.ENVIRONMENT || '').toUpperCase();
       const allowLocal = envVal === 'DEV';

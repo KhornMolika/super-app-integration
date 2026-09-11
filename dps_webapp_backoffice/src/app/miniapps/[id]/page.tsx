@@ -26,7 +26,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
   const router = useRouter();
   const { id } = use(params);
 
-  const [formData, setFormData] = useState<Partial<CreateMiniAppDto & { status: string; validationErrors?: Record<string, string>; validationStatus?: string; validationStages?: any; validationReport?: any; issues?: any[] }>>({
+  const [formData, setFormData] = useState<Partial<CreateMiniAppDto & { status: string; validationErrors?: Record<string, string>; validationStatus?: string; validationStages?: any; validationReport?: any; issues?: any[]; pendingRevision?: any }>>({
     name: '',
     appId: '',
     category: 'Insurance',
@@ -49,6 +49,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
     securityChecks: [],
     status: 'DRAFT',
     validationErrors: undefined as Record<string, string> | undefined,
+    pendingRevision: undefined as any,
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -140,7 +141,29 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
     else setActiveTab('overview');
   };
 
-  const allErrors = { ...localErrors, ...(formData.validationErrors || {}) };
+  const rawErrors = { ...localErrors, ...(formData.validationErrors || {}) };
+  const allErrors = Object.entries(rawErrors).reduce((acc, [key, val]) => {
+    if (
+      formData.integrationMethod !== IntegrationMethod.WEBVIEW &&
+      key.startsWith('integrationConfigWebView')
+    ) {
+      return acc;
+    }
+    if (
+      formData.integrationMethod !== IntegrationMethod.FLUTTER_PACKAGE &&
+      key.startsWith('integrationConfigFlutter')
+    ) {
+      return acc;
+    }
+    if (
+      formData.integrationMethod !== IntegrationMethod.DEEP_LINK &&
+      key.startsWith('integrationConfigDeepLink')
+    ) {
+      return acc;
+    }
+    acc[key] = val;
+    return acc;
+  }, {} as Record<string, string>);
   const hasErrors = Object.keys(allErrors).length > 0;
   const isEditable = can('miniapp:update') && (formData.status === 'DRAFT' || formData.status === 'REJECTED' || isEditingUnlocked);
 
@@ -174,17 +197,20 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
       const res = await fetch(`${API_URL}/mini-apps/${id}`);
       if (res.ok) {
         const data = await res.json();
+        const activeOrRev = data.pendingRevision ? { ...data, ...data.pendingRevision } : data;
         setFormData({
           ...data,
-          permissions: Array.isArray(data.permissions) ? data.permissions : [],
-          integrationConfigWebView: data.integrationMethod === IntegrationMethod.WEBVIEW ? {
-            ...data.integrationConfig,
-            allowedDomains: Array.isArray(data.integrationConfig?.allowedDomains)
-              ? data.integrationConfig.allowedDomains.join(', ')
-              : (data.integrationConfig?.allowedDomains || ''),
+          ...activeOrRev,
+          pendingRevision: data.pendingRevision,
+          permissions: Array.isArray(activeOrRev.permissions) ? activeOrRev.permissions : [],
+          integrationConfigWebView: activeOrRev.integrationMethod === IntegrationMethod.WEBVIEW ? {
+            ...activeOrRev.integrationConfig,
+            allowedDomains: Array.isArray(activeOrRev.integrationConfig?.allowedDomains)
+              ? activeOrRev.integrationConfig.allowedDomains.join(', ')
+              : (activeOrRev.integrationConfig?.allowedDomains || ''),
           } : { productionUrl: '', allowedDomains: '', stagingUrl: '' },
-          integrationConfigFlutter: data.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE ? data.integrationConfig : { sourceType: SourceType.ARTIFACT, packageName: '', versionConstraint: '' },
-          integrationConfigDeepLink: data.integrationMethod === IntegrationMethod.DEEP_LINK ? data.integrationConfig : { urlScheme: '', packageName: '', appStoreUrl: '' },
+          integrationConfigFlutter: activeOrRev.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE ? activeOrRev.integrationConfig : { sourceType: SourceType.ARTIFACT, packageName: '', versionConstraint: '' },
+          integrationConfigDeepLink: activeOrRev.integrationMethod === IntegrationMethod.DEEP_LINK ? activeOrRev.integrationConfig : { urlScheme: '', packageName: '', appStoreUrl: '' },
         });
       } else {
         setModalState({ isOpen: true, status: 'error', message: 'Failed to fetch mini app details.' });
@@ -220,10 +246,27 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const fieldName = e.target.name;
+    if (fieldName === 'integrationMethod') {
+      const newMethod = e.target.value;
+      if (newMethod !== IntegrationMethod.WEBVIEW) {
+        setLocalErrors((prev) => {
+          const next = { ...prev };
+          delete next['integrationConfigWebView.domainVerification'];
+          delete next['integrationConfigWebView.productionUrl'];
+          delete next['integrationConfigWebView.stagingUrl'];
+          delete next['integrationConfigWebView.allowedDomains'];
+          return next;
+        });
+      }
+    }
     setFormData((prev) => {
       const nextValidationErrors = prev.validationErrors ? { ...prev.validationErrors } : undefined;
       if (nextValidationErrors) {
         delete nextValidationErrors[fieldName];
+        if (fieldName === 'integrationMethod' && e.target.value !== IntegrationMethod.WEBVIEW) {
+          delete nextValidationErrors['integrationConfigWebView.domainVerification'];
+          delete nextValidationErrors['integrationConfigWebView.productionUrl'];
+        }
       }
       return {
         ...prev,
@@ -248,7 +291,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
         validationErrors: nextValidationErrors,
       };
     });
-    if (isProdUrlChange) {
+    if (isProdUrlChange && formData.integrationMethod === IntegrationMethod.WEBVIEW) {
       setLocalErrors((prev) => ({
         ...prev,
         'integrationConfigWebView.domainVerification':
@@ -336,16 +379,18 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
         validationErrors: nextErrors,
       };
     });
-    setLocalErrors((prev) => {
-      const next = { ...prev };
-      if (isVerified) {
-        delete next['integrationConfigWebView.domainVerification'];
-      } else {
-        next['integrationConfigWebView.domainVerification'] =
-          'Domain ownership has not been verified. Please verify domain ownership before submitting.';
-      }
-      return next;
-    });
+    if (formData.integrationMethod === IntegrationMethod.WEBVIEW) {
+      setLocalErrors((prev) => {
+        const next = { ...prev };
+        if (isVerified) {
+          delete next['integrationConfigWebView.domainVerification'];
+        } else {
+          next['integrationConfigWebView.domainVerification'] =
+            'Domain ownership has not been verified. Please verify domain ownership before submitting.';
+        }
+        return next;
+      });
+    }
   };
 
   const handlePermissionFieldChange = (type: string, field: string, value: string) => {
@@ -522,7 +567,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
   };
 
   const handleLifecycleAction = async (
-    action: 'submit' | 'approve' | 'reject' | 'request-changes' | 'start-testing' | 'activate' | 'suspend',
+    action: 'submit' | 'approve' | 'reject' | 'request-changes' | 'start-testing' | 'activate' | 'suspend' | 'publish-revision' | 'discard-revision',
     explicitReason?: string
   ) => {
     let reason = explicitReason || '';
@@ -536,13 +581,41 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
       reason = response;
     } else if (!explicitReason) {
       const isTestBuild = action === 'start-testing';
-      const actionLabel = isTestBuild ? 'build test package and advance to testing' : action === 'activate' ? 'activate' : action;
+      const isPublishRev = action === 'publish-revision';
+      const isDiscardRev = action === 'discard-revision';
+      const actionLabel = isTestBuild
+        ? 'build test package and advance to testing'
+        : isPublishRev
+        ? 'publish the staged revision live to production'
+        : isDiscardRev
+        ? 'discard the pending revision'
+        : action === 'activate'
+        ? 'activate'
+        : action;
+
       const isConfirmed = await confirm({
-        title: isTestBuild ? 'Trigger Super App Test Build' : `Confirm ${actionLabel}`,
-        message: isTestBuild
+        title: isPublishRev
+          ? 'Publish Staged Revision to Live'
+          : isDiscardRev
+          ? 'Discard Staged Revision'
+          : isTestBuild
+          ? 'Trigger Super App Test Build'
+          : `Confirm ${actionLabel}`,
+        message: isPublishRev
+          ? 'Are you sure you want to publish the staged revision to production? This will update the live Mini App in the Super App catalog immediately.'
+          : isDiscardRev
+          ? 'Are you sure you want to discard this pending draft revision? Any unmerged changes will be lost.'
+          : isTestBuild
           ? 'Are you sure you want to trigger the Jenkins test build? This will compile the Super App container in debug mode and upload the test APK to Nexus for manual testing.'
           : `Are you sure you want to ${actionLabel} this Mini App?`,
-        confirmText: isTestBuild ? 'Trigger Test Build' : `Yes, proceed`,
+        confirmText: isPublishRev
+          ? 'Publish Live'
+          : isDiscardRev
+          ? 'Discard Changes'
+          : isTestBuild
+          ? 'Trigger Test Build'
+          : `Yes, proceed`,
+        confirmVariant: isDiscardRev ? 'danger' : 'primary',
         cancelText: 'Cancel',
       });
       if (!isConfirmed) return;
@@ -562,6 +635,10 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
           message:
             action === 'start-testing'
               ? 'Super App test build pipeline triggered in Jenkins! Packaging test APK for Nexus store...'
+              : action === 'publish-revision'
+              ? 'Staged revision published live to Super App successfully!'
+              : action === 'discard-revision'
+              ? 'Pending draft revision has been discarded.'
               : `Mini App status successfully updated!`,
         });
         setTimeout(() => window.location.reload(), 1200);
@@ -641,6 +718,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
           isSubmitting={isSubmitting}
           onLifecycleAction={handleLifecycleAction}
           onOpenSandbox={openSandboxPreview}
+          pendingRevision={formData.pendingRevision}
         />
 
         {/* Tab Navigation List */}
@@ -772,14 +850,17 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
       <SubmissionModal
         state={modalState}
         mode="manage"
-        onClose={() => setModalState({ ...modalState, isOpen: false })}
+        onClose={() => setModalState((prev) => ({ ...prev, isOpen: false }))}
         onFixLater={() => {
-          setModalState({ ...modalState, isOpen: false });
+          setModalState((prev) => ({ ...prev, isOpen: false }));
         }}
         onRunInBackground={() => {
-          setModalState({ ...modalState, isOpen: false });
+          setModalState((prev) => ({ ...prev, isOpen: false }));
         }}
-        onSuccessContinue={() => {}}
+        onSuccessContinue={() => {
+          setModalState((prev) => ({ ...prev, isOpen: false }));
+          fetchApp();
+        }}
       />
 
       {/* Floating Error Summary Button */}

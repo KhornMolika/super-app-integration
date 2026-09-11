@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -6,12 +7,14 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../services/auth_service.dart';
 import '../../../routes/app_pages.dart';
 import 'package:dps_mobile_app/app/config/api_config.dart';
+import '../widgets/miniapp_consent_sheet.dart';
 
 class HomeController extends GetxController {
   var miniApps = [].obs;
   var isLoading = true.obs;
   var hasError = false.obs;
   var selectedIndex = 0.obs;
+  final consentedAppIds = <String>{}.obs;
 
   @override
   void onInit() {
@@ -61,16 +64,32 @@ class HomeController extends GetxController {
       } catch (_) {}
 
       final response = await http.get(
-        Uri.parse('$baseUrl/mini-apps'),
+        Uri.parse('$baseUrl/mini-apps?_t=${DateTime.now().millisecondsSinceEpoch}'),
         headers: headers,
       ).timeout(const Duration(seconds: 4));
       
       if (response.statusCode == 200) {
         final List<dynamic> allApps = json.decode(response.body);
-        // Display Approved, Active, and Testing mini apps
+        // Display Approved, Active, and Testing mini apps (or all active/review apps in web sandbox)
         miniApps.value = allApps.where((app) {
           final s = (app['status'] ?? '').toString().toUpperCase();
+          if (kIsWeb) {
+            // In web sandbox preview, show all registered apps so developers can immediately test
+            return s != 'DELETED' && s != 'ARCHIVED';
+          }
           return s == 'APPROVED' || s == 'PUBLISHED' || s == 'ACTIVE' || s == 'TESTING';
+        }).map((app) {
+          // If in web sandbox preview and app has pendingRevision, merge revision into app object so preview shows fresh changes
+          if (kIsWeb && app['pendingRevision'] is Map) {
+            final rev = app['pendingRevision'];
+            return {
+              ...app,
+              ...rev,
+              'integrationConfig': rev['integrationConfig'] ?? app['integrationConfig'],
+              'permissions': rev['permissions'] ?? app['permissions'],
+            };
+          }
+          return app;
         }).toList();
       } else {
         hasError(true);
@@ -86,6 +105,30 @@ class HomeController extends GetxController {
   Future<void> launchMiniApp(dynamic app) async {
     if (app == null) return;
 
+    final appId = (app['appId'] ?? app['id'] ?? '').toString();
+    final hasConsented = consentedAppIds.contains(appId);
+
+    // Show consent bottom sheet if not accepted yet
+    if (!hasConsented) {
+      final bool? agreed = await Get.bottomSheet<bool>(
+        MiniAppConsentSheet(app: app),
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+      );
+
+      if (agreed != true) {
+        return; // User cancelled or closed the sheet
+      }
+
+      if (appId.isNotEmpty) {
+        consentedAppIds.add(appId);
+      }
+    }
+
+    _executeMiniAppLaunch(app);
+  }
+
+  Future<void> _executeMiniAppLaunch(dynamic app) async {
     final redirectUri = app['redirectUri'];
     if (redirectUri != null && redirectUri.isNotEmpty) {
       Get.toNamed(redirectUri);

@@ -130,16 +130,18 @@ export default function RegisterMiniAppPage() {
             : prev.integrationConfigWebView?.allowedDomains || '',
       },
     }));
-    setLocalErrors((prev) => {
-      const next = { ...prev };
-      if (isVerified) {
-        delete next['integrationConfigWebView.domainVerification'];
-      } else {
-        next['integrationConfigWebView.domainVerification'] =
-          'Domain ownership has not been verified. Please host the verification association file and verify domain ownership before proceeding to the next step.';
-      }
-      return next;
-    });
+    if (formData.integrationMethod === IntegrationMethod.WEBVIEW) {
+      setLocalErrors((prev) => {
+        const next = { ...prev };
+        if (isVerified) {
+          delete next['integrationConfigWebView.domainVerification'];
+        } else {
+          next['integrationConfigWebView.domainVerification'] =
+            'Domain ownership has not been verified. Please host the verification association file and verify domain ownership before proceeding to the next step.';
+        }
+        return next;
+      });
+    }
   };
 
   useEffect(() => {
@@ -241,10 +243,45 @@ export default function RegisterMiniAppPage() {
     else if (field.startsWith('permission')) setStep(4);
   };
 
-  const allErrors = { ...localErrors, ...(modalState.errors || {}) };
+  const allRawErrors = { ...localErrors, ...(modalState.errors || {}) };
+  const allErrors = Object.entries(allRawErrors).reduce((acc, [key, val]) => {
+    if (
+      formData.integrationMethod !== IntegrationMethod.WEBVIEW &&
+      key.startsWith('integrationConfigWebView')
+    ) {
+      return acc;
+    }
+    if (
+      formData.integrationMethod !== IntegrationMethod.FLUTTER_PACKAGE &&
+      key.startsWith('integrationConfigFlutter')
+    ) {
+      return acc;
+    }
+    if (
+      formData.integrationMethod !== IntegrationMethod.DEEP_LINK &&
+      key.startsWith('integrationConfigDeepLink')
+    ) {
+      return acc;
+    }
+    acc[key] = val;
+    return acc;
+  }, {} as Record<string, string>);
   const hasErrors = Object.keys(allErrors).length > 0;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    if (e.target.name === 'integrationMethod') {
+      const newMethod = e.target.value;
+      if (newMethod !== IntegrationMethod.WEBVIEW) {
+        setLocalErrors((prev) => {
+          const next = { ...prev };
+          delete next['integrationConfigWebView.domainVerification'];
+          delete next['integrationConfigWebView.productionUrl'];
+          delete next['integrationConfigWebView.stagingUrl'];
+          delete next['integrationConfigWebView.allowedDomains'];
+          return next;
+        });
+      }
+    }
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -255,7 +292,7 @@ export default function RegisterMiniAppPage() {
       isDomainVerified: isUrlChange ? false : prev.isDomainVerified,
       integrationConfigWebView: { ...prev.integrationConfigWebView!, [e.target.name]: e.target.value },
     }));
-    if (isUrlChange) {
+    if (isUrlChange && formData.integrationMethod === IntegrationMethod.WEBVIEW) {
       setLocalErrors((prev) => ({
         ...prev,
         'integrationConfigWebView.domainVerification':
@@ -593,7 +630,7 @@ export default function RegisterMiniAppPage() {
             </Card>
           )}
 
-          {step === 3 && allErrors['integrationConfigWebView.domainVerification'] && (
+          {step === 3 && formData.integrationMethod === IntegrationMethod.WEBVIEW && allErrors['integrationConfigWebView.domainVerification'] && (
             <div className="mb-4 p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-sm font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-2">
               <svg className="w-5 h-5 text-rose-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />

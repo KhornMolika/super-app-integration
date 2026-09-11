@@ -56,8 +56,13 @@ export default function BankingAppClient({
         </div>
 
         {/* Security & Regulatory Notice */}
-        <div className="mt-12 p-4 bg-gray-100/80 rounded-2xl text-center text-xs text-gray-500 border border-gray-200/60">
-          DPS Banking Mini App operates under bank-grade tokenized security protocols. All transactions are digitally signed and insured.
+        <div className="mt-12 p-4 bg-gray-100/80 rounded-2xl text-center text-xs text-gray-500 border border-gray-200/60 space-y-2">
+          <p>DPS Banking Mini App operates under bank-grade tokenized security protocols. All transactions are digitally signed and insured.</p>
+          <div className="flex items-center justify-center gap-4 text-xs font-semibold text-amber-600 dark:text-amber-500 pt-1">
+            <a href="/terms" className="hover:underline">Terms of Service</a>
+            <span>•</span>
+            <a href="/privacy" className="hover:underline">Privacy Policy</a>
+          </div>
         </div>
       </main>
     </div>

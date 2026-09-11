@@ -282,7 +282,7 @@ export class MiniappsService {
       );
     }
 
-    data.status = 'PROCESSING';
+    const isLive = existing.status === 'ACTIVE' || existing.status === 'TESTING';
 
     // Automatically upload base64 image data to MinIO object storage on submission
     const isBase64Logo =
@@ -300,6 +300,61 @@ export class MiniappsService {
         this.logger.error(`Failed to store logo in MinIO: ${err.message}`);
       }
     }
+
+    if (isLive) {
+      // Preserve the active live app status so it remains visible and usable in the Super App
+      const existingRev = existing.pendingRevision || {};
+      const revisionData = {
+        ...existingRev,
+        name: data.name ?? existingRev.name ?? existing.name,
+        shortDescription: data.shortDescription ?? existingRev.shortDescription ?? existing.shortDescription,
+        fullDescription: data.fullDescription ?? existingRev.fullDescription ?? existing.fullDescription,
+        logo: data.logo ?? existingRev.logo ?? existing.logo,
+        category: data.category ?? existingRev.category ?? existing.category,
+        termsUrl: data.termsUrl ?? existingRev.termsUrl ?? existing.termsUrl,
+        termsDescription: data.termsDescription ?? existingRev.termsDescription ?? existing.termsDescription,
+        privacyPolicyUrl: data.privacyPolicyUrl ?? existingRev.privacyPolicyUrl ?? existing.privacyPolicyUrl,
+        privacyPolicyDescription: data.privacyPolicyDescription ?? existingRev.privacyPolicyDescription ?? existing.privacyPolicyDescription,
+        ownerName: data.ownerName ?? existingRev.ownerName ?? existing.ownerName,
+        ownerEmail: data.ownerEmail ?? existingRev.ownerEmail ?? existing.ownerEmail,
+        supportEmail: data.supportEmail ?? existingRev.supportEmail ?? existing.supportEmail,
+        teamName: data.teamName ?? existingRev.teamName ?? existing.teamName,
+        integrationMethod: data.integrationMethod ?? existingRev.integrationMethod ?? existing.integrationMethod,
+        integrationConfig: data.integrationConfig ?? existingRev.integrationConfig ?? existing.integrationConfig,
+        permissions: data.permissions ?? existingRev.permissions ?? existing.permissions,
+        securityChecks: data.securityChecks ?? existingRev.securityChecks ?? existing.securityChecks,
+        isDomainVerified: data.isDomainVerified ?? existingRev.isDomainVerified ?? existing.isDomainVerified,
+        domainVerifiedAt: data.domainVerifiedAt ?? existingRev.domainVerifiedAt ?? existing.domainVerifiedAt,
+        verificationToken: data.verificationToken ?? existingRev.verificationToken ?? existing.verificationToken,
+        revisionStatus: 'IN_REVIEW',
+        validationStatus: 'RUNNING',
+        submittedAt: existingRev.submittedAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      existing.pendingRevision = revisionData;
+      await this.miniappRepository.save(existing);
+
+      // Kick off async validation on the staged revision
+      this.validateMiniAppAsync(id, revisionData).catch((err) => {
+        this.logger.error(`Error in async validation for app revision ${id}:`, err);
+      });
+
+      const updated = await this.findOne(id);
+      await this.logActivity(
+        id,
+        actorId || 'system',
+        'UPDATE_REVISION',
+        `Revision Saved for ${existing.name}`,
+        'Draft revision updated while live version remains running in Super App',
+        'UPDATE_MINI_APP_REVISION',
+        existing,
+        updated,
+      );
+      return updated;
+    }
+
+    data.status = 'PROCESSING';
 
     const merged = this.miniappRepository.merge(existing, data);
     if (data.permissions) {
@@ -333,6 +388,92 @@ export class MiniappsService {
       updated,
     );
     return updated;
+  }
+
+  async publishRevision(id: string, actorId: string) {
+    const app = await this.findOne(id);
+    if (!app) throw new BadRequestException('App not found');
+    if (!app.pendingRevision) {
+      throw new BadRequestException('No pending revision found to publish');
+    }
+
+    const rev = app.pendingRevision;
+    const oldVal = { ...app };
+
+    app.name = rev.name ?? app.name;
+    app.shortDescription = rev.shortDescription ?? app.shortDescription;
+    app.fullDescription = rev.fullDescription ?? app.fullDescription;
+    app.logo = rev.logo ?? app.logo;
+    app.category = rev.category ?? app.category;
+    app.termsUrl = rev.termsUrl ?? app.termsUrl;
+    app.termsDescription = rev.termsDescription ?? app.termsDescription;
+    app.privacyPolicyUrl = rev.privacyPolicyUrl ?? app.privacyPolicyUrl;
+    app.privacyPolicyDescription = rev.privacyPolicyDescription ?? app.privacyPolicyDescription;
+    app.ownerName = rev.ownerName ?? app.ownerName;
+    app.ownerEmail = rev.ownerEmail ?? app.ownerEmail;
+    app.supportEmail = rev.supportEmail ?? app.supportEmail;
+    app.teamName = rev.teamName ?? app.teamName;
+    app.integrationMethod = rev.integrationMethod ?? app.integrationMethod;
+    app.integrationConfig = rev.integrationConfig ?? app.integrationConfig;
+    app.permissions = rev.permissions ?? app.permissions;
+    if (rev.isDomainVerified !== undefined) app.isDomainVerified = rev.isDomainVerified;
+    if (rev.domainVerifiedAt !== undefined) app.domainVerifiedAt = rev.domainVerifiedAt;
+    if (rev.verificationToken !== undefined) app.verificationToken = rev.verificationToken;
+    if (rev.validationStages) app.validationStages = rev.validationStages;
+    if (rev.validationReport) app.validationReport = rev.validationReport;
+    if (rev.validationStatus) app.validationStatus = rev.validationStatus;
+    if (rev.validationErrors !== undefined) app.validationErrors = rev.validationErrors;
+
+    app.pendingRevision = null;
+    app.status = 'ACTIVE';
+
+    await this.miniappRepository.save(app);
+
+    await this.notificationsService.createNotification(
+      app.ownerId || '',
+      'Revision Published',
+      `Revision for Mini App "${app.name}" has been published live to the Super App catalog.`,
+      'REVISION_PUBLISHED',
+      app.id,
+    );
+
+    await this.logActivity(
+      id,
+      actorId || 'system',
+      'STATUS_CHANGE',
+      `Revision Published for ${app.name}`,
+      'Staged revision merged into live active Mini App configuration',
+      'PUBLISH_REVISION',
+      oldVal,
+      app,
+    );
+
+    return app;
+  }
+
+  async discardRevision(id: string, actorId: string) {
+    const app = await this.findOne(id);
+    if (!app) throw new BadRequestException('App not found');
+    if (!app.pendingRevision) {
+      throw new BadRequestException('No pending revision found to discard');
+    }
+
+    const oldRev = app.pendingRevision;
+    app.pendingRevision = null;
+    await this.miniappRepository.save(app);
+
+    await this.logActivity(
+      id,
+      actorId || 'system',
+      'STATUS_CHANGE',
+      `Revision Discarded for ${app.name}`,
+      'Pending draft revision was discarded without affecting the live version',
+      'DISCARD_REVISION',
+      oldRev,
+      null,
+    );
+
+    return app;
   }
 
   async remove(id: string, actorId?: string) {

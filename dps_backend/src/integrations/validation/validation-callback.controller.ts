@@ -131,17 +131,33 @@ export class ValidationCallbackController {
       completedAt: new Date().toISOString(),
     };
 
+    const hasPendingRevision = Boolean(app.pendingRevision);
+
+    if (hasPendingRevision) {
+      app.pendingRevision = {
+        ...app.pendingRevision,
+        validationReport: app.validationReport,
+        validationStages: app.validationStages,
+        validationStatus: dto.status === 'PASSED' ? 'PASSED' : 'FAILED',
+        revisionStatus: dto.status === 'PASSED' ? 'IN_REVIEW' : 'DRAFT',
+      };
+    }
+
     if (dto.status === 'PASSED') {
       app.validationStatus = 'PASSED';
-      app.status = 'IN_REVIEW';
+      if (!hasPendingRevision) {
+        app.status = 'IN_REVIEW';
+      }
       app.validationErrors = null;
 
       await this.miniappRepository.save(app);
 
       await this.notificationsService.createNotification(
         app.ownerId || '',
-        'Automated Validation Passed',
-        `${app.name || 'Mini App'} passed automated ${dto.method} security validation (Score: ${dto.score}/100) and is now In Review.`,
+        hasPendingRevision ? 'Revision Validation Passed' : 'Automated Validation Passed',
+        hasPendingRevision
+          ? `${app.name || 'Mini App'} revision passed automated ${dto.method} validation (Score: ${dto.score}/100). Live version remains active.`
+          : `${app.name || 'Mini App'} passed automated ${dto.method} security validation (Score: ${dto.score}/100) and is now In Review.`,
         'REVIEW_STARTED',
         app.id,
       );
@@ -161,7 +177,7 @@ export class ValidationCallbackController {
         resourceType: 'MiniApp',
         resourceId: app.id,
         newValue: {
-          status: 'IN_REVIEW',
+          status: app.status,
           validationStatus: 'PASSED',
           score: dto.score,
         },
@@ -169,12 +185,14 @@ export class ValidationCallbackController {
 
       return {
         success: true,
-        newStatus: 'IN_REVIEW',
+        newStatus: app.status,
         validationStatus: 'PASSED',
       };
     } else {
       app.validationStatus = 'FAILED';
-      app.status = 'DRAFT'; // Auto-reset to DRAFT for remediation
+      if (!hasPendingRevision) {
+        app.status = 'DRAFT'; // Auto-reset to DRAFT for remediation
+      }
 
       // Mark running/pending stages as FAILED
       const stages = app.validationStages || {};

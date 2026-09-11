@@ -258,9 +258,23 @@ export class LocalSecurityScannerService {
       fallbackReason: fallbackReason || null,
     };
 
+    const hasPendingRevision = Boolean(app.pendingRevision);
+
+    if (hasPendingRevision) {
+      app.pendingRevision = {
+        ...app.pendingRevision,
+        validationReport: app.validationReport,
+        validationStages: app.validationStages,
+        validationStatus: overallStatus,
+        revisionStatus: overallStatus === 'PASSED' ? 'IN_REVIEW' : 'DRAFT',
+      };
+    }
+
     if (overallStatus === 'PASSED') {
       app.validationStatus = 'PASSED';
-      app.status = 'IN_REVIEW';
+      if (!hasPendingRevision) {
+        app.status = 'IN_REVIEW';
+      }
       app.validationErrors = null;
       await this.miniappRepository.save(app);
 
@@ -273,8 +287,10 @@ export class LocalSecurityScannerService {
 
       await this.notificationsService.createNotification(
         app.ownerId || '',
-        'Automated Validation Passed',
-        `All configured ${method} security checks passed successfully (${score}/100). Status updated to IN_REVIEW.`,
+        hasPendingRevision ? 'Revision Validation Passed' : 'Automated Validation Passed',
+        hasPendingRevision
+          ? `All configured ${method} security checks for pending revision passed (${score}/100). Live version remains active.`
+          : `All configured ${method} security checks passed successfully (${score}/100). Status updated to IN_REVIEW.`,
         'VALIDATION_SUCCESS',
         app.id,
       );
@@ -285,14 +301,16 @@ export class LocalSecurityScannerService {
         resourceType: 'MiniApp',
         resourceId: app.id,
         newValue: {
-          status: 'IN_REVIEW',
+          status: app.status,
           validationStatus: 'PASSED',
           score,
         },
       });
     } else {
       app.validationStatus = 'FAILED';
-      app.status = 'DRAFT';
+      if (!hasPendingRevision) {
+        app.status = 'DRAFT';
+      }
 
       const issuesToCreate: MiniAppIssue[] = [];
       const criticalOrHigh = findings.filter(

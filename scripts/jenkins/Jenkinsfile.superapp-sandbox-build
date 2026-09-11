@@ -1,0 +1,114 @@
+pipeline {
+    agent any
+
+    parameters {
+        string(name: 'BRANCH', defaultValue: 'molika', description: 'Git Branch / Tag to build')
+        string(name: 'BASE_HREF', defaultValue: '/superapp-sandbox/', description: 'Base href for Flutter Web hosting')
+        choice(name: 'BUILD_MODE', choices: ['release', 'debug'], description: 'Flutter Web compilation mode')
+        string(name: 'CALLBACK_URL', defaultValue: 'http://host.docker.internal:3000/api/release-assembly/build-callback', description: 'Backend Webhook Callback URL')
+        string(name: 'NEXUS_URL', defaultValue: 'http://host.docker.internal:8081', description: 'Sonatype Nexus URL')
+        booleanParam(name: 'PUBLISH_TO_NEXUS', defaultValue: false, description: 'Publish compiled sandbox archive to Sonatype Nexus')
+    }
+
+    environment {
+        SANDBOX_OUTPUT_DIR = "/var/reports/superapp-sandbox"
+        ARCHIVE_FILE = "/var/reports/superapp-sandbox.tar.gz"
+    }
+
+    stages {
+        stage('1. Pre-Flight & Workspace Preparation') {
+            steps {
+                echo "=========================================================="
+                echo " 🚀 Super App Flutter Web Sandbox CI Pipeline"
+                echo " Branch          : ${params.BRANCH}"
+                echo " Base Href       : ${params.BASE_HREF}"
+                echo " Build Mode      : ${params.BUILD_MODE}"
+                echo " Output Dir      : ${env.SANDBOX_OUTPUT_DIR}"
+                echo "=========================================================="
+
+                sh "mkdir -p ${env.SANDBOX_OUTPUT_DIR} && chmod -R 777 /var/reports"
+            }
+        }
+
+        stage('2. Build Flutter Web Sandbox') {
+            agent {
+                docker {
+                    image 'ghcr.io/cirruslabs/flutter:stable'
+                    reuseNode true
+                    args '-v /var/reports:/var/reports'
+                }
+            }
+            steps {
+                echo "📦 Resolving Flutter dependencies..."
+                dir('dps_mobile_app') {
+                    sh 'flutter pub get'
+                    
+                    echo "⚙️ Compiling Flutter Web (--base-href ${params.BASE_HREF})..."
+                    sh "flutter build web --base-href ${params.BASE_HREF} --${params.BUILD_MODE}"
+
+                    echo "🚚 Syncing compiled web bundle to sandbox output directory..."
+                    sh "cp -R build/web/* ${env.SANDBOX_OUTPUT_DIR}/"
+                    sh "tar -czf ${env.ARCHIVE_FILE} -C build/web ."
+                }
+            }
+        }
+
+        stage('3. Publish Artifacts (Optional)') {
+            when {
+                expression { return params.PUBLISH_TO_NEXUS == true }
+            }
+            steps {
+                echo "📤 Uploading superapp-sandbox.tar.gz to Sonatype Nexus..."
+                sh """
+                NEXUS_USER="\${NEXUS_USER:-admin}"
+                NEXUS_PASSWORD="\${NEXUS_PASSWORD:-admin123}"
+                if [ -f "${env.ARCHIVE_FILE}" ]; then
+                    curl -s -f -u "\${NEXUS_USER}:\${NEXUS_PASSWORD}" --upload-file "${env.ARCHIVE_FILE}" "${params.NEXUS_URL}/repository/superapp-artifacts/sandbox/latest/superapp-sandbox.tar.gz"
+                    echo "✅ Nexus upload completed."
+                fi
+                """
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "🎉 Flutter Web Sandbox built and synced successfully!"
+            script {
+                sh """
+                node -e '
+                    const callbackUrl = "${params.CALLBACK_URL}";
+                    fetch(callbackUrl, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            appName: "superapp-sandbox",
+                            status: "COMPLETED",
+                            details: "Flutter Web Sandbox compiled successfully with base-href ${params.BASE_HREF}."
+                        })
+                    }).catch(() => {});
+                ' || true
+                """
+            }
+        }
+        failure {
+            echo "❌ Flutter Web Sandbox build failed."
+            script {
+                sh """
+                node -e '
+                    const callbackUrl = "${params.CALLBACK_URL}";
+                    fetch(callbackUrl, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            appName: "superapp-sandbox",
+                            status: "FAILED",
+                            details: "Flutter Web Sandbox build failed."
+                        })
+                    }).catch(() => {});
+                ' || true
+                """
+            }
+        }
+    }
+}

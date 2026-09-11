@@ -132,9 +132,9 @@ export default function Footer({ onOpenQuote }: { onOpenQuote: () => void }) {
             &copy; {new Date().getFullYear()} Nova Insurance Technologies. Underwritten by DPS Partner Syndicate. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
-            <a href="#" className="hover:text-slate-400">Privacy Policy</a>
-            <a href="#" className="hover:text-slate-400">Terms of Service</a>
-            <a href="#" className="hover:text-slate-400">Regulatory Disclosure</a>
+            <a href="/privacy" className="hover:text-slate-300 transition-colors">Privacy Policy</a>
+            <a href="/terms" className="hover:text-slate-300 transition-colors">Terms of Service</a>
+            <span className="text-slate-600">Regulatory Compliant</span>
           </div>
         </div>
 
