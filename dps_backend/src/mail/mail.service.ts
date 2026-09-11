@@ -36,19 +36,19 @@ export class MailService {
     try {
       const name = userName || 'User';
       const result = await this.resend.emails.send({
-        from: `DPS Super App <${this.fromEmail}>`,
+        from: `Super App <${this.fromEmail}>`,
         to: toEmail,
-        subject: 'Test Notification: DPS Super App Email Gateway',
+        subject: 'Test Notification: Super App Email Gateway',
         html: `
           <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
             <div style="background: #0f172a; padding: 32px 24px; text-align: left; color: #ffffff; border-bottom: 3px solid #0284c7;">
-              <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #38bdf8; font-weight: 700;">DPS Super App Gateway</span>
+              <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #38bdf8; font-weight: 700;">Super App Gateway</span>
               <h1 style="margin: 8px 0 0 0; font-size: 22px; font-weight: 700; color: #ffffff;">Email Notification Test</h1>
             </div>
             <div style="padding: 32px 24px;">
               <p style="font-size: 14px; line-height: 1.6; margin-top: 0;">Hello <strong>${name}</strong>,</p>
               <p style="font-size: 14px; line-height: 1.6;">
-                This is a verified test email sent directly from the DPS Super App Backoffice notification engine.
+                This is a verified test email sent directly from the Super App Backoffice notification engine.
               </p>
               
               <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 18px; margin: 24px 0;">
@@ -63,7 +63,7 @@ export class MailService {
 
               <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 28px 0;" />
               <p style="margin: 0; font-size: 13px; color: #64748b;">Best regards,</p>
-              <p style="margin: 4px 0 0 0; font-size: 14px; font-weight: 700; color: #0f172a;">DPS Super App Governance</p>
+              <p style="margin: 4px 0 0 0; font-size: 14px; font-weight: 700; color: #0f172a;">Super App Governance</p>
             </div>
           </div>
         `,
@@ -102,13 +102,13 @@ export class MailService {
 
     try {
       await this.resend.emails.send({
-        from: `DPS Mini App Gateway <${this.fromEmail}>`,
+        from: `Super App <${this.fromEmail}>`,
         to: toEmail,
         subject: `Mini App Registration Successful: ${appName}`,
         html: `
           <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
             <div style="background: #0f172a; padding: 32px 24px; text-align: left; color: #ffffff; border-bottom: 3px solid #0284c7;">
-              <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #38bdf8; font-weight: 700;">DPS Mini App Gateway</span>
+              <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #38bdf8; font-weight: 700;">Super App Gateway</span>
               <h1 style="margin: 8px 0 0 0; font-size: 22px; font-weight: 700; color: #ffffff;">Mini App Registration Successful</h1>
             </div>
             <div style="padding: 32px 24px;">
@@ -128,12 +128,12 @@ export class MailService {
               </div>
 
               <p style="font-size: 14px; color: #475569; line-height: 1.6;">
-                You can manage credentials, webhooks, and revisions directly from the DPS Administration Portal.
+                You can manage credentials, webhooks, and revisions directly from the Super App Portal.
               </p>
 
               <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 28px 0;" />
               <p style="margin: 0; font-size: 13px; color: #64748b;">Best regards,</p>
-              <p style="margin: 4px 0 0 0; font-size: 14px; font-weight: 700; color: #0f172a;">DPS Administration Team</p>
+              <p style="margin: 4px 0 0 0; font-size: 14px; font-weight: 700; color: #0f172a;">Super App Administration Team</p>
             </div>
           </div>
         `,
@@ -321,13 +321,13 @@ export class MailService {
 
     try {
       await this.resend.emails.send({
-        from: `DPS Mini App Gateway <${this.fromEmail}>`,
+        from: `Super App <${this.fromEmail}>`,
         to: toEmail,
         subject: `Action Required: Mini App Registration Issues (${appName})`,
         html: `
           <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
             <div style="background: #0f172a; padding: 32px 24px; text-align: left; color: #ffffff; border-bottom: 3px solid #e11d48;">
-              <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #fb7185; font-weight: 700;">DPS Mini App Gateway</span>
+              <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #fb7185; font-weight: 700;">Super App Gateway</span>
               <h1 style="margin: 8px 0 0 0; font-size: 22px; font-weight: 700; color: #ffffff;">Registration Issues Detected</h1>
             </div>
             <div style="padding: 32px 24px;">
@@ -346,12 +346,12 @@ export class MailService {
               </div>
 
               <p style="font-size: 14px; color: #475569; line-height: 1.6;">
-                Please resolve these errors in the DPS Administration Portal before resubmitting the application.
+                Please resolve these errors in the Super App Portal before resubmitting the application.
               </p>
 
               <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 28px 0;" />
               <p style="margin: 0; font-size: 13px; color: #64748b;">Best regards,</p>
-              <p style="margin: 4px 0 0 0; font-size: 14px; font-weight: 700; color: #0f172a;">DPS Administration Team</p>
+              <p style="margin: 4px 0 0 0; font-size: 14px; font-weight: 700; color: #0f172a;">Super App Administration Team</p>
             </div>
           </div>
         `,

@@ -269,7 +269,7 @@ export default function SettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chatId: targetChat,
-          miniAppName: role === 'SUPER_ADMIN' || role === 'ADMIN' ? 'DPS Super App Operations' : 'Mini App Team Channel',
+          miniAppName: role === 'SUPER_ADMIN' || role === 'ADMIN' ? 'Super App Operations' : 'Mini App Team Channel',
         }),
       });
       const data = await res.json();

@@ -130,7 +130,7 @@ export class TelegramController {
     const name = dbUser?.name || req.user?.name || 'User';
     const email = dbUser?.email || req.user?.email || 'N/A';
     const success = await this.telegramService.sendMessage(
-      `<b>Test Notification: Personal Direct Alert</b>\n\nHello ${name}, this is a verified test notification from the DPS Super App Backoffice.\n\nYour account (<code>${email}</code>) is receiving direct updates.`,
+      `<b>Test Notification: Personal Direct Alert</b>\n\nHello ${name}, this is a verified test notification from the Super App Backoffice.\n\nYour account (<code>${email}</code>) is receiving direct updates.`,
       chatId,
     );
 
@@ -153,7 +153,7 @@ export class TelegramController {
 
     const appName = body.miniAppName || 'Platform Ops & Dev Team Channel';
     const success = await this.telegramService.sendMessage(
-      `<b>Test Notification: Team Channel Alert</b>\n\n<b>Channel:</b> <code>${targetChat}</code>\n<b>Target:</b> ${appName}\n\nThis group channel is connected to receive automated security scan results, review status updates, and CI/CD test build APK alerts from the DPS Super App Gateway.`,
+      `<b>Test Notification: Team Channel Alert</b>\n\n<b>Channel:</b> <code>${targetChat}</code>\n<b>Target:</b> ${appName}\n\nThis group channel is connected to receive automated security scan results, review status updates, and CI/CD test build APK alerts from the Super App Gateway.`,
       targetChat,
     );
 

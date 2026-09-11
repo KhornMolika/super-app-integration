@@ -111,7 +111,7 @@ export class TelegramService {
     // Send instant welcome / confirmation message
     const displayName = firstName || user.name || 'User';
     await this.sendMessage(
-      `<b>Super App Telegram Alerts Connected</b>\n\nHello ${displayName}, your Telegram account is now connected to your DPS Super App account (<b>${user.email}</b>).\n\nYou will receive real-time alerts for your Mini Apps, security scans, review feedback, and test builds.`,
+      `<b>Super App Telegram Alerts Connected</b>\n\nHello ${displayName}, your Telegram account is now connected to your Super App account (<b>${user.email}</b>).\n\nYou will receive real-time alerts for your Mini Apps, security scans, review feedback, and test builds.`,
       chatId.toString(),
     );
 
@@ -229,7 +229,7 @@ export class TelegramService {
 <b>${header}</b>
 <b>Title:</b> ${title}${appLabel}
 <b>Details:</b> ${message}
-<i>DPS Super App Management Gateway</i>
+<i>Super App Management Gateway</i>
     `.trim();
 
     const dispatched = new Set<string>();
