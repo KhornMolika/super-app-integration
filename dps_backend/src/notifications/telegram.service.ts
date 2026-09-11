@@ -167,6 +167,34 @@ export class TelegramService {
     }
   }
 
+  async getRecentGroups(): Promise<Array<{ id: string; title: string; type: string }>> {
+    if (!this.botToken) return [];
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${this.botToken}/getUpdates`);
+      if (!res.ok) return [];
+
+      const data = await res.json();
+      const updates = data.result || [];
+      const groupsMap = new Map<string, { id: string; title: string; type: string }>();
+
+      for (const update of updates) {
+        const chat = update.message?.chat || update.my_chat_member?.chat || update.channel_post?.chat;
+        if (chat && (chat.type === 'group' || chat.type === 'supergroup' || chat.type === 'channel')) {
+          groupsMap.set(chat.id.toString(), {
+            id: chat.id.toString(),
+            title: chat.title || 'Untitled Group',
+            type: chat.type,
+          });
+        }
+      }
+
+      return Array.from(groupsMap.values());
+    } catch (err) {
+      this.logger.error('Failed to get recent groups from Telegram:', err);
+      return [];
+    }
+  }
+
   async unlinkTelegramAccount(userId: string): Promise<boolean> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) return false;

@@ -31,6 +31,8 @@ export default function SettingsPage() {
   const [sendingTest, setSendingTest] = useState(false);
   const [sendingTeamTest, setSendingTeamTest] = useState(false);
   const [savingTeamChat, setSavingTeamChat] = useState(false);
+  const [detectingGroups, setDetectingGroups] = useState(false);
+  const [detectedGroups, setDetectedGroups] = useState<Array<{ id: string; title: string; type: string }>>([]);
   const [loading, setLoading] = useState(false);
   const [showManualTelegram, setShowManualTelegram] = useState(false);
   const [manualChatId, setManualChatId] = useState('');
@@ -38,7 +40,7 @@ export default function SettingsPage() {
   const [teamChatIdInput, setTeamChatIdInput] = useState('');
   const [copiedChatId, setCopiedChatId] = useState(false);
   const [copiedTeamChatId, setCopiedTeamChatId] = useState(false);
-  const [activeGuideTab, setActiveGuideTab] = useState<'botfather' | 'personal' | 'group'>('botfather');
+  const [activeGuideTab, setActiveGuideTab] = useState<'botfather' | 'group' | 'personal'>('group');
 
   const [feedback, setFeedback] = useState<{
     type: 'success' | 'error' | null;
@@ -170,6 +172,31 @@ export default function SettingsPage() {
       setFeedback({ type: 'error', message: err.message || 'Failed to save Team Telegram ID.' });
     } finally {
       setSavingTeamChat(false);
+    }
+  };
+
+  const handleDetectGroups = async () => {
+    setDetectingGroups(true);
+    try {
+      const res = await fetch('/api/telegram/recent-groups');
+      const data = await res.json();
+      if (res.ok && Array.isArray(data.groups) && data.groups.length > 0) {
+        setDetectedGroups(data.groups);
+        setFeedback({
+          type: 'success',
+          message: `Discovered ${data.groups.length} Telegram group(s) connected with the bot! Select one below.`,
+        });
+      } else {
+        setDetectedGroups([]);
+        setFeedback({
+          type: 'error',
+          message: 'No groups found yet. Make sure you added the bot to your group and posted a message (e.g. "hi" or "/start") in that group first.',
+        });
+      }
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: 'Failed to scan for recent Telegram groups.' });
+    } finally {
+      setDetectingGroups(false);
     }
   };
 
@@ -692,10 +719,24 @@ export default function SettingsPage() {
           <div className="my-6 space-y-5">
             <form onSubmit={handleSaveTeamChat} className="space-y-4">
               <div>
-                <Label className="flex items-center gap-2 text-sm sm:text-base">
-                  <span className="font-semibold">Team / Platform Telegram Group Chat ID</span>
-                  <span className="text-sm text-slate-400 font-normal">(starts with -100...)</span>
-                </Label>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <Label className="flex items-center gap-2 text-sm sm:text-base">
+                    <span className="font-semibold">Team / Platform Telegram Group Chat ID</span>
+                    <span className="text-sm text-slate-400 font-normal">(starts with -100...)</span>
+                  </Label>
+                  <button
+                    type="button"
+                    onClick={handleDetectGroups}
+                    disabled={detectingGroups}
+                    className="text-xs sm:text-sm font-semibold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1.5"
+                  >
+                    <svg className={`w-3.5 h-3.5 ${detectingGroups ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <span>{detectingGroups ? 'Scanning Telegram...' : 'Auto-Detect Group ID from Bot'}</span>
+                  </button>
+                </div>
+
                 <div className="flex flex-col sm:flex-row gap-3 mt-2">
                   <Input
                     type="text"
@@ -726,6 +767,45 @@ export default function SettingsPage() {
                 </div>
               </div>
             </form>
+
+            {/* Discovered Groups Drawer */}
+            {detectedGroups.length > 0 && (
+              <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3 animate-in fade-in duration-300">
+                <div className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                  Discovered Groups with @{telegramStatus?.botUsername || 'superapp_notification_bot'}:
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {detectedGroups.map((g) => (
+                    <div
+                      key={g.id}
+                      className="p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 shadow-xs"
+                    >
+                      <div className="min-w-0">
+                        <div className="font-bold text-slate-800 dark:text-slate-200 truncate text-sm">
+                          {g.title}
+                        </div>
+                        <div className="text-xs font-mono text-slate-500 truncate">
+                          {g.id} ({g.type})
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          setTeamChatIdInput(g.id);
+                          setFeedback({
+                            type: 'success',
+                            message: `Selected "${g.title}" (${g.id}). Click "Save Group ID" to apply.`,
+                          });
+                        }}
+                        className="text-xs h-8 px-3 shrink-0 rounded-lg"
+                      >
+                        Use This ID
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {telegramStatus?.user?.teamTelegramChatId && (
               <div className="p-4 bg-indigo-50/60 dark:bg-indigo-950/30 rounded-xl border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-between text-sm">
@@ -771,6 +851,21 @@ export default function SettingsPage() {
           <div className="flex flex-wrap gap-2.5 pt-5">
             <button
               type="button"
+              onClick={() => setActiveGuideTab('group')}
+              className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 ${
+                activeGuideTab === 'group'
+                  ? 'bg-brand-600 text-white shadow-sm'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              <span>1. Find Team Group ID (-100...)</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setActiveGuideTab('botfather')}
               className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 ${
                 activeGuideTab === 'botfather'
@@ -782,22 +877,7 @@ export default function SettingsPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-              <span>1. Enable Group Adding (BotFather)</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveGuideTab('group')}
-              className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 ${
-                activeGuideTab === 'group'
-                  ? 'bg-brand-600 text-white shadow-sm'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-              <span>2. Find Team Group ID (-100...)</span>
+              <span>2. Enable Group Adding (BotFather)</span>
             </button>
 
             <button
@@ -817,7 +897,37 @@ export default function SettingsPage() {
           </div>
 
           {/* Guide Tab Contents */}
-          <div className="mt-5 p-5 rounded-2xl bg-white/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 text-sm sm:text-base leading-relaxed space-y-3.5">
+          <div className="mt-5 p-5 rounded-2xl bg-white/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 text-sm sm:text-base leading-relaxed space-y-4">
+            {activeGuideTab === 'group' && (
+              <div className="space-y-3">
+                <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 text-base">
+                  <span>How to Get your Team Telegram Group ID (-100...):</span>
+                </div>
+                <div className="p-3.5 bg-brand-50/60 dark:bg-brand-950/40 rounded-xl border border-brand-200 dark:border-brand-800 space-y-1 text-sm">
+                  <div className="font-bold text-brand-900 dark:text-brand-200">
+                    Method 1: Built-in 1-Click Auto-Detect (Fastest &amp; No extra bots)
+                  </div>
+                  <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+                    1. Add <strong>@{telegramStatus?.botUsername || 'superapp_notification_bot'}</strong> into your Telegram group.<br/>
+                    2. Type any message (e.g. <code>hi</code> or <code>/start</code>) inside the group.<br/>
+                    3. Click the <strong>&quot;Auto-Detect Group ID from Bot&quot;</strong> button above.<br/>
+                    4. Click <strong>&quot;Use This ID&quot;</strong> and tap <strong>Save Group ID</strong>!
+                  </p>
+                </div>
+
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1 text-sm">
+                  <div className="font-bold text-slate-900 dark:text-slate-200">
+                    Method 2: From Telegram Web (Browser URL)
+                  </div>
+                  <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+                    1. Open <strong>web.telegram.org</strong> in your web browser and click on your group.<br/>
+                    2. Check the browser address bar: <code>web.telegram.org/k/#-1002345678901</code>.<br/>
+                    3. Copy the number starting with <code>-100...</code> and paste it into the Group ID input.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {activeGuideTab === 'botfather' && (
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold text-base">
@@ -833,22 +943,6 @@ export default function SettingsPage() {
                   <li>Click <strong>Turn groups on</strong> (you will see &quot;Groups are currently enabled for this bot&quot;).</li>
                   <li><em>(Optional)</em> Under <strong>Bot Settings</strong> → <strong>Group Privacy</strong>, tap <strong>Turn off</strong> so the bot can receive commands in groups.</li>
                   <li>Now you can immediately add the bot to any group without errors!</li>
-                </ol>
-              </div>
-            )}
-
-            {activeGuideTab === 'group' && (
-              <div className="space-y-3">
-                <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 text-base">
-                  <span>How to Get your Team Telegram Group ID (-100...):</span>
-                </div>
-                <ol className="list-decimal list-inside space-y-2 text-slate-700 dark:text-slate-300 ml-1 text-sm sm:text-base">
-                  <li>Create a new Telegram Group or open an existing group.</li>
-                  <li>Add your bot <strong>@{telegramStatus?.botUsername || 'superapp_notification_bot'}</strong> into the group.</li>
-                  <li>Add <strong>@RawDataBot</strong> (the blue robot icon) to your group.</li>
-                  <li>Look at the message <code>@RawDataBot</code> sends: find <code>&quot;chat&quot;: &#123; &quot;id&quot;: -100xxxxxxxxxx &#125;</code>.</li>
-                  <li>Copy that full number starting with <code>-100</code> (including the minus sign).</li>
-                  <li>Remove <code>@RawDataBot</code> from the group, paste the ID into the input above, and click <strong>Save Group ID</strong>!</li>
                 </ol>
               </div>
             )}

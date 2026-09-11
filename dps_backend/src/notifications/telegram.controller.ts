@@ -51,6 +51,13 @@ export class TelegramController {
     };
   }
 
+  @Get('recent-groups')
+  @UseGuards(JwtAuthGuard)
+  async getRecentGroups() {
+    const groups = await this.telegramService.getRecentGroups();
+    return { groups };
+  }
+
   @Post('check-sync')
   @UseGuards(JwtAuthGuard)
   async checkSync(@Req() req: any) {
