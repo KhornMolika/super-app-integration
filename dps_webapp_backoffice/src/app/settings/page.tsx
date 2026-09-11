@@ -750,35 +750,35 @@ export default function SettingsPage() {
         {/* ------------------------------------------------------------- */}
         {/* CARD 4: Interactive Step-by-Step Guideline Drawer */}
         {/* ------------------------------------------------------------- */}
-        <Card className="p-6 border-brand-200 dark:border-brand-900/60 bg-gradient-to-br from-white to-brand-50/30 dark:from-slate-900 dark:to-brand-950/20">
-          <div className="flex items-center gap-3 pb-4 border-b border-slate-200/80 dark:border-slate-800">
-            <div className="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <Card className="p-6 sm:p-7 border-brand-200 dark:border-brand-900/60 bg-gradient-to-br from-white to-brand-50/30 dark:from-slate-900 dark:to-brand-950/20">
+          <div className="flex items-center gap-3.5 pb-4 border-b border-slate-200/80 dark:border-slate-800">
+            <div className="w-12 h-12 rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
             <div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">
                 Setup Guideline: How to Connect Telegram &amp; Find IDs
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                 Troubleshooting guide for bot group permissions, personal chat IDs, and team group IDs.
               </p>
             </div>
           </div>
 
           {/* Guide Selector Tabs */}
-          <div className="flex flex-wrap gap-2 pt-4">
+          <div className="flex flex-wrap gap-2.5 pt-5">
             <button
               type="button"
               onClick={() => setActiveGuideTab('botfather')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 ${
+              className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${
                 activeGuideTab === 'botfather'
                   ? 'bg-brand-600 text-white shadow-sm'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
@@ -788,13 +788,13 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={() => setActiveGuideTab('group')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 ${
+              className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${
                 activeGuideTab === 'group'
                   ? 'bg-brand-600 text-white shadow-sm'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
               <span>2. Find Team Group ID (-100...)</span>
@@ -803,13 +803,13 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={() => setActiveGuideTab('personal')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 ${
+              className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${
                 activeGuideTab === 'personal'
                   ? 'bg-brand-600 text-white shadow-sm'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
               <span>3. Find Personal 1-on-1 Chat ID</span>
@@ -817,50 +817,56 @@ export default function SettingsPage() {
           </div>
 
           {/* Guide Tab Contents */}
-          <div className="mt-4 p-4 rounded-2xl bg-white/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 text-xs leading-relaxed space-y-3">
+          <div className="mt-5 p-5 sm:p-6 rounded-2xl bg-white/90 dark:bg-slate-900/80 border border-slate-200/90 dark:border-slate-800 text-sm sm:text-base leading-relaxed space-y-4">
             {activeGuideTab === 'botfather' && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="space-y-4">
+                <div className="flex items-center gap-2.5 text-rose-600 dark:text-rose-400 font-bold text-base sm:text-lg">
+                  <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                   <span>Fix &quot;This bot can&apos;t be added to groups&quot; Error:</span>
                 </div>
-                <ol className="list-decimal list-inside space-y-1.5 text-slate-700 dark:text-slate-300 ml-1">
-                  <li>In Telegram search, open <strong>@BotFather</strong>.</li>
-                  <li>Send the command <code>/mybots</code> and choose your notification bot.</li>
-                  <li>Click <strong>Bot Settings</strong> → <strong>Allow Groups?</strong> (or <strong>Groups</strong>).</li>
-                  <li>Click <strong>Turn groups on</strong> (you will see &quot;Groups are currently enabled for this bot&quot;).</li>
-                  <li><em>(Optional)</em> Under <strong>Bot Settings</strong> → <strong>Group Privacy</strong>, tap <strong>Turn off</strong> so the bot can receive commands in groups.</li>
-                  <li>Now you can immediately add the bot to any group without errors!</li>
+                <ol className="list-decimal list-inside space-y-2.5 text-slate-800 dark:text-slate-200 ml-1 text-sm sm:text-base">
+                  <li className="pl-1">In Telegram search, open <strong className="font-bold text-slate-900 dark:text-white">@BotFather</strong>.</li>
+                  <li className="pl-1">Send the command <code className="px-2 py-0.5 rounded-lg bg-brand-50 dark:bg-brand-950/60 border border-brand-200/80 dark:border-brand-800 text-brand-700 dark:text-brand-300 font-mono text-xs sm:text-sm font-semibold">/mybots</code> and choose your notification bot.</li>
+                  <li className="pl-1">Click <strong className="font-bold text-slate-900 dark:text-white">Bot Settings</strong> &rarr; <strong className="font-bold text-slate-900 dark:text-white">Allow Groups?</strong> (or <strong className="font-bold text-slate-900 dark:text-white">Groups</strong>).</li>
+                  <li className="pl-1">Click <strong className="font-bold text-emerald-600 dark:text-emerald-400">Turn groups on</strong> (you will see &quot;Groups are currently enabled for this bot&quot;).</li>
+                  <li className="pl-1"><em className="text-slate-600 dark:text-slate-400">(Optional)</em> Under <strong className="font-bold text-slate-900 dark:text-white">Bot Settings</strong> &rarr; <strong className="font-bold text-slate-900 dark:text-white">Group Privacy</strong>, tap <strong className="font-bold text-slate-900 dark:text-white">Turn off</strong> so the bot can receive commands in groups.</li>
+                  <li className="pl-1 text-emerald-700 dark:text-emerald-300 font-semibold">Now you can immediately add the bot to any group without errors!</li>
                 </ol>
               </div>
             )}
 
             {activeGuideTab === 'group' && (
-              <div className="space-y-3">
-                <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <div className="space-y-4">
+                <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2.5 text-base sm:text-lg">
+                  <svg className="w-5 h-5 text-indigo-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
                   <span>How to Get your Team Telegram Group ID (-100...):</span>
                 </div>
-                <ol className="list-decimal list-inside space-y-1.5 text-slate-700 dark:text-slate-300 ml-1">
-                  <li>Create a new Telegram Group or open an existing group.</li>
-                  <li>Add your bot <strong>@{telegramStatus?.botUsername || 'superapp_notification_bot'}</strong> into the group.</li>
-                  <li>Add <strong>@RawDataBot</strong> (the blue robot icon) to your group.</li>
-                  <li>Look at the message <code>@RawDataBot</code> sends: find <code>&quot;chat&quot;: &#123; &quot;id&quot;: -100xxxxxxxxxx &#125;</code>.</li>
-                  <li>Copy that full number starting with <code>-100</code> (including the minus sign).</li>
-                  <li>Remove <code>@RawDataBot</code> from the group, paste the ID into the input above, and click <strong>Save Group ID</strong>!</li>
+                <ol className="list-decimal list-inside space-y-2.5 text-slate-800 dark:text-slate-200 ml-1 text-sm sm:text-base">
+                  <li className="pl-1">Create a new Telegram Group or open an existing group with your team.</li>
+                  <li className="pl-1">Add your bot <strong className="font-bold text-slate-900 dark:text-white">@{telegramStatus?.botUsername || 'superapp_notification_bot'}</strong> into the group.</li>
+                  <li className="pl-1">Add <strong className="font-bold text-slate-900 dark:text-white">@RawDataBot</strong> (the blue robot icon) to your group.</li>
+                  <li className="pl-1">Look at the message <code className="px-2 py-0.5 rounded-lg bg-brand-50 dark:bg-brand-950/60 border border-brand-200/80 dark:border-brand-800 text-brand-700 dark:text-brand-300 font-mono text-xs sm:text-sm font-semibold">@RawDataBot</code> sends: find <code className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono text-xs sm:text-sm font-bold">&quot;chat&quot;: &#123; &quot;id&quot;: -100xxxxxxxxxx &#125;</code>.</li>
+                  <li className="pl-1">Copy that full number starting with <code className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono text-xs sm:text-sm font-bold">-100</code> (including the minus sign).</li>
+                  <li className="pl-1">Remove <code className="px-2 py-0.5 rounded-lg bg-brand-50 dark:bg-brand-950/60 border border-brand-200/80 dark:border-brand-800 text-brand-700 dark:text-brand-300 font-mono text-xs sm:text-sm font-semibold">@RawDataBot</code> from the group, paste the ID into the input above, and click <strong className="font-bold text-brand-600 dark:text-brand-400">Save Group ID</strong>!</li>
                 </ol>
               </div>
             )}
 
             {activeGuideTab === 'personal' && (
-              <div className="space-y-3">
-                <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <div className="space-y-4">
+                <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2.5 text-base sm:text-lg">
+                  <svg className="w-5 h-5 text-sky-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
                   <span>How to Get your Personal 1-on-1 Chat ID:</span>
                 </div>
-                <ul className="list-disc list-inside space-y-1.5 text-slate-700 dark:text-slate-300 ml-1">
-                  <li><strong>Instant 1-Click Method:</strong> Click the blue <strong>1-Click Connect with Telegram</strong> button above. When Telegram opens, press <strong>START</strong> and then click <strong>Check &amp; Sync Connection</strong>.</li>
-                  <li><strong>Manual Lookup Method:</strong> Search for <strong>@userinfobot</strong> in Telegram and tap Start. It will reply with your personal <code>Id: xxxxxxxxxx</code>. Copy that number and paste it into manual entry.</li>
+                <ul className="list-disc list-inside space-y-2.5 text-slate-800 dark:text-slate-200 ml-1 text-sm sm:text-base">
+                  <li className="pl-1"><strong className="font-bold text-slate-900 dark:text-white">Instant 1-Click Method:</strong> Click the blue <strong className="font-bold text-sky-600 dark:text-sky-400">1-Click Connect with Telegram</strong> button above. When Telegram opens, press <strong className="font-bold text-slate-900 dark:text-white">START</strong> and then click <strong className="font-bold text-slate-900 dark:text-white">Check &amp; Sync Connection</strong>.</li>
+                  <li className="pl-1"><strong className="font-bold text-slate-900 dark:text-white">Manual Lookup Method:</strong> Search for <strong className="font-bold text-slate-900 dark:text-white">@userinfobot</strong> in Telegram and tap Start. It will reply with your personal <code className="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono text-xs sm:text-sm font-bold">Id: xxxxxxxxxx</code>. Copy that number and paste it into manual entry.</li>
                 </ul>
               </div>
             )}
