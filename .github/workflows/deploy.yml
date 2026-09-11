@@ -2,7 +2,7 @@ name: Android · Firebase App Distribution
 
 on:
   push:
-    branches: [main]
+    branches: [neat]
   workflow_dispatch: {} # allows manual "Run workflow" from the Actions tab, on any branch, for testing
 
 permissions:
