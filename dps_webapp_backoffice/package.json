@@ -7,7 +7,10 @@
     "build": "next build",
     "build:sandbox": "powershell -ExecutionPolicy Bypass -File ../scripts/build-sandbox.ps1",
     "start": "next start -p 3002",
-    "lint": "eslint"
+    "lint": "eslint",
+    "push:fintech:dev": "git -C .. subtree push --prefix=dps_webapp_backoffice https://git.fintechcenterfsa.com/frontend/super-app-manager.git development",
+    "push:fintech:molika": "git -C .. subtree push --prefix=dps_webapp_backoffice https://git.fintechcenterfsa.com/frontend/super-app-manager.git molika",
+    "push:fintech": "pnpm push:fintech:dev && pnpm push:fintech:molika"
   },
   "dependencies": {
     "@xyflow/react": "^12.11.5",

@@ -18,7 +18,10 @@
         "test:cov": "jest --coverage",
         "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
         "test:e2e": "jest --config ./test/jest-e2e.json",
-        "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js -d ./data-source.ts"
+        "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js -d ./data-source.ts",
+        "push:fintech:dev": "git -C .. subtree push --prefix=dps_backend https://git.fintechcenterfsa.com/backend/super-app.git development",
+        "push:fintech:molika": "git -C .. subtree push --prefix=dps_backend https://git.fintechcenterfsa.com/backend/super-app.git molika",
+        "push:fintech": "pnpm push:fintech:dev && pnpm push:fintech:molika"
     },
     "dependencies": {
         "@nestjs/common": "^11.0.1",
