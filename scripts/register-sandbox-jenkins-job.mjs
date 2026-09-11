@@ -4,7 +4,10 @@ async function registerOrUpdateJob() {
   const jobName = 'superapp-sandbox-build';
   const jenkinsUrl = process.env.JENKINS_URL || 'http://localhost:8085';
   const jenkinsfile = fs.readFileSync('scripts/jenkins/Jenkinsfile.superapp-sandbox-build', 'utf8');
-  const auth = Buffer.from('admin:1167e4d41890ae8043e610a64102eca33d').toString('base64');
+  
+  const jenkinsUser = process.env.JENKINS_USER || 'admin';
+  const jenkinsToken = process.env.JENKINS_TOKEN || process.env.JENKINS_API_TOKEN || '';
+  const auth = process.env.JENKINS_AUTH || Buffer.from(`${jenkinsUser}:${jenkinsToken}`).toString('base64');
 
   const escapedScript = jenkinsfile
     .replace(/&/g, '&amp;')
