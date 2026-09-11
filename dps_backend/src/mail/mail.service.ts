@@ -351,12 +351,181 @@ export class MailService {
           </div>
         `,
       });
-      this.logger.log(`Test build email sent to ${toEmail} for app ${appName}`);
     } catch (error) {
       this.logger.error(
         `Failed to send test build email to ${toEmail}:`,
         error,
       );
+    }
+  }
+
+  async sendMiniAppApprovedEmail(
+    toEmail: string,
+    appName: string,
+    detailsUrl: string,
+  ) {
+    if (!this.resend) {
+      this.logger.log(
+        `[DUMMY] Would have sent Approval Email to ${toEmail} for ${appName}`,
+      );
+      return;
+    }
+
+    try {
+      await this.resend.emails.send({
+        from: `Super App Governance <${this.fromEmail}>`,
+        to: toEmail,
+        subject: `Mini App Approved: "${appName}"`,
+        html: `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+            <div style="background: #0f172a; padding: 32px 24px; text-align: left; color: #ffffff; border-bottom: 3px solid #10b981;">
+              <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #34d399; font-weight: 700;">Super App Platform Governance</span>
+              <h1 style="margin: 8px 0 0 0; font-size: 22px; font-weight: 700; color: #ffffff;">Mini App Approved</h1>
+            </div>
+            <div style="padding: 32px 24px;">
+              <p style="font-size: 14px; line-height: 1.6; margin-top: 0;">Hello,</p>
+              <p style="font-size: 14px; line-height: 1.6;">
+                Great news! Your Mini App <strong>"${appName}"</strong> has been formally approved by the Super App Administrator after security compliance validation and review.
+              </p>
+              
+              <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 18px; margin: 24px 0;">
+                <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: #15803d; letter-spacing: 0.5px; margin-bottom: 8px;">Current Status</div>
+                <div style="display: inline-block; background: #dcfce7; color: #166534; border: 1px solid #86efac; padding: 4px 12px; border-radius: 6px; font-size: 13px; font-weight: 700;">
+                  APPROVED
+                </div>
+                <p style="margin: 12px 0 0 0; font-size: 13px; color: #15803d; line-height: 1.5;">
+                  Your application is now scheduled for integration verification and testing build packaging in the Super App sandbox.
+                </p>
+              </div>
+
+              <div style="text-align: left; margin: 28px 0;">
+                <a href="${detailsUrl}" style="display: inline-block; background: #059669; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px;">
+                  View Mini App in Portal
+                </a>
+              </div>
+
+              <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 28px 0;" />
+              <p style="margin: 0; font-size: 13px; color: #64748b;">Best regards,</p>
+              <p style="margin: 4px 0 0 0; font-size: 14px; font-weight: 700; color: #0f172a;">Super App Governance Team</p>
+            </div>
+          </div>
+        `,
+      });
+      this.logger.log(`Approval email sent to ${toEmail} for app ${appName}`);
+    } catch (error) {
+      this.logger.error(`Failed to send approval email to ${toEmail}:`, error);
+    }
+  }
+
+  async sendMiniAppRejectedEmail(
+    toEmail: string,
+    appName: string,
+    reason: string,
+    detailsUrl: string,
+  ) {
+    if (!this.resend) {
+      this.logger.log(
+        `[DUMMY] Would have sent Rejection Email to ${toEmail} for ${appName}`,
+      );
+      return;
+    }
+
+    try {
+      await this.resend.emails.send({
+        from: `Super App Governance <${this.fromEmail}>`,
+        to: toEmail,
+        subject: `Mini App Review Decision: "${appName}" (Rejected)`,
+        html: `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+            <div style="background: #0f172a; padding: 32px 24px; text-align: left; color: #ffffff; border-bottom: 3px solid #ef4444;">
+              <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #f87171; font-weight: 700;">Super App Platform Governance</span>
+              <h1 style="margin: 8px 0 0 0; font-size: 22px; font-weight: 700; color: #ffffff;">Mini App Review Decision</h1>
+            </div>
+            <div style="padding: 32px 24px;">
+              <p style="font-size: 14px; line-height: 1.6; margin-top: 0;">Hello,</p>
+              <p style="font-size: 14px; line-height: 1.6;">
+                Your Mini App <strong>"${appName}"</strong> was reviewed by the Super App Administrator and was not approved at this time.
+              </p>
+              
+              <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 18px; margin: 24px 0;">
+                <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: #991b1b; letter-spacing: 0.5px; margin-bottom: 8px;">Reason / Feedback</div>
+                <p style="margin: 0; font-size: 13px; color: #7f1d1d; line-height: 1.5;">
+                  ${reason || 'Administrative policy review decision.'}
+                </p>
+              </div>
+
+              <div style="text-align: left; margin: 28px 0;">
+                <a href="${detailsUrl}" style="display: inline-block; background: #dc2626; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px;">
+                  Review Details in Portal
+                </a>
+              </div>
+
+              <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 28px 0;" />
+              <p style="margin: 0; font-size: 13px; color: #64748b;">Best regards,</p>
+              <p style="margin: 4px 0 0 0; font-size: 14px; font-weight: 700; color: #0f172a;">Super App Governance Team</p>
+            </div>
+          </div>
+        `,
+      });
+      this.logger.log(`Rejection email sent to ${toEmail} for app ${appName}`);
+    } catch (error) {
+      this.logger.error(`Failed to send rejection email to ${toEmail}:`, error);
+    }
+  }
+
+  async sendChangesRequestedEmail(
+    toEmail: string,
+    appName: string,
+    reason: string,
+    detailsUrl: string,
+  ) {
+    if (!this.resend) {
+      this.logger.log(
+        `[DUMMY] Would have sent Changes Requested Email to ${toEmail} for ${appName}`,
+      );
+      return;
+    }
+
+    try {
+      await this.resend.emails.send({
+        from: `Super App Governance <${this.fromEmail}>`,
+        to: toEmail,
+        subject: `Changes Requested: Mini App "${appName}"`,
+        html: `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+            <div style="background: #0f172a; padding: 32px 24px; text-align: left; color: #ffffff; border-bottom: 3px solid #f59e0b;">
+              <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #fbbf24; font-weight: 700;">Super App Platform Governance</span>
+              <h1 style="margin: 8px 0 0 0; font-size: 22px; font-weight: 700; color: #ffffff;">Changes Requested</h1>
+            </div>
+            <div style="padding: 32px 24px;">
+              <p style="font-size: 14px; line-height: 1.6; margin-top: 0;">Hello,</p>
+              <p style="font-size: 14px; line-height: 1.6;">
+                The Super App Administrator has reviewed Mini App <strong>"${appName}"</strong> and requested revisions before approval.
+              </p>
+              
+              <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 18px; margin: 24px 0;">
+                <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: #92400e; letter-spacing: 0.5px; margin-bottom: 8px;">Requested Modifications</div>
+                <p style="margin: 0; font-size: 13px; color: #78350f; line-height: 1.5;">
+                  ${reason || 'Please review the requested changes and submit a new revision.'}
+                </p>
+              </div>
+
+              <div style="text-align: left; margin: 28px 0;">
+                <a href="${detailsUrl}" style="display: inline-block; background: #d97706; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px;">
+                  Update Mini App Configuration
+                </a>
+              </div>
+
+              <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 28px 0;" />
+              <p style="margin: 0; font-size: 13px; color: #64748b;">Best regards,</p>
+              <p style="margin: 4px 0 0 0; font-size: 14px; font-weight: 700; color: #0f172a;">Super App Governance Team</p>
+            </div>
+          </div>
+        `,
+      });
+      this.logger.log(`Changes requested email sent to ${toEmail} for app ${appName}`);
+    } catch (error) {
+      this.logger.error(`Failed to send changes requested email to ${toEmail}:`, error);
     }
   }
 }

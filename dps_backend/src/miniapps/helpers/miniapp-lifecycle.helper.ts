@@ -448,6 +448,28 @@ export class MiniappLifecycleHelper {
     }
     app.status = 'APPROVED';
     await this.miniappRepository.save(app);
+
+    // 1. Dispatch Notification (WebSocket + Telegram to MA Manager, MA Team Group, & SA Admins)
+    if (app.ownerId) {
+      await this.notificationsService.createNotification(
+        app.ownerId,
+        'Mini App Approved',
+        `Mini App "${app.name}" has been approved by the Super App Administrator and is ready for test build verification.`,
+        'MINIAPP_APPROVED',
+        app.id,
+      );
+    }
+
+    // 2. Dispatch Email to Mini App Owner
+    const targetEmail = app.ownerEmail || app.owner?.email;
+    if (targetEmail) {
+      await this.mailService.sendMiniAppApprovedEmail(
+        targetEmail,
+        app.name || app.appId,
+        `http://localhost:3002/miniapps/${app.id}`,
+      );
+    }
+
     await logActivityFn(
       app.id,
       actorId,
@@ -484,6 +506,29 @@ export class MiniappLifecycleHelper {
     }
     app.status = 'REJECTED';
     await this.miniappRepository.save(app);
+
+    // 1. Dispatch Notification (WebSocket + Telegram to MA Manager, MA Team Group, & SA Admins)
+    if (app.ownerId) {
+      await this.notificationsService.createNotification(
+        app.ownerId,
+        'Mini App Rejected',
+        `Mini App "${app.name}" was rejected by Super App Administrator. Reason: ${reason || 'Administrative review decision.'}`,
+        'MINIAPP_REJECTED',
+        app.id,
+      );
+    }
+
+    // 2. Dispatch Email to Mini App Owner
+    const targetEmail = app.ownerEmail || app.owner?.email;
+    if (targetEmail) {
+      await this.mailService.sendMiniAppRejectedEmail(
+        targetEmail,
+        app.name || app.appId,
+        reason || 'Administrative review decision.',
+        `http://localhost:3002/miniapps/${app.id}`,
+      );
+    }
+
     await logActivityFn(
       app.id,
       actorId,
@@ -514,6 +559,29 @@ export class MiniappLifecycleHelper {
   ) {
     app.status = 'DRAFT';
     await this.miniappRepository.save(app);
+
+    // 1. Dispatch Notification (WebSocket + Telegram to MA Manager, MA Team Group, & SA Admins)
+    if (app.ownerId) {
+      await this.notificationsService.createNotification(
+        app.ownerId,
+        'Changes Requested',
+        `Super App Administrator requested changes for "${app.name}". Reason: ${reason || 'Please update the configuration and resubmit.'}`,
+        'CHANGES_REQUESTED',
+        app.id,
+      );
+    }
+
+    // 2. Dispatch Email to Mini App Owner
+    const targetEmail = app.ownerEmail || app.owner?.email;
+    if (targetEmail) {
+      await this.mailService.sendChangesRequestedEmail(
+        targetEmail,
+        app.name || app.appId,
+        reason || 'Please update the configuration and resubmit.',
+        `http://localhost:3002/miniapps/${app.id}`,
+      );
+    }
+
     await logActivityFn(
       app.id,
       actorId,

@@ -263,6 +263,12 @@ export class TelegramService {
         return 'Review Required: New Revision Submitted';
       case 'TEST_BUILD_READY':
         return 'Test Build: Ready for Verification';
+      case 'MINIAPP_APPROVED':
+        return 'Review Decision: Mini App Approved';
+      case 'MINIAPP_REJECTED':
+        return 'Review Decision: Mini App Rejected';
+      case 'CHANGES_REQUESTED':
+        return 'Review Feedback: Changes Requested';
       default:
         return 'Super App Notification';
     }
