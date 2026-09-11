@@ -14,22 +14,28 @@ export default function Dashboard() {
     superAppTestVersion: 'v0.1.0',
     officialReleaseVersion: 'v0.0.1',
   });
+  const [storageInfo, setStorageInfo] = useState<{ configured: boolean; licenseType: string; endpoint: string } | null>(null);
+  const [telegramInfo, setTelegramInfo] = useState<{ enabled: boolean; botUsername?: string } | null>(null);
 
   useEffect(() => {
     async function fetchMetrics() {
       try {
-        const [miniAppsRes, proposalsRes, permissionsRes, ecosystemRes] = await Promise.all([
+        const [miniAppsRes, proposalsRes, permissionsRes, ecosystemRes, storageRes, telegramRes] = await Promise.all([
           fetch(`${API_URL}/mini-apps`).catch(() => null),
           fetch(`${API_URL}/permission-proposals`).catch(() => null),
           fetch(`${API_URL}/permissions`).catch(() => null),
           fetch(`${API_URL}/super-app/ecosystem-status`).catch(() => null),
+          fetch(`${API_URL}/storage/license-status`).catch(() => null),
+          fetch(`${API_URL}/telegram/status`).catch(() => null),
         ]);
 
-        const [miniApps, proposals, permissions, ecosystem] = await Promise.all([
+        const [miniApps, proposals, permissions, ecosystem, storage, telegram] = await Promise.all([
           miniAppsRes?.ok ? miniAppsRes.json() : [],
           proposalsRes?.ok ? proposalsRes.json() : [],
           permissionsRes?.ok ? permissionsRes.json() : [],
           ecosystemRes?.ok ? ecosystemRes.json() : null,
+          storageRes?.ok ? storageRes.json() : null,
+          telegramRes?.ok ? telegramRes.json() : null,
         ]);
 
         // Count pending Mini Apps needing review
@@ -49,6 +55,13 @@ export default function Dashboard() {
           superAppTestVersion: ecosystem?.superAppTestVersion || ecosystem?.superAppVersion || 'v0.1.0',
           officialReleaseVersion: ecosystem?.officialReleaseVersion || 'v0.0.1',
         });
+
+        if (storage) {
+          setStorageInfo(storage);
+        }
+        if (telegram) {
+          setTelegramInfo(telegram);
+        }
       } catch (e) {
         console.error('Failed to fetch metrics', e);
       }
@@ -58,9 +71,30 @@ export default function Dashboard() {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out space-y-8">
-      <div>
-        <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Dashboard Overview</h2>
-        <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">Monitor your Super App ecosystem metrics in real-time.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Dashboard Overview</h2>
+          <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">Monitor your Super App ecosystem metrics and infrastructure in real-time.</p>
+        </div>
+
+        {/* Action shortcuts */}
+        <div className="flex flex-wrap gap-3">
+          {can('miniapp:create') && (
+            <Link href="/miniapps/register" className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-brand-600 hover:bg-brand-700">
+              Register Mini App
+            </Link>
+          )}
+          {can('permission_proposal:read') && (
+            <Link href="/review" className="inline-flex items-center px-4 py-2 border border-slate-300 dark:border-slate-600 text-sm font-medium rounded-lg text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700">
+              Review Pending Items
+            </Link>
+          )}
+          {can('super_app:read') && (
+            <Link href="/super-app" className="inline-flex items-center px-4 py-2 border border-slate-300 dark:border-slate-600 text-sm font-medium rounded-lg text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700">
+              Ecosystem Architecture
+            </Link>
+          )}
+        </div>
       </div>
       
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
@@ -130,18 +164,95 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Action shortcuts */}
-      <div className="flex gap-4">
-        {can('miniapp:create') && (
-          <Link href="/miniapps/register" className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-brand-600 hover:bg-brand-700">
-            Register Mini App
-          </Link>
-        )}
-        {can('permission_proposal:read') && (
-          <Link href="/review" className="inline-flex items-center px-4 py-2 border border-slate-300 dark:border-slate-600 text-sm font-medium rounded-lg text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700">
-            Review Pending Items
-          </Link>
-        )}
+      {/* Ecosystem & Infrastructure Status Overview */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100 dark:border-slate-700/60">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center justify-center">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                Ecosystem Services &amp; Infrastructure
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Operational status of object storage, messaging bots, artifact registries, and CI/CD pipelines.
+              </p>
+            </div>
+          </div>
+
+          {can('super_app:read') && (
+            <Link
+              href="/super-app"
+              className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-700 inline-flex items-center gap-1.5"
+            >
+              <span>Manage Infrastructure</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+          {/* Storage Engine Status */}
+          <div className="p-4 rounded-xl border border-slate-200/80 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-900/30">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-semibold uppercase text-slate-400 tracking-wider">Storage Engine</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            </div>
+            <div className="font-bold text-slate-800 dark:text-slate-200 text-sm truncate">
+              {storageInfo?.licenseType || 'MinIO AIStor'}
+            </div>
+            <p className="text-xs text-slate-500 font-mono mt-1 truncate">
+              {storageInfo?.endpoint || 'localhost:9000'}
+            </p>
+          </div>
+
+          {/* Telegram Gateway Status */}
+          <div className="p-4 rounded-xl border border-slate-200/80 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-900/30">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-semibold uppercase text-slate-400 tracking-wider">Telegram Gateway</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            </div>
+            <div className="font-bold text-slate-800 dark:text-slate-200 text-sm truncate">
+              Bot Gateway
+            </div>
+            <p className="text-xs text-sky-600 dark:text-sky-400 font-mono mt-1 truncate">
+              @{telegramInfo?.botUsername || 'superapp_notification_bot'}
+            </p>
+          </div>
+
+          {/* Nexus Registry */}
+          <div className="p-4 rounded-xl border border-slate-200/80 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-900/30">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-semibold uppercase text-slate-400 tracking-wider">Nexus Registry</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            </div>
+            <div className="font-bold text-slate-800 dark:text-slate-200 text-sm truncate">
+              Sonatype Repository
+            </div>
+            <p className="text-xs text-slate-500 font-mono mt-1 truncate">
+              localhost:8081
+            </p>
+          </div>
+
+          {/* CI/CD Automation */}
+          <div className="p-4 rounded-xl border border-slate-200/80 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-900/30">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-semibold uppercase text-slate-400 tracking-wider">CI/CD Engine</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            </div>
+            <div className="font-bold text-slate-800 dark:text-slate-200 text-sm truncate">
+              Jenkins Automation
+            </div>
+            <p className="text-xs text-slate-500 font-mono mt-1 truncate">
+              localhost:8085
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
