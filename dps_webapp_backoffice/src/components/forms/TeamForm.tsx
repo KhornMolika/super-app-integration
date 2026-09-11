@@ -162,11 +162,10 @@ export default function TeamForm({ formData, handleChange, allErrors = {}, isEdi
           {showGuide && (
             <div className="mt-3 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs space-y-2 text-slate-700 dark:text-slate-300 animate-in fade-in duration-200">
               <div className="font-bold text-slate-900 dark:text-slate-100">Quick Guide: Setup Team Group Alerts</div>
-              <ol className="list-decimal list-inside space-y-1 text-[11px] leading-relaxed">
-                <li><strong>Enable bot in BotFather:</strong> Open <code>@BotFather</code> in Telegram &rarr; <code>/mybots</code> &rarr; select bot &rarr; <em>Bot Settings</em> &rarr; <em>Allow Groups?</em> &rarr; <strong>Turn groups on</strong>.</li>
-                <li><strong>Create group &amp; add bot:</strong> Create a Telegram group with your team and add <code>@superapp_notification_bot</code>.</li>
-                <li><strong>Find Group ID:</strong> Add <code>@RawDataBot</code> into the group. Copy the ID starting with <code>-100...</code> from the JSON message and paste it above.</li>
-                <li><strong>Click &quot;Test Channel Alert&quot;</strong> to confirm instant delivery!</li>
+              <ol className="list-decimal list-inside space-y-1.5 text-[11px] leading-relaxed">
+                <li><strong>Add bot to group:</strong> Add <code>@superapp_notification_bot</code> into your Telegram team group or channel.</li>
+                <li><strong>Find Group ID:</strong> Open <code>web.telegram.org</code> and copy the <code>-100...</code> ID from the browser URL, or use 1-Click Auto-Detect under <strong>Settings &amp; Profile</strong>.</li>
+                <li><strong>Paste &amp; Test:</strong> Paste the ID above and click <strong>&quot;Test Channel Alert&quot;</strong> to confirm instant delivery!</li>
               </ol>
             </div>
           )}

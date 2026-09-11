@@ -324,6 +324,7 @@ export default function SettingsPage() {
 
   const isConnected = Boolean(telegramStatus?.user?.isConnected);
   const hasTeamChat = Boolean(telegramStatus?.user?.teamTelegramChatId);
+  const isSuperAdminOrAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN';
 
   return (
     <ProtectedRoute>
@@ -866,22 +867,6 @@ export default function SettingsPage() {
 
             <button
               type="button"
-              onClick={() => setActiveGuideTab('botfather')}
-              className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 ${
-                activeGuideTab === 'botfather'
-                  ? 'bg-brand-600 text-white shadow-sm'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <span>2. Enable Group Adding (BotFather)</span>
-            </button>
-
-            <button
-              type="button"
               onClick={() => setActiveGuideTab('personal')}
               className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 ${
                 activeGuideTab === 'personal'
@@ -892,8 +877,26 @@ export default function SettingsPage() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
-              <span>3. Find Personal 1-on-1 Chat ID</span>
+              <span>2. Find Personal 1-on-1 Chat ID</span>
             </button>
+
+            {isSuperAdminOrAdmin && (
+              <button
+                type="button"
+                onClick={() => setActiveGuideTab('botfather')}
+                className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 ${
+                  activeGuideTab === 'botfather'
+                    ? 'bg-brand-600 text-white shadow-sm'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span>3. Admin Bot Settings (BotFather)</span>
+              </button>
+            )}
           </div>
 
           {/* Guide Tab Contents */}
@@ -928,7 +931,19 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {activeGuideTab === 'botfather' && (
+            {activeGuideTab === 'personal' && (
+              <div className="space-y-3">
+                <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 text-base">
+                  <span>How to Get your Personal 1-on-1 Chat ID:</span>
+                </div>
+                <ul className="list-disc list-inside space-y-2 text-slate-700 dark:text-slate-300 ml-1 text-sm sm:text-base">
+                  <li><strong>Instant 1-Click Method:</strong> Click the blue <strong>1-Click Connect with Telegram</strong> button above. When Telegram opens, press <strong>START</strong> and then click <strong>Check &amp; Sync Connection</strong>.</li>
+                  <li><strong>Manual Lookup Method:</strong> Search for <strong>@userinfobot</strong> in Telegram and tap Start. It will reply with your personal <code>Id: xxxxxxxxxx</code>. Copy that number and paste it into manual entry.</li>
+                </ul>
+              </div>
+            )}
+
+            {activeGuideTab === 'botfather' && isSuperAdminOrAdmin && (
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold text-base">
                   <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -944,18 +959,6 @@ export default function SettingsPage() {
                   <li><em>(Optional)</em> Under <strong>Bot Settings</strong> → <strong>Group Privacy</strong>, tap <strong>Turn off</strong> so the bot can receive commands in groups.</li>
                   <li>Now you can immediately add the bot to any group without errors!</li>
                 </ol>
-              </div>
-            )}
-
-            {activeGuideTab === 'personal' && (
-              <div className="space-y-3">
-                <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 text-base">
-                  <span>How to Get your Personal 1-on-1 Chat ID:</span>
-                </div>
-                <ul className="list-disc list-inside space-y-2 text-slate-700 dark:text-slate-300 ml-1 text-sm sm:text-base">
-                  <li><strong>Instant 1-Click Method:</strong> Click the blue <strong>1-Click Connect with Telegram</strong> button above. When Telegram opens, press <strong>START</strong> and then click <strong>Check &amp; Sync Connection</strong>.</li>
-                  <li><strong>Manual Lookup Method:</strong> Search for <strong>@userinfobot</strong> in Telegram and tap Start. It will reply with your personal <code>Id: xxxxxxxxxx</code>. Copy that number and paste it into manual entry.</li>
-                </ul>
               </div>
             )}
           </div>
