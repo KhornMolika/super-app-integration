@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { useAuth } from '@/lib/auth';
 import { Card } from '@/components/ui/card';
 import { Button, Input, Label } from '@/components/ui/inputs';
 
 export default function SettingsPage() {
+  const { role, can } = useAuth();
   const [licenseKey, setLicenseKey] = useState('');
   const [showLicenseKey, setShowLicenseKey] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -247,16 +249,45 @@ export default function SettingsPage() {
     }
   };
 
+  const userDisplayName =
+    telegramStatus?.user?.name ||
+    (role === 'MINI_APP_MANAGER'
+      ? 'Mini App Manager'
+      : role === 'ADMIN'
+      ? 'Super App Administrator'
+      : role === 'SUPER_ADMIN'
+      ? 'System Super Admin'
+      : 'Developer');
+
+  const userEmail =
+    telegramStatus?.user?.email ||
+    (role === 'MINI_APP_MANAGER'
+      ? 'manager@example.com'
+      : role === 'ADMIN'
+      ? 'admin@example.com'
+      : role === 'SUPER_ADMIN'
+      ? 'superadmin@example.com'
+      : 'dev@example.com');
+
+  const roleBadgeLabel =
+    role === 'MINI_APP_MANAGER'
+      ? 'Mini App Manager'
+      : role === 'ADMIN'
+      ? 'Administrator'
+      : role === 'SUPER_ADMIN'
+      ? 'Super Admin'
+      : 'Developer';
+
   return (
-    <ProtectedRoute permission="settings:manage">
+    <ProtectedRoute>
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out space-y-8 max-w-5xl">
         <div className="flex justify-between items-end">
           <div>
             <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">
-              System Settings
+              Settings &amp; Profile
             </h2>
             <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
-              Configure global infrastructure, MinIO AIStor licensing, and real-time Telegram notification routing.
+              Manage your account profile, personal Telegram direct notifications, and platform infrastructure.
             </p>
           </div>
         </div>
@@ -290,6 +321,66 @@ export default function SettingsPage() {
             </button>
           </div>
         )}
+
+        {/* User Profile & Role Overview Card */}
+        <Card className="p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-brand-500/10 dark:bg-brand-500/20 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold text-xl">
+                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <div>
+                <div className="flex items-center gap-2.5">
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                    {userDisplayName}
+                  </h3>
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand-50 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300 border border-brand-200 dark:border-brand-500/30">
+                    {roleBadgeLabel}
+                  </span>
+                </div>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 font-mono">
+                  {userEmail}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                Organization: <strong className="text-slate-900 dark:text-white">Financial Services Authority</strong>
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 p-4 bg-slate-50/70 dark:bg-slate-900/40 rounded-xl border border-slate-100 dark:border-slate-800 text-xs">
+            <div>
+              <span className="text-slate-400 font-medium block">Account Status</span>
+              <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-600 dark:text-emerald-400 text-sm mt-0.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                Active
+              </span>
+            </div>
+            <div>
+              <span className="text-slate-400 font-medium block">Telegram Alerts</span>
+              <span className="font-semibold text-slate-800 dark:text-slate-200 text-sm mt-0.5 block">
+                {telegramStatus?.user?.isConnected ? (
+                  <span className="text-sky-600 dark:text-sky-400">
+                    {telegramStatus.user.telegramUsername ? `@${telegramStatus.user.telegramUsername}` : 'Connected'}
+                  </span>
+                ) : (
+                  <span className="text-slate-400">Not Linked</span>
+                )}
+              </span>
+            </div>
+            <div>
+              <span className="text-slate-400 font-medium block">Scope / Role Type</span>
+              <span className="font-semibold text-slate-800 dark:text-slate-200 text-sm mt-0.5 block">
+                {role === 'MINI_APP_MANAGER' ? 'Mini App Submissions & Management' : 'Super App Administration'}
+              </span>
+            </div>
+          </div>
+        </Card>
 
         {/* Telegram Direct Notifications Card (Approach 2) */}
         <Card className="p-6">
@@ -456,8 +547,10 @@ export default function SettingsPage() {
         <Card className="p-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-rose-500/10 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center text-2xl font-bold">
-                🪣
+              <div className="w-12 h-12 rounded-xl bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                </svg>
               </div>
               <div>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
@@ -511,37 +604,43 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Form to Update License Key */}
-          <form onSubmit={handleSaveLicense} className="space-y-4">
-            <div>
-              <Label>Enter MinIO AIStor License Key / Subnet API Key</Label>
-              <div className="relative flex items-center">
-                <Input
-                  type={showLicenseKey ? 'text' : 'password'}
-                  value={licenseKey}
-                  onChange={(e) => setLicenseKey(e.target.value)}
-                  placeholder="Paste your MinIO AIStor / Subnet license key (e.g. minio_lic_...)"
-                  className="pr-24 font-mono text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowLicenseKey(!showLicenseKey)}
-                  className="absolute right-3 text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium px-2 py-1 rounded bg-slate-100 dark:bg-slate-800"
-                >
-                  {showLicenseKey ? 'Hide' : 'Show'}
-                </button>
+          {/* Form to Update License Key (Super Admins) */}
+          {can('settings:manage') ? (
+            <form onSubmit={handleSaveLicense} className="space-y-4">
+              <div>
+                <Label>Enter MinIO AIStor License Key / Subnet API Key</Label>
+                <div className="relative flex items-center">
+                  <Input
+                    type={showLicenseKey ? 'text' : 'password'}
+                    value={licenseKey}
+                    onChange={(e) => setLicenseKey(e.target.value)}
+                    placeholder="Paste your MinIO AIStor / Subnet license key (e.g. minio_lic_...)"
+                    className="pr-24 font-mono text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowLicenseKey(!showLicenseKey)}
+                    className="absolute right-3 text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium px-2 py-1 rounded bg-slate-100 dark:bg-slate-800"
+                  >
+                    {showLicenseKey ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+                  The key will be verified and stored securely to enable AIStor commercial features, unlimited object capacity, and enterprise diagnostics.
+                </p>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
-                The key will be verified and stored securely to enable AIStor commercial features, unlimited object capacity, and enterprise diagnostics.
-              </p>
-            </div>
 
-            <div className="flex justify-end">
-              <Button type="submit" disabled={loading || !licenseKey.trim()} className="text-sm">
-                {loading ? 'Validating & Applying...' : 'Apply AIStor License'}
-              </Button>
-            </div>
-          </form>
+              <div className="flex justify-end">
+                <Button type="submit" disabled={loading || !licenseKey.trim()} className="text-sm">
+                  {loading ? 'Validating & Applying...' : 'Apply AIStor License'}
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <p className="text-xs text-slate-400 italic">
+              Global object storage parameters are managed by the System Super Administrator.
+            </p>
+          )}
         </Card>
 
         {/* Global Infrastructure Overview Card */}
