@@ -4,8 +4,45 @@ import { Input, Label, Button } from '@/components/ui/inputs';
 
 export default function TeamForm({ formData, handleChange, allErrors = {}, isEditable = true }: any) {
   const [isTesting, setIsTesting] = useState(false);
+  const [isTestingEmail, setIsTestingEmail] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [emailTestResult, setEmailTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const handleTestEmail = async () => {
+    if (!formData.ownerEmail?.trim()) return;
+    setIsTestingEmail(true);
+    setEmailTestResult(null);
+
+    try {
+      const res = await fetch('/api/mail/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.ownerEmail.trim(),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        setEmailTestResult({
+          success: true,
+          message: `Test email sent to ${formData.ownerEmail.trim()}! Check your inbox / spam.`,
+        });
+      } else {
+        setEmailTestResult({
+          success: false,
+          message: data.message || 'Failed to send test email.',
+        });
+      }
+    } catch (err: any) {
+      setEmailTestResult({
+        success: false,
+        message: 'Network error sending test email.',
+      });
+    } finally {
+      setIsTestingEmail(false);
+    }
+  };
 
   const handleTestTeamAlert = async () => {
     if (!formData.teamTelegramChatId?.trim()) return;
@@ -73,7 +110,22 @@ export default function TeamForm({ formData, handleChange, allErrors = {}, isEdi
           />
         </div>
         <div>
-          <Label>Owner Email <span className="text-rose-500">*</span></Label>
+          <div className="flex items-center justify-between mb-1">
+            <Label>Owner Email <span className="text-rose-500">*</span></Label>
+            {formData.ownerEmail && (
+              <button
+                type="button"
+                onClick={handleTestEmail}
+                disabled={isTestingEmail}
+                className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-semibold flex items-center gap-1"
+              >
+                <svg className={`w-3.5 h-3.5 ${isTestingEmail ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <span>{isTestingEmail ? 'Sending...' : 'Send Test Email'}</span>
+              </button>
+            )}
+          </div>
           <Input 
             required 
             name="ownerEmail" 
@@ -84,6 +136,20 @@ export default function TeamForm({ formData, handleChange, allErrors = {}, isEdi
             disabled={!isEditable}
             className={allErrors.ownerEmail ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
           />
+          {emailTestResult && (
+            <div className={`mt-1.5 flex items-center gap-1.5 text-xs font-medium ${emailTestResult.success ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+              {emailTestResult.success ? (
+                <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+              ) : (
+                <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              )}
+              <span>{emailTestResult.message}</span>
+            </div>
+          )}
           {allErrors.ownerEmail && <p className="mt-1.5 text-sm text-rose-600 font-medium">{allErrors.ownerEmail}</p>}
         </div>
         <div>

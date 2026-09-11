@@ -29,6 +29,7 @@ export default function SettingsPage() {
   const [fetchingTelegram, setFetchingTelegram] = useState(true);
   const [checkingSync, setCheckingSync] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
+  const [sendingTestEmail, setSendingTestEmail] = useState(false);
   const [sendingTeamTest, setSendingTeamTest] = useState(false);
   const [savingTeamChat, setSavingTeamChat] = useState(false);
   const [detectingGroups, setDetectingGroups] = useState(false);
@@ -223,6 +224,34 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSendTestEmail = async () => {
+    if (!userEmail) return;
+    setSendingTestEmail(true);
+    try {
+      const res = await fetch('/api/mail/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: userEmail }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        setFeedback({
+          type: 'success',
+          message: `Verified test email successfully delivered to ${userEmail}! Please check your inbox and spam folder.`,
+        });
+      } else {
+        setFeedback({
+          type: 'error',
+          message: data.message || 'Failed to send test email. Verify Resend API configuration.',
+        });
+      }
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.message || 'Failed to send test email.' });
+    } finally {
+      setSendingTestEmail(false);
+    }
+  };
+
   const handleSendTeamTestMessage = async () => {
     const targetChat = teamChatIdInput.trim() || telegramStatus?.user?.teamTelegramChatId;
     if (!targetChat) {
@@ -405,10 +434,24 @@ export default function SettingsPage() {
                     {roleBadgeLabel}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 mt-1.5">
+                <div className="flex flex-wrap items-center gap-3 mt-2">
                   <span className="text-base font-mono text-slate-500 dark:text-slate-400">
                     {userEmail}
                   </span>
+                  {userEmail && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleSendTestEmail}
+                      disabled={sendingTestEmail}
+                      className="text-xs h-7 px-2.5 rounded-lg flex items-center gap-1.5"
+                    >
+                      <svg className={`w-3.5 h-3.5 text-brand-600 ${sendingTestEmail ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      <span>{sendingTestEmail ? 'Sending Test...' : 'Send Test Email'}</span>
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>

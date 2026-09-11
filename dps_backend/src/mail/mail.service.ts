@@ -22,6 +22,76 @@ export class MailService {
     }
   }
 
+  async sendTestEmail(
+    toEmail: string,
+    userName?: string,
+  ): Promise<{ success: boolean; message?: string; id?: string }> {
+    if (!this.resend) {
+      return {
+        success: false,
+        message: 'RESEND_API_KEY is not configured on the backend server.',
+      };
+    }
+
+    try {
+      const name = userName || 'User';
+      const result = await this.resend.emails.send({
+        from: `DPS Super App <${this.fromEmail}>`,
+        to: toEmail,
+        subject: 'Test Notification: DPS Super App Email Gateway',
+        html: `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+            <div style="background: #0f172a; padding: 32px 24px; text-align: left; color: #ffffff; border-bottom: 3px solid #0284c7;">
+              <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #38bdf8; font-weight: 700;">DPS Super App Gateway</span>
+              <h1 style="margin: 8px 0 0 0; font-size: 22px; font-weight: 700; color: #ffffff;">Email Notification Test</h1>
+            </div>
+            <div style="padding: 32px 24px;">
+              <p style="font-size: 14px; line-height: 1.6; margin-top: 0;">Hello <strong>${name}</strong>,</p>
+              <p style="font-size: 14px; line-height: 1.6;">
+                This is a verified test email sent directly from the DPS Super App Backoffice notification engine.
+              </p>
+              
+              <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 18px; margin: 24px 0;">
+                <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: #15803d; letter-spacing: 0.5px; margin-bottom: 8px;">Delivery Status</div>
+                <div style="display: inline-block; background: #dcfce7; color: #166534; border: 1px solid #86efac; padding: 4px 12px; border-radius: 6px; font-size: 13px; font-weight: 700;">
+                  ACTIVE &amp; VERIFIED
+                </div>
+                <p style="margin: 12px 0 0 0; font-size: 13px; color: #15803d; line-height: 1.5;">
+                  Your registered email address (<code>${toEmail}</code>) is receiving automated security compliance audits, approval certificates, and release updates.
+                </p>
+              </div>
+
+              <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 28px 0;" />
+              <p style="margin: 0; font-size: 13px; color: #64748b;">Best regards,</p>
+              <p style="margin: 4px 0 0 0; font-size: 14px; font-weight: 700; color: #0f172a;">DPS Super App Governance</p>
+            </div>
+          </div>
+        `,
+      });
+
+      if (result.error) {
+        this.logger.error(`Resend API Error: ${result.error.message}`);
+        return {
+          success: false,
+          message: result.error.message,
+        };
+      }
+
+      this.logger.log(`Test email sent successfully to ${toEmail} (ID: ${result.data?.id})`);
+      return {
+        success: true,
+        id: result.data?.id,
+        message: `Test email dispatched successfully to ${toEmail}!`,
+      };
+    } catch (err: any) {
+      this.logger.error(`Failed to send test email: ${err.message}`);
+      return {
+        success: false,
+        message: err.message,
+      };
+    }
+  }
+
   async sendRegistrationSuccessEmail(toEmail: string, appName: string) {
     if (!this.resend) {
       this.logger.log(

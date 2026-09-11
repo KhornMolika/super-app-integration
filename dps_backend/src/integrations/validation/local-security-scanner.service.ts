@@ -295,6 +295,16 @@ export class LocalSecurityScannerService {
         app.id,
       );
 
+      const targetPassedEmail = app.ownerEmail || app.owner?.email;
+      if (targetPassedEmail) {
+        await this.mailService.sendValidationPassedEmail(
+          targetPassedEmail,
+          app.name || app.appId,
+          score,
+          `http://localhost:3002/miniapps/${app.id}`,
+        );
+      }
+
       await this.auditService.log({
         actorId: 'system:local-scanner',
         action: 'VALIDATION_PASSED',
@@ -350,6 +360,22 @@ export class LocalSecurityScannerService {
         'ISSUE_CREATED',
         app.id,
       );
+
+      const targetFailedEmail = app.ownerEmail || app.owner?.email;
+      if (targetFailedEmail) {
+        await this.mailService.sendValidationFailedEmail(
+          targetFailedEmail,
+          app.name || app.appId,
+          score,
+          criticalOrHigh.map((f) => ({
+            severity: f.severity,
+            title: f.title,
+            description: f.description,
+            recommendation: f.recommendation,
+          })),
+          `http://localhost:3002/miniapps/${app.id}`,
+        );
+      }
     }
   }
 

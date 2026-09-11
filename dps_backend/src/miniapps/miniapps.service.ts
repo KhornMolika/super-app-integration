@@ -8,6 +8,7 @@ import { AuditService } from '../audit/audit.service';
 import { DomainVerificationService } from '../integrations/webview/domain-verification.service';
 import { StorageService } from '../storage/storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { MailService } from '../mail/mail.service';
 import { PermissionDetectorHelper } from './helpers/permission-detector.helper';
 import { MiniappValidationHelper } from './helpers/miniapp-validation.helper';
 import { MiniappLifecycleHelper } from './helpers/miniapp-lifecycle.helper';
@@ -30,6 +31,7 @@ export class MiniappsService {
     private domainVerificationService: DomainVerificationService,
     private storageService: StorageService,
     private notificationsService: NotificationsService,
+    private mailService: MailService,
 
     private permissionDetectorHelper: PermissionDetectorHelper,
     private validationHelper: MiniappValidationHelper,
@@ -127,6 +129,13 @@ export class MiniappsService {
         err,
       );
     });
+
+    if (savedApp.ownerEmail) {
+      await this.mailService.sendRegistrationSuccessEmail(
+        savedApp.ownerEmail,
+        savedApp.name || savedApp.appId,
+      );
+    }
 
     await this.logActivity(
       savedApp.id,
