@@ -2,16 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/inputs";
-
-interface FirebaseRelease {
-  id: string;
-  displayVersion: string;
-  buildVersion: string;
-  releaseNotes: string;
-  createTime: string;
-  testingUri: string;
-  firebaseConsoleUri: string;
-}
+import type { FirebaseRelease } from "@/lib/firebase-distribution";
 
 function CopyIcon() {
   return (
@@ -48,11 +39,11 @@ export function FirebaseReleasesPanel() {
 
     fetch("/api/firebase-releases")
       .then(async (res) => {
-        const data = await res.json();
+        const data = await res.json().catch(() => null);
         if (!res.ok) {
-          throw new Error(data.error || `Request failed with status ${res.status}`);
+          throw new Error(data?.error || `Request failed with status ${res.status}`);
         }
-        if (!cancelled) setReleases(data.releases || []);
+        if (!cancelled) setReleases(data?.releases || []);
       })
       .catch((err: Error) => {
         if (!cancelled) setError(err.message);
@@ -84,7 +75,7 @@ export function FirebaseReleasesPanel() {
         Firebase Test Distribution
       </h2>
       <p className="text-slate-500 text-sm mb-4">
-        Builds sent to the internal-testers group via GitHub Actions.
+        Builds sent to the internal-testers group via GitHub Actions. Showing the 100 most recent.
       </p>
 
       {isLoading && (
@@ -125,7 +116,7 @@ export function FirebaseReleasesPanel() {
               {releases.map((release) => (
                 <tr key={release.id} className="border-b border-slate-100 dark:border-slate-800">
                   <td className="py-3 pr-4 text-slate-900 dark:text-white font-semibold">
-                    {release.displayVersion} ({release.buildVersion})
+                    {release.displayVersion || "—"} ({release.buildVersion || "—"})
                   </td>
                   <td className="py-3 pr-4 text-slate-600 dark:text-slate-400">
                     {release.releaseNotes || "—"}
@@ -139,21 +130,33 @@ export function FirebaseReleasesPanel() {
                         variant="outline"
                         className="!px-3 !py-1.5 text-xs"
                         onClick={() => handleCopy(release)}
+                        disabled={!release.testingUri}
                       >
                         <CopyIcon />
                         <span className="ml-1.5">{copiedId === release.id ? "Copied" : "Copy Link"}</span>
                       </Button>
-                      <Button
-                        as="a"
-                        href={release.firebaseConsoleUri}
-                        target="_blank"
-                        rel="noreferrer"
-                        variant="outline"
-                        className="!px-3 !py-1.5 text-xs"
-                      >
-                        <ExternalLinkIcon />
-                        <span className="ml-1.5">Open in Firebase</span>
-                      </Button>
+                      {release.firebaseConsoleUri ? (
+                        <Button
+                          as="a"
+                          href={release.firebaseConsoleUri}
+                          target="_blank"
+                          rel="noreferrer"
+                          variant="outline"
+                          className="!px-3 !py-1.5 text-xs"
+                        >
+                          <ExternalLinkIcon />
+                          <span className="ml-1.5">Open in Firebase</span>
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          className="!px-3 !py-1.5 text-xs"
+                          disabled
+                        >
+                          <ExternalLinkIcon />
+                          <span className="ml-1.5">Open in Firebase</span>
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>

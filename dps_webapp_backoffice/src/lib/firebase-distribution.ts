@@ -31,8 +31,9 @@ function readRequiredEnv(name: string): string {
 
 async function getAccessToken(serviceAccountPath: string): Promise<string> {
   if (!fs.existsSync(serviceAccountPath)) {
+    console.error(`Firebase service account file not found at path: ${serviceAccountPath}`);
     throw new FirebaseDistributionConfigError(
-      `Firebase service account file not found at path: ${serviceAccountPath}`
+      "Firebase service account file not found. Check FIREBASE_SERVICE_ACCOUNT_PATH."
     );
   }
 
@@ -47,10 +48,8 @@ async function getAccessToken(serviceAccountPath: string): Promise<string> {
     const tokenResponse = await client.getAccessToken();
     token = tokenResponse.token;
   } catch (err) {
-    throw new FirebaseDistributionApiError(
-      `Failed to authenticate with Google: ${(err as Error).message}`,
-      502
-    );
+    console.error("Failed to authenticate with Google:", err);
+    throw new FirebaseDistributionApiError("Failed to authenticate with Google", 502);
   }
 
   if (!token) {
@@ -72,8 +71,8 @@ interface RawFirebaseRelease {
 function mapRelease(raw: RawFirebaseRelease): FirebaseRelease {
   return {
     id: raw.name,
-    displayVersion: raw.displayVersion ?? "—",
-    buildVersion: raw.buildVersion ?? "—",
+    displayVersion: raw.displayVersion ?? "",
+    buildVersion: raw.buildVersion ?? "",
     releaseNotes: raw.releaseNotes?.text ?? "",
     createTime: raw.createTime ?? "",
     testingUri: raw.testingUri ?? "",
@@ -88,7 +87,7 @@ export async function getFirebaseReleases(): Promise<FirebaseRelease[]> {
 
   const token = await getAccessToken(serviceAccountPath);
 
-  const url = `https://firebaseappdistribution.googleapis.com/v1/projects/${projectNumber}/apps/${appId}/releases`;
+  const url = `https://firebaseappdistribution.googleapis.com/v1/projects/${projectNumber}/apps/${appId}/releases?pageSize=100`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
     cache: "no-store",
@@ -96,8 +95,9 @@ export async function getFirebaseReleases(): Promise<FirebaseRelease[]> {
 
   if (!res.ok) {
     const body = await res.text();
+    console.error(`Firebase App Distribution API returned ${res.status}: ${body}`);
     throw new FirebaseDistributionApiError(
-      `Firebase App Distribution API returned ${res.status}: ${body}`,
+      `Firebase App Distribution API returned ${res.status}`,
       res.status
     );
   }

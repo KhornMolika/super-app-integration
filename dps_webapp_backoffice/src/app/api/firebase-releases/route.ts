@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import {
   FirebaseDistributionApiError,
   FirebaseDistributionConfigError,
@@ -6,6 +7,11 @@ import {
 } from "@/lib/firebase-distribution";
 
 export async function GET() {
+  const token = (await cookies()).get("auth_token")?.value;
+  if (!token) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const releases = await getFirebaseReleases();
     return NextResponse.json({ releases });
