@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/inputs';
+import { FirebaseReleasesPanel } from '@/components/ui/FirebaseReleasesPanel';
 
 export default function ReleasesPage() {
   const [apps, setApps] = useState<any[]>([]);
@@ -236,6 +237,8 @@ export default function ReleasesPage() {
           </table>
         </div>
       </div>
+
+      <FirebaseReleasesPanel />
     </div>
   );
 }
