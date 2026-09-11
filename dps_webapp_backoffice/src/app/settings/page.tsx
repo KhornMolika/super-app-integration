@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Button, Input, Label } from '@/components/ui/inputs';
 
 export default function SettingsPage() {
-  const { role, can } = useAuth();
+  const { role } = useAuth();
 
   // Telegram States
   const [telegramStatus, setTelegramStatus] = useState<{
@@ -32,6 +32,7 @@ export default function SettingsPage() {
   const [showManualTelegram, setShowManualTelegram] = useState(false);
   const [manualChatId, setManualChatId] = useState('');
   const [manualUsername, setManualUsername] = useState('');
+  const [copiedChatId, setCopiedChatId] = useState(false);
 
   const [feedback, setFeedback] = useState<{
     type: 'success' | 'error' | null;
@@ -67,7 +68,7 @@ export default function SettingsPage() {
           window.open(data.url, '_blank');
           setFeedback({
             type: 'success',
-            message: 'Telegram opened! Tap START in the bot, then click "Check & Sync Connection".',
+            message: 'Telegram bot opened! Tap START in the app, then click "Check & Sync Connection".',
           });
         }
       }
@@ -85,12 +86,12 @@ export default function SettingsPage() {
         await fetchTelegramStatus();
         setFeedback({
           type: 'success',
-          message: 'Your Telegram account has been linked successfully!',
+          message: 'Your Telegram account has been linked successfully! Test message can be sent below.',
         });
       } else {
         setFeedback({
           type: 'error',
-          message: data.message || 'No /start command detected yet. Please tap START in the Telegram bot.',
+          message: data.message || 'No /start command detected yet. Please tap START in the Telegram bot chat first.',
         });
       }
     } catch (err: any) {
@@ -142,7 +143,7 @@ export default function SettingsPage() {
       if (res.ok && data.success) {
         setFeedback({
           type: 'success',
-          message: 'Test notification sent! Check your Telegram app.',
+          message: 'Test notification delivered! Please check your Telegram app.',
         });
       } else {
         setFeedback({
@@ -158,19 +159,25 @@ export default function SettingsPage() {
   };
 
   const handleDisconnectTelegram = async () => {
-    if (!confirm('Are you sure you want to disconnect Telegram notifications?')) return;
+    if (!confirm('Are you sure you want to disconnect Telegram notifications from this account?')) return;
     try {
       const res = await fetch('/api/telegram/disconnect', { method: 'POST' });
       if (res.ok) {
         await fetchTelegramStatus();
         setFeedback({
           type: 'success',
-          message: 'Telegram notifications have been disconnected from your account.',
+          message: 'Telegram direct notifications disconnected from your account.',
         });
       }
     } catch (err: any) {
       setFeedback({ type: 'error', message: 'Failed to disconnect Telegram.' });
     }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedChatId(true);
+    setTimeout(() => setCopiedChatId(false), 2000);
   };
 
   const userDisplayName =
@@ -193,6 +200,13 @@ export default function SettingsPage() {
       ? 'superadmin@example.com'
       : 'dev@example.com');
 
+  const roleBadgeStyle =
+    role === 'MINI_APP_MANAGER'
+      ? 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/50 dark:text-sky-300 dark:border-sky-800'
+      : role === 'SUPER_ADMIN'
+      ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/50 dark:text-purple-300 dark:border-purple-800'
+      : 'bg-brand-50 text-brand-700 border-brand-200 dark:bg-brand-950/50 dark:text-brand-300 dark:border-brand-800';
+
   const roleBadgeLabel =
     role === 'MINI_APP_MANAGER'
       ? 'Mini App Manager'
@@ -202,134 +216,164 @@ export default function SettingsPage() {
       ? 'Super Admin'
       : 'Developer';
 
+  const isConnected = Boolean(telegramStatus?.user?.isConnected);
+
   return (
     <ProtectedRoute>
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out space-y-8 max-w-5xl">
-        <div className="flex justify-between items-end">
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4">
           <div>
-            <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">
+            <div className="flex items-center gap-2 text-xs font-semibold text-brand-600 dark:text-brand-400 uppercase tracking-wider mb-1">
+              <span>Account &amp; Notifications</span>
+            </div>
+            <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
               Settings &amp; Profile
             </h2>
             <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
-              Manage your account profile, personal Telegram direct notifications, and platform infrastructure.
+              Manage your personal user profile identity and direct Telegram notification channels.
             </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>Session Active</span>
+            </span>
           </div>
         </div>
 
         {/* Feedback Alert */}
         {feedback.message && (
           <div
-            className={`p-4 rounded-xl border text-sm flex items-center justify-between ${
+            className={`p-4 rounded-2xl border text-sm flex items-start justify-between gap-3 transition-all ${
               feedback.type === 'success'
-                ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200'
-                : 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200'
+                ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200'
+                : 'bg-rose-50/80 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-900 dark:text-rose-200'
             }`}
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-start gap-3">
               {feedback.type === 'success' ? (
-                <svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                </svg>
+                <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-300 flex items-center justify-center shrink-0 mt-0.5">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
               ) : (
-                <svg className="w-4 h-4 text-rose-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <div className="w-5 h-5 rounded-full bg-rose-100 dark:bg-rose-900/60 text-rose-600 dark:text-rose-300 flex items-center justify-center shrink-0 mt-0.5">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </div>
               )}
-              <span>{feedback.message}</span>
+              <span className="leading-snug">{feedback.message}</span>
             </div>
             <button
               onClick={() => setFeedback({ type: null, message: null })}
-              className="text-xs font-semibold underline opacity-75 hover:opacity-100"
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"
             >
-              Dismiss
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
           </div>
         )}
 
-        {/* User Profile & Role Overview Card */}
-        <Card className="p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100 dark:border-slate-800">
+        {/* ------------------------------------------------------------- */}
+        {/* CARD 1: User Profile & Role Overview */}
+        {/* ------------------------------------------------------------- */}
+        <Card className="p-6 overflow-hidden relative">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-brand-500/10 dark:bg-brand-500/20 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold text-xl">
-                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-500 to-indigo-600 text-white flex items-center justify-center font-bold text-2xl shadow-sm shrink-0">
+                {userDisplayName.charAt(0).toUpperCase()}
               </div>
               <div>
-                <div className="flex items-center gap-2.5">
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
                     {userDisplayName}
                   </h3>
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand-50 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300 border border-brand-200 dark:border-brand-500/30">
+                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${roleBadgeStyle}`}>
                     {roleBadgeLabel}
                   </span>
                 </div>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 font-mono">
-                  {userEmail}
-                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-sm font-mono text-slate-500 dark:text-slate-400">
+                    {userEmail}
+                  </span>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="px-3 py-1 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                Organization: <strong className="text-slate-900 dark:text-white">Financial Services Authority</strong>
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <span className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                Organization: <strong className="text-slate-900 dark:text-white">Financial Services Authority (FSA)</strong>
               </span>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 p-4 bg-slate-50/70 dark:bg-slate-900/40 rounded-xl border border-slate-100 dark:border-slate-800 text-xs">
-            <div>
-              <span className="text-slate-400 font-medium block">Account Status</span>
-              <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-600 dark:text-emerald-400 text-sm mt-0.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                Active
-              </span>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+            <div className="p-4 rounded-xl bg-slate-50/70 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80">
+              <span className="text-xs uppercase font-bold text-slate-400 block tracking-wider">Account Status</span>
+              <div className="flex items-center gap-2 mt-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                <span className="font-bold text-emerald-700 dark:text-emerald-300 text-sm">Active &amp; Verified</span>
+              </div>
             </div>
-            <div>
-              <span className="text-slate-400 font-medium block">Telegram Alerts</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200 text-sm mt-0.5 block">
-                {telegramStatus?.user?.isConnected ? (
-                  <span className="text-sky-600 dark:text-sky-400">
-                    {telegramStatus.user.telegramUsername ? `@${telegramStatus.user.telegramUsername}` : 'Connected'}
+
+            <div className="p-4 rounded-xl bg-slate-50/70 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80">
+              <span className="text-xs uppercase font-bold text-slate-400 block tracking-wider">Telegram Alerts</span>
+              <div className="flex items-center gap-2 mt-1.5">
+                {isConnected ? (
+                  <span className="font-bold text-sky-600 dark:text-sky-400 text-sm inline-flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-sky-500"></span>
+                    <span>{telegramStatus?.user?.telegramUsername ? `@${telegramStatus.user.telegramUsername}` : 'Direct Chat Active'}</span>
                   </span>
                 ) : (
-                  <span className="text-slate-400">Not Linked</span>
+                  <span className="font-medium text-slate-400 text-sm">Not Configured</span>
                 )}
-              </span>
+              </div>
             </div>
-            <div>
-              <span className="text-slate-400 font-medium block">Scope / Role Type</span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200 text-sm mt-0.5 block">
-                {role === 'MINI_APP_MANAGER' ? 'Mini App Submissions & Management' : 'Super App Administration'}
-              </span>
+
+            <div className="p-4 rounded-xl bg-slate-50/70 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80">
+              <span className="text-xs uppercase font-bold text-slate-400 block tracking-wider">Access Scope</span>
+              <div className="font-bold text-slate-800 dark:text-slate-200 text-sm mt-1.5 truncate">
+                {role === 'MINI_APP_MANAGER'
+                  ? 'Mini App Submissions & Management'
+                  : 'Super App Platform Administration'}
+              </div>
             </div>
           </div>
         </Card>
 
-        {/* Telegram Direct Notifications Card (Approach 2) */}
+        {/* ------------------------------------------------------------- */}
+        {/* CARD 2: Telegram Direct Notifications */}
+        {/* ------------------------------------------------------------- */}
         <Card className="p-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100 dark:border-slate-800">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-sky-500/10 dark:bg-sky-500/20 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-sky-500/10 dark:bg-sky-500/20 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
                 <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
                 </svg>
               </div>
               <div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                  Telegram Direct Notifications
-                  {telegramStatus?.user?.isConnected ? (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                      Connected
-                    </span>
-                  ) : (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                      Not Connected
-                    </span>
-                  )}
-                </h3>
+                <div className="flex items-center gap-2.5">
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                    Telegram Direct Notifications
+                  </h3>
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                      isConnected
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                        : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                    }`}
+                  >
+                    {isConnected ? 'Connected' : 'Not Connected'}
+                  </span>
+                </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Receive instant personal alerts for Mini App validations, security scan results, reviews, and test builds.
+                  Receive instant personal alerts for security scans, review approvals, and test build APK readiness.
                 </p>
               </div>
             </div>
@@ -339,102 +383,170 @@ export default function SettingsPage() {
               variant="outline"
               onClick={fetchTelegramStatus}
               disabled={fetchingTelegram}
-              className="text-xs h-9 px-3 shrink-0"
+              className="text-xs h-9 px-3 shrink-0 flex items-center gap-1.5"
             >
-              {fetchingTelegram ? 'Checking...' : 'Refresh Status'}
+              <svg className={`w-3.5 h-3.5 text-slate-500 ${fetchingTelegram ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>{fetchingTelegram ? 'Checking...' : 'Refresh Status'}</span>
             </Button>
           </div>
 
-          {/* Telegram Status Body */}
-          {telegramStatus?.user?.isConnected ? (
-            <div className="my-6 space-y-4">
-              <div className="p-4 bg-emerald-50/60 dark:bg-emerald-950/20 rounded-xl border border-emerald-200/60 dark:border-emerald-800/40 text-xs">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Connected State View */}
+          {isConnected ? (
+            <div className="my-6 space-y-6">
+              <div className="p-5 bg-gradient-to-r from-emerald-50/80 to-teal-50/80 dark:from-emerald-950/30 dark:to-teal-950/20 rounded-2xl border border-emerald-200 dark:border-emerald-800/60">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                   <div>
-                    <span className="text-slate-500 dark:text-slate-400 font-medium block">Telegram Account</span>
-                    <span className="font-semibold text-emerald-800 dark:text-emerald-300 text-sm">
-                      {telegramStatus.user.telegramUsername ? `@${telegramStatus.user.telegramUsername}` : 'Direct Chat Active'}
+                    <span className="text-xs font-bold uppercase text-emerald-800/60 dark:text-emerald-300/60 block tracking-wider">
+                      Connected Handle
+                    </span>
+                    <span className="font-bold text-emerald-900 dark:text-emerald-200 text-base mt-1 block">
+                      {telegramStatus?.user?.telegramUsername ? `@${telegramStatus.user.telegramUsername}` : 'Direct User Chat'}
                     </span>
                   </div>
+
                   <div>
-                    <span className="text-slate-500 dark:text-slate-400 font-medium block">Chat ID</span>
-                    <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
-                      {telegramStatus.user.telegramChatId}
+                    <span className="text-xs font-bold uppercase text-emerald-800/60 dark:text-emerald-300/60 block tracking-wider">
+                      Telegram Chat ID
                     </span>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="font-mono font-bold text-slate-800 dark:text-slate-200 text-sm">
+                        {telegramStatus?.user?.telegramChatId}
+                      </span>
+                      {telegramStatus?.user?.telegramChatId && (
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(telegramStatus?.user?.telegramChatId || '')}
+                          className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                          title="Copy Chat ID"
+                        >
+                          {copiedChatId ? (
+                            <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          )}
+                        </button>
+                      )}
+                    </div>
                   </div>
+
                   <div>
-                    <span className="text-slate-500 dark:text-slate-400 font-medium block">Connected At</span>
-                    <span className="text-slate-700 dark:text-slate-300">
-                      {telegramStatus.user.telegramConnectedAt ? new Date(telegramStatus.user.telegramConnectedAt).toLocaleDateString() : 'Active'}
+                    <span className="text-xs font-bold uppercase text-emerald-800/60 dark:text-emerald-300/60 block tracking-wider">
+                      Delivery Channel
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-300 text-sm mt-1">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                      Direct Alerts Active
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3 pt-2">
+              <div className="flex flex-wrap items-center gap-3">
                 <Button
                   type="button"
                   onClick={handleSendTestMessage}
                   disabled={sendingTest}
-                  className="text-xs bg-sky-600 hover:bg-sky-500 text-white"
+                  className="text-sm bg-sky-600 hover:bg-sky-500 text-white font-semibold flex items-center gap-2 rounded-xl"
                 >
-                  {sendingTest ? 'Sending Test...' : 'Send Test Notification'}
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                  <span>{sendingTest ? 'Sending Test Alert...' : 'Send Test Notification'}</span>
                 </Button>
+
                 <Button
                   type="button"
                   variant="outline"
                   onClick={handleDisconnectTelegram}
-                  className="text-xs text-rose-600 hover:text-rose-700 dark:text-rose-400"
+                  className="text-sm text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 border-rose-200 dark:border-rose-900 rounded-xl"
                 >
                   Disconnect Telegram
                 </Button>
               </div>
             </div>
           ) : (
+            /* Disconnected State: 3-Step Guided Onboarding */
             <div className="my-6 space-y-6">
-              <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 text-xs space-y-2">
-                <p className="text-slate-700 dark:text-slate-300">
-                  Connect your Telegram account to get direct real-time alerts whenever:
-                </p>
-                <ul className="list-disc list-inside text-slate-500 dark:text-slate-400 space-y-1">
-                  <li>Your Mini App completes automated security scans (with compliance score &amp; findings)</li>
-                  <li>A test build APK or sandbox container is ready for testing</li>
-                  <li>A revision is submitted, approved, or rejected by the Super App Administrator</li>
-                </ul>
+              {/* 3 Step Flow Guide */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800">
+                  <div className="w-7 h-7 rounded-xl bg-sky-100 dark:bg-sky-950 text-sky-600 dark:text-sky-300 font-bold text-xs flex items-center justify-center mb-2.5">
+                    1
+                  </div>
+                  <h4 className="font-bold text-slate-800 dark:text-slate-200 text-sm">Open Telegram Bot</h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Click 1-Click Connect to launch <strong>@{telegramStatus?.botUsername || 'superapp_notification_bot'}</strong>.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800">
+                  <div className="w-7 h-7 rounded-xl bg-sky-100 dark:bg-sky-950 text-sky-600 dark:text-sky-300 font-bold text-xs flex items-center justify-center mb-2.5">
+                    2
+                  </div>
+                  <h4 className="font-bold text-slate-800 dark:text-slate-200 text-sm">Tap &quot;START&quot;</h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    In Telegram, press <strong>START</strong> to register your personal Chat ID automatically.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800">
+                  <div className="w-7 h-7 rounded-xl bg-sky-100 dark:bg-sky-950 text-sky-600 dark:text-sky-300 font-bold text-xs flex items-center justify-center mb-2.5">
+                    3
+                  </div>
+                  <h4 className="font-bold text-slate-800 dark:text-slate-200 text-sm">Sync &amp; Confirm</h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Return here and click <strong>Check &amp; Sync Connection</strong> to activate real-time alerts.
+                  </p>
+                </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center gap-3 pt-2">
                 <Button
                   type="button"
                   onClick={handleOneClickConnect}
-                  className="text-sm bg-sky-600 hover:bg-sky-500 text-white font-semibold flex items-center gap-2"
+                  className="text-sm bg-[#229ED9] hover:bg-[#1E8BC0] text-white font-bold shadow-sm rounded-xl px-5 py-2.5 flex items-center gap-2.5 transition-transform active:scale-95"
                 >
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
                   </svg>
                   <span>1-Click Connect with Telegram</span>
                 </Button>
+
                 <Button
                   type="button"
                   variant="outline"
                   onClick={handleCheckSync}
                   disabled={checkingSync}
-                  className="text-xs"
+                  className="text-sm rounded-xl flex items-center gap-2"
                 >
-                  {checkingSync ? 'Checking Sync...' : 'Check & Sync Connection'}
+                  <svg className={`w-4 h-4 text-slate-500 ${checkingSync ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span>{checkingSync ? 'Syncing...' : 'Check & Sync Connection'}</span>
                 </Button>
+
                 <button
                   type="button"
                   onClick={() => setShowManualTelegram(!showManualTelegram)}
-                  className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 underline ml-2"
+                  className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-semibold underline ml-2"
                 >
-                  {showManualTelegram ? 'Hide manual setup' : 'Enter Chat ID manually'}
+                  {showManualTelegram ? 'Hide manual Chat ID input' : 'Enter Chat ID manually'}
                 </button>
               </div>
 
-              {/* Manual Input Fallback */}
+              {/* Manual Input Fallback Drawer */}
               {showManualTelegram && (
-                <form onSubmit={handleManualConnect} className="p-4 bg-slate-100 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 space-y-4">
+                <form onSubmit={handleManualConnect} className="p-5 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4 animate-in fade-in duration-300">
+                  <div className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                    Manual Chat ID Entry
+                  </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label>Telegram Chat ID *</Label>
@@ -443,7 +555,7 @@ export default function SettingsPage() {
                         value={manualChatId}
                         onChange={(e) => setManualChatId(e.target.value)}
                         placeholder="e.g. 1193078022"
-                        className="font-mono text-sm"
+                        className="font-mono text-sm mt-1"
                         required
                       />
                     </div>
@@ -454,17 +566,88 @@ export default function SettingsPage() {
                         value={manualUsername}
                         onChange={(e) => setManualUsername(e.target.value)}
                         placeholder="e.g. khornmolika"
-                        className="text-sm"
+                        className="text-sm mt-1"
                       />
                     </div>
                   </div>
-                  <Button type="submit" disabled={loading || !manualChatId.trim()} className="text-xs">
+                  <Button type="submit" disabled={loading || !manualChatId.trim()} className="text-xs rounded-xl">
                     Save Chat ID
                   </Button>
                 </form>
               )}
             </div>
           )}
+        </Card>
+
+        {/* ------------------------------------------------------------- */}
+        {/* CARD 3: Notification Event Subscriptions Overview */}
+        {/* ------------------------------------------------------------- */}
+        <Card className="p-6">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                Automated Notification Events
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Active alerts dispatched directly to your connected Telegram direct channel.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5 text-xs">
+            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 flex items-start gap-3">
+              <div className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-300 flex items-center justify-center shrink-0 mt-0.5">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div>
+                <span className="font-bold text-slate-800 dark:text-slate-200 block text-sm">
+                  Security Scans &amp; DAST
+                </span>
+                <p className="text-slate-500 mt-0.5 text-[11px]">
+                  Real-time scan results with CVE compliance scores and vulnerability counts.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 flex items-start gap-3">
+              <div className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-300 flex items-center justify-center shrink-0 mt-0.5">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div>
+                <span className="font-bold text-slate-800 dark:text-slate-200 block text-sm">
+                  Test Build APK Generated
+                </span>
+                <p className="text-slate-500 mt-0.5 text-[11px]">
+                  Instant direct APK download links whenever CI/CD pipeline completes a test build.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 flex items-start gap-3">
+              <div className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-300 flex items-center justify-center shrink-0 mt-0.5">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div>
+                <span className="font-bold text-slate-800 dark:text-slate-200 block text-sm">
+                  Review &amp; Approval Decisions
+                </span>
+                <p className="text-slate-500 mt-0.5 text-[11px]">
+                  Immediate notification when Super App Admin approves, rejects, or requests changes.
+                </p>
+              </div>
+            </div>
+          </div>
         </Card>
       </div>
     </ProtectedRoute>

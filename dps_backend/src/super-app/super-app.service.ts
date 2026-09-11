@@ -1,4 +1,5 @@
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as fs from 'fs';
@@ -10,6 +11,7 @@ export class SuperAppService implements OnApplicationBootstrap {
   constructor(
     @InjectRepository(SuperAppCapability)
     private superAppCapabilityRepository: Repository<SuperAppCapability>,
+    private configService: ConfigService,
   ) {}
 
   async onApplicationBootstrap() {
@@ -196,6 +198,21 @@ export class SuperAppService implements OnApplicationBootstrap {
       'storage',
     ];
 
+    const nexusUrl =
+      this.configService.get<string>('NEXUS_BASE_URL') ||
+      this.configService.get<string>('NEXUS_URL') ||
+      'http://localhost:8081';
+    const jenkinsUrl =
+      this.configService.get<string>('JENKINS_URL') || 'http://localhost:8085';
+    const minioEndpoint = `${this.configService.get<string>('MINIO_ENDPOINT', 'localhost')}:${this.configService.get<string>('MINIO_PORT', '9000')}`;
+    const minioPublicUrl =
+      this.configService.get<string>('MINIO_PUBLIC_URL') ||
+      `http://${minioEndpoint}`;
+    const telegramBotUsername = this.configService.get<string>(
+      'TELEGRAM_BOT_USERNAME',
+      'superapp_notification_bot',
+    );
+
     return {
       superAppVersion: testVersion,
       superAppTestVersion: testVersion,
@@ -217,6 +234,30 @@ export class SuperAppService implements OnApplicationBootstrap {
       capabilities,
       storageEngine: 'MinIO AIStor Enterprise S3',
       containerSandbox: 'Wasm / Iframe Web Sandbox & Dart AST Isolate Sandbox',
+      integratedServices: {
+        telegramBot: {
+          name: 'Telegram Bot Gateway',
+          username: telegramBotUsername,
+          url: `https://t.me/${telegramBotUsername}`,
+          status: 'ONLINE',
+        },
+        nexusRegistry: {
+          name: 'Sonatype Nexus Registry',
+          url: nexusUrl,
+          status: 'ONLINE',
+        },
+        jenkinsCiCd: {
+          name: 'Jenkins CI/CD Automation',
+          url: jenkinsUrl,
+          status: 'ONLINE',
+        },
+        minioStorage: {
+          name: 'MinIO AIStor Object Storage',
+          url: minioPublicUrl,
+          endpoint: minioEndpoint,
+          status: 'ONLINE',
+        },
+      },
     };
   }
 }

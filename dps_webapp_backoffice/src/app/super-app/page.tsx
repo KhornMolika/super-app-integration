@@ -17,6 +17,12 @@ interface EcosystemStatus {
   capabilities: string[];
   storageEngine: string;
   containerSandbox: string;
+  integratedServices?: {
+    telegramBot?: { name: string; username: string; url: string; status: string };
+    nexusRegistry?: { name: string; url: string; status: string };
+    jenkinsCiCd?: { name: string; url: string; status: string };
+    minioStorage?: { name: string; url: string; endpoint: string; status: string };
+  };
 }
 
 interface StorageStatus {
@@ -126,6 +132,12 @@ export default function SuperAppEcosystemPage() {
   };
 
   const isSuperAdminOrAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN' || can('super_app:manage') || can('settings:manage');
+
+  const nexusUrl = status?.integratedServices?.nexusRegistry?.url || 'http://localhost:8081';
+  const jenkinsUrl = status?.integratedServices?.jenkinsCiCd?.url || 'http://localhost:8085';
+  const botUsername = telegramInfo?.botUsername || status?.integratedServices?.telegramBot?.username || 'superapp_notification_bot';
+  const botUrl = `https://t.me/${botUsername}`;
+  const storageEndpoint = storageStatus?.endpoint || status?.integratedServices?.minioStorage?.endpoint || 'localhost:9000';
 
   return (
     <ProtectedRoute permission="super_app:read">
@@ -382,7 +394,7 @@ export default function SuperAppEcosystemPage() {
             <div>
               <span className="text-slate-400 font-medium block">Storage Endpoint</span>
               <span className="font-mono font-semibold text-slate-800 dark:text-slate-200 mt-0.5 block">
-                {storageStatus?.endpoint || 'localhost:9000'}
+                {storageEndpoint}
               </span>
             </div>
             <div>
@@ -463,7 +475,7 @@ export default function SuperAppEcosystemPage() {
                 Integrated Ecosystem Services Overview
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Live status of auxiliary build engines, messaging gateways, and package registries configured across the platform.
+                Live status of auxiliary build engines, messaging gateways, and package registries dynamically configured across the platform.
               </p>
             </div>
           </div>
@@ -481,9 +493,17 @@ export default function SuperAppEcosystemPage() {
                   <span className="font-bold text-slate-800 dark:text-slate-200 block text-sm">
                     Telegram Bot Gateway
                   </span>
-                  <span className="text-slate-500 font-mono text-[11px]">
-                    @{telegramInfo?.botUsername || 'superapp_notification_bot'}
-                  </span>
+                  <a
+                    href={botUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sky-600 dark:text-sky-400 hover:underline font-mono text-[11px] inline-flex items-center gap-1"
+                  >
+                    <span>@{botUsername}</span>
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
                 </div>
               </div>
               <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-semibold text-[11px]">
@@ -503,7 +523,17 @@ export default function SuperAppEcosystemPage() {
                   <span className="font-bold text-slate-800 dark:text-slate-200 block text-sm">
                     Sonatype Nexus Registry
                   </span>
-                  <span className="text-slate-500 font-mono text-[11px]">http://localhost:8081</span>
+                  <a
+                    href={nexusUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-indigo-600 dark:text-indigo-400 hover:underline font-mono text-[11px] inline-flex items-center gap-1 truncate max-w-[180px]"
+                  >
+                    <span className="truncate">{nexusUrl}</span>
+                    <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
                 </div>
               </div>
               <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-semibold text-[11px]">
@@ -524,7 +554,17 @@ export default function SuperAppEcosystemPage() {
                   <span className="font-bold text-slate-800 dark:text-slate-200 block text-sm">
                     Jenkins CI/CD Automation
                   </span>
-                  <span className="text-slate-500 font-mono text-[11px]">http://localhost:8085</span>
+                  <a
+                    href={jenkinsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-amber-600 dark:text-amber-400 hover:underline font-mono text-[11px] inline-flex items-center gap-1 truncate max-w-[180px]"
+                  >
+                    <span className="truncate">{jenkinsUrl}</span>
+                    <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
                 </div>
               </div>
               <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-semibold text-[11px]">
