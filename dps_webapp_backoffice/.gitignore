@@ -38,6 +38,11 @@ yarn-error.log*
 !.env.example
 !.env.production.example
 
+# Firebase / GCP service account keys (never commit these)
+*service-account*.json
+*-adminsdk-*.json
+/super-app-test-dev-bc591ece0c31.json
+
 # vercel
 .vercel
 
