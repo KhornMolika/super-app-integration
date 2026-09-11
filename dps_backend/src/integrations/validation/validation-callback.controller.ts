@@ -107,6 +107,7 @@ export class ValidationCallbackController {
 
     const app = await this.miniappRepository.findOne({
       where: { id: dto.miniAppId },
+      relations: { owner: true },
     });
     if (!app) {
       this.logger.error(
@@ -162,9 +163,10 @@ export class ValidationCallbackController {
         app.id,
       );
 
-      if (app.ownerEmail) {
+      const targetEmail = app.ownerEmail || app.owner?.email;
+      if (targetEmail) {
         await this.mailService.sendValidationPassedEmail(
-          app.ownerEmail,
+          targetEmail,
           app.name || app.appId || 'Mini App',
           dto.score ?? 100,
           `http://localhost:3002/miniapps/${app.id}`,
@@ -259,9 +261,10 @@ export class ValidationCallbackController {
         app.id,
       );
 
-      if (app.ownerEmail) {
+      const targetEmail = app.ownerEmail || app.owner?.email;
+      if (targetEmail) {
         await this.mailService.sendValidationFailedEmail(
-          app.ownerEmail,
+          targetEmail,
           app.name || app.appId || 'Mini App',
           dto.score ?? 0,
           (dto.findings || []).filter(

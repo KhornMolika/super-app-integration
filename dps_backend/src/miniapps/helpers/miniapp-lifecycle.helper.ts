@@ -675,9 +675,10 @@ export class MiniappLifecycleHelper {
         app.id,
       );
     }
-    if (app.ownerEmail) {
+    const targetEmail = app.ownerEmail || app.owner?.email;
+    if (targetEmail) {
       await this.mailService.sendTestBuildReadyEmail(
-        app.ownerEmail,
+        targetEmail,
         app.name || app.appId,
         activeTestVer,
         `http://localhost:8081/repository/apk-test-builds/superapp/${activeTestVer}/app-debug.apk`,
@@ -751,6 +752,16 @@ export class MiniappLifecycleHelper {
         `Mini App "${app.name}" has been granted final approval and production release build is live in the Super App catalog.`,
         'MINIAPP_ACTIVATED',
         app.id,
+      );
+    }
+
+    const targetLiveEmail = app.ownerEmail || app.owner?.email;
+    if (targetLiveEmail) {
+      await this.mailService.sendMiniAppActivatedEmail(
+        targetLiveEmail,
+        app.name || app.appId,
+        releaseVersion,
+        `http://localhost:3002/miniapps/${app.id}`,
       );
     }
 

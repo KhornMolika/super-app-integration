@@ -386,7 +386,10 @@ export class LocalSecurityScannerService {
     miniAppId: string,
     options?: { fallbackReason?: string; securityChecks?: string[] },
   ): Promise<void> {
-    const app = await this.miniappRepository.findOne({ where: { id: miniAppId } });
+    const app = await this.miniappRepository.findOne({
+      where: { id: miniAppId },
+      relations: { owner: true },
+    });
     if (!app) {
       this.logger.error(`Scan failed: Mini App ${miniAppId} not found`);
       return;
@@ -684,7 +687,10 @@ export class LocalSecurityScannerService {
     miniAppId: string,
     options?: { fallbackReason?: string; securityChecks?: string[] },
   ): Promise<void> {
-    const app = await this.miniappRepository.findOne({ where: { id: miniAppId } });
+    const app = await this.miniappRepository.findOne({
+      where: { id: miniAppId },
+      relations: { owner: true },
+    });
     if (!app) return;
 
     if (options?.securityChecks && options.securityChecks.length > 0) {
@@ -868,7 +874,10 @@ export class LocalSecurityScannerService {
     miniAppId: string,
     options?: { fallbackReason?: string; securityChecks?: string[] },
   ): Promise<void> {
-    const app = await this.miniappRepository.findOne({ where: { id: miniAppId } });
+    const app = await this.miniappRepository.findOne({
+      where: { id: miniAppId },
+      relations: { owner: true },
+    });
     if (!app) return;
 
     if (options?.securityChecks && options.securityChecks.length > 0) {
@@ -970,7 +979,10 @@ export class LocalSecurityScannerService {
     miniAppId: string,
     options?: { fallbackReason?: string; securityChecks?: string[] },
   ): Promise<void> {
-    const app = await this.miniappRepository.findOne({ where: { id: miniAppId } });
+    const app = await this.miniappRepository.findOne({
+      where: { id: miniAppId },
+      relations: { owner: true },
+    });
     if (!app) return;
 
     if (options?.securityChecks && options.securityChecks.length > 0) {

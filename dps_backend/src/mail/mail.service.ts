@@ -598,4 +598,63 @@ export class MailService {
       this.logger.error(`Failed to send changes requested email to ${toEmail}:`, error);
     }
   }
+
+  async sendMiniAppActivatedEmail(
+    toEmail: string,
+    appName: string,
+    version: string,
+    detailsUrl: string,
+  ) {
+    if (!this.resend) {
+      this.logger.log(
+        `[DUMMY] Would have sent Activated Email to ${toEmail} for ${appName} (v${version})`,
+      );
+      return;
+    }
+
+    try {
+      await this.resend.emails.send({
+        from: `Super App Governance <${this.fromEmail}>`,
+        to: toEmail,
+        subject: `Mini App Live in Catalog: "${appName}" (v${version})`,
+        html: `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+            <div style="background: #0f172a; padding: 32px 24px; text-align: left; color: #ffffff; border-bottom: 3px solid #10b981;">
+              <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #34d399; font-weight: 700;">Super App Production Catalog</span>
+              <h1 style="margin: 8px 0 0 0; font-size: 22px; font-weight: 700; color: #ffffff;">Mini App Live &amp; Activated</h1>
+            </div>
+            <div style="padding: 32px 24px;">
+              <p style="font-size: 14px; line-height: 1.6; margin-top: 0;">Hello,</p>
+              <p style="font-size: 14px; line-height: 1.6;">
+                Mini App <strong>"${appName}"</strong> (version <code>v${version}</code>) is now officially <strong>LIVE and ACTIVE</strong> in the Super App store catalog.
+              </p>
+              
+              <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 18px; margin: 24px 0;">
+                <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: #15803d; letter-spacing: 0.5px; margin-bottom: 8px;">Release Status</div>
+                <div style="display: inline-block; background: #dcfce7; color: #166534; border: 1px solid #86efac; padding: 4px 12px; border-radius: 6px; font-size: 13px; font-weight: 700;">
+                  ACTIVE &bull; PRODUCTION
+                </div>
+                <p style="margin: 12px 0 0 0; font-size: 13px; color: #15803d; line-height: 1.5;">
+                  Production binaries have been deployed to the Super App distribution network. End-users can now access your mini app seamlessly.
+                </p>
+              </div>
+
+              <div style="text-align: left; margin: 28px 0;">
+                <a href="${detailsUrl}" style="display: inline-block; background: #059669; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px;">
+                  View Live Mini App
+                </a>
+              </div>
+
+              <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 28px 0;" />
+              <p style="margin: 0; font-size: 13px; color: #64748b;">Best regards,</p>
+              <p style="margin: 4px 0 0 0; font-size: 14px; font-weight: 700; color: #0f172a;">Super App Governance Team</p>
+            </div>
+          </div>
+        `,
+      });
+      this.logger.log(`Activation email sent to ${toEmail} for app ${appName}`);
+    } catch (error) {
+      this.logger.error(`Failed to send activation email to ${toEmail}:`, error);
+    }
+  }
 }

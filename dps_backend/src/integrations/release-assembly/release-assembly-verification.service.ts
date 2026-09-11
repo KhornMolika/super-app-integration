@@ -8,6 +8,7 @@ import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 import { JenkinsService } from '../jenkins/jenkins.service';
 import { NexusIntegrationService } from '../nexus/nexus-integration.service';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { MailService } from '../../mail/mail.service';
 import {
   VerifyAndAssembleReleaseDto,
   ReleaseAssemblyAuditResult,
@@ -31,6 +32,7 @@ export class ReleaseAssemblyVerificationService {
     private readonly nexusService: NexusIntegrationService,
     private readonly jenkinsService: JenkinsService,
     private readonly notificationsService: NotificationsService,
+    private readonly mailService: MailService,
     @InjectRepository(MiniApp)
     private readonly miniappRepository: Repository<MiniApp>,
   ) {}
@@ -270,6 +272,7 @@ export class ReleaseAssemblyVerificationService {
     if (body.status === 'COMPLETED' || body.status === 'SUCCESS') {
       const buildingApps = await this.miniappRepository.find({
         where: { status: 'BUILDING' },
+        relations: { owner: true },
       });
 
       await this.miniappRepository
@@ -296,6 +299,18 @@ export class ReleaseAssemblyVerificationService {
             `Super App test build (${body.releaseVersion}) is ready! Download the test APK to verify ${app.name}.`,
             'TEST_BUILD_READY',
             app.id,
+          );
+        }
+
+        const targetEmail = app.ownerEmail || app.owner?.email;
+        if (targetEmail) {
+          const sandboxUrl = `http://localhost:3002/miniapps/${app.id}`;
+          await this.mailService.sendTestBuildReadyEmail(
+            targetEmail,
+            app.name || app.appId || 'Mini App',
+            body.releaseVersion || 'v1.0.0',
+            apkUrl,
+            sandboxUrl,
           );
         }
       }

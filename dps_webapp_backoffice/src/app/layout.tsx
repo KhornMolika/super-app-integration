@@ -39,7 +39,7 @@ export default function RootLayout({
                   <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-lg shadow-accent-900/30 overflow-hidden">
                     <Image src="/fsa-logo.png" alt="FSA Logo" width={40} height={40} className="object-cover" />
                   </div>
-                  <h1 className="text-2xl font-extrabold text-white tracking-tight">DPS Admin</h1>
+                  <h1 className="text-2xl font-extrabold text-white tracking-tight">Super App</h1>
                 </div>
                 <p className="text-xs font-medium text-brand-200 uppercase tracking-wider ml-11">Super App Gateway</p>
               </div>
