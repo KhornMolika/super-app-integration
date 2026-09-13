@@ -37,11 +37,14 @@ dsp-poc/
 │   ├── src/
 │   │   ├── app/
 │   │   │   ├── api/download-apk/    # Streaming proxy route for Nexus APK downloads
+│   │   │   ├── api/firebase-releases/ # Firebase App Distribution release listing route
 │   │   │   ├── miniapps/            # Mini App catalog, details & live polling
 │   │   │   └── releases/            # Release history & build artifact catalog
 │   │   ├── components/ui/
 │   │   │   ├── PreviewModal.tsx     # Device simulator with JS Bridge inspector
 │   │   │   └── IframePreviewEngine.tsx # Embedded webview preview runner
+│   │   ├── lib/
+│   │   │   └── firebase-distribution.ts # Firebase App Distribution API client
 │   │   └── public/
 │   │       └── superapp-sandbox/    # Compiled Flutter Web Super App container
 │
