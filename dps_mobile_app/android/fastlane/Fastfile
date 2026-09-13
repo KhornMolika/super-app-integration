@@ -42,9 +42,12 @@ platform :android do
 
   desc "Build a release APK and distribute it to Firebase App Distribution (internal-testers)"
   lane :distribute_firebase do
-    # fastlane's `sh` runs from android/fastlane/, so ../.. is the Flutter project root (dps_mobile_app/)
-    flutter_root = "../.."
-    apk_path = "#{flutter_root}/build/app/outputs/flutter-apk/app-release.apk"
+    # Absolute paths anchored on __dir__ (the Fastfile's own directory) avoid relative-path
+    # ambiguity: plain Ruby `File.exist?` and the firebase_app_distribution plugin can each
+    # resolve a relative path against a different working directory, which previously let our
+    # own check pass while the plugin's own check failed on the same string.
+    flutter_root = File.expand_path("../..", __dir__)
+    apk_path = File.join(flutter_root, "build/app/outputs/flutter-apk/app-release.apk")
 
     sh("cd #{flutter_root} && flutter pub get && flutter build apk --release")
 

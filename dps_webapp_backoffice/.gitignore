@@ -50,3 +50,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 /fix
+
+super-app-test-dev-bc591ece0c31.json
