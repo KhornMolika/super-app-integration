@@ -55,7 +55,8 @@ platform :android do
     UI.success("Built #{apk_path} (#{(File.size(apk_path) / 1024.0 / 1024.0).round(1)} MB)")
 
     pr_number = ENV["CODEGEN_PR_NUMBER"]
-    release_notes = "CI: #{ENV['GITHUB_REF_NAME'] || 'local'} @ #{(ENV['GITHUB_SHA'] || 'dev')[0, 7]}"
+    ref_label = ENV['GITHUB_BASE_REF'] && !ENV['GITHUB_BASE_REF'].empty? ? ENV['GITHUB_BASE_REF'] : (ENV['GITHUB_REF_NAME'] || 'local')
+    release_notes = "CI: #{ref_label} @ #{(ENV['GITHUB_SHA'] || 'dev')[0, 7]}"
     release_notes += " — Native SDK codegen PR ##{pr_number}" unless pr_number.nil? || pr_number.empty?
 
     firebase_app_distribution(
