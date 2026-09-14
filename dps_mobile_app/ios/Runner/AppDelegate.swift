@@ -1,6 +1,7 @@
 import Flutter
 import UIKit
 // === GENERATED NATIVE SDK IMPORTS — DO NOT EDIT ===
+import PermitCheckSDK
 // === END GENERATED NATIVE SDK IMPORTS ===
 
 @main
@@ -30,6 +31,36 @@ import UIKit
     let messenger = engineBridge.applicationRegistrar.messenger()
 
     // === GENERATED NATIVE SDK HANDLERS — DO NOT EDIT ===
+    let channel_com_fsa_permitcheck = FlutterMethodChannel(
+      name: "com.example.dsp_mobile/com_fsa_permitcheck",
+      binaryMessenger: messenger
+    )
+    channel_com_fsa_permitcheck.setMethodCallHandler { [weak self] call, result in
+      guard call.method == "present" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      guard self?.inFlight.contains("com.example.dsp_mobile/com_fsa_permitcheck") != true else {
+        result(["status": "error", "error": "already in progress"])
+        return
+      }
+      guard let args = call.arguments as? [String: Any],
+            let userId = args["userId"] as? String,
+            let jwtToken = args["jwtToken"] as? String else {
+        result(["status": "error", "error": "missing identity"])
+        return
+      }
+      guard let presenter = self?.topPresenter() else {
+        result(["status": "error", "error": "no presenter"])
+        return
+      }
+      self?.inFlight.insert("com.example.dsp_mobile/com_fsa_permitcheck")
+      PermitCheck.initialize(userId: userId, jwtToken: jwtToken)
+      PermitCheck.present(from: presenter) {
+        self?.inFlight.remove("com.example.dsp_mobile/com_fsa_permitcheck")
+        result(["status": "completed"])
+      }
+    }
     // === END GENERATED NATIVE SDK HANDLERS ===
   }
 }
