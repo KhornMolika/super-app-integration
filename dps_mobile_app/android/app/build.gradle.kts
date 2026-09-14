@@ -43,3 +43,8 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // === GENERATED NATIVE SDK DEPS — DO NOT EDIT ===
+    // === END GENERATED NATIVE SDK DEPS ===
+}
