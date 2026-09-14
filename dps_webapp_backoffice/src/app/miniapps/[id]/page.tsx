@@ -56,6 +56,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalState, setModalState] = useState<SubmissionModalState>({ isOpen: false, status: 'loading' });
+  const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [previewUrl, setPreviewUrl] = useState('');
   const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
@@ -65,6 +66,13 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
   const [activeTab, setActiveTab] = useState<MiniAppTabType>('overview');
   const [customPermission, setCustomPermission] = useState('');
   const [isEditingUnlocked, setIsEditingUnlocked] = useState(false);
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   useEffect(() => {
     const errors: Record<string, string> = {};
@@ -214,10 +222,10 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
           integrationConfigDeepLink: activeOrRev.integrationMethod === IntegrationMethod.DEEP_LINK ? activeOrRev.integrationConfig : { urlScheme: '', packageName: '', appStoreUrl: '' },
         });
       } else {
-        setModalState({ isOpen: true, status: 'error', message: 'Failed to fetch mini app details.' });
+        setToast({ type: 'error', message: 'Failed to fetch mini app details.' });
       }
     } catch (error) {
-      setModalState({ isOpen: true, status: 'error', message: 'Error connecting to backend.' });
+      setToast({ type: 'error', message: 'Error connecting to backend.' });
     } finally {
       setIsLoading(false);
     }
@@ -498,8 +506,9 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
 
       if (response.ok) {
         if (isDraftOnly) {
-          setModalState({ isOpen: true, status: 'success', message: 'Draft saved successfully.' });
+          setToast({ type: 'success', message: 'Draft saved successfully.' });
           setIsSubmitting(false);
+          fetchApp();
           return;
         }
 
@@ -631,25 +640,22 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
         body: JSON.stringify({ reason }),
       });
       if (res.ok) {
-        setModalState({
-          isOpen: true,
-          status: 'success',
-          message:
-            action === 'start-testing'
-              ? 'Super App test build pipeline triggered in Jenkins! Packaging test APK for Nexus store...'
-              : action === 'publish-revision'
-              ? 'Staged revision published live to Super App successfully!'
-              : action === 'discard-revision'
-              ? 'Pending draft revision has been discarded.'
-              : `Mini App status successfully updated!`,
-        });
-        setTimeout(() => window.location.reload(), 1200);
+        const msg =
+          action === 'start-testing'
+            ? 'Super App test build pipeline triggered in Jenkins! Packaging test APK for Nexus store...'
+            : action === 'publish-revision'
+            ? 'Staged revision published live to Super App successfully!'
+            : action === 'discard-revision'
+            ? 'Pending draft revision has been discarded.'
+            : 'Mini App status successfully updated!';
+        setToast({ type: 'success', message: msg });
+        fetchApp();
       } else {
         const errorData = await res.json().catch(() => null);
-        setModalState({ isOpen: true, status: 'error', message: errorData?.message || `Failed to execute ${action}.` });
+        setToast({ type: 'error', message: errorData?.message || `Failed to execute ${action}.` });
       }
     } catch (err) {
-      setModalState({ isOpen: true, status: 'error', message: 'Network error occurred.' });
+      setToast({ type: 'error', message: 'Network error occurred.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -674,11 +680,11 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
       if (response.ok) {
         router.push('/miniapps');
       } else {
-        setModalState({ isOpen: true, status: 'error', message: 'Failed to delete mini app.' });
+        setToast({ type: 'error', message: 'Failed to delete mini app.' });
         setIsSubmitting(false);
       }
     } catch (error) {
-      setModalState({ isOpen: true, status: 'error', message: 'Error connecting to backend.' });
+      setToast({ type: 'error', message: 'Error connecting to backend.' });
       setIsSubmitting(false);
     }
   };
@@ -870,6 +876,38 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
       {/* Floating Error Summary Button */}
       {!modalState.isOpen && hasErrors && (
         <ValidationIssuesButton errors={allErrors} onNavigate={handleNavigateToIssue} />
+      )}
+
+      {/* Floating Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-[120] animate-in slide-in-from-bottom-5 fade-in duration-300">
+          <div
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border backdrop-blur-md text-white ${
+              toast.type === 'success'
+                ? 'bg-slate-900/95 dark:bg-slate-800/95 border-emerald-500/40'
+                : toast.type === 'error'
+                ? 'bg-rose-950/95 border-rose-600/60'
+                : 'bg-slate-900/95 border-slate-700/80'
+            }`}
+          >
+            {toast.type === 'success' && (
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+              </span>
+            )}
+            {toast.type === 'error' && <span className="text-rose-400 font-bold">⚠️</span>}
+            <span className="text-sm font-semibold tracking-wide">{toast.message}</span>
+            <button
+              type="button"
+              onClick={() => setToast(null)}
+              className="ml-2 text-slate-400 hover:text-white p-0.5 rounded transition-colors"
+              aria-label="Dismiss notification"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
       )}
     </>
   );
