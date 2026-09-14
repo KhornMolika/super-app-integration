@@ -5,7 +5,7 @@ on:
     branches: [neat]
   pull_request:
     types: [closed]
-    branches: [main] # must match dps_backend's CODEGEN_BASE_BRANCH env var — keep both in sync
+    branches: [neat] # must match dps_backend's CODEGEN_BASE_BRANCH env var — keep both in sync
   workflow_dispatch: {} # allows manual "Run workflow" from the Actions tab, on any branch, for testing
 
 permissions:
@@ -76,3 +76,4 @@ jobs:
       - name: Remove service account JSON
         if: always()
         run: rm -f "$RUNNER_TEMP/firebase-service-account.json"
+
