@@ -15,6 +15,7 @@ import { SuperAppModule } from '../super-app/super-app.module';
 import { AuditModule } from '../audit/audit.module';
 import { IntegrationsModule } from '../integrations/integrations.module';
 import { StorageModule } from '../storage/storage.module';
+import { NativeSdkCodegenModule } from '../native-sdk-codegen/native-sdk-codegen.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { StorageModule } from '../storage/storage.module';
     AuditModule,
     IntegrationsModule,
     StorageModule,
+    NativeSdkCodegenModule,
   ],
   controllers: [MiniappsController],
   providers: [MiniappsService],

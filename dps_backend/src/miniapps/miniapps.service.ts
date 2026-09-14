@@ -17,6 +17,8 @@ import { NexusIntegrationService } from '../integrations/nexus/nexus-integration
 import { DomainVerificationService } from '../integrations/webview/domain-verification.service';
 import { JenkinsService } from '../integrations/jenkins/jenkins.service';
 import { StorageService } from '../storage/storage.service';
+import { NativeSdkCodegenService } from '../native-sdk-codegen/native-sdk-codegen.service';
+import { GithubPrService } from '../native-sdk-codegen/github-pr.service';
 
 @Injectable()
 export class MiniappsService {
@@ -43,6 +45,8 @@ export class MiniappsService {
     private domainVerificationService: DomainVerificationService,
     private jenkinsService: JenkinsService,
     private storageService: StorageService,
+    private nativeSdkCodegen: NativeSdkCodegenService,
+    private githubPr: GithubPrService,
   ) {}
 
   async logActivity(miniAppId: string, actorId: string, actionType: string, title: string, description: string, auditAction: string, oldVal?: any, newVal?: any) {
@@ -793,6 +797,27 @@ export class MiniappsService {
     app.status = 'APPROVED';
     await this.miniappRepository.save(app);
     await this.logActivity(id, actorId, 'STATUS_CHANGE', 'Mini App Approved', 'App approved by SA Admin', 'APPROVE_MINI_APP', null, app);
+
+    // Regenerate native glue for every approved NATIVE_SDK app. Only an approval
+    // of a NATIVE_SDK app can change that generated output, so approving any other
+    // integration method must not touch the mobile sources. Failure here must not
+    // roll back an approval that is already persisted, so it is recorded, not thrown.
+    if (app.integrationMethod?.toUpperCase() === 'NATIVE_SDK') {
+      try {
+        const { changedFiles } = await this.nativeSdkCodegen.regenerate();
+        const result = await this.githubPr.openPrForChanges(changedFiles);
+        app.lastCodegenRun = { ...result, timestamp: new Date().toISOString() };
+      } catch (err: any) {
+        this.logger.error(`Native SDK codegen failed after approving ${id}: ${err}`);
+        app.lastCodegenRun = {
+          status: 'error',
+          error: err?.message || String(err),
+          timestamp: new Date().toISOString(),
+        };
+      }
+      await this.miniappRepository.save(app);
+    }
+
     return app;
   }
 

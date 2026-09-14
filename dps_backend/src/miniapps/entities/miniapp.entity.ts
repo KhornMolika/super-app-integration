@@ -99,6 +99,16 @@ export class MiniApp {
   @Column({ type: 'jsonb', nullable: true, default: () => "'[]'" })
   permissions!: any[];
 
+  @Column({ type: 'jsonb', nullable: true })
+  lastCodegenRun?: {
+    status: 'no_changes' | 'skipped' | 'opened' | 'error';
+    prUrl?: string;
+    prNumber?: number;
+    supersededPrNumbers?: number[];
+    error?: string;
+    timestamp: string;
+  };
+
   @OneToMany(() => MiniAppIssue, issue => issue.miniApp, { cascade: true, eager: true })
   issues!: MiniAppIssue[];
 
