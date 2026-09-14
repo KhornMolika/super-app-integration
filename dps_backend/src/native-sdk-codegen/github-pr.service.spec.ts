@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { GithubPrService } from './github-pr.service';
+import { MiniApp } from '../miniapps/entities/miniapp.entity';
 
 function configValue(overrides: Record<string, string | undefined> = {}) {
   const defaults: Record<string, string | undefined> = {
@@ -14,14 +16,22 @@ function configValue(overrides: Record<string, string | undefined> = {}) {
   return (key: string) => merged[key];
 }
 
-async function buildService(configOverrides: Record<string, string | undefined> = {}) {
+async function buildService(
+  configOverrides: Record<string, string | undefined> = {},
+  miniappApps: MiniApp[] = [],
+) {
+  const miniappRepository = {
+    find: jest.fn().mockResolvedValue(miniappApps),
+    save: jest.fn().mockImplementation((app: MiniApp) => Promise.resolve(app)),
+  };
   const module: TestingModule = await Test.createTestingModule({
     providers: [
       GithubPrService,
       { provide: ConfigService, useValue: { get: jest.fn(configValue(configOverrides)) } },
+      { provide: getRepositoryToken(MiniApp), useValue: miniappRepository },
     ],
   }).compile();
-  return module.get<GithubPrService>(GithubPrService);
+  return { service: module.get<GithubPrService>(GithubPrService), miniappRepository };
 }
 
 function jsonResponse(body: any, ok = true, status = ok ? 200 : 500) {
@@ -42,21 +52,21 @@ describe('GithubPrService', () => {
   });
 
   it('returns no_changes without calling fetch when there are no changed files', async () => {
-    const service = await buildService();
+    const { service } = await buildService();
     const result = await service.openPrForChanges(new Map());
     expect(result).toEqual({ status: 'no_changes' });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('returns skipped without calling fetch when CODEGEN_AUTO_PR is not "true"', async () => {
-    const service = await buildService({ CODEGEN_AUTO_PR: 'false' });
+    const { service } = await buildService({ CODEGEN_AUTO_PR: 'false' });
     const result = await service.openPrForChanges(new Map([['a.swift', 'content']]));
     expect(result).toEqual({ status: 'skipped' });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('creates blob(s), a tree, a commit, a branch ref, and opens a PR', async () => {
-    const service = await buildService();
+    const { service } = await buildService();
     fetchMock
       .mockResolvedValueOnce(jsonResponse({ object: { sha: 'base-sha' } })) // GET ref/heads/main
       .mockResolvedValueOnce(jsonResponse({ tree: { sha: 'base-tree-sha' } })) // GET commits/base-sha
@@ -86,7 +96,7 @@ describe('GithubPrService', () => {
   });
 
   it('closes a superseded open codegen PR with a comment, and reports it', async () => {
-    const service = await buildService();
+    const { service } = await buildService();
     fetchMock
       .mockResolvedValueOnce(jsonResponse({ object: { sha: 'base-sha' } }))
       .mockResolvedValueOnce(jsonResponse({ tree: { sha: 'base-tree-sha' } }))
@@ -119,8 +129,56 @@ describe('GithubPrService', () => {
     expect(JSON.parse(closeCall![1].body)).toEqual({ state: 'closed' });
   });
 
+  it('repoints mini apps tracking the superseded PR to the new one', async () => {
+    const trackingSupersededApp = {
+      appId: 'parking_pass',
+      integrationMethod: 'NATIVE_SDK',
+      lastCodegenRun: { status: 'opened', prNumber: 41, prUrl: 'https://github.com/acme/dsp-poc/pull/41' },
+    } as unknown as MiniApp;
+    const trackingSomeOtherPrApp = {
+      appId: 'unrelated_vendor',
+      integrationMethod: 'NATIVE_SDK',
+      lastCodegenRun: { status: 'opened', prNumber: 99, prUrl: 'https://github.com/acme/dsp-poc/pull/99' },
+    } as unknown as MiniApp;
+    const { service, miniappRepository } = await buildService({}, [
+      trackingSupersededApp,
+      trackingSomeOtherPrApp,
+    ]);
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ object: { sha: 'base-sha' } }))
+      .mockResolvedValueOnce(jsonResponse({ tree: { sha: 'base-tree-sha' } }))
+      .mockResolvedValueOnce(jsonResponse({ sha: 'blob-sha-1' }))
+      .mockResolvedValueOnce(jsonResponse({ sha: 'new-tree-sha' }))
+      .mockResolvedValueOnce(jsonResponse({ sha: 'new-commit-sha' }))
+      .mockResolvedValueOnce(jsonResponse({}))
+      .mockResolvedValueOnce(jsonResponse({ html_url: 'https://github.com/acme/dsp-poc/pull/43', number: 43 }))
+      .mockResolvedValueOnce(
+        jsonResponse([{ number: 41, head: { ref: 'codegen/native-sdk-1700000000000' } }]),
+      )
+      .mockResolvedValueOnce(jsonResponse({}))
+      .mockResolvedValueOnce(jsonResponse({}));
+
+    await service.openPrForChanges(new Map([['a.swift', 'content']]));
+
+    expect(miniappRepository.save).toHaveBeenCalledTimes(1);
+    expect(miniappRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        appId: 'parking_pass',
+        lastCodegenRun: expect.objectContaining({
+          status: 'opened',
+          prNumber: 43,
+          prUrl: 'https://github.com/acme/dsp-poc/pull/43',
+        }),
+      }),
+    );
+    // The app tracking an unrelated PR (#99) must be left untouched.
+    expect(miniappRepository.save).not.toHaveBeenCalledWith(
+      expect.objectContaining({ appId: 'unrelated_vendor' }),
+    );
+  });
+
   it('does not fail the whole call when closing one superseded PR fails', async () => {
-    const service = await buildService();
+    const { service } = await buildService();
     fetchMock
       .mockResolvedValueOnce(jsonResponse({ object: { sha: 'base-sha' } }))
       .mockResolvedValueOnce(jsonResponse({ tree: { sha: 'base-tree-sha' } }))
@@ -142,7 +200,7 @@ describe('GithubPrService', () => {
   });
 
   it('throws when CODEGEN_REPO_SLUG is not set', async () => {
-    const service = await buildService({ CODEGEN_REPO_SLUG: undefined });
+    const { service } = await buildService({ CODEGEN_REPO_SLUG: undefined });
     await expect(
       service.openPrForChanges(new Map([['a.swift', 'content']])),
     ).rejects.toThrow(/CODEGEN_REPO_SLUG/);

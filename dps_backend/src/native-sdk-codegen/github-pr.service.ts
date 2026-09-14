@@ -1,5 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { MiniApp } from '../miniapps/entities/miniapp.entity';
 
 export interface OpenPrResult {
   status: 'no_changes' | 'skipped' | 'opened';
@@ -14,7 +17,11 @@ const CODEGEN_BRANCH_PREFIX = 'codegen/native-sdk-';
 export class GithubPrService {
   private readonly logger = new Logger(GithubPrService.name);
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    @InjectRepository(MiniApp)
+    private readonly miniappRepository: Repository<MiniApp>,
+  ) {}
 
   private enabled(): boolean {
     return this.configService.get<string>('CODEGEN_AUTO_PR') === 'true';
@@ -186,11 +193,50 @@ export class GithubPrService {
           body: JSON.stringify({ state: 'closed' }),
         });
         closed.push(old.number);
+        await this.repointSupersededApps(old.number, newPrNumber, newPrUrl);
       } catch (err) {
         this.logger.error(`Failed to close superseded codegen PR #${old.number}: ${err}`);
       }
     }
 
     return closed;
+  }
+
+  /**
+   * A mini app's lastCodegenRun.prNumber can point at a PR that has since been
+   * closed as superseded (regeneration always covers every currently-approved
+   * vendor, so a later approval's PR already contains everything an earlier
+   * one had). Repoint every app tracking the just-closed PR at the new one, so
+   * later correlation (e.g. "has this mini app's PR merged yet?") looks at the
+   * PR that will actually ship its code, not a dead end.
+   */
+  private async repointSupersededApps(
+    oldPrNumber: number,
+    newPrNumber: number,
+    newPrUrl: string,
+  ): Promise<void> {
+    try {
+      const apps = await this.miniappRepository.find({
+        where: { integrationMethod: 'NATIVE_SDK' } as any,
+      });
+      const affected = apps.filter(app => app.lastCodegenRun?.prNumber === oldPrNumber);
+      for (const app of affected) {
+        app.lastCodegenRun = {
+          ...app.lastCodegenRun!,
+          prNumber: newPrNumber,
+          prUrl: newPrUrl,
+        };
+        await this.miniappRepository.save(app);
+      }
+      if (affected.length > 0) {
+        this.logger.log(
+          `Repointed ${affected.length} mini app(s) from superseded PR #${oldPrNumber} to #${newPrNumber}`,
+        );
+      }
+    } catch (err) {
+      this.logger.error(
+        `Failed to repoint mini apps from superseded PR #${oldPrNumber} to #${newPrNumber}: ${err}`,
+      );
+    }
   }
 }
