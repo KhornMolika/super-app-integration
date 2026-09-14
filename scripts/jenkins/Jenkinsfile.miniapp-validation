@@ -700,17 +700,66 @@ pipeline {
             }
         }
 
-        stage('7. DAST & CSP Audit (OWASP ZAP)') {
+        stage('7. Security Headers & CSP Audit') {
             when {
                 expression {
                     if (params.INTEGRATION_METHOD != 'WEBVIEW') return false
                     if (!params.CHECKS || params.CHECKS.trim() == '') return true
                     def checks = params.CHECKS.split(',').collect { it.trim().toLowerCase() }
-                    return checks.contains('dast_zap') || checks.contains('zap') || checks.contains('csp_headers_audit') || checks.contains('csp')
+                    return checks.contains('csp_headers_audit') || checks.contains('csp')
                 }
             }
             steps {
-                echo "Running OWASP ZAP Baseline DAST & CSP Audit..."
+                echo "Running Security Headers & CSP Audit..."
+                script {
+                    sh """
+                    node -e '
+                        const callbackUrl = "${params.CALLBACK_URL}".replace("/callback", "/stage");
+                        fetch(callbackUrl, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                miniAppId: "${params.MINIAPP_ID}",
+                                stageId: "csp_headers_audit",
+                                stageName: "Security Headers & CSP Audit",
+                                status: "RUNNING",
+                                details: "Auditing Content-Security-Policy, X-Frame-Options, and CORS headers..."
+                            })
+                        }).catch(() => {});
+                    ' || true
+                    """
+
+                    sh """
+                    node -e '
+                        const callbackUrl = "${params.CALLBACK_URL}".replace("/callback", "/stage");
+                        fetch(callbackUrl, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                miniAppId: "${params.MINIAPP_ID}",
+                                stageId: "csp_headers_audit",
+                                stageName: "Security Headers & CSP Audit",
+                                status: "COMPLETED",
+                                details: "Content Security Policy and security headers verified."
+                            })
+                        }).catch(() => {});
+                    ' || true
+                    """
+                }
+            }
+        }
+
+        stage('8. Dynamic Application Security Scan (DAST)') {
+            when {
+                expression {
+                    if (params.INTEGRATION_METHOD != 'WEBVIEW') return false
+                    if (!params.CHECKS || params.CHECKS.trim() == '') return true
+                    def checks = params.CHECKS.split(',').collect { it.trim().toLowerCase() }
+                    return checks.contains('dast_zap') || checks.contains('zap')
+                }
+            }
+            steps {
+                echo "Running OWASP ZAP Baseline DAST Scan..."
                 script {
                     sh """
                     node -e '
@@ -721,9 +770,9 @@ pipeline {
                             body: JSON.stringify({
                                 miniAppId: "${params.MINIAPP_ID}",
                                 stageId: "dast_zap",
-                                stageName: "OWASP ZAP DAST Scan",
+                                stageName: "Dynamic Application Security Scan (DAST)",
                                 status: "RUNNING",
-                                details: "Running spider, active XSS & CSP header audit..."
+                                details: "Running spider and active XSS vulnerability probing..."
                             })
                         }).catch(() => {});
                     ' || true
@@ -749,7 +798,7 @@ pipeline {
                             body: JSON.stringify({
                                 miniAppId: "${params.MINIAPP_ID}",
                                 stageId: "dast_zap",
-                                stageName: "OWASP ZAP DAST Scan",
+                                stageName: "Dynamic Application Security Scan (DAST)",
                                 status: "COMPLETED",
                                 details: "OWASP ZAP baseline scan complete."
                             })

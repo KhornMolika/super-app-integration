@@ -212,42 +212,58 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
     }
   });
 
-  // Dynamically resolve active validation stages
+  // Dynamically resolve active validation stages based strictly on active security profile
   const activeStages = useMemo(() => {
-    const rawStageKeys = Object.keys(stages);
-    let stageKeyOrder: string[] = [];
+    const userSelected = miniApp.securityChecks && miniApp.securityChecks.length > 0
+      ? miniApp.securityChecks
+      : getRecommendedChecksForMethod(miniApp.integrationMethod);
 
-    if (rawStageKeys.length > 0) {
-      stageKeyOrder = [...rawStageKeys].sort((a, b) => {
-        const orderA = stages[a]?.order !== undefined
-          ? Number(stages[a].order)
-          : (typeof stages[a]?.name === 'string' && stages[a]?.name.match(/^(\d+)\./)
-              ? parseInt(stages[a].name.match(/^(\d+)\./)[1], 10)
-              : 999);
-        const orderB = stages[b]?.order !== undefined
-          ? Number(stages[b].order)
-          : (typeof stages[b]?.name === 'string' && stages[b]?.name.match(/^(\d+)\./)
-              ? parseInt(stages[b].name.match(/^(\d+)\./)[1], 10)
-              : 999);
-        return orderA - orderB;
-      });
-    } else {
-      const userSelected = miniApp.securityChecks && miniApp.securityChecks.length > 0
-        ? miniApp.securityChecks
-        : getRecommendedChecksForMethod(miniApp.integrationMethod);
-
-      if (isFlutterPackage) {
-        stageKeyOrder = ['ingest', ...userSelected];
-        if (!stageKeyOrder.includes('capability_gate')) {
-          stageKeyOrder.push('capability_gate');
-        }
-      } else {
-        stageKeyOrder = ['ssrf', ...userSelected];
+    let allowedKeys: string[] = [];
+    if (isFlutterPackage || miniApp.integrationMethod === 'NATIVE_SDK') {
+      allowedKeys = ['ingest', ...userSelected];
+      if (!allowedKeys.includes('capability_gate')) {
+        allowedKeys.push('capability_gate');
       }
-      stageKeyOrder = Array.from(new Set(stageKeyOrder));
+    } else {
+      allowedKeys = ['ssrf', ...userSelected];
     }
+    allowedKeys = Array.from(new Set(allowedKeys));
 
-    return stageKeyOrder.map((key, idx) => {
+    // Map of check aliases for backward compatibility or alternative IDs
+    const checkAliases: Record<string, string[]> = {
+      secret_scan: ['secret_scan', 'secrets'],
+      dependency_scan: ['dependency_scan', 'sca'],
+      domain_tls_audit: ['domain_tls_audit', 'tls'],
+      dast_zap: ['dast_zap', 'zap', 'dast'],
+      sast: ['sast', 'malware_sast'],
+      malware_scan: ['malware_scan'],
+      capability_gate: ['capability_gate', 'host_capability_gate'],
+      csp_headers_audit: ['csp_headers_audit'],
+      sbom: ['sbom'],
+      license_compliance: ['license_compliance'],
+      ssrf: ['ssrf', 'preflight'],
+      ingest: ['ingest'],
+    };
+
+    // Sort allowedKeys based on recorded order in stages if present, otherwise preserve logical sequence
+    const sortedKeys = [...allowedKeys].sort((a, b) => {
+      const getOrder = (key: string) => {
+        const aliases = checkAliases[key] || [key];
+        for (const alias of aliases) {
+          if (stages[alias]?.order !== undefined) {
+            return Number(stages[alias].order);
+          }
+          if (typeof stages[alias]?.name === 'string') {
+            const m = stages[alias].name.match(/^(\d+)\./);
+            if (m) return parseInt(m[1], 10);
+          }
+        }
+        return allowedKeys.indexOf(key) + 1;
+      };
+      return getOrder(a) - getOrder(b);
+    });
+
+    return sortedKeys.map((key, idx) => {
       const meta = STAGE_CATALOG[key] || {
         id: key,
         name: key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
@@ -257,11 +273,23 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
         description: 'Automated platform security audit.',
       };
 
-      const recorded = stages[key] || null;
+      const aliases = checkAliases[key] || [key];
+      let recorded = stages[key] || null;
+      if (!recorded) {
+        for (const a of aliases) {
+          if (stages[a]) {
+            recorded = stages[a];
+            break;
+          }
+        }
+      }
+
+      const cleanTitle = (recorded?.name || meta.name).replace(/^\d+\.\s*/, '');
       return {
         id: key,
         index: idx + 1,
-        name: recorded?.name || `${idx + 1}. ${meta.name.replace(/^\d+\.\s*/, '')}`,
+        name: `${idx + 1}. ${cleanTitle}`,
+        title: cleanTitle,
         defaultTitle: meta.defaultTitle,
         icon: recorded?.icon || meta.icon,
         tool: recorded?.tool || meta.tool,
@@ -537,7 +565,15 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-6">
           {activeStages.map((st) => {
             const recorded = st.recorded;
-            const checkData = report?.checks?.[st.id] || (st.id === 'sast' ? report?.checks?.malware_sast : null) || (st.id === 'dependency_scan' ? report?.checks?.sca : null) || (st.id === 'dast_zap' ? report?.checks?.dast : null) || (st.id === 'domain_tls_audit' ? report?.checks?.tls : null) || (st.id === 'secret_scan' ? report?.checks?.secrets : null);
+            const checkData = report?.checks?.[st.id]
+              || (st.id === 'sast' ? (report?.checks?.malware_sast || report?.checks?.sast) : null)
+              || (st.id === 'dependency_scan' ? (report?.checks?.sca || report?.checks?.dependency_scan) : null)
+              || (st.id === 'dast_zap' ? (report?.checks?.dast || report?.checks?.dast_zap || report?.checks?.zap) : null)
+              || (st.id === 'domain_tls_audit' ? (report?.checks?.tls || report?.checks?.domain_tls_audit) : null)
+              || (st.id === 'secret_scan' ? (report?.checks?.secrets || report?.checks?.secret_scan) : null)
+              || (st.id === 'csp_headers_audit' ? (report?.checks?.csp_headers_audit || report?.checks?.csp) : null)
+              || (st.id === 'capability_gate' ? (report?.checks?.capability_gate || report?.checks?.capabilities) : null)
+              || (st.id === 'sbom' ? (report?.checks?.sbom) : null);
             
             const isPassed = checkData?.passed === true || recorded?.status === 'COMPLETED';
             const isRunning = valStatus === 'RUNNING' && (recorded?.status === 'RUNNING' || !recorded);
