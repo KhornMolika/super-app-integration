@@ -272,7 +272,8 @@ export class LocalSecurityScannerService {
 
     if (overallStatus === 'PASSED') {
       app.validationStatus = 'PASSED';
-      if (!hasPendingRevision) {
+      const initialStatuses = ['DRAFT', 'SUBMITTED', 'PENDING_REVIEW'];
+      if (!hasPendingRevision && initialStatuses.includes(app.status)) {
         app.status = 'IN_REVIEW';
       }
       app.validationErrors = null;
@@ -290,7 +291,9 @@ export class LocalSecurityScannerService {
         hasPendingRevision ? 'Revision Validation Passed' : 'Automated Validation Passed',
         hasPendingRevision
           ? `All configured ${method} security checks for pending revision passed (${score}/100). Live version remains active.`
-          : `All configured ${method} security checks passed successfully (${score}/100). Status updated to IN_REVIEW.`,
+          : initialStatuses.includes(app.status)
+          ? `All configured ${method} security checks passed successfully (${score}/100). Status updated to IN_REVIEW.`
+          : `All configured ${method} security checks passed (${score}/100). Status remains ${app.status}.`,
         'VALIDATION_SUCCESS',
         app.id,
       );
@@ -318,7 +321,8 @@ export class LocalSecurityScannerService {
       });
     } else {
       app.validationStatus = 'FAILED';
-      if (!hasPendingRevision) {
+      const resetToDraftStatuses = ['DRAFT', 'SUBMITTED', 'PENDING_REVIEW', 'IN_REVIEW'];
+      if (!hasPendingRevision && resetToDraftStatuses.includes(app.status)) {
         app.status = 'DRAFT';
       }
 

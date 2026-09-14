@@ -146,7 +146,8 @@ export class ValidationCallbackController {
 
     if (dto.status === 'PASSED') {
       app.validationStatus = 'PASSED';
-      if (!hasPendingRevision) {
+      const initialStatuses = ['DRAFT', 'SUBMITTED', 'PENDING_REVIEW'];
+      if (!hasPendingRevision && initialStatuses.includes(app.status)) {
         app.status = 'IN_REVIEW';
       }
       app.validationErrors = null;
@@ -158,7 +159,9 @@ export class ValidationCallbackController {
         hasPendingRevision ? 'Revision Validation Passed' : 'Automated Validation Passed',
         hasPendingRevision
           ? `${app.name || 'Mini App'} revision passed automated ${dto.method} validation (Score: ${dto.score}/100). Live version remains active.`
-          : `${app.name || 'Mini App'} passed automated ${dto.method} security validation (Score: ${dto.score}/100) and is now In Review.`,
+          : initialStatuses.includes(app.status)
+          ? `${app.name || 'Mini App'} passed automated ${dto.method} security validation (Score: ${dto.score}/100) and is now In Review.`
+          : `${app.name || 'Mini App'} security re-scan passed (${dto.score}/100). Status remains ${app.status}.`,
         'REVIEW_STARTED',
         app.id,
       );
@@ -192,8 +195,9 @@ export class ValidationCallbackController {
       };
     } else {
       app.validationStatus = 'FAILED';
-      if (!hasPendingRevision) {
-        app.status = 'DRAFT'; // Auto-reset to DRAFT for remediation
+      const resetToDraftStatuses = ['DRAFT', 'SUBMITTED', 'PENDING_REVIEW', 'IN_REVIEW'];
+      if (!hasPendingRevision && resetToDraftStatuses.includes(app.status)) {
+        app.status = 'DRAFT'; // Auto-reset to DRAFT for remediation if in pre-approval stage
       }
 
       // Mark running/pending stages as FAILED
