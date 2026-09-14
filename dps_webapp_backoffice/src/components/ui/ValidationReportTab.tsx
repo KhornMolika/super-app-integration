@@ -191,6 +191,16 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
     }
   }, [miniApp.securityChecks]);
 
+  // Auto-dismiss reScanMessage toast after 4 seconds
+  useEffect(() => {
+    if (reScanMessage) {
+      const timer = setTimeout(() => {
+        setReScanMessage(null);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [reScanMessage]);
+
   // Combine findings from report & database issues
   const allFindings: Array<{
     id: string;
@@ -436,33 +446,91 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
     });
   }, [miniApp.securityChecks, miniApp.integrationMethod]);
 
+  const isScanningActive = valStatus === 'RUNNING' || isReScanning;
+  const completedStagesCount = activeStages.filter((st) => st.recorded?.status === 'COMPLETED').length;
+  const runningStage = activeStages.find((st) => st.recorded?.status === 'RUNNING' || (!st.recorded && st.index === 1 && isScanningActive));
+  const totalStagesCount = activeStages.length;
+  const scanProgressPercent = totalStagesCount > 0
+    ? Math.round((completedStagesCount / totalStagesCount) * 100)
+    : 0;
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
+      {/* Floating Toast Notification for Re-Scan / Status Actions */}
+      {reScanMessage && (
+        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900/95 dark:bg-slate-800/95 text-white shadow-2xl border border-slate-700/80 backdrop-blur-md">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand-500"></span>
+            </span>
+            <span className="text-sm font-semibold tracking-wide">{reScanMessage}</span>
+            <button
+              onClick={() => setReScanMessage(null)}
+              className="ml-2 text-slate-400 hover:text-white p-0.5 rounded transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Executive Security Summary Card */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-start gap-4">
-            <div className={`w-20 h-20 rounded-2xl border flex flex-col items-center justify-center p-2 flex-shrink-0 ${scoreBg}`}>
-              <span className={`text-2xl font-black ${scoreColor}`}>
-                {score !== null ? score : '--'}
-              </span>
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Score</span>
+            <div className={`w-20 h-20 rounded-2xl border flex flex-col items-center justify-center p-2 flex-shrink-0 transition-all ${
+              isScanningActive
+                ? 'bg-amber-500/10 border-amber-500/30 dark:bg-amber-500/15 dark:border-amber-500/40 ring-2 ring-amber-500/20 animate-pulse'
+                : scoreBg
+            }`}>
+              {isScanningActive ? (
+                <div className="flex flex-col items-center justify-center text-center">
+                  <svg className="w-6 h-6 text-amber-500 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                  </svg>
+                  <span className="text-[9px] font-black tracking-wider text-amber-600 dark:text-amber-400 mt-1 uppercase">AUDITING</span>
+                </div>
+              ) : (
+                <>
+                  <span className={`text-2xl font-black ${scoreColor}`}>
+                    {score !== null ? score : '--'}
+                  </span>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Score</span>
+                </>
+              )}
             </div>
             <div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <h3 className="text-xl font-bold text-slate-900 dark:text-white">
                   {isFlutterPackage ? 'Package Security & Compliance Report' : 'Automated Security & Compliance Report'}
                 </h3>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs sm:text-sm font-bold uppercase tracking-wider ${
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs sm:text-sm font-bold uppercase tracking-wider transition-all ${
                   valStatus === 'PASSED'
-                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300'
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
                     : valStatus === 'RUNNING'
-                    ? 'bg-brand-100 text-brand-800 dark:bg-brand-900/50 dark:text-brand-300 animate-pulse'
+                    ? 'bg-amber-100 text-amber-900 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80 shadow-sm animate-pulse'
                     : valStatus === 'FAILED'
-                    ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-300'
-                    : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                    ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-300 dark:border-rose-800'
+                    : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
                 }`}>
-                  {valStatus === 'RUNNING' ? 'SCANNING IN PROGRESS' : valStatus}
+                  {valStatus === 'RUNNING' ? (
+                    <>
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                      </span>
+                      <span>SCANNING IN PROGRESS</span>
+                    </>
+                  ) : valStatus === 'PASSED' ? (
+                    <>
+                      <span>✓</span>
+                      <span>PASSED</span>
+                    </>
+                  ) : (
+                    valStatus
+                  )}
                 </span>
               </div>
               <p className="text-base text-slate-600 dark:text-slate-400 mt-1">
@@ -483,19 +551,14 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-end gap-3">
-            {reScanMessage && (
-              <span className="text-sm font-medium text-brand-600 dark:text-brand-400 animate-fade-in">
-                {reScanMessage}
-              </span>
-            )}
+          <div className="flex items-center gap-2.5 flex-wrap self-start lg:self-center">
             {valStatus === 'RUNNING' && (
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleCancelScan}
                 disabled={isCancelling}
-                className="text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 border-rose-200 dark:border-rose-900/50 text-sm px-3.5 py-2 flex items-center gap-1.5"
+                className="text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 border-rose-200 dark:border-rose-900/50 text-sm h-10 px-3.5 flex items-center gap-1.5 font-semibold transition-all"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -522,15 +585,52 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
               variant="primary"
               onClick={() => handleReScan()}
               disabled={isReScanning || isCancelling}
-              className="flex items-center gap-2 text-sm font-semibold h-10 px-4"
+              className={`flex items-center gap-2 text-sm font-semibold h-10 px-4 transition-all ${
+                isScanningActive ? 'opacity-90 shadow-md ring-2 ring-brand-500/20' : ''
+              }`}
             >
-              <svg className={`w-4 h-4 ${isReScanning ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className={`w-4 h-4 ${isScanningActive ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              <span>{isReScanning ? 'Running Security Scan...' : 'Re-Run Security Scan'}</span>
+              <span>{isScanningActive ? 'Running Security Scan...' : 'Re-Run Security Scan'}</span>
             </Button>
           </div>
         </div>
+
+        {/* Live Scan Progress Bar Banner (when scan is active) */}
+        {isScanningActive && (
+          <div className="mt-4 p-4 rounded-xl bg-slate-900/5 dark:bg-slate-800/40 border border-brand-200/80 dark:border-brand-800/60 flex flex-col gap-2.5 animate-in fade-in duration-300">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-6 h-6 rounded-lg bg-brand-500 text-white flex items-center justify-center text-xs font-bold animate-spin flex-shrink-0">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                  </svg>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">
+                    Live Security Pipeline Executing
+                  </span>
+                  {runningStage && (
+                    <span className="text-xs font-medium text-brand-700 dark:text-brand-300 bg-brand-100 dark:bg-brand-950/60 px-2.5 py-0.5 rounded-full border border-brand-200 dark:border-brand-800">
+                      Stage {runningStage.index} of {totalStagesCount}: {runningStage.title}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <span className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400">
+                {completedStagesCount}/{totalStagesCount} Checks Completed ({scanProgressPercent}%)
+              </span>
+            </div>
+            <div className="w-full bg-slate-200 dark:bg-slate-700/60 h-2 rounded-full overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-brand-500 to-emerald-500 h-full rounded-full transition-all duration-500 ease-out"
+                style={{ width: `${Math.max(scanProgressPercent, 8)}%` }}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Active Security Profile Tags */}
         <div className="mt-4 pt-4 border-b border-slate-100 dark:border-slate-800/80">
@@ -575,43 +675,68 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
               || (st.id === 'capability_gate' ? (report?.checks?.capability_gate || report?.checks?.capabilities) : null)
               || (st.id === 'sbom' ? (report?.checks?.sbom) : null);
             
-            const isPassed = checkData?.passed === true || recorded?.status === 'COMPLETED';
-            const isRunning = valStatus === 'RUNNING' && (recorded?.status === 'RUNNING' || !recorded);
-            const isFailed = checkData?.passed === false || recorded?.status === 'FAILED' || (valStatus === 'FAILED' && !isPassed);
+            let stageStatus = 'PENDING';
+            if (isScanningActive) {
+              if (recorded?.status === 'COMPLETED') stageStatus = 'COMPLETED';
+              else if (recorded?.status === 'RUNNING') stageStatus = 'RUNNING';
+              else if (recorded?.status === 'FAILED') stageStatus = 'FAILED';
+              else if (!recorded && st.index === 1) stageStatus = 'RUNNING';
+              else stageStatus = 'PENDING';
+            } else {
+              if (recorded?.status === 'COMPLETED' || checkData?.passed === true) stageStatus = 'COMPLETED';
+              else if (recorded?.status === 'FAILED' || checkData?.passed === false || valStatus === 'FAILED') stageStatus = 'FAILED';
+              else stageStatus = 'PENDING';
+            }
+
+            const isPassed = stageStatus === 'COMPLETED';
+            const isRunning = stageStatus === 'RUNNING';
+            const isFailed = stageStatus === 'FAILED';
 
             return (
               <div
                 key={st.id}
-                className="p-4 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/30 flex flex-col justify-between"
+                className={`p-4 rounded-xl border flex flex-col justify-between transition-all ${
+                  isRunning
+                    ? 'border-brand-300 dark:border-brand-700 bg-brand-50/60 dark:bg-brand-950/40 ring-2 ring-brand-500/20 shadow-sm'
+                    : isPassed
+                    ? 'border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/30 dark:bg-emerald-950/15'
+                    : isFailed
+                    ? 'border-rose-200 dark:border-rose-900/40 bg-rose-50/40 dark:bg-rose-950/20'
+                    : 'border-slate-100 dark:border-slate-800/80 bg-slate-50/40 dark:bg-slate-800/30 opacity-75'
+                }`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-base">{st.icon}</span>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-base flex-shrink-0">{st.icon}</span>
                       <span className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">
-                        {st.name.replace(/^\d+\.\s*/, '')}
+                        {st.title}
                       </span>
                     </div>
                     {isPassed ? (
-                      <span className="text-emerald-600 font-bold text-xs bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">
-                        PASSED
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold text-xs bg-emerald-100/80 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full flex-shrink-0 flex items-center gap-1">
+                        <span>✓</span> PASSED
                       </span>
                     ) : isRunning ? (
-                      <span className="text-brand-600 text-xs font-bold animate-pulse">
+                      <span className="text-brand-600 dark:text-brand-400 text-xs font-bold bg-brand-100/80 dark:bg-brand-950/60 border border-brand-200 dark:border-brand-800 px-2 py-0.5 rounded-full flex-shrink-0 flex items-center gap-1 animate-pulse">
+                        <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
                         CHECKING...
                       </span>
                     ) : isFailed ? (
-                      <span className="text-rose-600 font-bold text-xs bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded">
+                      <span className="text-rose-600 dark:text-rose-400 font-bold text-xs bg-rose-100/80 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 px-2 py-0.5 rounded-full flex-shrink-0">
                         FAILED
                       </span>
                     ) : (
-                      <span className="text-slate-400 font-bold text-xs bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                      <span className="text-slate-400 font-bold text-xs bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full flex-shrink-0">
                         PENDING
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                    {recorded?.details || checkData?.details || (valStatus === 'FAILED' && isFailed ? 'Check failed or reported security concerns.' : st.description)}
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed line-clamp-2">
+                    {recorded?.details || (isScanningActive && isRunning ? 'Executing automated security check...' : checkData?.details || (valStatus === 'FAILED' && isFailed ? 'Check failed or reported security concerns.' : st.description))}
                   </p>
                 </div>
                 <div className="mt-3 pt-2 border-t border-slate-200/50 dark:border-slate-800/50 flex items-center justify-between text-[11px] text-slate-400">
@@ -701,53 +826,72 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
         <div className="space-y-3">
           {activeStages.map((st) => {
             const recorded = st.recorded;
-            const stageStatus = recorded
-              ? (valStatus === 'FAILED' && recorded.status === 'RUNNING' ? 'FAILED' : recorded.status)
-              : (valStatus === 'PASSED' ? 'COMPLETED' : 'PENDING');
+            let stageStatus = 'PENDING';
+            if (isScanningActive) {
+              if (recorded?.status === 'COMPLETED') stageStatus = 'COMPLETED';
+              else if (recorded?.status === 'RUNNING') stageStatus = 'RUNNING';
+              else if (recorded?.status === 'FAILED') stageStatus = 'FAILED';
+              else if (!recorded && st.index === 1) stageStatus = 'RUNNING';
+              else stageStatus = 'PENDING';
+            } else {
+              if (recorded?.status) stageStatus = valStatus === 'FAILED' && recorded.status === 'RUNNING' ? 'FAILED' : recorded.status;
+              else stageStatus = valStatus === 'PASSED' ? 'COMPLETED' : 'PENDING';
+            }
+
             const isCompleted = stageStatus === 'COMPLETED';
-            const isRunning = stageStatus === 'RUNNING' && valStatus !== 'FAILED';
-            const isFailed = stageStatus === 'FAILED' || (valStatus === 'FAILED' && recorded?.status === 'RUNNING');
+            const isRunning = stageStatus === 'RUNNING';
+            const isFailed = stageStatus === 'FAILED';
 
             return (
               <div
                 key={st.id}
                 className={`flex items-start justify-between p-4 rounded-xl border transition-all ${
                   isRunning
-                    ? 'bg-brand-50/70 dark:bg-brand-950/30 border-brand-200 dark:border-brand-800'
+                    ? 'border-l-4 border-l-brand-500 border-t border-r border-b border-brand-200 dark:border-brand-800 bg-brand-50/70 dark:bg-brand-950/40 shadow-sm ring-1 ring-brand-500/20'
                     : isCompleted
-                    ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-900/30'
+                    ? 'border-l-4 border-l-emerald-500 border-t border-r border-b border-emerald-100 dark:border-emerald-900/30 bg-emerald-50/40 dark:bg-emerald-950/20'
                     : isFailed
-                    ? 'bg-rose-50/60 dark:bg-rose-950/30 border-rose-200 dark:border-rose-900/40'
-                    : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800'
+                    ? 'border-l-4 border-l-rose-500 border-t border-r border-b border-rose-200 dark:border-rose-900/40 bg-rose-50/60 dark:bg-rose-950/30'
+                    : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 opacity-80'
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  <div className="mt-0.5 text-xl">{st.icon}</div>
+                  <div className="mt-0.5 text-xl flex-shrink-0">{st.icon}</div>
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h4 className="text-base font-bold text-slate-900 dark:text-white">
                         {st.name}
                       </h4>
+                      {isRunning && (
+                        <span className="w-2 h-2 rounded-full bg-brand-500 animate-ping" />
+                      )}
                       <span className="text-xs font-mono text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
                         {st.tool}
                       </span>
                     </div>
                     <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                      {recorded?.details || (valStatus === 'FAILED' && isFailed ? 'Execution failed or scanner encountered an error.' : st.defaultTitle)}
+                      {recorded?.details || (isScanningActive && isRunning ? 'Analyzing target endpoint and running security checks...' : valStatus === 'FAILED' && isFailed ? 'Execution failed or scanner encountered an error.' : st.defaultTitle)}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs sm:text-sm px-2.5 py-1 rounded font-mono font-semibold uppercase ${
+                <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                  <span className={`text-xs sm:text-sm px-2.5 py-1 rounded-full font-mono font-semibold uppercase flex items-center gap-1.5 ${
                     isRunning
-                      ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/50 dark:text-brand-300 animate-pulse'
+                      ? 'bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300 border border-brand-300 dark:border-brand-700 animate-pulse'
                       : isCompleted
-                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300'
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
                       : isFailed
-                      ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300'
-                      : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                      ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 dark:border-rose-800'
+                      : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
                   }`}>
+                    {isRunning && (
+                      <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                      </svg>
+                    )}
+                    {isCompleted && <span>✓</span>}
                     {stageStatus}
                   </span>
                 </div>
