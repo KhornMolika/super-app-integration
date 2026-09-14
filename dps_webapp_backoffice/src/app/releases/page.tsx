@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/inputs';
 import { FirebaseReleasesPanel } from '@/components/ui/FirebaseReleasesPanel';
+import { CodegenPipelinePanel } from '@/components/ui/CodegenPipelinePanel';
 
 export default function ReleasesPage() {
   const [apps, setApps] = useState<any[]>([]);
@@ -238,6 +239,7 @@ export default function ReleasesPage() {
         </div>
       </div>
 
+      <CodegenPipelinePanel apps={apps} />
       <FirebaseReleasesPanel />
     </div>
   );
