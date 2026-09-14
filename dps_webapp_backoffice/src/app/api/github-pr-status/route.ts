@@ -30,7 +30,16 @@ interface RawPull {
 
 interface RawActionsRun {
   status: "queued" | "in_progress" | "completed";
-  conclusion: "success" | "failure" | "cancelled" | null;
+  conclusion:
+    | "success"
+    | "failure"
+    | "cancelled"
+    | "skipped"
+    | "neutral"
+    | "timed_out"
+    | "action_required"
+    | "stale"
+    | null;
   html_url: string;
   created_at: string;
 }
@@ -91,10 +100,17 @@ export async function GET(request: Request) {
   }
 
   const prNumbersParam = new URL(request.url).searchParams.get("prNumbers") || "";
-  const prNumbers = prNumbersParam
-    .split(",")
-    .map((n) => Number(n.trim()))
-    .filter((n) => Number.isInteger(n) && n > 0);
+  // Superseded mini apps are deliberately repointed onto the same new PR number,
+  // so callers commonly send the same PR number many times — dedupe to avoid
+  // burning GitHub API quota on identical lookups.
+  const prNumbers = [
+    ...new Set(
+      prNumbersParam
+        .split(",")
+        .map((n) => Number(n.trim()))
+        .filter((n) => Number.isInteger(n) && n > 0)
+    ),
+  ];
 
   if (prNumbers.length === 0) {
     return NextResponse.json({ statuses: [] });
@@ -112,7 +128,6 @@ export async function GET(request: Request) {
   let rateLimited = false;
 
   for (const prNumber of prNumbers) {
-    if (rateLimited) break;
     try {
       statuses.push(await fetchPrStatus(repoSlug, prNumber));
     } catch (err) {

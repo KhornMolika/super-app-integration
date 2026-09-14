@@ -16,13 +16,13 @@ function badgeClasses(tone: Tone): string {
   return `inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${TONE_CLASSES[tone]}`;
 }
 
-function prBadge(entry: CodegenPipelineEntry): { label: string; tone: Tone } {
+export function prBadge(entry: CodegenPipelineEntry): { label: string; tone: Tone } {
   if (entry.merged) return { label: "PR merged", tone: "success" };
   if (entry.prState === "open") return { label: "PR open", tone: "info" };
   return { label: "PR closed", tone: "neutral" };
 }
 
-function buildBadge(entry: CodegenPipelineEntry): { label: string; tone: Tone } {
+export function buildBadge(entry: CodegenPipelineEntry): { label: string; tone: Tone } {
   const run = entry.actionsRun;
   if (!run) return { label: entry.merged ? "Build pending" : "Build —", tone: "neutral" };
   if (run.status !== "completed") return { label: "Build running", tone: "info" };
@@ -31,20 +31,31 @@ function buildBadge(entry: CodegenPipelineEntry): { label: string; tone: Tone } 
   return { label: `Build ${run.conclusion ?? "unknown"}`, tone: "warning" };
 }
 
-function releaseBadge(entry: CodegenPipelineEntry): { label: string; tone: Tone } {
+function releaseBadge(
+  entry: CodegenPipelineEntry,
+  releasesError?: string | null
+): { label: string; tone: Tone } {
+  // The Firebase lookup itself failed: "not yet" would be a lie, so say so.
+  if (releasesError) return { label: "Release unknown", tone: "warning" };
   return entry.release
     ? { label: "Release found", tone: "success" }
     : { label: "Release not yet", tone: "neutral" };
 }
 
-export function CodegenPipelineStrip({ entry }: { entry: CodegenPipelineEntry }) {
+export function CodegenPipelineStrip({
+  entry,
+  releasesError,
+}: {
+  entry: CodegenPipelineEntry;
+  releasesError?: string | null;
+}) {
   if (entry.error) {
     return <span className={badgeClasses("danger")}>Unable to fetch PR #{entry.prNumber} status</span>;
   }
 
   const pr = prBadge(entry);
   const build = buildBadge(entry);
-  const release = releaseBadge(entry);
+  const release = releaseBadge(entry, releasesError);
 
   return (
     <div className="flex flex-wrap items-center gap-2">

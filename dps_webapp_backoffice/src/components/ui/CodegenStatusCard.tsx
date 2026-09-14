@@ -5,7 +5,8 @@ import { CodegenPipelineStrip } from "@/components/ui/CodegenPipelineStrip";
 import { useCodegenPipelineStatus } from "@/lib/useCodegenPipelineStatus";
 
 export function CodegenStatusCard({ prNumber }: { prNumber: number }) {
-  const { data, loading, error, rateLimited, refresh } = useCodegenPipelineStatus([prNumber]);
+  const { data, loading, error, rateLimited, releasesError, refresh } =
+    useCodegenPipelineStatus([prNumber]);
   const entry = data.find((item) => item.prNumber === prNumber);
 
   return (
@@ -20,7 +21,7 @@ export function CodegenStatusCard({ prNumber }: { prNumber: number }) {
         )}
         {!error && entry && (
           <div className="mt-2">
-            <CodegenPipelineStrip entry={entry} />
+            <CodegenPipelineStrip entry={entry} releasesError={releasesError} />
           </div>
         )}
         {!error && !entry && (

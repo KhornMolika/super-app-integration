@@ -3,20 +3,26 @@
 import { Button } from "@/components/ui/inputs";
 import { CodegenPipelineStrip } from "@/components/ui/CodegenPipelineStrip";
 import { useCodegenPipelineStatus } from "@/lib/useCodegenPipelineStatus";
+import { IntegrationMethod } from "@/types/miniapp.types";
 
-interface EligibleApp {
+export interface EligibleApp {
   id: string;
   name?: string;
+  integrationMethod?: string;
   lastCodegenRun?: { status?: string; prNumber?: number };
 }
 
 export function CodegenPipelinePanel({ apps }: { apps: EligibleApp[] }) {
   const eligible = apps.filter(
-    (app) => app.lastCodegenRun?.status === "opened" && typeof app.lastCodegenRun.prNumber === "number"
+    (app) =>
+      app.integrationMethod === IntegrationMethod.NATIVE_SDK &&
+      app.lastCodegenRun?.status === "opened" &&
+      typeof app.lastCodegenRun.prNumber === "number"
   );
   const prNumbers = eligible.map((app) => app.lastCodegenRun!.prNumber!);
 
-  const { data, loading, error, rateLimited, refresh } = useCodegenPipelineStatus(prNumbers);
+  const { data, loading, error, rateLimited, releasesError, refresh } =
+    useCodegenPipelineStatus(prNumbers);
 
   return (
     <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-6">
@@ -57,7 +63,7 @@ export function CodegenPipelinePanel({ apps }: { apps: EligibleApp[] }) {
                   {app.name || "Mini App"}
                 </span>
                 {entry ? (
-                  <CodegenPipelineStrip entry={entry} />
+                  <CodegenPipelineStrip entry={entry} releasesError={releasesError} />
                 ) : (
                   <span className="text-xs text-slate-400">{loading ? "Loading..." : "No status yet"}</span>
                 )}

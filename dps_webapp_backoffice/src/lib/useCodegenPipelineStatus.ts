@@ -9,6 +9,12 @@ interface UseCodegenPipelineStatusResult {
   loading: boolean;
   error: string | null;
   rateLimited: boolean;
+  /**
+   * Set when /api/firebase-releases itself failed. The PR/Build stages stay
+   * usable (they don't depend on Firebase); the UI uses this to show the
+   * Release stage as "unknown" rather than a misleading "not yet".
+   */
+  releasesError: string | null;
   refresh: () => void;
 }
 
@@ -17,6 +23,7 @@ export function useCodegenPipelineStatus(prNumbers: number[]): UseCodegenPipelin
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rateLimited, setRateLimited] = useState(false);
+  const [releasesError, setReleasesError] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
 
   const key = prNumbers.join(",");
@@ -28,12 +35,15 @@ export function useCodegenPipelineStatus(prNumbers: number[]): UseCodegenPipelin
       setLoading(false);
       setError(null);
       setRateLimited(false);
+      setReleasesError(null);
       return;
     }
 
     let cancelled = false;
     setLoading(true);
     setError(null);
+    setRateLimited(false);
+    setReleasesError(null);
 
     Promise.all([
       fetch(`/api/github-pr-status?prNumbers=${key}`).then((res) => res.json()),
@@ -46,6 +56,10 @@ export function useCodegenPipelineStatus(prNumbers: number[]): UseCodegenPipelin
         ]) => {
           if (cancelled) return;
           if (prData.error) throw new Error(prData.error);
+
+          // A Firebase-releases failure must not blank out the PR/Build stages,
+          // so surface it as a separate flag instead of throwing.
+          if (releaseData.error) setReleasesError(releaseData.error);
 
           const releases = releaseData.releases ?? [];
           const statuses = prData.statuses ?? [];
@@ -70,5 +84,5 @@ export function useCodegenPipelineStatus(prNumbers: number[]): UseCodegenPipelin
     };
   }, [key, refreshToken]);
 
-  return { data, loading, error, rateLimited, refresh };
+  return { data, loading, error, rateLimited, releasesError, refresh };
 }

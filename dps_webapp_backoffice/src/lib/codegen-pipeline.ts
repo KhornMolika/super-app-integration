@@ -2,7 +2,16 @@ import type { FirebaseRelease } from "./firebase-distribution";
 
 export interface GithubActionsRunStatus {
   status: "queued" | "in_progress" | "completed";
-  conclusion: "success" | "failure" | "cancelled" | null;
+  conclusion:
+    | "success"
+    | "failure"
+    | "cancelled"
+    | "skipped"
+    | "neutral"
+    | "timed_out"
+    | "action_required"
+    | "stale"
+    | null;
   runUrl: string;
 }
 
