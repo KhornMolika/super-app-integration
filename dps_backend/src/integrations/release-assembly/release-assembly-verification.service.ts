@@ -244,6 +244,15 @@ export class ReleaseAssemblyVerificationService {
         releaseVersion: dto.releaseVersion,
         buildType: 'debug',
       });
+
+      // Trigger Jenkins Super App Web Sandbox build pipeline
+      this.jenkinsService
+        .triggerSuperAppSandboxBuild()
+        .catch((e: any) => {
+          this.logger.warn(
+            `Failed to trigger superapp-sandbox-build: ${e.message}`,
+          );
+        });
     }
 
     const nexusApkUrl = `http://localhost:8081/repository/apk-releases/superapp/${dto.releaseVersion}/app-debug.apk`;

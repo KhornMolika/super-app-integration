@@ -17,7 +17,7 @@ pipeline {
         stage('1. Pre-Flight & Manifest Verification') {
             steps {
                 echo "=========================================================="
-                echo " 🚀 Super App Fastlane CI Pipeline"
+                echo " [*] Super App Fastlane CI Pipeline"
                 echo " App Name        : ${params.APP_NAME}"
                 echo " Release Version : ${params.RELEASE_VERSION}"
                 echo " Build Mode      : ${params.BUILD_TYPE}"
@@ -95,20 +95,22 @@ pipeline {
         stage('3. Publish to Nexus & Finalize') {
             steps {
                 echo "Publishing APK artifact to Sonatype Nexus..."
-                sh """
-                APK_FILE="/var/reports/app-debug.apk"
-                REPO_NAME="${params.BUILD_TYPE == 'release' ? 'apk-releases' : 'apk-test-builds'}"
-                TARGET_NAME="${params.BUILD_TYPE == 'release' ? 'app-release.apk' : 'app-debug.apk'}"
-                NEXUS_USER="\${NEXUS_USER:-admin}"
-                NEXUS_PASSWORD="\${NEXUS_PASSWORD:-admin123}"
-                if [ -f "\$APK_FILE" ]; then
-                    echo "Uploading \${TARGET_NAME} to Nexus repository \${REPO_NAME} at ${params.NEXUS_URL}/repository/\${REPO_NAME}/${params.APP_NAME}/${params.RELEASE_VERSION}/\${TARGET_NAME}..."
-                    curl -s -f -u "\${NEXUS_USER}:\${NEXUS_PASSWORD}" --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/\${REPO_NAME}/${params.APP_NAME}/${params.RELEASE_VERSION}/\${TARGET_NAME}"
-                    echo "Upload to Sonatype Nexus \${REPO_NAME} successfully completed!"
-                else
-                    echo "Warning: \$APK_FILE not found, skipping binary upload."
-                fi
-                """
+                script {
+                    def repoName = params.BUILD_TYPE == 'release' ? 'apk-releases' : 'apk-test-builds'
+                    def targetName = params.BUILD_TYPE == 'release' ? 'app-release.apk' : 'app-debug.apk'
+                    sh """
+                    APK_FILE="/var/reports/app-debug.apk"
+                    NEXUS_USER="\${NEXUS_USER:-admin}"
+                    NEXUS_PASSWORD="\${NEXUS_PASSWORD:-admin123}"
+                    if [ -f "\$APK_FILE" ]; then
+                        echo "Uploading ${targetName} to Nexus repository ${repoName} at ${params.NEXUS_URL}/repository/${repoName}/${params.APP_NAME}/${params.RELEASE_VERSION}/${targetName}..."
+                        curl -s -f -u "\${NEXUS_USER}:\${NEXUS_PASSWORD}" --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/${repoName}/${params.APP_NAME}/${params.RELEASE_VERSION}/${targetName}"
+                        echo "Upload to Sonatype Nexus ${repoName} successfully completed!"
+                    else
+                        echo "Warning: \$APK_FILE not found, skipping binary upload."
+                    fi
+                    """
+                }
                 script {
                     sh """
                     node -e '

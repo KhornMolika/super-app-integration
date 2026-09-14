@@ -8,6 +8,11 @@ export class JenkinsService {
   private readonly jenkinsUser: string;
   private readonly jenkinsApiToken: string;
   private readonly callbackBaseUrl: string;
+  private readonly superAppRepoUrl: string;
+  private readonly superAppBranch: string;
+  private readonly sandboxBaseHref: string;
+  private readonly sandboxBuildMode: string;
+  private readonly jenkinsNexusUrl: string;
 
   constructor(private readonly configService: ConfigService) {
     this.jenkinsUrl = this.configService
@@ -21,6 +26,27 @@ export class JenkinsService {
     this.callbackBaseUrl = this.configService
       .get<string>('CALLBACK_BASE_URL', 'http://host.docker.internal:3000')
       .replace(/\/$/, '');
+
+    this.superAppRepoUrl = this.configService.get<string>(
+      'SUPERAPP_GIT_REPO_URL',
+      'https://github.com/KhornMolika/super-app-integration.git',
+    );
+    this.superAppBranch = this.configService.get<string>(
+      'SUPERAPP_GIT_BRANCH',
+      'molika',
+    );
+    this.sandboxBaseHref = this.configService.get<string>(
+      'SUPERAPP_SANDBOX_BASE_HREF',
+      '/superapp-sandbox/',
+    );
+    this.sandboxBuildMode = this.configService.get<string>(
+      'SUPERAPP_SANDBOX_BUILD_MODE',
+      'release',
+    );
+    this.jenkinsNexusUrl = this.configService.get<string>(
+      'JENKINS_NEXUS_URL',
+      'http://host.docker.internal:8081',
+    );
   }
 
   private getAuthHeader(): string | null {
@@ -238,18 +264,20 @@ export class JenkinsService {
     appName?: string;
     releaseVersion: string;
     buildType?: string;
+    nexusUrl?: string;
   }): Promise<{ success: boolean; message: string }> {
     const jobName = 'superapp-test-build';
     const callbackUrl = `${this.callbackBaseUrl}/api/release-assembly/build-callback`;
     const buildType = options.buildType || 'debug';
     const appName = options.appName || 'superapp';
+    const nexusUrl = options.nexusUrl || this.jenkinsNexusUrl;
 
     const params = new URLSearchParams({
       APP_NAME: appName,
       RELEASE_VERSION: options.releaseVersion,
       BUILD_TYPE: buildType,
       CALLBACK_URL: callbackUrl,
-      NEXUS_URL: 'http://host.docker.internal:8081',
+      NEXUS_URL: nexusUrl,
     });
 
     const triggerUrl = `${this.jenkinsUrl}/job/${jobName}/buildWithParameters?${params.toString()}`;
@@ -300,6 +328,93 @@ export class JenkinsService {
       };
     } catch (err: any) {
       this.logger.error(`Failed to trigger Jenkins build: ${err.message}`);
+      return {
+        success: false,
+        message: `Could not connect to Jenkins: ${err.message}`,
+      };
+    }
+  }
+
+  /**
+   * Triggers the superapp-sandbox-build parameterized pipeline in Jenkins
+   */
+  async triggerSuperAppSandboxBuild(options?: {
+    branch?: string;
+    baseHref?: string;
+    buildMode?: string;
+    publishToNexus?: boolean;
+    repoUrl?: string;
+    nexusUrl?: string;
+  }): Promise<{ success: boolean; message: string }> {
+    const jobName = 'superapp-sandbox-build';
+    const callbackUrl = `${this.callbackBaseUrl}/api/release-assembly/build-callback`;
+    const branch = options?.branch || this.superAppBranch;
+    const baseHref = options?.baseHref || this.sandboxBaseHref;
+    const buildMode = options?.buildMode || this.sandboxBuildMode;
+    const publishToNexus = options?.publishToNexus ? 'true' : 'false';
+    const repoUrl = options?.repoUrl || this.superAppRepoUrl;
+    const nexusUrl = options?.nexusUrl || this.jenkinsNexusUrl;
+
+    const params = new URLSearchParams({
+      REPO_URL: repoUrl,
+      BRANCH: branch,
+      BASE_HREF: baseHref,
+      BUILD_MODE: buildMode,
+      CALLBACK_URL: callbackUrl,
+      NEXUS_URL: nexusUrl,
+      PUBLISH_TO_NEXUS: publishToNexus,
+    });
+
+    const triggerUrl = `${this.jenkinsUrl}/job/${jobName}/buildWithParameters?${params.toString()}`;
+    this.logger.log(
+      `Triggering Jenkins Super App Web Sandbox pipeline: ${triggerUrl}`,
+    );
+
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      };
+
+      const authHeader = this.getAuthHeader();
+      if (authHeader) {
+        headers['Authorization'] = authHeader;
+      }
+
+      const crumbData = await this.getCrumb();
+      if (crumbData) {
+        headers[crumbData.headerName] = crumbData.crumb;
+        if (crumbData.cookie) {
+          headers['Cookie'] = crumbData.cookie;
+        }
+      }
+
+      const response = await fetch(triggerUrl, {
+        method: 'POST',
+        headers,
+      });
+
+      if (response.status === 201 || response.status === 200) {
+        this.logger.log(
+          `Jenkins job "${jobName}" triggered successfully for branch ${branch}`,
+        );
+        return {
+          success: true,
+          message: 'Super App Web Sandbox pipeline triggered successfully',
+        };
+      }
+
+      const responseBody = await response.text();
+      this.logger.warn(
+        `Jenkins sandbox trigger returned HTTP ${response.status}: ${responseBody.substring(0, 300)}`,
+      );
+      return {
+        success: false,
+        message: `Jenkins returned HTTP ${response.status}: ${responseBody.substring(0, 150)}`,
+      };
+    } catch (err: any) {
+      this.logger.error(
+        `Failed to trigger Jenkins sandbox build: ${err.message}`,
+      );
       return {
         success: false,
         message: `Could not connect to Jenkins: ${err.message}`,

@@ -643,6 +643,15 @@ export class MiniappLifecycleHelper {
             `Jenkins test build trigger returned: ${jenkinsResult.message}`,
           );
         }
+
+        // Also trigger Super App Web Sandbox build concurrently
+        this.jenkinsService
+          .triggerSuperAppSandboxBuild()
+          .catch((e: any) => {
+            this.logger.warn(
+              `Failed to trigger superapp-sandbox-build: ${e.message}`,
+            );
+          });
       } catch (err: any) {
         this.logger.error(
           `Error triggering Jenkins test build: ${err.message}`,

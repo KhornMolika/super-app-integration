@@ -58,9 +58,9 @@ try {
 }
 
 # 2. Sync to Jenkins container so subsequent Jenkins jobs use the fresh binary
-Write-Host "`n🔄 Syncing APK into Jenkins container (/var/reports/app-debug.apk)..." -ForegroundColor Yellow
+Write-Host "`n🔄 Syncing APK into Jenkins container..." -ForegroundColor Yellow
 try {
-    & docker cp "$ApkPath" "jenkins-controller:/var/reports/app-debug.apk"
+    & docker cp "$ApkPath" "jenkins-controller:/var/reports/app-debug.apk" 2>$null
     Write-Host "✅ Jenkins container /var/reports/app-debug.apk updated!" -ForegroundColor Green
 } catch {
     Write-Host "ℹ️ (Optional) Jenkins container not running or docker cp skipped." -ForegroundColor Gray

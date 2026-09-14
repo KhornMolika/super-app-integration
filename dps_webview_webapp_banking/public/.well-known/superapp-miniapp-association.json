@@ -1,9 +1,9 @@
 {
-  "appId": "miniapp_ii_ff4206",
-  "verificationToken": "tok_live_61f19cc570325869b51d6ab851a118aa",
+  "appId": "miniapp_nn_f10315",
+  "verificationToken": "tok_live_b3ebe1c8fe92628393c55cf658432518",
   "environment": "DEV",
   "allowedDomains": [
-    "172.20.64.1"
+    "localhost"
   ],
   "permissions": [
     "Camera"

@@ -8,7 +8,7 @@ platform :android do
     nexus_url = options[:nexus_url] || "http://localhost:8081"
     
     UI.message("==================================================")
-    UI.message("🚀 FASTLANE SUPER APP ANDROID BUILD PIPELINE")
+    UI.message("FASTLANE SUPER APP ANDROID BUILD PIPELINE")
     UI.message(" App Name       : #{app_name}")
     UI.message(" Target Version : #{version}")
     UI.message(" Nexus Registry : #{nexus_url}/repository/apk-releases/#{app_name}/#{version}/")
@@ -20,19 +20,19 @@ platform :android do
     # 2. Verify APK Artifact
     apk_path = "../../build/app/outputs/flutter-apk/app-debug.apk"
     unless File.exist?(apk_path)
-      UI.user_error!("❌ APK artifact was not generated at #{apk_path}")
+      UI.user_error!("APK artifact was not generated at #{apk_path}")
     end
 
-    UI.success("✓ Built APK successfully: #{apk_path}")
+    UI.success("Built APK successfully: #{apk_path}")
 
     # 3. Publish to Sonatype Nexus apk-releases repository categorized by app name
-    UI.message("📦 Promoting and publishing APK to Sonatype Nexus under #{app_name}/#{version}/...")
+    UI.message("Promoting and publishing APK to Sonatype Nexus under #{app_name}/#{version}/...")
     nexus_user = ENV['NEXUS_USER'] || 'admin'
     nexus_pass = ENV['NEXUS_PASSWORD'] || ''
     auth_arg = nexus_pass.empty? ? "" : "-u #{nexus_user}:#{nexus_pass}"
     sh("curl -s -f #{auth_arg} --upload-file #{apk_path} #{nexus_url}/repository/apk-releases/#{app_name}/#{version}/app-debug.apk || echo 'Nexus upload complete'")
     
-    UI.success("🎉 Fastlane pipeline completed successfully for #{app_name} (#{version})!")
+    UI.success("Fastlane pipeline completed successfully for #{app_name} (#{version})!")
   end
 
   desc "Build Production Signed AAB (Android App Bundle)"
