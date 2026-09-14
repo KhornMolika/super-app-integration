@@ -12,7 +12,7 @@ export interface ValidationReportProps {
   onRefresh?: () => void;
 }
 
-interface StageCatalogItem {
+export interface StageCatalogItem {
   id: string;
   name: string;
   tool: string;
@@ -21,7 +21,7 @@ interface StageCatalogItem {
   description: string;
 }
 
-const STAGE_CATALOG: Record<string, StageCatalogItem> = {
+export const STAGE_CATALOG: Record<string, StageCatalogItem> = {
   ingest: {
     id: 'ingest',
     name: 'Ingestion & Integrity Verification',

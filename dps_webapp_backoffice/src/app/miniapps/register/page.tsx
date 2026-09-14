@@ -673,6 +673,8 @@ export default function RegisterMiniAppPage() {
       <SubmissionModal
         state={modalState}
         mode="register"
+        securityChecks={formData.securityChecks}
+        integrationMethod={formData.integrationMethod}
         onClose={() => setModalState({ ...modalState, isOpen: false })}
         onFixLater={async () => {
           setModalState((prev) => ({ ...prev, status: 'loading' }));

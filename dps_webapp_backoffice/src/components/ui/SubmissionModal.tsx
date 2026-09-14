@@ -1,6 +1,8 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/inputs';
+import { STAGE_CATALOG } from '@/components/ui/ValidationReportTab';
+import { getRecommendedChecksForMethod } from '@/components/forms/SecurityValidationSelector';
 
 export type ValidationStageItem = {
   id: string;
@@ -17,6 +19,8 @@ export type SubmissionModalState = {
   errors?: Record<string, string>;
   createdId?: string;
   stages?: Record<string, ValidationStageItem>;
+  securityChecks?: string[];
+  integrationMethod?: string;
 };
 
 type SubmissionModalProps = {
@@ -26,47 +30,111 @@ type SubmissionModalProps = {
   onSuccessContinue: () => void;
   onFixLater?: () => void;
   mode: 'register' | 'manage';
+  securityChecks?: string[];
+  integrationMethod?: string;
 };
 
-const ORDERED_STAGES: Array<{ id: string; name: string; defaultDetails: string }> = [
-  { id: 'ssrf', name: '1. Pre-Flight & SSRF Defense', defaultDetails: 'Verifying DNS resolution & private IP routes...' },
-  { id: 'tls', name: '2. TLS & HTTPS Security', defaultDetails: 'Awaiting cipher suite & protocol audit' },
-  { id: 'zap', name: '3. OWASP ZAP DAST Scan', defaultDetails: 'Awaiting baseline spider, XSS & CSP header audit' },
-  { id: 'nuclei', name: '4. Exposure & Vulnerability Audit', defaultDetails: 'Awaiting CVE, .env, and secret exposure audit' },
-];
-
-export default function SubmissionModal({ state, onClose, onRunInBackground, onSuccessContinue, mode }: SubmissionModalProps) {
+export default function SubmissionModal({
+  state,
+  onClose,
+  onRunInBackground,
+  onSuccessContinue,
+  mode,
+  securityChecks: propSecurityChecks,
+  integrationMethod: propIntegrationMethod,
+}: SubmissionModalProps) {
   const router = useRouter();
   if (!state.isOpen) return null;
 
-  const stageList: Array<{ id: string; name: string; status: string; details?: string; icon?: string; tool?: string; order?: number }> = React.useMemo(() => {
-    if (state.stages && Object.keys(state.stages).length > 0) {
-      const list = Object.values(state.stages).map((s: any) => {
-        const numMatch = typeof s.name === 'string' ? s.name.match(/^(\d+)\./) : null;
-        const parsedOrder = s.order !== undefined ? Number(s.order) : (numMatch ? parseInt(numMatch[1], 10) : 999);
-        return {
-          id: s.id || s.name,
-          name: s.name || s.id,
-          status: s.status || 'PENDING',
-          details: s.details,
-          icon: s.icon,
-          tool: s.tool,
-          order: parsedOrder,
-        };
-      });
+  const stageList = React.useMemo(() => {
+    const rawMethod = propIntegrationMethod || state.integrationMethod || 'WEBVIEW';
+    const isFlutter = rawMethod === 'FLUTTER_PACKAGE' || rawMethod === 'NATIVE_SDK';
+    const activeMethod = rawMethod;
 
-      return list.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
-    }
-    return ORDERED_STAGES.map((item, idx) => {
+    const rawChecks =
+      (propSecurityChecks && propSecurityChecks.length > 0)
+        ? propSecurityChecks
+        : (state.securityChecks && state.securityChecks.length > 0)
+        ? state.securityChecks
+        : getRecommendedChecksForMethod(activeMethod);
+
+    const baselineKeys = isFlutter ? ['ingest', 'ssrf'] : ['ssrf'];
+    const allowedKeys = Array.from(new Set([...baselineKeys, ...rawChecks]));
+
+    const aliasMap: Record<string, string[]> = {
+      dast_zap: ['dast_zap', 'zap'],
+      domain_tls_audit: ['domain_tls_audit', 'tls'],
+      dependency_scan: ['dependency_scan', 'sca'],
+      secret_scan: ['secret_scan', 'secrets'],
+      sast: ['sast', 'malware_sast'],
+      sbom: ['sbom'],
+      capability_gate: ['capability_gate'],
+      malware_scan: ['malware_scan'],
+      license_compliance: ['license_compliance'],
+      csp_headers_audit: ['csp_headers_audit'],
+      ssrf: ['ssrf'],
+      ingest: ['ingest'],
+    };
+
+    const stagesMap = state.stages || {};
+
+    return allowedKeys.map((key, idx) => {
+      const catalog = STAGE_CATALOG[key];
+      const aliases = aliasMap[key] || [key];
+
+      let recorded: any = null;
+      for (const a of aliases) {
+        if (stagesMap[a]) {
+          recorded = stagesMap[a];
+          break;
+        }
+      }
+
+      const defaultName = catalog?.name || key;
+      const rawName = recorded?.name
+        ? recorded.name.replace(/^\d+\.\s*/, '')
+        : defaultName;
+
+      const numPrefix = `${idx + 1}. `;
+      const finalName = `${numPrefix}${rawName}`;
+
+      if (recorded) {
+        return {
+          id: key,
+          name: finalName,
+          status: recorded.status || 'PENDING',
+          details:
+            recorded.details ||
+            (recorded.status === 'COMPLETED'
+              ? 'Verification passed'
+              : recorded.status === 'RUNNING'
+              ? 'In progress...'
+              : `Awaiting ${defaultName}...`),
+          icon: catalog?.icon || '🛡️',
+          tool: catalog?.tool,
+          order: idx + 1,
+        };
+      }
+
+      // Initial state before stages are reported by backend
       return {
-        id: item.id,
-        name: item.name,
-        status: item.id === 'ssrf' ? 'RUNNING' : 'PENDING',
-        details: item.defaultDetails,
+        id: key,
+        name: finalName,
+        status: idx === 0 ? 'RUNNING' : 'PENDING',
+        details:
+          idx === 0
+            ? (key === 'ssrf'
+                ? 'Verifying DNS resolution & private IP routes...'
+                : key === 'ingest'
+                ? 'Unpacking package & verifying cryptographic digest...'
+                : 'Initiating security audit...')
+            : `Awaiting ${defaultName}...`,
+        icon: catalog?.icon || '🛡️',
+        tool: catalog?.tool,
         order: idx + 1,
       };
     });
-  }, [state.stages]);
+  }, [state.stages, state.securityChecks, state.integrationMethod, propSecurityChecks, propIntegrationMethod]);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">

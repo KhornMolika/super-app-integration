@@ -852,6 +852,8 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
       <SubmissionModal
         state={modalState}
         mode="manage"
+        securityChecks={formData.securityChecks}
+        integrationMethod={formData.integrationMethod}
         onClose={() => setModalState((prev) => ({ ...prev, isOpen: false }))}
         onFixLater={() => {
           setModalState((prev) => ({ ...prev, isOpen: false }));
