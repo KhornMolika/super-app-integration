@@ -1,6 +1,7 @@
 /doc
 /fix-errors
 .superpowers/
+.worktrees/
 .env.development
 .env.production
 .env.local
@@ -20,3 +21,9 @@ build/
 **/build/
 *.lock.db
 *.lock
+
+# Vendor Samples
+vendor-samples/**/build/
+vendor-samples/**/.swiftpm/
+vendor-samples/**/.gradle/
+vendor-samples/**/local.properties

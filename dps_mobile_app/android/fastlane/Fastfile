@@ -54,13 +54,18 @@ platform :android do
     UI.user_error!("APK not found at #{apk_path}") unless File.exist?(apk_path)
     UI.success("Built #{apk_path} (#{(File.size(apk_path) / 1024.0 / 1024.0).round(1)} MB)")
 
+    pr_number = ENV["CODEGEN_PR_NUMBER"]
+    ref_label = ENV['GITHUB_BASE_REF'] && !ENV['GITHUB_BASE_REF'].empty? ? ENV['GITHUB_BASE_REF'] : (ENV['GITHUB_REF_NAME'] || 'local')
+    release_notes = "CI: #{ref_label} @ #{(ENV['GITHUB_SHA'] || 'dev')[0, 7]}"
+    release_notes += " — Native SDK codegen PR ##{pr_number}" unless pr_number.nil? || pr_number.empty?
+
     firebase_app_distribution(
       app: ENV.fetch("FIREBASE_APP_ID"),
       service_credentials_file: ENV["GOOGLE_APPLICATION_CREDENTIALS"],
       android_artifact_type: "APK",
       android_artifact_path: apk_path,
       groups: "internal-testers",
-      release_notes: "CI: #{ENV['GITHUB_REF_NAME'] || 'local'} @ #{(ENV['GITHUB_SHA'] || 'dev')[0, 7]}"
+      release_notes: release_notes
     )
   end
 end

@@ -1,6 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { ReleaseAssemblyVerificationService } from './release-assembly-verification.service';
 import { NexusIntegrationService } from '../nexus/nexus-integration.service';
+import { JenkinsService } from '../jenkins/jenkins.service';
+import { NotificationsService } from '../../notifications/notifications.service';
+import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 
 describe('ReleaseAssemblyVerificationService', () => {
   let service: ReleaseAssemblyVerificationService;
@@ -21,10 +25,17 @@ describe('ReleaseAssemblyVerificationService', () => {
       }),
     };
 
+    const jenkinsService: jest.Mocked<Partial<JenkinsService>> = {
+      triggerSuperAppBuild: jest.fn().mockResolvedValue({ success: true, message: 'triggered' }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ReleaseAssemblyVerificationService,
         { provide: NexusIntegrationService, useValue: nexusService },
+        { provide: JenkinsService, useValue: jenkinsService },
+        { provide: NotificationsService, useValue: {} },
+        { provide: getRepositoryToken(MiniApp), useValue: { update: jest.fn().mockResolvedValue({}) } },
       ],
     }).compile();
 

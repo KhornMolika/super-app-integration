@@ -6,6 +6,12 @@
       "runtimeExecutable": "bash",
       "runtimeArgs": ["-c", "cd dps_webapp_backoffice && npx --yes pnpm@10.33.0 run dev"],
       "port": 3002
+    },
+    {
+      "name": "backend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd dps_backend && npx --yes pnpm@10.33.0 run start:dev"],
+      "port": 3000
     }
   ]
 }

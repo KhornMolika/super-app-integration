@@ -47,6 +47,14 @@ export default function RegisterMiniAppPage() {
     },
     integrationConfigFlutter: { sourceType: SourceType.ARTIFACT, packageName: '', versionConstraint: '' },
     integrationConfigDeepLink: { urlScheme: '', packageName: '', appStoreUrl: '' },
+    integrationConfigNativeSdk: {
+      iosModuleName: '',
+      iosTypeName: '',
+      iosArtifactFilename: '',
+      androidPackageName: '',
+      androidObjectName: '',
+      androidArtifactFilename: '',
+    },
     permissions: []
   });
 
@@ -226,6 +234,24 @@ export default function RegisterMiniAppPage() {
           }
         }
       }
+
+      if (formData.integrationMethod === IntegrationMethod.NATIVE_SDK) {
+        const conf: Record<string, string | undefined> = (formData.integrationConfigNativeSdk || {}) as any;
+        const requiredFields: { key: string; label: string }[] = [
+          { key: 'iosModuleName', label: 'iOS Module Name is required' },
+          { key: 'iosTypeName', label: 'iOS Type Name is required' },
+          { key: 'iosArtifactFilename', label: 'iOS Artifact Filename is required' },
+          { key: 'androidPackageName', label: 'Android Package Name is required' },
+          { key: 'androidObjectName', label: 'Android Object Name is required' },
+          { key: 'androidArtifactFilename', label: 'Android Artifact Filename is required' },
+        ];
+        requiredFields.forEach(({ key, label }) => {
+          if (!conf[key] || conf[key]!.trim() === '') {
+            errors[`integrationConfigNativeSdk.${key}`] = label;
+            isValid = false;
+          }
+        });
+      }
     }
 
     if (currentStep === 4) {
@@ -258,6 +284,7 @@ export default function RegisterMiniAppPage() {
     const payload = { ...formData };
     if (payload.integrationMethod !== IntegrationMethod.WEBVIEW) delete payload.integrationConfigWebView;
     if (payload.integrationMethod !== IntegrationMethod.FLUTTER_PACKAGE) delete payload.integrationConfigFlutter;
+    if (payload.integrationMethod !== IntegrationMethod.NATIVE_SDK) delete payload.integrationConfigNativeSdk;
 
     try {
       const response = await fetch(`${API_URL}/mini-apps/draft`, {
@@ -406,6 +433,13 @@ export default function RegisterMiniAppPage() {
     });
   };
 
+  const handleNativeSdkChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setFormData({
+      ...formData,
+      integrationConfigNativeSdk: { ...formData.integrationConfigNativeSdk!, [e.target.name]: e.target.value } as any
+    });
+  };
+
   const togglePermission = (type: string) => {
     const exists = formData.permissions?.find(p => p.type === type);
     if (exists) {
@@ -450,6 +484,7 @@ export default function RegisterMiniAppPage() {
     }
     if (payload.integrationMethod !== IntegrationMethod.FLUTTER_PACKAGE) delete payload.integrationConfigFlutter;
     if (payload.integrationMethod !== IntegrationMethod.DEEP_LINK) delete payload.integrationConfigDeepLink;
+    if (payload.integrationMethod !== IntegrationMethod.NATIVE_SDK) delete payload.integrationConfigNativeSdk;
 
     try {
       const url = modalState.createdId ? `${API_URL}/mini-apps/${modalState.createdId}` : `${API_URL}/mini-apps`;
@@ -627,6 +662,7 @@ export default function RegisterMiniAppPage() {
               handleWebViewChange={handleWebViewChange}
               handleFlutterChange={handleFlutterChange}
               handleDeepLinkChange={handleDeepLinkChange}
+              handleNativeSdkChange={handleNativeSdkChange}
               onDomainVerified={handleDomainVerified}
             />
           </Card>}
@@ -708,6 +744,16 @@ export default function RegisterMiniAppPage() {
                         <div><span className="text-slate-500">Branch:</span> <br />{formData.integrationConfigFlutter?.gitBranch || '-'}</div>
                       </>
                     )}
+                  </div>
+                )}
+                {formData.integrationMethod === 'NATIVE_SDK' && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div><span className="text-slate-500">iOS Module Name:</span> <br /><span className="font-mono">{formData.integrationConfigNativeSdk?.iosModuleName || '-'}</span></div>
+                    <div><span className="text-slate-500">iOS Type Name:</span> <br /><span className="font-mono">{formData.integrationConfigNativeSdk?.iosTypeName || '-'}</span></div>
+                    <div><span className="text-slate-500">iOS Artifact:</span> <br /><span className="font-mono">{formData.integrationConfigNativeSdk?.iosArtifactFilename || '-'}</span></div>
+                    <div><span className="text-slate-500">Android Package Name:</span> <br /><span className="font-mono">{formData.integrationConfigNativeSdk?.androidPackageName || '-'}</span></div>
+                    <div><span className="text-slate-500">Android Object Name:</span> <br /><span className="font-mono">{formData.integrationConfigNativeSdk?.androidObjectName || '-'}</span></div>
+                    <div><span className="text-slate-500">Android Artifact:</span> <br /><span className="font-mono">{formData.integrationConfigNativeSdk?.androidArtifactFilename || '-'}</span></div>
                   </div>
                 )}
               </div>

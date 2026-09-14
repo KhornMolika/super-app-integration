@@ -4,9 +4,13 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/inputs';
 import { FirebaseReleasesPanel } from '@/components/ui/FirebaseReleasesPanel';
+import { CodegenPipelinePanel, type EligibleApp } from '@/components/ui/CodegenPipelinePanel';
 
 export default function ReleasesPage() {
   const [apps, setApps] = useState<any[]>([]);
+  // Unfiltered mini apps list — the codegen panel must also see BUILDING/TESTING
+  // apps, which are exactly the ones with an in-flight codegen PR.
+  const [allApps, setAllApps] = useState<EligibleApp[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [releaseVersion, setReleaseVersion] = useState('v1.1.0');
   const [isAssembling, setIsAssembling] = useState(false);
@@ -17,6 +21,7 @@ export default function ReleasesPage() {
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
+          setAllApps(data);
           // Filter to show Approved, Published, or Active apps
           setApps(data.filter(app => ['APPROVED', 'PUBLISHED', 'ACTIVE', 'Approved', 'Published'].includes(app.status)));
         }
@@ -238,6 +243,7 @@ export default function ReleasesPage() {
         </div>
       </div>
 
+      <CodegenPipelinePanel apps={allApps} />
       <FirebaseReleasesPanel />
     </div>
   );

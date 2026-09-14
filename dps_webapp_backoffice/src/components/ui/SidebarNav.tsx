@@ -76,6 +76,14 @@ const navGroups: NavGroup[] = [
         ),
       },
       {
+        name: 'Releases',
+        href: '/releases',
+        requiredPermission: 'super_app:read',
+        icon: (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 12V3m0 0l-3.5 3.5M12 3l3.5 3.5" /></svg>
+        ),
+      },
+      {
         name: 'Permissions',
         href: '/permissions',
         requiredPermission: 'permission:read',

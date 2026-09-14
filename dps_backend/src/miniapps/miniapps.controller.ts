@@ -47,10 +47,13 @@ export class MiniappsController {
       dataToSave.integrationConfig = createData.integrationConfigFlutter;
     } else if (createData.integrationMethod === 'DEEP_LINK') {
       dataToSave.integrationConfig = createData.integrationConfigDeepLink;
+    } else if (createData.integrationMethod === 'NATIVE_SDK') {
+      dataToSave.integrationConfig = createData.integrationConfigNativeSdk;
     }
     delete dataToSave.integrationConfigWebView;
     delete dataToSave.integrationConfigFlutter;
     delete dataToSave.integrationConfigDeepLink;
+    delete dataToSave.integrationConfigNativeSdk;
     return this.miniappService.create(dataToSave, req.user.sub);
   }
 
@@ -84,12 +87,15 @@ export class MiniappsController {
       dataToSave.integrationConfig = createData.integrationConfigFlutter;
     } else if (createData.integrationMethod === 'DEEP_LINK') {
       dataToSave.integrationConfig = createData.integrationConfigDeepLink;
+    } else if (createData.integrationMethod === 'NATIVE_SDK') {
+      dataToSave.integrationConfig = createData.integrationConfigNativeSdk;
     }
-    
+
     // Clean up DTO specific fields
     delete dataToSave.integrationConfigWebView;
     delete dataToSave.integrationConfigFlutter;
     delete dataToSave.integrationConfigDeepLink;
+    delete dataToSave.integrationConfigNativeSdk;
 
     return this.miniappService.create(dataToSave, req.user.sub);
   }
@@ -312,12 +318,15 @@ export class MiniappsController {
       dataToSave.integrationConfig = updateData.integrationConfigFlutter;
     } else if (updateData.integrationMethod === 'DEEP_LINK') {
       dataToSave.integrationConfig = (updateData as any).integrationConfigDeepLink;
+    } else if (updateData.integrationMethod === 'NATIVE_SDK') {
+      dataToSave.integrationConfig = (updateData as any).integrationConfigNativeSdk;
     }
-    
+
     // Clean up DTO specific fields
     delete dataToSave.integrationConfigWebView;
     delete dataToSave.integrationConfigFlutter;
     delete dataToSave.integrationConfigDeepLink;
+    delete dataToSave.integrationConfigNativeSdk;
 
     return this.miniappService.update(id, dataToSave, req.user.sub);
   }
