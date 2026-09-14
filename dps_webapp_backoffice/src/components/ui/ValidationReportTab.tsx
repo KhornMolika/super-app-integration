@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { io } from 'socket.io-client';
 import { Button } from '@/components/ui/inputs';
 import { Card, CardHeader } from '@/components/ui/card';
@@ -170,11 +171,16 @@ export const STAGE_CATALOG: Record<string, StageCatalogItem> = {
 };
 
 export default function ValidationReportTab({ miniApp, onRefresh }: ValidationReportProps) {
+  const [mounted, setMounted] = useState(false);
   const [isReScanning, setIsReScanning] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [reScanMessage, setReScanMessage] = useState<string | null>(null);
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [configuredChecks, setConfiguredChecks] = useState<string[]>(miniApp.securityChecks || []);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const report = miniApp.validationReport || null;
   const stages = miniApp.validationStages || {};
@@ -457,8 +463,8 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Floating Toast Notification for Re-Scan / Status Actions */}
-      {reScanMessage && (
-        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
+      {mounted && reScanMessage && createPortal(
+        <div className="fixed bottom-6 right-6 z-[120] animate-in slide-in-from-bottom-5 fade-in duration-300">
           <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900/95 dark:bg-slate-800/95 text-white shadow-2xl border border-slate-700/80 backdrop-blur-md">
             <span className="relative flex h-2.5 w-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
@@ -466,13 +472,16 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
             </span>
             <span className="text-sm font-semibold tracking-wide">{reScanMessage}</span>
             <button
+              type="button"
               onClick={() => setReScanMessage(null)}
               className="ml-2 text-slate-400 hover:text-white p-0.5 rounded transition-colors"
+              aria-label="Dismiss notification"
             >
               ✕
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Executive Security Summary Card */}
@@ -969,26 +978,39 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
       </Card>
 
       {/* Security Checks Re-Configuration Modal */}
-      {showConfigModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl flex flex-col">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
+      {mounted && showConfigModal && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-150">
+          {/* Backdrop overlay */}
+          <div
+            className="fixed inset-0 bg-slate-950/70 dark:bg-slate-950/80 backdrop-blur-sm transition-opacity"
+            onClick={() => setShowConfigModal(false)}
+          />
+
+          {/* Modal Dialog Card */}
+          <div
+            className="relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 max-w-4xl w-full max-h-[85vh] shadow-2xl flex flex-col overflow-hidden z-10 animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header (pinned at top) */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold text-lg">
+                <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold text-lg border border-brand-100 dark:border-brand-800/50">
                   🛡️
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                     Re-Configure Security Scan Profile
                   </h3>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     Select the automated security audits to run for this Mini App ({miniApp.integrationMethod})
                   </p>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setShowConfigModal(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                aria-label="Close modal"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -996,7 +1018,8 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
               </button>
             </div>
 
-            <div className="py-2">
+            {/* Scrollable Content Body */}
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
               <SecurityValidationSelector
                 integrationMethod={miniApp.integrationMethod}
                 selectedChecks={configuredChecks}
@@ -1004,31 +1027,41 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
               />
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-5 border-t border-slate-100 dark:border-slate-800 mt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowConfigModal(false)}
-                className="text-sm px-4"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                variant="primary"
-                disabled={configuredChecks.length === 0}
-                onClick={() => handleReScan(configuredChecks)}
-                className="text-sm px-5 flex items-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>Run Custom Scan ({configuredChecks.length} checks)</span>
-              </Button>
+            {/* Footer (sticky at bottom) */}
+            <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300/50 dark:border-slate-700">
+                  {configuredChecks.length} {configuredChecks.length === 1 ? 'Check' : 'Checks'} Selected
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowConfigModal(false)}
+                  className="text-sm px-4"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  disabled={configuredChecks.length === 0}
+                  onClick={() => handleReScan(configuredChecks)}
+                  className="text-sm px-5 flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Run Custom Scan ({configuredChecks.length} checks)</span>
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
