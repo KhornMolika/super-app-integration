@@ -21,6 +21,7 @@ import ValidationReportTab from '@/components/ui/ValidationReportTab';
 import { ValidatedUrlInput } from '@/components/ui/ValidatedUrlInput';
 import { LogoUploadInput } from '@/components/ui/LogoUploadInput';
 import { CreateMiniAppDto, IntegrationMethod, SourceType } from '@/types/miniapp.types';
+import { CodegenStatusCard } from '@/components/ui/CodegenStatusCard';
 
 
 
@@ -28,7 +29,11 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
   const router = useRouter();
   const { id } = use(params);
 
-  const [formData, setFormData] = useState<Partial<CreateMiniAppDto & { status: string, validationErrors?: Record<string, string> }>>({
+  const [formData, setFormData] = useState<Partial<CreateMiniAppDto & {
+    status: string,
+    validationErrors?: Record<string, string>,
+    lastCodegenRun?: { status: string; prNumber?: number },
+  }>>({
     name: '',
     appId: '',
     category: 'Insurance',
@@ -776,6 +781,12 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
             )}
           </div>
         </div>
+
+        {formData.integrationMethod === IntegrationMethod.NATIVE_SDK &&
+          formData.lastCodegenRun?.status === 'opened' &&
+          typeof formData.lastCodegenRun.prNumber === 'number' && (
+            <CodegenStatusCard prNumber={formData.lastCodegenRun.prNumber} />
+          )}
 
         {/* SA Admin Review & Action Banner for IN_REVIEW */}
         {can('miniapp:approve') && formData.status === 'IN_REVIEW' && (
