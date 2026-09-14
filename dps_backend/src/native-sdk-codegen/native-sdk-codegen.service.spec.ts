@@ -45,6 +45,21 @@ describe('NativeSdkCodegenService', () => {
   let service: NativeSdkCodegenService;
   let miniappFind: jest.Mock;
   let getFileContent: jest.Mock;
+  let fetchMock: jest.Mock;
+
+  const defaultArtifactListing = [
+    { name: 'PermitCheckSDK.xcframework' },
+    { name: 'permit-check-sdk-1.0.0.aar' },
+  ];
+
+  function mockArtifactListing(entries: { name: string }[] = defaultArtifactListing) {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(entries),
+      text: () => Promise.resolve(JSON.stringify(entries)),
+    });
+  }
 
   async function setup(apps: MiniApp[], fileContents: Record<string, string>) {
     miniappFind = jest.fn().mockResolvedValue(apps);
@@ -52,6 +67,9 @@ describe('NativeSdkCodegenService', () => {
       if (path in fileContents) return Promise.resolve(fileContents[path]);
       return Promise.reject(new Error(`File '${path}' not found`));
     });
+    fetchMock = jest.fn();
+    (global as any).fetch = fetchMock;
+    mockArtifactListing();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -79,8 +97,6 @@ describe('NativeSdkCodegenService', () => {
     android: 'dps_mobile_app/android/app/src/main/kotlin/com/example/dsp_mobile/MainActivity.kt',
     podfile: 'dps_mobile_app/ios/Podfile',
     gradle: 'dps_mobile_app/android/app/build.gradle.kts',
-    artifact: 'vendor-artifacts/PermitCheckSDK.xcframework',
-    androidArtifact: 'vendor-artifacts/permit-check-sdk-1.0.0.aar',
   };
 
   const baselineFiles = {
@@ -88,8 +104,6 @@ describe('NativeSdkCodegenService', () => {
     [filePaths.android]: MAIN_ACTIVITY,
     [filePaths.podfile]: PODFILE,
     [filePaths.gradle]: GRADLE,
-    [filePaths.artifact]: 'binary-not-read-as-text-but-present',
-    [filePaths.androidArtifact]: 'binary-not-read-as-text-but-present',
   };
 
   it('returns the changed files for a newly approved vendor', async () => {
@@ -121,10 +135,9 @@ describe('NativeSdkCodegenService', () => {
     expect(changedFiles.size).toBe(0);
   });
 
-  it('throws when a vendor artifact is missing from the repo', async () => {
-    const filesWithoutArtifact = { ...baselineFiles };
-    delete filesWithoutArtifact[filePaths.artifact];
-    await setup([makeApprovedNativeSdkApp()], filesWithoutArtifact);
+  it('throws when a vendor artifact is missing from the directory listing', async () => {
+    await setup([makeApprovedNativeSdkApp()], baselineFiles);
+    mockArtifactListing([{ name: 'PermitCheckSDK.xcframework' }]); // androidArtifact missing
 
     await expect(service.regenerate()).rejects.toThrow(/missing artifact/i);
   });
@@ -136,6 +149,15 @@ describe('NativeSdkCodegenService', () => {
     );
 
     await expect(service.regenerate()).rejects.toThrow(/iosModuleName/);
+  });
+
+  it('throws when a NATIVE_SDK app has no integrationConfig at all', async () => {
+    await setup(
+      [makeApprovedNativeSdkApp({ integrationConfig: null } as any)],
+      baselineFiles,
+    );
+
+    await expect(service.regenerate()).rejects.toThrow(/has no integrationConfig/i);
   });
 
   it('throws when two appIds collide on the same generated identifier', async () => {

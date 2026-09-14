@@ -68,28 +68,29 @@ export class NativeSdkCodegenService {
       order: { appId: 'ASC' } as any,
     });
 
-    const vendors = apps
-      .filter(app => app.integrationConfig)
-      .map(app => {
-        const config = app.integrationConfig;
-        for (const field of REQUIRED_VENDOR_FIELDS) {
-          const value = config[field];
-          if (typeof value !== 'string' || value.trim() === '') {
-            throw new Error(
-              `NATIVE_SDK app "${app.appId}" has an invalid integrationConfig: "${field}" must be a non-empty string`,
-            );
-          }
+    const vendors = apps.map(app => {
+      const config = app.integrationConfig;
+      if (!config) {
+        throw new Error(`NATIVE_SDK app "${app.appId}" has no integrationConfig set`);
+      }
+      for (const field of REQUIRED_VENDOR_FIELDS) {
+        const value = config[field];
+        if (typeof value !== 'string' || value.trim() === '') {
+          throw new Error(
+            `NATIVE_SDK app "${app.appId}" has an invalid integrationConfig: "${field}" must be a non-empty string`,
+          );
         }
-        return {
-          appId: app.appId,
-          iosModuleName: config.iosModuleName,
-          iosTypeName: config.iosTypeName,
-          iosArtifactFilename: config.iosArtifactFilename,
-          androidPackageName: config.androidPackageName,
-          androidObjectName: config.androidObjectName,
-          androidArtifactFilename: config.androidArtifactFilename,
-        };
-      });
+      }
+      return {
+        appId: app.appId,
+        iosModuleName: config.iosModuleName,
+        iosTypeName: config.iosTypeName,
+        iosArtifactFilename: config.iosArtifactFilename,
+        androidPackageName: config.androidPackageName,
+        androidObjectName: config.androidObjectName,
+        androidArtifactFilename: config.androidArtifactFilename,
+      };
+    });
 
     const byIdentifier = new Map<string, string>();
     for (const vendor of vendors) {
@@ -104,6 +105,26 @@ export class NativeSdkCodegenService {
     }
 
     return vendors;
+  }
+
+  private async listVendorArtifactNames(slug: string, base: string): Promise<Set<string>> {
+    const baseUrl = this.configService.get<string>('GITHUB_BASE_URL') || 'https://api.github.com';
+    const token = this.configService.get<string>('GITHUB_TOKEN');
+    const res = await fetch(
+      `${baseUrl}/repos/${slug}/contents/vendor-artifacts?ref=${encodeURIComponent(base)}`,
+      {
+        headers: {
+          Accept: 'application/vnd.github+json',
+          'User-Agent': 'DPS-SuperApp-Integration',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      },
+    );
+    if (!res.ok) {
+      throw new Error(`Failed to list vendor-artifacts directory in ${slug}@${base} (${res.status})`);
+    }
+    const entries = (await res.json()) as { name: string }[];
+    return new Set(entries.map(e => e.name));
   }
 
   private editsFor(vendors: NativeSdkVendor[]): RegionEdit[] {
@@ -127,14 +148,12 @@ export class NativeSdkCodegenService {
     const slug = this.repoSlug();
     const base = this.baseBranch();
 
+    const artifactNames = await this.listVendorArtifactNames(slug, base);
     for (const vendor of vendors) {
       for (const artifact of [vendor.iosArtifactFilename, vendor.androidArtifactFilename]) {
-        const artifactPath = `vendor-artifacts/${artifact}`;
-        try {
-          await this.githubProvider.getFileContent(slug, artifactPath, base);
-        } catch {
+        if (!artifactNames.has(artifact)) {
           throw new Error(
-            `Missing artifact for "${vendor.appId}" in ${slug}@${base}: ${artifactPath}`,
+            `Missing artifact for "${vendor.appId}" in ${slug}@${base}: vendor-artifacts/${artifact}`,
           );
         }
       }

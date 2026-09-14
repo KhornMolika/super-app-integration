@@ -803,17 +803,21 @@ export class MiniappsService {
     // integration method must not touch the mobile sources. Failure here must not
     // roll back an approval that is already persisted, so it is recorded, not thrown.
     if (app.integrationMethod?.toUpperCase() === 'NATIVE_SDK') {
-      try {
-        const { changedFiles } = await this.nativeSdkCodegen.regenerate();
-        const result = await this.githubPr.openPrForChanges(changedFiles);
-        app.lastCodegenRun = { ...result, timestamp: new Date().toISOString() };
-      } catch (err: any) {
-        this.logger.error(`Native SDK codegen failed after approving ${id}: ${err}`);
-        app.lastCodegenRun = {
-          status: 'error',
-          error: err?.message || String(err),
-          timestamp: new Date().toISOString(),
-        };
+      if (!this.githubPr.isEnabled()) {
+        app.lastCodegenRun = { status: 'skipped', timestamp: new Date().toISOString() };
+      } else {
+        try {
+          const { changedFiles } = await this.nativeSdkCodegen.regenerate();
+          const result = await this.githubPr.openPrForChanges(changedFiles);
+          app.lastCodegenRun = { ...result, timestamp: new Date().toISOString() };
+        } catch (err: any) {
+          this.logger.error(`Native SDK codegen failed after approving ${id}: ${err}`);
+          app.lastCodegenRun = {
+            status: 'error',
+            error: err?.message || String(err),
+            timestamp: new Date().toISOString(),
+          };
+        }
       }
       await this.miniappRepository.save(app);
     }

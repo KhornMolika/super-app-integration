@@ -23,6 +23,7 @@ describe('MiniappsService.approve — native SDK codegen trigger', () => {
   let miniappRepository: { findOne: jest.Mock; save: jest.Mock };
   let regenerate: jest.Mock;
   let openPrForChanges: jest.Mock;
+  let isEnabled: jest.Mock;
 
   function makeApp(overrides: Partial<MiniApp> = {}): MiniApp {
     return {
@@ -34,13 +35,14 @@ describe('MiniappsService.approve — native SDK codegen trigger', () => {
     } as MiniApp;
   }
 
-  async function setup(app: MiniApp) {
+  async function setup(app: MiniApp, options: { codegenAutoPrEnabled?: boolean } = {}) {
     miniappRepository = {
       findOne: jest.fn().mockResolvedValue(app),
       save: jest.fn().mockImplementation((a: MiniApp) => Promise.resolve(a)),
     };
     regenerate = jest.fn();
     openPrForChanges = jest.fn();
+    isEnabled = jest.fn().mockReturnValue(options.codegenAutoPrEnabled ?? true);
 
     const noop = {} as any;
 
@@ -65,7 +67,10 @@ describe('MiniappsService.approve — native SDK codegen trigger', () => {
         { provide: JenkinsService, useValue: noop },
         { provide: StorageService, useValue: noop },
         { provide: NativeSdkCodegenService, useValue: { regenerate } },
-        { provide: GithubPrService, useValue: { openPrForChanges } },
+        {
+          provide: GithubPrService,
+          useValue: { openPrForChanges, isEnabled },
+        },
       ],
     }).compile();
 
@@ -86,8 +91,8 @@ describe('MiniappsService.approve — native SDK codegen trigger', () => {
 
     expect(regenerate).toHaveBeenCalled();
     expect(openPrForChanges).toHaveBeenCalledWith(new Map([['a.swift', 'x']]));
-    expect(result.lastCodegenRun.status).toBe('opened');
-    expect(result.lastCodegenRun.prUrl).toBe('https://github.com/acme/dsp-poc/pull/1');
+    expect(result.lastCodegenRun!.status).toBe('opened');
+    expect(result.lastCodegenRun!.prUrl).toBe('https://github.com/acme/dsp-poc/pull/1');
     expect(miniappRepository.save).toHaveBeenCalledTimes(2); // approval save, then codegen-result save
   });
 
@@ -98,9 +103,20 @@ describe('MiniappsService.approve — native SDK codegen trigger', () => {
     const result = await service.approve('app-1', 'actor-1');
 
     expect(result.status).toBe('APPROVED'); // approval itself is not rolled back
-    expect(result.lastCodegenRun.status).toBe('error');
-    expect(result.lastCodegenRun.error).toContain('boom');
+    expect(result.lastCodegenRun!.status).toBe('error');
+    expect(result.lastCodegenRun!.error).toContain('boom');
     expect(openPrForChanges).not.toHaveBeenCalled();
+  });
+
+  it('skips codegen entirely when CODEGEN_AUTO_PR is disabled', async () => {
+    await setup(makeApp(), { codegenAutoPrEnabled: false });
+
+    const result = await service.approve('app-1', 'actor-1');
+
+    expect(regenerate).not.toHaveBeenCalled();
+    expect(openPrForChanges).not.toHaveBeenCalled();
+    expect(result.lastCodegenRun!.status).toBe('skipped');
+    expect(miniappRepository.save).toHaveBeenCalledTimes(2); // approval save, then codegen-result save
   });
 
   it('does not run codegen for a non-NATIVE_SDK app', async () => {

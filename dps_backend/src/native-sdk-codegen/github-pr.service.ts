@@ -20,6 +20,10 @@ export class GithubPrService {
     return this.configService.get<string>('CODEGEN_AUTO_PR') === 'true';
   }
 
+  isEnabled(): boolean {
+    return this.enabled();
+  }
+
   private repoSlug(): string {
     const slug = this.configService.get<string>('CODEGEN_REPO_SLUG');
     if (!slug) {
@@ -52,7 +56,9 @@ export class GithubPrService {
       headers: { ...this.headers(), ...((init?.headers as Record<string, string>) || {}) },
     });
     if (!res.ok) {
-      throw new Error(`GitHub API error on ${path} (${res.status}): ${await res.text()}`);
+      const body = await res.text();
+      this.logger.error(`GitHub API error on ${path} (${res.status}): ${body}`);
+      throw new Error(`GitHub API error on ${path} (${res.status})`);
     }
     return res.json() as Promise<T>;
   }
