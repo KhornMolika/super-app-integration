@@ -40,6 +40,15 @@ export interface DeepLinkConfigDto {
   appStoreUrl?: string;
 }
 
+export interface NativeSdkConfigDto {
+  iosModuleName: string;
+  iosTypeName: string;
+  iosArtifactFilename: string;
+  androidPackageName: string;
+  androidObjectName: string;
+  androidArtifactFilename: string;
+}
+
 export interface CreateMiniAppDto {
   appId: string;
   name: string;
@@ -59,6 +68,7 @@ export interface CreateMiniAppDto {
   integrationConfigWebView?: WebViewConfigDto;
   integrationConfigFlutter?: FlutterPackageConfigDto;
   integrationConfigDeepLink?: DeepLinkConfigDto;
+  integrationConfigNativeSdk?: NativeSdkConfigDto;
   verificationToken?: string;
   isDomainVerified?: boolean;
   domainVerifiedAt?: string;

@@ -94,6 +94,31 @@ export class FlutterPackageConfigDto {
   versionConstraint?: string;
 }
 
+export class NativeSdkConfigDto {
+  @IsString()
+  @IsNotEmpty()
+  iosModuleName!: string; // Swift module to import; also the pod name
+
+  @IsString()
+  @IsNotEmpty()
+  iosTypeName!: string; // concrete type exposing initialize/present
+
+  @IsString()
+  @IsNotEmpty()
+  iosArtifactFilename!: string; // e.g. PermitCheckSDK.xcframework
+
+  @IsString()
+  @IsNotEmpty()
+  androidPackageName!: string; // e.g. com.dspvendor.permit
+
+  @IsString()
+  @IsNotEmpty()
+  androidObjectName!: string; // e.g. PermitCheck
+
+  @IsString()
+  @IsNotEmpty()
+  androidArtifactFilename!: string; // e.g. permit-check-sdk-1.0.0.aar
+}
 
 export class PermissionDto {
   @IsString()
@@ -193,6 +218,12 @@ export class CreateMiniAppDto {
   @Type(() => DeepLinkConfigDto)
   @IsNotEmpty()
   integrationConfigDeepLink?: DeepLinkConfigDto;
+
+  @ValidateIf(o => o.integrationMethod === IntegrationMethod.NATIVE_SDK)
+  @ValidateNested()
+  @Type(() => NativeSdkConfigDto)
+  @IsNotEmpty()
+  integrationConfigNativeSdk?: NativeSdkConfigDto;
 
   // In the controller, we can map integrationConfigWebView, integrationConfigFlutter, or integrationConfigDeepLink to integrationConfig before saving
 

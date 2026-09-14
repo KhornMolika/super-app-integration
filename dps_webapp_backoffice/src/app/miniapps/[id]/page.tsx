@@ -50,6 +50,14 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
     integrationConfigWebView: { productionUrl: '' },
     integrationConfigFlutter: { sourceType: SourceType.ARTIFACT, packageName: '', versionConstraint: '' },
     integrationConfigDeepLink: { urlScheme: '', packageName: '', appStoreUrl: '' },
+    integrationConfigNativeSdk: {
+      iosModuleName: '',
+      iosTypeName: '',
+      iosArtifactFilename: '',
+      androidPackageName: '',
+      androidObjectName: '',
+      androidArtifactFilename: '',
+    },
     permissions: [],
     status: 'DRAFT',
     validationErrors: undefined as Record<string, string> | undefined,
@@ -194,6 +202,10 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
             } : { productionUrl: '', allowedDomains: '', stagingUrl: '' },
             integrationConfigFlutter: data.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE ? data.integrationConfig : { sourceType: SourceType.ARTIFACT, packageName: '', versionConstraint: '' },
             integrationConfigDeepLink: data.integrationMethod === IntegrationMethod.DEEP_LINK ? data.integrationConfig : { urlScheme: '', packageName: '', appStoreUrl: '' },
+            integrationConfigNativeSdk: data.integrationMethod === IntegrationMethod.NATIVE_SDK ? data.integrationConfig : {
+              iosModuleName: '', iosTypeName: '', iosArtifactFilename: '',
+              androidPackageName: '', androidObjectName: '', androidArtifactFilename: '',
+            },
           });
         } else {
           setModalState({ isOpen: true, status: 'error', message: 'Failed to fetch mini app details.' });
@@ -281,6 +293,21 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
       return {
         ...prev,
         integrationConfigDeepLink: { ...prev.integrationConfigDeepLink!, [fieldName]: e.target.value } as any,
+        validationErrors: nextValidationErrors
+      };
+    });
+  };
+
+  const handleNativeSdkChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const fieldName = e.target.name;
+    setFormData(prev => {
+      const nextValidationErrors = prev.validationErrors ? { ...prev.validationErrors } : undefined;
+      if (nextValidationErrors) {
+        delete nextValidationErrors[`integrationConfigNativeSdk.${fieldName}`];
+      }
+      return {
+        ...prev,
+        integrationConfigNativeSdk: { ...prev.integrationConfigNativeSdk!, [fieldName]: e.target.value } as any,
         validationErrors: nextValidationErrors
       };
     });
@@ -403,6 +430,8 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
       payload.integrationConfigFlutter = formData.integrationConfigFlutter;
     } else if (formData.integrationMethod === IntegrationMethod.DEEP_LINK) {
       payload.integrationConfigDeepLink = formData.integrationConfigDeepLink;
+    } else if (formData.integrationMethod === IntegrationMethod.NATIVE_SDK) {
+      payload.integrationConfigNativeSdk = formData.integrationConfigNativeSdk;
     }
 
     try {
@@ -435,6 +464,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
                 integrationConfigWebView: appData.integrationMethod === IntegrationMethod.WEBVIEW ? appData.integrationConfig : prev.integrationConfigWebView,
                 integrationConfigFlutter: appData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE ? appData.integrationConfig : prev.integrationConfigFlutter,
                 integrationConfigDeepLink: appData.integrationMethod === IntegrationMethod.DEEP_LINK ? appData.integrationConfig : prev.integrationConfigDeepLink,
+                integrationConfigNativeSdk: appData.integrationMethod === IntegrationMethod.NATIVE_SDK ? appData.integrationConfig : prev.integrationConfigNativeSdk,
               }));
 
               const statusUpper = (appData.status || '').toUpperCase();
@@ -632,6 +662,8 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
                     ? 'Flutter Package'
                     : formData.integrationMethod === IntegrationMethod.DEEP_LINK
                     ? 'Deep Link'
+                    : formData.integrationMethod === IntegrationMethod.NATIVE_SDK
+                    ? 'Native SDK'
                     : 'WebView'}
                 </span>
                 {formData.category && (
@@ -1121,6 +1153,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
                 handleWebViewChange={handleWebViewChange}
                 handleFlutterChange={handleFlutterChange}
                 handleDeepLinkChange={handleDeepLinkChange}
+                handleNativeSdkChange={handleNativeSdkChange}
                 onDomainVerified={handleDomainVerified}
               />
             </Card>}

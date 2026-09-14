@@ -79,10 +79,12 @@ export default function IntegrationForm({
   handleWebViewChange,
   handleFlutterChange,
   handleDeepLinkChange,
+  handleNativeSdkChange,
   onDomainVerified,
 }: any) {
   const flutterConfig = formData.integrationConfigFlutter || {};
   const deepLinkConfig = formData.integrationConfigDeepLink || {};
+  const nativeSdkConfig = formData.integrationConfigNativeSdk || {};
 
   // State for Production URL Real-Time Validation
   const [prodUrlValidation, setProdUrlValidation] = useState<{
@@ -588,7 +590,7 @@ export default function IntegrationForm({
           <option value={IntegrationMethod.WEBVIEW}>WebView (Web App)</option>
           <option value={IntegrationMethod.FLUTTER_PACKAGE}>Flutter Package (Super App)</option>
           <option value={IntegrationMethod.DEEP_LINK}>Deep Link (External App / App Links)</option>
-          <option value={IntegrationMethod.NATIVE_SDK} disabled>Native SDK (Coming Soon)</option>
+          <option value={IntegrationMethod.NATIVE_SDK}>Native SDK (Vendor Binary)</option>
         </Select>
       </div>
 
@@ -1343,6 +1345,152 @@ export default function IntegrationForm({
               <pre className="overflow-x-auto whitespace-pre leading-relaxed">{generatedSnippet}</pre>
             </div>
           )}
+        </div>
+      )}
+
+      {formData.integrationMethod === IntegrationMethod.NATIVE_SDK && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800">
+          <div className="col-span-1 md:col-span-2 text-xs text-slate-500 dark:text-slate-400">
+            These values must match the vendor SDK&apos;s real public API exactly — they are used verbatim
+            to generate the native glue code that imports and calls the SDK.
+          </div>
+
+          <div className="col-span-1 md:col-span-2">
+            <h5 className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-3">iOS</h5>
+          </div>
+
+          <div>
+            <Label>Module Name <span className="text-rose-500">*</span></Label>
+            <Input
+              name="iosModuleName"
+              value={nativeSdkConfig.iosModuleName || ''}
+              onChange={handleNativeSdkChange}
+              placeholder="PermitCheckSDK"
+              className={
+                allErrors['integrationConfigNativeSdk.iosModuleName']
+                  ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50'
+                  : ''
+              }
+            />
+            {allErrors['integrationConfigNativeSdk.iosModuleName'] && (
+              <p className="mt-1.5 text-xs text-rose-600 font-medium">
+                {allErrors['integrationConfigNativeSdk.iosModuleName']}
+              </p>
+            )}
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Swift module to import; also the pod name.</p>
+          </div>
+
+          <div>
+            <Label>Type Name <span className="text-rose-500">*</span></Label>
+            <Input
+              name="iosTypeName"
+              value={nativeSdkConfig.iosTypeName || ''}
+              onChange={handleNativeSdkChange}
+              placeholder="PermitCheck"
+              className={
+                allErrors['integrationConfigNativeSdk.iosTypeName']
+                  ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50'
+                  : ''
+              }
+            />
+            {allErrors['integrationConfigNativeSdk.iosTypeName'] && (
+              <p className="mt-1.5 text-xs text-rose-600 font-medium">
+                {allErrors['integrationConfigNativeSdk.iosTypeName']}
+              </p>
+            )}
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Concrete type exposing initialize/present.</p>
+          </div>
+
+          <div className="col-span-1 md:col-span-2">
+            <Label>Artifact Filename <span className="text-rose-500">*</span></Label>
+            <Input
+              name="iosArtifactFilename"
+              value={nativeSdkConfig.iosArtifactFilename || ''}
+              onChange={handleNativeSdkChange}
+              placeholder="PermitCheckSDK.xcframework"
+              className={
+                allErrors['integrationConfigNativeSdk.iosArtifactFilename']
+                  ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50'
+                  : ''
+              }
+            />
+            {allErrors['integrationConfigNativeSdk.iosArtifactFilename'] && (
+              <p className="mt-1.5 text-xs text-rose-600 font-medium">
+                {allErrors['integrationConfigNativeSdk.iosArtifactFilename']}
+              </p>
+            )}
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Must already exist under <code className="font-mono">vendor-artifacts/</code> before approval.
+            </p>
+          </div>
+
+          <div className="col-span-1 md:col-span-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+            <h5 className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-3 mt-3">Android</h5>
+          </div>
+
+          <div>
+            <Label>Package Name <span className="text-rose-500">*</span></Label>
+            <Input
+              name="androidPackageName"
+              value={nativeSdkConfig.androidPackageName || ''}
+              onChange={handleNativeSdkChange}
+              placeholder="com.dspvendor.permit"
+              className={
+                allErrors['integrationConfigNativeSdk.androidPackageName']
+                  ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50'
+                  : ''
+              }
+            />
+            {allErrors['integrationConfigNativeSdk.androidPackageName'] && (
+              <p className="mt-1.5 text-xs text-rose-600 font-medium">
+                {allErrors['integrationConfigNativeSdk.androidPackageName']}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <Label>Object Name <span className="text-rose-500">*</span></Label>
+            <Input
+              name="androidObjectName"
+              value={nativeSdkConfig.androidObjectName || ''}
+              onChange={handleNativeSdkChange}
+              placeholder="PermitCheck"
+              className={
+                allErrors['integrationConfigNativeSdk.androidObjectName']
+                  ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50'
+                  : ''
+              }
+            />
+            {allErrors['integrationConfigNativeSdk.androidObjectName'] && (
+              <p className="mt-1.5 text-xs text-rose-600 font-medium">
+                {allErrors['integrationConfigNativeSdk.androidObjectName']}
+              </p>
+            )}
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Kotlin object; called directly, never via `.INSTANCE`.</p>
+          </div>
+
+          <div className="col-span-1 md:col-span-2">
+            <Label>Artifact Filename <span className="text-rose-500">*</span></Label>
+            <Input
+              name="androidArtifactFilename"
+              value={nativeSdkConfig.androidArtifactFilename || ''}
+              onChange={handleNativeSdkChange}
+              placeholder="permit-check-sdk-1.0.0.aar"
+              className={
+                allErrors['integrationConfigNativeSdk.androidArtifactFilename']
+                  ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50'
+                  : ''
+              }
+            />
+            {allErrors['integrationConfigNativeSdk.androidArtifactFilename'] && (
+              <p className="mt-1.5 text-xs text-rose-600 font-medium">
+                {allErrors['integrationConfigNativeSdk.androidArtifactFilename']}
+              </p>
+            )}
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Must already exist under <code className="font-mono">vendor-artifacts/</code> before approval.
+            </p>
+          </div>
         </div>
       )}
     </>
