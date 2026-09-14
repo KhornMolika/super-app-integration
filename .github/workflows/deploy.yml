@@ -3,6 +3,9 @@ name: Android · Firebase App Distribution
 on:
   push:
     branches: [neat]
+  pull_request:
+    types: [closed]
+    branches: [main] # must match dps_backend's CODEGEN_BASE_BRANCH env var — keep both in sync
   workflow_dispatch: {} # allows manual "Run workflow" from the Actions tab, on any branch, for testing
 
 permissions:
@@ -14,6 +17,14 @@ concurrency:
 
 jobs:
   distribute:
+    # For a pull_request event, only run for an actual merge of a native-SDK codegen PR —
+    # `types: [closed]` also fires when a PR is closed WITHOUT merging, which includes every
+    # PR the codegen auto-PR service closes as superseded. push/workflow_dispatch events have
+    # no pull_request object, so the first clause always lets them through unchanged.
+    if: >
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.merged == true &&
+       startsWith(github.event.pull_request.head.ref, 'codegen/native-sdk-'))
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -56,6 +67,7 @@ jobs:
         env:
           FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
+          CODEGEN_PR_NUMBER: ${{ github.event_name == 'pull_request' && github.event.pull_request.number || '' }}
         run: bundle exec fastlane android distribute_firebase
 
       - name: Remove service account JSON
