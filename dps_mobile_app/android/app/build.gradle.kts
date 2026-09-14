@@ -46,5 +46,6 @@ flutter {
 
 dependencies {
     // === GENERATED NATIVE SDK DEPS — DO NOT EDIT ===
+    implementation(files("../../../vendor-artifacts/permit-check-sdk-1.0.0.aar"))
     // === END GENERATED NATIVE SDK DEPS ===
 }

@@ -33,6 +33,7 @@ target 'Runner' do
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   pod 'SpaBookingSDK', :path => '../../vendor-artifacts'
   # === GENERATED NATIVE SDK PODS — DO NOT EDIT ===
+  pod 'PermitCheckSDK', :path => '../../vendor-artifacts'
   # === END GENERATED NATIVE SDK PODS ===
 
   target 'RunnerTests' do
