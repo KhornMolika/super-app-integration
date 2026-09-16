@@ -23,9 +23,21 @@ export interface TelegramGroup {
   [key: string]: any;
 }
 
+export interface TelegramBotChat {
+  chatId: string;
+  type: 'private' | 'group' | 'supergroup' | 'channel';
+  name: string;
+  username?: string;
+  lastActive?: string;
+  isDirectUser?: boolean;
+}
+
 export const telegramApi = {
   getStatus: () =>
     apiClient<TelegramStatus>('/api/telegram/status'),
+
+  getRecentChats: () =>
+    apiClient<{ chats: TelegramBotChat[] }>('/api/telegram/recent-chats'),
 
   getUserGroups: () =>
     apiClient<{ groups: TelegramGroup[] }>('/api/telegram/user-groups'),

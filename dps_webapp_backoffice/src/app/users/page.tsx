@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { Button, Input, Label } from '@/components/ui/inputs';
 import { Card } from '@/components/ui/card';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { usersApi, rolesApi, User, Role } from '@/api';
+import { usersApi, rolesApi, telegramApi, User, Role, TelegramBotChat } from '@/api';
 import { useToast } from '@/components/ui/Toast';
 
 // Permission Categories & Definition Catalog
@@ -119,6 +119,14 @@ export default function UsersPage() {
     isActive: true,
   });
 
+  // Telegram Auto-Detection State
+  const [detectingTelegram, setDetectingTelegram] = useState(false);
+  const [detectedTelegramChats, setDetectedTelegramChats] = useState<TelegramBotChat[]>([]);
+  const [showTelegramPicker, setShowTelegramPicker] = useState(false);
+  const [botUsername, setBotUsername] = useState('superapp_notification_bot');
+  const [validatingChatId, setValidatingChatId] = useState(false);
+  const [chatValidationStatus, setChatValidationStatus] = useState<{ checked: boolean; valid?: boolean; title?: string } | null>(null);
+
   // Role Modal State
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
@@ -164,6 +172,16 @@ export default function UsersPage() {
     }
   }, []);
 
+  // Preload Bot Info on mount
+  useEffect(() => {
+    telegramApi
+      .getStatus()
+      .then((res) => {
+        if (res?.botUsername) setBotUsername(res.botUsername);
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     fetchUsers();
     fetchRoles();
@@ -172,6 +190,9 @@ export default function UsersPage() {
   // User Handlers
   const handleOpenCreateUser = () => {
     setEditingUser(null);
+    setDetectedTelegramChats([]);
+    setShowTelegramPicker(false);
+    setChatValidationStatus(null);
     setUserFormData({
       name: '',
       email: '',
@@ -185,6 +206,9 @@ export default function UsersPage() {
 
   const handleOpenEditUser = (user: User) => {
     setEditingUser(user);
+    setDetectedTelegramChats([]);
+    setShowTelegramPicker(false);
+    setChatValidationStatus(null);
     setUserFormData({
       name: user.name,
       email: user.email,
@@ -194,6 +218,118 @@ export default function UsersPage() {
       isActive: user.isActive !== undefined ? user.isActive : true,
     });
     setIsUserModalOpen(true);
+  };
+
+  // Telegram Auto-Detection Handler
+  const handleAutoDetectTelegram = async () => {
+    setDetectingTelegram(true);
+    try {
+      const [statusRes, chatsRes] = await Promise.allSettled([
+        telegramApi.getStatus(),
+        telegramApi.getRecentChats(),
+      ]);
+
+      let currentBot = botUsername || 'superapp_notification_bot';
+      if (statusRes.status === 'fulfilled' && statusRes.value?.botUsername) {
+        currentBot = statusRes.value.botUsername;
+        setBotUsername(currentBot);
+      }
+
+      const chats =
+        chatsRes.status === 'fulfilled' && Array.isArray(chatsRes.value?.chats)
+          ? chatsRes.value.chats
+          : [];
+
+      setDetectedTelegramChats(chats);
+      setShowTelegramPicker(true);
+
+      if (chats.length === 0) {
+        toast.info(
+          `No recent chats found. Ask the operator to message @${currentBot} with "/start", then tap Auto-Detect again.`,
+          'Telegram Auto-Detect',
+        );
+      } else {
+        // Check if there is an exact or partial match with user's name or username
+        const targetQuery = (userFormData.name || userFormData.email || '').toLowerCase().trim();
+        const match = chats.find(
+          (c) =>
+            (c.username && targetQuery.includes(c.username.toLowerCase())) ||
+            (c.name && targetQuery.includes(c.name.toLowerCase())),
+        );
+
+        if (match) {
+          setUserFormData((prev) => ({
+            ...prev,
+            telegramChatId: match.chatId,
+            telegramUsername: match.username || prev.telegramUsername,
+          }));
+          toast.success(
+            `Matched: ${match.name} (Chat ID: ${match.chatId}). Auto-filled!`,
+            'Telegram Auto-Detected',
+          );
+        } else {
+          toast.success(
+            `Found ${chats.length} active Telegram contact(s). Select below to auto-fill.`,
+            'Contacts Discovered',
+          );
+        }
+      }
+    } catch (err: any) {
+      console.error('Failed to auto-detect Telegram', err);
+      toast.error('Failed to auto-detect Telegram chats.');
+    } finally {
+      setDetectingTelegram(false);
+    }
+  };
+
+  const handleSelectDetectedChat = (chat: TelegramBotChat) => {
+    setUserFormData((prev) => ({
+      ...prev,
+      telegramChatId: chat.chatId,
+      telegramUsername: chat.username || prev.telegramUsername,
+    }));
+    setShowTelegramPicker(false);
+    setChatValidationStatus({
+      checked: true,
+      valid: true,
+      title: `${chat.name} (${chat.type})`,
+    });
+    toast.success(`Selected: ${chat.name} (${chat.chatId})`);
+  };
+
+  const handleVerifyChatId = async () => {
+    if (!userFormData.telegramChatId.trim()) {
+      toast.warning('Please enter a Telegram Chat ID first');
+      return;
+    }
+    setValidatingChatId(true);
+    try {
+      const res = await telegramApi.validateChat(userFormData.telegramChatId.trim());
+      if (res.valid) {
+        setChatValidationStatus({
+          checked: true,
+          valid: true,
+          title: res.title || 'Active Telegram Chat',
+        });
+        toast.success(`Verified: ${res.title || 'Chat is active'}`);
+      } else {
+        setChatValidationStatus({
+          checked: true,
+          valid: false,
+          title: 'Unreachable / Inactive Chat ID',
+        });
+        toast.warning('Chat ID is not reachable by the bot');
+      }
+    } catch (err: any) {
+      setChatValidationStatus({
+        checked: true,
+        valid: false,
+        title: 'Validation failed',
+      });
+      toast.error('Chat validation failed');
+    } finally {
+      setValidatingChatId(false);
+    }
   };
 
   const handleSaveUser = async (e: React.FormEvent) => {
@@ -1411,36 +1547,194 @@ export default function UsersPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <Label htmlFor="telegram-chat-id" className="flex items-center gap-1.5 mb-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      <svg className="w-3.5 h-3.5 text-sky-500" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z" />
-                      </svg>
-                      Telegram Chat ID
-                    </Label>
-                    <Input
-                      id="telegram-chat-id"
-                      value={userFormData.telegramChatId}
-                      onChange={(e) => setUserFormData({ ...userFormData, telegramChatId: e.target.value })}
-                      placeholder="e.g. 123456789"
-                    />
+                {/* Telegram Alert Channel Auto-Detect Section */}
+                <div className="p-4 rounded-xl bg-sky-50/60 dark:bg-sky-950/30 border border-sky-200/80 dark:border-sky-800/60 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-sky-500 text-white shadow-xs">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                          <span>Telegram Alert Channel</span>
+                          <span className="text-[10px] font-semibold text-sky-600 dark:text-sky-400 bg-sky-100 dark:bg-sky-900/50 px-2 py-0.5 rounded-full">
+                            Auto-Detect Ready
+                          </span>
+                        </h4>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                          Receive instant push notifications for approvals, review tasks, and alerts
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <a
+                        href={`https://t.me/${botUsername || 'superapp_notification_bot'}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-800 hover:bg-sky-50 dark:hover:bg-sky-900/40 transition-colors shadow-2xs"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z" />
+                        </svg>
+                        <span>Open @{botUsername || 'Bot'}</span>
+                        <svg className="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </a>
+
+                      <button
+                        type="button"
+                        onClick={handleAutoDetectTelegram}
+                        disabled={detectingTelegram}
+                        className="inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white shadow-xs transition-colors disabled:opacity-50"
+                      >
+                        {detectingTelegram ? (
+                          <>
+                            <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span>Scanning...</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                            <span>Auto-Detect</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
 
-                  <div>
-                    <Label htmlFor="telegram-username" className="flex items-center gap-1.5 mb-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      <svg className="w-3.5 h-3.5 text-sky-500" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z" />
-                      </svg>
-                      Telegram Username
-                    </Label>
-                    <Input
-                      id="telegram-username"
-                      value={userFormData.telegramUsername}
-                      onChange={(e) => setUserFormData({ ...userFormData, telegramUsername: e.target.value.replace(/^@/, '') })}
-                      placeholder="e.g. johndoe"
-                    />
+                  {/* Auto-detected list drawer / picker */}
+                  {showTelegramPicker && detectedTelegramChats.length > 0 && (
+                    <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-sky-200 dark:border-sky-800 shadow-sm space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                        <span className="flex items-center gap-1">
+                          <svg className="w-3.5 h-3.5 text-sky-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Discovered Active Contacts ({detectedTelegramChats.length}):
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setShowTelegramPicker(false)}
+                          className="text-slate-400 hover:text-slate-600 text-[10px] font-semibold"
+                        >
+                          Close
+                        </button>
+                      </div>
+
+                      <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
+                        {detectedTelegramChats.map((c) => (
+                          <div
+                            key={c.chatId}
+                            onClick={() => handleSelectDetectedChat(c)}
+                            className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800/80 hover:bg-sky-50 dark:hover:bg-sky-900/30 border border-slate-200/60 dark:border-slate-700 cursor-pointer transition-colors"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="p-1 rounded-full bg-sky-100 dark:bg-sky-950 text-sky-600 dark:text-sky-400 shrink-0">
+                                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z" />
+                                </svg>
+                              </div>
+                              <div className="min-w-0">
+                                <div className="text-xs font-bold text-slate-900 dark:text-white truncate flex items-center gap-1.5">
+                                  <span>{c.name}</span>
+                                  {c.username && (
+                                    <span className="text-[11px] font-normal text-sky-600 dark:text-sky-400">
+                                      @{c.username}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="font-mono text-[10px] text-slate-400">
+                                  ID: {c.chatId} • {c.type}
+                                </div>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              className="text-[11px] font-bold px-2.5 py-1 rounded bg-sky-50 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 hover:bg-sky-600 hover:text-white transition-colors shrink-0"
+                            >
+                              Apply
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <Label htmlFor="telegram-chat-id" className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                          <svg className="w-3.5 h-3.5 text-sky-500" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z" />
+                          </svg>
+                          Telegram Chat ID
+                        </Label>
+                        {userFormData.telegramChatId && (
+                          <button
+                            type="button"
+                            onClick={handleVerifyChatId}
+                            disabled={validatingChatId}
+                            className="text-[10px] font-semibold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1"
+                          >
+                            {validatingChatId ? 'Checking...' : 'Verify ID'}
+                          </button>
+                        )}
+                      </div>
+                      <Input
+                        id="telegram-chat-id"
+                        value={userFormData.telegramChatId}
+                        onChange={(e) => {
+                          setUserFormData({ ...userFormData, telegramChatId: e.target.value });
+                          setChatValidationStatus(null);
+                        }}
+                        placeholder="e.g. 1193078022"
+                      />
+                      {chatValidationStatus && (
+                        <div className={`text-[10px] font-semibold mt-1 flex items-center gap-1 ${
+                          chatValidationStatus.valid ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
+                        }`}>
+                          <span>{chatValidationStatus.valid ? '✓' : '⚠️'}</span>
+                          <span>{chatValidationStatus.title}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="telegram-username" className="flex items-center gap-1.5 mb-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        <svg className="w-3.5 h-3.5 text-sky-500" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z" />
+                        </svg>
+                        Telegram Username
+                      </Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-mono text-sm">@</span>
+                        <Input
+                          id="telegram-username"
+                          value={userFormData.telegramUsername}
+                          onChange={(e) => setUserFormData({ ...userFormData, telegramUsername: e.target.value.replace(/^@/, '') })}
+                          placeholder="johndoe"
+                          className="pl-7"
+                        />
+                      </div>
+                    </div>
                   </div>
+
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed flex items-center gap-1">
+                    <svg className="w-3 h-3 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>To auto-detect: Have operator open @{botUsername || 'the bot'} and tap /start.</span>
+                  </p>
                 </div>
 
                 <div>

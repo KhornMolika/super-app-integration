@@ -765,6 +765,79 @@ export class TelegramService {
     }));
   }
 
+  // Retrieve recent direct users and groups who interacted with the bot for Auto-Detection
+  async getRecentBotChats(): Promise<Array<{
+    chatId: string;
+    type: 'private' | 'group' | 'supergroup' | 'channel';
+    name: string;
+    username?: string;
+    lastActive?: string;
+    isDirectUser: boolean;
+  }>> {
+    const contactsMap = new Map<string, {
+      chatId: string;
+      type: 'private' | 'group' | 'supergroup' | 'channel';
+      name: string;
+      username?: string;
+      lastActive?: string;
+      isDirectUser: boolean;
+    }>();
+
+    if (this.botToken) {
+      try {
+        const res = await fetch(`https://api.telegram.org/bot${this.botToken}/getUpdates`);
+        if (res.ok) {
+          const data = await res.json();
+          const updates = data.result || [];
+          for (const update of updates.reverse()) {
+            const msg = update.message || update.channel_post || update.my_chat_member;
+            const chat = msg?.chat;
+            const from = msg?.from || update.message?.from;
+            if (chat && chat.id) {
+              const chatId = chat.id.toString();
+              if (!contactsMap.has(chatId)) {
+                const isPrivate = chat.type === 'private';
+                const displayName = isPrivate
+                  ? [chat.first_name, chat.last_name].filter(Boolean).join(' ') || chat.username || 'Telegram User'
+                  : chat.title || 'Telegram Group';
+
+                contactsMap.set(chatId, {
+                  chatId,
+                  type: chat.type,
+                  name: displayName,
+                  username: chat.username || from?.username || undefined,
+                  lastActive: msg.date ? new Date(msg.date * 1000).toISOString() : new Date().toISOString(),
+                  isDirectUser: isPrivate,
+                });
+              }
+            }
+          }
+        }
+      } catch (err) {
+        this.logger.warn('Failed to query getUpdates for getRecentBotChats:', err);
+      }
+    }
+
+    // Also include existing users with saved Telegram credentials
+    try {
+      const existingUsers = await this.userRepository.find({ where: {} });
+      for (const u of existingUsers) {
+        if (u.telegramChatId && !contactsMap.has(u.telegramChatId)) {
+          contactsMap.set(u.telegramChatId, {
+            chatId: u.telegramChatId,
+            type: 'private',
+            name: u.name || 'Registered Operator',
+            username: u.telegramUsername,
+            lastActive: u.updatedAt ? u.updatedAt.toISOString() : undefined,
+            isDirectUser: true,
+          });
+        }
+      }
+    } catch (_) {}
+
+    return Array.from(contactsMap.values());
+  }
+
   async unlinkTelegramAccount(userId: string): Promise<boolean> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) return false;
