@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/inputs';
@@ -12,6 +13,11 @@ export default function AuditLogsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [actionFilter, setActionFilter] = useState<string>('ALL');
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const fetchLogs = useCallback(async () => {
     try {
@@ -182,9 +188,13 @@ export default function AuditLogsPage() {
         </Card>
 
         {/* Audit Log Detail Inspector Modal */}
-        {selectedLog && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-in fade-in">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 max-w-3xl w-full max-h-[85vh] overflow-y-auto p-6 shadow-2xl flex flex-col">
+        {mounted && selectedLog && createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/70 backdrop-blur-md p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-200">
+            <div
+              className="fixed inset-0"
+              onClick={() => setSelectedLog(null)}
+            />
+            <div className="relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 max-w-3xl w-full max-h-[85vh] overflow-y-auto p-6 shadow-2xl flex flex-col z-10 animate-in zoom-in-95 duration-200 my-auto">
               <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
                 <div>
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -193,10 +203,13 @@ export default function AuditLogsPage() {
                   <p className="text-xs text-slate-500 font-mono mt-0.5">ID: {selectedLog.id}</p>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setSelectedLog(null)}
-                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                 >
-                  ✕
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </button>
               </div>
 
@@ -253,6 +266,7 @@ export default function AuditLogsPage() {
 
               <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-800 mt-6">
                 <button
+                  type="button"
                   onClick={() => setSelectedLog(null)}
                   className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                 >
@@ -260,7 +274,8 @@ export default function AuditLogsPage() {
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </ProtectedRoute>
