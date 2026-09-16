@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:15
-    container_name: dps-postgres
+    container_name: superapp-postgres
     restart: unless-stopped
     env_file:
       - .env
@@ -16,7 +16,7 @@ services:
 
   nexus:
     image: sonatype/nexus3:latest
-    container_name: dps-nexus
+    container_name: superapp-nexus
     restart: unless-stopped
     env_file:
       - .env
@@ -27,7 +27,7 @@ services:
 
   minio:
     image: ${MINIO_IMAGE:-quay.io/minio/aistor/minio:RELEASE.2026-09-07T08-39-31Z}
-    container_name: dps-minio
+    container_name: superapp-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
     env_file:
@@ -46,7 +46,7 @@ services:
 
   minio-init:
     image: minio/mc:latest
-    container_name: dps-minio-init
+    container_name: superapp-minio-init
     depends_on:
       - minio
     env_file:
@@ -63,8 +63,8 @@ services:
 
 volumes:
   pgdata:
-    name: dps_pgdata
+    name: superapp_pgdata
   nexus-data:
-    name: dps_nexus_data
+    name: superapp_nexus_data
   minio_data:
-    name: dps_minio_data
+    name: superapp_minio_data

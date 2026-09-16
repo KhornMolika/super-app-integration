@@ -43,7 +43,7 @@ if (Test-NexusAuth $adminUser $targetPassword) {
 } else {
     Write-Host "Testing initial admin password from container..."
     try {
-        $initPass = ((docker exec dps-nexus cat /nexus-data/admin.password 2>$null), (docker exec nexus cat /nexus-data/admin.password 2>$null) | Where-Object { $_ } | Select-Object -First 1)
+        $initPass = ((docker exec superapp-nexus cat /nexus-data/admin.password 2>$null), (docker exec dps-nexus cat /nexus-data/admin.password 2>$null), (docker exec nexus cat /nexus-data/admin.password 2>$null) | Where-Object { $_ } | Select-Object -First 1)
         if ($initPass) { $initPass = $initPass.Trim() }
         if ($initPass -and (Test-NexusAuth $adminUser $initPass)) {
             Write-Host "Found initial admin password. Updating password to target..."

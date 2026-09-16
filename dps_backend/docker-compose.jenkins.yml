@@ -4,8 +4,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.jenkins
-    image: dps-jenkins-controller:lts-jdk21
-    container_name: dps-jenkins-controller
+    image: superapp-jenkins-controller:lts-jdk21
+    container_name: superapp-jenkins-controller
     restart: unless-stopped
     user: root
     ports:
@@ -30,7 +30,7 @@ services:
   # 2. Docker-in-Docker (The Ephemeral Execution Boundary)
   docker-dind:
     image: docker:dind
-    container_name: dps-jenkins-docker-dind
+    container_name: superapp-jenkins-docker-dind
     privileged: true
     restart: unless-stopped
     environment:
@@ -49,7 +49,7 @@ services:
   # 3. OWASP ZAP (XSS, CSP, & Web Vulnerability DAST Scanner)
   owasp-zap:
     image: zaproxy/zap-stable
-    container_name: dps-zap
+    container_name: superapp-zap
     restart: unless-stopped
     command: zap.sh -daemon -host 0.0.0.0 -port 8090 -config api.disablekey=true -config api.addrs.addr.name=.* -config api.addrs.addr.regex=true
     networks:
@@ -63,7 +63,7 @@ services:
   testssl:
     image: drwetter/testssl.sh
     platform: linux/amd64
-    container_name: dps-testssl
+    container_name: superapp-testssl
     entrypoint: ["tail", "-f", "/dev/null"]
     restart: unless-stopped
     networks:
@@ -74,7 +74,7 @@ services:
   # 5. Nuclei (Exposed Secrets, Misconfigurations & Known CVE Scanner)
   nuclei:
     image: projectdiscovery/nuclei:latest
-    container_name: dps-nuclei
+    container_name: superapp-nuclei
     entrypoint: ["tail", "-f", "/dev/null"]
     restart: unless-stopped
     networks:
@@ -90,10 +90,10 @@ networks:
 
 volumes:
   jenkins_data:
-    name: dps_jenkins_data
+    name: superapp_jenkins_data
   jenkins_certs:
-    name: dps_jenkins_certs
+    name: superapp_jenkins_certs
   scan_reports:
-    name: dps_scan_reports
+    name: superapp_scan_reports
   nuclei_templates:
-    name: dps_nuclei_templates
+    name: superapp_nuclei_templates
