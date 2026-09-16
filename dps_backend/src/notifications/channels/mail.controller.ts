@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { MailService } from './mail.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { SendTestEmailDto } from './dto/mail-channel.dto';
 
 @Controller(['mail', 'api/mail'])
 export class MailController {
@@ -17,7 +18,7 @@ export class MailController {
   @UseGuards(JwtAuthGuard)
   async sendTestEmail(
     @Req() req: any,
-    @Body() body: { email?: string },
+    @Body() body: SendTestEmailDto,
   ) {
     const targetEmail = body.email?.trim() || req.user?.email;
     if (!targetEmail) {

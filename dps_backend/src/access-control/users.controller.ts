@@ -10,6 +10,8 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AccessControlService } from './access-control.service';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('users')
@@ -27,35 +29,12 @@ export class UsersController {
   }
 
   @Post()
-  async create(
-    @Body()
-    dto: {
-      name: string;
-      email: string;
-      roleIds?: string[];
-      roleNames?: string[];
-      telegramChatId?: string;
-      telegramUsername?: string;
-      isActive?: boolean;
-    },
-  ) {
+  async create(@Body() dto: CreateUserDto) {
     return this.accessControlService.createUser(dto);
   }
 
   @Put(':id')
-  async update(
-    @Param('id') id: string,
-    @Body()
-    dto: {
-      name?: string;
-      email?: string;
-      roleIds?: string[];
-      roleNames?: string[];
-      telegramChatId?: string;
-      telegramUsername?: string;
-      isActive?: boolean;
-    },
-  ) {
+  async update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
     return this.accessControlService.updateUser(id, dto);
   }
 

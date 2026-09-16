@@ -8,7 +8,13 @@ async function bootstrap() {
   app.enableCors();
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ extended: true, limit: '50mb' }));
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      transformOptions: { enableImplicitConversion: true },
+    }),
+  );
   await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
 }
 bootstrap();

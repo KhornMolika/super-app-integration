@@ -12,6 +12,8 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationsService } from './organizations.service';
 import { Organization } from './entities/organization.entity';
+import { CreateOrganizationDto } from './dto/create-organization.dto';
+import { UpdateOrganizationDto } from './dto/update-organization.dto';
 
 @Controller('organizations')
 export class OrganizationsController {
@@ -32,14 +34,14 @@ export class OrganizationsController {
   }
 
   @Post()
-  async create(@Body() data: Partial<Organization>): Promise<Organization> {
+  async create(@Body() data: CreateOrganizationDto): Promise<Organization> {
     return this.organizationsService.create(data);
   }
 
   @Patch(':id')
   async update(
     @Param('id') id: string,
-    @Body() data: Partial<Organization>,
+    @Body() data: UpdateOrganizationDto,
   ): Promise<Organization> {
     return this.organizationsService.update(id, data);
   }

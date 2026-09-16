@@ -15,6 +15,9 @@ import {
   ArtifactRetentionPolicy,
 } from './artifact-retention.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UpdatePipelineTimingDto } from './dto/pipeline-timing-settings.dto';
+import { UpdateArtifactRetentionDto } from './dto/artifact-retention-policy.dto';
+import { UpdateSystemSettingDto } from './dto/update-system-setting.dto';
 
 @Controller(['settings', 'api/settings'])
 export class SettingsController {
@@ -38,7 +41,7 @@ export class SettingsController {
   @Put('pipeline-timing')
   @UseGuards(JwtAuthGuard)
   async updatePipelineTiming(
-    @Body() body: Partial<PipelineTimingSettings>,
+    @Body() body: UpdatePipelineTimingDto,
     @Req() req: any,
   ): Promise<PipelineTimingSettings> {
     const userRoles: string[] = req.user?.roles || [];
@@ -69,7 +72,7 @@ export class SettingsController {
   @Put('artifact-retention')
   @UseGuards(JwtAuthGuard)
   async updateArtifactRetention(
-    @Body() body: Partial<ArtifactRetentionPolicy>,
+    @Body() body: UpdateArtifactRetentionDto,
     @Req() req: any,
   ) {
     const userRoles: string[] = req.user?.roles || [];
@@ -105,7 +108,7 @@ export class SettingsController {
   @UseGuards(JwtAuthGuard)
   async setSetting(
     @Param('key') key: string,
-    @Body() body: { value: any; description?: string },
+    @Body() body: UpdateSystemSettingDto,
     @Req() req: any,
   ) {
     const userRoles: string[] = req.user?.roles || [];

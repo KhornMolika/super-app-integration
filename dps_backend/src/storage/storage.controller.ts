@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { StorageService } from './storage.service';
+import { UpdateLicenseDto, UploadBase64Dto } from './dto/storage.dto';
 
 @Controller('storage')
 export class StorageController {
@@ -23,10 +24,7 @@ export class StorageController {
 
   @Post('update-license')
   @HttpCode(HttpStatus.OK)
-  updateLicense(@Body() body: { licenseKey: string }) {
-    if (!body || typeof body.licenseKey !== 'string') {
-      throw new BadRequestException('License key string is required');
-    }
+  updateLicense(@Body() body: UpdateLicenseDto) {
     const status = this.storageService.setAistorLicense(body.licenseKey);
     return {
       success: true,
@@ -59,10 +57,7 @@ export class StorageController {
 
   @Post('upload-base64')
   @HttpCode(HttpStatus.OK)
-  async uploadBase64(@Body() body: { base64: string; nameHint?: string }) {
-    if (!body?.base64) {
-      throw new BadRequestException('Base64 image data is required');
-    }
+  async uploadBase64(@Body() body: UploadBase64Dto) {
     const url = await this.storageService.uploadBase64(
       body.base64,
       body.nameHint,

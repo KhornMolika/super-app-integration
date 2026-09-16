@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, OnApplicationBootstrap } from '@nestjs/c
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PermissionDefinition } from './entities/permission-definition.entity';
+import { UpdatePermissionDefinitionDto } from './dto/update-permission-definition.dto';
 
 @Injectable()
 export class PermissionsService implements OnApplicationBootstrap {
@@ -81,7 +82,7 @@ export class PermissionsService implements OnApplicationBootstrap {
 
   async update(
     id: string,
-    data: Partial<PermissionDefinition>,
+    data: UpdatePermissionDefinitionDto,
   ): Promise<PermissionDefinition> {
     const perm = await this.findOne(id);
     const merged = this.permissionDefinitionRepository.merge(perm, data);

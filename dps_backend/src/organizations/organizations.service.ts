@@ -3,6 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Organization, OrganizationStatus } from './entities/organization.entity';
 
+import { CreateOrganizationDto } from './dto/create-organization.dto';
+import { UpdateOrganizationDto } from './dto/update-organization.dto';
+
 @Injectable()
 export class OrganizationsService implements OnApplicationBootstrap {
   constructor(
@@ -57,7 +60,7 @@ export class OrganizationsService implements OnApplicationBootstrap {
     return this.organizationRepository.findOne({ where: { id } });
   }
 
-  async create(data: Partial<Organization>): Promise<Organization> {
+  async create(data: CreateOrganizationDto): Promise<Organization> {
     const org = this.organizationRepository.create({
       ...data,
       status: data.status || OrganizationStatus.ACTIVE,
@@ -65,7 +68,7 @@ export class OrganizationsService implements OnApplicationBootstrap {
     return this.organizationRepository.save(org);
   }
 
-  async update(id: string, data: Partial<Organization>): Promise<Organization> {
+  async update(id: string, data: UpdateOrganizationDto): Promise<Organization> {
     const org = await this.findOne(id);
     if (!org) {
       throw new Error(`Organization ${id} not found`);

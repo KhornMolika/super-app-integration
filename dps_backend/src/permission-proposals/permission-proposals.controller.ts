@@ -13,6 +13,7 @@ import { RbacGuard } from '../access-control/guards/rbac.guard';
 import { RequirePermissions } from '../access-control/decorators/require-permissions.decorator';
 import { PermissionProposalsService } from './permission-proposals.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ReviewProposalDto } from './dto/review-proposal.dto';
 
 @UseGuards(JwtAuthGuard, RbacGuard)
 @Controller('permission-proposals')
@@ -30,7 +31,10 @@ export class PermissionProposalsController {
 
   @Post(':id/review')
   @RequirePermissions('permission_proposal:review')
-  async reviewProposal(@Param('id') id: string, @Body() body: any) {
+  async reviewProposal(
+    @Param('id') id: string,
+    @Body() body: ReviewProposalDto,
+  ) {
     const proposal = await this.permissionProposalsService.findOne(id);
     if (!proposal) throw new NotFoundException('Proposal not found');
 

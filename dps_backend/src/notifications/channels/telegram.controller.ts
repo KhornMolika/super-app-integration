@@ -10,6 +10,13 @@ import {
 } from '@nestjs/common';
 import { TelegramService } from './telegram.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import {
+  ManualConnectDto,
+  SaveTeamChatDto,
+  TestTeamAlertDto,
+  ReassignGroupDto,
+  AssignAppGroupDto,
+} from './dto/telegram-channel.dto';
 
 @Controller(['telegram', 'api/telegram'])
 export class TelegramController {
@@ -98,7 +105,7 @@ export class TelegramController {
   @UseGuards(JwtAuthGuard)
   async manualConnect(
     @Req() req: any,
-    @Body() body: { chatId: string; username?: string },
+    @Body() body: ManualConnectDto,
   ) {
     const userId = req.user?.sub || req.user?.id;
     if (!userId) throw new BadRequestException('User ID not found');
@@ -118,7 +125,7 @@ export class TelegramController {
   @UseGuards(JwtAuthGuard)
   async saveTeamChat(
     @Req() req: any,
-    @Body() body: { teamTelegramChatId?: string },
+    @Body() body: SaveTeamChatDto,
   ) {
     const userId = req.user?.sub || req.user?.id;
     if (!userId) throw new BadRequestException('User ID not found');
@@ -165,7 +172,7 @@ export class TelegramController {
   @UseGuards(JwtAuthGuard)
   async testTeamAlert(
     @Req() req: any,
-    @Body() body: { chatId?: string; miniAppName?: string; message?: string },
+    @Body() body: TestTeamAlertDto,
   ) {
     const userId = req.user?.sub || req.user?.id;
     const dbUser = userId ? await this.telegramService.getUser(userId) : null;
@@ -192,7 +199,7 @@ export class TelegramController {
   @UseGuards(JwtAuthGuard)
   async reassignGroup(
     @Req() req: any,
-    @Body() body: { oldChatId: string; newChatId?: string | null },
+    @Body() body: ReassignGroupDto,
   ) {
     const userId = req.user?.sub || req.user?.id;
     if (!body.oldChatId?.trim()) {
@@ -210,7 +217,7 @@ export class TelegramController {
   @UseGuards(JwtAuthGuard)
   async assignAppGroup(
     @Req() req: any,
-    @Body() body: { miniAppId: string; newChatId?: string | null },
+    @Body() body: AssignAppGroupDto,
   ) {
     const userId = req.user?.sub || req.user?.id;
     if (!body.miniAppId?.trim()) {

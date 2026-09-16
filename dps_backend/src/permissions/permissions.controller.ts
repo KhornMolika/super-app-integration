@@ -2,6 +2,7 @@ import { Controller, Get, Param, Patch, Body, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsService } from './permissions.service';
 import { RequirePermissions } from '../access-control/decorators/require-permissions.decorator';
+import { UpdatePermissionDefinitionDto } from './dto/update-permission-definition.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('permissions')
@@ -20,7 +21,10 @@ export class PermissionsController {
 
   @Patch(':id')
   @RequirePermissions('permission:manage')
-  async update(@Param('id') id: string, @Body() data: any) {
+  async update(
+    @Param('id') id: string,
+    @Body() data: UpdatePermissionDefinitionDto,
+  ) {
     return this.permissionsService.update(id, data);
   }
 }

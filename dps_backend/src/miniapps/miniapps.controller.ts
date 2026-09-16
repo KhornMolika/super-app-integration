@@ -27,6 +27,12 @@ import { UrlProbeHelper } from './helpers/url-probe.helper';
 
 import { RequirePermissions } from '../access-control/decorators/require-permissions.decorator';
 
+import {
+  VerifyDomainStandaloneDto,
+  DetectPermissionsDto,
+  RescanDto,
+} from './dto/miniapp-actions.dto';
+
 @UseGuards(JwtAuthGuard, RbacGuard)
 @Controller('mini-apps')
 export class MiniappsController {
@@ -174,21 +180,8 @@ export class MiniappsController {
   @RequirePermissions('miniapp:create')
   verifyDomainStandalone(
     @Body()
-    body: {
-      productionUrl: string;
-      appId: string;
-      verificationToken: string;
-    },
+    body: VerifyDomainStandaloneDto,
   ) {
-    if (!body?.productionUrl) {
-      throw new BadRequestException('productionUrl is required.');
-    }
-    if (!body?.appId) {
-      throw new BadRequestException('appId is required.');
-    }
-    if (!body?.verificationToken) {
-      throw new BadRequestException('verificationToken is required.');
-    }
     return this.miniappService.verifyDomainStandalone(
       body.productionUrl,
       body.appId,
@@ -216,12 +209,7 @@ export class MiniappsController {
   @RequirePermissions('miniapp:create')
   detectPermissions(
     @Body()
-    body: {
-      productionUrl?: string;
-      category?: string;
-      name?: string;
-      appId?: string;
-    },
+    body: DetectPermissionsDto,
   ) {
     return this.miniappService.detectPermissions(body);
   }
@@ -245,7 +233,7 @@ export class MiniappsController {
   @RequirePermissions('miniapp:update')
   rescan(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: { securityChecks?: string[] },
+    @Body() body: RescanDto,
     @Req() req: any,
   ) {
     return this.miniappService.rescan(id, req.user?.sub, body?.securityChecks);

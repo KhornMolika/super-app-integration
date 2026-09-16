@@ -4,6 +4,10 @@ import { Repository, In } from 'typeorm';
 import { User } from './entities/user.entity';
 import { Role } from './entities/role.entity';
 import { Permission } from './entities/permission.entity';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { CreateRoleDto } from './dto/create-role.dto';
+import { UpdateRoleDto } from './dto/update-role.dto';
 
 @Injectable()
 export class AccessControlService {
@@ -42,15 +46,7 @@ export class AccessControlService {
     return user;
   }
 
-  async createUser(dto: {
-    name: string;
-    email: string;
-    roleIds?: string[];
-    roleNames?: string[];
-    telegramChatId?: string;
-    telegramUsername?: string;
-    isActive?: boolean;
-  }): Promise<User> {
+  async createUser(dto: CreateUserDto): Promise<User> {
     const existing = await this.userRepository.findOne({ where: { email: dto.email } });
     if (existing) {
       throw new BadRequestException(`User with email '${dto.email}' already exists.`);
@@ -80,15 +76,7 @@ export class AccessControlService {
 
   async updateUser(
     id: string,
-    dto: {
-      name?: string;
-      email?: string;
-      roleIds?: string[];
-      roleNames?: string[];
-      telegramChatId?: string;
-      telegramUsername?: string;
-      isActive?: boolean;
-    },
+    dto: UpdateUserDto,
   ): Promise<User> {
     const user = await this.findUserById(id);
 
@@ -149,12 +137,7 @@ export class AccessControlService {
     return role;
   }
 
-  async createRole(dto: {
-    name: string;
-    description?: string;
-    permissions?: string[];
-    permissionNames?: string[];
-  }): Promise<Role> {
+  async createRole(dto: CreateRoleDto): Promise<Role> {
     const existing = await this.roleRepository.findOne({ where: { name: dto.name } });
     if (existing) {
       throw new BadRequestException(`Role with name '${dto.name}' already exists.`);
@@ -178,13 +161,7 @@ export class AccessControlService {
 
   async updateRole(
     id: string,
-    dto: {
-      name?: string;
-      description?: string;
-      permissions?: string[];
-      permissionNames?: string[];
-      isActive?: boolean;
-    },
+    dto: UpdateRoleDto,
   ): Promise<Role> {
     const role = await this.findRoleById(id);
 
