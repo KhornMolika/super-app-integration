@@ -16,7 +16,7 @@ services:
 
   nexus:
     image: sonatype/nexus3:latest
-    container_name: nexus
+    container_name: dps-nexus
     restart: unless-stopped
     env_file:
       - .env
@@ -63,5 +63,8 @@ services:
 
 volumes:
   pgdata:
+    name: dps_pgdata
   nexus-data:
+    name: dps_nexus_data
   minio_data:
+    name: dps_minio_data
