@@ -888,9 +888,9 @@ export default function UsersPage() {
               </div>
             </div>
 
-            {/* --- SUB-VIEW 1: ROLE CARDS --- */}
+            {/* --- SUB-VIEW 1: ROLE CARDS (2 COLS) --- */}
             {rolesSubView === 'cards' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {loadingRoles ? (
                   <div className="col-span-full py-16 text-center text-slate-500">
                     <div className="flex items-center justify-center gap-2">
