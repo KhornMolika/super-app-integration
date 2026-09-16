@@ -12,18 +12,23 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AccessControlService } from './access-control.service';
 
 @UseGuards(JwtAuthGuard)
-@Controller('users')
-export class UsersController {
+@Controller('roles')
+export class RolesController {
   constructor(private readonly accessControlService: AccessControlService) {}
 
   @Get()
   async findAll() {
-    return this.accessControlService.findAllUsers();
+    return this.accessControlService.findAllRoles();
+  }
+
+  @Get('permissions')
+  async findAllPermissions() {
+    return this.accessControlService.findAllPermissions();
   }
 
   @Get(':id')
   async findOne(@Param('id') id: string) {
-    return this.accessControlService.findUserById(id);
+    return this.accessControlService.findRoleById(id);
   }
 
   @Post()
@@ -31,15 +36,12 @@ export class UsersController {
     @Body()
     dto: {
       name: string;
-      email: string;
-      roleIds?: string[];
-      roleNames?: string[];
-      telegramChatId?: string;
-      telegramUsername?: string;
-      isActive?: boolean;
+      description?: string;
+      permissions?: string[];
+      permissionNames?: string[];
     },
   ) {
-    return this.accessControlService.createUser(dto);
+    return this.accessControlService.createRole(dto);
   }
 
   @Put(':id')
@@ -48,19 +50,17 @@ export class UsersController {
     @Body()
     dto: {
       name?: string;
-      email?: string;
-      roleIds?: string[];
-      roleNames?: string[];
-      telegramChatId?: string;
-      telegramUsername?: string;
+      description?: string;
+      permissions?: string[];
+      permissionNames?: string[];
       isActive?: boolean;
     },
   ) {
-    return this.accessControlService.updateUser(id, dto);
+    return this.accessControlService.updateRole(id, dto);
   }
 
   @Delete(':id')
   async remove(@Param('id') id: string) {
-    return this.accessControlService.deleteUser(id);
+    return this.accessControlService.deleteRole(id);
   }
 }
