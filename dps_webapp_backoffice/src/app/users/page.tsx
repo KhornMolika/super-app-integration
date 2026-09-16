@@ -1446,7 +1446,7 @@ export default function UsersPage() {
               className="fixed inset-0"
               onClick={() => !isSubmittingUser && setIsUserModalOpen(false)}
             />
-            <div className="relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 max-w-lg w-full p-6 shadow-2xl my-auto max-h-[calc(100vh-3rem)] overflow-y-auto z-10 animate-in zoom-in-95 duration-200">
+            <div className="relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 max-w-2xl w-full p-6 shadow-2xl my-auto max-h-[calc(100vh-3rem)] overflow-y-auto z-10 animate-in zoom-in-95 duration-200">
               <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-5">
                 <div className="flex items-center gap-2.5">
                   <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/20">
@@ -1475,37 +1475,39 @@ export default function UsersPage() {
               </div>
 
               <form onSubmit={handleSaveUser} className="space-y-4">
-                <div>
-                  <Label htmlFor="user-name" className="flex items-center gap-1.5 mb-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                    <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                    Full Name *
-                  </Label>
-                  <Input
-                    id="user-name"
-                    value={userFormData.name}
-                    onChange={(e) => setUserFormData({ ...userFormData, name: e.target.value })}
-                    placeholder="e.g. John Doe"
-                    required
-                  />
-                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="user-name" className="flex items-center gap-1.5 mb-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      Full Name *
+                    </Label>
+                    <Input
+                      id="user-name"
+                      value={userFormData.name}
+                      onChange={(e) => setUserFormData({ ...userFormData, name: e.target.value })}
+                      placeholder="e.g. John Doe"
+                      required
+                    />
+                  </div>
 
-                <div>
-                  <Label htmlFor="user-email" className="flex items-center gap-1.5 mb-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                    <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                    Email Address *
-                  </Label>
-                  <Input
-                    id="user-email"
-                    type="email"
-                    value={userFormData.email}
-                    onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })}
-                    placeholder="e.g. user@fsa.gov.kh"
-                    required
-                  />
+                  <div>
+                    <Label htmlFor="user-email" className="flex items-center gap-1.5 mb-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      Email Address *
+                    </Label>
+                    <Input
+                      id="user-email"
+                      type="email"
+                      value={userFormData.email}
+                      onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })}
+                      placeholder="e.g. user@fsa.gov.kh"
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -1515,7 +1517,7 @@ export default function UsersPage() {
                     </svg>
                     Assign Roles *
                   </Label>
-                  <div className="grid grid-cols-2 gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700">
                     {roles.map((r) => {
                       const checked = userFormData.roleNames.includes(r.name);
                       return (
@@ -1538,9 +1540,9 @@ export default function UsersPage() {
                                   : [...prev.roleNames, r.name],
                               }));
                             }}
-                            className="rounded text-brand-600 focus:ring-brand-500 w-4 h-4"
+                            className="rounded text-brand-600 focus:ring-brand-500 w-4 h-4 shrink-0"
                           />
-                          <span>{r.name}</span>
+                          <span className="truncate">{r.name}</span>
                         </label>
                       );
                     })}
@@ -1801,7 +1803,7 @@ export default function UsersPage() {
               className="fixed inset-0"
               onClick={() => !isSubmittingRole && setIsRoleModalOpen(false)}
             />
-            <div className="relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 max-w-3xl w-full p-6 shadow-2xl my-auto max-h-[calc(100vh-3rem)] overflow-y-auto z-10 animate-in zoom-in-95 duration-200">
+            <div className="relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 max-w-4xl w-full p-6 sm:p-7 shadow-2xl my-auto max-h-[calc(100vh-3rem)] overflow-y-auto z-10 animate-in zoom-in-95 duration-200">
               {/* Modal Header */}
               <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-5">
                 <div className="flex items-center gap-2.5">
