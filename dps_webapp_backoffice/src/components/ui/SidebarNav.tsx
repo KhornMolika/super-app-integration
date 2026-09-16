@@ -128,12 +128,15 @@ const navGroups: NavGroup[] = [
   }
 ];
 
+import { useSidebar } from '@/components/ui/SidebarContext';
+
 export function SidebarNav() {
   const pathname = usePathname();
   const { can } = useAuth();
+  const { isCollapsed } = useSidebar();
 
   return (
-    <nav className="flex-1 px-4 mt-6 overflow-y-auto overflow-x-hidden no-scrollbar pb-6 space-y-6">
+    <nav className={`flex-1 ${isCollapsed ? 'px-2' : 'px-4'} mt-4 overflow-y-auto overflow-x-hidden no-scrollbar pb-6 space-y-4 transition-all duration-300`}>
       {navGroups.map((group) => {
         // Filter items based on permissions
         const visibleItems = group.items.filter(item => 
@@ -144,7 +147,11 @@ export function SidebarNav() {
 
         return (
           <div key={group.label} className="space-y-1">
-            <h3 className="px-3 text-xs font-bold uppercase tracking-widest text-brand-400 mb-2">{group.label}</h3>
+            {!isCollapsed ? (
+              <h3 className="px-3 text-[10px] font-bold uppercase tracking-widest text-brand-400 mb-1.5">{group.label}</h3>
+            ) : (
+              <div className="h-px bg-brand-900/60 dark:bg-slate-800/80 my-2 mx-2" />
+            )}
             <div className="space-y-1">
               {visibleItems.map((item) => {
                 const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
@@ -153,16 +160,19 @@ export function SidebarNav() {
                   <Link 
                     key={item.href} 
                     href={item.href} 
-                    className={`group flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
+                    title={isCollapsed ? item.name : undefined}
+                    className={`group flex items-center ${isCollapsed ? 'justify-center px-2 py-3' : 'space-x-3 px-3 py-2.5'} rounded-xl transition-all duration-200 ${
                       isActive 
                         ? 'bg-brand-800 dark:bg-brand-900 border border-brand-700 dark:border-brand-800 shadow-inner text-white' 
                         : 'hover:bg-brand-800 dark:hover:bg-brand-900 hover:text-white text-brand-200'
                     }`}
                   >
-                    <div className={`transition-colors ${isActive ? 'text-accent-400' : 'text-brand-400 group-hover:text-accent-400'}`}>
+                    <div className={`transition-colors shrink-0 ${isActive ? 'text-accent-400' : 'text-brand-400 group-hover:text-accent-400'}`}>
                       {item.icon}
                     </div>
-                    <span className="font-medium text-sm">{item.name}</span>
+                    {!isCollapsed && (
+                      <span className="font-medium text-sm whitespace-nowrap overflow-hidden text-ellipsis">{item.name}</span>
+                    )}
                   </Link>
                 );
               })}
