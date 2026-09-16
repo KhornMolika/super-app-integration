@@ -20,3 +20,4 @@ build/
 *.lock.db
 *.lock
 *.zip
+*.tsbuildinfo

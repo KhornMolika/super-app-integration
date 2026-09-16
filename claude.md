@@ -192,3 +192,5 @@ bash ./scripts/download-test-apk.sh
    * Dark theme primary styling (`#080C14`, `#0F172A`, `#1E293B`) with emerald/cyan/brand accents.
 3. **STATE SAFETY**:
    * In Dart/Flutter GetX controllers, do not mark dynamic route fields as `late final` to prevent `LateInitializationError` on re-navigation.
+4. **HARDCODE CREDENTIAL RULE**:
+   * **Always check and remove hardcoded credentials**: Never hardcode API keys, passwords, secrets, tokens, or private credentials in source code. Always use environment variables (`.env`) or secure configuration management.

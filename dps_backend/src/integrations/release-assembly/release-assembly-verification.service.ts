@@ -7,8 +7,7 @@ import { Repository } from 'typeorm';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 import { JenkinsService } from '../jenkins/jenkins.service';
 import { NexusIntegrationService } from '../nexus/nexus-integration.service';
-import { NotificationsService } from '../../notifications/notifications.service';
-import { MailService } from '../../mail/mail.service';
+import { NotificationsService, MailService } from '../../notifications';
 import {
   VerifyAndAssembleReleaseDto,
   ReleaseAssemblyAuditResult,
@@ -229,12 +228,32 @@ export class ReleaseAssemblyVerificationService {
         this.logger.warn(`Could not write manifest to disk: ${err.message}`);
       }
 
-      // Transition approved apps to BUILDING
+      // Transition approved apps to BUILDING and dispatch notifications
       for (const appDto of dto.miniApps) {
         try {
           await this.miniappRepository.update(appDto.id, {
             status: 'BUILDING',
           });
+
+          const appRecord = await this.miniappRepository.findOne({
+            where: { id: appDto.id },
+            relations: { owner: true },
+          });
+
+          if (appRecord?.ownerId) {
+            await this.notificationsService.createNotification(
+              appRecord.ownerId,
+              'Super App Build in Progress',
+              `Super App test build (${dto.releaseVersion}) has been triggered on Jenkins for Mini App "${appRecord.name}". Artifacts will be available upon assembly completion.`,
+              'BUILD_STARTED',
+              appRecord.id,
+              {
+                releaseVersion: dto.releaseVersion,
+                version: dto.releaseVersion,
+                buildType: 'debug',
+              },
+            );
+          }
         } catch (_) {}
       }
 
@@ -301,13 +320,28 @@ export class ReleaseAssemblyVerificationService {
         `http://localhost:8081/repository/${repoName}/superapp/${body.releaseVersion}/${filename}`;
 
       for (const app of buildingApps) {
+        const effectiveVersion =
+          body.releaseVersion ||
+          app.integrationConfig?.superAppTestVersion ||
+          'v1.0.0';
+
+        const finalApkUrl =
+          body.apkUrl ||
+          `http://localhost:8081/repository/${repoName}/superapp/${effectiveVersion}/${filename}`;
+
         if (app.ownerId) {
           await this.notificationsService.createNotification(
             app.ownerId,
             'Super App Test Build Ready',
-            `Super App test build (${body.releaseVersion}) is ready! Download the test APK to verify ${app.name}.`,
+            `Super App test build (${effectiveVersion}) is ready! Download the test APK or launch the Web Sandbox to verify ${app.name}.`,
             'TEST_BUILD_READY',
             app.id,
+            {
+              releaseVersion: effectiveVersion,
+              version: effectiveVersion,
+              apkUrl: finalApkUrl,
+              buildType: body.buildType || 'debug',
+            },
           );
         }
 
@@ -317,8 +351,8 @@ export class ReleaseAssemblyVerificationService {
           await this.mailService.sendTestBuildReadyEmail(
             targetEmail,
             app.name || app.appId || 'Mini App',
-            body.releaseVersion || 'v1.0.0',
-            apkUrl,
+            effectiveVersion,
+            finalApkUrl,
             sandboxUrl,
           );
         }

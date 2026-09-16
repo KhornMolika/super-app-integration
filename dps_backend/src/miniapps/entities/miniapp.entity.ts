@@ -126,6 +126,34 @@ export class MiniApp {
   @Column({ type: 'jsonb', nullable: true })
   pendingRevision?: any;
 
+  @Column({ nullable: true, default: '1.0.0' })
+  version?: string;
+
+  @Column({ nullable: true, default: '1.0.0' })
+  currentReleaseVersion?: string;
+
+  @Column({ nullable: true })
+  activeTestVersion?: string;
+
+  @Column({ nullable: true })
+  draftVersion?: string;
+
+  @Column({ type: 'jsonb', nullable: true, default: () => "'[]'" })
+  versionHistory?: {
+    version: string;
+    saVersion?: string;
+    type: 'PRODUCTION' | 'TEST' | 'DRAFT';
+    status: 'ACTIVE' | 'TESTING' | 'DEPRECATED' | 'SUPERSEDED' | 'ARCHIVED';
+    changelog?: string;
+    artifactUrl?: string;
+    apkSize?: string;
+    checksum?: string;
+    releasedAt: string;
+    releasedBy?: string;
+    buildNumber?: number;
+    jenkinsJobUrl?: string;
+  }[];
+
   @OneToMany(() => MiniAppIssue, (issue) => issue.miniApp, {
     cascade: true,
     eager: true,
@@ -146,3 +174,4 @@ export class MiniApp {
   @OneToMany(() => MiniAppActivity, (activity) => activity.miniApp)
   activities!: MiniAppActivity[];
 }
+

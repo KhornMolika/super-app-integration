@@ -15,6 +15,7 @@ import { SidebarProfile } from '@/components/ui/SidebarProfile';
 import { HeaderProfile } from '@/components/ui/HeaderProfile';
 import { NotificationBell } from '@/components/ui/NotificationBell';
 import { ConfirmationProvider } from '@/components/ui/ConfirmationProvider';
+import { ToastProvider } from '@/components/ui/Toast';
 
 export const metadata: Metadata = {
   title: 'DPS Back Office',
@@ -31,7 +32,8 @@ export default function RootLayout({
       <body className={`${plusJakarta.className} antialiased h-screen overflow-hidden selection:bg-brand-500/30 selection:text-brand-900 dark:selection:text-brand-100`}>
         <AuthProvider>
           <ConfirmationProvider>
-          <div className="flex h-screen overflow-hidden text-foreground transition-colors duration-300">
+            <ToastProvider>
+              <div className="flex h-screen overflow-hidden text-foreground transition-colors duration-300">
             {/* Sidebar */}
             <aside className="w-72 bg-brand-950 dark:bg-slate-950 text-slate-200 flex flex-col border-r border-brand-900 dark:border-slate-900 shadow-2xl relative z-20 transition-colors">
               <div className="p-8 pb-4">
@@ -67,9 +69,10 @@ export default function RootLayout({
               </div>
             </main>
           </div>
-        </ConfirmationProvider>
-        </AuthProvider>
-      </body>
-    </html>
+        </ToastProvider>
+      </ConfirmationProvider>
+    </AuthProvider>
+  </body>
+</html>
   );
 }

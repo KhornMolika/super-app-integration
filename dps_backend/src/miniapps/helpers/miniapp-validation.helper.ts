@@ -5,8 +5,7 @@ import { isEmail } from 'class-validator';
 import { MiniApp } from '../entities/miniapp.entity';
 import { MiniAppIssue } from '../entities/miniapp-issue.entity';
 import { IsUrlReachableConstraint } from '../../common/validators/is-url-reachable.validator';
-import { MailService } from '../../mail/mail.service';
-import { NotificationsService } from '../../notifications/notifications.service';
+import { NotificationsService, MailService } from '../../notifications';
 import { PermissionsService } from '../../permissions/permissions.service';
 import { PermissionProposalsService } from '../../permission-proposals/permission-proposals.service';
 import { SuperAppService } from '../../super-app/super-app.service';
@@ -45,7 +44,7 @@ export class MiniappValidationHelper {
 
   async validateMiniAppAsync(
     app: MiniApp,
-    logActivityFn: (
+    logActivityFn?: (
       miniAppId: string,
       actorId: string,
       actionType: string,
@@ -427,16 +426,18 @@ export class MiniappValidationHelper {
         'ISSUE_CREATED',
         app.id,
       );
-      await logActivityFn(
-        id,
-        'system',
-        'VALIDATION',
-        'Validation Failed',
-        `Found ${issues.length} issues`,
-        'VALIDATE_MINI_APP',
-        app,
-        await this.miniappRepository.findOne({ where: { id } }),
-      );
+      if (logActivityFn) {
+        await logActivityFn(
+          id,
+          'system',
+          'VALIDATION',
+          'Validation Failed',
+          `Found ${issues.length} issues`,
+          'VALIDATE_MINI_APP',
+          app,
+          await this.miniappRepository.findOne({ where: { id } }),
+        );
+      }
 
       if (app.ownerEmail) {
         await this.mailService.sendRegistrationFailureEmail(
@@ -563,16 +564,18 @@ export class MiniappValidationHelper {
         'SCAN_STARTED',
         app.id,
       );
-      await logActivityFn(
-        id,
-        'system',
-        'VALIDATION',
-        'Validation Running',
-        `Automated ${method} validation pipeline triggered on Jenkins`,
-        'VALIDATE_MINI_APP',
-        app,
-        await this.miniappRepository.findOne({ where: { id } }),
-      );
+      if (logActivityFn) {
+        await logActivityFn(
+          id,
+          'system',
+          'VALIDATION',
+          'Validation Running',
+          `Automated ${method} validation pipeline triggered on Jenkins`,
+          'VALIDATE_MINI_APP',
+          app,
+          await this.miniappRepository.findOne({ where: { id } }),
+        );
+      }
     }
   }
 

@@ -5,9 +5,8 @@ import * as dns from 'dns';
 import * as net from 'net';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 import { MiniAppIssue } from '../../miniapps/entities/miniapp-issue.entity';
-import { NotificationsService } from '../../notifications/notifications.service';
+import { NotificationsService, MailService, PipelinePacerService } from '../../notifications';
 import { AuditService } from '../../audit/audit.service';
-import { MailService } from '../../mail/mail.service';
 import { PermissionsService } from '../../permissions/permissions.service';
 import { ValidationFindingDto } from './validation-callback.controller';
 
@@ -207,6 +206,7 @@ export class LocalSecurityScannerService {
     private readonly auditService: AuditService,
     private readonly mailService: MailService,
     private readonly permissionsService: PermissionsService,
+    private readonly pipelinePacerService: PipelinePacerService,
   ) {}
 
   private delay(ms: number): Promise<void> {
@@ -271,6 +271,7 @@ export class LocalSecurityScannerService {
     }
 
     if (overallStatus === 'PASSED') {
+      await this.pipelinePacerService.paceValidationPass(app.name || app.appId);
       app.validationStatus = 'PASSED';
       const initialStatuses = ['DRAFT', 'SUBMITTED', 'PENDING_REVIEW'];
       if (!hasPendingRevision && initialStatuses.includes(app.status)) {
@@ -429,6 +430,8 @@ export class LocalSecurityScannerService {
     app.validationStages = stages;
     app.validationStatus = 'RUNNING';
     await this.miniappRepository.save(app);
+
+    await this.pipelinePacerService.paceValidationStart(app.name || app.appId);
 
     const emitUpdate = async (stageId: string) => {
       app.validationStages = stages;
@@ -717,6 +720,8 @@ export class LocalSecurityScannerService {
     app.validationStages = stages;
     app.validationStatus = 'RUNNING';
     await this.miniappRepository.save(app);
+
+    await this.pipelinePacerService.paceValidationStart(app.name || app.appId);
 
     const emitUpdate = async (stageId: string) => {
       app.validationStages = stages;

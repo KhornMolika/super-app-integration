@@ -1,5 +1,4 @@
 "use client";
-import { API_URL } from '@/lib/config';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -19,6 +18,7 @@ import ValidationIssuesButton from '@/components/ValidationIssuesButton';
 import { validateMiniAppStep } from '@/lib/miniapp-form.validator';
 import { validateUrlFormat } from '@/components/ui/ValidatedUrlInput';
 import { CreateMiniAppDto, IntegrationMethod, SourceType } from '@/types/miniapp.types';
+import { miniappsApi, telegramApi } from '@/api';
 
 export default function RegisterMiniAppPage() {
   const router = useRouter();
@@ -58,6 +58,32 @@ export default function RegisterMiniAppPage() {
     securityChecks: [],
   });
 
+  // Auto-populate owner & Telegram details from current user profile on mount
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      try {
+        const data = await telegramApi.getStatus();
+        if (data && data.user) {
+          setFormData((prev) => ({
+            ...prev,
+            ownerName: prev.ownerName || data.user?.name || '',
+            ownerEmail: prev.ownerEmail || data.user?.email || '',
+            supportEmail: prev.supportEmail || data.user?.email || '',
+            teamTelegramChatId:
+              prev.teamTelegramChatId ||
+              data.user?.teamTelegramChatId ||
+              data.user?.telegramChatId ||
+              '',
+          }));
+        }
+      } catch (err) {
+        // Silently continue if network fails
+      }
+    };
+
+    loadUserProfile();
+  }, []);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalState, setModalState] = useState<SubmissionModalState>({ isOpen: false, status: 'loading' });
   const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
@@ -90,16 +116,8 @@ export default function RegisterMiniAppPage() {
     if (payload.integrationMethod !== IntegrationMethod.FLUTTER_PACKAGE) delete payload.integrationConfigFlutter;
 
     try {
-      const response = await fetch(`${API_URL}/mini-apps/draft`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (response.ok) {
-        router.push('/miniapps');
-      } else {
-        setIsSubmitting(false);
-      }
+      await miniappsApi.createDraft(payload);
+      router.push('/miniapps');
     } catch (e) {
       setIsSubmitting(false);
     }
@@ -214,14 +232,13 @@ export default function RegisterMiniAppPage() {
     if (formData.appId || formData.name) {
       const timeoutId = setTimeout(async () => {
         try {
-          const params = new URLSearchParams();
-          if (formData.appId && !errors.appId) params.append('appId', formData.appId);
-          if (formData.name && !errors.name) params.append('name', formData.name);
+          const paramsToCheck: { appId?: string; name?: string } = {};
+          if (formData.appId && !errors.appId) paramsToCheck.appId = formData.appId;
+          if (formData.name && !errors.name) paramsToCheck.name = formData.name;
 
-          if (params.toString()) {
-            const res = await fetch(`${API_URL}/mini-apps/check-exists?${params.toString()}`);
-            if (res.ok) {
-              const data = await res.json();
+          if (paramsToCheck.appId || paramsToCheck.name) {
+            const data = await miniappsApi.checkExists(paramsToCheck);
+            if (data) {
               setLocalErrors((prev) => {
                 const newErrors = { ...prev };
                 if (data.appIdExists) newErrors.appId = 'This Mini App ID is already taken.';
@@ -368,27 +385,19 @@ export default function RegisterMiniAppPage() {
     if (payload.integrationMethod !== IntegrationMethod.DEEP_LINK) delete payload.integrationConfigDeepLink;
 
     try {
-      const url = modalState.createdId ? `${API_URL}/mini-apps/${modalState.createdId}` : `${API_URL}/mini-apps`;
-      const method = modalState.createdId ? 'PATCH' : 'POST';
+      const resData = modalState.createdId
+        ? await miniappsApi.update(modalState.createdId, payload)
+        : await miniappsApi.create(payload);
 
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const resData = await response.json();
-
-      if (response.ok) {
+      if (resData) {
         const appId = modalState.createdId || resData.id;
         let attempts = 0;
 
         const pollTimer = setInterval(async () => {
           attempts++;
           try {
-            const pollRes = await fetch(`${API_URL}/mini-apps/${appId}`);
-            if (pollRes.ok) {
-              const appData = await pollRes.json();
+            const appData = await miniappsApi.getById(appId);
+            if (appData) {
               if (appData.validationStages) {
                 setModalState((prev) => ({
                   ...prev,
@@ -467,26 +476,23 @@ export default function RegisterMiniAppPage() {
             setIsSubmitting(false);
           }
         }, 600);
-      } else {
-        let errorsObj: Record<string, string> | undefined = undefined;
-        if (Array.isArray(resData.message)) {
-          errorsObj = {};
-          const errs = errorsObj as Record<string, string>;
-          resData.message.forEach((msg: string) => {
-            const field = msg.split(' ')[0];
-            errs[field] = msg;
-          });
-        }
-        setModalState({
-          isOpen: true,
-          status: 'error',
-          message: Array.isArray(resData.message) ? undefined : resData.message || 'Failed to register mini app.',
-          errors: errorsObj,
-        });
-        setIsSubmitting(false);
       }
-    } catch (error) {
-      setModalState({ isOpen: true, status: 'error', message: 'Error connecting to backend.' });
+    } catch (error: any) {
+      let errorsObj: Record<string, string> | undefined = undefined;
+      if (Array.isArray(error?.message)) {
+        errorsObj = {};
+        const errs = errorsObj as Record<string, string>;
+        error.message.forEach((msg: string) => {
+          const field = msg.split(' ')[0];
+          errs[field] = msg;
+        });
+      }
+      setModalState({
+        isOpen: true,
+        status: 'error',
+        message: Array.isArray(error?.message) ? undefined : error?.message || 'Failed to register mini app.',
+        errors: errorsObj,
+      });
       setIsSubmitting(false);
     }
   };
@@ -553,7 +559,7 @@ export default function RegisterMiniAppPage() {
                   </svg>
                 }
               />
-              <TeamForm formData={formData} handleChange={handleChange} allErrors={allErrors} />
+              <TeamForm formData={formData} setFormData={setFormData} handleChange={handleChange} allErrors={allErrors} />
             </Card>
           )}
 
@@ -666,6 +672,10 @@ export default function RegisterMiniAppPage() {
           onClose={() => setShowPreview(false)}
           url={previewUrl}
           title={formData.name}
+          version={(formData.integrationConfigFlutter as any)?.packageVersion || formData.integrationConfigFlutter?.versionConstraint || 'v1.0.0'}
+          category={formData.category}
+          appId={formData.appId}
+          status={(formData as any).status || 'DRAFT'}
           isFlutter={formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE}
         />
       </div>
@@ -683,20 +693,11 @@ export default function RegisterMiniAppPage() {
           if (payload.integrationMethod !== 'FLUTTER_PACKAGE') delete payload.integrationConfigFlutter;
 
           try {
-            const url = `${API_URL}/mini-apps/draft`;
-            const response = await fetch(url, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload),
-            });
-            if (response.ok) {
-              setModalState({ isOpen: false, status: 'success' });
-              router.push('/miniapps');
-            } else {
-              setModalState((prev) => ({ ...prev, status: 'error', message: 'Failed to save draft' }));
-            }
-          } catch (e) {
-            setModalState((prev) => ({ ...prev, status: 'error', message: 'Network error' }));
+            await miniappsApi.createDraft(payload);
+            setModalState({ isOpen: false, status: 'success' });
+            router.push('/miniapps');
+          } catch (e: any) {
+            setModalState((prev) => ({ ...prev, status: 'error', message: e?.message || 'Failed to save draft' }));
           }
         }}
         onRunInBackground={() => {

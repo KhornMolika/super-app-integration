@@ -19,6 +19,10 @@ const ALLOWED_ROUTES = [
   'security',
   'storage',
   'telegram',
+  'mail',
+  'settings',
+  'notifications',
+  'auth',
   'api',
 ];
 
@@ -40,11 +44,14 @@ async function handleProxy(request: Request, { params }: { params: Promise<{ pro
     // Get the auth token
     const cookieStore = await cookies();
     const token = cookieStore.get('auth_token')?.value;
+    const clientAuth = request.headers.get('authorization');
 
     // Prepare headers
     const headers = new Headers();
     if (token) {
       headers.set('Authorization', `Bearer ${token}`);
+    } else if (clientAuth) {
+      headers.set('Authorization', clientAuth);
     } else if (process.env.BACKEND_INTERNAL_SECRET) {
       headers.set('Authorization', `Bearer ${process.env.BACKEND_INTERNAL_SECRET}`);
     }

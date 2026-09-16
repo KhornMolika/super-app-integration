@@ -1,5 +1,4 @@
 "use client";
-import { API_URL } from '@/lib/config';
 
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
@@ -16,17 +15,23 @@ import PermissionsForm, { formatCompliantPurpose } from '@/components/forms/Perm
 import ValidationIssuesButton from '@/components/ValidationIssuesButton';
 import ActivityTab from '@/components/ui/ActivityTab';
 import ValidationReportTab from '@/components/ui/ValidationReportTab';
+import VersionHistoryTab from '@/components/miniapp-detail/VersionHistoryTab';
 import MiniAppDetailHeader from '@/components/miniapp-detail/MiniAppDetailHeader';
+
 import MiniAppLifecycleBanners from '@/components/miniapp-detail/MiniAppLifecycleBanners';
 import MiniAppDetailTabs, { MiniAppTabType } from '@/components/miniapp-detail/MiniAppDetailTabs';
+import { RevisionReviewModal } from '@/components/review/RevisionReviewModal';
+import ReasonPromptModal from '@/components/ui/ReasonPromptModal';
 import { CreateMiniAppDto, IntegrationMethod, SourceType } from '@/types/miniapp.types';
 import { validateUrlFormat } from '@/components/ui/ValidatedUrlInput';
+import { toast } from '@/components/ui/Toast';
+import { miniappsApi, superAppApi } from '@/api';
 
 export default function ManageMiniAppPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id } = use(params);
 
-  const [formData, setFormData] = useState<Partial<CreateMiniAppDto & { status: string; validationErrors?: Record<string, string>; validationStatus?: string; validationStages?: any; validationReport?: any; issues?: any[]; pendingRevision?: any }>>({
+  const [formData, setFormData] = useState<Partial<CreateMiniAppDto & { status: string; validationErrors?: Record<string, string>; validationStatus?: string; validationStages?: any; validationReport?: any; issues?: any[]; pendingRevision?: any; activeTestVersion?: string; currentReleaseVersion?: string }>>({
     name: '',
     appId: '',
     category: 'Insurance',
@@ -51,28 +56,38 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
     status: 'DRAFT',
     validationErrors: undefined as Record<string, string> | undefined,
     pendingRevision: undefined as any,
+    activeTestVersion: undefined as string | undefined,
+    currentReleaseVersion: undefined as string | undefined,
   });
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalState, setModalState] = useState<SubmissionModalState>({ isOpen: false, status: 'loading' });
-  const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [previewUrl, setPreviewUrl] = useState('');
   const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
+
+  const [isReviewDiffOpen, setIsReviewDiffOpen] = useState(false);
+  const [revisionModalOpen, setRevisionModalOpen] = useState(false);
+  const [revisionChangelog, setRevisionChangelog] = useState('');
+  const [revisionJustification, setRevisionJustification] = useState('');
+  const [lifecycleReasonModal, setLifecycleReasonModal] = useState<{
+    isOpen: boolean;
+    action: 'reject' | 'request-changes' | 'discard-revision';
+    title: string;
+    description: string;
+    confirmText: string;
+    confirmVariant: 'danger' | 'warning';
+    quickSuggestions: string[];
+    placeholder: string;
+  } | null>(null);
 
   const confirm = useConfirm();
   const { can, role } = useAuth();
   const [activeTab, setActiveTab] = useState<MiniAppTabType>('overview');
   const [customPermission, setCustomPermission] = useState('');
   const [isEditingUnlocked, setIsEditingUnlocked] = useState(false);
-
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
+  const [latestTestVersion, setLatestTestVersion] = useState<string>('v0.3.7');
 
   useEffect(() => {
     const errors: Record<string, string> = {};
@@ -120,15 +135,14 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
     if (formData.appId || formData.name) {
       const timeoutId = setTimeout(async () => {
         try {
-          const queryParams = new URLSearchParams();
-          if (formData.appId && !errors.appId) queryParams.append('appId', formData.appId);
-          if (formData.name && !errors.name) queryParams.append('name', formData.name);
-          if (id) queryParams.append('excludeId', id as string);
+          const paramsToCheck: { appId?: string; name?: string; excludeId?: string } = {};
+          if (formData.appId && !errors.appId) paramsToCheck.appId = formData.appId;
+          if (formData.name && !errors.name) paramsToCheck.name = formData.name;
+          if (id) paramsToCheck.excludeId = id as string;
 
-          if (queryParams.toString()) {
-            const res = await fetch(`${API_URL}/mini-apps/check-exists?${queryParams.toString()}`);
-            if (res.ok) {
-              const data = await res.json();
+          if (paramsToCheck.appId || paramsToCheck.name) {
+            const data = await miniappsApi.checkExists(paramsToCheck);
+            if (data) {
               setLocalErrors((prev) => {
                 const newErrors = { ...prev };
                 if (data.appIdExists) newErrors.appId = 'This Mini App ID is already taken.';
@@ -203,9 +217,8 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
 
   const fetchApp = async () => {
     try {
-      const res = await fetch(`${API_URL}/mini-apps/${id}`);
-      if (res.ok) {
-        const data = await res.json();
+      const data = await miniappsApi.getById(id);
+      if (data) {
         const activeOrRev = data.pendingRevision ? { ...data, ...data.pendingRevision } : data;
         setFormData({
           ...data,
@@ -221,11 +234,19 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
           integrationConfigFlutter: activeOrRev.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE ? activeOrRev.integrationConfig : { sourceType: SourceType.ARTIFACT, packageName: '', versionConstraint: '' },
           integrationConfigDeepLink: activeOrRev.integrationMethod === IntegrationMethod.DEEP_LINK ? activeOrRev.integrationConfig : { urlScheme: '', packageName: '', appStoreUrl: '' },
         });
+
+        // Fetch current active ecosystem test build version
+        try {
+          const eco = await superAppApi.getEcosystemStatus();
+          if (eco && (eco.superAppTestVersion || eco.superAppVersion)) {
+            setLatestTestVersion(eco.superAppTestVersion || eco.superAppVersion);
+          }
+        } catch (_) {}
       } else {
-        setToast({ type: 'error', message: 'Failed to fetch mini app details.' });
+        toast.error('Failed to fetch mini app details.', 'Load Failed');
       }
-    } catch (error) {
-      setToast({ type: 'error', message: 'Error connecting to backend.' });
+    } catch (error: any) {
+      toast.error('Error connecting to backend.', 'Connection Error');
     } finally {
       setIsLoading(false);
     }
@@ -240,12 +261,9 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
 
     const pollInterval = setInterval(async () => {
       try {
-        const res = await fetch(`${API_URL}/mini-apps/${id}`);
-        if (res.ok) {
-          const updated = await res.json();
-          if (updated.status && updated.status !== 'BUILDING') {
-            setFormData((prev) => ({ ...prev, status: updated.status }));
-          }
+        const updated = await miniappsApi.getById(id);
+        if (updated && updated.status && updated.status !== 'BUILDING') {
+          setFormData((prev) => ({ ...prev, status: updated.status }));
         }
       } catch (_) {}
     }, 3000);
@@ -453,6 +471,15 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
       return;
     }
 
+    if (!isDraftOnly && formData.status === 'ACTIVE') {
+      setRevisionModalOpen(true);
+      return;
+    }
+
+    await executeSave(isDraftOnly);
+  };
+
+  const executeSave = async (isDraftOnly = false, changelog?: string, justification?: string) => {
     setIsSubmitting(true);
     setModalState({ isOpen: true, status: 'loading' });
 
@@ -480,6 +507,9 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
       permissions: cleanPermissions,
     };
 
+    if (changelog) payload.changelog = changelog;
+    if (justification) payload.justification = justification;
+
     if (formData.integrationMethod === IntegrationMethod.WEBVIEW) {
       const webConfig = { ...formData.integrationConfigWebView };
       if (typeof webConfig.allowedDomains === 'string') {
@@ -496,17 +526,19 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
     }
 
     try {
-      const response = await fetch(`${API_URL}/mini-apps/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      const resData = await miniappsApi.update(id, payload);
 
-      const resData = await response.json().catch(() => ({}));
-
-      if (response.ok) {
+      if (resData) {
         if (isDraftOnly) {
-          setToast({ type: 'success', message: 'Draft saved successfully.' });
+          toast.success('Draft saved successfully.', 'Draft Saved');
+          setIsSubmitting(false);
+          fetchApp();
+          return;
+        }
+
+        if (resData.isFastTrack) {
+          toast.success('General information updated live instantly (Fast-Track applied).', 'Updated Live');
+          setModalState({ isOpen: false, status: 'success' });
           setIsSubmitting(false);
           fetchApp();
           return;
@@ -516,10 +548,9 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
         const pollTimer = setInterval(async () => {
           attempts++;
           try {
-            const pollRes = await fetch(`${API_URL}/mini-apps/${id}`);
-            if (pollRes.ok) {
-              const appData = await pollRes.json();
-              setFormData((prev) => ({
+            const appData = await miniappsApi.getById(id);
+            if (appData) {
+              setFormData((prev: any) => ({
                 ...appData,
                 permissions: Array.isArray(appData.permissions) ? appData.permissions : prev.permissions,
                 integrationConfigWebView: appData.integrationMethod === IntegrationMethod.WEBVIEW ? appData.integrationConfig : prev.integrationConfigWebView,
@@ -530,49 +561,44 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
               const statusUpper = (appData.status || '').toUpperCase();
               if (statusUpper !== 'PROCESSING') {
                 const hasValidationErrors = appData.validationErrors && Object.keys(appData.validationErrors).length > 0;
-                if (hasValidationErrors) {
-                  clearInterval(pollTimer);
-                  setModalState({
-                    isOpen: true,
-                    status: 'error',
-                    message: 'Validation failed.',
-                    errors: appData.validationErrors || {},
-                  });
-                  setIsSubmitting(false);
-                } else {
-                  clearInterval(pollTimer);
-                  setModalState({ isOpen: true, status: 'success', message: 'Saved and submitted for review successfully!' });
-                  setIsSubmitting(false);
-                }
+                setModalState({
+                  isOpen: false,
+                  status: (statusUpper === 'REJECTED' || hasValidationErrors) ? 'error' : 'success',
+                  errors: appData.validationErrors,
+                });
+                clearInterval(pollTimer);
+                setIsSubmitting(false);
+                fetchApp();
               }
             }
-          } catch (pollErr) {}
-          if (attempts > 30) {
+          } catch (e) {
+            // Polling error ignored
+          }
+
+          if (attempts >= 15) {
             clearInterval(pollTimer);
-            setModalState({ isOpen: true, status: 'error', message: 'Validation timed out.' });
+            setModalState({ isOpen: false, status: 'success' });
             setIsSubmitting(false);
+            fetchApp();
           }
         }, 1000);
-      } else {
-        let errorsObj: Record<string, string> | undefined = undefined;
-        if (Array.isArray(resData.message)) {
-          errorsObj = {};
-          const errs = errorsObj as Record<string, string>;
-          resData.message.forEach((msg: string) => {
-            const field = msg.split(' ')[0];
-            errs[field] = msg;
-          });
-        }
-        setModalState({
-          isOpen: true,
-          status: 'error',
-          message: Array.isArray(resData.message) ? undefined : resData.message || 'Failed to save changes.',
-          errors: errorsObj,
-        });
-        setIsSubmitting(false);
       }
-    } catch (error) {
-      setModalState({ isOpen: true, status: 'error', message: 'Error connecting to backend.' });
+    } catch (error: any) {
+      let errorsObj: Record<string, string> | undefined = undefined;
+      if (Array.isArray(error?.message)) {
+        errorsObj = {};
+        const errs = errorsObj as Record<string, string>;
+        error.message.forEach((msg: string) => {
+          const field = msg.split(' ')[0];
+          errs[field] = msg;
+        });
+      }
+      setModalState({
+        isOpen: true,
+        status: 'error',
+        message: Array.isArray(error?.message) ? undefined : error?.message || 'Failed to save changes.',
+        errors: errorsObj,
+      });
       setIsSubmitting(false);
     }
   };
@@ -581,16 +607,105 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
     action: 'submit' | 'approve' | 'reject' | 'request-changes' | 'start-testing' | 'activate' | 'suspend' | 'publish-revision' | 'discard-revision',
     explicitReason?: string
   ) => {
+    const isLiveWithRevision = formData.status === 'ACTIVE' && Boolean(formData.pendingRevision);
+
+    if (action === 'discard-revision' && explicitReason === undefined) {
+      setLifecycleReasonModal({
+        isOpen: true,
+        action: 'discard-revision',
+        title: 'Reject & Discard Staged Revision',
+        description: 'Are you sure you want to reject this revision? All proposed changes will be discarded while the live version remains active in the Super App catalog.',
+        confirmText: 'Reject Revision',
+        confirmVariant: 'danger',
+        placeholder: 'Explain why this revision cannot be accepted...',
+        quickSuggestions: [
+          'Violates Super App platform capability and security policies',
+          'High-risk permissions requested without required partner certification',
+          'Duplicate or conflicting capability with existing Super App core features',
+          'Incompatible technical architecture or failed automated security baseline',
+        ],
+      });
+      return;
+    }
+
+    if (action === 'reject' && explicitReason === undefined) {
+      if (isLiveWithRevision) {
+        setLifecycleReasonModal({
+          isOpen: true,
+          action: 'discard-revision',
+          title: 'Reject & Discard Staged Revision',
+          description: 'Are you sure you want to reject this staged revision? All proposed changes will be discarded while the live version remains active in the Super App.',
+          confirmText: 'Reject Revision',
+          confirmVariant: 'danger',
+          placeholder: 'Explain why this revision is being rejected...',
+          quickSuggestions: [
+            'Violates Super App platform capability and security policies',
+            'High-risk permissions requested without required partner certification',
+            'Duplicate or conflicting capability with existing Super App core features',
+            'Security baseline checks failed on proposed endpoint or artifact',
+          ],
+        });
+        return;
+      }
+
+      setLifecycleReasonModal({
+        isOpen: true,
+        action: 'reject',
+        title: 'Reject Mini App Submission',
+        description: 'Specify the reason for rejecting this Mini App. The developer will receive this feedback to remediate issues.',
+        confirmText: 'Reject Mini App',
+        confirmVariant: 'danger',
+        placeholder: 'Explain why this Mini App is being rejected...',
+        quickSuggestions: [
+          'App description or assets violate Super App content guidelines',
+          'Integration endpoint is unreachable or returning invalid responses',
+          'High-risk permissions requested without acceptable justification',
+          'Security or domain verification requirements failed baseline',
+        ],
+      });
+      return;
+    }
+
+    if (action === 'request-changes' && explicitReason === undefined) {
+      if (isLiveWithRevision) {
+        setLifecycleReasonModal({
+          isOpen: true,
+          action: 'request-changes',
+          title: 'Request Changes on Staged Revision',
+          description: 'Specify the required fixes. The staged revision will remain in draft for the developer while the live version remains active.',
+          confirmText: 'Send Request',
+          confirmVariant: 'warning',
+          placeholder: 'Specify what updates are needed in this revision...',
+          quickSuggestions: [
+            'Permission purpose is too vague; provide explicit business context',
+            'Domain whitelist includes unverified external domains',
+            'Terms of Service / Privacy Policy URL is inaccessible or invalid',
+            'Security scan flagged potential SSRF risk on target endpoint',
+          ],
+        });
+        return;
+      }
+
+      setLifecycleReasonModal({
+        isOpen: true,
+        action: 'request-changes',
+        title: 'Request Changes from Developer',
+        description: 'Provide details on what needs to be updated before this Mini App can proceed through the approval pipeline.',
+        confirmText: 'Send Request',
+        confirmVariant: 'warning',
+        placeholder: 'Specify what updates are needed...',
+        quickSuggestions: [
+          'Please clarify and provide detailed purpose for requested permissions',
+          'Domain verification TXT / association record is missing or expired',
+          'Update Terms of Service and Privacy Policy URLs to valid live documents',
+          'Resolve reported security scan vulnerabilities before resubmission',
+        ],
+      });
+      return;
+    }
+
     let reason = explicitReason || '';
-    if (action === 'reject' && !explicitReason) {
-      const response = prompt('Please enter a reason for rejection:');
-      if (response === null) return;
-      reason = response;
-    } else if (action === 'request-changes' && !explicitReason) {
-      const response = prompt('Please specify the changes or fixes required:');
-      if (response === null) return;
-      reason = response;
-    } else if (!explicitReason) {
+    if (!explicitReason) {
       const isTestBuild = action === 'start-testing';
       const isPublishRev = action === 'publish-revision';
       const isDiscardRev = action === 'discard-revision';
@@ -634,28 +749,24 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
 
     setIsSubmitting(true);
     try {
-      const res = await fetch(`${API_URL}/mini-apps/${id}/${action}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason }),
-      });
-      if (res.ok) {
-        const msg =
-          action === 'start-testing'
-            ? 'Super App test build pipeline triggered in Jenkins! Packaging test APK for Nexus store...'
-            : action === 'publish-revision'
-            ? 'Staged revision published live to Super App successfully!'
-            : action === 'discard-revision'
-            ? 'Pending draft revision has been discarded.'
-            : 'Mini App status successfully updated!';
-        setToast({ type: 'success', message: msg });
-        fetchApp();
-      } else {
-        const errorData = await res.json().catch(() => null);
-        setToast({ type: 'error', message: errorData?.message || `Failed to execute ${action}.` });
+      const res = await miniappsApi.triggerAction(id, action, reason);
+      const msg =
+        action === 'start-testing'
+          ? 'Super App test build pipeline triggered in Jenkins! Packaging test APK for Nexus store...'
+          : action === 'publish-revision'
+          ? 'Staged revision published live to Super App successfully!'
+          : action === 'discard-revision'
+          ? 'Pending draft revision has been discarded.'
+          : action === 'approve'
+          ? 'Mini App approved successfully! Redirecting to Security & Compliance scan...'
+          : res?.message || 'Mini App status successfully updated!';
+      toast.success(msg, 'Lifecycle Updated');
+      fetchApp();
+      if (action === 'approve' || action === 'submit') {
+        setActiveTab('report');
       }
-    } catch (err) {
-      setToast({ type: 'error', message: 'Network error occurred.' });
+    } catch (err: any) {
+      toast.error(err?.message || `Failed to execute ${action}.`, 'Action Failed');
     } finally {
       setIsSubmitting(false);
     }
@@ -673,18 +784,11 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(`${API_URL}/mini-apps/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        router.push('/miniapps');
-      } else {
-        setToast({ type: 'error', message: 'Failed to delete mini app.' });
-        setIsSubmitting(false);
-      }
-    } catch (error) {
-      setToast({ type: 'error', message: 'Error connecting to backend.' });
+      await miniappsApi.delete(id);
+      toast.success('Mini App deleted successfully.', 'Deleted');
+      router.push('/miniapps');
+    } catch (error: any) {
+      toast.error(error?.message || 'Error deleting mini app.', 'Connection Error');
       setIsSubmitting(false);
     }
   };
@@ -709,6 +813,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
           formData={formData}
           role={role}
           can={can}
+          latestTestVersion={latestTestVersion}
           isEditingUnlocked={isEditingUnlocked}
           onToggleEditing={() => setIsEditingUnlocked(!isEditingUnlocked)}
           onOpenSandbox={openSandboxPreview}
@@ -722,10 +827,11 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
           status={formData.status || 'DRAFT'}
           can={can}
           role={role}
-          testVersion={(formData as any).integrationConfig?.superAppTestVersion || 'v1.1.1'}
+          testVersion={formData.activeTestVersion || latestTestVersion || (formData as any).integrationConfig?.superAppTestVersion || 'v0.3.7'}
           isSubmitting={isSubmitting}
           onLifecycleAction={handleLifecycleAction}
           onOpenSandbox={openSandboxPreview}
+          onOpenReviewDiff={() => setIsReviewDiffOpen(true)}
           pendingRevision={formData.pendingRevision}
         />
 
@@ -763,7 +869,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
                   </svg>
                 }
               />
-              <TeamForm formData={formData} handleChange={handleChange} allErrors={allErrors} isEditable={isEditable} />
+              <TeamForm formData={formData} setFormData={setFormData} handleChange={handleChange} allErrors={allErrors} isEditable={isEditable} />
             </Card>
           )}
 
@@ -814,6 +920,17 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
             </Card>
           )}
 
+          {activeTab === 'versions' && (
+            <VersionHistoryTab
+              miniAppId={id as string}
+              miniAppName={formData.name || ''}
+              appId={formData.appId}
+              currentStatus={formData.status}
+              teamTelegramChatId={formData.teamTelegramChatId}
+              pendingRevision={formData.pendingRevision}
+            />
+          )}
+
           {activeTab === 'report' && (
             <ValidationReportTab miniApp={formData} onRefresh={fetchApp} />
           )}
@@ -824,24 +941,30 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
         </div>
 
         {/* Save Changes Bottom Toolbar for Editable Modes */}
-        {isEditable && activeTab !== 'report' && activeTab !== 'activity' && (
+        {isEditable && activeTab !== 'report' && activeTab !== 'activity' && activeTab !== 'versions' && (
           <div className="mt-6 flex justify-end gap-3 border-t border-slate-200 dark:border-slate-800 pt-5">
             <Button
               type="button"
               variant="outline"
               onClick={(e) => handleSave(e, true)}
               disabled={isSubmitting}
-              className="h-11 px-6 text-base font-semibold"
+              className="h-11 px-6 text-base font-semibold flex items-center gap-2"
             >
-              Save as Draft
+              <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+              </svg>
+              <span>Save as Draft</span>
             </Button>
             <Button
               type="button"
               onClick={(e) => handleSave(e, false)}
               disabled={isSubmitting}
-              className="h-11 px-6 text-base font-semibold"
+              className="h-11 px-6 text-base font-semibold flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white"
             >
-              {isSubmitting ? 'Saving...' : 'Save & Submit Changes'}
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+              </svg>
+              <span>{isSubmitting ? 'Saving...' : 'Save & Submit Changes'}</span>
             </Button>
           </div>
         )}
@@ -851,9 +974,135 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
           onClose={() => setShowPreview(false)}
           url={previewUrl}
           title={formData.name}
+          version={
+            formData.activeTestVersion ||
+            latestTestVersion ||
+            (formData as any).integrationConfig?.superAppTestVersion ||
+            (formData.integrationConfigFlutter as any)?.packageVersion ||
+            formData.integrationConfigFlutter?.versionConstraint ||
+            (formData as any).version ||
+            'v1.0.0'
+          }
+          apkUrl={`/api/download-apk?type=test&version=${encodeURIComponent(formData.activeTestVersion || latestTestVersion || (formData as any).integrationConfig?.superAppTestVersion || 'v0.3.7')}`}
+          category={formData.category}
+          appId={formData.appId}
+          status={formData.status}
+          buildCompletedAt={
+            (formData as any).validationReport?.completedAt ||
+            (formData as any).validationStages?.RELEASE_ASSEMBLY?.completedAt ||
+            (formData as any).validationStages?.BUILD?.completedAt ||
+            (formData as any).updatedAt
+          }
           isFlutter={formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE}
         />
       </div>
+
+      {/* Revision Submission Modal (What & Why for Active Mini Apps) */}
+      {revisionModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden space-y-5 p-6 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Submit Revision for Review</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Provide context for Super Admins to review your update</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRevisionModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div>
+                <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                  What was updated? (Release Notes / Changelog) <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={revisionChangelog}
+                  onChange={(e) => setRevisionChangelog(e.target.value)}
+                  placeholder="e.g. Added biometric auth permission, updated endpoint to v2 API, upgraded dependencies..."
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                  Why is this change needed? (Business / Security Justification) <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={revisionJustification}
+                  onChange={(e) => setRevisionJustification(e.target.value)}
+                  placeholder="e.g. Required to support quick fingerprint checkout on Super App client..."
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+              </div>
+
+              <div className="p-3 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-900/60 text-blue-800 dark:text-blue-300 flex items-start gap-2">
+                <svg className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="leading-relaxed">
+                  General Info edits apply instantly via <strong>Smart Fast-Track</strong>. Security or Build configuration changes will be safely staged for SA Admin approval while your live app continues running.
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setRevisionModalOpen(false)}
+                className="px-4 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center gap-1.5"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                <span>Cancel</span>
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setRevisionModalOpen(false);
+                  await executeSave(false, revisionChangelog, revisionJustification);
+                }}
+                className="px-4 py-2 text-xs font-bold rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-sm flex items-center gap-1.5"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>Submit Revision</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Revision Review Diff Modal */}
+      {isReviewDiffOpen && (
+        <RevisionReviewModal
+          isOpen={isReviewDiffOpen}
+          onClose={() => setIsReviewDiffOpen(false)}
+          miniAppId={id as string}
+          miniAppName={formData.name}
+          onSuccess={() => {
+            setIsReviewDiffOpen(false);
+            fetchApp();
+          }}
+        />
+      )}
 
       <SubmissionModal
         state={modalState}
@@ -878,36 +1127,23 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
         <ValidationIssuesButton errors={allErrors} onNavigate={handleNavigateToIssue} />
       )}
 
-      {/* Floating Toast Notification */}
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-[120] animate-in slide-in-from-bottom-5 fade-in duration-300">
-          <div
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border backdrop-blur-md text-white ${
-              toast.type === 'success'
-                ? 'bg-slate-900/95 dark:bg-slate-800/95 border-emerald-500/40'
-                : toast.type === 'error'
-                ? 'bg-rose-950/95 border-rose-600/60'
-                : 'bg-slate-900/95 border-slate-700/80'
-            }`}
-          >
-            {toast.type === 'success' && (
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-              </span>
-            )}
-            {toast.type === 'error' && <span className="text-rose-400 font-bold">⚠️</span>}
-            <span className="text-sm font-semibold tracking-wide">{toast.message}</span>
-            <button
-              type="button"
-              onClick={() => setToast(null)}
-              className="ml-2 text-slate-400 hover:text-white p-0.5 rounded transition-colors"
-              aria-label="Dismiss notification"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
+      {lifecycleReasonModal?.isOpen && (
+        <ReasonPromptModal
+          isOpen={lifecycleReasonModal.isOpen}
+          title={lifecycleReasonModal.title}
+          description={lifecycleReasonModal.description}
+          placeholder={lifecycleReasonModal.placeholder}
+          confirmText={lifecycleReasonModal.confirmText}
+          confirmVariant={lifecycleReasonModal.confirmVariant}
+          quickSuggestions={lifecycleReasonModal.quickSuggestions}
+          isLoading={isSubmitting}
+          onClose={() => setLifecycleReasonModal(null)}
+          onConfirm={(reason) => {
+            const action = lifecycleReasonModal.action;
+            setLifecycleReasonModal(null);
+            handleLifecycleAction(action, reason);
+          }}
+        />
       )}
     </>
   );

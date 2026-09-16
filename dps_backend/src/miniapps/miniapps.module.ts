@@ -6,7 +6,6 @@ import { MiniApp } from './entities/miniapp.entity';
 import { MiniAppIssue } from './entities/miniapp-issue.entity';
 import { MiniAppActivity } from './entities/miniapp-activity.entity';
 
-import { MailModule } from '../mail/mail.module';
 import { AuthModule } from '../auth/auth.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { PermissionsModule } from '../permissions/permissions.module';
@@ -19,11 +18,14 @@ import { StorageModule } from '../storage/storage.module';
 import { PermissionDetectorHelper } from './helpers/permission-detector.helper';
 import { MiniappValidationHelper } from './helpers/miniapp-validation.helper';
 import { MiniappLifecycleHelper } from './helpers/miniapp-lifecycle.helper';
+import { ArtifactDistributionHelper } from './helpers/artifact-distribution.helper';
+import { DomainAssociationHelper } from './helpers/domain-association.helper';
+import { MiniappMutationHelper } from './helpers/miniapp-mutation.helper';
+import { UrlProbeHelper } from './helpers/url-probe.helper';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([MiniApp, MiniAppIssue, MiniAppActivity]),
-    MailModule,
     AuthModule,
     NotificationsModule,
     PermissionsModule,
@@ -39,12 +41,20 @@ import { MiniappLifecycleHelper } from './helpers/miniapp-lifecycle.helper';
     PermissionDetectorHelper,
     MiniappValidationHelper,
     MiniappLifecycleHelper,
+    ArtifactDistributionHelper,
+    DomainAssociationHelper,
+    MiniappMutationHelper,
+    UrlProbeHelper,
   ],
   exports: [
     MiniappsService,
     PermissionDetectorHelper,
     MiniappValidationHelper,
     MiniappLifecycleHelper,
+    ArtifactDistributionHelper,
+    DomainAssociationHelper,
+    MiniappMutationHelper,
+    UrlProbeHelper,
   ],
 })
 export class MiniappsModule {}

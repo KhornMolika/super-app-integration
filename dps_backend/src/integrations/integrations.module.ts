@@ -17,7 +17,6 @@ import { MiniApp } from '../miniapps/entities/miniapp.entity';
 import { MiniAppIssue } from '../miniapps/entities/miniapp-issue.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { AuditModule } from '../audit/audit.module';
-import { MailModule } from '../mail/mail.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { DomainVerificationService } from './webview/domain-verification.service';
 import { ValidationCallbackController } from './validation/validation-callback.controller';
@@ -30,7 +29,6 @@ import { LocalSecurityScannerService } from './validation/local-security-scanner
     TypeOrmModule.forFeature([MiniApp, MiniAppIssue]),
     NotificationsModule,
     AuditModule,
-    MailModule,
     PermissionsModule,
   ],
   controllers: [

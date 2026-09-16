@@ -11,9 +11,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 import { MiniAppIssue } from '../../miniapps/entities/miniapp-issue.entity';
-import { NotificationsService } from '../../notifications/notifications.service';
+import { NotificationsService, MailService } from '../../notifications';
 import { AuditService } from '../../audit/audit.service';
-import { MailService } from '../../mail/mail.service';
 
 export interface ValidationFindingDto {
   id: string;

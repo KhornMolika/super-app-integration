@@ -1,5 +1,4 @@
 "use client";
-import { API_URL } from '@/lib/config';
 
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
@@ -9,38 +8,39 @@ import { Input, Label, Textarea, Button } from '@/components/ui/inputs';
 import { Card } from '@/components/ui/card';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/lib/auth';
+import { toast } from '@/components/ui/Toast';
+import { permissionsApi, Permission } from '@/api';
 
 export default function PermissionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const router = useRouter();
   const { can } = useAuth();
   
-  const [permission, setPermission] = useState<any>(null);
+  const [permission, setPermission] = useState<Permission | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [metadataText, setMetadataText] = useState('');
+  const [metadataText, setMetadataText] = useState('{}');
   
   useEffect(() => {
-    async function fetchPermission() {
-      try {
-        const res = await fetch(`${API_URL}/permissions/${resolvedParams.id}`);
-        if (res.ok) {
-          const data = await res.json();
-          setPermission(data);
-          setMetadataText(data.metadata ? JSON.stringify(data.metadata, null, 2) : '');
-        }
-      } catch (err) {
-        console.error('Failed to fetch permission', err);
-      } finally {
-        setLoading(false);
-      }
-    }
     fetchPermission();
   }, [resolvedParams.id]);
 
+  const fetchPermission = async () => {
+    try {
+      const data = await permissionsApi.getById(resolvedParams.id);
+      setPermission(data);
+      setMetadataText(JSON.stringify(data.metadata || {}, null, 2));
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to load permission details.', 'Load Error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!can('permission:manage')) return;
+    if (!can('permission:manage') || !permission) return;
     
     setSaving(true);
     let parsedMetadata = null;
@@ -48,40 +48,30 @@ export default function PermissionDetailPage({ params }: { params: Promise<{ id:
       try {
         parsedMetadata = JSON.parse(metadataText);
       } catch (e) {
-        alert('Invalid JSON in metadata');
+        toast.error('Invalid JSON structure in metadata field.', 'Validation Error');
         setSaving(false);
         return;
       }
     }
 
     try {
-      const res = await fetch(`${API_URL}/permissions/${resolvedParams.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: permission.name,
-          description: permission.description,
-          category: permission.category,
-          isActive: permission.isActive,
-          isDeprecated: permission.isDeprecated,
-          introducedInVersion: permission.introducedInVersion,
-          deprecatedInVersion: permission.deprecatedInVersion,
-          minSuperAppVersion: permission.minSuperAppVersion,
-          maxSuperAppVersion: permission.maxSuperAppVersion,
-          metadata: parsedMetadata,
-        }),
+      await permissionsApi.update(resolvedParams.id, {
+        name: permission.name,
+        description: permission.description,
+        category: permission.category,
+        isActive: permission.isActive,
+        isDeprecated: permission.isDeprecated,
+        introducedInVersion: permission.introducedInVersion,
+        deprecatedInVersion: permission.deprecatedInVersion,
+        minSuperAppVersion: permission.minSuperAppVersion,
+        maxSuperAppVersion: permission.maxSuperAppVersion,
+        metadata: parsedMetadata,
       });
       
-      if (res.ok) {
-        alert('Permission updated successfully!');
-      } else {
-        alert('Failed to update permission');
-      }
-    } catch (err) {
+      toast.success('Permission configuration updated successfully!', 'Saved');
+    } catch (err: any) {
       console.error(err);
-      alert('Error updating permission');
+      toast.error(err.message || 'Network error updating permission.', 'Error');
     } finally {
       setSaving(false);
     }

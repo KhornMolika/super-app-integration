@@ -1,11 +1,11 @@
 {
-  "appId": "com.company.insurance_miniapp",
-  "verificationToken": "dev-insurance-verification-token",
+  "appId": "miniapp_rr_8bb982",
+  "verificationToken": "tok_live_a03a47b634babe943a6556ddd556ca05",
   "environment": "DEV",
   "allowedDomains": [
-    "localhost",
-    "127.0.0.1",
-    "insurance.fsa.gov",
-    "claims.insurance.fsa.gov"
+    "localhost"
+  ],
+  "permissions": [
+    "Camera"
   ]
 }

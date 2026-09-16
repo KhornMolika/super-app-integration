@@ -2,29 +2,8 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { API_URL } from '@/lib/config';
+import { notificationsApi, NotificationItem } from '@/api';
 import { useNotificationSocket } from '@/hooks/useNotificationSocket';
-
-interface MiniAppMeta {
-  id: string;
-  name: string;
-  appId: string;
-  category?: string;
-  status?: string;
-  integrationMethod?: string;
-}
-
-interface NotificationItem {
-  id: string;
-  type: string;
-  title: string;
-  message: string;
-  isRead: boolean;
-  miniAppId?: string;
-  miniApp?: MiniAppMeta;
-  createdAt: string;
-  metadata?: any;
-}
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -35,11 +14,8 @@ export default function NotificationsPage() {
 
   const fetchNotifications = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/mini-apps/notifications`);
-      if (res.ok) {
-        const data = await res.json();
-        setNotifications(Array.isArray(data) ? data : []);
-      }
+      const data = await notificationsApi.getAll();
+      setNotifications(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to load notifications:', err);
     } finally {
@@ -67,7 +43,7 @@ export default function NotificationsPage() {
       setNotifications(prev =>
         prev.map(n => (n.id === id ? { ...n, isRead: true } : n))
       );
-      await fetch(`${API_URL}/mini-apps/${id}/mark-read`, { method: 'POST' });
+      await notificationsApi.markAsRead(id);
     } catch (err) {
       console.error('Failed to mark notification read:', err);
     }
@@ -78,7 +54,7 @@ export default function NotificationsPage() {
     setIsProcessing(true);
     try {
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-      await fetch(`${API_URL}/mini-apps/notifications/mark-all-read`, { method: 'POST' });
+      await notificationsApi.markAllAsRead();
     } catch (err) {
       console.error('Failed to mark all read:', err);
     } finally {
@@ -89,7 +65,7 @@ export default function NotificationsPage() {
   const handleDelete = async (id: string) => {
     try {
       setNotifications(prev => prev.filter(n => n.id !== id));
-      await fetch(`${API_URL}/mini-apps/notifications/${id}`, { method: 'DELETE' });
+      await notificationsApi.delete(id);
     } catch (err) {
       console.error('Failed to delete notification:', err);
     }
@@ -143,8 +119,8 @@ export default function NotificationsPage() {
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
-  const getTypeStyle = (type: string, title: string) => {
-    const text = `${type} ${title}`.toLowerCase();
+  const getTypeStyle = (type?: string, title?: string) => {
+    const text = `${type || ''} ${title || ''}`.toLowerCase();
     if (text.includes('passed') || text.includes('approved') || text.includes('activated') || text.includes('success')) {
       return {
         bg: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50',

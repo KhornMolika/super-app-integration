@@ -22,6 +22,33 @@ export class MailService {
     }
   }
 
+  /**
+   * Validates whether an email address is eligible for sending through live Resend API.
+   * Prevents 422 errors caused by example/mock domains in sandbox mode.
+   */
+  public isDeliverableEmail(email?: string): boolean {
+    if (!email || !email.includes('@')) return false;
+    const domain = email.split('@')[1]?.toLowerCase().trim();
+    if (!domain) return false;
+
+    const mockDomains = [
+      'example.com',
+      'example.org',
+      'example.net',
+      'test.com',
+      'dummy.com',
+      'sample.com',
+      'invalid',
+      'localhost',
+    ];
+
+    if (mockDomains.some((d) => domain === d || domain.endsWith(`.${d}`))) {
+      return false;
+    }
+
+    return true;
+  }
+
   async sendTestEmail(
     toEmail: string,
     userName?: string,
@@ -30,6 +57,14 @@ export class MailService {
       return {
         success: false,
         message: 'RESEND_API_KEY is not configured on the backend server.',
+      };
+    }
+
+    if (!this.isDeliverableEmail(toEmail)) {
+      this.logger.warn(`Skipping test email dispatch to mock domain: ${toEmail}`);
+      return {
+        success: false,
+        message: `Recipient email "${toEmail}" is an example or mock domain. Please use a real email address (e.g. your Gmail or domain) to receive test emails.`,
       };
     }
 
@@ -100,6 +135,13 @@ export class MailService {
       return;
     }
 
+    if (!this.isDeliverableEmail(toEmail)) {
+      this.logger.debug(
+        `[SKIPPED] Skipped Success Email to mock/test address: ${toEmail}`,
+      );
+      return;
+    }
+
     try {
       await this.resend.emails.send({
         from: `Super App <${this.fromEmail}>`,
@@ -153,6 +195,13 @@ export class MailService {
     if (!this.resend) {
       this.logger.log(
         `[DUMMY] Would have sent Security Passed Email to ${toEmail} for ${appName} (Score: ${score}/100)`,
+      );
+      return;
+    }
+
+    if (!this.isDeliverableEmail(toEmail)) {
+      this.logger.debug(
+        `[SKIPPED] Skipped Security Passed Email to mock/test address: ${toEmail}`,
       );
       return;
     }
@@ -223,6 +272,13 @@ export class MailService {
     if (!this.resend) {
       this.logger.log(
         `[DUMMY] Would have sent Security Failed Email to ${toEmail} for ${appName} (Score: ${score}, Findings: ${findings.length})`,
+      );
+      return;
+    }
+
+    if (!this.isDeliverableEmail(toEmail)) {
+      this.logger.debug(
+        `[SKIPPED] Skipped Security Failed Email to mock/test address: ${toEmail}`,
       );
       return;
     }
@@ -308,6 +364,13 @@ export class MailService {
       return;
     }
 
+    if (!this.isDeliverableEmail(toEmail)) {
+      this.logger.debug(
+        `[SKIPPED] Skipped Failure Email to mock/test address: ${toEmail}`,
+      );
+      return;
+    }
+
     const errorListHtml = Object.entries(errors)
       .map(
         ([field, message]) => `
@@ -381,6 +444,13 @@ export class MailService {
       return;
     }
 
+    if (!this.isDeliverableEmail(toEmail)) {
+      this.logger.debug(
+        `[SKIPPED] Skipped Test Build Email to mock/test address: ${toEmail}`,
+      );
+      return;
+    }
+
     try {
       await this.resend.emails.send({
         from: `Super App Platform <${this.fromEmail}>`,
@@ -446,6 +516,13 @@ export class MailService {
       return;
     }
 
+    if (!this.isDeliverableEmail(toEmail)) {
+      this.logger.debug(
+        `[SKIPPED] Skipped Approval Email to mock/test address: ${toEmail}`,
+      );
+      return;
+    }
+
     try {
       await this.resend.emails.send({
         from: `Super App Governance <${this.fromEmail}>`,
@@ -505,6 +582,13 @@ export class MailService {
       return;
     }
 
+    if (!this.isDeliverableEmail(toEmail)) {
+      this.logger.debug(
+        `[SKIPPED] Skipped Rejection Email to mock/test address: ${toEmail}`,
+      );
+      return;
+    }
+
     try {
       await this.resend.emails.send({
         from: `Super App Governance <${this.fromEmail}>`,
@@ -557,6 +641,13 @@ export class MailService {
     if (!this.resend) {
       this.logger.log(
         `[DUMMY] Would have sent Changes Requested Email to ${toEmail} for ${appName}`,
+      );
+      return;
+    }
+
+    if (!this.isDeliverableEmail(toEmail)) {
+      this.logger.debug(
+        `[SKIPPED] Skipped Changes Requested Email to mock/test address: ${toEmail}`,
       );
       return;
     }
@@ -618,6 +709,13 @@ export class MailService {
     if (!this.resend) {
       this.logger.log(
         `[DUMMY] Would have sent Activated Email to ${toEmail} for ${appName} (${displayVersion})`,
+      );
+      return;
+    }
+
+    if (!this.isDeliverableEmail(toEmail)) {
+      this.logger.debug(
+        `[SKIPPED] Skipped Activated Email to mock/test address: ${toEmail}`,
       );
       return;
     }

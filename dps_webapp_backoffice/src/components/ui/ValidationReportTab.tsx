@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { io } from 'socket.io-client';
 import { Button } from '@/components/ui/inputs';
 import { Card, CardHeader } from '@/components/ui/card';
-import { API_URL } from '@/lib/config';
+import { miniappsApi } from '@/api';
 import SecurityValidationSelector, { ALL_SECURITY_CHECKS, getRecommendedChecksForMethod } from '@/components/forms/SecurityValidationSelector';
 
 export interface ValidationReportProps {
@@ -322,29 +322,11 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
     setShowConfigModal(false);
     setReScanMessage('Initiating security scan...');
     try {
-      const payload = checksToRun && checksToRun.length > 0 ? { securityChecks: checksToRun } : {};
-      let res = await fetch(`/api/mini-apps/${miniApp.id}/rescan`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok && res.status === 404) {
-        res = await fetch(`${API_URL}/mini-apps/${miniApp.id}/rescan`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-      }
-
-      if (res.ok) {
-        setReScanMessage('Security scan initiated!');
-        if (onRefresh) onRefresh();
-      } else {
-        const data = await res.json();
-        setReScanMessage(data.message || 'Failed to trigger scan.');
-      }
+      await miniappsApi.rescan(miniApp.id, checksToRun);
+      setReScanMessage('Security scan initiated!');
+      if (onRefresh) onRefresh();
     } catch (err: any) {
-      setReScanMessage('Error contacting server.');
+      setReScanMessage(err.message || 'Failed to trigger scan.');
     } finally {
       setIsReScanning(false);
     }
@@ -354,24 +336,11 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
     setIsCancelling(true);
     setReScanMessage('Cancelling / resetting validation status...');
     try {
-      let res = await fetch(`/api/mini-apps/${miniApp.id}/cancel-validation`, {
-        method: 'POST',
-      });
-      if (!res.ok && res.status === 404) {
-        res = await fetch(`${API_URL}/mini-apps/${miniApp.id}/cancel-validation`, {
-          method: 'POST',
-        });
-      }
-
-      if (res.ok) {
-        setReScanMessage('Scan cancelled. Status reset to FAILED.');
-        if (onRefresh) onRefresh();
-      } else {
-        const data = await res.json();
-        setReScanMessage(data.message || 'Failed to cancel scan.');
-      }
+      await miniappsApi.cancelValidation(miniApp.id);
+      setReScanMessage('Scan cancelled. Status reset to FAILED.');
+      if (onRefresh) onRefresh();
     } catch (err: any) {
-      setReScanMessage('Error contacting server.');
+      setReScanMessage(err.message || 'Failed to cancel scan.');
     } finally {
       setIsCancelling(false);
     }
@@ -379,7 +348,8 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
 
   // Real-time WebSocket connection for instantaneous stage updates
   useEffect(() => {
-    const socket = io(API_URL, {
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || (typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:3000` : 'http://localhost:3000');
+    const socket = io(socketUrl, {
       transports: ['websocket', 'polling'],
       reconnectionAttempts: 5,
     });
@@ -979,7 +949,7 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
 
       {/* Security Checks Re-Configuration Modal */}
       {mounted && showConfigModal && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-[9999] flex justify-center items-start pt-6 sm:pt-10 md:pt-12 pb-8 p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-150">
           {/* Backdrop overlay */}
           <div
             className="fixed inset-0 bg-slate-950/70 dark:bg-slate-950/80 backdrop-blur-sm transition-opacity"
@@ -988,7 +958,7 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
 
           {/* Modal Dialog Card */}
           <div
-            className="relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 max-w-4xl w-full max-h-[85vh] shadow-2xl flex flex-col overflow-hidden z-10 animate-in zoom-in-95 duration-150"
+            className="relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 max-w-5xl w-full max-h-[84vh] shadow-2xl flex flex-col overflow-hidden z-10 animate-in zoom-in-95 duration-150"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header (pinned at top) */}

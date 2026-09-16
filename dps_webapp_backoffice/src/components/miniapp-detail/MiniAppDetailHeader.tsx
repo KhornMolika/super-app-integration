@@ -9,6 +9,7 @@ export interface MiniAppDetailHeaderProps {
   formData: any;
   role?: string;
   can: (action: string) => boolean;
+  latestTestVersion?: string;
   isEditingUnlocked: boolean;
   onToggleEditing: () => void;
   onOpenSandbox: () => void;
@@ -21,6 +22,7 @@ export default function MiniAppDetailHeader({
   formData,
   role,
   can,
+  latestTestVersion,
   isEditingUnlocked,
   onToggleEditing,
   onOpenSandbox,
@@ -126,7 +128,7 @@ export default function MiniAppDetailHeader({
 
         {/* Download Test APK: ONLY displayed when status is TESTING or ACTIVE */}
         {(status === 'TESTING' || status === 'ACTIVE') && (status !== 'TESTING' || role === 'MINI_APP_MANAGER') && (() => {
-          const testVersion = formData.integrationConfig?.superAppTestVersion || 'v1.1.1';
+          const testVersion = latestTestVersion || formData.activeTestVersion || formData.integrationConfig?.superAppTestVersion || 'v0.3.7';
           return (
             <a
               href={`/api/download-apk?type=test&version=${encodeURIComponent(testVersion)}`}
@@ -213,7 +215,7 @@ export default function MiniAppDetailHeader({
                     <span>Super App Sandbox</span>
                   </button>
                   {(status === 'TESTING' || status === 'ACTIVE') && (() => {
-                    const testVersion = formData.integrationConfig?.superAppTestVersion || 'v1.1.1';
+                    const testVersion = latestTestVersion || formData.activeTestVersion || formData.integrationConfig?.superAppTestVersion || 'v0.3.7';
                     return (
                       <a
                         href={`/api/download-apk?type=test&version=${encodeURIComponent(testVersion)}`}

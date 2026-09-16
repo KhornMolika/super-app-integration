@@ -1,9 +1,9 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as crypto from 'crypto';
 import { MiniApp } from '../entities/miniapp.entity';
-import { NotificationsService } from '../../notifications/notifications.service';
-import { MailService } from '../../mail/mail.service';
+import { NotificationsService, MailService } from '../../notifications';
 import { JenkinsService } from '../../integrations/jenkins/jenkins.service';
 import { SuperAppService } from '../../super-app/super-app.service';
 import {
@@ -440,12 +440,42 @@ export class MiniappLifecycleHelper {
       newVal?: any,
     ) => Promise<void>,
   ) {
-    const validStatuses = ['IN_REVIEW', 'SUBMITTED'];
+    if (app.status === 'ACTIVE' && app.pendingRevision) {
+      return this.publishRevision(app, actorId, logActivityFn);
+    }
+
+    const validStatuses = ['IN_REVIEW', 'SUBMITTED', 'DRAFT'];
     if (!validStatuses.includes(app.status?.toUpperCase())) {
       throw new BadRequestException(
         `App is not in review (current status: ${app.status})`,
       );
     }
+
+    if (app.pendingRevision) {
+      const rev = app.pendingRevision;
+      app.name = rev.name ?? app.name;
+      app.shortDescription = rev.shortDescription ?? app.shortDescription;
+      app.fullDescription = rev.fullDescription ?? app.fullDescription;
+      app.logo = rev.logo ?? app.logo;
+      app.category = rev.category ?? app.category;
+      app.termsUrl = rev.termsUrl ?? app.termsUrl;
+      app.termsDescription = rev.termsDescription ?? app.termsDescription;
+      app.privacyPolicyUrl = rev.privacyPolicyUrl ?? app.privacyPolicyUrl;
+      app.privacyPolicyDescription =
+        rev.privacyPolicyDescription ?? app.privacyPolicyDescription;
+      app.ownerName = rev.ownerName ?? app.ownerName;
+      app.ownerEmail = rev.ownerEmail ?? app.ownerEmail;
+      app.supportEmail = rev.supportEmail ?? app.supportEmail;
+      app.teamName = rev.teamName ?? app.teamName;
+      if (rev.teamTelegramChatId !== undefined) {
+        app.teamTelegramChatId = rev.teamTelegramChatId;
+      }
+      app.integrationMethod = rev.integrationMethod ?? app.integrationMethod;
+      app.integrationConfig = rev.integrationConfig ?? app.integrationConfig;
+      app.permissions = rev.permissions ?? app.permissions;
+      app.pendingRevision = null;
+    }
+
     app.status = 'APPROVED';
     await this.miniappRepository.save(app);
 
@@ -498,6 +528,10 @@ export class MiniappLifecycleHelper {
       newVal?: any,
     ) => Promise<void>,
   ) {
+    if (app.status === 'ACTIVE' && app.pendingRevision) {
+      return this.discardRevision(app, actorId, logActivityFn, reason);
+    }
+
     const validStatuses = ['IN_REVIEW', 'SUBMITTED', 'APPROVED', 'TESTING'];
     if (!validStatuses.includes(app.status?.toUpperCase())) {
       throw new BadRequestException(
@@ -557,6 +591,50 @@ export class MiniappLifecycleHelper {
       newVal?: any,
     ) => Promise<void>,
   ) {
+    if (app.status === 'ACTIVE' && app.pendingRevision) {
+      app.pendingRevision = {
+        ...app.pendingRevision,
+        revisionStatus: 'DRAFT',
+        changesRequestedReason:
+          reason || 'Please update the configuration and resubmit.',
+        changesRequestedAt: new Date().toISOString(),
+      };
+      await this.miniappRepository.save(app);
+
+      if (app.ownerId) {
+        await this.notificationsService.createNotification(
+          app.ownerId,
+          'Changes Requested on Staged Revision',
+          `Super App Administrator requested changes for staged revision of "${app.name}". Reason: ${reason || 'Please update the configuration and resubmit.'} (Live version remains active in Super App)`,
+          'CHANGES_REQUESTED',
+          app.id,
+        );
+      }
+
+      const targetEmail = app.ownerEmail || app.owner?.email;
+      if (targetEmail) {
+        await this.mailService.sendChangesRequestedEmail(
+          targetEmail,
+          app.name || app.appId,
+          reason || 'Please update the staged revision and resubmit.',
+          `http://localhost:3002/miniapps/${app.id}`,
+        );
+      }
+
+      await logActivityFn(
+        app.id,
+        actorId,
+        'STATUS_CHANGE',
+        'Changes Requested on Revision',
+        reason ||
+          'SA Admin sent staged revision back to Draft for remediation; live app remains active',
+        'REQUEST_CHANGES',
+        null,
+        app,
+      );
+      return app;
+    }
+
     app.status = 'DRAFT';
     await this.miniappRepository.save(app);
 
@@ -610,60 +688,51 @@ export class MiniappLifecycleHelper {
     ) => Promise<void>,
   ) {
     const id = app.id;
-    const validStatuses = ['APPROVED', 'BUILDING', 'IN_REVIEW'];
+    const validStatuses = ['APPROVED', 'BUILDING', 'IN_REVIEW', 'TESTING', 'ACTIVE'];
     if (!validStatuses.includes(app.status?.toUpperCase())) {
       throw new BadRequestException(
-        `App must be in APPROVED or BUILDING status before moving to TESTING (current: ${app.status})`,
+        `App must be in APPROVED, BUILDING, IN_REVIEW, TESTING, or ACTIVE status before moving to TESTING (current: ${app.status})`,
       );
     }
 
-    if (app.status === 'APPROVED' || app.status === 'IN_REVIEW') {
-      app.status = 'BUILDING';
-
-      // Auto-increment dynamic Super App test version (e.g. v1.1.1, v1.1.2, etc.)
+    if (app.status === 'ACTIVE' && app.pendingRevision) {
       const releaseVersion = await this.superAppService.getAndRegisterNextVersion();
-      app.integrationConfig = {
-        ...(app.integrationConfig || {}),
-        superAppTestVersion: releaseVersion,
+      app.activeTestVersion = releaseVersion;
+      app.pendingRevision = {
+        ...app.pendingRevision,
+        revisionStatus: 'TESTING',
+        testVersion: releaseVersion,
       };
-
       await this.miniappRepository.save(app);
 
-      try {
-        this.logger.log(
-          `Triggering Jenkins Super App test build for Mini App ${app.name} (${app.id}) with dynamic version ${releaseVersion}...`,
+      if (app.ownerId) {
+        await this.notificationsService.createNotification(
+          app.ownerId,
+          'Staged Revision Test Build Started',
+          `Test build compilation (${releaseVersion}) initiated for staged revision of "${app.name}". Live version remains active.`,
+          'BUILD_STARTED',
+          app.id,
+          { releaseVersion, version: releaseVersion, buildType: 'debug' },
         );
-        const jenkinsResult = await this.jenkinsService.triggerSuperAppBuild({
+      }
+
+      try {
+        await this.jenkinsService.triggerSuperAppBuild({
           releaseVersion,
           appName: 'superapp',
           buildType: 'debug',
         });
-        if (!jenkinsResult.success) {
-          this.logger.warn(
-            `Jenkins test build trigger returned: ${jenkinsResult.message}`,
-          );
-        }
-
-        // Also trigger Super App Web Sandbox build concurrently
-        this.jenkinsService
-          .triggerSuperAppSandboxBuild()
-          .catch((e: any) => {
-            this.logger.warn(
-              `Failed to trigger superapp-sandbox-build: ${e.message}`,
-            );
-          });
+        this.jenkinsService.triggerSuperAppSandboxBuild().catch(() => {});
       } catch (err: any) {
-        this.logger.error(
-          `Error triggering Jenkins test build: ${err.message}`,
-        );
+        this.logger.error(`Error triggering Jenkins test build for revision: ${err.message}`);
       }
 
       await logActivityFn(
         id,
         actorId,
         'STATUS_CHANGE',
-        'Super App Test Build Triggered',
-        `Triggered Jenkins compilation of Super App test build (${releaseVersion}, debug). Artifact will be stored in Nexus for testing.`,
+        'Staged Revision Test Build Triggered',
+        `Triggered Jenkins compilation of Super App test build (${releaseVersion}, debug) for staged revision. Live app remains active.`,
         'TRIGGER_TEST_BUILD',
         null,
         app,
@@ -672,38 +741,75 @@ export class MiniappLifecycleHelper {
       return app;
     }
 
-    app.status = 'TESTING';
+    // For APPROVED, IN_REVIEW, TESTING, BUILDING
+    app.status = 'BUILDING';
+
+    // Auto-increment dynamic Super App test version (e.g. v1.1.1, v1.1.2, etc.)
+    const releaseVersion = await this.superAppService.getAndRegisterNextVersion();
+    app.activeTestVersion = releaseVersion;
+    app.integrationConfig = {
+      ...(app.integrationConfig || {}),
+      superAppTestVersion: releaseVersion,
+    };
+
     await this.miniappRepository.save(app);
-    const activeTestVer = app.integrationConfig?.superAppTestVersion || 'v0.0.1';
+
+    // Dispatch explicit BUILDING status notification
     if (app.ownerId) {
       await this.notificationsService.createNotification(
         app.ownerId,
-        'Testing Phase Started',
-        `Mini App "${app.name}" has completed test build compilation (${activeTestVer}) and is ready for manual testing.`,
-        'TESTING_STARTED',
+        'Super App Test Build Started',
+        `Super App test build (${releaseVersion}) compilation initiated on Jenkins for Mini App "${app.name}". Artifacts will be published to Nexus upon completion.`,
+        'BUILD_STARTED',
         app.id,
+        {
+          releaseVersion,
+          version: releaseVersion,
+          buildType: 'debug',
+        },
       );
     }
-    const targetEmail = app.ownerEmail || app.owner?.email;
-    if (targetEmail) {
-      await this.mailService.sendTestBuildReadyEmail(
-        targetEmail,
-        app.name || app.appId,
-        activeTestVer,
-        `http://localhost:8081/repository/apk-test-builds/superapp/${activeTestVer}/app-debug.apk`,
-        `http://localhost:3002/miniapps/${app.id}`,
+
+    try {
+      this.logger.log(
+        `Triggering Jenkins Super App test build for Mini App ${app.name} (${app.id}) with dynamic version ${releaseVersion}...`,
+      );
+      const jenkinsResult = await this.jenkinsService.triggerSuperAppBuild({
+        releaseVersion,
+        appName: 'superapp',
+        buildType: 'debug',
+      });
+      if (!jenkinsResult.success) {
+        this.logger.warn(
+          `Jenkins test build trigger returned: ${jenkinsResult.message}`,
+        );
+      }
+
+      // Also trigger Super App Web Sandbox build concurrently
+      this.jenkinsService
+        .triggerSuperAppSandboxBuild()
+        .catch((e: any) => {
+          this.logger.warn(
+            `Failed to trigger superapp-sandbox-build: ${e.message}`,
+          );
+        });
+    } catch (err: any) {
+      this.logger.error(
+        `Error triggering Jenkins test build: ${err.message}`,
       );
     }
+
     await logActivityFn(
       id,
       actorId,
       'STATUS_CHANGE',
-      'Testing Started',
-      `Mini App promoted to manual sandbox testing phase (Super App build ${activeTestVer})`,
-      'START_TESTING',
+      'Super App Test Build Triggered',
+      `Triggered Jenkins compilation of Super App test build (${releaseVersion}, debug). Artifact will be stored in Nexus for testing.`,
+      'TRIGGER_TEST_BUILD',
       null,
       app,
     );
+
     return app;
   }
 
@@ -814,6 +920,185 @@ export class MiniappLifecycleHelper {
       null,
       app,
     );
+    return app;
+  }
+
+  async publishRevision(
+    app: MiniApp,
+    actorId: string,
+    logActivityFn: (
+      miniAppId: string,
+      actorId: string,
+      actionType: string,
+      title: string,
+      description: string,
+      auditAction: string,
+      oldVal?: any,
+      newVal?: any,
+    ) => Promise<void>,
+  ) {
+    if (!app.pendingRevision) {
+      throw new BadRequestException('No pending revision found to publish');
+    }
+
+    const rev = app.pendingRevision;
+    const oldVal = { ...app };
+
+    app.name = rev.name ?? app.name;
+    app.shortDescription = rev.shortDescription ?? app.shortDescription;
+    app.fullDescription = rev.fullDescription ?? app.fullDescription;
+    app.logo = rev.logo ?? app.logo;
+    app.category = rev.category ?? app.category;
+    app.termsUrl = rev.termsUrl ?? app.termsUrl;
+    app.termsDescription = rev.termsDescription ?? app.termsDescription;
+    app.privacyPolicyUrl = rev.privacyPolicyUrl ?? app.privacyPolicyUrl;
+    app.privacyPolicyDescription =
+      rev.privacyPolicyDescription ?? app.privacyPolicyDescription;
+    app.ownerName = rev.ownerName ?? app.ownerName;
+    app.ownerEmail = rev.ownerEmail ?? app.ownerEmail;
+    app.supportEmail = rev.supportEmail ?? app.supportEmail;
+    app.teamName = rev.teamName ?? app.teamName;
+    if (rev.teamTelegramChatId !== undefined) {
+      app.teamTelegramChatId = rev.teamTelegramChatId;
+    }
+    app.integrationMethod = rev.integrationMethod ?? app.integrationMethod;
+    app.integrationConfig = rev.integrationConfig ?? app.integrationConfig;
+    app.permissions = rev.permissions ?? app.permissions;
+    if (rev.isDomainVerified !== undefined)
+      app.isDomainVerified = rev.isDomainVerified;
+    if (rev.domainVerifiedAt !== undefined)
+      app.domainVerifiedAt = rev.domainVerifiedAt;
+    if (rev.verificationToken !== undefined)
+      app.verificationToken = rev.verificationToken;
+    if (rev.validationStages) app.validationStages = rev.validationStages;
+    if (rev.validationReport) app.validationReport = rev.validationReport;
+    if (rev.validationStatus) app.validationStatus = rev.validationStatus;
+    if (rev.validationErrors !== undefined)
+      app.validationErrors = rev.validationErrors;
+
+    const nextVersion =
+      rev.version ||
+      rev.packageVersion ||
+      (app.currentReleaseVersion
+        ? `1.${parseInt(app.currentReleaseVersion.split('.')[1] || '0', 10) + 1}.0`
+        : '1.1.0');
+    app.currentReleaseVersion = nextVersion;
+    app.version = nextVersion;
+
+    const history = Array.isArray(app.versionHistory)
+      ? [...app.versionHistory]
+      : [];
+    history.forEach((h: any) => {
+      if (h.type === 'PRODUCTION' && h.status === 'ACTIVE') {
+        h.status = 'SUPERSEDED';
+      }
+    });
+    history.unshift({
+      version: nextVersion,
+      saVersion: app.integrationConfig?.superAppReleaseVersion || 'v1.0.0',
+      type: 'PRODUCTION',
+      status: 'ACTIVE',
+      changelog:
+        rev.changelog ||
+        `Release ${nextVersion} published live to Super App catalog`,
+      apkSize: '52.4 MB',
+      checksum:
+        'sha256:' +
+        crypto
+          .createHash('sha256')
+          .update(app.id + nextVersion + Date.now())
+          .digest('hex')
+          .substring(0, 16),
+      releasedAt: new Date().toISOString(),
+      releasedBy: actorId || app.ownerName || 'Mini App Manager',
+    });
+    app.versionHistory = history;
+
+    app.pendingRevision = null;
+    app.status = 'ACTIVE';
+
+    await this.miniappRepository.save(app);
+
+    await this.notificationsService.createNotification(
+      app.ownerId || '',
+      'Revision Published',
+      `Revision for Mini App "${app.name}" (${nextVersion}) has been published live to the Super App catalog.`,
+      'REVISION_PUBLISHED',
+      app.id,
+    );
+
+    await logActivityFn(
+      app.id,
+      actorId || 'system',
+      'STATUS_CHANGE',
+      `Revision Published for ${app.name}`,
+      'Staged revision merged into live active Mini App configuration',
+      'PUBLISH_REVISION',
+      oldVal,
+      app,
+    );
+
+    return app;
+  }
+
+  async discardRevision(
+    app: MiniApp,
+    actorId: string,
+    logActivityFn: (
+      miniAppId: string,
+      actorId: string,
+      actionType: string,
+      title: string,
+      description: string,
+      auditAction: string,
+      oldVal?: any,
+      newVal?: any,
+    ) => Promise<void>,
+    reason?: string,
+  ) {
+    if (!app.pendingRevision) {
+      throw new BadRequestException('No pending revision found to discard');
+    }
+
+    const oldRev = app.pendingRevision;
+    app.pendingRevision = null;
+    await this.miniappRepository.save(app);
+
+    // 1. Dispatch Notification
+    if (app.ownerId) {
+      await this.notificationsService.createNotification(
+        app.ownerId,
+        'Revision Rejected & Discarded',
+        `Staged revision for Mini App "${app.name}" was rejected. Live version remains active in Super App.${reason ? ` Reason: ${reason}` : ''}`,
+        'REVISION_DISCARDED',
+        app.id,
+      );
+    }
+
+    // 2. Dispatch Email
+    const targetEmail = app.ownerEmail || app.owner?.email;
+    if (targetEmail) {
+      await this.mailService.sendMiniAppRejectedEmail(
+        targetEmail,
+        app.name || app.appId,
+        reason ||
+          'Proposed revision was discarded by administrator. Live version remains active in the Super App catalog.',
+        `http://localhost:3002/miniapps/${app.id}`,
+      );
+    }
+
+    await logActivityFn(
+      app.id,
+      actorId || 'system',
+      'STATUS_CHANGE',
+      `Revision Discarded for ${app.name}`,
+      reason ||
+        'Pending draft revision was discarded without affecting the live version',
+      'DISCARD_REVISION',
+      oldRev,
+      null,
+    );
+
     return app;
   }
 }

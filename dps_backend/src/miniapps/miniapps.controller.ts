@@ -12,29 +12,34 @@ import {
   ParseUUIDPipe,
   UseGuards,
   Req,
+  Res,
   UseInterceptors,
   UploadedFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import * as net from 'net';
 import { MiniappsService } from './miniapps.service';
 import { CreateMiniAppDto } from './dto/create-miniapp.dto';
 import { MiniAppStatus } from './entities/miniapp.entity';
 import { UpdateMiniAppDto } from './dto/update-miniapp.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RbacGuard } from '../access-control/guards/rbac.guard';
+import { UrlProbeHelper } from './helpers/url-probe.helper';
+
 import { RequirePermissions } from '../access-control/decorators/require-permissions.decorator';
 
 @UseGuards(JwtAuthGuard, RbacGuard)
 @Controller('mini-apps')
 export class MiniappsController {
+  constructor(
+    private readonly miniappService: MiniappsService,
+    private readonly urlProbeHelper: UrlProbeHelper,
+  ) {}
+
   @Get('issues/all')
   @RequirePermissions('miniapp:read')
   getAllIssues() {
     return this.miniappService.findAllIssues();
   }
-
-  constructor(private readonly miniappService: MiniappsService) {}
 
   @Post('draft')
   @RequirePermissions('miniapp:create')
@@ -129,10 +134,12 @@ export class MiniappsController {
 
   @Get()
   @RequirePermissions('miniapp:read')
-  async findAll(@Query('status') status?: string) {
+  async findAll(@Query('status') status?: string, @Req() req?: any) {
     const query = status ? { status } : {};
+    const user = req?.user;
+    const roles = user?.roles || [];
     try {
-      return await this.miniappService.findAll(query);
+      return await this.miniappService.findAll(query, roles, user);
     } catch (error: any) {
       console.error('FIND ALL ERROR:', error);
       throw new HttpException(
@@ -142,76 +149,9 @@ export class MiniappsController {
     }
   }
 
-  private probeTcp(
-    host: string,
-    port: number,
-    timeoutMs = 1200,
-  ): Promise<boolean> {
-    return new Promise((resolve) => {
-      const socket = new net.Socket();
-      socket.setTimeout(timeoutMs);
-
-      socket.on('connect', () => {
-        socket.destroy();
-        resolve(true);
-      });
-
-      socket.on('timeout', () => {
-        socket.destroy();
-        resolve(false);
-      });
-
-      socket.on('error', () => {
-        socket.destroy();
-        resolve(false);
-      });
-
-      try {
-        socket.connect(port, host);
-      } catch {
-        resolve(false);
-      }
-    });
-  }
-
   @Get('check-url')
   async checkUrl(@Query('url') url: string) {
-    if (!url) return { reachable: false, message: 'URL is required' };
-
-    let parsed: URL;
-    try {
-      parsed = new URL(url);
-    } catch {
-      return { reachable: false, message: 'Invalid URL format' };
-    }
-
-    // Skip git repository URLs as they often block simple HEAD/GET requests
-    if (
-      url.includes('github.com') ||
-      url.includes('gitlab.com') ||
-      url.includes('bitbucket.org') ||
-      url.endsWith('.git')
-    ) {
-      return { reachable: true };
-    }
-
-    const port = parsed.port
-      ? Number(parsed.port)
-      : parsed.protocol === 'https:'
-        ? 443
-        : 80;
-    const host = parsed.hostname;
-
-    // Fast TCP probe (1200ms max timeout)
-    const isPortOpen = await this.probeTcp(host, port, 1200);
-    if (!isPortOpen) {
-      return {
-        reachable: false,
-        message: `Could not connect to ${host}:${port} (server offline or unreachable)`,
-      };
-    }
-
-    return { reachable: true, host, port };
+    return this.urlProbeHelper.checkUrl(url);
   }
 
   @Get('check-exists')
@@ -284,30 +224,6 @@ export class MiniappsController {
     },
   ) {
     return this.miniappService.detectPermissions(body);
-  }
-
-  @Get('notifications')
-  @RequirePermissions('miniapp:read')
-  getNotifications(@Req() req: any) {
-    return this.miniappService.getNotifications(req.user.sub);
-  }
-
-  @Post('notifications/mark-all-read')
-  @RequirePermissions('miniapp:read')
-  markAllNotificationsRead() {
-    return this.miniappService.markAllNotificationsRead();
-  }
-
-  @Delete('notifications/:id')
-  @RequirePermissions('miniapp:read')
-  deleteNotification(@Param('id') id: string) {
-    return this.miniappService.deleteNotification(id);
-  }
-
-  @Post(':id/mark-read')
-  @RequirePermissions('miniapp:read')
-  markNotificationRead(@Param('id') id: string) {
-    return this.miniappService.markNotificationRead(id);
   }
 
   @Post(':id/verify-domain')
@@ -387,8 +303,12 @@ export class MiniappsController {
 
   @Post(':id/discard-revision')
   @RequirePermissions('miniapp:update')
-  discardRevision(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
-    return this.miniappService.discardRevision(id, req.user.sub);
+  discardRevision(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body('reason') reason: string,
+    @Req() req: any,
+  ) {
+    return this.miniappService.discardRevision(id, req.user.sub, reason);
   }
 
   @Post(':id/suspend')
@@ -440,4 +360,93 @@ export class MiniappsController {
   remove(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
     return this.miniappService.remove(id, req.user.sub);
   }
+
+  @Get(':id/versions')
+  @RequirePermissions('miniapp:read')
+  async getVersions(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: any,
+  ) {
+    return this.miniappService.getVersionHistory(id, req.user);
+  }
+
+  @Get(':id/diff')
+  @RequirePermissions('miniapp:read')
+  getDiff(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('baseVersion') baseVersion?: string,
+    @Query('targetVersion') targetVersion?: string,
+  ) {
+    return this.miniappService.getDiff(id, baseVersion, targetVersion);
+  }
+
+  @Post(':id/invite-token')
+  @RequirePermissions('miniapp:read')
+  async createInviteToken(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body('expiresIn') expiresIn: string,
+    @Req() req: any,
+  ) {
+    return this.miniappService.generateInviteToken(
+      id,
+      req.user,
+      expiresIn || '7d',
+    );
+  }
+
+  @Get(':id/artifacts/test-apk')
+  async downloadTestApk(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('version') version: string,
+    @Query('token') inviteToken: string,
+    @Req() req: any,
+    @Res() res: any,
+  ) {
+    return this.miniappService.streamArtifact(
+      id,
+      'test',
+      version,
+      req.user,
+      inviteToken,
+      res,
+    );
+  }
+
+  @Get(':id/artifacts/release-apk')
+  async downloadReleaseApk(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('version') version: string,
+    @Query('token') inviteToken: string,
+    @Req() req: any,
+    @Res() res: any,
+  ) {
+    return this.miniappService.streamArtifact(
+      id,
+      'release',
+      version,
+      req.user,
+      inviteToken,
+      res,
+    );
+  }
+
+  @Get(':id/artifacts/download')
+  async downloadArtifact(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('type') type: 'test' | 'release',
+    @Query('version') version: string,
+    @Query('token') inviteToken: string,
+    @Req() req: any,
+    @Res() res: any,
+  ) {
+    return this.miniappService.streamArtifact(
+      id,
+      type === 'release' ? 'release' : 'test',
+      version,
+      req.user,
+      inviteToken,
+      res,
+    );
+  }
 }
+

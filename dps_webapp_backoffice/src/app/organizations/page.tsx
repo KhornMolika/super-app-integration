@@ -3,18 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button, Input, Label } from '@/components/ui/inputs';
 import { Card } from '@/components/ui/card';
-import { API_URL } from '@/lib/config';
-
-interface Organization {
-  id: string;
-  name: string;
-  domain: string;
-  description?: string;
-  status: 'ACTIVE' | 'INACTIVE' | 'PENDING';
-  contactEmail?: string;
-  contactPhone?: string;
-  createdAt: string;
-}
+import { organizationsApi, Organization } from '@/api';
 
 export default function OrganizationsPage() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -36,14 +25,8 @@ export default function OrganizationsPage() {
   const fetchOrganizations = useCallback(async () => {
     try {
       setLoading(true);
-      let res = await fetch('/api/organizations');
-      if (!res.ok) {
-        res = await fetch(`${API_URL}/organizations`);
-      }
-      if (res.ok) {
-        const data = await res.json();
-        setOrganizations(Array.isArray(data) ? data : []);
-      }
+      const data = await organizationsApi.getAll();
+      setOrganizations(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to fetch organizations:', err);
     } finally {
@@ -92,35 +75,13 @@ export default function OrganizationsPage() {
     setErrorMessage(null);
 
     try {
-      const url = editingOrg
-        ? `/api/organizations/${editingOrg.id}`
-        : '/api/organizations';
-      const fallbackUrl = editingOrg
-        ? `${API_URL}/organizations/${editingOrg.id}`
-        : `${API_URL}/organizations`;
-      const method = editingOrg ? 'PATCH' : 'POST';
-
-      let res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-
-      if (!res.ok && res.status === 404) {
-        res = await fetch(fallbackUrl, {
-          method,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
-        });
-      }
-
-      if (res.ok) {
-        setIsModalOpen(false);
-        fetchOrganizations();
+      if (editingOrg) {
+        await organizationsApi.update(editingOrg.id, formData);
       } else {
-        const errData = await res.json().catch(() => ({}));
-        setErrorMessage(errData.message || 'Failed to save organization.');
+        await organizationsApi.create(formData);
       }
+      setIsModalOpen(false);
+      fetchOrganizations();
     } catch (err: any) {
       setErrorMessage(err.message || 'Error communicating with server.');
     } finally {
@@ -131,13 +92,8 @@ export default function OrganizationsPage() {
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to remove this organization?')) return;
     try {
-      let res = await fetch(`/api/organizations/${id}`, { method: 'DELETE' });
-      if (!res.ok && res.status === 404) {
-        res = await fetch(`${API_URL}/organizations/${id}`, { method: 'DELETE' });
-      }
-      if (res.ok) {
-        fetchOrganizations();
-      }
+      await organizationsApi.delete(id);
+      fetchOrganizations();
     } catch (err) {
       console.error('Failed to delete organization', err);
     }

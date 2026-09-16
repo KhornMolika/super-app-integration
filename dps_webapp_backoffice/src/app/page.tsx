@@ -1,9 +1,9 @@
 "use client";
 
-import { API_URL } from '@/lib/config';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { useEffect, useState } from 'react';
+import { miniappsApi, permissionsApi, superAppApi, telegramApi } from '@/api';
 
 export default function Dashboard() {
   const { can, role } = useAuth();
@@ -24,22 +24,13 @@ export default function Dashboard() {
   useEffect(() => {
     async function fetchMetrics() {
       try {
-        const [miniAppsRes, proposalsRes, permissionsRes, ecosystemRes, storageRes, telegramRes] = await Promise.all([
-          fetch(`${API_URL}/mini-apps`).catch(() => null),
-          fetch(`${API_URL}/permission-proposals`).catch(() => null),
-          fetch(`${API_URL}/permissions`).catch(() => null),
-          fetch(`${API_URL}/super-app/ecosystem-status`).catch(() => null),
-          fetch(`${API_URL}/storage/license-status`).catch(() => null),
-          fetch('/api/telegram/status').catch(() => fetch(`${API_URL}/telegram/status`)),
-        ]);
-
         const [miniApps, proposals, permissions, ecosystem, storage, telegram] = await Promise.all([
-          miniAppsRes?.ok ? miniAppsRes.json() : [],
-          proposalsRes?.ok ? proposalsRes.json() : [],
-          permissionsRes?.ok ? permissionsRes.json() : [],
-          ecosystemRes?.ok ? ecosystemRes.json() : null,
-          storageRes?.ok ? storageRes.json() : null,
-          telegramRes?.ok ? telegramRes.json() : null,
+          miniappsApi.getAll().catch(() => []),
+          permissionsApi.getProposals().catch(() => []),
+          permissionsApi.getAll().catch(() => []),
+          superAppApi.getEcosystemStatus().catch(() => null),
+          superAppApi.getStorageLicenseStatus().catch(() => null),
+          telegramApi.getStatus().catch(() => null),
         ]);
 
         const rawApps = Array.isArray(miniApps) ? miniApps : [];

@@ -3,28 +3,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { API_URL } from '@/lib/config';
+import { notificationsApi, NotificationItem } from '@/api';
 import { useNotificationSocket } from '@/hooks/useNotificationSocket';
 
-type Notification = {
-  id: string;
-  miniAppId?: string;
-  title: string;
-  message: string;
-  isRead: boolean;
-};
-
 export function NotificationBell() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const pathname = usePathname();
 
   const fetchNotifications = async () => {
     try {
-      const res = await fetch(`${API_URL}/mini-apps/notifications`);
-      if (res.ok) {
-        const data = await res.json();
-        setNotifications(Array.isArray(data) ? data : []);
-      }
+      const data = await notificationsApi.getAll();
+      setNotifications(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Failed to fetch initial notifications', error);
     }

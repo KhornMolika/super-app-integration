@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { miniappsApi } from '@/api';
 
 export default function IssuesPage() {
   const [issues, setIssues] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/mini-apps/issues/all')
-      .then(res => res.json())
+    miniappsApi.getAllIssues()
       .then(data => {
         setIssues(Array.isArray(data) ? data : []);
         setIsLoading(false);

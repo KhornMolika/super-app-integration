@@ -4,13 +4,12 @@ import {
   Post,
   Body,
   Req,
+  Query,
   UseGuards,
-  HttpCode,
-  HttpStatus,
   BadRequestException,
 } from '@nestjs/common';
 import { TelegramService } from './telegram.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 
 @Controller(['telegram', 'api/telegram'])
 export class TelegramController {
@@ -53,9 +52,27 @@ export class TelegramController {
 
   @Get('recent-groups')
   @UseGuards(JwtAuthGuard)
-  async getRecentGroups() {
-    const groups = await this.telegramService.getRecentGroups();
+  async getRecentGroups(@Req() req: any) {
+    const userId = req.user?.sub || req.user?.id;
+    const groups = await this.telegramService.getRecentGroups(userId);
     return { groups };
+  }
+
+  @Get('user-groups')
+  @UseGuards(JwtAuthGuard)
+  async getUserGroups(@Req() req: any) {
+    const userId = req.user?.sub || req.user?.id;
+    const groups = await this.telegramService.getUserTelegramGroups(userId);
+    return { groups };
+  }
+
+  @Get('validate-chat')
+  @UseGuards(JwtAuthGuard)
+  async validateChat(@Query('chatId') chatId: string) {
+    if (!chatId?.trim()) {
+      throw new BadRequestException('chatId query parameter is required');
+    }
+    return this.telegramService.validateChat(chatId.trim());
   }
 
   @Post('check-sync')
@@ -129,19 +146,19 @@ export class TelegramController {
 
     const name = dbUser?.name || req.user?.name || 'User';
     const email = dbUser?.email || req.user?.email || 'N/A';
-    const success = await this.telegramService.sendMessage(
-      `<b>Test Notification: Personal Direct Alert</b>\n\nHello ${name}, this is a verified test notification from the Super App Backoffice.\n\nYour account (<code>${email}</code>) is receiving direct updates.`,
+    const result = await this.telegramService.sendMessageWithDetails(
+      `<b>⚡ Test Notification: Personal Direct Alert</b>\n\nHello <b>${name}</b>, this is a verified test notification from the Super App Backoffice.\n\nYour account (<code>${email}</code>) is receiving direct updates.`,
       chatId,
     );
 
-    return { success };
+    return result;
   }
 
   @Post('test-team')
   @UseGuards(JwtAuthGuard)
   async testTeamAlert(
     @Req() req: any,
-    @Body() body: { chatId?: string; miniAppName?: string },
+    @Body() body: { chatId?: string; miniAppName?: string; message?: string },
   ) {
     const userId = req.user?.sub || req.user?.id;
     const dbUser = userId ? await this.telegramService.getUser(userId) : null;
@@ -152,36 +169,58 @@ export class TelegramController {
     }
 
     const appName = body.miniAppName || 'Platform Ops & Dev Team Channel';
-    const success = await this.telegramService.sendMessage(
-      `<b>Test Notification: Team Channel Alert</b>\n\n<b>Channel:</b> <code>${targetChat}</code>\n<b>Target:</b> ${appName}\n\nThis group channel is connected to receive automated security scan results, review status updates, and CI/CD test build APK alerts from the Super App Gateway.`,
+    const msgText =
+      body.message ||
+      `<b>🏢 Test Notification: Team Channel Alert</b>\n\n<b>Channel:</b> <code>${targetChat}</code>\n<b>Target:</b> <b>${appName}</b>\n\nThis group channel is connected to receive automated security scan results, review status updates, and CI/CD test build APK alerts from the Super App Gateway.`;
+
+    const result = await this.telegramService.sendMessageWithDetails(
+      msgText,
       targetChat,
     );
 
-    return { success };
+    return result;
   }
 
-  @Post('webhook')
-  @HttpCode(HttpStatus.OK)
-  async handleWebhook(@Body() update: any) {
-    const msg = update?.message;
-    if (msg && msg.text) {
-      const text = msg.text.trim();
-      if (text.startsWith('/start ')) {
-        const userId = text.split(' ')[1]?.trim();
-        const chatId = msg.chat?.id;
-        const username = msg.from?.username;
-        const firstName = msg.from?.first_name;
-
-        if (userId && chatId) {
-          await this.telegramService.linkTelegramAccount(
-            userId,
-            chatId,
-            username,
-            firstName,
-          );
-        }
-      }
+  @Post('reassign-group')
+  @UseGuards(JwtAuthGuard)
+  async reassignGroup(
+    @Req() req: any,
+    @Body() body: { oldChatId: string; newChatId?: string | null },
+  ) {
+    const userId = req.user?.sub || req.user?.id;
+    if (!body.oldChatId?.trim()) {
+      throw new BadRequestException('oldChatId is required');
     }
-    return { ok: true };
+
+    return this.telegramService.reassignTelegramGroup(
+      body.oldChatId.trim(),
+      body.newChatId?.trim() || null,
+      userId,
+    );
+  }
+
+  @Post('assign-app-group')
+  @UseGuards(JwtAuthGuard)
+  async assignAppGroup(
+    @Req() req: any,
+    @Body() body: { miniAppId: string; newChatId?: string | null },
+  ) {
+    const userId = req.user?.sub || req.user?.id;
+    if (!body.miniAppId?.trim()) {
+      throw new BadRequestException('miniAppId is required');
+    }
+
+    return this.telegramService.assignMiniAppToGroup(
+      body.miniAppId.trim(),
+      body.newChatId?.trim() || null,
+      userId,
+    );
+  }
+
+  @Post('cleanup-inactive')
+  @UseGuards(JwtAuthGuard)
+  async cleanupInactive(@Req() req: any) {
+    const userId = req.user?.sub || req.user?.id;
+    return this.telegramService.cleanupInactiveGroups(userId);
   }
 }

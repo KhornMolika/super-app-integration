@@ -4,21 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/inputs';
-import { API_URL } from '@/lib/config';
-
-interface AuditLog {
-  id: string;
-  actorId?: string;
-  action: string;
-  resourceType: string;
-  resourceId?: string;
-  oldValue?: any;
-  newValue?: any;
-  metadata?: any;
-  ipAddress?: string;
-  userAgent?: string;
-  createdAt: string;
-}
+import { auditLogsApi, AuditLog } from '@/api';
 
 export default function AuditLogsPage() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
@@ -30,14 +16,8 @@ export default function AuditLogsPage() {
   const fetchLogs = useCallback(async () => {
     try {
       setLoading(true);
-      let res = await fetch('/api/audit-logs');
-      if (!res.ok) {
-        res = await fetch(`${API_URL}/audit-logs`);
-      }
-      if (res.ok) {
-        const data = await res.json();
-        setLogs(Array.isArray(data) ? data : []);
-      }
+      const data = await auditLogsApi.getAll();
+      setLogs(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to load audit logs:', err);
     } finally {

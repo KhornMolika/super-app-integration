@@ -4,6 +4,9 @@ import { GitIntegrationService } from './git-integration.service';
 import { GitHubProvider } from './providers/github.provider';
 import { GitLabProvider } from './providers/gitlab.provider';
 
+import { GitHubAppService } from './github-app.service';
+import { GitLabOAuthService } from './gitlab-oauth.service';
+
 describe('GitIntegrationService & Providers', () => {
   let service: GitIntegrationService;
   let githubProvider: GitHubProvider;
@@ -24,6 +27,14 @@ describe('GitIntegrationService & Providers', () => {
         GitHubProvider,
         GitLabProvider,
         {
+          provide: GitHubAppService,
+          useValue: { getAuthenticatedClient: jest.fn(), isConfigured: jest.fn().mockReturnValue(false) },
+        },
+        {
+          provide: GitLabOAuthService,
+          useValue: { getClient: jest.fn(), isConfigured: jest.fn().mockReturnValue(false) },
+        },
+        {
           provide: ConfigService,
           useValue: {
             get: (key: string) => mockConfig[key],
@@ -36,6 +47,7 @@ describe('GitIntegrationService & Providers', () => {
     githubProvider = module.get<GitHubProvider>(GitHubProvider);
     gitlabProvider = module.get<GitLabProvider>(GitLabProvider);
   });
+
 
   describe('URL Auto-Detection', () => {
     it('should auto-detect GitHub HTTPS URL', () => {

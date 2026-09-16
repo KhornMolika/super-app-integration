@@ -1,4 +1,4 @@
-import { API_URL } from '@/lib/config';
+import { miniappsApi, integrationsApi } from '@/api';
 import { CreateMiniAppDto, IntegrationMethod, PermissionDto, SourceType } from '@/types/miniapp.types';
 import { validateUrlFormat } from '@/components/ui/ValidatedUrlInput';
 
@@ -101,8 +101,7 @@ export async function validateMiniAppStep(
 
         if (isValid) {
           try {
-            const res = await fetch(`${API_URL}/mini-apps/check-url?url=${encodeURIComponent(prodUrl)}`);
-            const data = await res.json();
+            const data = await miniappsApi.checkUrl(prodUrl);
             if (!data.reachable) {
               errors['integrationConfigWebView.productionUrl'] = 'Production URL is not reachable';
               isValid = false;
@@ -139,8 +138,7 @@ export async function validateMiniAppStep(
           isValid = false;
         } else if (isValid) {
           try {
-            const res = await fetch(`/api/integrations/nexus/packages/${encodeURIComponent(conf.packageName)}`);
-            const data = await res.json();
+            const data = await integrationsApi.getNexusPackage(conf.packageName);
             if (data && data.exists === false) {
               errors['integrationConfigFlutter.packageName'] =
                 `Package "${conf.packageName}" does not exist on Nexus. Please save as Draft or publish the package to Nexus before submitting for review.`;
@@ -160,17 +158,12 @@ export async function validateMiniAppStep(
           isValid = false;
         } else if (isValid) {
           try {
-            const res = await fetch('/api/integrations/git/validate', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                url: conf.gitUrl,
-                ref: conf.gitBranch,
-                token: conf.gitAccessToken,
-                path: conf.gitPath,
-              }),
+            const data = await integrationsApi.validateGit({
+              url: conf.gitUrl,
+              ref: conf.gitBranch,
+              token: conf.gitAccessToken,
+              path: conf.gitPath,
             });
-            const data = await res.json();
             if (data && data.validation) {
               if (!data.validation.isValid) {
                 errors['integrationConfigFlutter.gitUrl'] =

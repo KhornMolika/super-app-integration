@@ -7,9 +7,9 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { MailService } from './mail.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 
-@Controller('mail')
+@Controller(['mail', 'api/mail'])
 export class MailController {
   constructor(private readonly mailService: MailService) {}
 

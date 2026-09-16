@@ -78,7 +78,9 @@ class LoginController extends GetxController {
           FilledButton(
             onPressed: () async {
               await ApiConfig.setCustomServer(textController.text);
-              Navigator.of(ctx).pop();
+              if (ctx.mounted) {
+                Navigator.of(ctx).pop();
+              }
             },
             child: const Text('Save'),
           ),

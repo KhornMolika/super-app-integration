@@ -2,7 +2,7 @@
 
 import React from 'react';
 
-export type MiniAppTabType = 'overview' | 'team' | 'integration' | 'permissions' | 'report' | 'activity';
+export type MiniAppTabType = 'overview' | 'team' | 'integration' | 'permissions' | 'report' | 'activity' | 'versions';
 
 export interface MiniAppDetailTabsProps {
   activeTab: MiniAppTabType;
@@ -10,6 +10,7 @@ export interface MiniAppDetailTabsProps {
   allErrors: Record<string, string>;
   issuesCount?: number;
   validationStatus?: string;
+  currentReleaseVersion?: string;
 }
 
 export default function MiniAppDetailTabs({
@@ -18,6 +19,7 @@ export default function MiniAppDetailTabs({
   allErrors,
   issuesCount = 0,
   validationStatus,
+  currentReleaseVersion,
 }: MiniAppDetailTabsProps) {
   const hasErrorInTab = (tab: MiniAppTabType) => {
     const errorKeys = Object.keys(allErrors);
@@ -75,6 +77,15 @@ export default function MiniAppDetailTabs({
       ),
     },
     {
+      id: 'versions',
+      label: 'Versions & Releases',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+        </svg>
+      ),
+    },
+    {
       id: 'report',
       label: 'Security & Compliance Report',
       icon: (
@@ -93,6 +104,7 @@ export default function MiniAppDetailTabs({
       ),
     },
   ];
+
 
   return (
     <div className="flex border-b border-slate-200/80 dark:border-slate-800 space-x-2 overflow-x-auto pb-px mb-6 scrollbar-none">

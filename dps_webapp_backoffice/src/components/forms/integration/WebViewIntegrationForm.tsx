@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button, Input, Label } from '@/components/ui/inputs';
 import { validateProductionUrlFormat, generateClientVerificationToken } from '@/lib/integration-utils';
+import { miniappsApi } from '@/api';
 
 export interface WebViewIntegrationFormProps {
   formData: any;
@@ -59,11 +60,8 @@ export default function WebViewIntegrationForm({
   const handleGenerateToken = async () => {
     let newToken = generateClientVerificationToken();
     try {
-      const res = await fetch('/api/mini-apps/generate-token');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.token) newToken = data.token;
-      }
+      const data = await miniappsApi.generateToken();
+      if (data && data.token) newToken = data.token;
     } catch {
       // Fallback already assigned
     }
@@ -126,30 +124,20 @@ export default function WebViewIntegrationForm({
     setDomainVerificationMsg(null);
     setDomainVerificationMsgType(null);
     try {
-      let res: Response;
-      if (formData.id) {
-        res = await fetch(`/api/mini-apps/${formData.id}/verify-domain`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ productionUrl: targetUrl.trim() }),
-        });
-      } else {
-        res = await fetch(`/api/mini-apps/verify-domain`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            productionUrl: targetUrl.trim(),
-            appId: currentAppId,
-            verificationToken: currentToken,
-          }),
-        });
-      }
+      const data = await miniappsApi.verifyDomain(
+        formData.id
+          ? { id: formData.id, productionUrl: targetUrl.trim() }
+          : {
+              productionUrl: targetUrl.trim(),
+              appId: currentAppId,
+              verificationToken: currentToken,
+            }
+      );
 
-      const data = await res.json();
-      if (res.ok && data.verified) {
+      if (data && data.verified) {
         setDomainVerificationSuccess(true);
         setVerifiedUrl(targetUrl.trim());
-        setDomainVerificationMsg(data.message || 'Domain ownership verified successfully.');
+        setDomainVerificationMsg((data as any).message || 'Domain ownership verified successfully.');
         setDomainVerificationMsgType('success');
         if (onDomainVerified) {
           onDomainVerified({
@@ -159,21 +147,21 @@ export default function WebViewIntegrationForm({
             verificationToken: currentToken,
           });
         }
-        if (data.allowedDomains && Array.isArray(data.allowedDomains) && data.allowedDomains.length > 0) {
+        if ((data as any).allowedDomains && Array.isArray((data as any).allowedDomains) && (data as any).allowedDomains.length > 0) {
           handleWebViewChange({
-            target: { name: 'allowedDomains', value: data.allowedDomains.join(', ') },
+            target: { name: 'allowedDomains', value: (data as any).allowedDomains.join(', ') },
           } as any);
         }
       } else {
         setDomainVerificationSuccess(false);
         setVerifiedUrl(null);
-        setDomainVerificationMsg(data.message || 'Domain verification failed.');
+        setDomainVerificationMsg((data as any)?.message || 'Domain verification failed.');
         setDomainVerificationMsgType('error');
         if (onDomainVerified) {
           onDomainVerified({
             verified: false,
             isDomainVerified: false,
-            validationErrors: data.validationErrors,
+            validationErrors: (data as any)?.validationErrors,
           });
         }
       }
@@ -224,14 +212,9 @@ export default function WebViewIntegrationForm({
       clearTimeout(prodUrlDebounceRef.current);
     }
 
-    const abortCtrl = new AbortController();
-
     prodUrlDebounceRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/mini-apps/check-url?url=${encodeURIComponent(prodUrl)}`, {
-          signal: abortCtrl.signal,
-        });
-        const data = await res.json();
+        const data = await miniappsApi.checkUrl(prodUrl);
         const isReachable = Boolean(data.reachable);
 
         prodUrlCacheRef.current.set(prodUrl, { reachable: isReachable, timestamp: Date.now() });
@@ -248,7 +231,6 @@ export default function WebViewIntegrationForm({
           });
         }
       } catch (err: any) {
-        if (err.name === 'AbortError') return;
         setProdUrlValidation({
           status: 'unreachable',
           message: 'URL format valid, but could not connect to server',
@@ -257,7 +239,6 @@ export default function WebViewIntegrationForm({
     }, 250);
 
     return () => {
-      abortCtrl.abort();
       if (prodUrlDebounceRef.current) {
         clearTimeout(prodUrlDebounceRef.current);
       }

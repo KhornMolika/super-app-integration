@@ -3,17 +3,17 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/inputs';
+import { superAppApi, miniappsApi, MiniApp } from '@/api';
 
 export default function ReleasesPage() {
-  const [apps, setApps] = useState<any[]>([]);
+  const [apps, setApps] = useState<MiniApp[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [releaseVersion, setReleaseVersion] = useState('v1.1.1');
   const [isAssembling, setIsAssembling] = useState(false);
   const [gate2Result, setGate2Result] = useState<any>(null);
 
   const fetchNextVersion = () => {
-    fetch('/api/super-app/next-version')
-      .then(res => res.json())
+    superAppApi.getNextVersion()
       .then(data => {
         if (data?.nextVersion) {
           setReleaseVersion(data.nextVersion);
@@ -23,12 +23,11 @@ export default function ReleasesPage() {
   };
 
   useEffect(() => {
-    fetch('/api/mini-apps')
-      .then(res => res.json())
+    miniappsApi.getAll()
       .then(data => {
         if (Array.isArray(data)) {
           // Filter to show Approved, Published, or Active apps
-          setApps(data.filter(app => ['APPROVED', 'PUBLISHED', 'ACTIVE', 'Approved', 'Published'].includes(app.status)));
+          setApps(data.filter(app => ['APPROVED', 'PUBLISHED', 'ACTIVE', 'Approved', 'Published'].includes(app.status || '')));
         }
         setIsLoading(false);
       })
@@ -51,13 +50,7 @@ export default function ReleasesPage() {
         })),
       };
 
-      const res = await fetch('/api/release-assembly/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
+      const data = await superAppApi.verifyReleaseAssembly(payload);
       setGate2Result(data);
       if (data?.success || data?.status === 'ASSEMBLY_STARTED') {
         fetchNextVersion();

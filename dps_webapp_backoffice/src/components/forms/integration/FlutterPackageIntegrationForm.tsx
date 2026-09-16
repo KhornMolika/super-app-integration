@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button, Input, Label, Select } from '@/components/ui/inputs';
 import { SourceType } from '@/types/miniapp.types';
+import { miniappsApi, integrationsApi } from '@/api';
 
 export interface FlutterPackageIntegrationFormProps {
   formData: any;
@@ -63,13 +64,8 @@ export default function FlutterPackageIntegrationForm({
     uploadFormData.append('version', flutterConfig.versionConstraint?.replace(/^[\^~>=<]+/, '') || '1.0.0');
 
     try {
-      const res = await fetch('/api/mini-apps/upload-artifact', {
-        method: 'POST',
-        body: uploadFormData,
-      });
-
-      const data = await res.json();
-      if (res.ok && data.success) {
+      const data = await miniappsApi.uploadArtifact(uploadFormData);
+      if (data && (data.success || data.packageUrl)) {
         setArchiveUploadSuccess(data);
 
         if (data.pubspec?.name) {
@@ -93,7 +89,7 @@ export default function FlutterPackageIntegrationForm({
           } as any);
         }
       } else {
-        setArchiveUploadError(data.message || 'Failed to extract archive.');
+        setArchiveUploadError(data?.message || 'Failed to extract archive.');
       }
     } catch (err: any) {
       setArchiveUploadError(err.message || 'Network error uploading archive bundle.');
@@ -176,18 +172,13 @@ export default function FlutterPackageIntegrationForm({
       setIsGitValidating(true);
       gitDebounceRef.current = setTimeout(async () => {
         try {
-          const valRes = await fetch('/api/integrations/git/validate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              url,
-              ref: selectedRef || flutterConfig.gitBranch || undefined,
-              token: flutterConfig.gitAccessToken || undefined,
-              path: path || undefined,
-            }),
+          const valData = await integrationsApi.validateGit({
+            url,
+            ref: selectedRef || flutterConfig.gitBranch || undefined,
+            token: flutterConfig.gitAccessToken || undefined,
+            path: path || undefined,
           });
 
-          const valData = await valRes.json();
           setGitValidationResult(valData.validation || valData);
 
           if (valData.provider) {
@@ -202,15 +193,10 @@ export default function FlutterPackageIntegrationForm({
 
           // Fetch tags in background
           try {
-            const tagsRes = await fetch('/api/integrations/git/tags', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                url,
-                token: flutterConfig.gitAccessToken || undefined,
-              }),
+            const tagsData = await integrationsApi.getGitTags({
+              url,
+              token: flutterConfig.gitAccessToken || undefined,
             });
-            const tagsData = await tagsRes.json();
             if (tagsData.tags && Array.isArray(tagsData.tags)) {
               setTags(tagsData.tags);
               if (tagsData.tags.length > 0 && !selectedRef && !flutterConfig.gitBranch) {
@@ -221,15 +207,10 @@ export default function FlutterPackageIntegrationForm({
 
           // Fetch branches in background
           try {
-            const branchesRes = await fetch('/api/integrations/git/branches', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                url,
-                token: flutterConfig.gitAccessToken || undefined,
-              }),
+            const branchesData = await integrationsApi.getGitBranches({
+              url,
+              token: flutterConfig.gitAccessToken || undefined,
             });
-            const branchesData = await branchesRes.json();
             if (branchesData.branches && Array.isArray(branchesData.branches)) {
               setBranches(branchesData.branches);
             }
@@ -237,15 +218,10 @@ export default function FlutterPackageIntegrationForm({
 
           // Resolve commit SHA
           try {
-            const shaRes = await fetch('/api/integrations/git/resolve-sha', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                url,
-                ref: selectedRef || flutterConfig.gitBranch || 'main',
-              }),
+            const shaData = await integrationsApi.resolveGitSha({
+              url,
+              ref: selectedRef || flutterConfig.gitBranch || 'main',
             });
-            const shaData = await shaRes.json();
             if (shaData.sha) {
               setLockedCommitSha(shaData.sha);
               handleFlutterChange({
@@ -288,8 +264,7 @@ export default function FlutterPackageIntegrationForm({
     setIsNexusValidating(true);
     nexusDebounceRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/integrations/nexus/packages/${encodeURIComponent(pkg)}`);
-        const data = await res.json();
+        const data = await integrationsApi.getNexusPackage(pkg);
         setNexusValidationResult(data);
 
         if (data.exists && data.latestVersion && !flutterConfig.versionConstraint) {

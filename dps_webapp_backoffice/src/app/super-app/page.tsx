@@ -5,25 +5,8 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/lib/auth';
 import { Card } from '@/components/ui/card';
 import { Button, Input, Label } from '@/components/ui/inputs';
-import { API_URL } from '@/lib/config';
-
-interface EcosystemStatus {
-  superAppVersion: string;
-  kernelStatus: string;
-  bridgeProtocolVersion: string;
-  securityGateEnforcement: string;
-  supportedPlatforms: string[];
-  activeSecurityChecks: string[];
-  capabilities: string[];
-  storageEngine: string;
-  containerSandbox: string;
-  integratedServices?: {
-    telegramBot?: { name: string; username: string; url: string; status: string };
-    nexusRegistry?: { name: string; url: string; status: string };
-    jenkinsCiCd?: { name: string; url: string; status: string };
-    minioStorage?: { name: string; url: string; endpoint: string; status: string };
-  };
-}
+import { toast } from '@/components/ui/Toast';
+import { superAppApi, telegramApi, EcosystemStatus } from '@/api';
 
 interface StorageStatus {
   configured: boolean;
@@ -43,34 +26,30 @@ export default function SuperAppEcosystemPage() {
   const { can, role } = useAuth();
   const [status, setStatus] = useState<EcosystemStatus | null>(null);
   const [storageStatus, setStorageStatus] = useState<StorageStatus | null>(null);
-  const [telegramInfo, setTelegramInfo] = useState<TelegramBotInfo | null>(null);
+  const [telegramInfo, setTelegramInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   // MinIO AIStor License management state
   const [licenseKey, setLicenseKey] = useState('');
   const [showLicenseKey, setShowLicenseKey] = useState(false);
   const [updatingLicense, setUpdatingLicense] = useState(false);
-  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const fetchEcosystemData = useCallback(async () => {
     try {
       setLoading(true);
-      const [ecoRes, storRes, tgRes] = await Promise.all([
-        fetch('/api/super-app/ecosystem-status').catch(() => fetch(`${API_URL}/super-app/ecosystem-status`)),
-        fetch('/api/storage/license-status').catch(() => fetch(`${API_URL}/storage/license-status`)),
-        fetch('/api/telegram/status').catch(() => fetch(`${API_URL}/telegram/status`)),
+      const [ecoData, storData, tgData] = await Promise.all([
+        superAppApi.getEcosystemStatus().catch(() => null),
+        superAppApi.getStorageLicenseStatus().catch(() => null),
+        telegramApi.getStatus().catch(() => null),
       ]);
 
-      if (ecoRes?.ok) {
-        const ecoData = await ecoRes.json();
+      if (ecoData) {
         setStatus(ecoData);
       }
-      if (storRes?.ok) {
-        const storData = await storRes.json();
+      if (storData) {
         setStorageStatus(storData);
       }
-      if (tgRes?.ok) {
-        const tgData = await tgRes.json();
+      if (tgData) {
         setTelegramInfo(tgData);
       }
     } catch (err) {
@@ -89,43 +68,16 @@ export default function SuperAppEcosystemPage() {
     if (!licenseKey.trim()) return;
 
     setUpdatingLicense(true);
-    setFeedback(null);
 
     try {
-      let res = await fetch('/api/storage/update-license', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ licenseKey }),
-      });
-
-      if (!res.ok) {
-        res = await fetch(`${API_URL}/storage/update-license`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ licenseKey }),
-        });
-      }
-
-      if (res.ok) {
-        const result = await res.json();
-        setStorageStatus(result);
-        setLicenseKey('');
-        setFeedback({
-          type: 'success',
-          message: 'MinIO AIStor enterprise license applied and verified successfully.',
-        });
-      } else {
-        const err = await res.json().catch(() => ({}));
-        setFeedback({
-          type: 'error',
-          message: err.message || 'Failed to update license key. Please check your credentials.',
-        });
-      }
-    } catch (err) {
-      setFeedback({
-        type: 'error',
-        message: 'Network error communicating with storage license service.',
-      });
+      const result = await superAppApi.updateStorageLicense(licenseKey);
+      setStorageStatus(result);
+      setLicenseKey('');
+      const msg = 'MinIO AIStor enterprise license applied and verified successfully.';
+      toast.success(msg, 'License Applied');
+    } catch (err: any) {
+      const msg = err.message || 'Failed to update license key. Please check your credentials.';
+      toast.error(msg, 'License Update Failed');
     } finally {
       setUpdatingLicense(false);
     }
@@ -172,60 +124,86 @@ export default function SuperAppEcosystemPage() {
 
         {/* Status Metrics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Test Build Version */}
           <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
             <div className="flex items-center justify-between">
-              <span className="text-xs uppercase font-bold text-slate-400">Kernel Version</span>
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-xs uppercase font-bold text-slate-400">Test Build Version</span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-bold rounded-full bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+                <span>Testing</span>
+              </span>
             </div>
             <div className="text-3xl font-black text-slate-800 dark:text-slate-100 mt-2">
-              {status?.superAppVersion || 'v2.4.0'}
+              {status?.superAppTestVersion || status?.superAppVersion || 'v0.3.1'}
             </div>
-            <p className="text-xs text-slate-500 mt-1">
-              Bridge Protocol: {status?.bridgeProtocolVersion || '2.0.0'}
+            <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+              <svg className="w-3.5 h-3.5 text-purple-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+              </svg>
+              <span>Candidate test build for sandbox validation</span>
             </p>
           </div>
 
+          {/* Official Release */}
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between">
+              <span className="text-xs uppercase font-bold text-slate-400">Official Release</span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-bold rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span>Production</span>
+              </span>
+            </div>
+            <div className="text-3xl font-black text-slate-800 dark:text-slate-100 mt-2">
+              {status?.officialReleaseVersion || 'v1.0.0'}
+            </div>
+            <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+              <svg className="w-3.5 h-3.5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+              </svg>
+              <span>Live Super App ecosystem release</span>
+            </p>
+          </div>
+
+          {/* Kernel Status */}
           <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
             <div className="flex items-center justify-between">
               <span className="text-xs uppercase font-bold text-slate-400">Kernel Status</span>
-              <span className="px-2 py-0.5 text-xs font-bold rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-                {status?.kernelStatus || 'OPERATIONAL'}
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-bold rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span>{status?.kernelStatus || 'OPERATIONAL'}</span>
               </span>
             </div>
             <div className="text-3xl font-black text-slate-800 dark:text-slate-100 mt-2">
               Healthy
             </div>
-            <p className="text-xs text-slate-500 mt-1">Zero blocking container exceptions</p>
+            <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+              <svg className="w-3.5 h-3.5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              <span>Zero blocking container exceptions</span>
+            </p>
           </div>
 
+          {/* Security Gate */}
           <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
             <div className="flex items-center justify-between">
               <span className="text-xs uppercase font-bold text-slate-400">Security Gate</span>
-              <span className="px-2 py-0.5 text-xs font-bold rounded bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
-                {status?.securityGateEnforcement || 'STRICT'}
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-bold rounded-full bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
+                <svg className="w-3 h-3 text-sky-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                <span>{status?.securityGateEnforcement || 'STRICT'}</span>
               </span>
             </div>
             <div className="text-3xl font-black text-slate-800 dark:text-slate-100 mt-2">
               {status?.activeSecurityChecks?.length || 8} Active
             </div>
-            <p className="text-xs text-slate-500 mt-1">Dynamic CVE &amp; DAST verification</p>
-          </div>
-
-          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
-            <div className="flex items-center justify-between">
-              <span className="text-xs uppercase font-bold text-slate-400">Storage Engine</span>
-              <span className={`px-2 py-0.5 text-xs font-bold rounded ${
-                storageStatus?.configured
-                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
-                  : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300'
-              }`}>
-                {storageStatus?.configured ? 'AIStor Active' : 'S3 Storage'}
-              </span>
-            </div>
-            <div className="text-xl font-black text-slate-800 dark:text-slate-100 mt-2 truncate">
-              {storageStatus?.licenseType || 'MinIO AIStor'}
-            </div>
-            <p className="text-xs text-slate-500 mt-1">Immutable package artifacts</p>
+            <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+              <svg className="w-3.5 h-3.5 text-sky-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              <span>Dynamic CVE &amp; DAST verification</span>
+            </p>
           </div>
         </div>
 
@@ -250,7 +228,7 @@ export default function SuperAppEcosystemPage() {
               </div>
 
               <div className="flex flex-wrap gap-2 mt-4">
-                {status?.capabilities?.map((cap) => (
+                {status?.capabilities?.map((cap: string) => (
                   <span
                     key={cap}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
@@ -356,27 +334,6 @@ export default function SuperAppEcosystemPage() {
             </Button>
           </div>
 
-          {feedback && (
-            <div
-              className={`mt-4 p-4 rounded-xl text-sm flex items-start gap-3 border ${
-                feedback.type === 'success'
-                  ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                  : 'bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border-rose-200 dark:border-rose-800'
-              }`}
-            >
-              {feedback.type === 'success' ? (
-                <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5 text-rose-600 dark:text-rose-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              )}
-              <div className="flex-1">{feedback.message}</div>
-            </div>
-          )}
-
           {/* Current Status Overview */}
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 my-6 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800 text-xs">
             <div>
@@ -480,7 +437,7 @@ export default function SuperAppEcosystemPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs mt-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs mt-6">
             {/* Telegram Bot Gateway */}
             <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -506,8 +463,9 @@ export default function SuperAppEcosystemPage() {
                   </a>
                 </div>
               </div>
-              <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-semibold text-[11px]">
-                Online
+              <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-semibold text-[11px] shrink-0 inline-flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span>Online</span>
               </span>
             </div>
 
@@ -527,7 +485,7 @@ export default function SuperAppEcosystemPage() {
                     href={nexusUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-indigo-600 dark:text-indigo-400 hover:underline font-mono text-[11px] inline-flex items-center gap-1 truncate max-w-[180px]"
+                    className="text-indigo-600 dark:text-indigo-400 hover:underline font-mono text-[11px] inline-flex items-center gap-1 truncate max-w-[140px]"
                   >
                     <span className="truncate">{nexusUrl}</span>
                     <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -536,8 +494,9 @@ export default function SuperAppEcosystemPage() {
                   </a>
                 </div>
               </div>
-              <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-semibold text-[11px]">
-                Online
+              <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-semibold text-[11px] shrink-0 inline-flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span>Online</span>
               </span>
             </div>
 
@@ -558,7 +517,7 @@ export default function SuperAppEcosystemPage() {
                     href={jenkinsUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-amber-600 dark:text-amber-400 hover:underline font-mono text-[11px] inline-flex items-center gap-1 truncate max-w-[180px]"
+                    className="text-amber-600 dark:text-amber-400 hover:underline font-mono text-[11px] inline-flex items-center gap-1 truncate max-w-[140px]"
                   >
                     <span className="truncate">{jenkinsUrl}</span>
                     <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -567,8 +526,39 @@ export default function SuperAppEcosystemPage() {
                   </a>
                 </div>
               </div>
-              <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-semibold text-[11px]">
-                Online
+              <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-semibold text-[11px] shrink-0 inline-flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span>Online</span>
+              </span>
+            </div>
+
+            {/* Storage Engine - MinIO AIStor */}
+            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                  </svg>
+                </div>
+                <div>
+                  <span className="font-bold text-slate-800 dark:text-slate-200 block text-sm">
+                    Storage Engine
+                  </span>
+                  <span className="text-slate-600 dark:text-slate-300 font-semibold text-[11px] block truncate max-w-[140px]">
+                    {storageStatus?.licenseType || 'MinIO AIStor Enterprise'}
+                  </span>
+                  <span className="text-[10px] text-slate-400 block mt-0.5">
+                    Immutable package artifacts
+                  </span>
+                </div>
+              </div>
+              <span className={`px-2.5 py-1 rounded-full font-semibold text-[11px] shrink-0 inline-flex items-center gap-1 ${
+                storageStatus?.configured
+                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                  : 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300'
+              }`}>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span>{storageStatus?.configured ? 'AIStor Active' : 'Active'}</span>
               </span>
             </div>
           </div>

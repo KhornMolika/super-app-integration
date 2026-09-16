@@ -1,5 +1,4 @@
 "use client";
-import { API_URL } from '@/lib/config';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -7,30 +6,18 @@ import { Button } from '@/components/ui/inputs';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/lib/auth';
 import { Card } from '@/components/ui/card';
-
-
-
-type PermissionItem = {
-  id: string;
-  name: string;
-  description?: string;
-  platform?: string;
-  status?: string;
-};
+import { permissionsApi, Permission } from '@/api';
 
 export default function PermissionsPage() {
   const { can } = useAuth();
-  const [permissions, setPermissions] = useState<PermissionItem[]>([]);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchPermissions() {
       try {
-        const res = await fetch(`${API_URL}/permissions`);
-        if (res.ok) {
-          const data = await res.json();
-          setPermissions(data);
-        }
+        const data = await permissionsApi.getAll();
+        setPermissions(data);
       } catch (err) {
         console.error('Failed to fetch permissions', err);
       } finally {

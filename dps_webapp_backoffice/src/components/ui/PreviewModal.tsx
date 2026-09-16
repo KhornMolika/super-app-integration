@@ -2,20 +2,13 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Button, Label } from './inputs';
+import { Button } from './inputs';
 import IframePreviewEngine from './IframePreviewEngine';
 
 export type DeviceType = 
   | 'Responsive' | 'Custom' 
   | 'iPhone 16 Pro' | 'Galaxy S25 Ultra' | 'iPad Pro 11"' | 'Laptop 14"';
 export type Orientation = 'Portrait' | 'Landscape';
-
-interface BridgeEventLog {
-  id: string;
-  timestamp: string;
-  type: string;
-  payload: any;
-}
 
 interface PreviewModalProps {
   isOpen: boolean;
@@ -28,6 +21,7 @@ interface PreviewModalProps {
   apkUrl?: string;
   isFlutter?: boolean;
   status?: string;
+  buildCompletedAt?: string | Date;
 }
 
 const DEVICE_DIMENSIONS = {
@@ -48,6 +42,7 @@ export default function PreviewModal({
   apkUrl = '/api/download-apk?type=test&version=v0.0.1',
   isFlutter = false,
   status,
+  buildCompletedAt,
 }: PreviewModalProps) {
   const [device, setDevice] = useState<DeviceType>('iPhone 16 Pro');
   const [orientation, setOrientation] = useState<Orientation>('Portrait');
@@ -56,13 +51,6 @@ export default function PreviewModal({
   const [reloadKey, setReloadKey] = useState(0);
   const [mounted, setMounted] = useState(false);
   const [currentScreen, setCurrentScreen] = useState<'flutter-web' | 'miniapp'>('flutter-web');
-  
-  // Simulator State
-  const [showInspector, setShowInspector] = useState(true);
-  const [eventLogs, setEventLogs] = useState<BridgeEventLog[]>([]);
-  const [selectedUser, setSelectedUser] = useState<'citizen' | 'merchant' | 'guest'>('citizen');
-  const [selectedCity, setSelectedCity] = useState('Phnom Penh');
-  const [simulatedTheme, setSimulatedTheme] = useState<'light' | 'dark'>('light');
   
   const previewAreaRef = useRef<HTMLDivElement>(null);
   const [autoScale, setAutoScale] = useState(1);
@@ -83,37 +71,6 @@ export default function PreviewModal({
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  // Listen for bridge messages from iframe runner
-  useEffect(() => {
-    const handleBridgeMessage = (event: MessageEvent) => {
-      if (!event.data || event.data.source !== 'DSP_MINIAPP_RUNNER') return;
-      
-      const newEvent: BridgeEventLog = {
-        id: Math.random().toString(36).substring(2, 9),
-        timestamp: new Date().toLocaleTimeString(),
-        type: event.data.type,
-        payload: event.data.payload,
-      };
-
-      setEventLogs(prev => [newEvent, ...prev.slice(0, 49)]); // Keep last 50 events
-    };
-
-    window.addEventListener('message', handleBridgeMessage);
-    return () => window.removeEventListener('message', handleBridgeMessage);
-  }, []);
-
-  // Send command to iframe sandbox
-  const postToRunner = (command: string, data: any) => {
-    const iframe = document.querySelector('iframe');
-    if (iframe && iframe.contentWindow) {
-      iframe.contentWindow.postMessage({
-        source: 'DSP_SIMULATOR_HOST',
-        command,
-        data,
-      }, '*');
-    }
-  };
 
   // Prevent background scrolling
   useEffect(() => {
@@ -186,105 +143,146 @@ export default function PreviewModal({
 
   const effectiveScale = device === 'Responsive' ? 1 : autoScale * (zoom / 100);
 
+  const buildDate = buildCompletedAt ? new Date(buildCompletedAt) : null;
+  const fullBuildTime = buildDate ? buildDate.toLocaleString('en-US') : null;
+  const formattedBuildTime = buildDate
+    ? buildDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
+      ', ' +
+      buildDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    : null;
+
+  const displayVersion = version ? (version.startsWith('v') ? version : `v${version}`) : 'v1.0.0';
+
   if (!mounted || !isOpen) return null;
 
   const modalContent = (
     <div className="fixed inset-0 z-[9999] flex flex-col bg-slate-950/90 backdrop-blur-md">
       {/* Top Header / Toolbar */}
-      <div className="flex flex-wrap items-center justify-between p-3.5 bg-slate-900 border-b border-slate-800 text-slate-100 shadow-sm z-20">
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-3">
-            <div className="w-9 h-9 rounded-xl bg-indigo-600/30 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold text-lg">
+      <div className="flex items-center justify-between px-4 bg-slate-900 border-b border-slate-800 text-slate-100 shadow-sm z-20 h-14 shrink-0 gap-3">
+        
+        {/* LEFT: App Brand & Build Info */}
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-indigo-600/30 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold text-base shrink-0">
               📱
             </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <h3 className="font-bold text-base text-slate-100">{title}</h3>
-                <span className="text-xs bg-indigo-500/20 text-indigo-300 font-semibold px-2.5 py-0.5 rounded-full border border-indigo-500/30">
-                  {isFlutter ? 'Flutter Package' : 'WebView Sandbox'}
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-sm text-slate-100 truncate max-w-[140px]" title={title}>{title}</h3>
+                <span className="text-[10px] bg-indigo-500/20 text-indigo-300 font-semibold px-2 py-0.5 rounded-full border border-indigo-500/30 shrink-0">
+                  {isFlutter ? 'Flutter' : 'WebView'}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 font-mono truncate max-w-[280px] mt-0.5">{effectiveUrl}</p>
             </div>
           </div>
 
-          <div className="h-6 w-px bg-slate-800 hidden md:block"></div>
+          <div className="h-5 w-px bg-slate-800 shrink-0 hidden sm:block"></div>
 
-          {/* Device Category Selector */}
-          <div className="hidden md:flex items-center space-x-1.5">
-            {(['iPhone 16 Pro', 'Galaxy S25 Ultra', 'iPad Pro 11"', 'Laptop 14"', 'Responsive'] as DeviceType[]).map(d => (
-              <button
-                key={d}
-                onClick={() => setDevice(d)}
-                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
-                  device === d 
-                    ? 'bg-indigo-600 text-white shadow-sm font-semibold' 
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-                }`}
-              >
-                {d}
-              </button>
-            ))}
-          </div>
+          {/* Version Badge */}
+          <span 
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-mono font-bold bg-indigo-950/60 text-indigo-300 border border-indigo-800/80 shrink-0 shadow-xs"
+            title={`App Version: ${displayVersion}`}
+          >
+            <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+            </svg>
+            <span>{displayVersion}</span>
+          </span>
 
-          {/* Orientation Toggle */}
-          {activeDeviceType === 'Phone' && (
-            <button
-              onClick={() => setOrientation(orientation === 'Portrait' ? 'Landscape' : 'Portrait')}
-              className="px-3 py-1.5 text-sm font-medium rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors flex items-center space-x-1.5"
-              title="Rotate Device"
+          {/* Build Complete Timestamp Badge */}
+          {formattedBuildTime ? (
+            <span 
+              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-mono bg-emerald-950/60 text-emerald-300 border border-emerald-800/80 shrink-0 shadow-xs cursor-default"
+              title={`Build Completed At: ${fullBuildTime}`}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-              <span>{orientation}</span>
-            </button>
+              <svg className="w-3.5 h-3.5 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-emerald-400/80 font-medium hidden md:inline">Built:</span>
+              <span className="font-semibold text-emerald-300">{formattedBuildTime}</span>
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-xs font-mono bg-slate-800/80 text-slate-300 border border-slate-700 shrink-0 shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+              <span className="text-slate-300 text-[11px] font-medium">Ready</span>
+            </span>
           )}
         </div>
 
-        {/* Right Action Tools */}
-        <div className="flex items-center space-x-3">
-          {/* Zoom Controls */}
-          <div className="flex items-center bg-slate-800/80 rounded-lg p-0.5 border border-slate-700">
-            <button onClick={handleZoomOut} className="p-1.5 text-slate-400 hover:text-slate-200 rounded hover:bg-slate-700">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 12H4" /></svg>
-            </button>
-            <button onClick={handleZoomReset} className="px-3 py-1 text-sm font-mono text-slate-300 hover:bg-slate-700 rounded">
-              {zoom}%
-            </button>
-            <button onClick={handleZoomIn} className="p-1.5 text-slate-400 hover:text-slate-200 rounded hover:bg-slate-700">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
-            </button>
+        {/* CENTER: Device Selector, Orientation & Zoom */}
+        <div className="flex items-center gap-2">
+          {/* Compact Device Dropdown Switcher */}
+          <div className="flex items-center bg-slate-800/90 rounded-xl p-0.5 border border-slate-700/80 shadow-xs">
+            <select
+              value={device}
+              onChange={(e) => setDevice(e.target.value as DeviceType)}
+              className="bg-transparent text-xs font-semibold text-slate-200 pl-2.5 pr-2 py-1.5 focus:outline-none cursor-pointer rounded-lg hover:bg-slate-700/50 transition-colors"
+            >
+              <option value="iPhone 16 Pro" className="bg-slate-900 text-slate-200">📱 iPhone 16 Pro (393×852)</option>
+              <option value="Galaxy S25 Ultra" className="bg-slate-900 text-slate-200">📱 Galaxy S25 Ultra (412×915)</option>
+              <option value="iPad Pro 11&quot;" className="bg-slate-900 text-slate-200">📱 iPad Pro 11&quot; (834×1194)</option>
+              <option value="Laptop 14&quot;" className="bg-slate-900 text-slate-200">💻 Laptop 14&quot; (1440×900)</option>
+              <option value="Responsive" className="bg-slate-900 text-slate-200">↔ Responsive (Fluid)</option>
+            </select>
+
+            {/* Orientation Toggle Button */}
+            {activeDeviceType === 'Phone' && (
+              <button
+                onClick={() => setOrientation(orientation === 'Portrait' ? 'Landscape' : 'Portrait')}
+                className="px-2 py-1 text-xs font-semibold rounded-lg text-slate-300 hover:text-white hover:bg-slate-700 transition-colors flex items-center gap-1 border-l border-slate-700/80"
+                title={`Rotate device (Current: ${orientation})`}
+              >
+                <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span className="hidden xl:inline text-[11px]">{orientation}</span>
+              </button>
+            )}
           </div>
 
-          {/* Screen Switcher */}
-          <div className="flex bg-slate-800/80 rounded-lg p-0.5 border border-slate-700">
+          {/* Zoom Controls */}
+          <div className="flex items-center bg-slate-800/90 rounded-xl p-0.5 border border-slate-700/80 shadow-xs">
+            <button onClick={handleZoomOut} className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition-colors" title="Zoom Out">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 12H4" /></svg>
+            </button>
+            <button onClick={handleZoomReset} className="px-2 py-0.5 text-xs font-mono text-slate-300 hover:bg-slate-700 rounded transition-colors" title="Reset Zoom">
+              {zoom}%
+            </button>
+            <button onClick={handleZoomIn} className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition-colors" title="Zoom In">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
+            </button>
+          </div>
+        </div>
+
+        {/* RIGHT: Screen Switcher & Action Tools */}
+        <div className="flex items-center gap-2">
+          {/* Screen Switcher (Super App vs Mini App) */}
+          <div className="flex bg-slate-800/90 rounded-xl p-0.5 border border-slate-700/80 text-xs shadow-xs">
             <button
               type="button"
               onClick={() => setCurrentScreen('flutter-web')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+              className={`px-3 py-1 font-semibold rounded-lg transition-all flex items-center gap-1.5 ${
                 currentScreen === 'flutter-web'
-                  ? 'bg-brand-600 text-white shadow-sm font-semibold'
+                  ? 'bg-brand-600 text-white shadow-xs'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <svg className="w-4 h-4 text-sky-400" viewBox="0 0 24 24" fill="currentColor">
+              <svg className="w-3.5 h-3.5 text-sky-400" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M14.314 0L2.3 12 6 15.7 21.686 0h-7.372zm.072 10.301L8.171 16.514 14.386 22.7 21.686 22.7l-7.3-7.299 7.3-5.1z" />
               </svg>
-              <span>Flutter Super App</span>
-              <span className="px-1.5 py-0.5 text-[10px] font-bold bg-emerald-500/20 text-emerald-300 rounded border border-emerald-500/30">
-                Web Build
-              </span>
+              <span>Super App</span>
             </button>
             <button
               type="button"
               onClick={() => setCurrentScreen('miniapp')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+              className={`px-3 py-1 font-semibold rounded-lg transition-all flex items-center gap-1.5 ${
                 currentScreen === 'miniapp'
-                  ? 'bg-brand-600 text-white shadow-sm font-semibold'
+                  ? 'bg-brand-600 text-white shadow-xs'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-              <span>Mini App View</span>
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+              <span>Mini App</span>
             </button>
           </div>
 
@@ -293,31 +291,21 @@ export default function PreviewModal({
             <a
               href={apkUrl}
               download="superapp-debug.apk"
-              className="h-9 px-3.5 text-sm font-semibold rounded-lg bg-emerald-600/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-600 hover:text-white transition-colors flex items-center gap-1.5 shadow-sm"
+              className="h-8 px-2.5 text-xs font-semibold rounded-xl bg-emerald-600/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-600 hover:text-white transition-colors flex items-center gap-1.5 shadow-xs"
               title="Download Super App Test Build APK (Nexus)"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-              <span>Download Test APK</span>
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              <span className="hidden sm:inline">Test APK</span>
             </a>
           )}
 
-          {/* Toggle Inspector Drawer */}
-          <Button
-            variant="outline"
-            onClick={() => setShowInspector(!showInspector)}
-            className={`h-9 px-3.5 text-sm font-medium border-slate-700 flex items-center gap-1.5 ${
-              showInspector ? 'bg-indigo-600/30 text-indigo-300 border-indigo-500/40' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
-            <span>Controls & Logs</span>
+          {/* Reload Button */}
+          <Button variant="outline" onClick={handleReload} className="!p-0 h-8 w-8 text-slate-400 hover:text-white border-slate-700/80 rounded-xl" title="Reload Frame">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
           </Button>
 
-          <Button variant="outline" onClick={handleReload} className="!p-2 h-9 w-9 text-slate-400 hover:text-white border-slate-700" title="Reload Frame">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-          </Button>
-
-          <Button onClick={onClose} className="!p-2 h-9 w-9 bg-slate-800 text-slate-300 hover:bg-rose-600 hover:text-white rounded-full transition-colors" title="Close Preview">
+          {/* Close Button */}
+          <Button onClick={onClose} className="!p-0 h-8 w-8 bg-slate-800 text-slate-300 hover:bg-rose-600 hover:text-white rounded-xl transition-colors" title="Close Preview">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
           </Button>
         </div>
@@ -445,143 +433,6 @@ export default function PreviewModal({
             </div>
           </div>
         </div>
-
-        {/* Right Side: Simulation Control Drawer & Live Event Inspector */}
-        {showInspector && (
-          <aside className="w-80 md:w-96 bg-slate-900 border-l border-slate-800 flex flex-col z-20 text-xs shadow-2xl">
-            
-            {/* Simulation Sensor Controls */}
-            <div className="p-4 border-b border-slate-800 space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="font-bold uppercase tracking-wider text-indigo-400 text-[10px]">Super App Sensor Bridge</span>
-                <span className="text-[10px] text-emerald-400 flex items-center gap-1 font-mono">● Emulation Online</span>
-              </div>
-
-              {/* NFC Sensor Emulation Button */}
-              <div>
-                <Label className="text-[11px] text-slate-300 mb-1.5 block">NFC Hardware Sensor</Label>
-                <Button
-                  type="button"
-                  onClick={() => postToRunner('SIMULATE_NFC', {})}
-                  className="w-full h-9 bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white rounded-xl font-semibold shadow-sm flex items-center justify-center space-x-2"
-                >
-                  <span>⚡ Simulate Contactless NFC Tap</span>
-                </Button>
-                <p className="text-[10px] text-slate-400 mt-1">Emulates reading an ISO-14443 contactless smart passport/chip.</p>
-              </div>
-
-              {/* Geolocation Mock */}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="text-[11px] text-slate-300 mb-1 block">GPS Location</Label>
-                  <select
-                    value={selectedCity}
-                    onChange={(e) => {
-                      setSelectedCity(e.target.value);
-                      postToRunner('SET_LOCATION', { city: e.target.value, lat: 11.5564, lng: 104.9282 });
-                    }}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg p-1.5 text-slate-200 text-xs"
-                  >
-                    <option value="Phnom Penh">Phnom Penh</option>
-                    <option value="Siem Reap">Siem Reap</option>
-                    <option value="Tokyo">Tokyo</option>
-                    <option value="Singapore">Singapore</option>
-                  </select>
-                </div>
-
-                {/* Mock User Role */}
-                <div>
-                  <Label className="text-[11px] text-slate-300 mb-1 block">User Context</Label>
-                  <select
-                    value={selectedUser}
-                    onChange={(e: any) => {
-                      setSelectedUser(e.target.value);
-                      const userMap = {
-                        citizen: { id: 'FSA-8829', name: 'Sokha Chan', role: 'Verified Citizen' },
-                        merchant: { id: 'MERCH-102', name: 'ABA Merchant', role: 'Merchant Partner' },
-                        guest: { id: 'GUEST-001', name: 'Anonymous Guest', role: 'Guest' },
-                      };
-                      postToRunner('SET_USER', userMap[e.target.value as keyof typeof userMap]);
-                    }}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg p-1.5 text-slate-200 text-xs"
-                  >
-                    <option value="citizen">Verified Citizen</option>
-                    <option value="merchant">Merchant Admin</option>
-                    <option value="guest">Guest</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Theme Mode Toggle */}
-              <div className="flex items-center justify-between pt-1">
-                <span className="text-[11px] text-slate-300 font-medium">Canvas Theme</span>
-                <div className="flex bg-slate-800 rounded-lg p-0.5 border border-slate-700">
-                  <button
-                    onClick={() => {
-                      setSimulatedTheme('light');
-                      postToRunner('SET_THEME', { theme: 'light' });
-                    }}
-                    className={`px-2.5 py-1 rounded text-[10px] font-semibold ${
-                      simulatedTheme === 'light' ? 'bg-indigo-600 text-white' : 'text-slate-400'
-                    }`}
-                  >
-                    Light
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSimulatedTheme('dark');
-                      postToRunner('SET_THEME', { theme: 'dark' });
-                    }}
-                    className={`px-2.5 py-1 rounded text-[10px] font-semibold ${
-                      simulatedTheme === 'dark' ? 'bg-indigo-600 text-white' : 'text-slate-400'
-                    }`}
-                  >
-                    Dark
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Live Bridge Event Stream */}
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="p-3 bg-slate-950/60 border-b border-slate-800 flex items-center justify-between">
-                <span className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Live Bridge Event Stream</span>
-                <button
-                  onClick={() => setEventLogs([])}
-                  className="text-[10px] text-slate-500 hover:text-slate-300"
-                >
-                  Clear
-                </button>
-              </div>
-
-              <div className="flex-1 p-3 overflow-y-auto space-y-2 font-mono text-[11px]">
-                {eventLogs.length === 0 ? (
-                  <div className="text-center py-10 text-slate-600">
-                    <span>No bridge events recorded yet.</span>
-                    <p className="text-[10px] mt-1 text-slate-700">Interact with the mini app canvas to inspect live messages.</p>
-                  </div>
-                ) : (
-                  eventLogs.map((log) => (
-                    <div
-                      key={log.id}
-                      className="p-2.5 rounded-lg bg-slate-950 border border-slate-800/80 text-slate-300 animate-fade-in"
-                    >
-                      <div className="flex items-center justify-between text-[10px] text-slate-500 mb-1">
-                        <span className="font-bold text-indigo-400">{log.type}</span>
-                        <span>{log.timestamp}</span>
-                      </div>
-                      <pre className="overflow-x-auto text-[10px] text-emerald-400 bg-slate-900/80 p-1.5 rounded">
-                        {JSON.stringify(log.payload, null, 2)}
-                      </pre>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-          </aside>
-        )}
-
       </div>
     </div>
   );

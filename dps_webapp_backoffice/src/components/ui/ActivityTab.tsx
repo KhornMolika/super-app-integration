@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { API_URL } from '@/lib/config';
+import { miniappsApi } from '@/api';
 
 interface MiniAppActivity {
   id: string;
@@ -22,11 +22,8 @@ export default function ActivityTab({ miniAppId }: ActivityTabProps) {
   useEffect(() => {
     async function fetchActivities() {
       try {
-        const res = await fetch(`${API_URL}/mini-apps/${miniAppId}/activities`);
-        if (res.ok) {
-          const data = await res.json();
-          setActivities(data);
-        }
+        const data = await miniappsApi.getActivities(miniAppId);
+        setActivities(data);
       } catch (err) {
         console.error('Failed to fetch activities', err);
       } finally {

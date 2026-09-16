@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { authApi } from '@/api';
 
 export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'MINI_APP_MANAGER' | 'DEVELOPER';
 
@@ -82,13 +83,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const email = profile.email;
 
     try {
-      const defaultPassword = process.env.NEXT_PUBLIC_DEFAULT_PASSWORD || '';
-      // Hit our BFF proxy
-      await fetch(`/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password: defaultPassword })
-      });
+      // Hit our Next.js BFF login route via authApi
+      await authApi.login({ email, role: currentRole });
     } catch(e) {
       console.error('Login failed', e);
     }

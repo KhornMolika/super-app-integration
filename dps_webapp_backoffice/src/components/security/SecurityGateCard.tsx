@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/inputs';
 import { Card, CardHeader } from '@/components/ui/card';
 
+import { integrationsApi, superAppApi } from '@/api';
+
 export interface SecurityGateCardProps {
   miniApp: any;
 }
@@ -76,19 +78,14 @@ export default function SecurityGateCard({ miniApp }: SecurityGateCardProps) {
       const ref = flutterConfig.gitBranch || 'main';
       const path = flutterConfig.gitPath || 'dsp_miniapp_trust_regulator';
 
-      const res = await fetch('/api/security/gate1/scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          url: gitUrl,
-          ref,
-          path,
-          token: flutterConfig.gitAccessToken || undefined,
-          declaredPermissions: miniApp?.permissions || [],
-        }),
+      const data = await integrationsApi.runGate1Scan({
+        url: gitUrl,
+        ref,
+        path,
+        token: flutterConfig.gitAccessToken || undefined,
+        declaredPermissions: miniApp?.permissions || [],
       });
 
-      const data = await res.json();
       setGate1Report(data);
     } catch (err) {
       console.error('Failed to run Security Gate 1 scan', err);
@@ -138,13 +135,7 @@ export default function SecurityGateCard({ miniApp }: SecurityGateCardProps) {
         ],
       };
 
-      const res = await fetch('/api/release-assembly/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
+      const data = await superAppApi.verifyReleaseAssembly(payload);
       setGate2Report(data);
     } catch (err) {
       console.error('Failed to run Security Gate 2 verification', err);

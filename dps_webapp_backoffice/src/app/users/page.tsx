@@ -1,19 +1,10 @@
 "use client";
-import { API_URL } from '@/lib/config';
 
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/inputs';
 import { Card } from '@/components/ui/card';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-
-type User = {
-  id: string;
-  name: string;
-  email: string;
-  telegramChatId?: string | null;
-  telegramUsername?: string | null;
-  roles: { id: string; name: string }[];
-};
+import { usersApi, User } from '@/api';
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -22,11 +13,8 @@ export default function UsersPage() {
   useEffect(() => {
     async function fetchUsers() {
       try {
-        const res = await fetch(`${API_URL}/users`);
-        if (res.ok) {
-          const data = await res.json();
-          setUsers(data);
-        }
+        const data = await usersApi.getAll();
+        setUsers(data);
       } catch (err) {
         console.error('Failed to fetch users', err);
       } finally {

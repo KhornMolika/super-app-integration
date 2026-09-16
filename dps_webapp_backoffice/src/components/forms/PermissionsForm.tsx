@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Input, Label, Button } from '@/components/ui/inputs';
 import { useAuth } from '@/lib/auth';
+import { miniappsApi } from '@/api';
 import SecurityValidationSelector from './SecurityValidationSelector';
 
 export const PERMISSION_STORE_MAP: Record<string, { iosKey: string; androidPermission: string; defaultAction: string }> = {
@@ -117,20 +118,14 @@ export default function PermissionsForm({
         formData.integrationConfig?.productionUrl ||
         '';
 
-      const res = await fetch('/api/mini-apps/detect-permissions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productionUrl: prodUrl,
-          category: formData.category,
-          name: formData.name,
-          appId: formData.appId,
-        }),
+      const data = await miniappsApi.detectPermissions({
+        productionUrl: prodUrl,
+        category: formData.category,
+        name: formData.name,
+        appId: formData.appId,
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.detected && Array.isArray(data.detected) && data.detected.length > 0) {
+      if (data && data.detected && Array.isArray(data.detected) && data.detected.length > 0) {
           const sourcesMap: Record<string, string> = {};
           const currentPermissions = [...(formData.permissions || [])];
 
@@ -175,7 +170,6 @@ export default function PermissionsForm({
         } else {
           setDetectionNotice('Scan complete: No additional native permissions required.');
         }
-      }
     } catch (err) {
       console.error('Failed to auto-detect permissions', err);
       setDetectionNotice('Unable to scan endpoint automatically. You can select permissions manually.');

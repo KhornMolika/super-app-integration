@@ -91,6 +91,8 @@ export interface ValidatedUrlInputProps {
   disabled?: boolean;
 }
 
+import { miniappsApi } from '@/api';
+
 export function ValidatedUrlInput({
   name,
   label,
@@ -147,15 +149,10 @@ export function ValidatedUrlInput({
       clearTimeout(debounceRef.current);
     }
 
-    const abortCtrl = new AbortController();
-
     debounceRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/mini-apps/check-url?url=${encodeURIComponent(trimmed)}`, {
-          signal: abortCtrl.signal,
-        });
-        const data = await res.json();
-        const isReachable = Boolean(data.reachable);
+        const data = await miniappsApi.checkUrl(trimmed);
+        const isReachable = Boolean(data?.reachable);
 
         cacheRef.current.set(trimmed, { reachable: isReachable, timestamp: Date.now() });
 
@@ -171,7 +168,6 @@ export function ValidatedUrlInput({
           });
         }
       } catch (err: any) {
-        if (err.name === 'AbortError') return;
         setValidation({
           status: 'unreachable',
           message: 'URL format valid, but could not connect to server',
@@ -180,7 +176,6 @@ export function ValidatedUrlInput({
     }, 250);
 
     return () => {
-      abortCtrl.abort();
       if (debounceRef.current) {
         clearTimeout(debounceRef.current);
       }

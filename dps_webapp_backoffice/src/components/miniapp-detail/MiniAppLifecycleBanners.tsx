@@ -11,6 +11,7 @@ export interface MiniAppLifecycleBannersProps {
   isSubmitting: boolean;
   onLifecycleAction: (action: 'submit' | 'approve' | 'reject' | 'request-changes' | 'start-testing' | 'activate' | 'suspend' | 'publish-revision' | 'discard-revision') => void;
   onOpenSandbox: () => void;
+  onOpenReviewDiff?: () => void;
   pendingRevision?: any;
 }
 
@@ -18,10 +19,11 @@ export default function MiniAppLifecycleBanners({
   status,
   can,
   role,
-  testVersion = 'v1.1.1',
+  testVersion = 'v0.3.1',
   isSubmitting,
   onLifecycleAction,
   onOpenSandbox,
+  onOpenReviewDiff,
   pendingRevision,
 }: MiniAppLifecycleBannersProps) {
   return (
@@ -52,7 +54,19 @@ export default function MiniAppLifecycleBanners({
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
+            {onOpenReviewDiff && (
+              <Button
+                type="button"
+                onClick={onOpenReviewDiff}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 font-semibold shadow-sm flex items-center gap-1.5"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                </svg>
+                <span>Compare &amp; Review Revision</span>
+              </Button>
+            )}
             {can('miniapp:approve') && (
               <Button
                 type="button"
@@ -71,18 +85,21 @@ export default function MiniAppLifecycleBanners({
               variant="outline"
               onClick={() => onLifecycleAction('discard-revision')}
               disabled={isSubmitting}
-              className="border-rose-300 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-950/50 text-sm px-3.5 py-2 font-medium"
+              className="border-rose-300 dark:border-rose-800/80 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-950/50 text-sm px-4 py-2.5 font-bold rounded-xl flex items-center gap-2 shadow-sm transition-all"
             >
-              Discard Revision
+              <svg className="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              <span>Discard Revision</span>
             </Button>
           </div>
         </div>
       )}
       {/* 1. SA Admin Review & Action Banner for IN_REVIEW */}
       {can('miniapp:approve') && status === 'IN_REVIEW' && (
-        <div className="mb-6 p-4 rounded-2xl border border-blue-200 dark:border-blue-900/50 bg-blue-50/80 dark:bg-blue-950/40 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm animate-in fade-in">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/60 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0 border border-blue-200 dark:border-blue-800">
+        <div className="mb-6 p-5 rounded-2xl border border-blue-200 dark:border-blue-900/50 bg-blue-50/80 dark:bg-blue-950/40 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm animate-in fade-in">
+          <div className="flex items-start gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-blue-100 dark:bg-blue-900/60 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0 border border-blue-200 dark:border-blue-800">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
@@ -96,16 +113,16 @@ export default function MiniAppLifecycleBanners({
               <h4 className="text-base font-bold text-blue-900 dark:text-blue-200">SA Admin Review Required</h4>
               <p className="text-sm text-blue-800 dark:text-blue-200 mt-1 leading-relaxed">
                 Automated security validation has <strong>PASSED</strong>. Review the integration configuration,
-                permissions, and report below, then Approve or Request Changes.
+                permissions, and report below, then Approve, Request Changes, or Reject.
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex flex-wrap items-center gap-2.5 flex-shrink-0">
             <Button
               type="button"
               onClick={() => onLifecycleAction('approve')}
               disabled={isSubmitting}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-4 py-2 font-semibold shadow-sm flex items-center gap-1.5"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-5 py-2.5 font-bold rounded-xl shadow-md shadow-emerald-600/20 flex items-center gap-2 transition-all"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
@@ -117,18 +134,24 @@ export default function MiniAppLifecycleBanners({
               variant="outline"
               onClick={() => onLifecycleAction('request-changes')}
               disabled={isSubmitting}
-              className="border-amber-300 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-950/50 text-sm px-3.5 py-2 font-medium"
+              className="border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 bg-amber-50/50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-sm px-4 py-2.5 font-bold rounded-xl flex items-center gap-2 shadow-sm transition-all"
             >
-              Request Changes
+              <svg className="w-4 h-4 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              <span>Request Changes</span>
             </Button>
             <Button
               type="button"
               variant="outline"
               onClick={() => onLifecycleAction('reject')}
               disabled={isSubmitting}
-              className="border-rose-300 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-950/50 text-sm px-3.5 py-2 font-medium"
+              className="border-rose-300 dark:border-rose-800/80 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-950/50 text-sm px-4 py-2.5 font-bold rounded-xl flex items-center gap-2 shadow-sm transition-all"
             >
-              Reject
+              <svg className="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              <span>Reject</span>
             </Button>
           </div>
         </div>
@@ -206,6 +229,9 @@ export default function MiniAppLifecycleBanners({
                 disabled={isSubmitting}
                 className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 font-semibold shadow-sm flex items-center gap-1.5"
               >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
                 <span>Advance to Testing</span>
               </Button>
             )}
@@ -259,18 +285,25 @@ export default function MiniAppLifecycleBanners({
               type="button"
               variant="outline"
               onClick={onOpenSandbox}
-              className="border-purple-300 text-purple-800 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-950/50 text-sm px-3.5 py-2 font-medium"
+              className="border-purple-300 text-purple-800 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-950/50 text-sm px-3.5 py-2 font-medium flex items-center gap-1.5"
             >
-              Launch Sandbox
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              <span>Launch Sandbox</span>
             </Button>
             {can('miniapp:activate') && (
               <Button
                 type="button"
                 onClick={() => onLifecycleAction('activate')}
                 disabled={isSubmitting}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-4 py-2 font-semibold shadow-sm"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-4 py-2 font-semibold shadow-sm flex items-center gap-1.5"
               >
-                Activate Mini App
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>Activate Mini App</span>
               </Button>
             )}
           </div>

@@ -1,31 +1,34 @@
+'use client';
+
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { cookies } from 'next/headers';
 import { Button } from '@/components/ui/inputs';
 import ClickableTableRow from '@/components/ui/ClickableTableRow';
 import { RegisterMiniAppButton } from '@/components/ui/RegisterMiniAppButton';
+import { miniappsApi } from '@/api';
 
-export default async function MiniAppsPage() {
-  let miniApps: any[] = [];
-  let fetchError = null;
-  const cookieStore = await cookies();
-  const token = cookieStore.get('auth_token')?.value;
-  
-  try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:3000'}/mini-apps`, { 
-      cache: 'no-store',
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    });
-    if (res.ok) {
-      miniApps = await res.json();
-    } else {
-      const errText = await res.text();
-      console.error('API ERROR:', res.status, errText);
-      fetchError = `API Error: ${res.status} ${errText}`;
+export default function MiniAppsPage() {
+  const [miniApps, setMiniApps] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  const fetchMiniApps = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setFetchError(null);
+      const data = await miniappsApi.getAll();
+      setMiniApps(Array.isArray(data) ? data : []);
+    } catch (error: any) {
+      console.error('Failed to fetch mini apps', error);
+      setFetchError(error.message || 'Error fetching mini apps');
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    console.error("Failed to fetch mini apps", error);
-    fetchError = `Network Error: ${(error as Error).message || String(error)}`;
-  }
+  }, []);
+
+  useEffect(() => {
+    fetchMiniApps();
+  }, [fetchMiniApps]);
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
@@ -138,7 +141,7 @@ export default async function MiniAppsPage() {
                     <td className="px-6 py-4 text-right">
                       <div className="inline-flex items-center gap-2">
                         {(app.status === 'TESTING' || app.status === 'ACTIVE') && (() => {
-                          const testVersion = app.integrationConfig?.superAppTestVersion || 'v1.1.1';
+                          const testVersion = (app as any).activeTestVersion || app.integrationConfig?.superAppTestVersion || 'v0.3.7';
                           return (
                             <a
                               href={`/api/download-apk?type=test&version=${encodeURIComponent(testVersion)}`}
