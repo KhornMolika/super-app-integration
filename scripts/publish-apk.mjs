@@ -59,7 +59,7 @@ try {
 
 console.log('\n🔄 Syncing APK into Jenkins container if running...');
 try {
-  execSync(`docker cp "${apkPath}" jenkins-controller:/var/reports/app-debug.apk`, { stdio: 'ignore' });
+  execSync(`docker cp "${apkPath}" superapp-jenkins-controller:/var/reports/app-debug.apk`, { stdio: 'ignore' });
   console.log('✅ Jenkins container /var/reports/app-debug.apk updated!');
 } catch (_) {
   console.log('ℹ️ (Optional) Jenkins container not running or docker cp skipped.');
