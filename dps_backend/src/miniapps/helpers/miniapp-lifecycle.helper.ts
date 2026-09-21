@@ -4,17 +4,23 @@ import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
 import { MiniApp } from '../entities/miniapp.entity';
 import { NotificationsService, MailService } from '../../notifications';
+import { PipelinePacerService } from '../../notifications/pipeline-pacer.service';
 import { JenkinsService } from '../../integrations/jenkins/jenkins.service';
 import { SuperAppService } from '../../super-app/super-app.service';
+import { GitIntegrationService } from '../../integrations/git/git-integration.service';
 import {
   LocalSecurityScannerService,
   buildDynamicValidationStages,
   getDefaultChecksForMethod,
 } from '../../integrations/validation/local-security-scanner.service';
+import { resolveBackofficeBaseUrl } from '../../common/utils/network.utils';
 
 @Injectable()
 export class MiniappLifecycleHelper {
   private readonly logger = new Logger(MiniappLifecycleHelper.name);
+  private get backofficeBaseUrl(): string {
+    return resolveBackofficeBaseUrl();
+  }
 
   constructor(
     @InjectRepository(MiniApp)
@@ -25,6 +31,8 @@ export class MiniappLifecycleHelper {
     private jenkinsService: JenkinsService,
     private superAppService: SuperAppService,
     private localSecurityScannerService: LocalSecurityScannerService,
+    private pipelinePacerService: PipelinePacerService,
+    private gitService: GitIntegrationService,
   ) {}
 
   async submitForReview(
@@ -63,20 +71,13 @@ export class MiniappLifecycleHelper {
 
     const declaredPerms = Array.isArray(app.permissions)
       ? app.permissions
-          .map((p: any) => (typeof p === 'string' ? p : p.name || p.id))
+          .map((p: any) => (typeof p === 'string' ? p : p.name || p.id || p.type))
           .filter(Boolean)
       : [];
-    const requiredPerms = Array.isArray(app.permissions)
-      ? app.permissions
-          .filter((p: any) => p.isRequired)
-          .map((p: any) => p.name || p.id)
-          .filter(Boolean)
-      : [];
+    const requiredPerms = declaredPerms;
 
-    const allowedCaps =
-      declaredPerms.length > 0
-        ? declaredPerms
-        : ['camera', 'geolocator', 'local_auth'];
+    // Super App Host Supported Capabilities whitelist
+    const allowedCaps = ['camera', 'geolocator', 'location', 'local_auth', 'biometrics'];
     const requiredCaps = requiredPerms;
 
     const allowedDomains = Array.isArray(cfg.allowedDomains)
@@ -121,6 +122,10 @@ export class MiniappLifecycleHelper {
         allowedCapabilities: allowedCaps,
         requiredCapabilities: requiredCaps,
         checks: app.securityChecks || getDefaultChecksForMethod(method),
+        isPrivateRepo: cfg.isPrivateRepo === true,
+        gitAuthMethod: cfg.authMethod || (cfg.isPrivateRepo ? 'deploy_key' : 'none'),
+        gitAccessToken: cfg.gitAccessToken || cfg.token || '',
+        deployKey: cfg.deployKey || '',
       })
       .then(async (res) => {
         if (!res?.success) {
@@ -201,20 +206,13 @@ export class MiniappLifecycleHelper {
 
     const declaredPerms = Array.isArray(app.permissions)
       ? app.permissions
-          .map((p: any) => (typeof p === 'string' ? p : p.name || p.id))
+          .map((p: any) => (typeof p === 'string' ? p : p.name || p.id || p.type))
           .filter(Boolean)
       : [];
-    const requiredPerms = Array.isArray(app.permissions)
-      ? app.permissions
-          .filter((p: any) => p.isRequired)
-          .map((p: any) => p.name || p.id)
-          .filter(Boolean)
-      : [];
+    const requiredPerms = declaredPerms;
 
-    const allowedCaps =
-      declaredPerms.length > 0
-        ? declaredPerms
-        : ['camera', 'geolocator', 'local_auth'];
+    // Super App Host Supported Capabilities whitelist
+    const allowedCaps = ['camera', 'geolocator', 'location', 'local_auth', 'biometrics'];
     const requiredCaps = requiredPerms;
 
     const allowedDomains = Array.isArray(cfg.allowedDomains)
@@ -259,6 +257,14 @@ export class MiniappLifecycleHelper {
         allowedCapabilities: allowedCaps,
         requiredCapabilities: requiredCaps,
         checks: activeChecks,
+        isPrivateRepo: cfg.isPrivateRepo === true,
+        gitAuthMethod: cfg.authMethod || (cfg.isPrivateRepo ? 'deploy_key' : 'none'),
+        gitAccessToken: cfg.gitAccessToken || cfg.token || '',
+        deployKey:
+          cfg.deployKey ||
+          (cfg.authMethod === 'deploy_key' || (cfg.isPrivateRepo && !cfg.gitAccessToken)
+            ? this.gitService.getDeployPrivateKey()
+            : ''),
       })
       .catch((err) => ({
         success: false,
@@ -496,7 +502,7 @@ export class MiniappLifecycleHelper {
       await this.mailService.sendMiniAppApprovedEmail(
         targetEmail,
         app.name || app.appId,
-        `http://localhost:3002/miniapps/${app.id}`,
+        `${this.backofficeBaseUrl}/miniapps/${app.id}`,
       );
     }
 
@@ -559,7 +565,7 @@ export class MiniappLifecycleHelper {
         targetEmail,
         app.name || app.appId,
         reason || 'Administrative review decision.',
-        `http://localhost:3002/miniapps/${app.id}`,
+        `${this.backofficeBaseUrl}/miniapps/${app.id}`,
       );
     }
 
@@ -617,7 +623,7 @@ export class MiniappLifecycleHelper {
           targetEmail,
           app.name || app.appId,
           reason || 'Please update the staged revision and resubmit.',
-          `http://localhost:3002/miniapps/${app.id}`,
+          `${this.backofficeBaseUrl}/miniapps/${app.id}`,
         );
       }
 
@@ -656,7 +662,7 @@ export class MiniappLifecycleHelper {
         targetEmail,
         app.name || app.appId,
         reason || 'Please update the configuration and resubmit.',
-        `http://localhost:3002/miniapps/${app.id}`,
+        `${this.backofficeBaseUrl}/miniapps/${app.id}`,
       );
     }
 
@@ -741,8 +747,33 @@ export class MiniappLifecycleHelper {
       return app;
     }
 
-    // For APPROVED, IN_REVIEW, TESTING, BUILDING
+    // For APPROVED, IN_REVIEW, TESTING, BUILDING, BUILD_FAILED
     app.status = 'BUILDING';
+    app.buildStatus = 'BUILDING';
+    app.buildError = undefined;
+    app.buildStages = {
+      preflight: {
+        id: 'preflight',
+        name: '1. Pre-Flight & Manifest Verification',
+        status: 'RUNNING',
+        details: 'Verifying package checksums, dependencies, and manifest integrity...',
+        updatedAt: new Date().toISOString(),
+      },
+      compile: {
+        id: 'compile',
+        name: '2. Fastlane APK Packaging',
+        status: 'PENDING',
+        details: 'Awaiting container assembly and Fastlane APK compilation...',
+        updatedAt: new Date().toISOString(),
+      },
+      publish: {
+        id: 'publish',
+        name: '3. Publish to Nexus & Finalize',
+        status: 'PENDING',
+        details: 'Awaiting artifact upload to Sonatype Nexus...',
+        updatedAt: new Date().toISOString(),
+      },
+    };
 
     // Auto-increment dynamic Super App test version (e.g. v1.1.1, v1.1.2, etc.)
     const releaseVersion = await this.superAppService.getAndRegisterNextVersion();
@@ -771,6 +802,7 @@ export class MiniappLifecycleHelper {
     }
 
     try {
+      await this.pipelinePacerService.paceBuildTrigger(app.name || app.appId);
       this.logger.log(
         `Triggering Jenkins Super App test build for Mini App ${app.name} (${app.id}) with dynamic version ${releaseVersion}...`,
       );
@@ -876,7 +908,7 @@ export class MiniappLifecycleHelper {
         targetLiveEmail,
         app.name || app.appId,
         releaseVersion,
-        `http://localhost:3002/miniapps/${app.id}`,
+        `${this.backofficeBaseUrl}/miniapps/${app.id}`,
       );
     }
 
@@ -990,7 +1022,7 @@ export class MiniappLifecycleHelper {
       : [];
     history.forEach((h: any) => {
       if (h.type === 'PRODUCTION' && h.status === 'ACTIVE') {
-        h.status = 'SUPERSEDED';
+        h.status = 'PREVIOUS';
       }
     });
     history.unshift({
@@ -1083,7 +1115,7 @@ export class MiniappLifecycleHelper {
         app.name || app.appId,
         reason ||
           'Proposed revision was discarded by administrator. Live version remains active in the Super App catalog.',
-        `http://localhost:3002/miniapps/${app.id}`,
+        `${this.backofficeBaseUrl}/miniapps/${app.id}`,
       );
     }
 

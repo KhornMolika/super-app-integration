@@ -19,6 +19,17 @@ export class GitRepoQueryDto {
   @IsString()
   @IsOptional()
   token?: string;
+
+  @IsOptional()
+  isPrivate?: boolean;
+
+  @IsOptional()
+  @IsString()
+  authMethod?: string;
+
+  @IsOptional()
+  @IsString()
+  deployKey?: string;
 }
 
 export class GitCommitsQueryDto extends GitRepoQueryDto {

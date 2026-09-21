@@ -20,9 +20,9 @@ export class SuperAppCapability {
   @Column('simple-array')
   capabilities!: string[];
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt!: Date;
 }

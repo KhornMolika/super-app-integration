@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { SuperAppService } from './super-app.service';
 
 @Controller('super-app')
@@ -16,6 +16,19 @@ export class SuperAppController {
     return { nextVersion };
   }
 
+  @Get('releases/history')
+  async getReleaseHistory() {
+    return this.superAppService.getReleaseHistory();
+  }
+
+  @Get('releases/compare')
+  async compareReleases(
+    @Query('base') base: string,
+    @Query('target') target: string,
+  ) {
+    return this.superAppService.compareReleases(base, target);
+  }
+
   @Get('capabilities')
   async getAllCapabilities() {
     return this.superAppService.findAllCapabilities();
@@ -26,3 +39,4 @@ export class SuperAppController {
     return this.superAppService.findCapabilitiesForVersion(version);
   }
 }
+

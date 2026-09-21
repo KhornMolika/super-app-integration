@@ -4,9 +4,6 @@ import { GitIntegrationService } from './git-integration.service';
 import { GitHubProvider } from './providers/github.provider';
 import { GitLabProvider } from './providers/gitlab.provider';
 
-import { GitHubAppService } from './github-app.service';
-import { GitLabOAuthService } from './gitlab-oauth.service';
-
 describe('GitIntegrationService & Providers', () => {
   let service: GitIntegrationService;
   let githubProvider: GitHubProvider;
@@ -26,14 +23,6 @@ describe('GitIntegrationService & Providers', () => {
         GitIntegrationService,
         GitHubProvider,
         GitLabProvider,
-        {
-          provide: GitHubAppService,
-          useValue: { getAuthenticatedClient: jest.fn(), isConfigured: jest.fn().mockReturnValue(false) },
-        },
-        {
-          provide: GitLabOAuthService,
-          useValue: { getClient: jest.fn(), isConfigured: jest.fn().mockReturnValue(false) },
-        },
         {
           provide: ConfigService,
           useValue: {

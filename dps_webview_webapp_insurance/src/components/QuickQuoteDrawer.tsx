@@ -12,7 +12,8 @@ import {
   Bike, 
   ShieldCheck, 
   Zap,
-  Fingerprint
+  Fingerprint,
+  PartyPopper
 } from "lucide-react";
 import { LiquidGlassContainer, LiquidGlassButton } from "./LiquidGlass";
 
@@ -80,14 +81,14 @@ export default function QuickQuoteDrawer({
         <div className="p-6 border-b border-white/20 dark:border-slate-800 flex items-center justify-between sticky top-0 backdrop-blur-xl z-10">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full bg-violet-600/15 text-violet-600 dark:text-violet-400 flex items-center justify-center font-bold text-xs">
-              ⚡
+              <Zap className="w-4 h-4" />
             </div>
             <div>
               <h3 className="font-bold text-sm text-slate-900 dark:text-white">
                 Liquid Glass Onboarding
               </h3>
               <p className="text-[11px] text-slate-400">
-                {step === 4 ? "Coverage Active 🎉" : `Step ${step} of 3 • Guided Setup`}
+                {step === 4 ? "Coverage Active • Instant Protection" : `Step ${step} of 3 • Guided Setup`}
               </p>
             </div>
           </div>
@@ -375,8 +376,8 @@ export default function QuickQuoteDrawer({
           {/* STEP 4: Celebratory Confirmation */}
           {step === 4 && (
             <div className="py-12 text-center space-y-5">
-              <div className="w-18 h-18 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center text-3xl shadow-xl animate-bounce">
-                🎉
+              <div className="w-18 h-18 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center shadow-xl animate-bounce">
+                <PartyPopper className="w-8 h-8" />
               </div>
 
               <div>

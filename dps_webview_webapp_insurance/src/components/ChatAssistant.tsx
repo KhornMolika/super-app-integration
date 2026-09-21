@@ -5,7 +5,8 @@ import {
   MessageCircle, 
   X, 
   Send, 
-  Bot
+  Bot,
+  Zap
 } from "lucide-react";
 import { LiquidGlassContainer } from "./LiquidGlass";
 
@@ -28,7 +29,7 @@ export default function ChatAssistant({
     {
       id: "1",
       sender: "bot",
-      text: "Hey! 👋 I'm Nova, your zero-BS insurance buddy. Got questions about gadgets, apartment coverage, or filing a lightning claim? Ask me anything!",
+      text: "Hey! I'm Nova, your zero-BS insurance buddy. Got questions about gadgets, apartment coverage, or filing a lightning claim? Ask me anything!",
       time: "Just now",
     },
   ]);
@@ -48,10 +49,10 @@ export default function ChatAssistant({
   }, [messages, isOpen]);
 
   const quickQuestions = [
-    { label: "⚡ How fast are claims?", query: "How fast do claims get paid out?" },
-    { label: "📱 Is screen cracking covered?", query: "Does gadget insurance cover dropped cracked screens?" },
-    { label: "🛡️ What is DPS Native Bridge?", query: "How does the DPS Super App bridge work?" },
-    { label: "💸 Can I cancel anytime?", query: "Is there a lock-in contract or cancellation fee?" },
+    { label: "How fast are claims?", query: "How fast do claims get paid out?" },
+    { label: "Is screen cracking covered?", query: "Does gadget insurance cover dropped cracked screens?" },
+    { label: "What is DPS Native Bridge?", query: "How does the DPS Super App bridge work?" },
+    { label: "Can I cancel anytime?", query: "Is there a lock-in contract or cancellation fee?" },
   ];
 
   const handleSend = (textToSend?: string) => {
@@ -132,7 +133,7 @@ export default function ChatAssistant({
             <div className="p-4 bg-gradient-to-r from-violet-600/90 to-indigo-600/90 text-white flex items-center justify-between backdrop-blur-md">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center font-bold text-sm shadow-inner">
-                  ⚡
+                  <Zap className="w-4 h-4 text-white" />
                 </div>
                 <div>
                   <div className="font-extrabold text-sm flex items-center gap-1.5">

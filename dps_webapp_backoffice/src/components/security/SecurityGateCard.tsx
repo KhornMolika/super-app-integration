@@ -3,8 +3,17 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/inputs';
 import { Card, CardHeader } from '@/components/ui/card';
-
 import { integrationsApi, superAppApi } from '@/api';
+import {
+  ZapIcon,
+  CheckIcon,
+  XIcon,
+  CheckCircleIcon,
+  CheckCircleSolidIcon,
+  AlertTriangleIcon,
+  RocketIcon,
+  LightbulbIcon,
+} from '@/components/ui/Icons';
 
 export interface SecurityGateCardProps {
   miniApp: any;
@@ -202,8 +211,8 @@ export default function SecurityGateCard({ miniApp }: SecurityGateCardProps) {
               </>
             ) : (
               <>
-                <span>⚡</span>
-                <span className="ml-1">Re-run Gate 1</span>
+                <ZapIcon className="w-3.5 h-3.5 mr-1 text-amber-500" />
+                <span>Re-run Gate 1</span>
               </>
             )}
           </Button>
@@ -221,24 +230,57 @@ export default function SecurityGateCard({ miniApp }: SecurityGateCardProps) {
               <div className="p-3.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200/80 dark:border-slate-700 shadow-sm">
                 <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold block">Static Analysis</span>
                 <span className={`text-xs font-bold flex items-center gap-1 mt-1.5 ${gate1Report.checks.staticAnalysis.passed ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                  {gate1Report.checks.staticAnalysis.passed ? '✓ Clean' : '✗ Issues Found'}
+                  {gate1Report.checks.staticAnalysis.passed ? (
+                    <>
+                      <CheckIcon className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>Clean</span>
+                    </>
+                  ) : (
+                    <>
+                      <XIcon className="w-3.5 h-3.5 text-rose-500" />
+                      <span>Issues Found</span>
+                    </>
+                  )}
                 </span>
               </div>
               <div className="p-3.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200/80 dark:border-slate-700 shadow-sm">
                 <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold block">Secret Leaks</span>
                 <span className={`text-xs font-bold flex items-center gap-1 mt-1.5 ${gate1Report.checks.secretScan.passed ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                  {gate1Report.checks.secretScan.passed ? '✓ 0 Leaks' : '✗ Leaks Found'}
+                  {gate1Report.checks.secretScan.passed ? (
+                    <>
+                      <CheckIcon className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>0 Leaks</span>
+                    </>
+                  ) : (
+                    <>
+                      <XIcon className="w-3.5 h-3.5 text-rose-500" />
+                      <span>Leaks Found</span>
+                    </>
+                  )}
                 </span>
               </div>
               <div className="p-3.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200/80 dark:border-slate-700 shadow-sm">
                 <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold block">Permissions</span>
                 <span className={`text-xs font-bold flex items-center gap-1 mt-1.5 ${gate1Report.checks.permissionCompliance.passed ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                  {gate1Report.checks.permissionCompliance.passed ? '✓ Compliant' : '✗ Undeclared'}
+                  {gate1Report.checks.permissionCompliance.passed ? (
+                    <>
+                      <CheckIcon className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>Compliant</span>
+                    </>
+                  ) : (
+                    <>
+                      <XIcon className="w-3.5 h-3.5 text-rose-500" />
+                      <span>Undeclared</span>
+                    </>
+                  )}
                 </span>
               </div>
               <div className="p-3.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200/80 dark:border-slate-700 shadow-sm">
                 <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold block">Core SDK</span>
-                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mt-1.5">✓ Compatible</span>
+                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mt-1.5">
+                  <CheckIcon className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>Compatible</span>
+                </span>
               </div>
             </div>
 
@@ -252,8 +294,9 @@ export default function SecurityGateCard({ miniApp }: SecurityGateCardProps) {
                     </div>
                     <p className="text-rose-800 dark:text-rose-200 text-xs leading-relaxed">{f.description}</p>
                     {f.recommendation && (
-                      <p className="mt-2 text-rose-950 dark:text-rose-100 text-xs font-medium bg-rose-100/70 dark:bg-rose-900/40 p-2.5 rounded-lg border border-rose-200/80 dark:border-rose-800/40">
-                        💡 <span className="underline font-bold">Remediation:</span> {f.recommendation}
+                      <p className="mt-2 text-rose-950 dark:text-rose-100 text-xs font-medium bg-rose-100/70 dark:bg-rose-900/40 p-2.5 rounded-lg border border-rose-200/80 dark:border-rose-800/40 flex items-start gap-1.5">
+                        <LightbulbIcon className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                        <span><span className="underline font-bold">Remediation:</span> {f.recommendation}</span>
                       </p>
                     )}
                   </div>
@@ -261,7 +304,7 @@ export default function SecurityGateCard({ miniApp }: SecurityGateCardProps) {
               </div>
             ) : (
               <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl border border-emerald-200 dark:border-emerald-800/60 text-xs text-emerald-900 dark:text-emerald-200 flex items-center gap-2 font-medium">
-                <span className="text-emerald-600 dark:text-emerald-400 font-bold text-sm">✓</span>
+                <CheckCircleIcon className="w-4 h-4 text-emerald-500 shrink-0" />
                 <span>Gate 1 Passed: Code is clean and permissions are fully compliant!</span>
               </div>
             )}
@@ -310,7 +353,7 @@ export default function SecurityGateCard({ miniApp }: SecurityGateCardProps) {
               </>
             ) : (
               <>
-                <span>🚀</span>
+                <RocketIcon className="w-3.5 h-3.5 text-white" />
                 <span>{gate2Report ? 'Re-run Gate 2' : 'Run Security Gate 2'}</span>
               </>
             )}
@@ -322,8 +365,18 @@ export default function SecurityGateCard({ miniApp }: SecurityGateCardProps) {
             <div className="p-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-xs space-y-2.5 shadow-sm">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-slate-700 dark:text-slate-300">Nexus Checksum Verification:</span>
-                <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-                  {gate2Report.verifiedApps?.[0]?.checksumMatched ? '✓ SHA-256 MATCHED' : '✗ MISMATCH'}
+                <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold inline-flex items-center gap-1">
+                  {gate2Report.verifiedApps?.[0]?.checksumMatched ? (
+                    <>
+                      <CheckIcon className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>SHA-256 MATCHED</span>
+                    </>
+                  ) : (
+                    <>
+                      <XIcon className="w-3.5 h-3.5 text-rose-500" />
+                      <span>MISMATCH</span>
+                    </>
+                  )}
                 </span>
               </div>
               
@@ -333,8 +386,15 @@ export default function SecurityGateCard({ miniApp }: SecurityGateCardProps) {
 
               <div className="flex items-center justify-between pt-1 text-slate-700 dark:text-slate-300">
                 <span>Dependency Collisions:</span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                  {gate2Report.conflicts?.length === 0 ? '✓ 0 Conflicts' : `${gate2Report.conflicts.length} Collisions`}
+                <span className="font-bold text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1">
+                  {gate2Report.conflicts?.length === 0 ? (
+                    <>
+                      <CheckIcon className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>0 Conflicts</span>
+                    </>
+                  ) : (
+                    `${gate2Report.conflicts.length} Collisions`
+                  )}
                 </span>
               </div>
 
@@ -347,7 +407,7 @@ export default function SecurityGateCard({ miniApp }: SecurityGateCardProps) {
             </div>
 
             <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl border border-emerald-200 dark:border-emerald-800/60 text-xs text-emerald-900 dark:text-emerald-200 flex items-center gap-2 font-medium">
-              <span className="text-emerald-600 dark:text-emerald-400 font-bold text-sm">✓</span>
+              <CheckCircleIcon className="w-4 h-4 text-emerald-500 shrink-0" />
               <span>Security Gate 2 Passed: Nexus package digest verified and release manifest signed!</span>
             </div>
           </div>
@@ -363,7 +423,13 @@ export default function SecurityGateCard({ miniApp }: SecurityGateCardProps) {
       {/* ========================================================================= */}
       <div className="p-4 rounded-2xl border flex items-center justify-between text-xs bg-slate-50/70 dark:bg-slate-900/50 border-slate-200/80 dark:border-slate-700/60">
         <div className="flex items-center gap-3">
-          <span className="text-lg">{gate1Passed ? '✅' : '⚠️'}</span>
+          <span className="shrink-0">
+            {gate1Passed ? (
+              <CheckCircleSolidIcon className="w-6 h-6 text-emerald-500" />
+            ) : (
+              <AlertTriangleIcon className="w-6 h-6 text-amber-500" />
+            )}
+          </span>
           <div>
             <span className="font-bold text-slate-800 dark:text-slate-200">
               Governance Status: {gate1Passed ? 'Ready for Super App Release' : 'Action Required'}

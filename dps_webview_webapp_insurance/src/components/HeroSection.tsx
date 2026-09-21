@@ -75,8 +75,10 @@ export default function HeroSection({
             {/* Conversational Body Copy */}
             <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 max-w-2xl leading-relaxed">
               {isAuthenticated && (
-                <span className="font-bold text-emerald-600 dark:text-emerald-400 block mb-1">
-                  Welcome back, {userName}! ⚡ DPS SSO Connected
+                <span className="font-bold text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1.5 mb-1">
+                  <span>Welcome back, {userName}!</span>
+                  <Zap className="w-3.5 h-3.5 fill-emerald-500 text-emerald-500 inline shrink-0" />
+                  <span>DPS SSO Connected</span>
                 </span>
               )}
               Renters, gadgets, e-bikes &amp; everyday life. Protected in under 90 seconds with pure liquid glass elegance, zero paperwork, and instant claim payouts.
@@ -139,7 +141,7 @@ export default function HeroSection({
               <div className="flex items-center justify-between pb-4 border-b border-white/20 dark:border-slate-800/80">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-full bg-violet-600/15 text-violet-600 dark:text-violet-400 flex items-center justify-center font-bold text-sm shrink-0">
-                    ⚡
+                    <Zap className="w-4 h-4" />
                   </div>
                   <div>
                     <h3 className="font-bold text-sm text-slate-900 dark:text-white">
@@ -276,7 +278,7 @@ export default function HeroSection({
                 className="px-4 py-3 flex items-center gap-3 shadow-2xl"
               >
                 <div className="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-sm shrink-0">
-                  ✓
+                  <CheckCircle2 className="w-4 h-4" />
                 </div>
                 <div className="text-left pr-2">
                   <p className="text-xs font-black text-slate-900 dark:text-white">Claim Paid: $840</p>

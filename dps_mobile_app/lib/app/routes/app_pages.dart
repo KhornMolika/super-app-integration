@@ -8,6 +8,12 @@ import '../modules/miniapp/bindings/miniapp_binding.dart';
 import '../modules/miniapp/views/miniapp_view.dart';
 import '../modules/trust_regulator/bindings/trust_regulator_binding.dart';
 import '../modules/trust_regulator/views/trust_regulator_view.dart';
+import '../modules/kyc_verifier/bindings/kyc_verifier_binding.dart';
+import '../modules/kyc_verifier/views/kyc_verifier_view.dart';
+import '../modules/sc_public_transit/bindings/sc_public_transit_binding.dart';
+import '../modules/sc_public_transit/views/sc_public_transit_view.dart';
+import '../modules/sc_private_loyalty/bindings/sc_private_loyalty_binding.dart';
+import '../modules/sc_private_loyalty/views/sc_private_loyalty_view.dart';
 
 part 'app_routes.dart';
 
@@ -34,6 +40,21 @@ class AppPages {
       name: Routes.TRUST_REGULATOR,
       page: () => const TrustRegulatorView(),
       binding: TrustRegulatorBinding(),
+    ),
+    GetPage(
+      name: Routes.KYC_VERIFIER,
+      page: () => const KycVerifierView(),
+      binding: KycVerifierBinding(),
+    ),
+    GetPage(
+      name: Routes.SC_PUBLIC_TRANSIT,
+      page: () => const ScPublicTransitView(),
+      binding: ScPublicTransitBinding(),
+    ),
+    GetPage(
+      name: Routes.SC_PRIVATE_LOYALTY,
+      page: () => const ScPrivateLoyaltyView(),
+      binding: ScPrivateLoyaltyBinding(),
     ),
   ];
 }

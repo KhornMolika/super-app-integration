@@ -82,7 +82,7 @@ export default function InviteDownloadModal({
 
     setSendingTelegram(true);
     try {
-      const msg = `🚀 <b>New Build Ready for Testing</b>\n\n📱 <b>Mini App:</b> ${miniAppName}\n🏷️ <b>Version:</b> ${version} (${buildType.toUpperCase()})\n⏳ <b>Invite Link Validity:</b> ${expiresIn.toUpperCase()}\n\n🔗 <a href="${fullDownloadUrl}">Tap to Download APK</a>\n\n<i>Scan QR or click link above to install directly on physical test devices.</i>`;
+      const msg = `[BUILD NOTIFICATION] <b>New Build Ready for Testing</b>\n\n<b>Mini App:</b> ${miniAppName}\n<b>Version:</b> ${version} (${buildType.toUpperCase()})\n<b>Invite Link Validity:</b> ${expiresIn.toUpperCase()}\n\n<b>Download Link:</b> <a href="${fullDownloadUrl}">Tap to Download APK</a>\n\n<i>Scan QR or click link above to install directly on physical test devices.</i>`;
       const data = await telegramApi.testTeamAlert(teamTelegramChatId, `${miniAppName} (${version})`, msg);
       if (data?.success) {
         toast.success(`Tester invite broadcast delivered to Telegram group (${teamTelegramChatId})!`, 'Invite Broadcast Sent');

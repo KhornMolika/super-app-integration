@@ -17,7 +17,23 @@ export interface NexusPackageResult {
 }
 
 export const integrationsApi = {
-  validateGit: (data: { url: string; ref?: string; token?: string; path?: string }) =>
+  getDeployKey: () =>
+    apiClient<{
+      publicKey: string;
+      fingerprint: string;
+      type: string;
+      title: string;
+    }>('/api/integrations/git/deploy-key'),
+
+  validateGit: (data: {
+    url: string;
+    ref?: string;
+    token?: string;
+    path?: string;
+    isPrivate?: boolean;
+    authMethod?: string;
+    deployKey?: string;
+  }) =>
     apiClient<{ validation: GitValidationResult; provider?: 'github' | 'gitlab' }>('/api/integrations/git/validate', {
       method: 'POST',
       body: data,

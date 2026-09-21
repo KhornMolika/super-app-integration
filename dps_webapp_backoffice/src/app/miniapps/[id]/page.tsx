@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, use } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import { useConfirm } from '@/components/ui/ConfirmationProvider';
 import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/inputs';
@@ -12,7 +12,6 @@ import BasicInfoForm from '@/components/forms/BasicInfoForm';
 import TeamForm from '@/components/forms/TeamForm';
 import IntegrationForm from '@/components/forms/IntegrationForm';
 import PermissionsForm, { formatCompliantPurpose } from '@/components/forms/PermissionsForm';
-import ValidationIssuesButton from '@/components/ValidationIssuesButton';
 import ActivityTab from '@/components/ui/ActivityTab';
 import ValidationReportTab from '@/components/ui/ValidationReportTab';
 import VersionHistoryTab from '@/components/miniapp-detail/VersionHistoryTab';
@@ -22,16 +21,18 @@ import MiniAppLifecycleBanners from '@/components/miniapp-detail/MiniAppLifecycl
 import MiniAppDetailTabs, { MiniAppTabType } from '@/components/miniapp-detail/MiniAppDetailTabs';
 import { RevisionReviewModal } from '@/components/review/RevisionReviewModal';
 import ReasonPromptModal from '@/components/ui/ReasonPromptModal';
+import BuildProgressModal, { BuildProgressModalState } from '@/components/ui/BuildProgressModal';
 import { CreateMiniAppDto, IntegrationMethod, SourceType } from '@/types/miniapp.types';
 import { validateUrlFormat } from '@/components/ui/ValidatedUrlInput';
 import { toast } from '@/components/ui/Toast';
 import { miniappsApi, superAppApi } from '@/api';
 
-export default function ManageMiniAppPage({ params }: { params: Promise<{ id: string }> }) {
+export default function ManageMiniAppPage({ params: _params }: { params?: Promise<{ id: string }> | { id: string } }) {
   const router = useRouter();
-  const { id } = use(params);
+  const routeParams = useParams();
+  const id = (typeof routeParams?.id === 'string' ? routeParams.id : (Array.isArray(routeParams?.id) ? routeParams.id[0] : '')) || '';
 
-  const [formData, setFormData] = useState<Partial<CreateMiniAppDto & { status: string; validationErrors?: Record<string, string>; validationStatus?: string; validationStages?: any; validationReport?: any; issues?: any[]; pendingRevision?: any; activeTestVersion?: string; currentReleaseVersion?: string }>>({
+  const [formData, setFormData] = useState<Partial<CreateMiniAppDto & { id?: string; status: string; validationErrors?: Record<string, string>; validationStatus?: string; validationStages?: any; validationReport?: any; buildStages?: any; buildStatus?: string; buildError?: string; issues?: any[]; pendingRevision?: any; activeTestVersion?: string; currentReleaseVersion?: string; draftVersion?: string; version?: string; versionHistory?: any[]; integrationConfig?: any }>>({
     name: '',
     appId: '',
     category: 'Insurance',
@@ -58,6 +59,9 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
     pendingRevision: undefined as any,
     activeTestVersion: undefined as string | undefined,
     currentReleaseVersion: undefined as string | undefined,
+    draftVersion: undefined as string | undefined,
+    version: undefined as string | undefined,
+    versionHistory: undefined as any[] | undefined,
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -88,6 +92,11 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
   const [customPermission, setCustomPermission] = useState('');
   const [isEditingUnlocked, setIsEditingUnlocked] = useState(false);
   const [latestTestVersion, setLatestTestVersion] = useState<string>('v0.3.7');
+  const [pendingArchiveFile, setPendingArchiveFile] = useState<File | null>(null);
+  const [buildModalState, setBuildModalState] = useState<BuildProgressModalState>({
+    isOpen: false,
+    status: 'building',
+  });
 
   useEffect(() => {
     const errors: Record<string, string> = {};
@@ -119,7 +128,8 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
             (window.location.hostname === 'localhost' ||
               window.location.hostname === '127.0.0.1' ||
               window.location.hostname.endsWith('.local') ||
-              window.location.hostname.endsWith('.orb.local'))));
+              window.location.hostname.endsWith('.orb.local') ||
+              /^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(window.location.hostname))));
 
       if (!isDev) {
         if (!prodUrl.startsWith('https://')) {
@@ -156,13 +166,6 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
       return () => clearTimeout(timeoutId);
     }
   }, [formData.appId, formData.name, formData.ownerEmail, formData.supportEmail, formData.logo, id]);
-
-  const handleNavigateToIssue = (field: string) => {
-    if (field.startsWith('permission')) setActiveTab('permissions');
-    else if (field.startsWith('integration')) setActiveTab('integration');
-    else if (['teamName', 'ownerName', 'ownerEmail', 'supportEmail'].includes(field)) setActiveTab('team');
-    else setActiveTab('overview');
-  };
 
   const rawErrors = { ...localErrors, ...(formData.validationErrors || {}) };
   const allErrors = Object.entries(rawErrors).reduce((acc, [key, val]) => {
@@ -215,10 +218,16 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
     }
   }, []);
 
-  const fetchApp = async () => {
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  const fetchApp = async (isRetry = false, isSilent = false) => {
+    if (!id) return;
+    if (!isSilent) setIsLoading(true);
+    if (!isRetry) setFetchError(null);
     try {
       const data = await miniappsApi.getById(id);
-      if (data) {
+      if (data && data.id) {
+        setFetchError(null);
         const activeOrRev = data.pendingRevision ? { ...data, ...data.pendingRevision } : data;
         setFormData({
           ...data,
@@ -242,13 +251,53 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
             setLatestTestVersion(eco.superAppTestVersion || eco.superAppVersion);
           }
         } catch (_) {}
+
+        // Auto-open Sandbox Preview modal if query param is set
+        if (typeof window !== 'undefined') {
+          const urlParams = new URLSearchParams(window.location.search);
+          if (
+            urlParams.get('preview') === 'true' ||
+            urlParams.get('preview') === '1' ||
+            urlParams.get('sandbox') === 'true' ||
+            urlParams.get('tab') === 'sandbox' ||
+            urlParams.get('tab') === 'preview'
+          ) {
+            if (activeOrRev.integrationMethod === IntegrationMethod.WEBVIEW) {
+              setPreviewUrl(activeOrRev.integrationConfig?.productionUrl || '');
+            } else if (activeOrRev.integrationMethod === IntegrationMethod.DEEP_LINK) {
+              setPreviewUrl(
+                activeOrRev.integrationConfig?.urlScheme ||
+                  (activeOrRev as any).integrationConfig?.urlScheme ||
+                  'app://open',
+              );
+            } else {
+              const conf = activeOrRev.integrationConfig;
+              const target =
+                conf?.sourceType === SourceType.GIT
+                  ? conf.gitUrl || ''
+                  : `http://localhost:8081/repository/pub-group/api/packages/${conf?.packageName || 'dps_core_package'}`;
+              setPreviewUrl(target);
+            }
+            setShowPreview(true);
+          }
+        }
       } else {
+        if (!isRetry) {
+          setTimeout(() => fetchApp(true, isSilent), 500);
+          return;
+        }
+        setFetchError('Mini App not found or failed to load configuration.');
         toast.error('Failed to fetch mini app details.', 'Load Failed');
       }
     } catch (error: any) {
+      if (!isRetry) {
+        setTimeout(() => fetchApp(true, isSilent), 500);
+        return;
+      }
+      setFetchError(error?.message || 'Error connecting to backend.');
       toast.error('Error connecting to backend.', 'Connection Error');
     } finally {
-      setIsLoading(false);
+      if (!isSilent) setIsLoading(false);
     }
   };
 
@@ -257,19 +306,41 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
   }, [id]);
 
   useEffect(() => {
-    if (formData.status !== 'BUILDING') return;
+    const isBuilding = formData.status === 'BUILDING' || (buildModalState.isOpen && buildModalState.status === 'building');
+    if (!isBuilding) return;
 
     const pollInterval = setInterval(async () => {
       try {
         const updated = await miniappsApi.getById(id);
-        if (updated && updated.status && updated.status !== 'BUILDING') {
-          setFormData((prev) => ({ ...prev, status: updated.status }));
+        if (updated) {
+          setFormData((prev: any) => ({
+            ...prev,
+            ...updated,
+            status: updated.status || prev.status,
+            buildStages: updated.buildStages || prev.buildStages,
+            buildStatus: updated.buildStatus || prev.buildStatus,
+            buildError: updated.buildError || prev.buildError,
+            activeTestVersion: updated.activeTestVersion || prev.activeTestVersion,
+          }));
+
+          setBuildModalState((prev) => {
+            if (!prev.isOpen) return prev;
+            const isFailed = updated.status === 'BUILD_FAILED' || updated.buildStatus === 'FAILED';
+            const isSuccess = updated.status === 'TESTING' || updated.buildStatus === 'COMPLETED';
+            return {
+              ...prev,
+              status: isFailed ? 'error' : isSuccess ? 'success' : 'building',
+              stages: updated.buildStages || prev.stages,
+              errorMessage: updated.buildError || prev.errorMessage,
+              releaseVersion: updated.activeTestVersion || prev.releaseVersion,
+            };
+          });
         }
       } catch (_) {}
-    }, 3000);
+    }, 2500);
 
     return () => clearInterval(pollInterval);
-  }, [formData.status, id]);
+  }, [formData.status, buildModalState.isOpen, buildModalState.status, id]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const fieldName = e.target.name;
@@ -337,6 +408,32 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
       return {
         ...prev,
         integrationConfigFlutter: { ...prev.integrationConfigFlutter!, [fieldName]: e.target.value },
+        validationErrors: nextValidationErrors,
+      };
+    });
+  };
+
+  const handleUpdateFlutterConfig = (
+    updates: Record<string, any>,
+    extraData?: { archiveFile?: File; detectedPermissions?: any[] },
+  ) => {
+    if (extraData?.archiveFile) {
+      setPendingArchiveFile(extraData.archiveFile);
+    }
+    setFormData((prev: any) => {
+      const nextValidationErrors = prev.validationErrors ? { ...prev.validationErrors } : undefined;
+      if (nextValidationErrors) {
+        Object.keys(updates).forEach((k) => {
+          delete nextValidationErrors[`integrationConfigFlutter.${k}`];
+        });
+      }
+      return {
+        ...prev,
+        integrationConfigFlutter: { ...(prev.integrationConfigFlutter || {}), ...updates },
+        permissions:
+          extraData?.detectedPermissions && extraData.detectedPermissions.length > 0
+            ? extraData.detectedPermissions
+            : prev.permissions,
         validationErrors: nextValidationErrors,
       };
     });
@@ -520,6 +617,28 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
       }
       payload.integrationConfigWebView = webConfig;
     } else if (formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE) {
+      if (pendingArchiveFile) {
+        try {
+          const uploadFormData = new FormData();
+          uploadFormData.append('file', pendingArchiveFile);
+          if (id) uploadFormData.append('miniAppId', id);
+          const ver = formData.integrationConfigFlutter?.versionConstraint?.replace(/^[\^~>=<]+/, '') || '1.0.0';
+          uploadFormData.append('version', ver);
+
+          const uploadRes = await miniappsApi.uploadArtifact(uploadFormData);
+          if (uploadRes && (uploadRes.success || uploadRes.packageStoragePath || uploadRes.minioKey || uploadRes.packageUrl)) {
+            formData.integrationConfigFlutter = {
+              sourceType: formData.integrationConfigFlutter?.sourceType || SourceType.ARTIFACT,
+              ...formData.integrationConfigFlutter,
+              packageStoragePath: uploadRes.packageStoragePath || uploadRes.minioKey || uploadRes.packageUrl,
+              packageUrl: uploadRes.packageUrl,
+              archiveChecksum: uploadRes.sha256 || formData.integrationConfigFlutter?.archiveChecksum,
+            };
+          }
+        } catch (err) {
+          console.error('Failed to upload archive to MinIO on edit save:', err);
+        }
+      }
       payload.integrationConfigFlutter = formData.integrationConfigFlutter;
     } else if (formData.integrationMethod === IntegrationMethod.DEEP_LINK) {
       payload.integrationConfigDeepLink = formData.integrationConfigDeepLink;
@@ -749,6 +868,18 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
 
     setIsSubmitting(true);
     try {
+      if (action === 'start-testing') {
+        setBuildModalState({
+          isOpen: true,
+          status: 'building',
+          releaseVersion: formData.activeTestVersion || (formData.integrationConfig as any)?.superAppTestVersion || 'v1.0.0',
+          stages: formData.buildStages || {},
+          appId: formData.appId,
+          appName: formData.name,
+          errorMessage: undefined,
+        });
+      }
+
       const res = await miniappsApi.triggerAction(id, action, reason);
       const msg =
         action === 'start-testing'
@@ -767,6 +898,13 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
       }
     } catch (err: any) {
       toast.error(err?.message || `Failed to execute ${action}.`, 'Action Failed');
+      if (action === 'start-testing') {
+        setBuildModalState((prev) => ({
+          ...prev,
+          status: 'error',
+          errorMessage: err?.message || 'Failed to trigger Jenkins test build.',
+        }));
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -805,6 +943,44 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
     );
   }
 
+  if (fetchError || !formData.id) {
+    return (
+      <div className="w-full max-w-xl mx-auto mt-24 p-8 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 text-center shadow-lg animate-in fade-in">
+        <div className="w-16 h-16 mx-auto mb-4 bg-red-50 dark:bg-red-950/40 text-red-500 rounded-full flex items-center justify-center">
+          <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Mini App Not Found</h2>
+        <p className="text-slate-500 dark:text-slate-400 mb-6 text-sm">
+          {fetchError || `Unable to locate mini app with ID "${id}". It may have been deleted or the link is invalid.`}
+        </p>
+        <div className="flex items-center justify-center gap-3">
+          <Button
+            variant="outline"
+            onClick={() => router.push('/miniapps')}
+            className="flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Mini Apps
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => fetchApp(false)}
+            className="flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Retry Loading
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="w-full mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out pb-12">
@@ -833,6 +1009,22 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
           onOpenSandbox={openSandboxPreview}
           onOpenReviewDiff={() => setIsReviewDiffOpen(true)}
           pendingRevision={formData.pendingRevision}
+          buildStages={formData.buildStages}
+          buildError={formData.buildError}
+          currentReleaseVersion={formData.currentReleaseVersion || ((formData as any).versionHistory?.find((v: any) => v.type === 'PRODUCTION' && v.status === 'ACTIVE')?.version)}
+          draftVersion={formData.pendingRevision?.version || (formData as any).draftVersion || formData.version}
+          hasActiveProduction={Boolean((formData.status === 'ACTIVE' || formData.status === 'Published') && ((formData as any).versionHistory?.some((v: any) => v.type === 'PRODUCTION' && (v.status === 'ACTIVE' || v.status === 'PREVIOUS')) || formData.currentReleaseVersion))}
+          onOpenBuildModal={() =>
+            setBuildModalState({
+              isOpen: true,
+              status: formData.status === 'BUILD_FAILED' ? 'error' : formData.status === 'TESTING' ? 'success' : 'building',
+              stages: formData.buildStages || {},
+              releaseVersion: formData.activeTestVersion || (formData.integrationConfig as any)?.superAppTestVersion || 'v1.0.0',
+              errorMessage: formData.buildError,
+              appId: formData.appId,
+              appName: formData.name,
+            })
+          }
         />
 
         {/* Tab Navigation List */}
@@ -889,6 +1081,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
                 allErrors={allErrors}
                 handleWebViewChange={handleWebViewChange}
                 handleFlutterChange={handleFlutterChange}
+                onUpdateFlutterConfig={handleUpdateFlutterConfig}
                 handleDeepLinkChange={handleDeepLinkChange}
                 onDomainVerified={handleDomainVerified}
                 isEditable={isEditable}
@@ -932,7 +1125,7 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
           )}
 
           {activeTab === 'report' && (
-            <ValidationReportTab miniApp={formData} onRefresh={fetchApp} />
+            <ValidationReportTab miniApp={formData} onRefresh={() => fetchApp(false, true)} />
           )}
 
           {activeTab === 'activity' && (
@@ -1122,11 +1315,6 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
         }}
       />
 
-      {/* Floating Error Summary Button */}
-      {!modalState.isOpen && hasErrors && (
-        <ValidationIssuesButton errors={allErrors} onNavigate={handleNavigateToIssue} />
-      )}
-
       {lifecycleReasonModal?.isOpen && (
         <ReasonPromptModal
           isOpen={lifecycleReasonModal.isOpen}
@@ -1145,6 +1333,22 @@ export default function ManageMiniAppPage({ params }: { params: Promise<{ id: st
           }}
         />
       )}
+
+      <BuildProgressModal
+        state={buildModalState}
+        onClose={() => {
+          setBuildModalState((prev) => ({ ...prev, isOpen: false }));
+          fetchApp();
+        }}
+        onRunInBackground={() => {
+          setBuildModalState((prev) => ({ ...prev, isOpen: false }));
+        }}
+        onRetry={() => {
+          setBuildModalState((prev) => ({ ...prev, isOpen: false }));
+          handleLifecycleAction('start-testing');
+        }}
+        onOpenSandbox={openSandboxPreview}
+      />
     </>
   );
 }

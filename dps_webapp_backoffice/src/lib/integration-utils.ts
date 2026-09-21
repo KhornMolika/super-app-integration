@@ -28,7 +28,8 @@ export const validateProductionUrlFormat = (url: string) => {
         (window.location.hostname === 'localhost' ||
           window.location.hostname === '127.0.0.1' ||
           window.location.hostname.endsWith('.local') ||
-          window.location.hostname.endsWith('.orb.local'))));
+          window.location.hostname.endsWith('.orb.local') ||
+          /^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(window.location.hostname))));
 
   if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
     return { valid: false, error: 'URL must start with http:// or https://' };

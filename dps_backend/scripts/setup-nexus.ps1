@@ -106,33 +106,51 @@ try {
     Write-Warning "Could not update active realms: $_"
 }
 
-# 2.5 Create raw repositories for Super App APKs
-Write-Host "Configuring raw APK repositories (apk-test-builds, apk-releases)..."
-$apkRepos = @("apk-test-builds", "apk-releases")
-foreach ($apkRepo in $apkRepos) {
+# 2.5 Clean up unused default repositories (Nuget, Maven Snapshots)
+Write-Host "Cleaning up unused default factory repositories (nuget-*, maven-*)..."
+$unusedRepos = @("nuget-group", "nuget-hosted", "nuget.org-proxy", "maven-snapshots", "maven-releases", "maven-public", "maven-central")
+foreach ($r in $unusedRepos) {
+    try {
+        Invoke-RestMethod -Uri "$baseUrl/service/rest/v1/repositories/$r" -Headers $authHeader -Method Delete -ErrorAction SilentlyContinue
+        Write-Host "Deleted unused repository: $r"
+    } catch {
+        # Ignored if already deleted
+    }
+}
+
+# 2.6 Create raw repositories for Super App APKs and Artifacts
+Write-Host "Configuring raw repositories (apk-test-builds, apk-releases, superapp-artifacts, miniapp-native-sdks, miniapp-packages)..."
+$rawRepoConfigs = @(
+    @{ name = "apk-test-builds"; writePolicy = "ALLOW" },
+    @{ name = "apk-releases"; writePolicy = "ALLOW_ONCE" },
+    @{ name = "superapp-artifacts"; writePolicy = "ALLOW" },
+    @{ name = "miniapp-native-sdks"; writePolicy = "ALLOW_ONCE" },
+    @{ name = "miniapp-packages"; writePolicy = "ALLOW" }
+)
+foreach ($cfg in $rawRepoConfigs) {
     try {
         $rawPayload = @{
-            name = $apkRepo
+            name = $cfg.name
             online = $true
             storage = @{
                 blobStoreName = "default"
                 strictContentTypeValidation = $false
-                writePolicy = "ALLOW"
+                writePolicy = $cfg.writePolicy
             }
         } | ConvertTo-Json -Depth 5
         Invoke-RestMethod -Uri "$baseUrl/service/rest/v1/repositories/raw/hosted" -Headers $authHeader -Method Post -ContentType "application/json" -Body $rawPayload
-        Write-Host "Created repository: $apkRepo"
+        Write-Host "Created repository: $($cfg.name) (WritePolicy: $($cfg.writePolicy))"
     } catch {
         if ($_.Exception.Response.StatusCode.value__ -eq 400 -or $_.Exception.Message -like "*already exists*") {
-            Write-Host "Repository $apkRepo already exists."
+            Write-Host "Repository $($cfg.name) already exists."
         } else {
-            Write-Warning "$apkRepo creation response: $_"
+            Write-Warning "$($cfg.name) creation response: $_"
         }
     }
 }
 
-# 3. Create pub-hosted repository
-Write-Host "Configuring pub-hosted repository..."
+# 3. Create pub-hosted repository (Immutable Dart Package Artifacts)
+Write-Host "Configuring pub-hosted repository (WritePolicy: ALLOW_ONCE)..."
 try {
     $hostedPayload = @{
         name = "pub-hosted"
@@ -140,7 +158,7 @@ try {
         storage = @{
             blobStoreName = "default"
             strictContentTypeValidation = $true
-            writePolicy = "ALLOW"
+            writePolicy = "ALLOW_ONCE"
         }
     } | ConvertTo-Json -Depth 5
 

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { MapPin } from 'lucide-react';
 
 // Extend Window interface for TypeScript
 declare global {
@@ -74,8 +75,8 @@ export default function LocationCard() {
   return (
     <div className="bg-white p-6 rounded-xl shadow hover:shadow-lg transition-shadow border border-blue-200 border-2 relative">
       <div className="absolute top-0 right-0 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-bl-lg rounded-tr-lg">NATIVE</div>
-      <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center mb-4 text-2xl">
-        📍
+      <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center mb-4">
+        <MapPin className="w-6 h-6 text-blue-600" />
       </div>
       <h3 className="text-lg font-bold mb-2">Device Location</h3>
       <p className="text-gray-600 text-sm mb-4">

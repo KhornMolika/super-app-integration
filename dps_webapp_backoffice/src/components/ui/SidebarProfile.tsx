@@ -7,7 +7,9 @@ export function SidebarProfile() {
   const { user } = useAuth();
   const { isCollapsed } = useSidebar();
   
-  const initials = user.name
+  const userName = user?.name || 'Super Admin';
+  const userEmail = user?.email || 'superadmin@example.com';
+  const initials = userName
     .split(' ')
     .map(w => w.charAt(0))
     .join('')
@@ -17,7 +19,7 @@ export function SidebarProfile() {
   return (
     <div className={`${isCollapsed ? 'p-2' : 'p-4'} mt-auto transition-all duration-300`}>
       <div 
-        title={isCollapsed ? `${user.name} (${user.email})` : undefined}
+        title={isCollapsed ? `${userName} (${userEmail})` : undefined}
         className={`bg-brand-900 dark:bg-brand-900/50 rounded-xl ${
           isCollapsed ? 'p-2 justify-center' : 'p-3.5 space-x-3'
         } border border-brand-800 dark:border-brand-800 flex items-center transition-colors`}
@@ -27,8 +29,8 @@ export function SidebarProfile() {
         </div>
         {!isCollapsed && (
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-white truncate">{user.name}</p>
-            <p className="text-xs text-brand-200 truncate">{user.email}</p>
+            <p className="text-sm font-semibold text-white truncate">{userName}</p>
+            <p className="text-xs text-brand-200 truncate">{userEmail}</p>
           </div>
         )}
       </div>

@@ -37,6 +37,6 @@ export class MiniAppActivity {
   @Column({ type: 'jsonb', nullable: true })
   metadata!: any;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 }

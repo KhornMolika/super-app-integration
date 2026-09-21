@@ -9,6 +9,7 @@ import {
   ValidateNested,
   ValidateIf,
   IsBoolean,
+  IsNumber,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -93,6 +94,26 @@ export class FlutterPackageConfigDto {
   @IsOptional()
   gitPath?: string;
 
+  @ValidateIf((o) => o.sourceType === SourceType.GIT)
+  @IsBoolean()
+  @IsOptional()
+  isPrivateRepo?: boolean;
+
+  @ValidateIf((o) => o.sourceType === SourceType.GIT)
+  @IsEnum(['none', 'deploy_key', 'token'])
+  @IsOptional()
+  authMethod?: 'none' | 'deploy_key' | 'token';
+
+  @ValidateIf((o) => o.sourceType === SourceType.GIT)
+  @IsString()
+  @IsOptional()
+  deployKey?: string;
+
+  @ValidateIf((o) => o.sourceType === SourceType.GIT)
+  @IsString()
+  @IsOptional()
+  deployKeyTitle?: string;
+
   // If ARTIFACT
   @ValidateIf((o) => o.sourceType === SourceType.ARTIFACT)
   @IsString()
@@ -103,6 +124,42 @@ export class FlutterPackageConfigDto {
   @IsString()
   @IsOptional()
   versionConstraint?: string;
+
+  @IsString()
+  @IsOptional()
+  packageStoragePath?: string;
+
+  @IsString()
+  @IsOptional()
+  packageUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  archiveChecksum?: string;
+
+  @IsString()
+  @IsOptional()
+  archiveFilename?: string;
+
+  @IsNumber()
+  @IsOptional()
+  archiveSize?: number;
+
+  @IsNumber()
+  @IsOptional()
+  archiveOriginalSize?: number;
+
+  @IsNumber()
+  @IsOptional()
+  archiveStrippedFilesCount?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  isSanitized?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  isArchiveSubmission?: boolean;
 }
 
 export class PermissionDto {

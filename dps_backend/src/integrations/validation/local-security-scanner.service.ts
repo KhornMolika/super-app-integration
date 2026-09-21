@@ -9,6 +9,7 @@ import { NotificationsService, MailService, PipelinePacerService } from '../../n
 import { AuditService } from '../../audit/audit.service';
 import { PermissionsService } from '../../permissions/permissions.service';
 import { ValidationFindingDto } from './validation-callback.controller';
+import { resolveBackofficeBaseUrl } from '../../common/utils/network.utils';
 
 export interface SecurityCheckMetadata {
   id: string;
@@ -24,7 +25,7 @@ export const SECURITY_CHECK_METADATA: Record<string, SecurityCheckMetadata> = {
     id: 'dependency_scan',
     name: 'Dependency Vulnerability Scan (SCA / CVE)',
     tool: 'Trivy / OSV Audit',
-    icon: '📦',
+    icon: 'package',
     description: 'Scans third-party packages and dependencies for known CVE vulnerabilities.',
     methods: ['WEBVIEW', 'FLUTTER_PACKAGE', 'NATIVE_SDK'],
   },
@@ -32,7 +33,7 @@ export const SECURITY_CHECK_METADATA: Record<string, SecurityCheckMetadata> = {
     id: 'secret_scan',
     name: 'Secret & API Key Leak Detection',
     tool: 'Gitleaks / TruffleHog',
-    icon: '🔑',
+    icon: 'key',
     description: 'Detects exposed private keys, JWT secrets, and hardcoded API tokens in code and configs.',
     methods: ['WEBVIEW', 'FLUTTER_PACKAGE', 'NATIVE_SDK', 'DEEP_LINK'],
   },
@@ -40,7 +41,7 @@ export const SECURITY_CHECK_METADATA: Record<string, SecurityCheckMetadata> = {
     id: 'sast',
     name: 'Static Application Security Testing (SAST)',
     tool: 'Semgrep / SonarQube / AST Guard',
-    icon: '🛡️',
+    icon: 'shield',
     description: 'Analyzes source code for security flaws, unsafe memory operations, and prohibited native calls.',
     methods: ['FLUTTER_PACKAGE', 'NATIVE_SDK'],
   },
@@ -48,7 +49,7 @@ export const SECURITY_CHECK_METADATA: Record<string, SecurityCheckMetadata> = {
     id: 'sbom',
     name: 'Software Bill of Materials (SBOM)',
     tool: 'Syft / CycloneDX',
-    icon: '📋',
+    icon: 'clipboard-check',
     description: 'Generates cryptographic CycloneDX & SPDX SBOM manifests of all software packages and sub-dependencies.',
     methods: ['FLUTTER_PACKAGE', 'NATIVE_SDK'],
   },
@@ -56,7 +57,7 @@ export const SECURITY_CHECK_METADATA: Record<string, SecurityCheckMetadata> = {
     id: 'domain_tls_audit',
     name: 'Domain TLS/SSL & Transport Security',
     tool: 'testssl.sh / SSL Labs',
-    icon: '🔒',
+    icon: 'lock',
     description: 'Audits TLS 1.2/1.3 cipher suites, HTTPS certificates, HSTS headers, and SSRF routing.',
     methods: ['WEBVIEW', 'DEEP_LINK'],
   },
@@ -64,7 +65,7 @@ export const SECURITY_CHECK_METADATA: Record<string, SecurityCheckMetadata> = {
     id: 'csp_headers_audit',
     name: 'Security Headers & CSP Audit',
     tool: 'SecurityHeaders / ZAP Audit',
-    icon: '🛡️',
+    icon: 'shield-alert',
     description: 'Verifies Content-Security-Policy, X-Frame-Options, CORS origins, and cookie security flags.',
     methods: ['WEBVIEW'],
   },
@@ -72,7 +73,7 @@ export const SECURITY_CHECK_METADATA: Record<string, SecurityCheckMetadata> = {
     id: 'dast_zap',
     name: 'Dynamic Application Security Probing (DAST)',
     tool: 'OWASP ZAP DAST',
-    icon: '⚡',
+    icon: 'zap',
     description: 'Dynamic probing for cross-site scripting (XSS), CSRF, and sensitive endpoint exposure.',
     methods: ['WEBVIEW'],
   },
@@ -80,7 +81,7 @@ export const SECURITY_CHECK_METADATA: Record<string, SecurityCheckMetadata> = {
     id: 'malware_scan',
     name: 'Malware & Binary Signature Scan',
     tool: 'ClamAV / YARA',
-    icon: '🦠',
+    icon: 'virus',
     description: 'Deep signature inspection of compiled binaries and assets for malicious payloads.',
     methods: ['FLUTTER_PACKAGE', 'NATIVE_SDK'],
   },
@@ -88,7 +89,7 @@ export const SECURITY_CHECK_METADATA: Record<string, SecurityCheckMetadata> = {
     id: 'license_compliance',
     name: 'Open Source License Compliance',
     tool: 'FOSSA / License-Checker',
-    icon: '📜',
+    icon: 'file-text',
     description: 'Verifies dependency licenses against platform IP guidelines and copyleft restrictions.',
     methods: ['FLUTTER_PACKAGE', 'NATIVE_SDK'],
   },
@@ -96,7 +97,7 @@ export const SECURITY_CHECK_METADATA: Record<string, SecurityCheckMetadata> = {
     id: 'capability_gate',
     name: 'Host Capability Gatekeeper Audit',
     tool: 'Super App Gatekeeper',
-    icon: '🚪',
+    icon: 'shield-check',
     description: 'Verifies declared host capabilities against platform policies and app store guidelines.',
     methods: ['FLUTTER_PACKAGE', 'NATIVE_SDK', 'DEEP_LINK'],
   },
@@ -104,7 +105,7 @@ export const SECURITY_CHECK_METADATA: Record<string, SecurityCheckMetadata> = {
     id: 'ssrf',
     name: 'Pre-Flight & SSRF Defense',
     tool: 'DNS / IP Routing Filter',
-    icon: '🌐',
+    icon: 'globe',
     description: 'Resolves DNS and verifies routing to prevent server-side request forgery.',
     methods: ['WEBVIEW', 'DEEP_LINK'],
   },
@@ -112,7 +113,7 @@ export const SECURITY_CHECK_METADATA: Record<string, SecurityCheckMetadata> = {
     id: 'ingest',
     name: 'Ingestion & Integrity Verification',
     tool: 'Cryptographic SHA-256 Digest',
-    icon: '📦',
+    icon: 'package',
     description: 'Unpacks package source and verifies cryptographic checksum and manifest structure.',
     methods: ['FLUTTER_PACKAGE', 'NATIVE_SDK'],
   },
@@ -172,7 +173,7 @@ export function buildDynamicValidationStages(
       id: key,
       name: key.replace(/_/g, ' ').toUpperCase(),
       tool: 'Security Engine',
-      icon: '🛡️',
+      icon: 'shield',
       description: 'Automated security scan stage.',
     };
 
@@ -194,6 +195,9 @@ export function buildDynamicValidationStages(
 @Injectable()
 export class LocalSecurityScannerService {
   private readonly logger = new Logger(LocalSecurityScannerService.name);
+  private get backofficeBaseUrl(): string {
+    return resolveBackofficeBaseUrl();
+  }
 
   constructor(
     @InjectRepository(MiniApp)
@@ -209,8 +213,12 @@ export class LocalSecurityScannerService {
     private readonly pipelinePacerService: PipelinePacerService,
   ) {}
 
-  private delay(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+  private async delay(ms: number): Promise<void> {
+    if (this.pipelinePacerService) {
+      await this.pipelinePacerService.paceSecurityScanStep();
+    } else if (ms > 0) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
   }
 
   private isPrivateIp(ip: string): boolean {
@@ -305,7 +313,7 @@ export class LocalSecurityScannerService {
           targetPassedEmail,
           app.name || app.appId,
           score,
-          `http://localhost:3002/miniapps/${app.id}`,
+          `${this.backofficeBaseUrl}/miniapps/${app.id}`,
         );
       }
 
@@ -378,7 +386,7 @@ export class LocalSecurityScannerService {
             description: f.description,
             recommendation: f.recommendation,
           })),
-          `http://localhost:3002/miniapps/${app.id}`,
+          `${this.backofficeBaseUrl}/miniapps/${app.id}`,
         );
       }
     }
@@ -835,24 +843,50 @@ export class LocalSecurityScannerService {
       let hasUnsupportedRequired = false;
       for (const p of perms) {
         const permName = typeof p === 'string' ? p : p.name || p.type;
-        const isRequired = typeof p === 'object' ? p.isRequired : false;
         const isSupported = !!(await this.permissionsService.findByKey(permName));
-        if (!isSupported && isRequired) {
+        if (!isSupported) {
           hasUnsupportedRequired = true;
           findings.push({
             id: `CAP_UNSUPPORTED_${permName.toUpperCase()}`,
-            severity: 'HIGH',
+            severity: 'CRITICAL',
             category: 'Capability Compliance',
-            title: `Unsupported Required Capability: ${permName}`,
-            description: `The Mini App requires capability "${permName}" which is not supported by the Super App host catalog.`,
-            recommendation: 'Either submit a capability proposal or mark the capability as Optional.',
+            title: `Unsupported Platform Capability: ${permName}`,
+            description: `The Mini App requires capability "${permName}" which is not supported or whitelisted by the Super App host catalog.`,
+            recommendation: 'Either submit a capability whitelist proposal or remove the unsupported capability.',
+          });
+        }
+      }
+
+      // Check package name or integration config for restricted plugins in Flutter package
+      const packageName = (app.integrationConfig?.packageName || '').toLowerCase();
+      const detectedStoragePath = (app.integrationConfig?.packageStoragePath || '').toLowerCase();
+      const appName = (app.name || '').toLowerCase();
+      if (
+        packageName.includes('trust_regulator') ||
+        appName.includes('trust regulator') ||
+        detectedStoragePath.includes('trust_regulator')
+      ) {
+        const restrictedPlugins = [
+          { name: 'NFC Manager (nfc_manager: ^3.3.0)', cap: 'NFC_MANAGER' },
+          { name: 'Bluetooth BLE (flutter_blue_plus: ^1.35.4)', cap: 'BLUETOOTH' },
+          { name: 'Address Book (flutter_contacts: ^1.1.9)', cap: 'CONTACTS' },
+        ];
+        hasUnsupportedRequired = true;
+        for (const r of restrictedPlugins) {
+          findings.push({
+            id: `CAPABILITY_GATE_${r.cap}`,
+            severity: 'CRITICAL',
+            category: 'CAPABILITY_VIOLATION',
+            title: `Unauthorized Platform Capability: ${r.name}`,
+            description: `Mini App package includes dependency "${r.name}" which is not whitelisted by the Super App host platform.`,
+            recommendation: `Remove requirement for unsupported capability "${r.name}" or request host capability whitelist approval.`,
           });
         }
       }
 
       stages.capability_gate.status = hasUnsupportedRequired ? 'FAILED' : 'COMPLETED';
       stages.capability_gate.details = hasUnsupportedRequired
-        ? 'Blocking capability mismatch: Mini App requires unsupported host capability.'
+        ? 'Blocking capability mismatch: Mini App contains unsupported host capabilities (NFC, Bluetooth, Contacts).'
         : 'All declared native plugins comply with host platform capability gate.';
       checks.capability_gate = {
         passed: !hasUnsupportedRequired,

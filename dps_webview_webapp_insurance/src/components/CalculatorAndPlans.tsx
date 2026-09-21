@@ -8,7 +8,9 @@ import {
   Laptop,
   Home,
   Bike,
-  Globe
+  Globe,
+  Zap,
+  Sparkles
 } from "lucide-react";
 import { LiquidGlassContainer, LiquidGlassButton, LiquidGlassBadge } from "./LiquidGlass";
 
@@ -65,7 +67,7 @@ export default function CalculatorAndPlans({ onSelectPlan }: { onSelectPlan: (pl
         "$25 low deductible",
         "Priority 8-minute claim resolution",
       ],
-      tag: "⚡ Most Popular",
+      tag: "Most Popular",
       cta: "Get Daily Flex",
     },
     {
@@ -282,8 +284,9 @@ export default function CalculatorAndPlans({ onSelectPlan }: { onSelectPlan: (pl
                   <span>Lock In This Quote</span>
                   <ArrowRight className="w-4 h-4 shrink-0" />
                 </button>
-                <p className="text-center text-[10px] text-violet-200 mt-2 font-medium">
-                  ⚡ 90 seconds to activate via DPS Super App
+                <p className="text-center text-[10px] text-violet-200 mt-2 font-medium flex items-center justify-center gap-1">
+                  <Zap className="w-3 h-3 text-amber-300" />
+                  <span>90 seconds to activate via DPS Super App</span>
                 </p>
               </div>
             </div>
@@ -305,8 +308,9 @@ export default function CalculatorAndPlans({ onSelectPlan }: { onSelectPlan: (pl
               >
                 {/* Popular Pill */}
                 {plan.popular && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-30 px-4 py-1 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-black shadow-lg uppercase tracking-wider whitespace-nowrap">
-                    {plan.tag}
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-30 px-4 py-1 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-black shadow-lg uppercase tracking-wider whitespace-nowrap flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>{plan.tag}</span>
                   </div>
                 )}
 

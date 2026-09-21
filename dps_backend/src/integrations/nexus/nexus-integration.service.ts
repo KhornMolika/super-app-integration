@@ -113,6 +113,6 @@ export class NexusIntegrationService {
     const ver = options.versionConstraint?.trim() || '^1.0.0';
     const groupUrl = this.getPubGroupUrl();
 
-    return `dependencies:\n  ${pkg}:\n    hosted: ${groupUrl}\n    version: ${ver}`;
+    return `dependencies:\n  ${pkg}: ${ver}\n\n# Hosted on Sonatype Nexus Private Registry\n# Resolves via environment: PUB_HOSTED_URL=${groupUrl}`;
   }
 }

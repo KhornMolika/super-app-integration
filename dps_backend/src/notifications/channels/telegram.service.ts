@@ -1,8 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as fs from 'fs';
+import * as path from 'path';
 import { User } from '../../access-control/entities/user.entity';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
+import { SettingsService } from '../../settings/settings.service';
+import {
+  resolveBackofficeBaseUrl,
+  resolveAppUrl,
+} from '../../common/utils/network.utils';
 
 export interface TelegramInlineButton {
   text: string;
@@ -45,14 +52,17 @@ export class TelegramService {
   private readonly isEnabled = process.env.TELEGRAM_ENABLED !== 'false';
   private botId: number | null = null;
   private botUsername = 'superapp_notification_bot';
-  private readonly backofficeBaseUrl =
-    process.env.BACKOFFICE_BASE_URL || 'http://localhost:3002';
+
+  private get backofficeBaseUrl(): string {
+    return resolveBackofficeBaseUrl();
+  }
 
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @InjectRepository(MiniApp)
     private miniAppRepository: Repository<MiniApp>,
+    private readonly settingsService?: SettingsService,
   ) {
     this.fetchBotProfile();
   }
@@ -126,24 +136,51 @@ export class TelegramService {
       };
 
       if (buttons && buttons.length > 0) {
-        // Sanitize inline keyboard buttons: Telegram Bot API rejects localhost, 127.0.0.1, or non-public URLs
+        // Sanitize inline keyboard buttons: ensure public/LAN accessible URLs and valid Telegram protocols
         const sanitizedButtons: TelegramInlineButton[][] = [];
         for (const row of buttons) {
           const sanitizedRow: TelegramInlineButton[] = [];
           for (const btn of row) {
             if (btn.url) {
-              const u = btn.url.trim();
-              const isLocalhost =
+              let u = resolveAppUrl(btn.url.trim());
+
+              // Replace internal Docker network hostnames with host/public endpoint
+              if (u.includes('host.docker.internal')) {
+                const nexusBase = (
+                  process.env.NEXUS_BASE_URL || 'http://localhost:8081'
+                ).replace(/\/+$/, '');
+                u = u
+                  .replace(/https?:\/\/host\.docker\.internal:8081/g, nexusBase)
+                  .replace(
+                    /https?:\/\/host\.docker\.internal:3000/g,
+                    'http://localhost:3000',
+                  )
+                  .replace(/host\.docker\.internal/g, 'localhost');
+                u = resolveAppUrl(u);
+              }
+
+              // Check if URL is acceptable by Telegram Bot API for inline buttons
+              const isTelegramLink =
+                u.startsWith('https://t.me/') || u.startsWith('tg://');
+              const isStrictLocalhost =
                 u.includes('localhost') ||
                 u.includes('127.0.0.1') ||
-                u.includes('0.0.0.0');
-              const isValidHttp = /^https?:\/\/[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/i.test(u);
-              const isTelegramDeepLink = u.startsWith('https://t.me/') || u.startsWith('tg://');
+                u.includes('0.0.0.0') ||
+                u.includes('.internal');
+              const isValidAddress =
+                /^https?:\/\/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})(:\d+)?(\/.*)?$/i.test(
+                  u,
+                );
 
-              if (isTelegramDeepLink || (isValidHttp && !isLocalhost)) {
+              if (isTelegramLink || (isValidAddress && !isStrictLocalhost)) {
                 sanitizedRow.push({ text: btn.text, url: u });
+              } else if (btn.callback_data) {
+                sanitizedRow.push({
+                  text: btn.text,
+                  callback_data: btn.callback_data,
+                });
               } else {
-                // Fallback to bot deep link so button remains clickable and valid for Telegram API
+                // For unresolvable local URLs, fallback to Bot deep link so Telegram API never rejects the button with BUTTON_URL_INVALID
                 sanitizedRow.push({
                   text: btn.text,
                   url: `https://t.me/${this.botUsername}`,
@@ -165,11 +202,32 @@ export class TelegramService {
         }
       }
 
-      const response = await fetch(url, {
+      let response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+
+      // Auto-retry without reply_markup if Telegram API rejects inline buttons (e.g. invalid button URL)
+      if (!response.ok && payload.reply_markup) {
+        const errorText = await response.clone().text();
+        if (
+          errorText.includes('BUTTON_URL_INVALID') ||
+          errorText.includes('wrong HTTP URL') ||
+          errorText.includes('URL host is empty') ||
+          response.status === 400
+        ) {
+          this.logger.warn(
+            `Telegram API rejected inline keyboard (${errorText}). Retrying message delivery without inline buttons to ${targetChat}...`,
+          );
+          delete payload.reply_markup;
+          response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+        }
+      }
 
       if (!response.ok) {
         const errorBody = await response.text();
@@ -483,7 +541,14 @@ export class TelegramService {
     // Send instant welcome / confirmation message
     const displayName = firstName || user.name || 'User';
     await this.sendMessage(
-      `<b>⚡ Super App Gateway: Telegram Connected</b>\n\nHello <b>${displayName}</b>, your Telegram account is now connected to <b>${user.email}</b>.\n\nYou will receive real-time alerts for your Mini Apps, security scans, review decisions, and test build artifacts.`,
+      `<b>⚡ Super App Gateway: Telegram Connected</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<pre><code class="language-diff">
++ [STATUS] Account Link Verified
++ [USER]   ${displayName} (${user.email})
++ [ALERTS] Real-time security, build & review notifications active
+</code></pre>
+<blockquote>Hello <b>${displayName}</b>, your Telegram account is connected to <b>${user.email}</b>. You will receive real-time alerts for your Mini Apps, security scans, review decisions, and test build artifacts.</blockquote>`,
       chatId.toString(),
     );
 
@@ -867,34 +932,146 @@ export class TelegramService {
     customChatIds: string[] = [],
     metadata?: any,
   ) {
-    const { text, buttons } = this.buildRichCard(title, message, type, miniAppName, metadata);
+    const { text, buttons } = this.buildRichCard(
+      title,
+      message,
+      type,
+      miniAppName,
+      metadata,
+    );
+
+    let allowButtons = true;
+    if (this.settingsService) {
+      try {
+        const timing = await this.settingsService.getPipelineTiming();
+        if (timing && timing.enableTelegramActionButtons === false) {
+          allowButtons = false;
+        }
+      } catch (_) {}
+    }
+
+    const finalButtons = allowButtons ? buttons : undefined;
     const dispatched = new Set<string>();
 
-    for (const rawChatId of customChatIds) {
+    const targetList = [...customChatIds];
+    if (this.defaultChatId) {
+      targetList.push(this.defaultChatId);
+    }
+
+    const dispatchedChats: string[] = [];
+    for (const rawChatId of targetList) {
       if (!rawChatId) continue;
-      const splitChatIds = rawChatId
+      const splitChatIds = String(rawChatId)
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean);
       for (const chatId of splitChatIds) {
         if (chatId && !dispatched.has(chatId)) {
           dispatched.add(chatId);
-          await this.sendMessage(text, chatId, 'HTML', buttons);
+          dispatchedChats.push(chatId);
+          await this.sendMessage(text, chatId, 'HTML', finalButtons);
         }
       }
     }
 
-    if (dispatched.size === 0 && this.defaultChatId) {
-      const defaultChatIds = this.defaultChatId
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean);
-      for (const dChatId of defaultChatIds) {
-        if (dChatId && !dispatched.has(dChatId)) {
-          dispatched.add(dChatId);
-          await this.sendMessage(text, dChatId, 'HTML', buttons);
+    // When a test build is ready, deliver the APK binary directly into the Telegram chats
+    if (type === 'TEST_BUILD_READY') {
+      const version = metadata?.version || metadata?.releaseVersion || 'v1.0.0';
+      const rawApkUrl = metadata?.apkUrl || '';
+      const resolvedName = miniAppName || 'Super App';
+      for (const chatId of dispatchedChats) {
+        this.sendApkDocument(chatId, rawApkUrl, version, resolvedName).catch(
+          (err) => {
+            this.logger.debug(
+              `Could not attach APK document to chat ${chatId}: ${err.message}`,
+            );
+          },
+        );
+      }
+    }
+  }
+
+  /**
+   * Dispatches the compiled APK artifact directly into the Telegram chat as a downloadable document
+   */
+  async sendApkDocument(
+    chatId: string,
+    apkUrlOrPath: string,
+    version: string,
+    appName: string,
+  ): Promise<boolean> {
+    if (!this.isEnabled || !this.botToken || !chatId) return false;
+
+    try {
+      const url = `https://api.telegram.org/bot${this.botToken}/sendDocument`;
+      const formData = new FormData();
+      formData.append('chat_id', chatId);
+      formData.append(
+        'caption',
+        `📲 <b>Direct APK Download:</b> <code>${appName}</code> (<code>${version}</code>)\nTap the file above to install directly on Android.`,
+      );
+      formData.append('parse_mode', 'HTML');
+
+      // Candidate local build paths
+      const candidatePaths = [
+        path.resolve(
+          process.cwd(),
+          'dps_mobile_app/build/app/outputs/flutter-apk/app-debug.apk',
+        ),
+        path.resolve(
+          process.cwd(),
+          '../dps_mobile_app/build/app/outputs/flutter-apk/app-debug.apk',
+        ),
+        path.resolve(
+          process.cwd(),
+          'dps_mobile_app/build/app/outputs/apk/debug/app-debug.apk',
+        ),
+        path.resolve(
+          process.cwd(),
+          '../dps_mobile_app/build/app/outputs/apk/debug/app-debug.apk',
+        ),
+        path.resolve(
+          process.cwd(),
+          'dsp_miniapp_trust_regulator/example/build/app/outputs/flutter-apk/app-debug.apk',
+        ),
+        apkUrlOrPath,
+      ];
+
+      let attached = false;
+      for (const p of candidatePaths) {
+        if (p && !p.startsWith('http') && fs.existsSync(p)) {
+          const fileBuffer = fs.readFileSync(p);
+          const blob = new Blob([fileBuffer], {
+            type: 'application/vnd.android.package-archive',
+          });
+          formData.append(
+            'document',
+            blob,
+            `superapp-${version || 'test'}-debug.apk`,
+          );
+          attached = true;
+          break;
         }
       }
+
+      if (!attached && apkUrlOrPath && apkUrlOrPath.startsWith('http')) {
+        formData.append('document', apkUrlOrPath);
+        attached = true;
+      }
+
+      if (!attached) return false;
+
+      const res = await fetch(url, {
+        method: 'POST',
+        body: formData,
+      });
+
+      return res.ok;
+    } catch (err: any) {
+      this.logger.warn(
+        `Failed to dispatch APK document to ${chatId}: ${err.message}`,
+      );
+      return false;
     }
   }
 
@@ -917,20 +1094,57 @@ export class TelegramService {
     const buttons: TelegramInlineButton[][] = [];
 
     switch (type) {
+      case 'MINIAPP_REGISTERED':
+      case 'MINIAPP_CREATED': {
+        const method = metadata?.integrationMethod || 'WEBVIEW';
+        const category = metadata?.category || 'Standard';
+        const teamName = metadata?.teamName || 'Engineering Team';
+
+        const text = `
+🟢 <b>[REGISTERED] NEW MINI APP REGISTERED</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📱 <b>Mini App:</b> ${appDisplayName}
+🏷️ <b>Method:</b> <code>${method}</code>
+📁 <b>Category:</b> ${category}
+👥 <b>Team:</b> ${teamName}
+
+<pre><code class="language-diff">
++ [REGISTERED] Application profile created
++ [STATUS]     Draft initialized & queued for verification
++ [INTEGRATION] ${method}
+</code></pre>
+
+<blockquote>Mini App <b>"${appDisplayName}"</b> has been registered on the Super App Gateway and is undergoing automated pre-flight security scanning.</blockquote>
+
+🔗 <b>Action Links:</b>
+👉 <a href="${detailsUrl}"><b>Open Mini App in Backoffice</b></a>
+        `.trim();
+
+        buttons.push([
+          { text: '🔍 View Mini App in Portal', url: detailsUrl },
+        ]);
+        return { text, buttons };
+      }
+
       case 'VALIDATION_RUNNING':
       case 'SCAN_STARTED': {
         const text = `
-⏳ <b>VALIDATION SCAN IN PROGRESS</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔵 <b>[IN PROGRESS] VALIDATION SCAN RUNNING</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━
 📱 <b>Mini App:</b> ${appDisplayName}
 ⚙️ <b>Status:</b> Automated Security Verification Started
 
-📊 <b>Active Pipeline Checks:</b>
-├ 🛡️ Static Code SAST Scan — <i>In Progress...</i>
-├ 📦 Package Integrity Digest — <i>Queued</i>
-└ 🧪 Web Sandbox Build — <i>Queued</i>
+<pre><code class="language-diff">
+! Static Code SAST Scan   : In Progress...
+! Package Integrity Check : Running
+! Network Boundary (SSRF) : Probing
+! Web Sandbox Build       : Queued
+</code></pre>
 
 <blockquote>Automated security engines are verifying network SSRF boundaries, TLS certificates, and sandboxed bridge capabilities.</blockquote>
+
+🔗 <b>Action Links:</b>
+👉 <a href="${detailsUrl}"><b>View Security Scan in Backoffice</b></a>
         `.trim();
 
         buttons.push([{ text: '🔍 View in Backoffice', url: detailsUrl }]);
@@ -941,17 +1155,23 @@ export class TelegramService {
       case 'SECURITY_PASSED': {
         const score = metadata?.score ?? 100;
         const text = `
-🟢 <b>AUTOMATED VALIDATION PASSED</b>
+🟢 <b>[PASSED] AUTOMATED VALIDATION VERIFIED</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📱 <b>Mini App:</b> ${appDisplayName}
 🏆 <b>Score:</b> <b>${score} / 100</b> (Compliance Verified)
 🛡️ <b>Status:</b> All Security Checks Passed
 
-✅ <b>Static Analysis (SAST):</b> 0 Critical Findings
-✅ <b>Network Boundary (SSRF):</b> Verified
-✅ <b>API Association Digest:</b> Signature Valid
+<pre><code class="language-diff">
++ [PASS] Static Analysis (SAST) : 0 Critical Findings
++ [PASS] Network Boundary (SSRF): Verified Secure
++ [PASS] API Association Digest : Signature Valid
++ [PASS] Capability Gatekeeper  : Approved
+</code></pre>
 
-<blockquote>Application compliance verified. Status has advanced to <b>IN_REVIEW</b> for administrator verification.</blockquote>
+<blockquote>Application compliance verified. Status has advanced to <b>IN_REVIEW</b> for administrator review.</blockquote>
+
+🔗 <b>Action Links:</b>
+👉 <a href="${detailsUrl}"><b>View Full Audit Report in Backoffice</b></a>
         `.trim();
 
         buttons.push([
@@ -964,17 +1184,30 @@ export class TelegramService {
       case 'VALIDATION_FAILED':
       case 'SECURITY_FAILED': {
         const score = metadata?.score ?? 0;
+        const cleanIssue = message
+          ? message
+              .split('\n')
+              .filter(Boolean)
+              .map((l) => `- ${l}`)
+              .join('\n')
+          : '- Security compliance gate requirements not satisfied';
+
         const text = `
-🔴 <b>VALIDATION ACTION REQUIRED</b>
+🔴 <b>[ACTION REQUIRED] VALIDATION FAILED</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📱 <b>Mini App:</b> ${appDisplayName}
 ⚠️ <b>Score:</b> <b>${score} / 100</b> (Violations Detected)
 🛡️ <b>Status:</b> Compliance Gate Failed
 
-<b>Issue Details:</b>
-${message}
+<pre><code class="language-diff">
+- [FAIL] Compliance Gate: Action Required
+${cleanIssue}
+</code></pre>
 
 <blockquote>Please address identified security policy violations in the backoffice and re-submit for validation.</blockquote>
+
+🔗 <b>Action Links:</b>
+👉 <a href="${detailsUrl}"><b>Remediate Violations in Backoffice</b></a>
         `.trim();
 
         buttons.push([
@@ -986,13 +1219,21 @@ ${message}
 
       case 'MINIAPP_APPROVED': {
         const text = `
-📋 <b>REVIEW DECISION: MINI APP APPROVED</b>
+🟢 <b>[APPROVED] MINI APP APPROVED</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📱 <b>Mini App:</b> ${appDisplayName}
 👤 <b>Reviewer:</b> Super App Administrator
 🏢 <b>Status:</b> <b>APPROVED</b> (Scheduled for Build)
 
+<pre><code class="language-diff">
++ [APPROVED] Review Decision: Mini App Approved
++ [STATUS]   Queued for Super App assembly & test build packaging
+</code></pre>
+
 <blockquote>Mini App <b>"${appDisplayName}"</b> has been formally approved and queued for Super App test build assembly & sandbox packaging.</blockquote>
+
+🔗 <b>Action Links:</b>
+👉 <a href="${detailsUrl}"><b>View Mini App Details in Backoffice</b></a>
         `.trim();
 
         buttons.push([
@@ -1005,14 +1246,22 @@ ${message}
       case 'BUILDING': {
         const version = metadata?.version || metadata?.releaseVersion || 'v1.0.0';
         const text = `
-🔨 <b>SUPER APP BUILD IN PROGRESS</b>
+🔵 <b>[BUILDING] SUPER APP BUILD IN PROGRESS</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📱 <b>Mini App:</b> ${appDisplayName}
 🏷️ <b>Version:</b> <code>${version}</code>
 ⚙️ <b>Pipeline:</b> Jenkins Sandbox & Android APK Assembler
-⏳ <b>Status:</b> Compiling Flutter Native Engine & Packaging Mini App
+
+<pre><code class="language-diff">
+! [BUILDING] Compiling Flutter Native Engine
+! [BUILDING] Resolving Package Dependencies
+! [BUILDING] Packaging Android APK & Web Sandbox
+</code></pre>
 
 <blockquote>Stand by while binary artifacts are assembled and uploaded to Sonatype Nexus repository.</blockquote>
+
+🔗 <b>Action Links:</b>
+👉 <a href="${detailsUrl}"><b>Monitor Build Progress in Backoffice</b></a>
         `.trim();
 
         buttons.push([
@@ -1023,17 +1272,35 @@ ${message}
 
       case 'TEST_BUILD_READY': {
         const version = metadata?.version || metadata?.releaseVersion || 'v1.0.0';
-        const apkUrl = metadata?.apkUrl || `http://localhost:8081/repository/apk-test-builds/superapp/${version}/app-debug.apk`;
-        const sandboxUrl = `${this.backofficeBaseUrl}/super-app`;
+        const rawApkUrl = metadata?.apkUrl;
+        const downloadProxyUrl = `${this.backofficeBaseUrl}/api/download-apk?type=test&version=${encodeURIComponent(version)}&appName=superapp`;
+        const apkUrl =
+          rawApkUrl && !rawApkUrl.includes('host.docker.internal')
+            ? rawApkUrl
+            : downloadProxyUrl;
+        const sandboxUrl = miniAppId
+          ? `${this.backofficeBaseUrl}/miniapps/${miniAppId}?preview=true`
+          : `${this.backofficeBaseUrl}/super-app?preview=true`;
 
         const text = `
-🧪 <b>SUPER APP TEST BUILD READY</b>
+🟢 <b>[BUILD READY] SUPER APP TEST BUILD READY</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📱 <b>Mini App:</b> ${appDisplayName}
 🏷️ <b>Version:</b> <code>${version}</code>
 📦 <b>Artifacts:</b> Android APK & Web Sandbox Build Ready
 
+<pre><code class="language-diff">
++ [READY] Android APK : Built & Uploaded to Nexus
++ [READY] Web Sandbox : Live & Interactive
++ [READY] Release     : ${version}
+</code></pre>
+
 <blockquote>Super App test binary packaging is complete! You can download the test APK or launch the interactive Web Sandbox.</blockquote>
+
+🔗 <b>Action Links:</b>
+📲 <a href="${apkUrl}"><b>Download Test APK (.apk)</b></a>
+🌐 <a href="${sandboxUrl}"><b>Launch Interactive Web Sandbox</b></a>
+🔍 <a href="${detailsUrl}"><b>View Details in Backoffice Portal</b></a>
         `.trim();
 
         const actionRow: TelegramInlineButton[] = [];
@@ -1047,15 +1314,65 @@ ${message}
         return { text, buttons };
       }
 
-      case 'CHANGES_REQUESTED': {
+      case 'BUILD_FAILED': {
+        const version = metadata?.version || metadata?.releaseVersion || 'latest';
+        const cleanReason = message
+          ? message
+              .split('\n')
+              .filter(Boolean)
+              .map((l) => `- ${l}`)
+              .join('\n')
+          : '- Fastlane packaging or Nexus publish failed';
+
         const text = `
-🟡 <b>REVIEW FEEDBACK: CHANGES REQUESTED</b>
+🔴 <b>[BUILD FAILED] SUPER APP BUILD ERROR</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📱 <b>Mini App:</b> ${appDisplayName}
+🏷️ <b>Version:</b> <code>${version}</code>
+⚙️ <b>Pipeline:</b> Jenkins Assembler CI
+
+<pre><code class="language-diff">
+- [FAILED] Build Pipeline Failure
+${cleanReason}
+</code></pre>
+
+<blockquote>The Super App build packaging failed. Please check the build logs in the portal to diagnose and remediate.</blockquote>
+
+🔗 <b>Action Links:</b>
+👉 <a href="${detailsUrl}"><b>View Build Logs & Diagnostics</b></a>
+        `.trim();
+
+        buttons.push([
+          { text: '🛠️ View Build Logs', url: detailsUrl },
+        ]);
+        return { text, buttons };
+      }
+
+      case 'CHANGES_REQUESTED': {
+        const cleanFeedback = message
+          ? message
+              .split('\n')
+              .filter(Boolean)
+              .map((l) => `! ${l}`)
+              .join('\n')
+          : '! Reviewer requested revisions before approval';
+
+        const text = `
+🟡 <b>[CHANGES REQUESTED] REVIEW FEEDBACK</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📱 <b>Mini App:</b> ${appDisplayName}
 👤 <b>Reviewer:</b> Super App Administrator
 📝 <b>Feedback:</b> ${message}
 
+<pre><code class="language-diff">
+! [ACTION REQUIRED] Reviewer Feedback:
+${cleanFeedback}
+</code></pre>
+
 <blockquote>Please review the requested changes in the Backoffice Portal and submit an updated revision.</blockquote>
+
+🔗 <b>Action Links:</b>
+👉 <a href="${detailsUrl}"><b>Update Mini App in Backoffice</b></a>
         `.trim();
 
         buttons.push([
@@ -1065,14 +1382,30 @@ ${message}
       }
 
       case 'MINIAPP_REJECTED': {
+        const cleanReason = message
+          ? message
+              .split('\n')
+              .filter(Boolean)
+              .map((l) => `- ${l}`)
+              .join('\n')
+          : '- Submission does not meet platform integration requirements';
+
         const text = `
-❌ <b>REVIEW DECISION: MINI APP REJECTED</b>
+🔴 <b>[REJECTED] REVIEW DECISION: MINI APP REJECTED</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📱 <b>Mini App:</b> ${appDisplayName}
 👤 <b>Decision:</b> Not Approved
 📝 <b>Reason:</b> ${message}
 
+<pre><code class="language-diff">
+- [REJECTED] Submission Not Approved
+${cleanReason}
+</code></pre>
+
 <blockquote>The submission for "${appDisplayName}" did not meet the required integration or compliance policies.</blockquote>
+
+🔗 <b>Action Links:</b>
+👉 <a href="${detailsUrl}"><b>View Decision in Portal</b></a>
         `.trim();
 
         buttons.push([
@@ -1083,13 +1416,21 @@ ${message}
 
       case 'REVISION_SUBMITTED': {
         const text = `
-📋 <b>NEW REVISION SUBMITTED</b>
+🟣 <b>[REVISION SUBMITTED] NEW REVISION INGESTED</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📱 <b>Mini App:</b> ${appDisplayName}
 📝 <b>Title:</b> ${title}
 📄 <b>Details:</b> ${message}
 
+<pre><code class="language-diff">
+! [REVISION] New Version Submitted
+! [STATUS]   Queued for Automated Security Scanning & Admin Review
+</code></pre>
+
 <blockquote>A new revision has been submitted for automated security scanning and administrator review.</blockquote>
+
+🔗 <b>Action Links:</b>
+👉 <a href="${detailsUrl}"><b>Review Proposed Revision in Backoffice</b></a>
         `.trim();
 
         buttons.push([
@@ -1100,14 +1441,24 @@ ${message}
 
       default: {
         const header = this.formatHeader(type);
+        const isError = type.includes('ERROR') || type.includes('FAIL');
+        const isSuccess = type.includes('SUCCESS') || type.includes('PASS');
+        const prefix = isError ? '-' : isSuccess ? '+' : '!';
+        const badge = isError ? '🔴' : isSuccess ? '🟢' : '🔵';
+
         const text = `
-🔔 <b>${header}</b>
+${badge} <b>${header}</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📱 <b>Mini App:</b> ${appDisplayName}
 <b>Title:</b> ${title}
-<b>Details:</b> ${message}
+
+<pre><code class="language-diff">
+${prefix} [DETAIL] ${message ? message.split('\n')[0] : 'Notification update'}
+</code></pre>
 
 <i>Super App Management Gateway</i>
+
+${miniAppId ? `🔗 <b>Portal Link:</b> <a href="${detailsUrl}"><b>Open Backoffice</b></a>` : ''}
         `.trim();
 
         if (miniAppId) {

@@ -68,3 +68,8 @@ volumes:
     name: superapp_nexus_data
   minio_data:
     name: superapp_minio_data
+
+networks:
+  default:
+    name: ci_network
+    external: true

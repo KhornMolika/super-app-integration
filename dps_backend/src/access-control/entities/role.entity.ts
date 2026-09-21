@@ -34,9 +34,9 @@ export class Role {
   @JoinTable({ name: 'role_permissions' })
   permissions!: Permission[];
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt!: Date;
 }

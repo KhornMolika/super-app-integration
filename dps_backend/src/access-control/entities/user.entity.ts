@@ -54,9 +54,9 @@ export class User {
   @OneToMany(() => MiniApp, (miniApp) => miniApp.owner)
   ownedMiniApps!: MiniApp[];
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt!: Date;
 }

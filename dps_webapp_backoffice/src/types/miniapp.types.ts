@@ -30,8 +30,23 @@ export interface FlutterPackageConfigDto {
   gitBranch?: string;
   gitAccessToken?: string;
   gitPath?: string;
+  isPrivateRepo?: boolean;
+  authMethod?: 'none' | 'deploy_key' | 'token';
+  deployKey?: string;
+  deployKeyTitle?: string;
   packageName?: string;
   versionConstraint?: string;
+  packageStoragePath?: string;
+  packageUrl?: string;
+  minioKey?: string;
+  minioUrl?: string;
+  archiveChecksum?: string;
+  archiveFilename?: string;
+  archiveSize?: number;
+  archiveOriginalSize?: number;
+  archiveStrippedFilesCount?: number;
+  isSanitized?: boolean;
+  isArchiveSubmission?: boolean;
 }
 
 export interface DeepLinkConfigDto {
@@ -68,4 +83,7 @@ export interface CreateMiniAppDto {
   
   permissions?: PermissionDto[];
   securityChecks?: string[];
+  buildStages?: any;
+  buildStatus?: string;
+  buildError?: string;
 }

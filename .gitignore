@@ -1,5 +1,7 @@
 /doc
 /fix-errors
+.env
+.env.*
 .env.development
 .env.production
 .env.local
@@ -21,3 +23,9 @@ build/
 *.lock
 *.zip
 *.tsbuildinfo
+
+# Secrets & SSH Deploy Keys
+secrets/
+*.key
+*.pem
+*.pub

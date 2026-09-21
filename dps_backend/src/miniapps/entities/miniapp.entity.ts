@@ -108,6 +108,15 @@ export class MiniApp {
   @Column({ default: 'PENDING' })
   validationStatus!: string; // PENDING, RUNNING, PASSED, FAILED
 
+  @Column({ type: 'jsonb', nullable: true, default: () => "'{}'" })
+  buildStages?: any;
+
+  @Column({ nullable: true, default: 'IDLE' })
+  buildStatus?: string; // IDLE, BUILDING, COMPLETED, FAILED
+
+  @Column({ type: 'text', nullable: true })
+  buildError?: string;
+
   @Column({ nullable: true })
   verificationToken?: string;
 
@@ -129,7 +138,7 @@ export class MiniApp {
   @Column({ nullable: true, default: '1.0.0' })
   version?: string;
 
-  @Column({ nullable: true, default: '1.0.0' })
+  @Column({ nullable: true })
   currentReleaseVersion?: string;
 
   @Column({ nullable: true })
@@ -143,7 +152,13 @@ export class MiniApp {
     version: string;
     saVersion?: string;
     type: 'PRODUCTION' | 'TEST' | 'DRAFT';
-    status: 'ACTIVE' | 'TESTING' | 'DEPRECATED' | 'SUPERSEDED' | 'ARCHIVED';
+    status:
+      | 'ACTIVE'
+      | 'TESTING'
+      | 'PREVIOUS'
+      | 'DEPRECATED'
+      | 'SUPERSEDED'
+      | 'ARCHIVED';
     changelog?: string;
     artifactUrl?: string;
     apkSize?: string;
@@ -165,10 +180,10 @@ export class MiniApp {
   })
   notifications!: Notification[];
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt!: Date;
 
   @OneToMany(() => MiniAppActivity, (activity) => activity.miniApp)

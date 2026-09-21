@@ -189,9 +189,29 @@ export class MiniappsController {
     );
   }
 
+  @Post('inspect-artifact')
+  @RequirePermissions('miniapp:create')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 500 * 1024 * 1024 },
+    }),
+  )
+  async inspectArtifact(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException(
+        'Package archive file (.zip / .tar.gz) is required.',
+      );
+    }
+    return this.miniappService.inspectPackageArtifact(file);
+  }
+
   @Post('upload-artifact')
   @RequirePermissions('miniapp:create')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 500 * 1024 * 1024 },
+    }),
+  )
   async uploadArtifact(
     @UploadedFile() file: Express.Multer.File,
     @Body('miniAppId') miniAppId?: string,

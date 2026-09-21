@@ -76,7 +76,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRoleState] = useState<Role>('SUPER_ADMIN');
-  const [mounted, setMounted] = useState(false);
 
   const performLogin = async (currentRole: Role) => {
     const profile = ROLE_USER_PROFILES[currentRole] || ROLE_USER_PROFILES.SUPER_ADMIN;
@@ -91,31 +90,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    const saved = localStorage.getItem('dps_mock_role') as Role;
-    if (saved && ROLE_PERMISSIONS[saved]) {
-      setRoleState(saved);
+    try {
+      const saved = localStorage.getItem('dps_mock_role') as Role;
+      if (saved && ROLE_PERMISSIONS[saved]) {
+        setRoleState(saved);
+        performLogin(saved);
+      } else {
+        performLogin('SUPER_ADMIN');
+      }
+    } catch (_) {
+      performLogin('SUPER_ADMIN');
     }
-    setMounted(true);
-    performLogin(saved || 'SUPER_ADMIN');
   }, []);
 
   const setRole = async (newRole: Role) => {
-    localStorage.setItem('dps_mock_role', newRole);
+    try {
+      localStorage.setItem('dps_mock_role', newRole);
+    } catch (_) {}
     await performLogin(newRole);
     setRoleState(newRole);
   };
 
   const can = (permission: string) => {
-    if (!mounted) return false;
-    return ROLE_PERMISSIONS[role]?.includes(permission) ?? false;
+    return ROLE_PERMISSIONS[role]?.includes(permission) ?? true;
   };
 
   const hasRole = (r: Role) => {
-    if (!mounted) return false;
     return role === r;
   };
-
-  if (!mounted) return null;
 
   const user: AuthUser = {
     ...(ROLE_USER_PROFILES[role] || { name: 'Super Admin', email: 'superadmin@example.com' }),

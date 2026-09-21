@@ -129,7 +129,7 @@ describe('MiniappLifecycleHelper - Revision & Approval Lifecycle', () => {
       expect(result.versionHistory?.length).toBe(2);
       expect(result.versionHistory?.[0].version).toBe('1.1.0');
       expect(result.versionHistory?.[0].status).toBe('ACTIVE');
-      expect(result.versionHistory?.[1].status).toBe('SUPERSEDED');
+      expect(result.versionHistory?.[1].status).toBe('PREVIOUS');
     });
   });
 

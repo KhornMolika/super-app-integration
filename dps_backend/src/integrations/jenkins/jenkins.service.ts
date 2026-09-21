@@ -122,6 +122,10 @@ export class JenkinsService {
     allowedCapabilities?: string[];
     requiredCapabilities?: string[];
     allowLocal?: boolean;
+    isPrivateRepo?: boolean;
+    gitAuthMethod?: string;
+    gitAccessToken?: string;
+    deployKey?: string;
   }): Promise<{ success: boolean; message: string }> {
     const jobName = 'miniapp-validation';
     const callbackUrl = `${this.callbackBaseUrl}/api/integrations/validation/callback`;
@@ -148,6 +152,10 @@ export class JenkinsService {
       GIT_PROVIDER: options.gitProvider || 'GITHUB',
       ALLOWED_CAPABILITIES: allowedCapsStr,
       REQUIRED_CAPABILITIES: requiredCapsStr,
+      IS_PRIVATE_REPO: options.isPrivateRepo ? 'true' : 'false',
+      GIT_AUTH_METHOD: options.gitAuthMethod || (options.isPrivateRepo ? 'deploy_key' : 'none'),
+      GIT_ACCESS_TOKEN: options.gitAccessToken || '',
+      GIT_DEPLOY_KEY: options.deployKey || '',
       CALLBACK_URL: callbackUrl,
       ALLOW_LOCAL: allowLocalStr,
     });
@@ -240,6 +248,10 @@ export class JenkinsService {
     allowedCapabilities?: string[];
     requiredCapabilities?: string[];
     checks?: string[];
+    isPrivateRepo?: boolean;
+    gitAuthMethod?: string;
+    gitAccessToken?: string;
+    deployKey?: string;
   }): Promise<{ success: boolean; message: string }> {
     return this.triggerMiniAppValidation({
       miniAppId: options.miniAppId,
@@ -254,6 +266,10 @@ export class JenkinsService {
       allowedCapabilities: options.allowedCapabilities,
       requiredCapabilities: options.requiredCapabilities,
       checks: options.checks,
+      isPrivateRepo: options.isPrivateRepo,
+      gitAuthMethod: options.gitAuthMethod,
+      gitAccessToken: options.gitAccessToken,
+      deployKey: options.deployKey,
     });
   }
 

@@ -135,12 +135,55 @@ class HomeController extends GetxController {
       return;
     }
 
-    final integrationMethod = app['integrationMethod'];
-    final appId = app['appId'];
+    final integrationMethod = (app['integrationMethod'] ?? '').toString();
+    final appId = (app['appId'] ?? app['id'] ?? '').toString();
     final name = (app['name'] ?? '').toString();
+    final integrationConfig = app['integrationConfig'];
+    final packageName = (integrationConfig is Map ? (integrationConfig['packageName'] ?? '') : '').toString();
 
-    if (integrationMethod == 'FLUTTER_PACKAGE' || appId == 'com.fsa.trust_regulator' || name.contains('Trust Regulator')) {
-      Get.toNamed(Routes.TRUST_REGULATOR);
+    // Route SC Public (Transit & Metro Pass) Mini App
+    if (packageName.contains('sc_public') ||
+        packageName.contains('transit') ||
+        appId.contains('transit') ||
+        appId.contains('public') ||
+        name.toLowerCase().contains('transit') ||
+        name.toLowerCase().contains('metro')) {
+      Get.toNamed(Routes.SC_PUBLIC_TRANSIT, arguments: app);
+      return;
+    }
+
+    // Route SC Private (Loyalty Rewards & VIP Vouchers) Mini App
+    if (packageName.contains('sc_private') ||
+        packageName.contains('loyalty') ||
+        packageName.contains('reward') ||
+        appId.contains('loyalty') ||
+        appId.contains('reward') ||
+        appId.contains('private') ||
+        name.toLowerCase().contains('loyalty') ||
+        name.toLowerCase().contains('reward') ||
+        name.toLowerCase().contains('voucher')) {
+      Get.toNamed(Routes.SC_PRIVATE_LOYALTY, arguments: app);
+      return;
+    }
+
+    // Route KYC Mini App
+    if (packageName.contains('kyc') ||
+        appId.contains('kyc') ||
+        name.toLowerCase().contains('kyc')) {
+      Get.toNamed(Routes.KYC_VERIFIER, arguments: app);
+      return;
+    }
+
+    // Route Trust Regulator Mini App
+    if (packageName.contains('trust_regulator') ||
+        appId == 'com.fsa.trust_regulator' ||
+        name.contains('Trust Regulator')) {
+      Get.toNamed(Routes.TRUST_REGULATOR, arguments: app);
+      return;
+    }
+
+    if (integrationMethod == 'FLUTTER_PACKAGE') {
+      Get.toNamed(Routes.KYC_VERIFIER, arguments: app);
       return;
     }
     if (integrationMethod == 'DEEP_LINK') {

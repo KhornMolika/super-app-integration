@@ -22,6 +22,12 @@ dependencies:
     path: ../dps_core_package
   dps_miniapp_mobile_trust_regulator:
     path: ../dsp_miniapp_trust_regulator
+  dps_miniapp_mobile_kyc_verifier:
+    path: ../dsp_miniapp_kyc_verifier
+  sc_public_miniapp:
+    path: ../sc-public-miniapp
+  sc_private_miniapp:
+    path: ../sc-private-miniapp
   url_launcher: ^6.3.2
   webview_flutter_web: ^0.2.3+4
 

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Input, Label, Button } from '@/components/ui/inputs';
 import { toast } from '@/components/ui/Toast';
 import { telegramApi } from '@/api';
+import { ZapIcon, BuildingIcon, UserIcon, CheckIcon, AlertTriangleIcon, DevicePhoneIcon } from '@/components/ui/Icons';
 
 export default function TeamForm({
   formData,
@@ -188,7 +189,8 @@ export default function TeamForm({
                 onClick={handleAutofillOwner}
                 className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-semibold flex items-center gap-1"
               >
-                <span>⚡ Fill from Profile ({telegramStatus.user.name})</span>
+                <ZapIcon className="w-3.5 h-3.5 text-amber-500" />
+                <span>Fill from Profile ({telegramStatus.user.name})</span>
               </button>
             )}
           </div>
@@ -299,8 +301,11 @@ export default function TeamForm({
                       : 'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 hover:border-sky-300'
                   }`}
                 >
-                  <span>🏢 Use Saved Team Channel ({telegramStatus.user.teamTelegramChatId})</span>
-                  {formData.teamTelegramChatId === telegramStatus.user.teamTelegramChatId && <span>✓</span>}
+                  <BuildingIcon className="w-3.5 h-3.5 text-sky-500" />
+                  <span>Use Saved Team Channel ({telegramStatus.user.teamTelegramChatId})</span>
+                  {formData.teamTelegramChatId === telegramStatus.user.teamTelegramChatId && (
+                    <CheckIcon className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+                  )}
                 </button>
               )}
               {userHasDirectChat && (
@@ -313,11 +318,14 @@ export default function TeamForm({
                       : 'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 hover:border-sky-300'
                   }`}
                 >
+                  <UserIcon className="w-3.5 h-3.5 text-sky-500" />
                   <span>
-                    👤 Use Personal Chat ({telegramStatus.user.telegramChatId}
+                    Use Personal Chat ({telegramStatus.user.telegramChatId}
                     {telegramStatus.user.telegramUsername ? ` - @${telegramStatus.user.telegramUsername}` : ''})
                   </span>
-                  {formData.teamTelegramChatId === telegramStatus.user.telegramChatId && <span>✓</span>}
+                  {formData.teamTelegramChatId === telegramStatus.user.telegramChatId && (
+                    <CheckIcon className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+                  )}
                 </button>
               )}
             </div>
@@ -348,7 +356,10 @@ export default function TeamForm({
                         <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate flex items-center gap-1.5">
                           <span>{group.title || 'Untitled Group'}</span>
                           {(group as any).isLive === false && (
-                            <span className="text-[10px] text-rose-500 font-normal">⚠️ Unavailable</span>
+                            <span className="text-[10px] text-rose-500 font-normal inline-flex items-center gap-0.5">
+                              <AlertTriangleIcon className="w-3 h-3 text-rose-500" />
+                              <span>Unavailable</span>
+                            </span>
                           )}
                         </div>
                         <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1.5">
@@ -360,8 +371,20 @@ export default function TeamForm({
                         {Array.isArray((group as any).associatedWith) && (group as any).associatedWith.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1">
                             {(group as any).associatedWith.map((assoc: any, i: number) => (
-                              <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 font-medium">
-                                {assoc.type === 'MINIAPP' ? `📱 ${assoc.name || assoc.appId}` : assoc.type === 'PROFILE' ? '👤 Profile Channel' : assoc.type}
+                              <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 font-medium inline-flex items-center gap-1">
+                                {assoc.type === 'MINIAPP' ? (
+                                  <>
+                                    <DevicePhoneIcon className="w-3 h-3 text-purple-500" />
+                                    <span>{assoc.name || assoc.appId}</span>
+                                  </>
+                                ) : assoc.type === 'PROFILE' ? (
+                                  <>
+                                    <UserIcon className="w-3 h-3 text-sky-500" />
+                                    <span>Profile Channel</span>
+                                  </>
+                                ) : (
+                                  assoc.type
+                                )}
                               </span>
                             ))}
                           </div>
@@ -369,7 +392,7 @@ export default function TeamForm({
                       </div>
                       {isSelected && (
                         <span className="w-5 h-5 rounded-full bg-sky-500 text-white flex items-center justify-center text-xs font-bold shrink-0">
-                          ✓
+                          <CheckIcon className="w-3.5 h-3.5 text-white" />
                         </span>
                       )}
                     </button>

@@ -4,6 +4,7 @@ import { ReleaseAssemblyVerificationService } from './release-assembly-verificat
 import { NexusIntegrationService } from '../nexus/nexus-integration.service';
 import { JenkinsService } from '../jenkins/jenkins.service';
 import { NotificationsService, MailService } from '../../notifications';
+import { ConfigService } from '@nestjs/config';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 
 describe('ReleaseAssemblyVerificationService', () => {
@@ -12,9 +13,14 @@ describe('ReleaseAssemblyVerificationService', () => {
   let jenkinsService: jest.Mocked<Partial<JenkinsService>>;
   let notificationsService: jest.Mocked<Partial<NotificationsService>>;
   let mailService: jest.Mocked<Partial<MailService>>;
+  let configService: jest.Mocked<Partial<ConfigService>>;
   let mockMiniappRepo: any;
 
   beforeEach(async () => {
+    configService = {
+      get: jest.fn().mockImplementation((key: string, def?: any) => def || ''),
+    };
+
     nexusService = {
       getPackageInfo: jest.fn().mockResolvedValue({
         exists: true,
@@ -33,7 +39,6 @@ describe('ReleaseAssemblyVerificationService', () => {
       triggerSuperAppBuild: jest.fn().mockResolvedValue({ queueId: 101, buildNumber: 42 }),
       triggerSuperAppSandboxBuild: jest.fn().mockResolvedValue({ queueId: 102, buildNumber: 43 }),
     };
-
 
     notificationsService = {
       createNotification: jest.fn().mockResolvedValue({ id: 'notif-1' }),
@@ -55,6 +60,7 @@ describe('ReleaseAssemblyVerificationService', () => {
         { provide: JenkinsService, useValue: jenkinsService },
         { provide: NotificationsService, useValue: notificationsService },
         { provide: MailService, useValue: mailService },
+        { provide: ConfigService, useValue: configService },
         { provide: getRepositoryToken(MiniApp), useValue: mockMiniappRepo },
       ],
     }).compile();

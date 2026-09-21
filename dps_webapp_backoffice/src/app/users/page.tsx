@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { usersApi, rolesApi, telegramApi, User, Role, TelegramBotChat } from '@/api';
 import { useToast } from '@/components/ui/Toast';
+import { CheckIcon, AlertTriangleIcon, ZapIcon, EyeIcon, DevicePhoneIcon } from '@/components/ui/Icons';
 
 // Permission Categories & Definition Catalog
 export interface PermissionItem {
@@ -1705,7 +1706,11 @@ export default function UsersPage() {
                         <div className={`text-[10px] font-semibold mt-1 flex items-center gap-1 ${
                           chatValidationStatus.valid ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
                         }`}>
-                          <span>{chatValidationStatus.valid ? '✓' : '⚠️'}</span>
+                          {chatValidationStatus.valid ? (
+                            <CheckIcon className="w-3.5 h-3.5 text-emerald-500" />
+                          ) : (
+                            <AlertTriangleIcon className="w-3.5 h-3.5 text-amber-500" />
+                          )}
                           <span>{chatValidationStatus.title}</span>
                         </div>
                       )}
@@ -1881,23 +1886,26 @@ export default function UsersPage() {
                         <button
                           type="button"
                           onClick={() => applyRolePreset('ALL')}
-                          className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 hover:bg-brand-50 hover:text-brand-700 transition-colors"
+                          className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 hover:bg-brand-50 hover:text-brand-700 transition-colors inline-flex items-center gap-1"
                         >
-                          ⚡ All Permissions
+                          <ZapIcon className="w-3.5 h-3.5 text-amber-500" />
+                          <span>All Permissions</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => applyRolePreset('READ_ONLY')}
-                          className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 hover:bg-brand-50 hover:text-brand-700 transition-colors"
+                          className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 hover:bg-brand-50 hover:text-brand-700 transition-colors inline-flex items-center gap-1"
                         >
-                          👁️ Read Only
+                          <EyeIcon className="w-3.5 h-3.5 text-sky-500" />
+                          <span>Read Only</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => applyRolePreset('MINI_APP')}
-                          className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 hover:bg-brand-50 hover:text-brand-700 transition-colors"
+                          className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 hover:bg-brand-50 hover:text-brand-700 transition-colors inline-flex items-center gap-1"
                         >
-                          📱 Mini App Focus
+                          <DevicePhoneIcon className="w-3.5 h-3.5 text-purple-500" />
+                          <span>Mini App Focus</span>
                         </button>
                         <button
                           type="button"

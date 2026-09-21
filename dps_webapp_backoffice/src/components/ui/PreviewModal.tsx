@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from './inputs';
 import IframePreviewEngine from './IframePreviewEngine';
+import { DevicePhoneIcon } from '@/components/ui/Icons';
 
 export type DeviceType = 
   | 'Responsive' | 'Custom' 
@@ -163,8 +164,8 @@ export default function PreviewModal({
         {/* LEFT: App Brand & Build Info */}
         <div className="flex items-center gap-3 min-w-0">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-indigo-600/30 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold text-base shrink-0">
-              📱
+            <div className="w-8 h-8 rounded-xl bg-indigo-600/30 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
+              <DevicePhoneIcon className="w-4 h-4" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
@@ -202,7 +203,7 @@ export default function PreviewModal({
               <span className="font-semibold text-emerald-300">{formattedBuildTime}</span>
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-xs font-mono bg-slate-800/80 text-slate-300 border border-slate-700 shrink-0 shadow-xs">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-mono bg-slate-800/80 text-slate-300 border border-slate-700 shrink-0 shadow-xs">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
               <span className="text-slate-300 text-[11px] font-medium">Ready</span>
             </span>
@@ -218,11 +219,11 @@ export default function PreviewModal({
               onChange={(e) => setDevice(e.target.value as DeviceType)}
               className="bg-transparent text-xs font-semibold text-slate-200 pl-2.5 pr-2 py-1.5 focus:outline-none cursor-pointer rounded-lg hover:bg-slate-700/50 transition-colors"
             >
-              <option value="iPhone 16 Pro" className="bg-slate-900 text-slate-200">📱 iPhone 16 Pro (393×852)</option>
-              <option value="Galaxy S25 Ultra" className="bg-slate-900 text-slate-200">📱 Galaxy S25 Ultra (412×915)</option>
-              <option value="iPad Pro 11&quot;" className="bg-slate-900 text-slate-200">📱 iPad Pro 11&quot; (834×1194)</option>
-              <option value="Laptop 14&quot;" className="bg-slate-900 text-slate-200">💻 Laptop 14&quot; (1440×900)</option>
-              <option value="Responsive" className="bg-slate-900 text-slate-200">↔ Responsive (Fluid)</option>
+              <option value="iPhone 16 Pro" className="bg-slate-900 text-slate-200">iPhone 16 Pro (393×852)</option>
+              <option value="Galaxy S25 Ultra" className="bg-slate-900 text-slate-200">Galaxy S25 Ultra (412×915)</option>
+              <option value="iPad Pro 11&quot;" className="bg-slate-900 text-slate-200">iPad Pro 11&quot; (834×1194)</option>
+              <option value="Laptop 14&quot;" className="bg-slate-900 text-slate-200">Laptop 14&quot; (1440×900)</option>
+              <option value="Responsive" className="bg-slate-900 text-slate-200">Responsive (Fluid)</option>
             </select>
 
             {/* Orientation Toggle Button */}

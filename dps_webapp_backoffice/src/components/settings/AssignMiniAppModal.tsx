@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Button, Input, Label } from '@/components/ui/inputs';
 import { toast } from '@/components/ui/Toast';
 import { TelegramGroupItem } from './TelegramTeamCard';
-
+import { StarIcon, CheckIcon, AlertTriangleIcon } from '@/components/ui/Icons';
 import { telegramApi } from '@/api';
 
 interface AssignMiniAppModalProps {
@@ -233,8 +233,9 @@ export function AssignMiniAppModal({
                               {group.title}
                             </span>
                             {group.isDefaultProfileChat && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200 font-bold">
-                                ⭐ Default
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200 font-bold flex items-center gap-1">
+                                <StarIcon className="w-3 h-3 text-amber-500 fill-amber-500" />
+                                <span>Default</span>
                               </span>
                             )}
                           </div>
@@ -245,7 +246,7 @@ export function AssignMiniAppModal({
 
                         {isSelected && (
                           <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
-                            ✓
+                            <CheckIcon className="w-3.5 h-3.5" />
                           </div>
                         )}
                       </button>
@@ -311,7 +312,7 @@ export function AssignMiniAppModal({
                     </>
                   ) : (
                     <>
-                      <span className="text-rose-500 font-bold shrink-0">⚠️</span>
+                      <AlertTriangleIcon className="w-4 h-4 text-rose-500 shrink-0" />
                       <span>{chatValidation.error || 'Group inaccessible. Make sure bot is added as Admin.'}</span>
                     </>
                   )}

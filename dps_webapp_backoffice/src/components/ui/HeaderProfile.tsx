@@ -6,7 +6,9 @@ import { useAuth } from '@/lib/auth';
 export function HeaderProfile() {
   const { user } = useAuth();
   
-  const initials = user.name
+  const userName = user?.name || 'Super Admin';
+  const userEmail = user?.email || 'superadmin@example.com';
+  const initials = userName
     .split(' ')
     .map(w => w.charAt(0))
     .join('')

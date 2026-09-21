@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from '@/components/ui/Toast';
 import ReasonPromptModal from '@/components/ui/ReasonPromptModal';
+import { DotBadge, ZapIcon } from '@/components/ui/Icons';
 import { miniappsApi } from '@/api';
 
 export interface RevisionReviewModalProps {
@@ -162,9 +163,19 @@ export function RevisionReviewModal({
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Comparing Live Version <strong className="text-slate-700 dark:text-slate-200">({diffData?.baseVersion?.version || 'v1.0.0'})</strong> 🆚 Proposed Revision <strong className="text-brand-600 dark:text-brand-400">({diffData?.targetVersion?.version || 'v1.1.0-draft'})</strong> for {miniAppName || diffData?.appName}
-              </p>
+              <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-slate-500 dark:text-slate-400">
+                <span>Comparing:</span>
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md font-mono font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                  <DotBadge color="emerald" />
+                  <span>Live MA: {diffData?.baseVersion?.version || '1.0.0'}</span>
+                </span>
+                <span className="font-extrabold text-slate-400 uppercase text-xs">vs</span>
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md font-mono font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                  <DotBadge color="amber" />
+                  <span>New Update: {diffData?.targetVersion?.version || 'v1.1.0-draft'}</span>
+                </span>
+                <span>for <strong className="text-slate-700 dark:text-slate-200">{miniAppName || diffData?.appName}</strong></span>
+              </div>
             </div>
           </div>
 
@@ -312,8 +323,9 @@ export function RevisionReviewModal({
                               </p>
                             </div>
                           </div>
-                          <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 shrink-0">
-                            🟢 Added
+                          <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 shrink-0 flex items-center gap-1.5">
+                            <DotBadge color="emerald" />
+                            <span>Added</span>
                           </span>
                         </div>
                       ))}
@@ -331,8 +343,9 @@ export function RevisionReviewModal({
                               {p.type}
                             </span>
                           </div>
-                          <span className="text-xs font-bold text-rose-600 dark:text-rose-400">
-                            🔴 Removed
+                          <span className="text-xs font-bold text-rose-600 dark:text-rose-400 shrink-0 flex items-center gap-1.5">
+                            <DotBadge color="rose" />
+                            <span>Removed</span>
                           </span>
                         </div>
                       ))}
@@ -354,8 +367,9 @@ export function RevisionReviewModal({
                   {/* Production URL Diff */}
                   {d?.integration?.productionUrl?.changed && (
                     <div className="p-3.5 rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-950/20 space-y-1 text-xs">
-                      <span className="font-bold text-amber-900 dark:text-amber-200">
-                        ⚡ Production Endpoint Modified:
+                      <span className="font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                        <ZapIcon className="w-3.5 h-3.5 text-amber-500" />
+                        <span>Production Endpoint Modified:</span>
                       </span>
                       <div className="grid grid-cols-2 gap-2 mt-1">
                         <div className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">

@@ -161,7 +161,14 @@ export class TelegramController {
     const name = dbUser?.name || req.user?.name || 'User';
     const email = dbUser?.email || req.user?.email || 'N/A';
     const result = await this.telegramService.sendMessageWithDetails(
-      `<b>⚡ Test Notification: Personal Direct Alert</b>\n\nHello <b>${name}</b>, this is a verified test notification from the Super App Backoffice.\n\nYour account (<code>${email}</code>) is receiving direct updates.`,
+      `<b>⚡ Test Notification: Personal Direct Alert</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<pre><code class="language-diff">
++ [STATUS] Direct Telegram Connection Active
++ [USER]   ${name} (${email})
++ [SCOPE]  Personal alerts, reviews & security scans
+</code></pre>
+<blockquote>Hello <b>${name}</b>, this is a verified test notification from the Super App Backoffice. Your account is connected and ready to receive real-time updates.</blockquote>`,
       chatId,
     );
 
@@ -185,7 +192,14 @@ export class TelegramController {
     const appName = body.miniAppName || 'Platform Ops & Dev Team Channel';
     const msgText =
       body.message ||
-      `<b>🏢 Test Notification: Team Channel Alert</b>\n\n<b>Channel:</b> <code>${targetChat}</code>\n<b>Target:</b> <b>${appName}</b>\n\nThis group channel is connected to receive automated security scan results, review status updates, and CI/CD test build APK alerts from the Super App Gateway.`;
+      `<b>🏢 Test Notification: Team Channel Alert</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<pre><code class="language-diff">
++ [CHANNEL] ${targetChat}
++ [TARGET]  ${appName}
++ [STATUS]  Automated alerts & build artifacts connected
+</code></pre>
+<blockquote>This group channel is connected to receive automated security scan results, review status updates, and CI/CD test build APK alerts from the Super App Gateway.</blockquote>`;
 
     const result = await this.telegramService.sendMessageWithDetails(
       msgText,

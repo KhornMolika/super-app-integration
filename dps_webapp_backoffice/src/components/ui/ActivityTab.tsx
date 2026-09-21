@@ -55,17 +55,24 @@ export default function ActivityTab({ miniAppId }: ActivityTabProps) {
     );
   }
 
+  const parseDate = (d?: string | Date): Date => {
+    if (!d) return new Date();
+    if (d instanceof Date) return d;
+    const str = d.endsWith('Z') || d.includes('+') ? d : `${d.replace(' ', 'T')}Z`;
+    return new Date(str);
+  };
+
   const groupActivitiesByDate = (acts: MiniAppActivity[]) => {
     const groups: { [date: string]: MiniAppActivity[] } = {};
     const today = new Date().toDateString();
     const yesterday = new Date(Date.now() - 86400000).toDateString();
 
     acts.forEach(act => {
-      const d = new Date(act.createdAt).toDateString();
+      const d = parseDate(act.createdAt).toDateString();
       let groupName = d;
       if (d === today) groupName = 'Today';
       else if (d === yesterday) groupName = 'Yesterday';
-      else groupName = new Date(act.createdAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+      else groupName = parseDate(act.createdAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
 
       if (!groups[groupName]) groups[groupName] = [];
       groups[groupName].push(act);
@@ -107,7 +114,7 @@ export default function ActivityTab({ miniAppId }: ActivityTabProps) {
                 <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800 shadow-sm">
                   <div className="flex items-center justify-between mb-1">
                     <h4 className="font-bold text-slate-900 dark:text-slate-100 text-base">{act.title}</h4>
-                    <span className="text-xs sm:text-sm text-slate-400 font-medium">{new Date(act.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span className="text-xs sm:text-sm text-slate-400 font-medium">{parseDate(act.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
                   {act.description && <p className="text-base text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">{act.description}</p>}
                   

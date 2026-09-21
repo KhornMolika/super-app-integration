@@ -51,7 +51,7 @@ export class AuditService implements OnApplicationBootstrap {
         resourceType: 'STORAGE',
         resourceId: 'minio-aistor',
         metadata: {
-          bucket: 'dsp-poc-storage',
+          bucket: 'superapp-storage',
           provider: 'MinIO AIStor Enterprise Object Storage',
           licenseStatus: 'VALID',
         },

@@ -34,4 +34,11 @@ export const superAppApi = {
       method: 'POST',
       body: { licenseKey },
     }),
+
+  getReleaseHistory: () =>
+    apiClient<any[]>('/api/super-app/releases/history'),
+
+  compareReleases: (base: string, target: string) =>
+    apiClient<any>(`/api/super-app/releases/compare?base=${encodeURIComponent(base)}&target=${encodeURIComponent(target)}`),
 };
+

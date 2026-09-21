@@ -405,6 +405,10 @@ export class MiniappsService {
     return this.permissionDetectorHelper.detect(body);
   }
 
+  async inspectPackageArtifact(file: Express.Multer.File) {
+    return this.miniappMutationHelper.inspectPackageArtifact(file);
+  }
+
   async uploadPackageArtifact(
     file: Express.Multer.File,
     miniAppId?: string,

@@ -237,10 +237,17 @@ export class MiniappValidationHelper {
 
       if (isArtifact) {
         const packageName = flutterConfig.packageName?.trim();
+        const hasPackageArchive = Boolean(
+          flutterConfig.packageStoragePath ||
+          flutterConfig.archiveChecksum ||
+          flutterConfig.packageUrl ||
+          flutterConfig.minioKey,
+        );
+
         if (!packageName) {
           errors['integrationConfigFlutter.packageName'] =
             'Package name is required for Artifact integration.';
-        } else {
+        } else if (!hasPackageArchive) {
           checks.push(
             this.nexusService
               .getPackageInfo(packageName)
@@ -255,13 +262,29 @@ export class MiniappValidationHelper {
                   `Could not verify package "${packageName}" on Nexus: ${err.message}`;
               }),
           );
+        } else {
+          this.logger.log(
+            `Package archive detected for "${packageName}" (Storage: ${flutterConfig.packageStoragePath || 'quarantine'}). CI validation pipeline will verify and publish to Nexus on review approval.`,
+          );
         }
       } else {
         const gitUrl = flutterConfig.gitUrl?.trim();
         if (!gitUrl) {
           errors['integrationConfigFlutter.gitUrl'] =
             'Git URL is required for Source Code integration.';
+        } else if (
+          flutterConfig.isPrivateRepo &&
+          flutterConfig.authMethod === 'token' &&
+          !flutterConfig.gitAccessToken &&
+          !flutterConfig.token
+        ) {
+          errors['integrationConfigFlutter.gitAccessToken'] =
+            'Access Token is required for Private repository with Token authentication.';
         } else {
+          const isDeployKey =
+            flutterConfig.isPrivateRepo &&
+            (flutterConfig.authMethod === 'deploy_key' || !flutterConfig.authMethod);
+
           checks.push(
             this.gitService
               .validatePackage(
@@ -273,9 +296,15 @@ export class MiniappValidationHelper {
               )
               .then(async (result) => {
                 if (!result.validation.isValid) {
-                  errors['integrationConfigFlutter.gitUrl'] =
-                    result.validation.error ||
-                    `Git repository or pubspec.yaml could not be verified for ${gitUrl}.`;
+                  if (isDeployKey) {
+                    this.logger.log(
+                      `Private Git repository configured with Deploy Key for ${gitUrl}. Full package verification will be orchestrated via Jenkins runner.`,
+                    );
+                  } else {
+                    errors['integrationConfigFlutter.gitUrl'] =
+                      result.validation.error ||
+                      `Git repository or pubspec.yaml could not be verified for ${gitUrl}.`;
+                  }
                 } else {
                   this.logger.log(
                     `Git repository metadata verified for ${gitUrl}. Automated security scanning and build integration will be orchestrated via Jenkins.`,
@@ -283,8 +312,14 @@ export class MiniappValidationHelper {
                 }
               })
               .catch((err) => {
-                errors['integrationConfigFlutter.gitUrl'] =
-                  `Could not verify Git repository "${gitUrl}": ${err.message}`;
+                if (isDeployKey) {
+                  this.logger.log(
+                    `Private Git repository with Deploy Key for ${gitUrl}: REST check skipped (${err.message}). Jenkins runner will verify with deploy key.`,
+                  );
+                } else {
+                  errors['integrationConfigFlutter.gitUrl'] =
+                    `Could not verify Git repository "${gitUrl}": ${err.message}`;
+                }
               }),
           );
         }
@@ -475,20 +510,13 @@ export class MiniappValidationHelper {
 
       const declaredPerms = Array.isArray(app.permissions)
         ? app.permissions
-            .map((p: any) => (typeof p === 'string' ? p : p.name || p.id))
+            .map((p: any) => (typeof p === 'string' ? p : p.name || p.id || p.type))
             .filter(Boolean)
         : [];
-      const requiredPerms = Array.isArray(app.permissions)
-        ? app.permissions
-            .filter((p: any) => p.isRequired)
-            .map((p: any) => p.name || p.id)
-            .filter(Boolean)
-        : [];
+      const requiredPerms = declaredPerms;
 
-      const allowedCaps =
-        declaredPerms.length > 0
-          ? declaredPerms
-          : ['camera', 'geolocator', 'local_auth'];
+      // Super App Host Supported Capabilities whitelist
+      const allowedCaps = ['camera', 'geolocator', 'location', 'local_auth', 'biometrics'];
       const requiredCaps = requiredPerms;
 
       const allowedDomains = Array.isArray(cfg.allowedDomains)
@@ -533,6 +561,14 @@ export class MiniappValidationHelper {
           allowedCapabilities: allowedCaps,
           requiredCapabilities: requiredCaps,
           checks: app.securityChecks || getDefaultChecksForMethod(method),
+          isPrivateRepo: cfg.isPrivateRepo === true,
+          gitAuthMethod: cfg.authMethod || (cfg.isPrivateRepo ? 'deploy_key' : 'none'),
+          gitAccessToken: cfg.gitAccessToken || cfg.token || '',
+          deployKey:
+            cfg.deployKey ||
+            (cfg.authMethod === 'deploy_key' || (cfg.isPrivateRepo && !cfg.gitAccessToken)
+              ? this.gitService.getDeployPrivateKey()
+              : ''),
         })
         .then(async (res) => {
           if (!res?.success) {

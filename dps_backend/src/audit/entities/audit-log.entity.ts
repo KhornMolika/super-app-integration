@@ -37,6 +37,6 @@ export class AuditLog {
   @Column({ nullable: true })
   userAgent!: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 }

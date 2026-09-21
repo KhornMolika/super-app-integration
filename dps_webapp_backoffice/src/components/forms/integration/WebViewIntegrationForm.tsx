@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button, Input, Label } from '@/components/ui/inputs';
 import { validateProductionUrlFormat, generateClientVerificationToken } from '@/lib/integration-utils';
 import { miniappsApi } from '@/api';
+import { CheckIcon, CheckCircleIcon, AlertTriangleIcon, XCircleIcon, ArrowRightIcon } from '@/components/ui/Icons';
 
 export interface WebViewIntegrationFormProps {
   formData: any;
@@ -296,18 +297,21 @@ export default function WebViewIntegrationForm({
 
           {/* Dynamic Real-Time Feedback Messages */}
           {prodUrlValidation.status === 'invalid' && (
-            <p className="mt-1.5 text-sm text-rose-600 font-medium flex items-center gap-1">
-              <span>✕</span> {prodUrlValidation.message}
+            <p className="mt-1.5 text-sm text-rose-600 font-medium flex items-center gap-1.5">
+              <XCircleIcon className="w-4 h-4 text-rose-500 shrink-0" />
+              <span>{prodUrlValidation.message}</span>
             </p>
           )}
           {prodUrlValidation.status === 'unreachable' && (
-            <p className="mt-1.5 text-sm text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1">
-              <span>⚠</span> {prodUrlValidation.message}
+            <p className="mt-1.5 text-sm text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1.5">
+              <AlertTriangleIcon className="w-4 h-4 text-amber-500 shrink-0" />
+              <span>{prodUrlValidation.message}</span>
             </p>
           )}
           {prodUrlValidation.status === 'valid' && (
-            <p className="mt-1.5 text-sm text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
-              <span>✓</span> {prodUrlValidation.message}
+            <p className="mt-1.5 text-sm text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1.5">
+              <CheckCircleIcon className="w-4 h-4 text-emerald-500 shrink-0" />
+              <span>{prodUrlValidation.message}</span>
             </p>
           )}
           {prodUrlValidation.status === 'idle' && allErrors['integrationConfigWebView.productionUrl'] && (
@@ -415,7 +419,7 @@ export default function WebViewIntegrationForm({
               className="text-brand-600 dark:text-brand-400 hover:underline inline-flex items-center gap-1 font-semibold text-sm"
             >
               <span>Learn more in documentation</span>
-              <span>→</span>
+              <ArrowRightIcon className="w-3.5 h-3.5" />
             </a>
           </div>
           <ol className="list-decimal list-inside space-y-2.5 text-slate-600 dark:text-slate-300 text-sm leading-relaxed pl-0.5">
@@ -591,9 +595,16 @@ export default function WebViewIntegrationForm({
                         setCopiedPath(true);
                         setTimeout(() => setCopiedPath(false), 2000);
                       }}
-                      className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm text-slate-200 font-semibold transition flex items-center gap-1"
+                      className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm text-slate-200 font-semibold transition flex items-center gap-1.5"
                     >
-                      {copiedPath ? '✓ Copied URL' : 'Copy URL'}
+                      {copiedPath ? (
+                        <>
+                          <CheckIcon className="w-3.5 h-3.5 text-emerald-500" />
+                          <span>Copied URL</span>
+                        </>
+                      ) : (
+                        'Copy URL'
+                      )}
                     </button>
                     <button
                       type="button"
@@ -602,9 +613,16 @@ export default function WebViewIntegrationForm({
                         setCopiedJson(true);
                         setTimeout(() => setCopiedJson(false), 2000);
                       }}
-                      className="px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-xs sm:text-sm text-white font-semibold transition flex items-center gap-1 shadow-sm"
+                      className="px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-xs sm:text-sm text-white font-semibold transition flex items-center gap-1.5 shadow-sm"
                     >
-                      {copiedJson ? '✓ Copied JSON' : 'Copy JSON'}
+                      {copiedJson ? (
+                        <>
+                          <CheckIcon className="w-3.5 h-3.5 text-white" />
+                          <span>Copied JSON</span>
+                        </>
+                      ) : (
+                        'Copy JSON'
+                      )}
                     </button>
                   </div>
                 </div>
@@ -639,9 +657,16 @@ export default function WebViewIntegrationForm({
                         setCopiedToken(true);
                         setTimeout(() => setCopiedToken(false), 2000);
                       }}
-                      className="text-xs sm:text-sm text-slate-400 hover:text-slate-200 underline font-sans font-medium"
+                      className="text-xs sm:text-sm text-slate-400 hover:text-slate-200 underline font-sans font-medium inline-flex items-center gap-1"
                     >
-                      {copiedToken ? '✓ Copied' : 'Copy Token'}
+                      {copiedToken ? (
+                        <>
+                          <CheckIcon className="w-3.5 h-3.5 text-emerald-500" />
+                          <span>Copied</span>
+                        </>
+                      ) : (
+                        'Copy Token'
+                      )}
                     </button>
                   </div>
                 </div>

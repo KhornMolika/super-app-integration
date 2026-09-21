@@ -750,14 +750,129 @@ export default function GuidelinesPage() {
 
           {/* Method 2: Flutter Package Artifact */}
           {activeMethodTab === "artifact" && (
-            <div className="space-y-4 pt-2">
+            <div className="space-y-6 pt-2">
               <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
                 <h5 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <PackageIcon /> Flutter Package Artifact (.tar.gz / .zip)
                 </h5>
                 <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                  Integrates a pre-compiled Flutter package archive directly. Uses zero-trust MinIO pre-signed URLs (50MB limit, 5-minute expiry) to upload directly to quarantine storage before inspection.
+                  Integrates a Flutter package archive directly into the Super App registry. Packages uploaded here undergo automated quarantine sanitization, static security scanning, and dependency resolution before promotion to private Sonatype Nexus registries.
                 </p>
+              </div>
+
+              {/* Package Archive Optimization & Size Reduction Guide */}
+              <div className="p-6 rounded-2xl border-2 border-indigo-500/40 dark:border-indigo-500/30 bg-gradient-to-br from-indigo-50/70 via-slate-50 to-white dark:from-indigo-950/30 dark:via-slate-900/60 dark:to-slate-900/40 shadow-sm space-y-6">
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                      <PackageIcon />
+                    </div>
+                    <div>
+                      <h5 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <span>Package Archive Optimization &amp; Size Reduction</span>
+                        <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                          99.5% Size Reduction
+                        </span>
+                      </h5>
+                      <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
+                        Reduce submission archives from <strong>300+ MB down to &lt; 1 MB</strong> by excluding intermediate build caches.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Root Cause Callout */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                  <div className="p-4 rounded-xl border border-rose-200 dark:border-rose-900/40 bg-rose-50/50 dark:bg-rose-950/20 text-rose-900 dark:text-rose-300 space-y-2">
+                    <strong className="flex items-center gap-1.5 font-bold text-rose-700 dark:text-rose-400 text-sm">
+                      <BanIcon /> What Causes 300+ MB Bloat (Exclude These)
+                    </strong>
+                    <ul className="space-y-1 list-disc pl-4 text-slate-700 dark:text-slate-300">
+                      <li><code>build/</code> (Gradle outputs, intermediate .dex/.class, C++ objects: ~200MB)</li>
+                      <li><code>.dart_tool/</code> (Dart kernel bytecode &amp; pub caches: ~80MB)</li>
+                      <li><code>android/.gradle/</code> &amp; <code>ios/Pods/</code> (Local build state &amp; daemons: ~100MB)</li>
+                      <li><code>.git/</code> (Complete local commit history &amp; packfiles)</li>
+                    </ul>
+                  </div>
+
+                  <div className="p-4 rounded-xl border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-900 dark:text-emerald-300 space-y-2">
+                    <strong className="flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-400 text-sm">
+                      <CheckCircleIcon /> Pure Source Needed (&lt; 1 MB)
+                    </strong>
+                    <ul className="space-y-1 list-disc pl-4 text-slate-700 dark:text-slate-300">
+                      <li><code>lib/</code> (All Dart widgets, business logic, and UI code)</li>
+                      <li><code>pubspec.yaml</code> (Package metadata &amp; dependency constraints)</li>
+                      <li><code>assets/</code> (Images, icons, fonts if bundled)</li>
+                      <li><code>README.md</code>, <code>CHANGELOG.md</code>, <code>LICENSE</code></li>
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Option 1: Manual Clean */}
+                <div className="space-y-3">
+                  <h6 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
+                    <WrenchIcon />
+                    <span>Option 1: Quick Terminal Clean Before Zipping</span>
+                  </h6>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Execute <code>flutter clean</code> and purge residual tooling caches before compressing your release archive:
+                  </p>
+                  <VSCodeEditor
+                    files={[
+                      {
+                        filename: "PowerShell (Windows)",
+                        language: "yaml",
+                        code: `# 1. Clean Flutter build output\nflutter clean\n\n# 2. Scrub residual cache folders\nRemove-Item -Recurse -Force build, .dart_tool, .git -ErrorAction SilentlyContinue\n\n# 3. Create minimal zip archive\nCompress-Archive -Path "lib", "pubspec.yaml", "assets", "README.md" -DestinationPath "my_miniapp-1.0.0.zip"`,
+                      },
+                      {
+                        filename: "Bash (macOS / Linux)",
+                        language: "yaml",
+                        code: `# 1. Clean Flutter build output\nflutter clean\n\n# 2. Scrub residual cache folders\nrm -rf build .dart_tool .git .gradle android/.gradle ios/Pods\n\n# 3. Create minimal zip archive\nzip -r my_miniapp-1.0.0.zip lib pubspec.yaml assets README.md -x "*.DS_Store"`,
+                      },
+                    ]}
+                  />
+                </div>
+
+                {/* Option 2: Automated Packing Scripts */}
+                <div className="space-y-3">
+                  <h6 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
+                    <PackageIcon />
+                    <span>Option 2: Automated Turnkey Pack Scripts (`pack-miniapp`)</span>
+                  </h6>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Use our ready-to-use packaging utilities in your repository root to automatically sanitize and produce minimal release archives:
+                  </p>
+                  <VSCodeEditor
+                    files={[
+                      {
+                        filename: "scripts/pack-miniapp.ps1",
+                        language: "yaml",
+                        code: `# Execute from your Flutter Mini App root in PowerShell:\n.\\scripts\\pack-miniapp.ps1\n\n# Or specify an output directory:\n.\\scripts\\pack-miniapp.ps1 -OutputDir "..\\dist"\n\n# Output:\n# [SUCCESS] Mini App Package Successfully Created: miniapp-1.0.0.zip (820.4 KB)`,
+                      },
+                      {
+                        filename: "scripts/pack-miniapp.sh",
+                        language: "yaml",
+                        code: `# Make executable and run in macOS / Linux terminal:\nchmod +x scripts/pack-miniapp.sh\n./scripts/pack-miniapp.sh\n\n# Output:\n# [SUCCESS] Mini App Package Successfully Created: miniapp-1.0.0.zip (820.4 KB)`,
+                      },
+                      {
+                        filename: ".pubignore",
+                        language: "yaml",
+                        code: `# Standard .pubignore for Flutter Mini Apps\nbuild/\n.dart_tool/\n.gradle/\nandroid/.gradle/\nios/Pods/\n.idea/\n.vscode/\n*.apk\n*.aar\n*.ipa\n.DS_Store`,
+                      },
+                    ]}
+                  />
+                </div>
+
+                {/* Backend Quarantine Gateway Architecture */}
+                <div className="p-4 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-900/80 space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-400">
+                    <ShieldIcon />
+                    <span>Platform Ingestion Safety: Backend Quarantine Sanitizer</span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                    If an uncleaned archive (300+ MB) is accidentally uploaded, the Super App <strong>Backend Gateway Sanitizer</strong> automatically strips local build artifacts in-memory before writing to MinIO <code>package-submissions/</code>. The CI pipeline then performs static analysis on pure source code and publishes canonical <code>.tar.gz</code> packages to Sonatype Nexus <code>pub-hosted</code>.
+                  </p>
+                </div>
               </div>
             </div>
           )}
@@ -835,7 +950,8 @@ export default function GuidelinesPage() {
           <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <h5 className="font-bold text-slate-900 dark:text-white text-sm uppercase tracking-wider flex items-center gap-2">
-                <span>🛡️ Maximizing App Store & Google Play Approval Probability</span>
+                <ShieldIcon />
+                <span>Maximizing App Store & Google Play Approval Probability</span>
               </h5>
               <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
                 Apple Guideline 4.7 & Google Play Host Policy
@@ -911,17 +1027,17 @@ export default function GuidelinesPage() {
               <div className="grid grid-cols-2 gap-2 text-sm font-mono">
                 <div className="p-3 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
                   <span className="text-xs text-slate-400 font-sans block mb-1 font-semibold uppercase">Super App Supports:</span>
-                  <div className="text-emerald-600 dark:text-emerald-400">• Camera ✅</div>
-                  <div className="text-emerald-600 dark:text-emerald-400">• Location ✅</div>
-                  <div className="text-emerald-600 dark:text-emerald-400">• Notification ✅</div>
+                  <div className="text-emerald-600 dark:text-emerald-400">• Camera [OK]</div>
+                  <div className="text-emerald-600 dark:text-emerald-400">• Location [OK]</div>
+                  <div className="text-emerald-600 dark:text-emerald-400">• Notification [OK]</div>
                 </div>
                 <div className="p-3 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
                   <span className="text-xs text-slate-400 font-sans block mb-1 font-semibold uppercase">Mini App Requests (5):</span>
-                  <div className="text-emerald-600 dark:text-emerald-400">• Camera (Req) ✅</div>
-                  <div className="text-emerald-600 dark:text-emerald-400">• Location (Req) ✅</div>
-                  <div className="text-emerald-600 dark:text-emerald-400">• Notification (Opt) ✅</div>
-                  <div className="text-rose-500 font-semibold">• Contacts (Opt) ❌</div>
-                  <div className="text-rose-500 font-semibold">• Microphone (Req) ⚠️</div>
+                  <div className="text-emerald-600 dark:text-emerald-400">• Camera (Req) [OK]</div>
+                  <div className="text-emerald-600 dark:text-emerald-400">• Location (Req) [OK]</div>
+                  <div className="text-emerald-600 dark:text-emerald-400">• Notification (Opt) [OK]</div>
+                  <div className="text-rose-500 font-semibold">• Contacts (Opt) [BLOCKED]</div>
+                  <div className="text-rose-500 font-semibold">• Microphone (Req) [UNSUPPORTED]</div>
                 </div>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
@@ -938,8 +1054,8 @@ export default function GuidelinesPage() {
                 <div className="text-slate-400">Mini App requests N capabilities</div>
                 <div className="text-slate-500 pl-4">↓ Compare with Super App catalog (M supported)</div>
                 <div className="text-amber-400">Required capability unsupported?</div>
-                <div className="text-rose-400 pl-4">├── Yes → ❌ REJECT Mini App</div>
-                <div className="text-emerald-400 pl-4">└── No  → ✅ Continue (Optional features disabled)</div>
+                <div className="text-rose-400 pl-4">├── Yes → REJECT Mini App</div>
+                <div className="text-emerald-400 pl-4">└── No  → Continue (Optional features disabled)</div>
                 <div className="text-slate-400 pl-8">↓</div>
                 <div className="text-indigo-300 pl-8">M supported capabilities exposed</div>
                 <div className="text-slate-400 pl-8">↓</div>

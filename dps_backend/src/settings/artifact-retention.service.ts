@@ -93,6 +93,17 @@ export class ArtifactRetentionService implements OnModuleInit {
     this.logger.log(
       `Artifact retention policy updated: schedule=${updated.scheduleType}, time=${updated.scheduleTime}, retentionDays=${updated.retentionDays}d, keepLast=${updated.maxTestBuildsPerApp}`,
     );
+
+    // If specific datetime is set and already reached/passed, execute immediately
+    if (updated.enabled && updated.scheduleType === 'specific_datetime' && updated.specificRunDateTime) {
+      const targetTime = new Date(updated.specificRunDateTime).getTime();
+      if (Date.now() >= targetTime) {
+        this.checkAndExecuteScheduledRun().catch((err) => {
+          this.logger.error(`Error in immediate execution of scheduled retention: ${err.message}`);
+        });
+      }
+    }
+
     return updated;
   }
 
@@ -120,13 +131,13 @@ export class ArtifactRetentionService implements OnModuleInit {
   }
 
   private startScheduleChecker() {
-    // Check every 60 seconds against policy schedule
+    // Check every 30 seconds against policy schedule
     if (this.intervalTimer) clearInterval(this.intervalTimer);
     this.intervalTimer = setInterval(() => {
       this.checkAndExecuteScheduledRun().catch((err) => {
         this.logger.error(`Error in scheduled artifact retention checker: ${err.message}`);
       });
-    }, 60 * 1000);
+    }, 30 * 1000);
   }
 
   private async checkAndExecuteScheduledRun() {
@@ -140,9 +151,8 @@ export class ArtifactRetentionService implements OnModuleInit {
 
     if (policy.scheduleType === 'specific_datetime' && policy.specificRunDateTime) {
       const targetTime = new Date(policy.specificRunDateTime).getTime();
-      const diffMinutes = Math.abs(now.getTime() - targetTime) / (60 * 1000);
-      if (diffMinutes <= 1) {
-        this.logger.log(`Triggering scheduled 1-time artifact cleanup for ${policy.specificRunDateTime}...`);
+      if (now.getTime() >= targetTime) {
+        this.logger.log(`Target execution datetime ${policy.specificRunDateTime} reached or passed. Triggering scheduled cleanup...`);
         await this.executePruning('SCHEDULED_SPECIFIC_DATETIME');
         // Reset specific datetime to prevent repeating
         await this.updatePolicy({ specificRunDateTime: null, scheduleType: 'recurring' });
@@ -169,7 +179,7 @@ export class ArtifactRetentionService implements OnModuleInit {
 
   private getNexusAuthHeader(): Record<string, string> {
     const user = this.configService.get<string>('NEXUS_ADMIN_USER', 'admin');
-    const pass = this.configService.get<string>('NEXUS_ADMIN_PASSWORD', 'Admin@123');
+    const pass = this.configService.get<string>('NEXUS_ADMIN_PASSWORD', 'admin123');
     const b64 = Buffer.from(`${user}:${pass}`).toString('base64');
     return { Authorization: `Basic ${b64}`, Accept: 'application/json' };
   }
@@ -216,17 +226,20 @@ export class ArtifactRetentionService implements OnModuleInit {
           appGroups[groupKey].push(item);
         }
 
-        // Apply Dual-rule estimation: keep last N builds, check age for rest
+        // Apply Dual-rule estimation: keep last N builds, check age or scheduled excess
         for (const groupKey of Object.keys(appGroups)) {
           const list = appGroups[groupKey];
-          list.sort((a, b) => new Date(b.lastModified || 0).getTime() - new Date(a.lastModified || 0).getTime());
+          list.sort((a, b) => {
+            if (a.path?.includes('/latest/')) return -1;
+            if (b.path?.includes('/latest/')) return 1;
+            const timeA = new Date(a.lastModified || a.blobCreated || 0).getTime();
+            const timeB = new Date(b.lastModified || b.blobCreated || 0).getTime();
+            return timeB - timeA;
+          });
           const candidates = list.slice(policy.maxTestBuildsPerApp);
           for (const item of candidates) {
-            const itemDate = new Date(item.lastModified || item.blobCreated || 0);
-            if (itemDate < cutoffDate) {
-              prunableCount++;
-              prunableSizeMb += (item.fileSize || 50 * 1024 * 1024) / (1024 * 1024);
-            }
+            prunableCount++;
+            prunableSizeMb += (item.fileSize || 50 * 1024 * 1024) / (1024 * 1024);
           }
         }
       }
@@ -331,7 +344,13 @@ export class ArtifactRetentionService implements OnModuleInit {
           // Enforce dual-rule: protect last N builds, delete older ones
           for (const groupKey of Object.keys(appGroups)) {
             const list = appGroups[groupKey];
-            list.sort((a, b) => new Date(b.lastModified || 0).getTime() - new Date(a.lastModified || 0).getTime());
+            list.sort((a, b) => {
+              if (a.path?.includes('/latest/')) return -1;
+              if (b.path?.includes('/latest/')) return 1;
+              const timeA = new Date(a.lastModified || a.blobCreated || 0).getTime();
+              const timeB = new Date(b.lastModified || b.blobCreated || 0).getTime();
+              return timeB - timeA;
+            });
             
             // Retain top N builds unconditionally
             const protectedItems = list.slice(0, policy.maxTestBuildsPerApp);
@@ -347,10 +366,16 @@ export class ArtifactRetentionService implements OnModuleInit {
             const remainder = list.slice(policy.maxTestBuildsPerApp);
             for (const item of remainder) {
               const itemDate = new Date(item.lastModified || item.blobCreated || 0);
-              if (itemDate < cutoffDate || triggerSource === 'MANUAL') {
+              const isOlder = itemDate < cutoffDate;
+              const shouldPrune =
+                triggerSource === 'MANUAL' ||
+                triggerSource === 'SCHEDULED_SPECIFIC_DATETIME' ||
+                isOlder;
+
+              if (shouldPrune) {
                 try {
                   const delRes = await fetch(
-                    `${baseUrl}/service/rest/v1/assets/${item.id}`,
+                    `${baseUrl}/service/rest/v1/assets/${encodeURIComponent(item.id)}`,
                     { method: 'DELETE', headers: authHeaders },
                   );
                   if (delRes.ok || delRes.status === 204) {

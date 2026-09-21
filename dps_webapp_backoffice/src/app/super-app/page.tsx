@@ -7,6 +7,8 @@ import { Card } from '@/components/ui/card';
 import { Button, Input, Label } from '@/components/ui/inputs';
 import { toast } from '@/components/ui/Toast';
 import { superAppApi, telegramApi, EcosystemStatus } from '@/api';
+import PreviewModal from '@/components/ui/PreviewModal';
+import { DevicePhoneIcon } from '@/components/ui/Icons';
 
 interface StorageStatus {
   configured: boolean;
@@ -28,6 +30,22 @@ export default function SuperAppEcosystemPage() {
   const [storageStatus, setStorageStatus] = useState<StorageStatus | null>(null);
   const [telegramInfo, setTelegramInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isSandboxOpen, setIsSandboxOpen] = useState(false);
+
+  // Auto-launch sandbox if query parameter ?preview=true, ?sandbox=true, or ?tab=sandbox is provided
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (
+        params.get('preview') === 'true' ||
+        params.get('preview') === '1' ||
+        params.get('tab') === 'sandbox' ||
+        params.get('sandbox') === 'true'
+      ) {
+        setIsSandboxOpen(true);
+      }
+    }
+  }, []);
 
   // MinIO AIStor License management state
   const [licenseKey, setLicenseKey] = useState('');
@@ -104,22 +122,32 @@ export default function SuperAppEcosystemPage() {
               Live status, runtime sandboxes, bridge capabilities, enterprise storage engines, and integrated gateways.
             </p>
           </div>
-          <Button
-            onClick={fetchEcosystemData}
-            variant="outline"
-            disabled={loading}
-            className="flex items-center gap-2 text-sm shrink-0"
-          >
-            <svg
-              className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          <div className="flex items-center gap-3 shrink-0">
+            <Button
+              onClick={() => setIsSandboxOpen(true)}
+              variant="primary"
+              className="bg-gradient-to-r from-brand-600 via-indigo-600 to-purple-600 hover:from-brand-700 hover:via-indigo-700 hover:to-purple-700 text-white font-bold flex items-center gap-2 text-sm shadow-md hover:shadow-lg transition-all"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            <span>{loading ? 'Refreshing...' : 'Refresh Architecture'}</span>
-          </Button>
+              <DevicePhoneIcon className="w-4 h-4" />
+              <span>Launch Live Web Sandbox</span>
+            </Button>
+            <Button
+              onClick={fetchEcosystemData}
+              variant="outline"
+              disabled={loading}
+              className="flex items-center gap-2 text-sm shrink-0"
+            >
+              <svg
+                className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>{loading ? 'Refreshing...' : 'Refresh Architecture'}</span>
+            </Button>
+          </div>
         </div>
 
         {/* Status Metrics Cards */}
@@ -563,6 +591,16 @@ export default function SuperAppEcosystemPage() {
             </div>
           </div>
         </Card>
+
+        {/* Live Super App Web Sandbox Simulator Modal */}
+        <PreviewModal
+          isOpen={isSandboxOpen}
+          onClose={() => setIsSandboxOpen(false)}
+          url="/superapp-sandbox/index.html"
+          title="Super App Web Sandbox"
+          version={status?.superAppTestVersion || status?.superAppVersion || 'v0.3.1'}
+          isFlutter={true}
+        />
       </div>
     </ProtectedRoute>
   );

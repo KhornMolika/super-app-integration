@@ -1,18 +1,19 @@
 'use client';
 
 import React from 'react';
+import { CheckIcon } from '@/components/ui/Icons';
 
 export interface RegistrationWizardStepsProps {
   currentStep: number;
 }
 
-const STEP_LABELS = ['Basic Info', 'Team', 'Integration', 'Permissions', 'Review'];
+const STEP_LABELS = ['Basic Info', 'Team', 'Integration', 'Permissions', 'Security', 'Review'];
 
 export default function RegistrationWizardSteps({ currentStep }: RegistrationWizardStepsProps) {
   return (
     <div className="mb-8">
       <div className="flex items-center justify-between mb-4">
-        {[1, 2, 3, 4, 5].map((s) => (
+        {[1, 2, 3, 4, 5, 6].map((s) => (
           <div key={s} className="flex flex-col items-center flex-1">
             <div
               className={`w-9 h-9 rounded-full flex items-center justify-center text-base font-bold transition-colors ${
@@ -23,7 +24,7 @@ export default function RegistrationWizardSteps({ currentStep }: RegistrationWiz
                   : 'bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
               }`}
             >
-              {currentStep > s ? '✓' : s}
+              {currentStep > s ? <CheckIcon className="w-5 h-5" /> : s}
             </div>
             <span className={`text-sm mt-2 hidden sm:block ${
               currentStep === s
@@ -38,7 +39,7 @@ export default function RegistrationWizardSteps({ currentStep }: RegistrationWiz
       <div className="h-1 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
         <div
           className="h-full bg-brand-600 transition-all duration-300 ease-out"
-          style={{ width: `${(currentStep / 5) * 100}%` }}
+          style={{ width: `${(currentStep / 6) * 100}%` }}
         />
       </div>
     </div>

@@ -7,6 +7,21 @@ import { Button } from '@/components/ui/inputs';
 import { Card, CardHeader } from '@/components/ui/card';
 import { miniappsApi } from '@/api';
 import SecurityValidationSelector, { ALL_SECURITY_CHECKS, getRecommendedChecksForMethod } from '@/components/forms/SecurityValidationSelector';
+import {
+  PackageIcon,
+  GlobeIcon,
+  KeyIcon,
+  ShieldIcon,
+  ShieldCheckIcon,
+  ClipboardCheckIcon,
+  LockIcon,
+  ZapIcon,
+  VirusIcon,
+  SearchIcon,
+  CheckIcon,
+  AlertTriangleIcon,
+  XIcon,
+} from '@/components/ui/Icons';
 
 export interface ValidationReportProps {
   miniApp: any;
@@ -22,12 +37,46 @@ export interface StageCatalogItem {
   description: string;
 }
 
+export function getStageIcon(stageId: string, className = "w-4 h-4") {
+  switch (stageId) {
+    case 'ingest':
+    case 'dependency_scan':
+      return <PackageIcon className={className} />;
+    case 'ssrf':
+    case 'domain_tls_audit':
+    case 'tls':
+      return <GlobeIcon className={className} />;
+    case 'secret_scan':
+    case 'secrets':
+      return <KeyIcon className={className} />;
+    case 'sast':
+    case 'malware_sast':
+    case 'csp_headers_audit':
+      return <ShieldIcon className={className} />;
+    case 'sbom':
+    case 'license_compliance':
+      return <ClipboardCheckIcon className={className} />;
+    case 'dast_zap':
+    case 'zap':
+      return <ZapIcon className={className} />;
+    case 'malware_scan':
+      return <VirusIcon className={className} />;
+    case 'capability_gate':
+      return <LockIcon className={className} />;
+    case 'sca':
+    case 'nuclei':
+      return <SearchIcon className={className} />;
+    default:
+      return <ShieldIcon className={className} />;
+  }
+}
+
 export const STAGE_CATALOG: Record<string, StageCatalogItem> = {
   ingest: {
     id: 'ingest',
     name: 'Ingestion & Integrity Verification',
     tool: 'Cryptographic SHA-256 Digest',
-    icon: '📦',
+    icon: 'package',
     defaultTitle: 'Source Unpack & SHA-256 Digest',
     description: 'Unpacks package source and verifies cryptographic checksum and manifest structure.',
   },
@@ -35,7 +84,7 @@ export const STAGE_CATALOG: Record<string, StageCatalogItem> = {
     id: 'ssrf',
     name: 'Pre-Flight & SSRF Defense',
     tool: 'DNS / IP Routing Filter',
-    icon: '🌐',
+    icon: 'globe',
     defaultTitle: 'DNS & IP Routing Audit',
     description: 'Resolves DNS and verifies routing to prevent server-side request forgery.',
   },
@@ -43,7 +92,7 @@ export const STAGE_CATALOG: Record<string, StageCatalogItem> = {
     id: 'dependency_scan',
     name: 'Dependency Vulnerability Scan (SCA / CVE)',
     tool: 'Trivy / OSV Audit',
-    icon: '📦',
+    icon: 'package',
     defaultTitle: 'Dependency Vulnerability (CVE) Audit',
     description: 'Scans third-party packages and dependencies for known CVE vulnerabilities.',
   },
@@ -51,7 +100,7 @@ export const STAGE_CATALOG: Record<string, StageCatalogItem> = {
     id: 'secret_scan',
     name: 'Secret & API Key Leak Detection',
     tool: 'Gitleaks / TruffleHog',
-    icon: '🔑',
+    icon: 'key',
     defaultTitle: 'Gitleaks & API Key Scan',
     description: 'Detects exposed private keys, JWT secrets, and hardcoded API tokens.',
   },
@@ -59,7 +108,7 @@ export const STAGE_CATALOG: Record<string, StageCatalogItem> = {
     id: 'sast',
     name: 'Static Application Security Testing (SAST)',
     tool: 'Semgrep / SonarQube / AST Guard',
-    icon: '🛡️',
+    icon: 'shield',
     defaultTitle: 'Dart AST & Sandbox Guard',
     description: 'Analyzes source code for security flaws, unsafe memory operations, and prohibited native calls.',
   },
@@ -67,7 +116,7 @@ export const STAGE_CATALOG: Record<string, StageCatalogItem> = {
     id: 'sbom',
     name: 'Software Bill of Materials (SBOM)',
     tool: 'Syft / CycloneDX',
-    icon: '📋',
+    icon: 'clipboard',
     defaultTitle: 'CycloneDX & SPDX Manifest Generation',
     description: 'Generates cryptographic CycloneDX & SPDX SBOM manifests of all dependencies.',
   },
@@ -75,7 +124,7 @@ export const STAGE_CATALOG: Record<string, StageCatalogItem> = {
     id: 'domain_tls_audit',
     name: 'Domain TLS/SSL & Transport Security',
     tool: 'testssl.sh / SSL Labs',
-    icon: '🔒',
+    icon: 'lock',
     defaultTitle: 'SSL/TLS Cipher Suite Audit',
     description: 'Audits TLS 1.2/1.3 cipher suites, HTTPS certificates, HSTS headers, and SSRF routing.',
   },
@@ -83,7 +132,7 @@ export const STAGE_CATALOG: Record<string, StageCatalogItem> = {
     id: 'csp_headers_audit',
     name: 'Security Headers & CSP Audit',
     tool: 'SecurityHeaders / ZAP Audit',
-    icon: '🛡️',
+    icon: 'shield',
     defaultTitle: 'Security Headers & CSP Audit',
     description: 'Verifies Content-Security-Policy, X-Frame-Options, CORS origins, and cookie security flags.',
   },
@@ -91,7 +140,7 @@ export const STAGE_CATALOG: Record<string, StageCatalogItem> = {
     id: 'dast_zap',
     name: 'Dynamic Application Security Scan (DAST)',
     tool: 'OWASP ZAP DAST',
-    icon: '⚡',
+    icon: 'zap',
     defaultTitle: 'DAST, XSS & CSP Audit',
     description: 'Dynamic probing for cross-site scripting (XSS), CSRF, and sensitive endpoint exposure.',
   },
@@ -99,7 +148,7 @@ export const STAGE_CATALOG: Record<string, StageCatalogItem> = {
     id: 'malware_scan',
     name: 'Malware & Binary Signature Scan',
     tool: 'ClamAV / YARA',
-    icon: '🦠',
+    icon: 'virus',
     defaultTitle: 'Malware & Binary Signature Heuristics',
     description: 'Deep signature inspection of compiled binaries and assets for malicious payloads.',
   },
@@ -107,7 +156,7 @@ export const STAGE_CATALOG: Record<string, StageCatalogItem> = {
     id: 'license_compliance',
     name: 'Open Source License Compliance',
     tool: 'FOSSA / License-Checker',
-    icon: '📜',
+    icon: 'document',
     defaultTitle: 'License IP & Copyleft Compliance',
     description: 'Verifies dependency licenses against platform IP guidelines and copyleft restrictions.',
   },
@@ -115,7 +164,7 @@ export const STAGE_CATALOG: Record<string, StageCatalogItem> = {
     id: 'capability_gate',
     name: 'Host Capability Gatekeeper Audit',
     tool: 'Super App Gatekeeper',
-    icon: '🚪',
+    icon: 'lock',
     defaultTitle: 'Super App Capability Boundary Verification',
     description: 'Verifies declared host capabilities against platform policies and app store guidelines.',
   },
@@ -124,7 +173,7 @@ export const STAGE_CATALOG: Record<string, StageCatalogItem> = {
     id: 'secrets',
     name: 'Secret & API Key Leak Detection',
     tool: 'Gitleaks / TruffleHog',
-    icon: '🔑',
+    icon: 'key',
     defaultTitle: 'Gitleaks & API Key Scan',
     description: 'Detects exposed private keys, JWT secrets, and hardcoded API tokens.',
   },
@@ -132,7 +181,7 @@ export const STAGE_CATALOG: Record<string, StageCatalogItem> = {
     id: 'malware_sast',
     name: 'Malware & Static Code Analysis (SAST)',
     tool: 'Dart AST & Sandbox Guard',
-    icon: '🛡️',
+    icon: 'shield',
     defaultTitle: 'Dart AST & Sandbox Guard',
     description: 'Analyzes source code for security flaws and prohibited native calls.',
   },
@@ -140,7 +189,7 @@ export const STAGE_CATALOG: Record<string, StageCatalogItem> = {
     id: 'sca',
     name: 'Software Composition Analysis (SCA)',
     tool: 'Dependency Vulnerability (CVE) Audit',
-    icon: '🔍',
+    icon: 'search',
     defaultTitle: 'Dependency Vulnerability (CVE) Audit',
     description: 'Scans third-party packages for known CVE vulnerabilities.',
   },
@@ -148,7 +197,7 @@ export const STAGE_CATALOG: Record<string, StageCatalogItem> = {
     id: 'tls',
     name: 'TLS & HTTPS Security',
     tool: 'SSL/TLS Cipher Suite Audit',
-    icon: '🔒',
+    icon: 'lock',
     defaultTitle: 'SSL/TLS Cipher Suite Audit',
     description: 'Audits TLS 1.2/1.3 cipher suites and HTTPS encryption.',
   },
@@ -156,7 +205,7 @@ export const STAGE_CATALOG: Record<string, StageCatalogItem> = {
     id: 'zap',
     name: 'OWASP ZAP DAST Scan',
     tool: 'OWASP ZAP DAST',
-    icon: '⚡',
+    icon: 'zap',
     defaultTitle: 'DAST, XSS & CSP Audit',
     description: 'Dynamic probing for cross-site scripting and security headers.',
   },
@@ -164,7 +213,7 @@ export const STAGE_CATALOG: Record<string, StageCatalogItem> = {
     id: 'nuclei',
     name: 'Exposure & Vulnerability Audit',
     tool: 'Secret & CVE Exposure Check',
-    icon: '🔍',
+    icon: 'search',
     defaultTitle: 'Secret & CVE Exposure Check',
     description: 'Probes for exposed endpoints, secrets, and CVE vulnerabilities.',
   },
@@ -284,7 +333,7 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
         id: key,
         name: key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
         tool: 'Security Engine',
-        icon: '🔍',
+        icon: 'search',
         defaultTitle: 'Security Audit Check',
         description: 'Automated platform security audit.',
       };
@@ -376,7 +425,7 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
     if (valStatus === 'RUNNING' || isReScanning) {
       const interval = setInterval(() => {
         if (onRefresh) onRefresh();
-      }, 1000);
+      }, 2000);
       return () => clearInterval(interval);
     }
   }, [valStatus, isReScanning, onRefresh]);
@@ -417,7 +466,7 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
         id: cId,
         name: checkMeta?.name || cId,
         tool: checkMeta?.tool || 'Security Engine',
-        icon: STAGE_CATALOG[cId]?.icon || '🛡️',
+        icon: STAGE_CATALOG[cId]?.icon || 'shield',
       };
     });
   }, [miniApp.securityChecks, miniApp.integrationMethod]);
@@ -447,7 +496,7 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
               className="ml-2 text-slate-400 hover:text-white p-0.5 rounded transition-colors"
               aria-label="Dismiss notification"
             >
-              ✕
+              <XIcon className="w-4 h-4" />
             </button>
           </div>
         </div>,
@@ -504,8 +553,13 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
                     </>
                   ) : valStatus === 'PASSED' ? (
                     <>
-                      <span>✓</span>
+                      <CheckIcon className="w-3.5 h-3.5" />
                       <span>PASSED</span>
+                    </>
+                  ) : valStatus === 'FAILED' ? (
+                    <>
+                      <XIcon className="w-3.5 h-3.5" />
+                      <span>SECURITY AUDIT FAILED</span>
                     </>
                   ) : (
                     valStatus
@@ -615,7 +669,8 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
         <div className="mt-4 pt-4 border-b border-slate-100 dark:border-slate-800/80">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-              <span>🛡️</span> Active Security Scan Profile ({activeProfileChecks.length} checks enabled)
+              <ShieldCheckIcon className="w-4 h-4 text-slate-500" />
+              <span>Active Security Scan Profile ({activeProfileChecks.length} checks enabled)</span>
             </span>
             <button
               onClick={() => setShowConfigModal(true)}
@@ -630,7 +685,7 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
                 key={chk.id}
                 className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
               >
-                <span>{chk.icon}</span>
+                {getStageIcon(chk.id, "w-3.5 h-3.5 text-slate-500")}
                 <span>{chk.name}</span>
                 <span className="text-[10px] text-slate-400 bg-slate-200/60 dark:bg-slate-700/60 px-1.5 py-0.5 rounded">
                   {chk.tool}
@@ -639,92 +694,6 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
             ))}
           </div>
         </div>
-
-        {/* Dynamic Security Controls Overview Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-6">
-          {activeStages.map((st) => {
-            const recorded = st.recorded;
-            const checkData = report?.checks?.[st.id]
-              || (st.id === 'sast' ? (report?.checks?.malware_sast || report?.checks?.sast) : null)
-              || (st.id === 'dependency_scan' ? (report?.checks?.sca || report?.checks?.dependency_scan) : null)
-              || (st.id === 'dast_zap' ? (report?.checks?.dast || report?.checks?.dast_zap || report?.checks?.zap) : null)
-              || (st.id === 'domain_tls_audit' ? (report?.checks?.tls || report?.checks?.domain_tls_audit) : null)
-              || (st.id === 'secret_scan' ? (report?.checks?.secrets || report?.checks?.secret_scan) : null)
-              || (st.id === 'csp_headers_audit' ? (report?.checks?.csp_headers_audit || report?.checks?.csp) : null)
-              || (st.id === 'capability_gate' ? (report?.checks?.capability_gate || report?.checks?.capabilities) : null)
-              || (st.id === 'sbom' ? (report?.checks?.sbom) : null);
-            
-            let stageStatus = 'PENDING';
-            if (isScanningActive) {
-              if (recorded?.status === 'COMPLETED') stageStatus = 'COMPLETED';
-              else if (recorded?.status === 'RUNNING') stageStatus = 'RUNNING';
-              else if (recorded?.status === 'FAILED') stageStatus = 'FAILED';
-              else if (!recorded && st.index === 1) stageStatus = 'RUNNING';
-              else stageStatus = 'PENDING';
-            } else {
-              if (recorded?.status === 'COMPLETED' || checkData?.passed === true) stageStatus = 'COMPLETED';
-              else if (recorded?.status === 'FAILED' || checkData?.passed === false || valStatus === 'FAILED') stageStatus = 'FAILED';
-              else stageStatus = 'PENDING';
-            }
-
-            const isPassed = stageStatus === 'COMPLETED';
-            const isRunning = stageStatus === 'RUNNING';
-            const isFailed = stageStatus === 'FAILED';
-
-            return (
-              <div
-                key={st.id}
-                className={`p-4 rounded-xl border flex flex-col justify-between transition-all ${
-                  isRunning
-                    ? 'border-brand-300 dark:border-brand-700 bg-brand-50/60 dark:bg-brand-950/40 ring-2 ring-brand-500/20 shadow-sm'
-                    : isPassed
-                    ? 'border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/30 dark:bg-emerald-950/15'
-                    : isFailed
-                    ? 'border-rose-200 dark:border-rose-900/40 bg-rose-50/40 dark:bg-rose-950/20'
-                    : 'border-slate-100 dark:border-slate-800/80 bg-slate-50/40 dark:bg-slate-800/30 opacity-75'
-                }`}
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-base flex-shrink-0">{st.icon}</span>
-                      <span className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">
-                        {st.title}
-                      </span>
-                    </div>
-                    {isPassed ? (
-                      <span className="text-emerald-600 dark:text-emerald-400 font-bold text-xs bg-emerald-100/80 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full flex-shrink-0 flex items-center gap-1">
-                        <span>✓</span> PASSED
-                      </span>
-                    ) : isRunning ? (
-                      <span className="text-brand-600 dark:text-brand-400 text-xs font-bold bg-brand-100/80 dark:bg-brand-950/60 border border-brand-200 dark:border-brand-800 px-2 py-0.5 rounded-full flex-shrink-0 flex items-center gap-1 animate-pulse">
-                        <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                        </svg>
-                        CHECKING...
-                      </span>
-                    ) : isFailed ? (
-                      <span className="text-rose-600 dark:text-rose-400 font-bold text-xs bg-rose-100/80 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 px-2 py-0.5 rounded-full flex-shrink-0">
-                        FAILED
-                      </span>
-                    ) : (
-                      <span className="text-slate-400 font-bold text-xs bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full flex-shrink-0">
-                        PENDING
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed line-clamp-2">
-                    {recorded?.details || (isScanningActive && isRunning ? 'Executing automated security check...' : checkData?.details || (valStatus === 'FAILED' && isFailed ? 'Check failed or reported security concerns.' : st.description))}
-                  </p>
-                </div>
-                <div className="mt-3 pt-2 border-t border-slate-200/50 dark:border-slate-800/50 flex items-center justify-between text-[11px] text-slate-400">
-                  <span className="font-mono">{st.tool}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
       </div>
 
       {/* Jenkins Offline Fallback Notice Banner */}
@@ -732,7 +701,7 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
         <div className="p-4 rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/80 dark:bg-amber-950/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-in fade-in">
           <div className="flex items-start gap-3">
             <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-lg flex-shrink-0">
-              ⚡
+              <ZapIcon className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -756,14 +725,18 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
         <div className="p-4 rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/80 dark:bg-rose-950/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-in fade-in">
           <div className="flex items-start gap-3">
             <div className="w-9 h-9 rounded-xl bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold text-lg flex-shrink-0">
-              ⚠️
+              <AlertTriangleIcon className="w-5 h-5" />
             </div>
             <div>
               <h4 className="text-base font-bold text-rose-900 dark:text-rose-200">
-                Security Validation Pipeline Failed
+                {allFindings.length > 0
+                  ? 'Security Audit: Action Required (Violations Detected)'
+                  : 'Automated Security Pipeline Encountered an Error'}
               </h4>
               <p className="text-sm text-rose-700 dark:text-rose-300 mt-1 leading-relaxed">
-                The automated validation pipeline encountered an error or reported blocking security findings. Status has been stopped and reset to require remediation.
+                {allFindings.length > 0
+                  ? `Automated security checks detected ${allFindings.length} issue(s) (such as unauthorized permissions or policy violations). Please review the findings below and update the package to resolve them before resubmitting.`
+                  : 'The automated validation pipeline encountered an execution error. Please check the Jenkins CI logs for details.'}
               </p>
             </div>
           </div>
@@ -775,7 +748,7 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
                 rel="noreferrer"
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-rose-200 dark:border-rose-800 bg-white dark:bg-slate-900 text-sm font-semibold text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shadow-sm"
               >
-                <span>Jenkins Logs</span>
+                <span>View CI Logs</span>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
               </a>
             </div>
@@ -835,7 +808,7 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  <div className="mt-0.5 text-xl flex-shrink-0">{st.icon}</div>
+                  <div className="mt-0.5 flex-shrink-0 text-brand-600 dark:text-brand-400">{getStageIcon(st.id, "w-5 h-5")}</div>
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <h4 className="text-base font-bold text-slate-900 dark:text-white">
@@ -849,7 +822,7 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
                       </span>
                     </div>
                     <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                      {recorded?.details || (isScanningActive && isRunning ? 'Analyzing target endpoint and running security checks...' : valStatus === 'FAILED' && isFailed ? 'Execution failed or scanner encountered an error.' : st.defaultTitle)}
+                      {recorded?.details || (isScanningActive && isRunning ? 'Analyzing target endpoint and running security checks...' : valStatus === 'FAILED' && isFailed ? 'Violations or unauthorized capabilities detected in this check.' : st.defaultTitle)}
                     </p>
                   </div>
                 </div>
@@ -870,8 +843,8 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                       </svg>
                     )}
-                    {isCompleted && <span>✓</span>}
-                    {stageStatus}
+                    {isCompleted && <CheckIcon className="w-3.5 h-3.5" />}
+                    <span>{stageStatus}</span>
                   </span>
                 </div>
               </div>
@@ -965,7 +938,7 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold text-lg border border-brand-100 dark:border-brand-800/50">
-                  🛡️
+                  <ShieldIcon className="w-5 h-5" />
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white">

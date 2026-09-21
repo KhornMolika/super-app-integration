@@ -13,6 +13,7 @@ import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 import { MiniAppIssue } from '../../miniapps/entities/miniapp-issue.entity';
 import { NotificationsService, MailService } from '../../notifications';
 import { AuditService } from '../../audit/audit.service';
+import { resolveBackofficeBaseUrl } from '../../common/utils/network.utils';
 
 export interface ValidationFindingDto {
   id: string;
@@ -28,6 +29,7 @@ export interface ValidationCallbackDto {
   method: string;
   status: 'PASSED' | 'FAILED';
   score?: number;
+  commitSha?: string;
   checks?: Record<string, any>;
   findings?: ValidationFindingDto[];
   reportPath?: string;
@@ -36,6 +38,9 @@ export interface ValidationCallbackDto {
 @Controller(['integrations/validation', 'api/integrations/validation'])
 export class ValidationCallbackController {
   private readonly logger = new Logger(ValidationCallbackController.name);
+  private get backofficeBaseUrl(): string {
+    return resolveBackofficeBaseUrl();
+  }
 
   constructor(
     @InjectRepository(MiniApp)
@@ -121,6 +126,12 @@ export class ValidationCallbackController {
       type: 'SECURITY_CHECK',
     });
 
+    if (dto.commitSha) {
+      if (!app.integrationConfig) app.integrationConfig = {};
+      app.integrationConfig.commitSha = dto.commitSha;
+      app.integrationConfig.lockedCommitSha = dto.commitSha;
+    }
+
     app.validationReport = {
       score: dto.score,
       status: dto.status,
@@ -128,8 +139,29 @@ export class ValidationCallbackController {
       checks: dto.checks,
       findings: dto.findings || [],
       reportPath: dto.reportPath,
+      commitSha: dto.commitSha,
       completedAt: new Date().toISOString(),
     };
+
+    // Finalize any pending or running stages based on checks or overall status
+    const currentStages = app.validationStages || {};
+    for (const [stageId, stageObj] of Object.entries(currentStages)) {
+      const s = stageObj as any;
+      if (s && (s.status === 'PENDING' || s.status === 'RUNNING')) {
+        const checkResult = dto.checks?.[stageId];
+        if (checkResult) {
+          s.status = checkResult.passed !== false ? 'COMPLETED' : 'FAILED';
+          if (checkResult.details) s.details = checkResult.details;
+        } else if (dto.status === 'PASSED') {
+          s.status = 'COMPLETED';
+          if (!s.details || s.details.startsWith('Awaiting') || s.details.startsWith('Initiating')) {
+            s.details = 'Verification completed.';
+          }
+        }
+        s.updatedAt = new Date().toISOString();
+      }
+    }
+    app.validationStages = currentStages;
 
     const hasPendingRevision = Boolean(app.pendingRevision);
 
@@ -171,7 +203,7 @@ export class ValidationCallbackController {
           targetEmail,
           app.name || app.appId || 'Mini App',
           dto.score ?? 100,
-          `http://localhost:3002/miniapps/${app.id}`,
+          `${this.backofficeBaseUrl}/miniapps/${app.id}`,
         );
       }
 
@@ -273,7 +305,7 @@ export class ValidationCallbackController {
           (dto.findings || []).filter(
             (f) => f.severity === 'CRITICAL' || f.severity === 'HIGH',
           ),
-          `http://localhost:3002/miniapps/${app.id}`,
+          `${this.backofficeBaseUrl}/miniapps/${app.id}`,
         );
       }
 

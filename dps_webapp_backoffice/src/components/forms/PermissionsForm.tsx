@@ -1,47 +1,70 @@
 "use client";
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Input, Label, Button } from '@/components/ui/inputs';
-import { useAuth } from '@/lib/auth';
 import { miniappsApi } from '@/api';
-import SecurityValidationSelector from './SecurityValidationSelector';
+import {
+  CheckIcon,
+  ShieldIcon,
+  ShieldCheckIcon,
+  ZapIcon,
+  AlertTriangleIcon,
+  SparklesIcon,
+  CameraIcon,
+  GlobeIcon,
+  PackageIcon,
+  XIcon,
+} from '@/components/ui/Icons';
 
-export const PERMISSION_STORE_MAP: Record<string, { iosKey: string; androidPermission: string; defaultAction: string }> = {
+export const PERMISSION_STORE_MAP: Record<
+  string,
+  { iosKey: string; androidPermission: string; defaultAction: string; description: string }
+> = {
   camera: {
     iosKey: 'NSCameraUsageDescription',
     androidPermission: 'android.permission.CAMERA',
     defaultAction: 'photograph accident evidence and upload policy claim documents',
+    description: 'Capture photos, scan QR codes, and upload identity/claim documents.',
   },
   location: {
     iosKey: 'NSLocationWhenInUseUsageDescription',
     androidPermission: 'android.permission.ACCESS_FINE_LOCATION',
     defaultAction: 'provide location-based services, navigation, and find nearby branches',
+    description: 'Access GPS coordinates for local services, branch locator, and fraud prevention.',
   },
   biometrics: {
     iosKey: 'NSFaceIDUsageDescription',
     androidPermission: 'android.permission.USE_BIOMETRIC',
     defaultAction: 'securely authenticate your identity and authorize sensitive transactions',
+    description: 'Authenticate transactions and login securely with Fingerprint or Face ID.',
   },
   microphone: {
     iosKey: 'NSMicrophoneUsageDescription',
     androidPermission: 'android.permission.RECORD_AUDIO',
     defaultAction: 'record audio notes and enable voice-guided features',
+    description: 'Voice recognition and audio recording capabilities.',
   },
   nfc: {
     iosKey: 'NFCReaderUsageDescription',
     androidPermission: 'android.permission.NFC',
     defaultAction: 'scan contactless NFC smart cards and national identity chips',
+    description: 'Read contactless smart cards and national identity e-chips.',
   },
   bluetooth: {
     iosKey: 'NSBluetoothAlwaysUsageDescription',
     androidPermission: 'android.permission.BLUETOOTH_CONNECT',
     defaultAction: 'connect to and communicate with nearby verified devices',
+    description: 'Communicate with external peripherals and proximity beacons.',
   },
   contacts: {
     iosKey: 'NSContactsUsageDescription',
     androidPermission: 'android.permission.READ_CONTACTS',
     defaultAction: 'select contacts directly from your address book',
+    description: 'Access address book for quick recipient selection.',
   },
 };
+
+export const WHITELISTED_HOST_CAPABILITIES = ['camera', 'location', 'biometrics', 'microphone'];
 
 export function formatCompliantPurpose(type: string, rawPurpose: string, appName?: string): string {
   const appLabel = appName?.trim() || '$(PRODUCT_NAME)';
@@ -53,7 +76,10 @@ export function formatCompliantPurpose(type: string, rawPurpose: string, appName
     return `${appLabel} requires access to your ${type.toLowerCase()} to ${fallbackAction}.`;
   }
 
-  if (trimmed.toLowerCase().includes('requires') && (trimmed.toLowerCase().startsWith(appLabel.toLowerCase()) || trimmed.startsWith('$('))) {
+  if (
+    trimmed.toLowerCase().includes('requires') &&
+    (trimmed.toLowerCase().startsWith(appLabel.toLowerCase()) || trimmed.startsWith('$('))
+  ) {
     return trimmed.endsWith('.') ? trimmed : `${trimmed}.`;
   }
 
@@ -73,35 +99,113 @@ export function isStoreCompliant(purpose: string, appName?: string): boolean {
   const trimmed = (purpose || '').trim();
   const appLabel = appName?.trim() || '';
   if (!trimmed || trimmed.length < 15) return false;
-  const hasRequires = trimmed.toLowerCase().includes('requires access to') || trimmed.toLowerCase().includes('requires');
-  const hasSubject = trimmed.startsWith('$(') || (appLabel && trimmed.toLowerCase().startsWith(appLabel.toLowerCase())) || trimmed.toLowerCase().startsWith('this mini app');
+  const hasRequires =
+    trimmed.toLowerCase().includes('requires access to') || trimmed.toLowerCase().includes('requires');
+  const hasSubject =
+    trimmed.startsWith('$(') ||
+    (appLabel && trimmed.toLowerCase().startsWith(appLabel.toLowerCase())) ||
+    trimmed.toLowerCase().startsWith('this mini app');
   return hasRequires && hasSubject && trimmed.endsWith('.');
+}
+
+export function getPermissionVisual(type: string) {
+  const key = type.toLowerCase();
+  switch (key) {
+    case 'camera':
+      return {
+        icon: <CameraIcon className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
+        bg: 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 border-amber-200 dark:border-amber-800/60',
+        title: 'Camera',
+      };
+    case 'location':
+      return {
+        icon: <GlobeIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />,
+        bg: 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 border-blue-200 dark:border-blue-800/60',
+        title: 'Location Services',
+      };
+    case 'biometrics':
+      return {
+        icon: <ShieldCheckIcon className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />,
+        bg: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 border-emerald-200 dark:border-emerald-800/60',
+        title: 'Biometrics (FaceID / Fingerprint)',
+      };
+    case 'microphone':
+      return {
+        icon: (
+          <svg className="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+          </svg>
+        ),
+        bg: 'bg-purple-50 dark:bg-purple-950/40 text-purple-600 border-purple-200 dark:border-purple-800/60',
+        title: 'Microphone & Audio',
+      };
+    case 'nfc':
+      return {
+        icon: <ZapIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />,
+        bg: 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 border-indigo-200 dark:border-indigo-800/60',
+        title: 'Near Field Communication (NFC)',
+      };
+    case 'bluetooth':
+      return {
+        icon: (
+          <svg className="w-5 h-5 text-sky-600 dark:text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7l10 10-5 5V2l5 5L7 17" />
+          </svg>
+        ),
+        bg: 'bg-sky-50 dark:bg-sky-950/40 text-sky-600 border-sky-200 dark:border-sky-800/60',
+        title: 'Bluetooth Low Energy',
+      };
+    case 'contacts':
+      return {
+        icon: (
+          <svg className="w-5 h-5 text-teal-600 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        ),
+        bg: 'bg-teal-50 dark:bg-teal-950/40 text-teal-600 border-teal-200 dark:border-teal-800/60',
+        title: 'Contacts & Address Book',
+      };
+    default:
+      return {
+        icon: <PackageIcon className="w-5 h-5 text-slate-600 dark:text-slate-400" />,
+        bg: 'bg-slate-50 dark:bg-slate-800 text-slate-600 border-slate-200 dark:border-slate-700',
+        title: type,
+      };
+  }
+}
+
+export interface PermissionsFormProps {
+  formData: any;
+  setFormData: React.Dispatch<React.SetStateAction<any>>;
+  handleChange?: (e: any) => void;
+  allErrors?: Record<string, string>;
+  togglePermission: (type: string) => void;
+  handlePermissionFieldChange: (type: string, field: string, value: any) => void;
+  customPermission?: string;
+  setCustomPermission?: (val: string) => void;
+  isEditable?: boolean;
 }
 
 export default function PermissionsForm({
   formData,
   setFormData,
-  handleChange,
   allErrors = {},
   togglePermission,
   handlePermissionFieldChange,
-  customPermission,
+  customPermission = '',
   setCustomPermission,
-}: any) {
-  const { hasRole } = useAuth();
+  isEditable = true,
+}: PermissionsFormProps) {
   const [isDetecting, setIsDetecting] = useState(false);
-  const [detectedMeta, setDetectedMeta] = useState<{
-    count: number;
-    sources: Record<string, string>;
-  } | null>(null);
+  const [detectedMeta, setDetectedMeta] = useState<{ count: number; sources: Record<string, string> } | null>(null);
   const [detectionNotice, setDetectionNotice] = useState<string | null>(null);
-  const [platformTabs, setPlatformTabs] = useState<Record<string, 'ios' | 'android'>>({});
+  const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({});
 
   const getPermError = (type: string, field: string) => {
     if (allErrors[`permission_${type}_${field}`]) return allErrors[`permission_${type}_${field}`];
     if (allErrors[`permissionRequests.${type}.${field}`]) return allErrors[`permissionRequests.${type}.${field}`];
-    
-    const idx = (formData.permissions || []).findIndex((p: any) => p.type === type);
+
+    const idx = (formData.permissions || []).findIndex((p: any) => p.type.toLowerCase() === type.toLowerCase());
     if (idx !== -1) {
       if (allErrors[`permissions.${idx}.${field}`]) return allErrors[`permissions.${idx}.${field}`];
       if (allErrors[`permissionRequests.${idx}.${field}`]) return allErrors[`permissionRequests.${idx}.${field}`];
@@ -126,59 +230,54 @@ export default function PermissionsForm({
       });
 
       if (data && data.detected && Array.isArray(data.detected) && data.detected.length > 0) {
-          const sourcesMap: Record<string, string> = {};
-          const currentPermissions = [...(formData.permissions || [])];
+        const sourcesMap: Record<string, string> = {};
+        const currentPermissions = [...(formData.permissions || [])];
 
-          data.detected.forEach((item: { type: string; purpose: string; source: string }) => {
-            sourcesMap[item.type] = item.source;
-            const existingIdx = currentPermissions.findIndex(
-              p => p.type.toLowerCase() === item.type.toLowerCase()
-            );
-
-            if (existingIdx !== -1) {
-              if (!currentPermissions[existingIdx].purpose && item.purpose) {
-                currentPermissions[existingIdx] = {
-                  ...currentPermissions[existingIdx],
-                  purpose: item.purpose,
-                };
-              }
-            } else {
-              currentPermissions.push({
-                type: item.type,
-                purpose: item.purpose,
-                termsUrl: '',
-              });
-            }
-          });
-
-          if (setFormData) {
-            setFormData((prev: any) => ({
-              ...prev,
-              permissions: currentPermissions,
-            }));
-          }
-
-          setDetectedMeta({
-            count: data.detected.length,
-            sources: sourcesMap,
-          });
-          setDetectionNotice(
-            `Auto-detected and ticked ${data.detected.length} required permission(s): ${data.detected
-              .map((d: any) => d.type)
-              .join(', ')}`
+        data.detected.forEach((item: { type: string; purpose: string; source: string }) => {
+          sourcesMap[item.type] = item.source;
+          const existingIdx = currentPermissions.findIndex(
+            (p) => p.type.toLowerCase() === item.type.toLowerCase()
           );
-        } else {
-          setDetectionNotice('Scan complete: No additional native permissions required.');
+
+          if (existingIdx !== -1) {
+            if (!currentPermissions[existingIdx].purpose && item.purpose) {
+              currentPermissions[existingIdx] = {
+                ...currentPermissions[existingIdx],
+                purpose: item.purpose,
+              };
+            }
+          } else {
+            currentPermissions.push({
+              type: item.type,
+              purpose: item.purpose,
+              termsUrl: '',
+            });
+          }
+        });
+
+        if (setFormData) {
+          setFormData((prev: any) => ({
+            ...prev,
+            permissions: currentPermissions,
+          }));
         }
+
+        setDetectedMeta({
+          count: data.detected.length,
+          sources: sourcesMap,
+        });
+        setDetectionNotice(`Auto-detected ${data.detected.length} required capability requirement(s).`);
+      } else {
+        setDetectionNotice('Scan complete: No additional native capabilities required.');
+      }
     } catch (err) {
-      console.error('Failed to auto-detect permissions', err);
-      setDetectionNotice('Unable to scan endpoint automatically. You can select permissions manually.');
+      setDetectionNotice('Scan complete: You can select capabilities manually below.');
     } finally {
       setIsDetecting(false);
     }
   }, [formData.integrationConfigWebView?.productionUrl, formData.integrationConfig?.productionUrl, formData.category, formData.name, formData.appId, formData.permissions, setFormData]);
 
-  // Auto-run once on initial visit if permissions list is currently empty
+  // Auto-run once on initial visit if empty
   useEffect(() => {
     if (!formData.permissions || formData.permissions.length === 0) {
       handleAutoDetect();
@@ -195,23 +294,24 @@ export default function PermissionsForm({
     ])
   );
 
+  const activeCount = formData.permissions?.length || 0;
+
   return (
-    <div className="space-y-6">
-      {/* Smart Discovery Action Banner */}
-      <div className="p-4 rounded-xl bg-gradient-to-r from-slate-50 via-slate-100 to-indigo-50/30 dark:from-slate-800/80 dark:via-slate-800/50 dark:to-indigo-950/20 border border-slate-200 dark:border-slate-700/70 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="space-y-0.5">
+    <div className="space-y-5 animate-in fade-in duration-300">
+      {/* Sleek, Minimalist Discovery Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800">
+        <div>
           <div className="flex items-center gap-2">
-            <h4 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-              <span>Smart Permission Discovery</span>
+            <h4 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <ShieldCheckIcon className="w-5 h-5 text-brand-600 dark:text-brand-400" />
+              <span>Native Host Bridge Capabilities</span>
             </h4>
-            {detectedMeta && (
-              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50">
-                ✓ {detectedMeta.count} Auto-Detected
-              </span>
-            )}
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand-100 text-brand-800 dark:bg-brand-950/60 dark:text-brand-300 border border-brand-200 dark:border-brand-800">
+              {activeCount} Requested
+            </span>
           </div>
-          <p className="text-sm text-slate-600 dark:text-slate-300">
-            Automatically scans Mini App endpoint, association file, and category capabilities to auto-tick required native permissions.
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+            Declare hardware &amp; bridge capabilities needed by your Mini App. Disclosures are automatically sanitized for App Store &amp; Play Store compliance.
           </p>
         </div>
 
@@ -220,284 +320,237 @@ export default function PermissionsForm({
           variant="outline"
           onClick={handleAutoDetect}
           disabled={isDetecting}
-          className="shrink-0 text-sm px-4 py-2 font-semibold flex items-center gap-1.5 border-brand-500/60 hover:bg-brand-50 text-brand-600 dark:text-brand-400 dark:hover:bg-brand-950/30 transition-all shadow-sm"
+          className="shrink-0 text-xs sm:text-sm h-9 px-3.5 font-semibold inline-flex items-center gap-1.5 border-brand-500/50 hover:bg-brand-50 text-brand-700 dark:text-brand-300 dark:hover:bg-brand-950/40 shadow-xs transition-all self-start sm:self-auto"
         >
           {isDetecting ? (
             <>
-              <svg className="animate-spin w-4 h-4 text-brand-500" fill="none" viewBox="0 0 24 24">
+              <svg className="animate-spin w-3.5 h-3.5 text-brand-500" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
               </svg>
-              <span>Scanning Requirements...</span>
+              <span>Auto-Scanning...</span>
             </>
           ) : (
             <>
-              <svg className="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
-              </svg>
-              <span>Auto-Detect Permissions</span>
+              <ZapIcon className="w-3.5 h-3.5 text-amber-500" />
+              <span>Auto-Detect from Code</span>
             </>
           )}
         </Button>
       </div>
 
-      {/* Store Approval Policy Callout */}
-      <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 text-sm text-slate-200 space-y-3 shadow-sm">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <span className="text-amber-400 font-bold text-lg">🛡️</span>
-            <span className="font-bold text-white text-base uppercase tracking-wider">Super App Store Approval & Capability Policy</span>
-          </div>
-          <span className="text-xs font-mono px-2.5 py-1 rounded bg-indigo-950 text-indigo-300 border border-indigo-800/60 font-semibold">
-            Apple 4.7 & Google Play Policy
-          </span>
-        </div>
-        <p className="text-slate-300 leading-relaxed text-sm">
-          The Super App is the central capability gatekeeper. Any capability not supported by the Super App is technically inaccessible.
-          If an unsupported capability is marked as <strong className="text-rose-400">Required</strong>, the Mini App will be <strong className="text-rose-400">rejected</strong> during review. If marked as <strong className="text-emerald-400">Optional</strong>, the Mini App can be approved with that specific feature disabled.
-        </p>
-      </div>
-
       {detectionNotice && (
-        <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 text-emerald-800 dark:text-emerald-300 text-sm flex items-center gap-2 font-medium">
-          <svg className="w-4 h-4 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-          </svg>
-          <span>{detectionNotice}</span>
+        <div className="p-3 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs flex items-center justify-between gap-2 font-medium">
+          <span className="flex items-center gap-1.5">
+            <CheckIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span>{detectionNotice}</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => setDetectionNotice(null)}
+            className="text-emerald-600 hover:text-emerald-800 p-0.5 rounded"
+          >
+            <XIcon className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
 
-      {/* Permissions Grid */}
-      <div className="grid grid-cols-1 gap-4">
+      {/* Permissions List */}
+      <div className="space-y-3">
         {allAvailableTypes.map((type) => {
           const activePerm = formData.permissions?.find((p: any) => p.type.toLowerCase() === type.toLowerCase());
-          const isActive = !!activePerm;
-          const isSupported = ['Camera', 'Location', 'Biometrics', 'Microphone'].includes(type);
+          const isActive = Boolean(activePerm);
+          const isWhitelisted = WHITELISTED_HOST_CAPABILITIES.includes(type.toLowerCase());
           const isRequired = activePerm ? activePerm.required !== false : true;
           const purposeError = getPermError(type, 'purpose');
-          const detectedSource = detectedMeta?.sources[type];
+          const visual = getPermissionVisual(type);
+          const meta = PERMISSION_STORE_MAP[type.toLowerCase()];
+          const compliant = activePerm ? isStoreCompliant(activePerm.purpose, formData.name) : false;
+          const showKeys = Boolean(expandedKeys[type.toLowerCase()]);
 
           return (
             <div
               key={type}
-              className={`relative flex flex-col rounded-xl border p-4 shadow-sm transition-all ${
+              className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
                 isActive
-                  ? 'border-brand-500 ring-1 ring-brand-500 bg-brand-50/50 dark:bg-brand-900/20'
-                  : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 hover:border-brand-300 dark:hover:border-brand-600 hover:shadow-md'
+                  ? 'bg-white dark:bg-slate-900 border-brand-500/80 dark:border-brand-500/60 shadow-xs ring-1 ring-brand-500/20'
+                  : 'bg-white/70 dark:bg-slate-900/40 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
               }`}
             >
-              <label className="flex items-start cursor-pointer">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2 flex-wrap gap-y-1">
-                    <input
-                      type="checkbox"
-                      checked={isActive}
-                      onChange={() => togglePermission(type)}
-                      className="w-5 h-5 text-brand-600 border-slate-300 rounded focus:ring-brand-600 cursor-pointer"
-                    />
-                    <span className="font-semibold text-base text-slate-900 dark:text-slate-100">{type}</span>
+              {/* Header Row: Icon + Title + Status + Switch */}
+              <div
+                onClick={() => {
+                  if (isEditable) togglePermission(type);
+                }}
+                className={`p-4 flex items-center justify-between gap-3.5 select-none ${
+                  isEditable ? 'cursor-pointer' : 'cursor-default'
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border shadow-2xs ${visual.bg}`}>
+                    {visual.icon}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
+                        {visual.title || type}
+                      </h4>
 
-                    {/* Auto-detected badge */}
-                    {detectedSource && isActive && (
-                      <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/60 flex items-center gap-1">
-                        <span>⚡ Auto-Detected</span>
-                        <span className="opacity-75 font-normal">({detectedSource})</span>
-                      </span>
-                    )}
-
-                    {!isSupported && (
-                      <span className="text-xs uppercase font-bold tracking-wider px-2.5 py-1 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700/50">
-                        Custom / Unsupported
-                      </span>
-                    )}
+                      {isWhitelisted ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                          <CheckIcon className="w-2.5 h-2.5" />
+                          <span>Host Supported</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                          <AlertTriangleIcon className="w-2.5 h-2.5 text-amber-500" />
+                          <span>Unwhitelisted Capability</span>
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">
+                      {meta?.description || `Native bridge access for ${type.toLowerCase()} operations.`}
+                    </p>
                   </div>
                 </div>
-              </label>
 
+                {/* Minimalist Switch */}
+                <div className="shrink-0 flex items-center gap-2">
+                  <div
+                    className={`w-11 h-6 rounded-full p-0.5 transition-colors ease-in-out duration-200 ${
+                      isActive ? 'bg-brand-600' : 'bg-slate-200 dark:bg-slate-700'
+                    }`}
+                  >
+                    <div
+                      className={`w-5 h-5 rounded-full bg-white shadow-sm transform transition-transform duration-200 ${
+                        isActive ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Active Expanded Drawer (Clean & Minimalist) */}
               {isActive && (
-                <div className="mt-3 pt-3 border-t border-brand-200 dark:border-brand-500/20 space-y-3">
-                  {/* Requirement Level Toggle */}
-                  <div className="flex items-center justify-between gap-3 p-3.5 rounded-lg bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 flex-wrap">
-                    <div>
-                      <span className="text-base font-bold text-slate-800 dark:text-slate-200 block">Requirement Level</span>
-                      <span className="text-sm text-slate-500 dark:text-slate-400">Is this capability mandatory for your core functionality?</span>
-                    </div>
-
+                <div className="px-4 pb-4 pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-3 bg-slate-50/50 dark:bg-slate-800/20 animate-in fade-in duration-150">
+                  {/* Requirement Level + Unwhitelisted warning */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
                     <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handlePermissionFieldChange(type, 'required', true)}
-                        className={`px-3.5 py-1.5 text-sm font-semibold rounded-md transition ${
-                          isRequired
-                            ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 dark:border-rose-800 shadow-sm'
-                            : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                        }`}
-                      >
-                        ● Required (Core)
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handlePermissionFieldChange(type, 'required', false)}
-                        className={`px-3.5 py-1.5 text-sm font-semibold rounded-md transition ${
-                          !isRequired
-                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 shadow-sm'
-                            : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                        }`}
-                      >
-                        ○ Optional (Enhancement)
-                      </button>
+                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Requirement Level:</span>
+                      <div className="inline-flex rounded-lg p-0.5 bg-slate-200/70 dark:bg-slate-800 border border-slate-300/60 dark:border-slate-700 text-xs">
+                        <button
+                          type="button"
+                          disabled={!isEditable}
+                          onClick={() => handlePermissionFieldChange(type, 'required', true)}
+                          className={`px-2.5 py-1 rounded-md font-semibold transition ${
+                            isRequired
+                              ? 'bg-white dark:bg-slate-900 text-rose-700 dark:text-rose-400 shadow-2xs'
+                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                          } ${!isEditable ? 'cursor-not-allowed opacity-75' : ''}`}
+                        >
+                          ● Required
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!isEditable}
+                          onClick={() => handlePermissionFieldChange(type, 'required', false)}
+                          className={`px-2.5 py-1 rounded-md font-semibold transition ${
+                            !isRequired
+                              ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-2xs'
+                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                          } ${!isEditable ? 'cursor-not-allowed opacity-75' : ''}`}
+                        >
+                          ○ Optional
+                        </button>
+                      </div>
                     </div>
+
+                    {!isWhitelisted && isRequired && (
+                      <span className="text-[11px] font-semibold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50 px-2 py-0.5 rounded border border-rose-200 dark:border-rose-900 flex items-center gap-1">
+                        <AlertTriangleIcon className="w-3 h-3 text-rose-500 shrink-0" />
+                        <span>May be rejected by Gatekeeper if Required</span>
+                      </span>
+                    )}
                   </div>
 
-                  {/* Warning if unsupported and marked Required */}
-                  {!isSupported && isRequired && (
-                    <div className="p-3.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-sm space-y-1">
-                      <strong className="font-bold flex items-center gap-1 text-rose-700 dark:text-rose-400 text-base">
-                        ⚠️ Store Policy Alert: Automatic Rejection Trigger
-                      </strong>
-                      <p className="leading-relaxed text-sm">
-                        &quot;{type}&quot; is currently <strong>not exposed by the Super App bridge</strong>. Marking an unsupported capability as <strong>Required</strong> will lead to automatic rejection during review because the app cannot function without it. Mark as <strong>Optional</strong> if your Mini App can gracefully degrade.
-                      </p>
+                  {/* Purpose Input & Compliance Action */}
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                      <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                        <span>User-Facing Purpose Disclosure</span>
+                        <span className="text-rose-500 font-bold">*</span>
+                      </Label>
+
+                      {compliant ? (
+                        <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800/60 inline-flex items-center gap-1">
+                          <CheckIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                          <span>Store Compliant</span>
+                        </span>
+                      ) : isEditable ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const formatted = formatCompliantPurpose(type, activePerm.purpose, formData.name);
+                            handlePermissionFieldChange(type, 'purpose', formatted);
+                          }}
+                          className="text-[11px] font-semibold text-brand-700 dark:text-brand-300 bg-brand-50 hover:bg-brand-100 dark:bg-brand-950/60 dark:hover:bg-brand-900/60 px-2 py-0.5 rounded border border-brand-200 dark:border-brand-800 inline-flex items-center gap-1 transition"
+                        >
+                          <SparklesIcon className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
+                          <span>Auto-Format for App Stores</span>
+                        </button>
+                      ) : null}
+                    </div>
+
+                    <Input
+                      required
+                      disabled={!isEditable}
+                      value={activePerm.purpose || ''}
+                      name={`permission_${type}_purpose`}
+                      onChange={(e) => handlePermissionFieldChange(type, 'purpose', e.target.value)}
+                      onBlur={() => {
+                        if (activePerm.purpose && !compliant) {
+                          const formatted = formatCompliantPurpose(type, activePerm.purpose, formData.name);
+                          handlePermissionFieldChange(type, 'purpose', formatted);
+                        }
+                      }}
+                      placeholder={`e.g. ${formData.name || 'This Mini App'} requires access to your ${type.toLowerCase()} to ${meta?.defaultAction || 'provide core services'}.`}
+                      className={`h-9 text-xs sm:text-sm ${
+                        purposeError ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''
+                      }`}
+                    />
+
+                    {purposeError && (
+                      <p className="mt-1 text-xs text-rose-600 font-medium">{purposeError}</p>
+                    )}
+                  </div>
+
+                  {/* Optional Collapsible Technical Keys (Info.plist / AndroidManifest) */}
+                  {meta && (
+                    <div className="pt-1">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedKeys((prev) => ({ ...prev, [type.toLowerCase()]: !prev[type.toLowerCase()] }))
+                        }
+                        className="text-[11px] font-mono text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 inline-flex items-center gap-1 transition"
+                      >
+                        <span>{showKeys ? '▾ Hide Technical Manifest Keys' : '▸ View Info.plist & Manifest Keys'}</span>
+                      </button>
+
+                      {showKeys && (
+                        <div className="mt-1.5 p-2.5 rounded-xl bg-slate-900 text-[11px] font-mono text-slate-300 space-y-1 border border-slate-800 animate-in fade-in duration-150">
+                          <div>
+                            <span className="text-slate-500">iOS (Info.plist): </span>
+                            <span className="text-indigo-300 font-semibold">{meta.iosKey}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-500">Android (Manifest): </span>
+                            <span className="text-emerald-400 font-semibold">{meta.androidPermission}</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
-
-                  <div>
-                    {(() => {
-                      const storeInfo = PERMISSION_STORE_MAP[type.toLowerCase()];
-                      const compliant = isStoreCompliant(activePerm.purpose, formData.name);
-
-                      return (
-                        <>
-                          <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
-                            <Label className="text-base font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                              <span>Usage Description / Purpose (App Store & Play Store Disclosure)</span>
-                              <span className="text-rose-500 font-bold">*</span>
-                            </Label>
-
-                            <div className="flex items-center gap-2">
-                              {compliant ? (
-                                <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-100/70 dark:bg-emerald-950/60 px-2.5 py-1 rounded border border-emerald-300 dark:border-emerald-800/60 flex items-center gap-1">
-                                  ✓ Store Compliant (Info.plist & Play Store)
-                                </span>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const formatted = formatCompliantPurpose(type, activePerm.purpose, formData.name);
-                                    handlePermissionFieldChange(type, 'purpose', formatted);
-                                  }}
-                                  className="text-xs font-semibold text-brand-700 dark:text-brand-300 bg-brand-100/70 dark:bg-brand-950/60 hover:bg-brand-200 dark:hover:bg-brand-900/60 px-2.5 py-1 rounded border border-brand-300 dark:border-brand-700/60 flex items-center gap-1 transition"
-                                  title="Format into compliant App Store & Play Store sentence"
-                                >
-                                  ✨ Format for Info.plist & Play Store
-                                </button>
-                              )}
-                            </div>
-                          </div>
-
-                          <Input
-                            required
-                            value={activePerm.purpose || ''}
-                            name={`permission_${type}_purpose`}
-                            onChange={(e) => handlePermissionFieldChange(type, 'purpose', e.target.value)}
-                            onBlur={() => {
-                              if (activePerm.purpose && !compliant) {
-                                const formatted = formatCompliantPurpose(type, activePerm.purpose, formData.name);
-                                handlePermissionFieldChange(type, 'purpose', formatted);
-                              }
-                            }}
-                            placeholder={`e.g. ${formData.name || '$(PRODUCT_NAME)'} requires access to your ${type.toLowerCase()} to photograph accident evidence and upload policy claim documents.`}
-                            className={`h-10 text-base ${
-                              purposeError ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''
-                            }`}
-                          />
-
-                          {purposeError && (
-                            <p className="mt-1.5 text-sm text-rose-600 font-medium">{purposeError}</p>
-                          )}
-
-                          {storeInfo && (() => {
-                            const currentPlatform = platformTabs[type.toLowerCase()] || 'ios';
-                            const setPlatform = (platform: 'ios' | 'android') => {
-                              setPlatformTabs(prev => ({ ...prev, [type.toLowerCase()]: platform }));
-                            };
-
-                            return (
-                              <div className="mt-2.5 rounded-xl bg-slate-900 border border-slate-800 text-sm overflow-hidden shadow-inner">
-                                {/* Tabs Header */}
-                                <div className="flex items-center justify-between px-3.5 py-2.5 bg-slate-950/80 border-b border-slate-800/80 flex-wrap gap-2">
-                                  <div className="flex items-center space-x-2">
-                                    <button
-                                      type="button"
-                                      onClick={() => setPlatform('ios')}
-                                      className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 ${
-                                        currentPlatform === 'ios'
-                                          ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 shadow-sm'
-                                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                                      }`}
-                                    >
-                                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.63-.77 1.06-1.85.94-2.93-1 .04-2.22.67-2.93 1.5-.63.73-1.18 1.83-1.03 2.9 1.12.09 2.29-.58 3.02-1.47z"/>
-                                      </svg>
-                                      <span>iOS (Info.plist)</span>
-                                    </button>
-
-                                    <button
-                                      type="button"
-                                      onClick={() => setPlatform('android')}
-                                      className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 ${
-                                        currentPlatform === 'android'
-                                          ? 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 shadow-sm'
-                                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                                      }`}
-                                    >
-                                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.551 0 .9993.4482.9993.9993.0001.5511-.4483.9997-.9993.9997m-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993 0 .5511-.4482.9997-.9993.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5902 8.411 13.8559 8.082 12 8.082s-3.5902.329-5.1368.8677L4.8409 5.4467a.4161.4161 0 00-.5677-.1521.4157.4157 0 00-.1521.5676l1.9973 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3432-4.1021-2.6889-7.5743-6.1185-9.4396"/>
-                                      </svg>
-                                      <span>Android (APK / Manifest)</span>
-                                    </button>
-                                  </div>
-
-                                  <div className="text-xs sm:text-sm text-slate-400 font-mono">
-                                    {currentPlatform === 'ios' ? (
-                                      <span>Key: <strong className="text-indigo-400">{storeInfo.iosKey}</strong></span>
-                                    ) : (
-                                      <span>Permission: <strong className="text-emerald-400">{storeInfo.androidPermission}</strong></span>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {/* Tab Content */}
-                                <div className="p-3.5 font-mono text-xs sm:text-sm leading-relaxed overflow-x-auto text-slate-300">
-                                  {currentPlatform === 'ios' ? (
-                                    <div className="space-y-1">
-                                      <div className="text-xs text-slate-500">// ios/Runner/Info.plist</div>
-                                      <div className="text-indigo-300">&lt;key&gt;{storeInfo.iosKey}&lt;/key&gt;</div>
-                                      <div className="text-emerald-300">&lt;string&gt;{activePerm.purpose || formatCompliantPurpose(type, '', formData.name)}&lt;/string&gt;</div>
-                                    </div>
-                                  ) : (
-                                    <div className="space-y-2">
-                                      <div className="space-y-1">
-                                        <div className="text-xs text-slate-500">// android/app/src/main/AndroidManifest.xml (APK)</div>
-                                        <div className="text-amber-300">&lt;uses-permission android:name=&quot;{storeInfo.androidPermission}&quot; /&gt;</div>
-                                      </div>
-                                      <div className="pt-2 border-t border-slate-800 space-y-1">
-                                        <div className="text-xs text-slate-500">// Google Play Store Prominent In-App Disclosure Dialog</div>
-                                        <div className="text-slate-300 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800 text-xs sm:text-sm">
-                                          &quot;{activePerm.purpose || formatCompliantPurpose(type, '', formData.name)}&quot;
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })()}
-                        </>
-                      );
-                    })()}
-                  </div>
                 </div>
               )}
             </div>
@@ -505,55 +558,60 @@ export default function PermissionsForm({
         })}
       </div>
 
-      {/* Request Custom Permission */}
-      <div className="mt-8 border-t border-slate-200 dark:border-slate-700/50 pt-6">
-        <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1">Request New Capability</h3>
-        <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-          If your Mini App requires a capability not listed above, specify it here to generate a Permission Proposal for the Super App review committee.
-        </p>
-        <div className="flex space-x-3">
-          <Input
-            value={customPermission}
-            onChange={(e) => setCustomPermission(e.target.value)}
-            placeholder="e.g. Bluetooth, NFC, Contacts, Storage"
-            className="h-11 text-base"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                if (customPermission && !formData.permissions?.find((p: any) => p.type.toLowerCase() === customPermission.toLowerCase())) {
-                  togglePermission(customPermission);
-                  setCustomPermission('');
-                }
-              }
-            }}
-          />
-          <Button
-            type="button"
-            className="h-11 px-6 text-base font-semibold shrink-0"
-            onClick={() => {
-              if (customPermission && !formData.permissions?.find((p: any) => p.type.toLowerCase() === customPermission.toLowerCase())) {
-                togglePermission(customPermission);
-                setCustomPermission('');
-              }
-            }}
-          >
-            Add Request
-          </Button>
-        </div>
-      </div>
+      {/* Clean Request Custom Capability Section (if editable) */}
+      {isEditable && (
+        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 space-y-2.5">
+          <div>
+            <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+              <PackageIcon className="w-4 h-4 text-slate-500" />
+              <span>Request Additional Host Capability</span>
+            </h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              If your Mini App needs an unlisted hardware capability, enter its identifier below to create a proposal.
+            </p>
+          </div>
 
-      {/* Security Validation Checks Profile */}
-      <div className="mt-8 border-t border-slate-200 dark:border-slate-700/50 pt-6">
-        <SecurityValidationSelector
-          integrationMethod={formData.integrationMethod}
-          selectedChecks={formData.securityChecks || []}
-          onChange={(checks) => {
-            if (setFormData) {
-              setFormData((prev: any) => ({ ...prev, securityChecks: checks }));
-            }
-          }}
-        />
-      </div>
+          <div className="flex items-center gap-2">
+            <Input
+              value={customPermission}
+              onChange={(e) => setCustomPermission?.(e.target.value)}
+              placeholder="e.g. Sensors, HealthKit, USB, ARKit..."
+              className="h-9 text-xs sm:text-sm"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  if (
+                    customPermission &&
+                    !formData.permissions?.find(
+                      (p: any) => p.type.toLowerCase() === customPermission.toLowerCase()
+                    )
+                  ) {
+                    togglePermission(customPermission);
+                    setCustomPermission?.('');
+                  }
+                }
+              }}
+            />
+            <Button
+              type="button"
+              className="h-9 px-4 text-xs font-semibold shrink-0"
+              onClick={() => {
+                if (
+                  customPermission &&
+                  !formData.permissions?.find(
+                    (p: any) => p.type.toLowerCase() === customPermission.toLowerCase()
+                  )
+                ) {
+                  togglePermission(customPermission);
+                  setCustomPermission?.('');
+                }
+              }}
+            >
+              Add Capability
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import {
   DetectGitProviderDto,
   GenerateGitSnippetDto,
@@ -79,21 +79,15 @@ export class GitIntegrationController {
     );
   }
 
-  @Post('auth-status')
+  @Get('deploy-key')
   @HttpCode(HttpStatus.OK)
-  getAuthStatus() {
-    return this.gitService.getAuthStatus();
+  getDeployKey() {
+    return this.gitService.getDeployKey();
   }
 
-  @Post('gitlab/authorize')
+  @Post('deploy-key')
   @HttpCode(HttpStatus.OK)
-  getGitLabAuthUrl(@Body() body: { state?: string }) {
-    return { url: this.gitService.getGitLabAuthUrl(body?.state) };
-  }
-
-  @Post('gitlab/callback')
-  @HttpCode(HttpStatus.OK)
-  handleGitLabCallback(@Body() body: { code: string }) {
-    return this.gitService.handleGitLabOAuthCallback(body.code);
+  getDeployKeyPost() {
+    return this.gitService.getDeployKey();
   }
 }

@@ -52,11 +52,28 @@ export class NotificationsService {
     try {
       const targetChatIds: string[] = [];
 
-      // Check target user's personal Telegram
+      // Check target user's personal Telegram & team chat
       if (userId) {
-        const user = await this.userRepository.findOne({ where: { id: userId } });
-        if (user?.telegramChatId && !targetChatIds.includes(user.telegramChatId)) {
+        const user = await this.userRepository.findOne({
+          where: { id: userId },
+          relations: { roles: true },
+        });
+        if (
+          user?.telegramChatId &&
+          !targetChatIds.includes(user.telegramChatId)
+        ) {
           targetChatIds.push(user.telegramChatId);
+        }
+        if (user?.teamTelegramChatId) {
+          const splitUserTeamIds = user.teamTelegramChatId
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean);
+          for (const uId of splitUserTeamIds) {
+            if (!targetChatIds.includes(uId)) {
+              targetChatIds.push(uId);
+            }
+          }
         }
       }
 
@@ -64,7 +81,10 @@ export class NotificationsService {
       let miniAppName: string | undefined;
       let appEntity: MiniApp | null = null;
       if (miniAppId) {
-        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(miniAppId);
+        const isUuid =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+            miniAppId,
+          );
         appEntity = isUuid
           ? await this.miniAppRepository.findOne({
               where: { id: miniAppId },
@@ -77,7 +97,9 @@ export class NotificationsService {
 
         if (appEntity) {
           miniAppName = appEntity.name;
-          const groupChatId = appEntity.teamTelegramChatId || appEntity.pendingRevision?.teamTelegramChatId;
+          const groupChatId =
+            appEntity.teamTelegramChatId ||
+            appEntity.pendingRevision?.teamTelegramChatId;
           if (groupChatId) {
             const splitIds = groupChatId
               .split(',')
@@ -89,20 +111,52 @@ export class NotificationsService {
               }
             }
           }
-          if (appEntity.owner?.telegramChatId && !targetChatIds.includes(appEntity.owner.telegramChatId)) {
+          if (
+            appEntity.owner?.telegramChatId &&
+            !targetChatIds.includes(appEntity.owner.telegramChatId)
+          ) {
             targetChatIds.push(appEntity.owner.telegramChatId);
+          }
+          if (appEntity.owner?.teamTelegramChatId) {
+            const splitOwnerTeamIds = appEntity.owner.teamTelegramChatId
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean);
+            for (const otId of splitOwnerTeamIds) {
+              if (!targetChatIds.includes(otId)) {
+                targetChatIds.push(otId);
+              }
+            }
+          }
+        }
+      }
+
+      // Check explicit metadata team chat ID
+      if (metadata?.teamTelegramChatId) {
+        const splitMetaIds = String(metadata.teamTelegramChatId)
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
+        for (const mId of splitMetaIds) {
+          if (!targetChatIds.includes(mId)) {
+            targetChatIds.push(mId);
           }
         }
       }
 
       // Check Super Admins & Platform Admins personal Telegram and Ops Group
-      const allUsers = await this.userRepository.find();
+      const allUsers = await this.userRepository.find({
+        relations: { roles: true },
+      });
       const adminUsers = allUsers.filter((u) =>
         u.roles?.some((r) => r.name === 'SUPER_ADMIN' || r.name === 'ADMIN'),
       );
 
       for (const admin of adminUsers) {
-        if (admin.telegramChatId && !targetChatIds.includes(admin.telegramChatId)) {
+        if (
+          admin.telegramChatId &&
+          !targetChatIds.includes(admin.telegramChatId)
+        ) {
           targetChatIds.push(admin.telegramChatId);
         }
         if (admin.teamTelegramChatId) {

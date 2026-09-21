@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button, Input, Label } from '@/components/ui/inputs';
 import { toast } from '@/components/ui/Toast';
 import { AssignMiniAppModal } from './AssignMiniAppModal';
+import { StarIcon } from '@/components/ui/Icons';
 
 export interface TelegramGroupAssociation {
   type: 'PROFILE' | 'MINIAPP' | 'SUPER_APP' | 'BOT_SCAN';
@@ -360,8 +361,9 @@ export function TelegramTeamCard({
                           </span>
                         )}
                         {isDefault && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-300">
-                            <span>⭐ Default Channel</span>
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-300">
+                            <StarIcon className="w-3 h-3 text-amber-500 fill-amber-500" />
+                            <span>Default Channel</span>
                           </span>
                         )}
                       </div>

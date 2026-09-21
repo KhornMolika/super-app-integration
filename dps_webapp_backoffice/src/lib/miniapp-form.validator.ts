@@ -42,20 +42,6 @@ export async function validateMiniAppStep(
       errors.logo = 'Logo must be an uploaded image or valid URL';
       isValid = false;
     }
-    if (formData.termsUrl && formData.termsUrl.trim()) {
-      const termsRes = validateUrlFormat(formData.termsUrl, 'Terms of Service URL', true);
-      if (!termsRes.valid && termsRes.error) {
-        errors.termsUrl = termsRes.error;
-        isValid = false;
-      }
-    }
-    if (formData.privacyPolicyUrl && formData.privacyPolicyUrl.trim()) {
-      const privacyRes = validateUrlFormat(formData.privacyPolicyUrl, 'Privacy Policy URL', true);
-      if (!privacyRes.valid && privacyRes.error) {
-        errors.privacyPolicyUrl = privacyRes.error;
-        isValid = false;
-      }
-    }
   }
 
   if (currentStep === 2) {
@@ -92,7 +78,8 @@ export async function validateMiniAppStep(
               (window.location.hostname === 'localhost' ||
                 window.location.hostname === '127.0.0.1' ||
                 window.location.hostname.endsWith('.local') ||
-                window.location.hostname.endsWith('.orb.local'))));
+                window.location.hostname.endsWith('.orb.local') ||
+                /^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(window.location.hostname))));
 
         if (!isDev && !prodUrl.startsWith('https://')) {
           errors['integrationConfigWebView.productionUrl'] = 'Production URL must use HTTPS in PROD mode';
@@ -130,45 +117,66 @@ export async function validateMiniAppStep(
       }
     }
 
-    if (formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE) {
+    if (
+      formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE ||
+      formData.integrationMethod === IntegrationMethod.NATIVE_SDK
+    ) {
       const conf = formData.integrationConfigFlutter;
       if (conf?.sourceType === SourceType.ARTIFACT) {
-        if (!conf.packageName) {
-          errors['integrationConfigFlutter.packageName'] = 'Package Name is required';
+        const hasArchive = Boolean(
+          conf?.packageStoragePath ||
+          conf?.archiveChecksum ||
+          conf?.packageUrl ||
+          conf?.minioKey ||
+          (conf as any)?.archiveFilename ||
+          (conf as any)?.isArchiveSubmission ||
+          (formData as any)?.pendingArchiveFile,
+        );
+
+        if (!hasArchive) {
+          errors['integrationConfigFlutter.archiveFile'] =
+            'Please upload a package archive (.zip or .tar.gz) before proceeding.';
           isValid = false;
-        } else if (isValid) {
-          try {
-            const data = await integrationsApi.getNexusPackage(conf.packageName);
-            if (data && data.exists === false) {
-              errors['integrationConfigFlutter.packageName'] =
-                `Package "${conf.packageName}" does not exist on Nexus. Please save as Draft or publish the package to Nexus before submitting for review.`;
-              isValid = false;
-            }
-          } catch (e) {
-            // non-blocking if offline
-          }
         }
-        if (!conf.versionConstraint) {
+
+        if (!conf?.packageName || !conf.packageName.trim()) {
+          errors['integrationConfigFlutter.packageName'] =
+            'Package Name is required. Upload a package archive containing manifest or pubspec.';
+          isValid = false;
+        }
+        if (!conf?.versionConstraint || !conf.versionConstraint.trim()) {
           errors['integrationConfigFlutter.versionConstraint'] = 'Version Constraint is required';
           isValid = false;
         }
       } else {
-        if (!conf?.gitUrl) {
+        if (!conf?.gitUrl || !conf.gitUrl.trim()) {
           errors['integrationConfigFlutter.gitUrl'] = 'Git URL is required';
           isValid = false;
+        } else if (conf?.isPrivateRepo && conf?.authMethod === 'token' && !conf?.gitAccessToken?.trim()) {
+          errors['integrationConfigFlutter.gitAccessToken'] =
+            'Access Token is required for private repositories when Token authentication is selected.';
+          isValid = false;
         } else if (isValid) {
+          const isDeployKey =
+            conf?.isPrivateRepo && (conf?.authMethod === 'deploy_key' || !conf?.authMethod);
+
           try {
             const data = await integrationsApi.validateGit({
               url: conf.gitUrl,
               ref: conf.gitBranch,
-              token: conf.gitAccessToken,
+              token: conf.isPrivateRepo ? conf.gitAccessToken : undefined,
               path: conf.gitPath,
+              isPrivate: conf.isPrivateRepo,
+              authMethod: conf.authMethod,
+              deployKey: conf.deployKey,
             });
             if (data && data.validation) {
               if (!data.validation.isValid) {
-                errors['integrationConfigFlutter.gitUrl'] =
-                  data.validation.error || 'Git repository or pubspec.yaml could not be verified.';
-                isValid = false;
+                if (!isDeployKey) {
+                  errors['integrationConfigFlutter.gitUrl'] =
+                    data.validation.error || 'Git repository or pubspec.yaml could not be verified.';
+                  isValid = false;
+                }
               } else {
                 // Auto-detect required native permissions from dependencies
                 const deps = data.validation.dependencies || {};
@@ -202,10 +210,26 @@ export async function validateMiniAppStep(
                 }
               }
             }
-          } catch (e) {
-            // non-blocking if offline
+          } catch {
+            // non-blocking if offline or network error
           }
         }
+      }
+    }
+
+    // Step 3 Legal Policies Validation
+    if (formData.termsUrl && formData.termsUrl.trim()) {
+      const termsRes = validateUrlFormat(formData.termsUrl, 'Terms of Service URL', true);
+      if (!termsRes.valid && termsRes.error) {
+        errors.termsUrl = termsRes.error;
+        isValid = false;
+      }
+    }
+    if (formData.privacyPolicyUrl && formData.privacyPolicyUrl.trim()) {
+      const privacyRes = validateUrlFormat(formData.privacyPolicyUrl, 'Privacy Policy URL', true);
+      if (!privacyRes.valid && privacyRes.error) {
+        errors.privacyPolicyUrl = privacyRes.error;
+        isValid = false;
       }
     }
   }
@@ -218,6 +242,13 @@ export async function validateMiniAppStep(
           isValid = false;
         }
       });
+    }
+  }
+
+  if (currentStep === 5) {
+    if (!formData.securityChecks || formData.securityChecks.length === 0) {
+      errors.securityChecks = 'Please select at least one security validation check before proceeding.';
+      isValid = false;
     }
   }
 

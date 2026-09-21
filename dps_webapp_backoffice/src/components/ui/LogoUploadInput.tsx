@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Label } from './inputs';
+import { XCircleIcon } from '@/components/ui/Icons';
 
 interface LogoUploadInputProps {
   name?: string;
@@ -264,8 +265,9 @@ export function LogoUploadInput({
       </div>
 
       {displayError ? (
-        <p className="mt-1.5 text-sm text-rose-600 font-medium flex items-center gap-1">
-          <span>✕</span> {displayError}
+        <p className="mt-1.5 text-sm text-rose-600 font-medium flex items-center gap-1.5">
+          <XCircleIcon className="w-4 h-4 text-rose-500 shrink-0" />
+          <span>{displayError}</span>
         </p>
       ) : (
         <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">

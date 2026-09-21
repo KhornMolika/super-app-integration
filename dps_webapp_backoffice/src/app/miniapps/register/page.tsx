@@ -11,13 +11,14 @@ import SubmissionModal, { SubmissionModalState } from '@/components/ui/Submissio
 import BasicInfoForm from '@/components/forms/BasicInfoForm';
 import TeamForm from '@/components/forms/TeamForm';
 import IntegrationForm, { generateClientVerificationToken, generateClientMiniAppId } from '@/components/forms/IntegrationForm';
-import PermissionsForm, { formatCompliantPurpose } from '@/components/forms/PermissionsForm';
+import PermissionsForm, { formatCompliantPurpose, WHITELISTED_HOST_CAPABILITIES } from '@/components/forms/PermissionsForm';
+import UnsupportedPermissionsModal from '@/components/forms/UnsupportedPermissionsModal';
+import SecurityForm from '@/components/forms/SecurityForm';
 import ReviewSummaryStep from '@/components/forms/ReviewSummaryStep';
 import RegistrationWizardSteps from '@/components/forms/RegistrationWizardSteps';
-import ValidationIssuesButton from '@/components/ValidationIssuesButton';
 import { validateMiniAppStep } from '@/lib/miniapp-form.validator';
 import { validateUrlFormat } from '@/components/ui/ValidatedUrlInput';
-import { CreateMiniAppDto, IntegrationMethod, SourceType } from '@/types/miniapp.types';
+import { CreateMiniAppDto, FlutterPackageConfigDto, IntegrationMethod, SourceType } from '@/types/miniapp.types';
 import { miniappsApi, telegramApi } from '@/api';
 
 export default function RegisterMiniAppPage() {
@@ -91,9 +92,14 @@ export default function RegisterMiniAppPage() {
   const [customPermission, setCustomPermission] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const [previewUrl, setPreviewUrl] = useState('');
+  const [pendingArchiveFile, setPendingArchiveFile] = useState<File | null>(null);
+  const [showUnsupportedModal, setShowUnsupportedModal] = useState(false);
 
   const validateStep = async (currentStep: number) => {
-    const result = await validateMiniAppStep(currentStep, formData);
+    const result = await validateMiniAppStep(currentStep, {
+      ...formData,
+      pendingArchiveFile: pendingArchiveFile || undefined,
+    } as any);
     if (!result.isValid) {
       setLocalErrors((prev) => ({ ...prev, ...result.errors }));
     } else {
@@ -113,7 +119,30 @@ export default function RegisterMiniAppPage() {
     setIsSubmitting(true);
     const payload = { ...formData };
     if (payload.integrationMethod !== IntegrationMethod.WEBVIEW) delete payload.integrationConfigWebView;
-    if (payload.integrationMethod !== IntegrationMethod.FLUTTER_PACKAGE) delete payload.integrationConfigFlutter;
+    if (payload.integrationMethod !== IntegrationMethod.FLUTTER_PACKAGE) {
+      delete payload.integrationConfigFlutter;
+    } else if (pendingArchiveFile) {
+      try {
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', pendingArchiveFile);
+        if (payload.appId) uploadFormData.append('miniAppId', payload.appId);
+        const ver = payload.integrationConfigFlutter?.versionConstraint?.replace(/^[\^~>=<]+/, '') || '1.0.0';
+        uploadFormData.append('version', ver);
+
+        const uploadRes = await miniappsApi.uploadArtifact(uploadFormData);
+        if (uploadRes && (uploadRes.success || uploadRes.packageStoragePath || uploadRes.minioKey || uploadRes.packageUrl)) {
+          payload.integrationConfigFlutter = {
+            sourceType: payload.integrationConfigFlutter?.sourceType || SourceType.ARTIFACT,
+            ...payload.integrationConfigFlutter,
+            packageStoragePath: uploadRes.packageStoragePath || uploadRes.minioKey || uploadRes.packageUrl,
+            packageUrl: uploadRes.packageUrl,
+            archiveChecksum: uploadRes.sha256 || payload.integrationConfigFlutter?.archiveChecksum,
+          };
+        }
+      } catch (err) {
+        console.error('Failed to upload archive to MinIO on draft save:', err);
+      }
+    }
 
     try {
       await miniappsApi.createDraft(payload);
@@ -127,7 +156,18 @@ export default function RegisterMiniAppPage() {
     setIsSubmitting(true);
     const valid = await validateStep(step);
     setIsSubmitting(false);
-    if (valid) setStep((prev) => prev + 1);
+    if (valid) {
+      if (step === 4) {
+        const unsupported = (formData.permissions || []).filter(
+          (p: any) => !WHITELISTED_HOST_CAPABILITIES.includes((p.type || '').toLowerCase())
+        );
+        if (unsupported.length > 0) {
+          setShowUnsupportedModal(true);
+          return;
+        }
+      }
+      setStep((prev) => prev + 1);
+    }
   };
 
   const prevStep = () => setStep((prev) => prev - 1);
@@ -202,7 +242,8 @@ export default function RegisterMiniAppPage() {
             (window.location.hostname === 'localhost' ||
               window.location.hostname === '127.0.0.1' ||
               window.location.hostname.endsWith('.local') ||
-              window.location.hostname.endsWith('.orb.local'))));
+              window.location.hostname.endsWith('.orb.local') ||
+              /^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(window.location.hostname))));
 
       if (!isDev) {
         if (!prodUrl.startsWith('https://')) {
@@ -252,14 +293,6 @@ export default function RegisterMiniAppPage() {
       return () => clearTimeout(timeoutId);
     }
   }, [formData.appId, formData.name, formData.ownerEmail, formData.supportEmail, formData.logo, formData.termsUrl, formData.privacyPolicyUrl]);
-
-  const handleNavigateToIssue = (field: string) => {
-    if (field === 'name' || field === 'appId' || field === 'category' || field === 'logo') setStep(1);
-    else if (field === 'teamName' || field === 'ownerName' || field === 'ownerEmail' || field === 'supportEmail')
-      setStep(2);
-    else if (field.startsWith('integration')) setStep(3);
-    else if (field.startsWith('permission')) setStep(4);
-  };
 
   const allRawErrors = { ...localErrors, ...(modalState.errors || {}) };
   const allErrors = Object.entries(allRawErrors).reduce((acc, [key, val]) => {
@@ -320,9 +353,49 @@ export default function RegisterMiniAppPage() {
   };
 
   const handleFlutterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({
-      ...formData,
-      integrationConfigFlutter: { ...formData.integrationConfigFlutter!, [e.target.name]: e.target.value },
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      integrationConfigFlutter: { ...prev.integrationConfigFlutter!, [name]: value },
+    }));
+    setLocalErrors((prev) => {
+      const next = { ...prev };
+      delete next[`integrationConfigFlutter.${name}`];
+      return next;
+    });
+  };
+
+  const handleUpdateFlutterConfig = (
+    updates: Partial<FlutterPackageConfigDto>,
+    extraData?: { archiveFile?: File; detectedPermissions?: any[] },
+  ) => {
+    if (extraData?.archiveFile) {
+      setPendingArchiveFile(extraData.archiveFile);
+    }
+    setFormData((prev) => {
+      const nextFlutter: FlutterPackageConfigDto = {
+        sourceType: SourceType.ARTIFACT,
+        ...(prev.integrationConfigFlutter || {}),
+        ...updates,
+      };
+      const nextPermissions =
+        extraData?.detectedPermissions && extraData.detectedPermissions.length > 0
+          ? extraData.detectedPermissions
+          : prev.permissions;
+
+      return {
+        ...prev,
+        integrationConfigFlutter: nextFlutter,
+        permissions: nextPermissions,
+      };
+    });
+
+    setLocalErrors((prev) => {
+      const next = { ...prev };
+      Object.keys(updates).forEach((key) => {
+        delete next[`integrationConfigFlutter.${key}`];
+      });
+      return next;
     });
   };
 
@@ -357,7 +430,7 @@ export default function RegisterMiniAppPage() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    for (let s = 1; s <= 4; s++) {
+    for (let s = 1; s <= 5; s++) {
       const valid = await validateStep(s);
       if (!valid) {
         setIsSubmitting(false);
@@ -381,7 +454,30 @@ export default function RegisterMiniAppPage() {
       }
       payload.integrationConfigWebView = webConfig;
     }
-    if (payload.integrationMethod !== IntegrationMethod.FLUTTER_PACKAGE) delete payload.integrationConfigFlutter;
+    if (payload.integrationMethod !== IntegrationMethod.FLUTTER_PACKAGE) {
+      delete payload.integrationConfigFlutter;
+    } else if (pendingArchiveFile) {
+      try {
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', pendingArchiveFile);
+        if (payload.appId) uploadFormData.append('miniAppId', payload.appId);
+        const ver = payload.integrationConfigFlutter?.versionConstraint?.replace(/^[\^~>=<]+/, '') || '1.0.0';
+        uploadFormData.append('version', ver);
+
+        const uploadRes = await miniappsApi.uploadArtifact(uploadFormData);
+        if (uploadRes && (uploadRes.success || uploadRes.packageStoragePath || uploadRes.minioKey || uploadRes.packageUrl)) {
+          payload.integrationConfigFlutter = {
+            sourceType: payload.integrationConfigFlutter?.sourceType || SourceType.ARTIFACT,
+            ...payload.integrationConfigFlutter,
+            packageStoragePath: uploadRes.packageStoragePath || uploadRes.minioKey || uploadRes.packageUrl,
+            packageUrl: uploadRes.packageUrl,
+            archiveChecksum: uploadRes.sha256 || payload.integrationConfigFlutter?.archiveChecksum,
+          };
+        }
+      } catch (err) {
+        console.error('Failed to upload archive to MinIO on submit:', err);
+      }
+    }
     if (payload.integrationMethod !== IntegrationMethod.DEEP_LINK) delete payload.integrationConfigDeepLink;
 
     try {
@@ -458,7 +554,7 @@ export default function RegisterMiniAppPage() {
                 setModalState({
                   isOpen: true,
                   status: 'error',
-                  message: 'Automated security validation failed. Please address the issues below.',
+                  message: 'Security audit identified blocking issues. Please review and resolve the flagged violations.',
                   errors: displayErrors,
                   createdId: appId,
                 });
@@ -522,7 +618,7 @@ export default function RegisterMiniAppPage() {
           className="space-y-6"
           onSubmit={(e) => {
             e.preventDefault();
-            if (step === 5) handleSubmit(e);
+            if (step === 6) handleSubmit(e);
           }}
         >
           {step === 1 && (
@@ -584,6 +680,7 @@ export default function RegisterMiniAppPage() {
                 allErrors={allErrors}
                 handleWebViewChange={handleWebViewChange}
                 handleFlutterChange={handleFlutterChange}
+                onUpdateFlutterConfig={handleUpdateFlutterConfig}
                 handleDeepLinkChange={handleDeepLinkChange}
                 onDomainVerified={handleDomainVerified}
               />
@@ -621,6 +718,29 @@ export default function RegisterMiniAppPage() {
           {step === 5 && (
             <Card>
               <CardHeader
+                title="Security Validation Profile"
+                icon={
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                    />
+                  </svg>
+                }
+              />
+              <SecurityForm
+                formData={formData}
+                setFormData={setFormData}
+                allErrors={allErrors}
+              />
+            </Card>
+          )}
+
+          {step === 6 && (
+            <Card>
+              <CardHeader
                 title="Review Registration"
                 icon={
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -633,24 +753,15 @@ export default function RegisterMiniAppPage() {
                   </svg>
                 }
               />
-              <ReviewSummaryStep formData={formData} />
+              <ReviewSummaryStep formData={formData} onEditStep={setStep} />
             </Card>
-          )}
-
-          {step === 3 && formData.integrationMethod === IntegrationMethod.WEBVIEW && allErrors['integrationConfigWebView.domainVerification'] && (
-            <div className="mb-4 p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-sm font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-2">
-              <svg className="w-5 h-5 text-rose-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              <span>{allErrors['integrationConfigWebView.domainVerification']}</span>
-            </div>
           )}
 
           <div className="flex justify-between space-x-4 border-t border-slate-200 dark:border-slate-800 pt-6">
             <Button type="button" variant="outline" className="h-11 px-6 text-base font-medium" onClick={step === 1 ? () => router.push('/miniapps') : prevStep}>
               {step === 1 ? 'Cancel' : 'Back'}
             </Button>
-            {step < 5 ? (
+            {step < 6 ? (
               <div className="flex space-x-3">
                 <Button type="button" variant="outline" className="h-11 px-5 text-base font-medium" onClick={handleSaveDraft} disabled={isSubmitting}>
                   Save as Draft
@@ -680,6 +791,18 @@ export default function RegisterMiniAppPage() {
         />
       </div>
 
+      <UnsupportedPermissionsModal
+        isOpen={showUnsupportedModal}
+        unsupportedPermissions={(formData.permissions || []).filter(
+          (p: any) => !WHITELISTED_HOST_CAPABILITIES.includes((p.type || '').toLowerCase())
+        )}
+        onConfirm={() => {
+          setShowUnsupportedModal(false);
+          setStep(5);
+        }}
+        onCancel={() => setShowUnsupportedModal(false)}
+      />
+
       <SubmissionModal
         state={modalState}
         mode="register"
@@ -706,11 +829,6 @@ export default function RegisterMiniAppPage() {
         }}
         onSuccessContinue={() => {}}
       />
-
-      {/* Floating Error Summary Button */}
-      {!modalState.isOpen && hasErrors && (
-        <ValidationIssuesButton errors={allErrors} onNavigate={handleNavigateToIssue} />
-      )}
     </>
   );
 }

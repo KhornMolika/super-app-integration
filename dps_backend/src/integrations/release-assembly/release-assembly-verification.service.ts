@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -8,6 +9,7 @@ import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 import { JenkinsService } from '../jenkins/jenkins.service';
 import { NexusIntegrationService } from '../nexus/nexus-integration.service';
 import { NotificationsService, MailService } from '../../notifications';
+import { resolveBackofficeBaseUrl } from '../../common/utils/network.utils';
 import {
   VerifyAndAssembleReleaseDto,
   ReleaseAssemblyAuditResult,
@@ -32,6 +34,7 @@ export class ReleaseAssemblyVerificationService {
     private readonly jenkinsService: JenkinsService,
     private readonly notificationsService: NotificationsService,
     private readonly mailService: MailService,
+    private readonly configService: ConfigService,
     @InjectRepository(MiniApp)
     private readonly miniappRepository: Repository<MiniApp>,
   ) {}
@@ -274,8 +277,16 @@ export class ReleaseAssemblyVerificationService {
         });
     }
 
-    const nexusApkUrl = `http://localhost:8081/repository/apk-releases/superapp/${dto.releaseVersion}/app-debug.apk`;
-    const minioApkUrl = `http://localhost:9000/releases/superapp/${dto.releaseVersion}/app-debug.apk`;
+    const nexusBase = (
+      this.configService.get<string>('NEXUS_BASE_URL') ||
+      'http://localhost:8081'
+    ).replace(/\/+$/, '');
+    const minioBase = (
+      this.configService.get<string>('MINIO_PUBLIC_URL') ||
+      'http://localhost:9000'
+    ).replace(/\/+$/, '');
+    const nexusApkUrl = `${nexusBase}/repository/apk-releases/superapp/${dto.releaseVersion}/app-debug.apk`;
+    const minioApkUrl = `${minioBase}/releases/superapp/${dto.releaseVersion}/app-debug.apk`;
 
     return {
       passed,
@@ -291,43 +302,131 @@ export class ReleaseAssemblyVerificationService {
   }
 
   /**
+   * Handles stage progress update from Jenkins pipeline
+   */
+  async handleStageUpdate(body: any) {
+    this.logger.log(
+      `Received build stage update for release ${body.releaseVersion}: [${body.stageId}] ${body.status} - ${body.details}`,
+    );
+
+    const buildingApps = await this.miniappRepository.find({
+      where: [
+        { status: 'BUILDING' },
+        { activeTestVersion: body.releaseVersion },
+      ],
+    });
+
+    for (const app of buildingApps) {
+      const currentStages = app.buildStages || {};
+      currentStages[body.stageId] = {
+        id: body.stageId,
+        name: body.stageName || body.stageId,
+        status: body.status || 'RUNNING',
+        details: body.details || '',
+        updatedAt: new Date().toISOString(),
+      };
+      app.buildStages = { ...currentStages };
+      if (body.status === 'FAILED') {
+        app.buildStatus = 'FAILED';
+        app.buildError = body.details || body.errorMessage || `Stage ${body.stageName || body.stageId} failed.`;
+      }
+      await this.miniappRepository.save(app);
+    }
+
+    return { success: true };
+  }
+
+  /**
    * Handles build callback from Jenkins pipeline
    */
   async handleBuildCallback(body: any) {
     this.logger.log(
       `Received build callback from Jenkins for release ${body.releaseVersion}: ${body.status}`,
     );
-    if (body.status === 'COMPLETED' || body.status === 'SUCCESS') {
+
+    const isSuccess = body.status === 'COMPLETED' || body.status === 'SUCCESS';
+
+    if (isSuccess) {
       const buildingApps = await this.miniappRepository.find({
-        where: { status: 'BUILDING' },
+        where: [
+          { status: 'BUILDING' },
+          { activeTestVersion: body.releaseVersion },
+        ],
         relations: { owner: true },
       });
-
-      await this.miniappRepository
-        .createQueryBuilder()
-        .update(MiniApp)
-        .set({ status: 'TESTING' })
-        .where("status = 'BUILDING'")
-        .execute();
 
       const repoName =
         body.buildType === 'release' ? 'apk-releases' : 'apk-test-builds';
       const filename =
         body.filename ||
         (body.buildType === 'release' ? 'app-release.apk' : 'app-debug.apk');
-      const apkUrl =
-        body.apkUrl ||
-        `http://localhost:8081/repository/${repoName}/superapp/${body.releaseVersion}/${filename}`;
 
       for (const app of buildingApps) {
         const effectiveVersion =
           body.releaseVersion ||
+          app.activeTestVersion ||
           app.integrationConfig?.superAppTestVersion ||
           'v1.0.0';
 
-        const finalApkUrl =
-          body.apkUrl ||
-          `http://localhost:8081/repository/${repoName}/superapp/${effectiveVersion}/${filename}`;
+        const nexusBase = (
+          this.configService.get<string>('NEXUS_BASE_URL') ||
+          'http://localhost:8081'
+        ).replace(/\/+$/, '');
+        const backofficeBase = resolveBackofficeBaseUrl(
+          this.configService.get<string>('BACKOFFICE_BASE_URL') ||
+            this.configService.get<string>('WEBAPP_URL'),
+        );
+
+        // Sanitize incoming APK URL if Jenkins sent internal Docker hostname
+        let sanitizedNexusUrl = body.apkUrl;
+        if (sanitizedNexusUrl) {
+          sanitizedNexusUrl = sanitizedNexusUrl.replace(
+            /https?:\/\/host\.docker\.internal:\d+/,
+            nexusBase,
+          );
+        } else {
+          sanitizedNexusUrl = `${nexusBase}/repository/${repoName}/superapp/${effectiveVersion}/${filename}`;
+        }
+
+        // Backoffice download endpoint is the most robust link for one-click downloading
+        const finalApkUrl = `${backofficeBase}/api/download-apk?type=${body.buildType === 'release' ? 'release' : 'test'}&version=${encodeURIComponent(effectiveVersion)}&appName=superapp`;
+
+        const currentStages = app.buildStages || {};
+        const allCompletedStages: Record<string, any> = {
+          preflight: {
+            id: 'preflight',
+            name: '1. Pre-Flight & Manifest Verification',
+            status: 'COMPLETED',
+            details: 'Manifest and dependencies verified.',
+            updatedAt: new Date().toISOString(),
+          },
+          compile: {
+            id: 'compile',
+            name: '2. Fastlane APK Packaging',
+            status: 'COMPLETED',
+            details: 'Fastlane packaging completed successfully.',
+            updatedAt: new Date().toISOString(),
+          },
+          publish: {
+            id: 'publish',
+            name: '3. Publish to Nexus & Finalize',
+            status: 'COMPLETED',
+            details: `Published APK to Sonatype Nexus (${repoName}).`,
+            updatedAt: new Date().toISOString(),
+          },
+          ...currentStages,
+        };
+
+        // Ensure all are marked COMPLETED
+        for (const k of Object.keys(allCompletedStages)) {
+          allCompletedStages[k].status = 'COMPLETED';
+        }
+
+        app.status = 'TESTING';
+        app.buildStatus = 'COMPLETED';
+        app.buildStages = allCompletedStages;
+        app.buildError = undefined;
+        await this.miniappRepository.save(app);
 
         if (app.ownerId) {
           await this.notificationsService.createNotification(
@@ -347,7 +446,11 @@ export class ReleaseAssemblyVerificationService {
 
         const targetEmail = app.ownerEmail || app.owner?.email;
         if (targetEmail) {
-          const sandboxUrl = `http://localhost:3002/miniapps/${app.id}`;
+          const backofficeBase = resolveBackofficeBaseUrl(
+            this.configService.get<string>('BACKOFFICE_BASE_URL') ||
+              this.configService.get<string>('WEBAPP_URL'),
+          );
+          const sandboxUrl = `${backofficeBase}/miniapps/${app.id}`;
           await this.mailService.sendTestBuildReadyEmail(
             targetEmail,
             app.name || app.appId || 'Mini App',
@@ -357,7 +460,49 @@ export class ReleaseAssemblyVerificationService {
           );
         }
       }
+    } else {
+      // Build Failed
+      const failureReason =
+        body.errorMessage ||
+        body.details ||
+        'Build failed during Super App Fastlane CI packaging.';
+
+      const failedApps = await this.miniappRepository.find({
+        where: [
+          { status: 'BUILDING' },
+          { activeTestVersion: body.releaseVersion },
+        ],
+        relations: { owner: true },
+      });
+
+      for (const app of failedApps) {
+        const currentStages = app.buildStages || {};
+        if (body.failedStage && currentStages[body.failedStage]) {
+          currentStages[body.failedStage].status = 'FAILED';
+          currentStages[body.failedStage].details = failureReason;
+        }
+        app.status = 'BUILD_FAILED';
+        app.buildStatus = 'FAILED';
+        app.buildStages = { ...currentStages };
+        app.buildError = failureReason;
+        await this.miniappRepository.save(app);
+
+        if (app.ownerId) {
+          await this.notificationsService.createNotification(
+            app.ownerId,
+            'Super App Build Failed',
+            `Super App build (${body.releaseVersion || 'latest'}) failed: ${failureReason}`,
+            'BUILD_FAILED',
+            app.id,
+            {
+              releaseVersion: body.releaseVersion,
+              error: failureReason,
+            },
+          );
+        }
+      }
     }
+
     return { success: true };
   }
 }

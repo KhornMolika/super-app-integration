@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Input, Label } from './inputs';
+import { CheckCircleIcon, AlertTriangleIcon, XCircleIcon } from '@/components/ui/Icons';
 
 export const validateUrlFormat = (url: string, fieldName: string = 'URL', isOptional: boolean = false) => {
   if (!url || !url.trim()) {
@@ -30,7 +31,8 @@ export const validateUrlFormat = (url: string, fieldName: string = 'URL', isOpti
         (window.location.hostname === 'localhost' ||
           window.location.hostname === '127.0.0.1' ||
           window.location.hostname.endsWith('.local') ||
-          window.location.hostname.endsWith('.orb.local'))));
+          window.location.hostname.endsWith('.orb.local') ||
+          /^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(window.location.hostname))));
 
   if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
     return { valid: false, error: `${fieldName} must start with http:// or https://` };
@@ -206,9 +208,24 @@ export function ValidatedUrlInput({
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
               </svg>
             )}
-            {validation.status === 'valid' && '✓ Reachable'}
-            {validation.status === 'unreachable' && '⚠ Unreachable'}
-            {validation.status === 'invalid' && '✕ Format Error'}
+            {validation.status === 'valid' && (
+              <span className="flex items-center gap-1">
+                <CheckCircleIcon className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Reachable</span>
+              </span>
+            )}
+            {validation.status === 'unreachable' && (
+              <span className="flex items-center gap-1">
+                <AlertTriangleIcon className="w-3.5 h-3.5 text-amber-500" />
+                <span>Unreachable</span>
+              </span>
+            )}
+            {validation.status === 'invalid' && (
+              <span className="flex items-center gap-1">
+                <XCircleIcon className="w-3.5 h-3.5 text-rose-500" />
+                <span>Format Error</span>
+              </span>
+            )}
           </span>
         ) : isOptional ? (
           <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Optional</span>
@@ -260,18 +277,21 @@ export function ValidatedUrlInput({
 
       {/* Dynamic Real-Time Feedback Messages */}
       {validation.status === 'invalid' && (
-        <p className="mt-1.5 text-sm text-rose-600 font-medium flex items-center gap-1">
-          <span>✕</span> {validation.message}
+        <p className="mt-1.5 text-sm text-rose-600 font-medium flex items-center gap-1.5">
+          <XCircleIcon className="w-4 h-4 text-rose-500 shrink-0" />
+          <span>{validation.message}</span>
         </p>
       )}
       {validation.status === 'unreachable' && (
-        <p className="mt-1.5 text-sm text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1">
-          <span>⚠</span> {validation.message}
+        <p className="mt-1.5 text-sm text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1.5">
+          <AlertTriangleIcon className="w-4 h-4 text-amber-500 shrink-0" />
+          <span>{validation.message}</span>
         </p>
       )}
       {validation.status === 'valid' && (
-        <p className="mt-1.5 text-sm text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
-          <span>✓</span> {validation.message}
+        <p className="mt-1.5 text-sm text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1.5">
+          <CheckCircleIcon className="w-4 h-4 text-emerald-500 shrink-0" />
+          <span>{validation.message}</span>
         </p>
       )}
       {validation.status === 'idle' && externalError && (

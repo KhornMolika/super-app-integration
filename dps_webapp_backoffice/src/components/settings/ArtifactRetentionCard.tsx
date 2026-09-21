@@ -119,6 +119,7 @@ export function ArtifactRetentionCard() {
     if (!str) return 'Never / Not scheduled';
     try {
       const d = new Date(str);
+      if (isNaN(d.getTime())) return 'Never / Not scheduled';
       return d.toLocaleString(undefined, {
         month: 'short',
         day: 'numeric',
@@ -129,6 +130,25 @@ export function ArtifactRetentionCard() {
     } catch {
       return str;
     }
+  };
+
+  const toLocalDatetimeString = (isoString: string | null): string => {
+    if (!isoString) return '';
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return '';
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const year = d.getFullYear();
+    const month = pad(d.getMonth() + 1);
+    const day = pad(d.getDate());
+    const hours = pad(d.getHours());
+    const minutes = pad(d.getMinutes());
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
+  const fromLocalDatetimeString = (localString: string): string | null => {
+    if (!localString) return null;
+    const d = new Date(localString);
+    return isNaN(d.getTime()) ? null : d.toISOString();
   };
 
   return (
@@ -357,15 +377,11 @@ export function ArtifactRetentionCard() {
                   </label>
                   <input
                     type="datetime-local"
-                    value={
-                      policy.specificRunDateTime
-                        ? new Date(policy.specificRunDateTime).toISOString().slice(0, 16)
-                        : ''
-                    }
+                    value={toLocalDatetimeString(policy.specificRunDateTime)}
                     onChange={(e) =>
                       setPolicy({
                         ...policy,
-                        specificRunDateTime: e.target.value ? new Date(e.target.value).toISOString() : null,
+                        specificRunDateTime: fromLocalDatetimeString(e.target.value),
                       })
                     }
                     className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-medium"

@@ -14,6 +14,7 @@ pipeline {
     environment {
         SANDBOX_OUTPUT_DIR = "/var/reports/superapp-sandbox"
         ARCHIVE_FILE = "/var/reports/superapp-sandbox.tar.gz"
+        PUB_HOSTED_URL = "${params.NEXUS_URL}/repository/pub-group"
     }
 
     stages {
@@ -26,6 +27,7 @@ pipeline {
                 echo " Base Href       : ${params.BASE_HREF}"
                 echo " Build Mode      : ${params.BUILD_MODE}"
                 echo " Output Dir      : ${env.SANDBOX_OUTPUT_DIR}"
+                echo " PUB_HOSTED_URL  : ${env.PUB_HOSTED_URL}"
                 echo "=========================================================="
 
                 sh "mkdir -p ${env.SANDBOX_OUTPUT_DIR} && chmod -R 777 /var/reports"
@@ -50,9 +52,10 @@ pipeline {
                 docker run --rm \
                     -v "\$(pwd)/dps_mobile_app:/app" \
                     -v /var/reports:/var/reports \
+                    -e PUB_HOSTED_URL="${params.NEXUS_URL}/repository/pub-group" \
                     -w /app \
                     ghcr.io/cirruslabs/flutter:stable \
-                    sh -c "flutter pub get && flutter build web --base-href ${params.BASE_HREF} --${params.BUILD_MODE} && mkdir -p ${env.SANDBOX_OUTPUT_DIR} && cp -R build/web/* ${env.SANDBOX_OUTPUT_DIR}/ && tar -czf ${env.ARCHIVE_FILE} -C build/web ." || {
+                    sh -c "export PUB_HOSTED_URL=${params.NEXUS_URL}/repository/pub-group && flutter pub get && flutter build web --base-href ${params.BASE_HREF} --${params.BUILD_MODE} && mkdir -p ${env.SANDBOX_OUTPUT_DIR} && cp -R build/web/* ${env.SANDBOX_OUTPUT_DIR}/ && tar -czf ${env.ARCHIVE_FILE} -C build/web ." || {
                         echo "[WARN] Docker compilation failed or docker CLI unavailable in container. Performing fallback build step..."
                     }
                 """

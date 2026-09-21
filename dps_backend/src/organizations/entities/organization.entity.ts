@@ -42,9 +42,9 @@ export class Organization {
   @Column({ type: 'jsonb', nullable: true })
   metadata?: any;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt!: Date;
 }

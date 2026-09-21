@@ -19,6 +19,12 @@ export class ReleaseAssemblyVerificationController {
     return this.releaseService.verifyAndAssembleRelease(dto);
   }
 
+  @Post('stage')
+  @HttpCode(HttpStatus.OK)
+  async stageUpdate(@Body() body: any) {
+    return this.releaseService.handleStageUpdate(body);
+  }
+
   @Post('build-callback')
   @HttpCode(HttpStatus.OK)
   async buildCallback(@Body() body: any) {

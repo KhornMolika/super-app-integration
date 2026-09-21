@@ -21,8 +21,10 @@ export default function TransferCard() {
   return (
     <div className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-gray-100 flex flex-col justify-between">
       <div>
-        <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center mb-4 text-2xl shadow-inner">
-          💸
+        <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center mb-4 shadow-inner">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+          </svg>
         </div>
         <h3 className="text-lg font-bold text-gray-900 mb-1">Instant Transfer</h3>
         <p className="text-gray-500 text-xs leading-relaxed mb-4">
@@ -53,9 +55,18 @@ export default function TransferCard() {
 
       <button
         onClick={handleTransfer}
-        className="w-full py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-colors shadow-xs cursor-pointer"
+        className="w-full py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-colors shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
       >
-        {transferred ? "✓ Sent Successfully!" : "Send Money"}
+        {transferred ? (
+          <>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+            </svg>
+            <span>Sent Successfully!</span>
+          </>
+        ) : (
+          <span>Send Money</span>
+        )}
       </button>
     </div>
   );

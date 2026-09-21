@@ -96,8 +96,47 @@ export const miniappsApi = {
   cancelValidation: (id: string) =>
     apiClient<any>(`/api/mini-apps/${id}/cancel-validation`, { method: 'POST' }),
 
+  inspectArtifact: (formData: FormData) =>
+    apiClient<{
+      success: boolean;
+      pubspec?: {
+        name?: string;
+        version?: string;
+        description?: string;
+        dependencies?: Record<string, any>;
+        environment?: Record<string, any>;
+      };
+      sha256?: string;
+      filename?: string;
+      size?: number;
+      originalSize?: number;
+      isSanitized?: boolean;
+      strippedFilesCount?: number;
+      detectedPermissions?: Array<{ type: string; purpose: string; source?: string; termsUrl?: string }>;
+      message?: string;
+    }>('/api/mini-apps/inspect-artifact', {
+      method: 'POST',
+      body: formData,
+    }),
+
   uploadArtifact: (formData: FormData) =>
-    apiClient<{ packageUrl: string; packageName?: string; pubspec?: any; sha256?: string; packageStoragePath?: string; success?: boolean; filename?: string; message?: string }>('/api/mini-apps/upload-artifact', {
+    apiClient<{
+      success?: boolean;
+      packageUrl: string;
+      packageStoragePath?: string;
+      minioUrl?: string;
+      minioKey?: string;
+      packageName?: string;
+      pubspec?: any;
+      sha256?: string;
+      filename?: string;
+      size?: number;
+      originalSize?: number;
+      isSanitized?: boolean;
+      strippedFilesCount?: number;
+      detectedPermissions?: Array<{ type: string; purpose: string; source?: string; termsUrl?: string }>;
+      message?: string;
+    }>('/api/mini-apps/upload-artifact', {
       method: 'POST',
       body: formData,
     }),

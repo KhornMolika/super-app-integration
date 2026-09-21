@@ -11,7 +11,6 @@ import { AuthProvider } from '@/lib/auth';
 const plusJakarta = Plus_Jakarta_Sans({ subsets: ['latin'] });
 
 import { AppSidebar } from '@/components/ui/AppSidebar';
-import { HeaderSidebarToggle } from '@/components/ui/HeaderSidebarToggle';
 import { HeaderProfile } from '@/components/ui/HeaderProfile';
 import { NotificationBell } from '@/components/ui/NotificationBell';
 import { ConfirmationProvider } from '@/components/ui/ConfirmationProvider';
@@ -43,7 +42,6 @@ export default function RootLayout({
                   <main className="flex-1 flex flex-col h-full overflow-y-auto relative bg-slate-50 dark:bg-slate-900 transition-all duration-300 min-w-0">
                     <header className="sticky top-0 z-10 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border-b border-slate-200/60 dark:border-slate-800/60 h-20 flex items-center px-6 sm:px-10 shadow-sm transition-all">
                       <div className="flex items-center gap-3">
-                        <HeaderSidebarToggle />
                         <h2 className="text-base sm:text-lg font-semibold text-slate-800 dark:text-slate-100 tracking-tight">
                           FinTech Center General Secretariat of FSA
                         </h2>

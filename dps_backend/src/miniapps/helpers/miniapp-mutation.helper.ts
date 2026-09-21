@@ -40,6 +40,8 @@ export class MiniappMutationHelper {
   ): Promise<MiniApp> {
     delete data.status;
     data.status = 'PROCESSING';
+    data.currentReleaseVersion = undefined;
+    data.pendingRevision = null;
 
     // Automatically upload base64 image data to MinIO object storage on submission
     const isBase64Logo =
@@ -84,6 +86,24 @@ export class MiniappMutationHelper {
         );
       }
       throw error;
+    }
+
+    // 1. Dispatch Notification (WebSocket + Telegram to MA Manager, MA Team Group, & SA Admins)
+    const targetUserId = savedApp.ownerId || actorId || '';
+    if (targetUserId) {
+      await this.notificationsService.createNotification(
+        targetUserId,
+        'Mini App Registered',
+        `Mini App "${savedApp.name || savedApp.appId}" has been registered successfully by ${savedApp.ownerName || 'Operator'} and queued for security validation.`,
+        'MINIAPP_REGISTERED',
+        savedApp.id,
+        {
+          integrationMethod: savedApp.integrationMethod,
+          category: savedApp.category,
+          teamName: savedApp.teamName,
+          teamTelegramChatId: savedApp.teamTelegramChatId,
+        },
+      );
     }
 
     // Kick off async validation
@@ -170,7 +190,7 @@ export class MiniappMutationHelper {
       );
 
       if (!hasSecurityImpact) {
-        // ⚡ SMART FAST-TRACK: Only General Metadata / Contact / Legal info modified
+        // SMART FAST-TRACK: Only General Metadata / Contact / Legal info modified
         if (data.name !== undefined) existing.name = data.name;
         if (data.shortDescription !== undefined)
           existing.shortDescription = data.shortDescription;
@@ -233,7 +253,7 @@ export class MiniappMutationHelper {
         return updated || existing;
       }
 
-      // 🛡️ SECURITY GATEWAY: Changes include Permissions, URLs, Allowed Domains, or Packages
+      // SECURITY GATEWAY: Changes include Permissions, URLs, Allowed Domains, or Packages
       if (data.teamTelegramChatId !== undefined) {
         existing.teamTelegramChatId = data.teamTelegramChatId;
       }
@@ -415,6 +435,19 @@ export class MiniappMutationHelper {
     }
 
     return updated || merged;
+  }
+
+  async inspectPackageArtifact(file: Express.Multer.File) {
+    const res = this.storageService.inspectPackageArchive(file);
+    const detected =
+      this.permissionDetectorHelper.detectFromPubspecDependencies(
+        res.pubspec?.dependencies || {},
+        res.pubspec?.name,
+      );
+    return {
+      ...res,
+      detectedPermissions: detected,
+    };
   }
 
   async uploadPackageArtifact(
