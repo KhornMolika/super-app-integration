@@ -9,9 +9,7 @@ import { NativeSdkVendor } from './vendor.types';
  * syntax of that file. Use `beginMarker()` / `endMarker()` (or the
  * NATIVE_SDK_MARKED_REGIONS table) to obtain the exact lines; the resulting
  * text is e.g. `// === GENERATED NATIVE SDK IMPORTS — DO NOT EDIT ===`.
- *
- * All paths are relative to the mobile-super-app root
- * (/Users/junior/Desktop/project/FSASuperApp/mobile-super-app).
+ * All paths are relative to the mobile-super-app root.
  *
  * Target: ios/Podfile   (comment prefix `#`)
  *   SOURCES  top level, right after the `project 'Runner', { ... }` block

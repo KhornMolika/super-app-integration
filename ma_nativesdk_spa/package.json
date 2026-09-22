@@ -1,0 +1,22 @@
+{
+  "name": "ma_nativesdk_spa",
+  "version": "1.0.0",
+  "description": "Sample Native SDK Mini App for Spa & Wellness Booking utilizing Universal Native Launcher",
+  "private": true,
+  "superapp": {
+    "integrationMethod": "NATIVE_SDK",
+    "android": {
+      "entryClass": "com.fintech.vendor.spa.SpaBookingActivity",
+      "artifactType": "AAR",
+      "groupId": "com.fintech.vendor",
+      "artifactId": "spa-booking-sdk",
+      "version": "1.0.0"
+    },
+    "ios": {
+      "entryClass": "SpaBookingViewController",
+      "artifactType": "XCFRAMEWORK",
+      "bundleId": "com.fintech.vendor.SpaBookingSDK",
+      "version": "1.0.0"
+    }
+  }
+}
