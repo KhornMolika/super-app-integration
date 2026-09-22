@@ -68,5 +68,13 @@
 	</array>
 	<key>NFCReaderUsageDescription</key>
 	<string>Trust Regulator requires NFC access to scan ID cards.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>https</string>
+		<string>http</string>
+		<string>bankapp</string>
+		<string>insuranceapp</string>
+		<string>tg</string>
+	</array>
 </dict>
 </plist>

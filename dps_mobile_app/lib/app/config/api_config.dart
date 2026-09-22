@@ -8,7 +8,10 @@ class ApiConfig {
   static const String _envApiUrl = String.fromEnvironment('API_URL', defaultValue: '');
 
   /// Observable current base URL used by all HTTP calls across the Super App
-  static final RxString baseUrlRx = (kIsWeb ? 'http://localhost:3000' : 'http://192.168.10.35:3000').obs;
+  static final RxString baseUrlRx = (_envApiUrl.isNotEmpty
+          ? _envApiUrl
+          : (kIsWeb ? 'http://localhost:3000' : 'http://10.0.2.2:3000'))
+      .obs;
   static final RxString connectionStatusRx = 'Unknown'.obs;
   static final RxBool isCheckingRx = false.obs;
 
@@ -19,7 +22,7 @@ class ApiConfig {
       final uri = Uri.parse(baseUrl);
       return uri.host;
     } catch (_) {
-      return kIsWeb ? 'localhost' : '192.168.10.35';
+      return kIsWeb ? 'localhost' : '10.0.2.2';
     }
   }
 

@@ -3,8 +3,7 @@
 
 $ErrorActionPreference = "Stop"
 
-$ProjectRoot = Resolve-Path "$PSScriptRoot/.."
-$MobileAppDir = "$ProjectRoot/dps_mobile_app"
+$MobileAppDir = Resolve-Path "$PSScriptRoot/.."
 
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host "📉 Super App Mobile Container: APK & Binary Size Analysis" -ForegroundColor Cyan

@@ -11,3 +11,4 @@ export * from './settings.api';
 export * from './integrations.api';
 export * from './auth.api';
 export * from './roles.api';
+export * from './sdk-artifacts.api';

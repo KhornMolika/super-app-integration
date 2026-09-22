@@ -18,7 +18,7 @@ import ReviewSummaryStep from '@/components/forms/ReviewSummaryStep';
 import RegistrationWizardSteps from '@/components/forms/RegistrationWizardSteps';
 import { validateMiniAppStep } from '@/lib/miniapp-form.validator';
 import { validateUrlFormat } from '@/components/ui/ValidatedUrlInput';
-import { CreateMiniAppDto, FlutterPackageConfigDto, IntegrationMethod, SourceType } from '@/types/miniapp.types';
+import { CreateMiniAppDto, FlutterPackageConfigDto, NativeSdkConfigDto, IntegrationMethod, SourceType } from '@/types/miniapp.types';
 import { miniappsApi, telegramApi } from '@/api';
 
 export default function RegisterMiniAppPage() {
@@ -56,6 +56,17 @@ export default function RegisterMiniAppPage() {
       verificationToken: generateClientVerificationToken(),
     },
     integrationConfigFlutter: { sourceType: SourceType.ARTIFACT, packageName: '', versionConstraint: '' },
+    integrationConfigNativeSdk: {
+      iosModuleName: '',
+      iosTypeName: '',
+      iosArtifactFilename: '',
+      androidPackageName: '',
+      androidObjectName: '',
+      androidArtifactFilename: '',
+      androidMavenGroupId: 'com.fsa.sdk',
+      androidMavenArtifactId: '',
+      androidMavenVersion: '1.0.0',
+    },
     integrationConfigDeepLink: { urlScheme: '', packageName: '', appStoreUrl: '' },
     permissions: [],
     securityChecks: [],
@@ -95,12 +106,16 @@ export default function RegisterMiniAppPage() {
   const [showPreview, setShowPreview] = useState(false);
   const [previewUrl, setPreviewUrl] = useState('');
   const [pendingArchiveFile, setPendingArchiveFile] = useState<File | null>(null);
+  const [pendingIosFile, setPendingIosFile] = useState<File | null>(null);
+  const [pendingAndroidFile, setPendingAndroidFile] = useState<File | null>(null);
   const [showUnsupportedModal, setShowUnsupportedModal] = useState(false);
 
   const validateStep = async (currentStep: number) => {
     const result = await validateMiniAppStep(currentStep, {
       ...formData,
       pendingArchiveFile: pendingArchiveFile || undefined,
+      pendingIosFile: pendingIosFile || undefined,
+      pendingAndroidFile: pendingAndroidFile || undefined,
     } as any);
     if (!result.isValid) {
       setLocalErrors((prev) => ({ ...prev, ...result.errors }));
@@ -121,6 +136,7 @@ export default function RegisterMiniAppPage() {
     setIsSubmitting(true);
     const payload = { ...formData };
     if (payload.integrationMethod !== IntegrationMethod.WEBVIEW) delete payload.integrationConfigWebView;
+    if (payload.integrationMethod !== IntegrationMethod.NATIVE_SDK) delete payload.integrationConfigNativeSdk;
     if (payload.integrationMethod !== IntegrationMethod.FLUTTER_PACKAGE) {
       delete payload.integrationConfigFlutter;
     } else if (pendingArchiveFile) {
@@ -311,6 +327,12 @@ export default function RegisterMiniAppPage() {
       return acc;
     }
     if (
+      formData.integrationMethod !== IntegrationMethod.NATIVE_SDK &&
+      key.startsWith('integrationConfigNativeSdk')
+    ) {
+      return acc;
+    }
+    if (
       formData.integrationMethod !== IntegrationMethod.DEEP_LINK &&
       key.startsWith('integrationConfigDeepLink')
     ) {
@@ -401,6 +423,57 @@ export default function RegisterMiniAppPage() {
     });
   };
 
+  const handleNativeSdkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      integrationConfigNativeSdk: { ...prev.integrationConfigNativeSdk!, [name]: value } as any,
+    }));
+    setLocalErrors((prev) => {
+      const next = { ...prev };
+      delete next[`integrationConfigNativeSdk.${name}`];
+      return next;
+    });
+  };
+
+  const handleUpdateNativeSdkConfig = (
+    updates: Partial<NativeSdkConfigDto>,
+    extraData?: { iosFile?: File; androidFile?: File; detectedPermissions?: any[] },
+  ) => {
+    if (extraData?.iosFile) setPendingIosFile(extraData.iosFile);
+    if (extraData?.androidFile) setPendingAndroidFile(extraData.androidFile);
+
+    setFormData((prev) => {
+      const nextSdk: NativeSdkConfigDto = {
+        ...(prev.integrationConfigNativeSdk as NativeSdkConfigDto),
+        ...updates,
+      };
+      const nextPermissions =
+        extraData?.detectedPermissions && extraData.detectedPermissions.length > 0
+          ? [
+              ...(prev.permissions || []).filter(
+                (p) => !extraData.detectedPermissions!.some((dp) => dp.type === p.type),
+              ),
+              ...extraData.detectedPermissions,
+            ]
+          : prev.permissions;
+
+      return {
+        ...prev,
+        integrationConfigNativeSdk: nextSdk,
+        permissions: nextPermissions,
+      };
+    });
+
+    setLocalErrors((prev) => {
+      const next = { ...prev };
+      Object.keys(updates).forEach((key) => {
+        delete next[`integrationConfigNativeSdk.${key}`];
+      });
+      return next;
+    });
+  };
+
   const handleDeepLinkChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
       ...formData,
@@ -480,6 +553,7 @@ export default function RegisterMiniAppPage() {
         console.error('Failed to upload archive to MinIO on submit:', err);
       }
     }
+    if (payload.integrationMethod !== IntegrationMethod.NATIVE_SDK) delete payload.integrationConfigNativeSdk;
     if (payload.integrationMethod !== IntegrationMethod.DEEP_LINK) delete payload.integrationConfigDeepLink;
 
     try {
@@ -683,6 +757,8 @@ export default function RegisterMiniAppPage() {
                 handleWebViewChange={handleWebViewChange}
                 handleFlutterChange={handleFlutterChange}
                 onUpdateFlutterConfig={handleUpdateFlutterConfig}
+                handleNativeSdkChange={handleNativeSdkChange}
+                onUpdateNativeSdkConfig={handleUpdateNativeSdkConfig}
                 handleDeepLinkChange={handleDeepLinkChange}
                 onDomainVerified={handleDomainVerified}
               />

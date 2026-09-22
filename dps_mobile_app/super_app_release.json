@@ -1,15 +1,15 @@
 {
   "superAppVersion": "1.0.0",
-  "buildTimestamp": "2026-09-22T12:03:15.834Z",
+  "buildTimestamp": "2026-09-22T13:21:39.775Z",
   "bundledMiniApps": [
     {
       "id": "app-1",
-      "packageName": "dps_miniapp_banking",
+      "packageName": "p",
       "version": "1.0.0",
       "checksum": "a050dc04f6fad5e26f4c66b2ad7efa22925012496808d0b71fd152834737b8fb",
-      "entryPoint": "package:dps_miniapp_banking/dps_miniapp_banking.dart"
+      "entryPoint": "package:p/p.dart"
     }
   ],
   "consolidatedPermissions": [],
-  "integrityDigest": "b3f1b29a2b40963c35040d0a60df607772ebdf36753a054d2981efe63f26a681"
+  "integrityDigest": "748cd13bc4971d7e1fa02e447418edf7da89a8d8695516587ee88eae4c24cb48"
 }

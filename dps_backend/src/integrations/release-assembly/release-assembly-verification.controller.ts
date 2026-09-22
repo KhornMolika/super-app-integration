@@ -1,9 +1,19 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
+} from '@nestjs/common';
 import { ReleaseAssemblyVerificationService } from './release-assembly-verification.service';
 import {
   VerifyAndAssembleReleaseDto,
   ReleaseAssemblyAuditResult,
+  BuildStageUpdateDto,
+  BuildCallbackDto,
 } from './dto/release-assembly-verification.dto';
+import { CallbackTokenGuard } from './callback-token.guard';
 
 @Controller(['release-assembly', 'api/release-assembly'])
 export class ReleaseAssemblyVerificationController {
@@ -25,9 +35,17 @@ export class ReleaseAssemblyVerificationController {
     return this.releaseService.handleStageUpdate(body);
   }
 
-  @Post('build-callback')
+  @Post('build-stage-update')
+  @UseGuards(CallbackTokenGuard)
   @HttpCode(HttpStatus.OK)
-  async buildCallback(@Body() body: any) {
-    return this.releaseService.handleBuildCallback(body);
+  async buildStageUpdate(@Body() dto: BuildStageUpdateDto) {
+    return this.releaseService.handleBuildStageUpdate(dto);
+  }
+
+  @Post('build-callback')
+  @UseGuards(CallbackTokenGuard)
+  @HttpCode(HttpStatus.OK)
+  async buildCallback(@Body() dto: BuildCallbackDto) {
+    return this.releaseService.handleBuildCallback(dto);
   }
 }

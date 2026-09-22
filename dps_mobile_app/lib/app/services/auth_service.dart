@@ -2,9 +2,9 @@ import 'package:get/get.dart';
 
 class AuthService extends GetxService {
   final _token = ''.obs;
-  final _userId = 'super_app_user_456'.obs;
-  final _userName = 'Sokha Chan'.obs;
-  final _userEmail = 'admin@example.com'.obs;
+  final _userId = ''.obs;
+  final _userName = ''.obs;
+  final _userEmail = ''.obs;
   
   String get token => _token.value;
   set token(String value) => _token.value = value;

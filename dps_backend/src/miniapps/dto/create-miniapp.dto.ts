@@ -10,6 +10,7 @@ import {
   ValidateIf,
   IsBoolean,
   IsNumber,
+  Matches,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -162,6 +163,71 @@ export class FlutterPackageConfigDto {
   isArchiveSubmission?: boolean;
 }
 
+// Allow-lists: these values are rendered into Gradle/Swift/Kotlin/Podfile source.
+const NATIVE_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
+const NATIVE_PACKAGE = /^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$/;
+const MAVEN_COORD = /^[A-Za-z0-9_.-]+$/;
+const MAVEN_VERSION = /^[A-Za-z0-9_.+-]+$/;
+
+export class NativeSdkConfigDto {
+  @IsString()
+  @IsNotEmpty()
+  @Matches(NATIVE_IDENTIFIER, {
+    message: 'iosModuleName must be a valid identifier',
+  })
+  iosModuleName!: string; // 'SpaBookingSDK'
+
+  @IsString()
+  @IsNotEmpty()
+  @Matches(NATIVE_IDENTIFIER, {
+    message: 'iosTypeName must be a valid identifier',
+  })
+  iosTypeName!: string; // 'SpaBookingSDKView'
+
+  @IsString()
+  @IsNotEmpty()
+  iosArtifactFilename!: string; // 'SpaBookingSDK.xcframework.zip'
+
+  @IsString()
+  @IsNotEmpty()
+  @Matches(NATIVE_PACKAGE, {
+    message: 'androidPackageName must be a dotted package name',
+  })
+  androidPackageName!: string; // 'com.example.spabooking'
+
+  @IsString()
+  @IsNotEmpty()
+  @Matches(NATIVE_IDENTIFIER, {
+    message: 'androidObjectName must be a valid identifier',
+  })
+  androidObjectName!: string; // 'SpaBookingSDK'
+
+  @IsString()
+  @IsNotEmpty()
+  androidArtifactFilename!: string; // 'spa-booking-sdk-1.0.0.aar'
+
+  @IsString()
+  @IsNotEmpty()
+  @Matches(MAVEN_COORD, {
+    message: 'androidMavenGroupId may only contain letters, digits, _ . -',
+  })
+  androidMavenGroupId!: string; // 'com.fsa.sdk'
+
+  @IsString()
+  @IsNotEmpty()
+  @Matches(MAVEN_COORD, {
+    message: 'androidMavenArtifactId may only contain letters, digits, _ . -',
+  })
+  androidMavenArtifactId!: string; // 'spa-booking-sdk'
+
+  @IsString()
+  @IsNotEmpty()
+  @Matches(MAVEN_VERSION, {
+    message: 'androidMavenVersion may only contain letters, digits, _ . + -',
+  })
+  androidMavenVersion!: string; // '1.0.0'
+}
+
 export class PermissionDto {
   @IsString()
   @IsNotEmpty()
@@ -281,7 +347,13 @@ export class CreateMiniAppDto {
   @IsNotEmpty()
   integrationConfigDeepLink?: DeepLinkConfigDto;
 
-  // In the controller, we can map integrationConfigWebView, integrationConfigFlutter, or integrationConfigDeepLink to integrationConfig before saving
+  @ValidateIf((o) => o.integrationMethod === IntegrationMethod.NATIVE_SDK)
+  @ValidateNested()
+  @Type(() => NativeSdkConfigDto)
+  @IsNotEmpty()
+  integrationConfigNativeSdk?: NativeSdkConfigDto;
+
+  // In the controller, we can map integrationConfigWebView, integrationConfigFlutter, integrationConfigDeepLink, or integrationConfigNativeSdk to integrationConfig before saving
 
   @IsArray()
   @ValidateNested({ each: true })

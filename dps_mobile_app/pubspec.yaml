@@ -27,16 +27,6 @@ dependencies:
       name: dps_miniapp_mobile_trust_regulator
       url: http://localhost:8081/repository/pub-group
     version: ^1.0.0
-  sc_private_miniapp:
-    git:
-      url: https://github.com/KhornMolika/sc-private-miniapp.git
-      ref: main
-  sc_public_miniapp:
-    git:
-      url: https://github.com/KhornMolika/sc-public-miniapp.git
-      ref: v1.0.0
-  dps_miniapp_mobile_kyc_verifier:
-    path: ../dsp_miniapp_kyc_verifier
 
 dev_dependencies:
   flutter_test:

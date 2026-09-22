@@ -30,7 +30,7 @@ export const DEFAULT_PLATFORM_DEPLOY_KEY_FINGERPRINT =
 
 /**
  * Derives a standardized Dart package name from a Git repository URL or subfolder path.
- * e.g., "git@github.com:KhornMolika/sc-private-miniapp.git" -> "sc_private_miniapp"
+ * e.g., "git@git.example.com:partner/sample-miniapp.git" -> "sample_miniapp"
  */
 export function inferPackageNameFromGitUrl(
   url?: string,

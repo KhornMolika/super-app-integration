@@ -293,7 +293,7 @@ export function TelegramPersonalCard({
                     type="text"
                     value={manualUsername}
                     onChange={(e) => setManualUsername(e.target.value)}
-                    placeholder="e.g. khornmolika"
+                    placeholder="e.g. username"
                     className="text-base mt-1.5"
                   />
                 </div>

@@ -1,8 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:dps_core_package/dps_core.dart';
 import 'package:nfc_manager/nfc_manager.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
+
+/// Defines standard exit callback for host app navigation.
+typedef ExitCallback = void Function();
+
+/// Represents the active user session provided by the Super App or standalone host.
+class AuthContext {
+  final String jwtToken;
+  final String userId;
+
+  const AuthContext({
+    required this.jwtToken,
+    required this.userId,
+  });
+}
 
 /// The entry point widget for the Trust Regulator mini app.
 /// Designed for Security Testing & Capability Gatekeeper validation.
@@ -11,12 +24,19 @@ class TrustRegulatorAppEntry extends StatefulWidget {
   final ExitCallback onExit;
   final Future<String> Function()? onScanNFC;
 
-  const TrustRegulatorAppEntry({
+  TrustRegulatorAppEntry({
     super.key,
-    required this.authContext,
-    required this.onExit,
+    AuthContext? authContext,
+    String? jwtToken,
+    String? userId,
+    ExitCallback? onExit,
     this.onScanNFC,
-  });
+  })  : authContext = authContext ??
+            AuthContext(
+              jwtToken: jwtToken ?? '',
+              userId: userId ?? '',
+            ),
+        onExit = onExit ?? (() {});
 
   @override
   State<TrustRegulatorAppEntry> createState() => _TrustRegulatorAppEntryState();

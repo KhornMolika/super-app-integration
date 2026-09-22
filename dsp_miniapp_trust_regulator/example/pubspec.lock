@@ -73,13 +73,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.15"
-  dps_core_package:
-    dependency: "direct main"
-    description:
-      path: "../../dps_core_package"
-      relative: true
-    source: path
-    version: "1.0.0"
   dps_miniapp_mobile_trust_regulator:
     dependency: "direct main"
     description:

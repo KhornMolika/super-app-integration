@@ -83,7 +83,7 @@ export default function SecurityGateCard({ miniApp }: SecurityGateCardProps) {
         return;
       }
 
-      const gitUrl = flutterConfig.gitUrl || 'https://github.com/KhornMolika/super-app-integration';
+      const gitUrl = flutterConfig.gitUrl || process.env.NEXT_PUBLIC_SUPERAPP_GIT_REPO_URL || 'https://git.fintechcenterfsa.com/frontend/super-app';
       const ref = flutterConfig.gitBranch || 'main';
       const path = flutterConfig.gitPath || 'dsp_miniapp_trust_regulator';
 

@@ -32,8 +32,6 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
-  dps_core_package:
-    path: ../../dps_core_package
   dps_miniapp_mobile_trust_regulator:
     path: ../../dsp_miniapp_trust_regulator
 

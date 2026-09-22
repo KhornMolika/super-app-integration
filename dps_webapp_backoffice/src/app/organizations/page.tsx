@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { Button, Input, Label } from '@/components/ui/inputs';
 import { Card } from '@/components/ui/card';
 import { organizationsApi, Organization } from '@/api';
+import { useConfirm } from '@/components/ui/ConfirmationProvider';
 import { BuildingIcon, ShieldCheckIcon, DocumentTextIcon, CheckIcon, XIcon } from '@/components/ui/Icons';
 import {
   getOrganizationCode,
@@ -140,8 +141,16 @@ export default function OrganizationsPage() {
     }
   };
 
+  const confirm = useConfirm();
+
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to remove this organization?')) return;
+    const isConfirmed = await confirm({
+      title: 'Remove Organization',
+      message: 'Are you sure you want to remove this organization? Associated applications and users may be impacted.',
+      confirmText: 'Remove',
+      confirmVariant: 'danger',
+    });
+    if (!isConfirmed) return;
     try {
       await organizationsApi.delete(id);
       fetchOrganizations();

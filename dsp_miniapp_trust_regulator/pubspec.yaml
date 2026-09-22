@@ -10,8 +10,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  dps_core_package:
-    path: ../dps_core_package
   nfc_manager: ^3.3.0
   flutter_blue_plus: ^1.35.4
   flutter_contacts: ^1.1.9

@@ -5,6 +5,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/lib/auth';
 import { PipelineTimingSettings, DEFAULT_PIPELINE_TIMING } from '@/types/settings.types';
 import { toast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmationProvider';
 import {
   UserProfileCard,
   TelegramPersonalCard,
@@ -21,6 +22,7 @@ import { telegramApi, settingsApi } from '@/api';
 
 export default function SettingsPage() {
   const { role, user } = useAuth();
+  const confirm = useConfirm();
 
   // Pipeline Automation Timing States
   const [pipelineTiming, setPipelineTiming] = useState<PipelineTimingSettings>(DEFAULT_PIPELINE_TIMING);
@@ -328,7 +330,13 @@ export default function SettingsPage() {
   };
 
   const handleDisconnectTelegram = async () => {
-    if (!confirm('Are you sure you want to disconnect personal Telegram notifications from this account?')) return;
+    const isConfirmed = await confirm({
+      title: 'Disconnect Telegram',
+      message: 'Are you sure you want to disconnect personal Telegram notifications from this account?',
+      confirmText: 'Disconnect',
+      confirmVariant: 'danger',
+    });
+    if (!isConfirmed) return;
     try {
       const data = await telegramApi.disconnect();
       if (data?.success) {

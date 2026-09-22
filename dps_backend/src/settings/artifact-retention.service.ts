@@ -179,7 +179,12 @@ export class ArtifactRetentionService implements OnModuleInit {
 
   private getNexusAuthHeader(): Record<string, string> {
     const user = this.configService.get<string>('NEXUS_ADMIN_USER', 'admin');
-    const pass = this.configService.get<string>('NEXUS_ADMIN_PASSWORD', 'admin123');
+    const pass = this.configService.get<string>('NEXUS_ADMIN_PASSWORD');
+    if (!pass) {
+      throw new Error(
+        'NEXUS_ADMIN_PASSWORD is not set; refusing to call Nexus with a default password',
+      );
+    }
     const b64 = Buffer.from(`${user}:${pass}`).toString('base64');
     return { Authorization: `Basic ${b64}`, Accept: 'application/json' };
   }

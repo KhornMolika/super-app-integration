@@ -583,24 +583,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.28.0"
-  sc_private_miniapp:
-    dependency: "direct main"
-    description:
-      path: "."
-      ref: main
-      resolved-ref: "00d16a0eb6719c85717ffc9f50c0c4024571063c"
-      url: "https://github.com/KhornMolika/sc-private-miniapp.git"
-    source: git
-    version: "1.0.0"
-  sc_public_miniapp:
-    dependency: "direct main"
-    description:
-      path: "."
-      ref: "v1.0.0"
-      resolved-ref: "124d536be4a4ad26a9c6cf8f0120c70b44861b8b"
-      url: "https://github.com/KhornMolika/sc-public-miniapp.git"
-    source: git
-    version: "1.0.0"
   sky_engine:
     dependency: transitive
     description: flutter

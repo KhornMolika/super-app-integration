@@ -14,7 +14,13 @@ export class JenkinsService {
   private readonly sandboxBuildMode: string;
   private readonly jenkinsNexusUrl: string;
 
+  /** Public API URL baked into the mobile app build (Flutter --dart-define=API_BASE_URL). */
+  private readonly mobileApiBaseUrl: string;
+
   constructor(private readonly configService: ConfigService) {
+    this.mobileApiBaseUrl = (
+      this.configService.get<string>('MOBILE_API_BASE_URL') || ''
+    ).trim();
     this.jenkinsUrl = this.configService
       .get<string>('JENKINS_URL', 'http://localhost:8085')
       .replace(/\/$/, '');
@@ -29,11 +35,11 @@ export class JenkinsService {
 
     this.superAppRepoUrl = this.configService.get<string>(
       'SUPERAPP_GIT_REPO_URL',
-      'https://github.com/KhornMolika/super-app-integration.git',
+      'https://git.fintechcenterfsa.com/frontend/super-app.git',
     );
     this.superAppBranch = this.configService.get<string>(
       'SUPERAPP_GIT_BRANCH',
-      'molika',
+      'main',
     );
     this.sandboxBaseHref = this.configService.get<string>(
       'SUPERAPP_SANDBOX_BASE_HREF',
@@ -281,6 +287,10 @@ export class JenkinsService {
     releaseVersion: string;
     buildType?: string;
     nexusUrl?: string;
+    /** GitLab merge request number of the native-SDK codegen MR (digits only), for release notes. */
+    codegenMrIid?: string;
+    /** Overrides MOBILE_API_BASE_URL: backend URL the built app talks to. */
+    apiBaseUrl?: string;
   }): Promise<{ success: boolean; message: string }> {
     const jobName = 'superapp-test-build';
     const callbackUrl = `${this.callbackBaseUrl}/api/release-assembly/build-callback`;
@@ -295,6 +305,29 @@ export class JenkinsService {
       CALLBACK_URL: callbackUrl,
       NEXUS_URL: nexusUrl,
     });
+    // Backend URL baked into the app. Release builds must be https (the app refuses cleartext).
+    const apiBaseUrl = (options.apiBaseUrl ?? this.mobileApiBaseUrl).trim();
+    if (apiBaseUrl) {
+      const ok =
+        /^https?:\/\/[A-Za-z0-9._:-]+(?:\/[A-Za-z0-9._~%/-]*)?$/.test(
+          apiBaseUrl,
+        ) &&
+        (buildType !== 'release' || apiBaseUrl.startsWith('https://'));
+      if (ok) params.set('API_BASE_URL', apiBaseUrl.replace(/\/+$/, ''));
+      else {
+        this.logger.warn(
+          `Ignoring invalid MOBILE_API_BASE_URL for a ${buildType} build (must be http(s) URL; https for release)`,
+        );
+      }
+    } else if (buildType === 'release') {
+      this.logger.warn(
+        'MOBILE_API_BASE_URL is not set: the release app build will refuse to talk to the backend',
+      );
+    }
+    // Only sent when known; the Jenkinsfile defaults it to '' and accepts digits only.
+    if (options.codegenMrIid && /^\d{1,9}$/.test(options.codegenMrIid)) {
+      params.set('CODEGEN_MR_IID', options.codegenMrIid);
+    }
 
     const triggerUrl = `${this.jenkinsUrl}/job/${jobName}/buildWithParameters?${params.toString()}`;
     this.logger.log(

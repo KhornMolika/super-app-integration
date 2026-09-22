@@ -220,4 +220,13 @@ export class NotificationsService {
   emitStageUpdate(data: any) {
     this.notificationGateway.emitStageUpdate(data);
   }
+
+  emitBuildStageUpdate(data: any) {
+    this.notificationGateway.emitBuildStageUpdate(data);
+  }
+
+  emitBuildCompleted(data: any) {
+    this.notificationGateway.emitBuildCompleted(data);
+  }
 }
+

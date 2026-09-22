@@ -121,6 +121,11 @@ export class GitLabProvider implements GitProvider {
     return encodeURIComponent(parsed.fullName);
   }
 
+  getProjectApiUrl(slug: string): string {
+    const parsed = this.parseUrl(slug);
+    return `${this.getApiBaseUrl(parsed.host)}/projects/${this.getProjectIdentifier(parsed)}`;
+  }
+
   private getAuthHeaders(token?: string): Record<string, string> {
     const effectiveToken = token || this.getDefaultToken();
     const headers: Record<string, string> = {

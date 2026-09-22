@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ShieldCheckIcon, BuildingIcon } from '@/components/ui/Icons';
+import { ShieldCheckIcon, BuildingIcon, DevicePhoneIcon, PackageIcon } from '@/components/ui/Icons';
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 import { CreateMiniAppDto, IntegrationMethod } from '@/types/miniapp.types';
 import { getOrganizationCode, getOrganizationFullName } from '@/lib/constants/fsa-organizations';
@@ -595,6 +595,85 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                     </span>
                   </div>
                 )}
+              </div>
+            )}
+
+            {formData.integrationMethod === IntegrationMethod.NATIVE_SDK && (
+              <div className="space-y-4">
+                {/* Quarantine Isolation Banner */}
+                <div className="p-3 bg-indigo-50/80 dark:bg-indigo-950/40 rounded-xl border border-indigo-200/80 dark:border-indigo-800 text-xs text-indigo-900 dark:text-indigo-200 flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-1.5 font-semibold">
+                    <ShieldCheckIcon className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    <span>Isolated MinIO Quarantine Staging</span>
+                  </span>
+                  <span className="font-mono text-[10px] bg-white/70 dark:bg-slate-900/60 px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-800">
+                    Zero-Bytes to Nexus Pre-Approval
+                  </span>
+                </div>
+
+                {/* iOS Details */}
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800 space-y-2 text-xs">
+                  <div className="flex items-center justify-between pb-1.5 border-b border-slate-200/60 dark:border-slate-700/60">
+                    <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                      <DevicePhoneIcon className="w-3.5 h-3.5 text-sky-600" />
+                      <span>iOS Framework Target</span>
+                    </span>
+                    <span className="font-mono text-[11px] text-slate-500">
+                      {formData.integrationConfigNativeSdk?.iosArtifactFilename || '-'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    <div>
+                      <span className="text-slate-400 block">Module:</span>
+                      <code className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                        {formData.integrationConfigNativeSdk?.iosModuleName || '-'}
+                      </code>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block">Type:</span>
+                      <code className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                        {formData.integrationConfigNativeSdk?.iosTypeName || '-'}
+                      </code>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Android Details */}
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800 space-y-2 text-xs">
+                  <div className="flex items-center justify-between pb-1.5 border-b border-slate-200/60 dark:border-slate-700/60">
+                    <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                      <PackageIcon className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Android Maven Artifact Target</span>
+                    </span>
+                    <span className="font-mono text-[11px] text-slate-500">
+                      {formData.integrationConfigNativeSdk?.androidArtifactFilename || '-'}
+                    </span>
+                  </div>
+                  <div className="space-y-1.5 text-[11px]">
+                    <div>
+                      <span className="text-slate-400 block">Maven Coordinates:</span>
+                      <code className="font-mono font-bold text-emerald-700 dark:text-emerald-300">
+                        {formData.integrationConfigNativeSdk?.androidMavenGroupId || 'com.fsa.sdk'}:
+                        {formData.integrationConfigNativeSdk?.androidMavenArtifactId || '-'}:
+                        {formData.integrationConfigNativeSdk?.androidMavenVersion || '1.0.0'}
+                      </code>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <span className="text-slate-400 block">Package:</span>
+                        <code className="font-mono font-semibold text-slate-800 dark:text-slate-200 truncate block">
+                          {formData.integrationConfigNativeSdk?.androidPackageName || '-'}
+                        </code>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block">Object Class:</span>
+                        <code className="font-mono font-semibold text-slate-800 dark:text-slate-200 truncate block">
+                          {formData.integrationConfigNativeSdk?.androidObjectName || '-'}
+                        </code>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 

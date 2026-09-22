@@ -6,6 +6,7 @@ import { ShieldCheckIcon } from '@/components/ui/Icons';
 import { IntegrationMethod } from '@/types/miniapp.types';
 import WebViewIntegrationForm from './integration/WebViewIntegrationForm';
 import FlutterPackageIntegrationForm from './integration/FlutterPackageIntegrationForm';
+import NativeSdkIntegrationForm from './integration/NativeSdkIntegrationForm';
 import DeepLinkIntegrationForm from './integration/DeepLinkIntegrationForm';
 import LegalPolicyTabField from './LegalPolicyTabField';
 
@@ -27,6 +28,11 @@ export interface IntegrationFormProps {
     updates: Record<string, any>,
     extraData?: { archiveFile?: File; detectedPermissions?: any[] },
   ) => void;
+  handleNativeSdkChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onUpdateNativeSdkConfig?: (
+    updates: Record<string, any>,
+    extraData?: { iosFile?: File; androidFile?: File; detectedPermissions?: any[] },
+  ) => void;
   handleDeepLinkChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onDomainVerified?: (data: any) => void;
   isEditable?: boolean;
@@ -39,6 +45,8 @@ export default function IntegrationForm({
   handleWebViewChange = () => {},
   handleFlutterChange = () => {},
   onUpdateFlutterConfig,
+  handleNativeSdkChange,
+  onUpdateNativeSdkConfig,
   handleDeepLinkChange = () => {},
   onDomainVerified,
   isEditable = true,
@@ -70,13 +78,22 @@ export default function IntegrationForm({
         />
       )}
 
-      {(formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE ||
-        formData.integrationMethod === IntegrationMethod.NATIVE_SDK) && (
+      {formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE && (
         <FlutterPackageIntegrationForm
           formData={formData}
           allErrors={allErrors}
           handleFlutterChange={handleFlutterChange}
           onUpdateFlutterConfig={onUpdateFlutterConfig}
+          isEditable={isEditable}
+        />
+      )}
+
+      {formData.integrationMethod === IntegrationMethod.NATIVE_SDK && (
+        <NativeSdkIntegrationForm
+          formData={formData}
+          allErrors={allErrors}
+          handleNativeSdkChange={handleNativeSdkChange}
+          onUpdateNativeSdkConfig={onUpdateNativeSdkConfig}
           isEditable={isEditable}
         />
       )}

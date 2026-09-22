@@ -1,4 +1,5 @@
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
@@ -12,6 +13,7 @@ export class SeederService implements OnApplicationBootstrap {
     @InjectRepository(Role) private roleRepository: Repository<Role>,
     @InjectRepository(Permission)
     private permissionRepository: Repository<Permission>,
+    private configService: ConfigService,
   ) {}
 
   async onApplicationBootstrap() {
@@ -114,23 +116,28 @@ export class SeederService implements OnApplicationBootstrap {
       devRole,
     ]);
 
+    const superAdminEmail = this.configService.get<string>('SUPERADMIN_EMAIL', 'superadmin@example.com');
+    const adminEmail = this.configService.get<string>('ADMIN_EMAIL', 'admin@example.com');
+    const managerEmail = this.configService.get<string>('MANAGER_EMAIL', 'manager@example.com');
+    const devEmail = this.configService.get<string>('DEV_EMAIL', 'dev@example.com');
+
     const superAdminUser = this.userRepository.create({
-      email: 'superadmin@example.com',
+      email: superAdminEmail,
       name: 'Super Admin',
       roles: [superAdminRole],
     });
     const adminUser = this.userRepository.create({
-      email: 'admin@example.com',
+      email: adminEmail,
       name: 'Admin User',
       roles: [adminRole],
     });
     const managerUser = this.userRepository.create({
-      email: 'manager@example.com',
+      email: managerEmail,
       name: 'Mini App Manager',
       roles: [managerRole],
     });
     const devUser = this.userRepository.create({
-      email: 'dev@example.com',
+      email: devEmail,
       name: 'Developer User',
       roles: [devRole],
     });

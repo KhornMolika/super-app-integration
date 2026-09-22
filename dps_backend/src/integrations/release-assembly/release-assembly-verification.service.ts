@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 import { JenkinsService } from '../jenkins/jenkins.service';
+import { latestCodegenMrIid } from '../../miniapps/helpers/native-sdk-config.helper';
 import { NexusIntegrationService } from '../nexus/nexus-integration.service';
 import { NotificationsService, MailService } from '../../notifications';
 import { resolveBackofficeBaseUrl } from '../../common/utils/network.utils';
@@ -14,6 +15,8 @@ import { PubspecInjectorService } from '../flutter/pubspec-injector.service';
 import {
   VerifyAndAssembleReleaseDto,
   ReleaseAssemblyAuditResult,
+  BuildStageUpdateDto,
+  BuildCallbackDto,
 } from './dto/release-assembly-verification.dto';
 
 interface VerifiedAppRecord {
@@ -85,8 +88,13 @@ export class ReleaseAssemblyVerificationService {
               path.resolve(process.cwd(), `../${app.packageName}/pubspec.yaml`),
               path.resolve(
                 process.cwd(),
+                `../ma_flutter_trust_regulator/pubspec.yaml`,
+              ),
+              path.resolve(
+                process.cwd(),
                 `../dsp_miniapp_trust_regulator/pubspec.yaml`,
               ),
+              path.resolve(process.cwd(), `../superapp_core/pubspec.yaml`),
               path.resolve(process.cwd(), `../dps_core_package/pubspec.yaml`),
             ];
             let foundLocal = false;
@@ -220,8 +228,8 @@ export class ReleaseAssemblyVerificationService {
     if (passed) {
       try {
         const releaseManifestPath = path.resolve(
-          process.cwd(),
-          '../dps_mobile_app/super_app_release.json',
+          this.pubspecService.getMobileAppDir(),
+          'super_app_release.json',
         );
         fs.writeFileSync(
           releaseManifestPath,
@@ -241,17 +249,22 @@ export class ReleaseAssemblyVerificationService {
         this.logger.warn(`Pubspec synchronization warning during release assembly: ${err.message}`);
       }
 
+      // Integration configs of the apps in this release (to find the codegen MR for the build).
+      const releaseConfigs: unknown[] = [];
+
       // Transition approved apps to BUILDING and dispatch notifications
       for (const appDto of dto.miniApps) {
         try {
           await this.miniappRepository.update(appDto.id, {
             status: 'BUILDING',
+            buildStages: null as any,
           });
 
           const appRecord = await this.miniappRepository.findOne({
             where: { id: appDto.id },
             relations: { owner: true },
           });
+          releaseConfigs.push(appRecord?.integrationConfig);
 
           if (appRecord?.ownerId) {
             await this.notificationsService.createNotification(
@@ -275,6 +288,7 @@ export class ReleaseAssemblyVerificationService {
         appName: 'superapp',
         releaseVersion: dto.releaseVersion,
         buildType: 'debug',
+        codegenMrIid: latestCodegenMrIid(releaseConfigs),
       });
 
       // Trigger Jenkins Super App Web Sandbox build pipeline
@@ -365,6 +379,13 @@ export class ReleaseAssemblyVerificationService {
         relations: { owner: true },
       });
 
+      await this.miniappRepository
+        .createQueryBuilder()
+        .update(MiniApp)
+        .set({ status: 'TESTING' })
+        .where("status = 'BUILDING'")
+        .execute();
+
       const repoName =
         body.buildType === 'release' ? 'apk-releases' : 'apk-test-builds';
       const filename =
@@ -399,7 +420,9 @@ export class ReleaseAssemblyVerificationService {
         }
 
         // Backoffice download endpoint is the most robust link for one-click downloading
-        const finalApkUrl = `${backofficeBase}/api/download-apk?type=${body.buildType === 'release' ? 'release' : 'test'}&version=${encodeURIComponent(effectiveVersion)}&appName=superapp`;
+        const finalApkUrl =
+          body.apkUrl ||
+          `${backofficeBase}/api/download-apk?type=${body.buildType === 'release' ? 'release' : 'test'}&version=${encodeURIComponent(effectiveVersion)}&appName=superapp`;
 
         const currentStages = app.buildStages || {};
         const allCompletedStages: Record<string, any> = {
@@ -438,6 +461,15 @@ export class ReleaseAssemblyVerificationService {
         app.buildError = undefined;
         await this.miniappRepository.save(app);
 
+        this.notificationsService.emitBuildCompleted({
+          miniAppId: app.id,
+          appName: body.appName,
+          releaseVersion: effectiveVersion,
+          buildType: body.buildType || 'debug',
+          apkUrl: finalApkUrl,
+          status: 'TESTING',
+        });
+
         if (app.ownerId) {
           await this.notificationsService.createNotification(
             app.ownerId,
@@ -471,49 +503,116 @@ export class ReleaseAssemblyVerificationService {
         }
       }
     } else {
-      // Build Failed
-      const failureReason =
-        body.errorMessage ||
-        body.details ||
-        'Build failed during Super App Fastlane CI packaging.';
-
-      const failedApps = await this.miniappRepository.find({
-        where: [
-          { status: 'BUILDING' },
-          { activeTestVersion: body.releaseVersion },
-        ],
-        relations: { owner: true },
-      });
-
-      for (const app of failedApps) {
-        const currentStages = app.buildStages || {};
-        if (body.failedStage && currentStages[body.failedStage]) {
-          currentStages[body.failedStage].status = 'FAILED';
-          currentStages[body.failedStage].details = failureReason;
-        }
-        app.status = 'BUILD_FAILED';
-        app.buildStatus = 'FAILED';
-        app.buildStages = { ...currentStages };
-        app.buildError = failureReason;
-        await this.miniappRepository.save(app);
-
-        if (app.ownerId) {
-          await this.notificationsService.createNotification(
-            app.ownerId,
-            'Super App Build Failed',
-            `Super App build (${body.releaseVersion || 'latest'}) failed: ${failureReason}`,
-            'BUILD_FAILED',
-            app.id,
-            {
-              releaseVersion: body.releaseVersion,
-              error: failureReason,
-            },
-          );
-        }
-      }
+      await this.handleFailedBuild(body);
     }
 
     return { success: true };
+  }
+
+  /**
+   * A non-COMPLETED/SUCCESS callback (e.g. FAILED) must not leave apps stuck in
+   * BUILDING. The pre-BUILDING status is NOT recorded anywhere, and apps enter
+   * BUILDING from APPROVED (verify()) or APPROVED/IN_REVIEW/TESTING/BUILDING
+   * (lifecycle triggerTestBuild). We move them to APPROVED: an existing status
+   * from which both "Verify release" and "Start test build"/startTesting are
+   * allowed, so the admin can simply retry. `buildStages` is left untouched so
+   * the UI still shows which stage failed. The UPDATE is atomic on
+   * `status = 'BUILDING'` so it cannot clobber a concurrent transition.
+   */
+  private async handleFailedBuild(body: BuildCallbackDto) {
+    const buildingApps = await this.miniappRepository.find({
+      where: { status: 'BUILDING' },
+      relations: { owner: true },
+    });
+
+    await this.miniappRepository
+      .createQueryBuilder()
+      .update(MiniApp)
+      .set({ status: 'APPROVED' })
+      .where("status = 'BUILDING'")
+      .execute();
+
+    for (const app of buildingApps) {
+      const effectiveVersion =
+        body.releaseVersion ||
+        app.integrationConfig?.superAppTestVersion ||
+        'unknown';
+
+      this.notificationsService.emitBuildCompleted({
+        miniAppId: app.id,
+        appName: body.appName,
+        releaseVersion: effectiveVersion,
+        buildType: body.buildType || 'debug',
+        status: 'FAILED',
+      });
+
+      if (app.ownerId) {
+        await this.notificationsService.createNotification(
+          app.ownerId,
+          'Super App Build Failed',
+          `Super App test build (${effectiveVersion}) failed on Jenkins for Mini App "${app.name}". The app was returned to APPROVED; check the build stages for the failing step and retry the build.`,
+          'BUILD_FAILED',
+          app.id,
+          {
+            releaseVersion: effectiveVersion,
+            version: effectiveVersion,
+            buildType: body.buildType || 'debug',
+          },
+        );
+      }
+    }
+    this.logger.warn(
+      `Build ${body.releaseVersion} reported ${body.status}: ${buildingApps.length} app(s) returned from BUILDING to APPROVED`,
+    );
+  }
+
+  /**
+   * Records a Jenkins build pipeline stage on BUILDING mini-apps with a single
+   * atomic UPDATE (jsonb_set), so concurrent stage POSTs cannot lose updates
+   * and a stale write cannot revert a status changed by build-callback.
+   */
+  async handleBuildStageUpdate(dto: BuildStageUpdateDto) {
+    const stage = {
+      id: dto.stageId,
+      name: dto.stageName || dto.stageId,
+      status: dto.status,
+      details: dto.details || '',
+      updatedAt: new Date().toISOString(),
+    };
+
+    const result = await this.miniappRepository
+      .createQueryBuilder()
+      .update(MiniApp)
+      .set({
+        buildStages: () =>
+          `jsonb_set(COALESCE("buildStages", '{}'::jsonb), ARRAY[:stageId]::text[], CAST(:stageJson AS jsonb), true)`,
+      })
+      .where("status = 'BUILDING'")
+      .setParameters({ stageId: dto.stageId, stageJson: JSON.stringify(stage) })
+      .returning(['id', 'buildStages'])
+      .execute();
+
+    const rows: { id: string; buildStages: any }[] = result?.raw || [];
+    if (!rows.length) {
+      this.logger.warn(
+        `Build stage update for release ${dto.releaseVersion} ignored: no BUILDING mini-apps`,
+      );
+      return { ok: false, updated: 0 };
+    }
+
+    for (const row of rows) {
+      this.notificationsService.emitBuildStageUpdate({
+        miniAppId: row.id,
+        appName: dto.appName,
+        releaseVersion: dto.releaseVersion,
+        stage,
+        stages: row.buildStages,
+      });
+    }
+    this.logger.log(
+      `Build stage [${dto.releaseVersion}] ${dto.stageId} -> ${dto.status} (${rows.length} app(s))`,
+    );
+    return { ok: true, updated: rows.length };
   }
 }
 

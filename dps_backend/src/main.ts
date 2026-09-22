@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { json, urlencoded } from 'express';
 import { types } from 'pg';
 import {
@@ -33,6 +34,7 @@ async function bootstrap() {
       transformOptions: { enableImplicitConversion: true },
     }),
   );
+  app.useGlobalFilters(new AllExceptionsFilter());
   const port = process.env.PORT ?? 3000;
   await app.listen(port, '0.0.0.0');
 

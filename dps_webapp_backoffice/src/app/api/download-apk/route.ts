@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
   const nexusBase = (process.env.NEXUS_BASE_URL || process.env.NEXUS_URL || 'http://localhost:8081').replace(/\/+$/, '');
   const adminUser = process.env.NEXUS_ADMIN_USER || 'admin';
-  const adminPass = process.env.NEXUS_ADMIN_PASSWORD || 'admin123';
+  const adminPass = process.env.NEXUS_ADMIN_PASSWORD || '';
   const b64 = Buffer.from(`${adminUser}:${adminPass}`).toString('base64');
 
   // 1. Try Direct Nexus URLs with version variants
@@ -105,10 +105,18 @@ export async function GET(request: NextRequest) {
   } catch (_) {}
 
   // 3. Try Local Disk APK from Mobile App Build Directory
+  const mobileDir = process.env.MOBILE_APP_DIR
+    ? path.resolve(process.env.MOBILE_APP_DIR)
+    : path.resolve(process.cwd(), '../superapp_mobile');
+  const legacyMobileDir = path.resolve(process.cwd(), '../dps_mobile_app');
   const localApkPaths = [
-    path.resolve(process.cwd(), '../dps_mobile_app/build/app/outputs/flutter-apk/app-debug.apk'),
-    path.resolve(process.cwd(), '../dps_mobile_app/build/app/outputs/apk/debug/app-debug.apk'),
-    path.resolve(process.cwd(), '../dps_mobile_app/build/app/outputs/flutter-apk/app-release.apk'),
+    path.resolve(mobileDir, 'build/app/outputs/flutter-apk/app-debug.apk'),
+    path.resolve(mobileDir, 'build/app/outputs/apk/debug/app-debug.apk'),
+    path.resolve(mobileDir, 'build/app/outputs/flutter-apk/app-release.apk'),
+    path.resolve(legacyMobileDir, 'build/app/outputs/flutter-apk/app-debug.apk'),
+    path.resolve(legacyMobileDir, 'build/app/outputs/apk/debug/app-debug.apk'),
+    path.resolve(legacyMobileDir, 'build/app/outputs/flutter-apk/app-release.apk'),
+    path.resolve(process.cwd(), '../ma_flutter_trust_regulator/example/build/app/outputs/flutter-apk/app-debug.apk'),
     path.resolve(process.cwd(), '../dsp_miniapp_trust_regulator/example/build/app/outputs/flutter-apk/app-debug.apk'),
   ];
 

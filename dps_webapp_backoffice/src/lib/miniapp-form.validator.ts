@@ -10,7 +10,7 @@ export interface ValidationResult {
 
 /**
  * Derives a standardized Dart package name from a Git repository URL or subfolder path.
- * e.g., "git@github.com:KhornMolika/sc-private-miniapp.git" -> "sc_private_miniapp"
+ * e.g., "git@git.example.com:partner/sample-miniapp.git" -> "sample_miniapp"
  */
 export function inferPackageNameFromGitUrl(
   url?: string,
@@ -152,10 +152,7 @@ export async function validateMiniAppStep(
       }
     }
 
-    if (
-      formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE ||
-      formData.integrationMethod === IntegrationMethod.NATIVE_SDK
-    ) {
+    if (formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE) {
       const conf = formData.integrationConfigFlutter;
       if (conf?.sourceType === SourceType.ARTIFACT) {
         const hasArchive = Boolean(
@@ -281,6 +278,86 @@ export async function validateMiniAppStep(
             // non-blocking if offline or network error
           }
         }
+      }
+    }
+
+    if (formData.integrationMethod === IntegrationMethod.NATIVE_SDK) {
+      const conf = formData.integrationConfigNativeSdk;
+      const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
+      const DOTTED_PACKAGE = /^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$/;
+      const MAVEN_COORD = /^[A-Za-z0-9_.-]+$/;
+
+      if (!conf?.iosModuleName || !conf.iosModuleName.trim()) {
+        errors['integrationConfigNativeSdk.iosModuleName'] = 'iOS Module Name is required';
+        isValid = false;
+      } else if (!IDENTIFIER.test(conf.iosModuleName.trim())) {
+        errors['integrationConfigNativeSdk.iosModuleName'] = 'iOS Module Name must be a valid identifier (letters, digits, _)';
+        isValid = false;
+      }
+
+      if (!conf?.iosTypeName || !conf.iosTypeName.trim()) {
+        errors['integrationConfigNativeSdk.iosTypeName'] = 'iOS Type Name is required';
+        isValid = false;
+      } else if (!IDENTIFIER.test(conf.iosTypeName.trim())) {
+        errors['integrationConfigNativeSdk.iosTypeName'] = 'iOS Type Name must be a valid identifier';
+        isValid = false;
+      }
+
+      const hasIosFile = Boolean(
+        conf?.iosArtifactFilename ||
+        conf?.iosStoragePath ||
+        (formData as any)?.pendingIosFile,
+      );
+      if (!hasIosFile) {
+        errors['integrationConfigNativeSdk.iosArtifactFilename'] = 'Please upload an iOS framework (.xcframework.zip)';
+        isValid = false;
+      }
+
+      if (!conf?.androidPackageName || !conf.androidPackageName.trim()) {
+        errors['integrationConfigNativeSdk.androidPackageName'] = 'Android Package Name is required';
+        isValid = false;
+      } else if (!DOTTED_PACKAGE.test(conf.androidPackageName.trim())) {
+        errors['integrationConfigNativeSdk.androidPackageName'] = 'Android Package Name must be a valid dotted identifier (e.g. com.example.sdk)';
+        isValid = false;
+      }
+
+      if (!conf?.androidObjectName || !conf.androidObjectName.trim()) {
+        errors['integrationConfigNativeSdk.androidObjectName'] = 'Android Object / Class Name is required';
+        isValid = false;
+      } else if (!IDENTIFIER.test(conf.androidObjectName.trim())) {
+        errors['integrationConfigNativeSdk.androidObjectName'] = 'Android Object Name must be a valid identifier';
+        isValid = false;
+      }
+
+      if (!conf?.androidMavenGroupId || !conf.androidMavenGroupId.trim()) {
+        errors['integrationConfigNativeSdk.androidMavenGroupId'] = 'Maven Group ID is required';
+        isValid = false;
+      } else if (!MAVEN_COORD.test(conf.androidMavenGroupId.trim())) {
+        errors['integrationConfigNativeSdk.androidMavenGroupId'] = 'Maven Group ID may only contain letters, digits, _, ., -';
+        isValid = false;
+      }
+
+      if (!conf?.androidMavenArtifactId || !conf.androidMavenArtifactId.trim()) {
+        errors['integrationConfigNativeSdk.androidMavenArtifactId'] = 'Maven Artifact ID is required';
+        isValid = false;
+      } else if (!MAVEN_COORD.test(conf.androidMavenArtifactId.trim())) {
+        errors['integrationConfigNativeSdk.androidMavenArtifactId'] = 'Maven Artifact ID may only contain letters, digits, _, ., -';
+        isValid = false;
+      }
+
+      if (!conf?.androidMavenVersion || !conf.androidMavenVersion.trim()) {
+        errors['integrationConfigNativeSdk.androidMavenVersion'] = 'Maven Version is required';
+        isValid = false;
+      }
+
+      const hasAndroidFile = Boolean(
+        conf?.androidArtifactFilename ||
+        conf?.androidStoragePath ||
+        (formData as any)?.pendingAndroidFile,
+      );
+      if (!hasAndroidFile) {
+        errors['integrationConfigNativeSdk.androidArtifactFilename'] = 'Please upload an Android AAR (.aar)';
+        isValid = false;
       }
     }
 

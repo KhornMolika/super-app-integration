@@ -7,8 +7,8 @@ export function SidebarProfile() {
   const { user } = useAuth();
   const { isCollapsed } = useSidebar();
   
-  const userName = user?.name || 'Super Admin';
-  const userEmail = user?.email || 'superadmin@example.com';
+  const userName = user?.name || 'Administrator';
+  const userEmail = user?.email || (process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL || 'admin@superapp.local');
   const initials = userName
     .split(' ')
     .map(w => w.charAt(0))

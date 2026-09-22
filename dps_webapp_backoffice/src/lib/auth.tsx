@@ -48,19 +48,19 @@ export interface AuthUser {
 export const ROLE_USER_PROFILES: Record<Role, { name: string; email: string }> = {
   SUPER_ADMIN: {
     name: 'Super Admin',
-    email: 'superadmin@example.com',
+    email: process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL || 'superadmin@example.com',
   },
   ADMIN: {
     name: 'Admin User',
-    email: 'admin@example.com',
+    email: process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'admin@example.com',
   },
   MINI_APP_MANAGER: {
     name: 'Mini App Manager',
-    email: 'manager@example.com',
+    email: process.env.NEXT_PUBLIC_MANAGER_EMAIL || 'manager@example.com',
   },
   DEVELOPER: {
     name: 'Developer User',
-    email: 'dev@example.com',
+    email: process.env.NEXT_PUBLIC_DEV_EMAIL || 'dev@example.com',
   },
 };
 
@@ -120,7 +120,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const user: AuthUser = {
-    ...(ROLE_USER_PROFILES[role] || { name: 'Super Admin', email: 'superadmin@example.com' }),
+    ...(ROLE_USER_PROFILES[role] || {
+      name: 'Super Admin',
+      email: process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL || 'superadmin@example.com',
+    }),
     role,
   };
 

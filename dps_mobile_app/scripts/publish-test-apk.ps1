@@ -1,19 +1,18 @@
-# scripts/publish-test-apk.ps1
+# dps_mobile_app/scripts/publish-test-apk.ps1
 # Builds the Flutter Mobile App APK and publishes it to Sonatype Nexus & Jenkins test build volume.
 
 param(
     [string]$Version = "v0.0.1",
     [string]$AppName = "superapp",
     [string]$RepoName = "apk-test-builds",
-    [string]$NexusUrl = "http://localhost:8081",
-    [string]$NexusUser = "admin",
-    [string]$NexusPassword = "admin123",
+    [string]$NexusUrl = (if ($env:NEXUS_BASE_URL) { $env:NEXUS_BASE_URL } elseif ($env:NEXUS_URL) { $env:NEXUS_URL } else { "http://localhost:8081" }),
+    [string]$NexusUser = (if ($env:NEXUS_ADMIN_USER) { $env:NEXUS_ADMIN_USER } elseif ($env:NEXUS_USER) { $env:NEXUS_USER } else { "admin" }),
+    [string]$NexusPassword = (if ($env:NEXUS_ADMIN_PASSWORD) { $env:NEXUS_ADMIN_PASSWORD } elseif ($env:NEXUS_PASSWORD) { $env:NEXUS_PASSWORD } else { "" }),
     [switch]$SkipBuild
 )
 
 $ErrorActionPreference = "Stop"
-$ProjectRoot = Resolve-Path "$PSScriptRoot/.."
-$MobileAppDir = "$ProjectRoot/dps_mobile_app"
+$MobileAppDir = Resolve-Path "$PSScriptRoot/.."
 $ApkPath = "$MobileAppDir/build/app/outputs/flutter-apk/app-debug.apk"
 
 Write-Host "==========================================" -ForegroundColor Cyan

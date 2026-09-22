@@ -9,11 +9,13 @@ async function getDevAuthToken(forceRefresh = false): Promise<string | null> {
   if (!forceRefresh && cachedDevToken && Date.now() < cachedDevToken.expiresAt) {
     return cachedDevToken.token;
   }
+  const fallbackEmail = process.env.DEV_FALLBACK_USER_EMAIL;
+  if (!fallbackEmail) return null;
   try {
     const res = await fetch(`${BACKEND_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'superadmin@example.com' }),
+      body: JSON.stringify({ email: fallbackEmail }),
     });
     if (res.ok) {
       const data = await res.json();
@@ -196,9 +198,27 @@ async function handleProxy(request: Request, { params }: { params: Promise<{ pro
     }
 
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('BFF Proxy Error:', error);
-    return NextResponse.json({ error: 'Internal Gateway Error' }, { status: 502 });
+    const isConnRefused =
+      error?.code === 'ECONNREFUSED' ||
+      error?.cause?.code === 'ECONNREFUSED' ||
+      error?.message?.includes('fetch failed');
+    const status = isConnRefused ? 503 : 502;
+    const message = isConnRefused
+      ? 'Backend service is currently unreachable. It may be starting up or restarting. Please try again shortly.'
+      : (error?.message || 'Upstream gateway error encountered while communicating with backend.');
+
+    return NextResponse.json(
+      {
+        statusCode: status,
+        error: isConnRefused ? 'Service Unavailable' : 'Bad Gateway',
+        message,
+        code: isConnRefused ? 'BACKEND_SERVICE_DOWN' : 'GATEWAY_ERROR',
+        timestamp: new Date().toISOString(),
+      },
+      { status },
+    );
   }
 }
 

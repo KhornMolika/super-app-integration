@@ -7,17 +7,16 @@ import '../../../services/auth_service.dart';
 import 'package:dps_mobile_app/app/config/api_config.dart';
 
 class LoginController extends GetxController {
-  final emailController = TextEditingController(text: 'admin@example.com');
-  final passwordController = TextEditingController(text: 'admin123');
+  static const String _defaultEmail =
+      String.fromEnvironment('DEFAULT_LOGIN_EMAIL', defaultValue: '');
+  final emailController = TextEditingController(text: _defaultEmail);
+  final passwordController = TextEditingController();
 
   @override
   void onInit() {
     super.onInit();
-    if (emailController.text.isEmpty) {
-      emailController.text = 'admin@example.com';
-    }
-    if (passwordController.text.isEmpty) {
-      passwordController.text = 'admin123';
+    if (emailController.text.isEmpty && _defaultEmail.isNotEmpty) {
+      emailController.text = _defaultEmail;
     }
     ApiConfig.autoDetectServer();
   }

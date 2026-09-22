@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button, Input, Label } from '@/components/ui/inputs';
 import { toast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmationProvider';
 import { AssignMiniAppModal } from './AssignMiniAppModal';
 import { StarIcon } from '@/components/ui/Icons';
 
@@ -116,9 +117,17 @@ export function TelegramTeamCard({
     }
   };
 
+  const confirm = useConfirm();
+
   const handleUnlinkAllFromGroup = async (oldChatId: string) => {
     if (!onReassignGroup) return;
-    if (!confirm(`Are you sure you want to unlink all Mini Apps from deleted group "${oldChatId}"?`)) return;
+    const isConfirmed = await confirm({
+      title: 'Unlink All Mini Apps',
+      message: `Are you sure you want to unlink all Mini Apps from deleted group "${oldChatId}"?`,
+      confirmText: 'Unlink',
+      confirmVariant: 'danger',
+    });
+    if (!isConfirmed) return;
     setMigratingGroupId(oldChatId);
     try {
       await onReassignGroup(oldChatId, null);

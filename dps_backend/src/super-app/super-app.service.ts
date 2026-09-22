@@ -169,17 +169,21 @@ export class SuperAppService implements OnApplicationBootstrap {
 
   getOfficialReleaseVersion(): string {
     try {
-      const releaseManifestPath = path.resolve(
-        process.cwd(),
-        '../dps_mobile_app/super_app_release.json',
-      );
-      if (fs.existsSync(releaseManifestPath)) {
-        const raw = fs.readFileSync(releaseManifestPath, 'utf-8');
-        const json = JSON.parse(raw);
-        if (json.superAppVersion) {
-          return json.superAppVersion.startsWith('v')
-            ? json.superAppVersion
-            : `v${json.superAppVersion}`;
+      const mobileDir = this.configService.get<string>('MOBILE_APP_DIR');
+      const candidatePaths = [
+        ...(mobileDir ? [path.resolve(process.cwd(), mobileDir, 'super_app_release.json')] : []),
+        path.resolve(process.cwd(), '../superapp_mobile/super_app_release.json'),
+        path.resolve(process.cwd(), '../dps_mobile_app/super_app_release.json'),
+      ];
+      for (const releaseManifestPath of candidatePaths) {
+        if (fs.existsSync(releaseManifestPath)) {
+          const raw = fs.readFileSync(releaseManifestPath, 'utf-8');
+          const json = JSON.parse(raw);
+          if (json.superAppVersion) {
+            return json.superAppVersion.startsWith('v')
+              ? json.superAppVersion
+              : `v${json.superAppVersion}`;
+          }
         }
       }
     } catch (_) {}

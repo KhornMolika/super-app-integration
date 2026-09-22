@@ -14,6 +14,8 @@ import { SuperAppModule } from '../super-app/super-app.module';
 import { AuditModule } from '../audit/audit.module';
 import { IntegrationsModule } from '../integrations/integrations.module';
 import { StorageModule } from '../storage/storage.module';
+import { NativeSdkCodegenModule } from '../native-sdk-codegen/native-sdk-codegen.module';
+import { SdkArtifactsModule } from '../sdk-artifacts/sdk-artifacts.module';
 
 import { PermissionDetectorHelper } from './helpers/permission-detector.helper';
 import { MiniappValidationHelper } from './helpers/miniapp-validation.helper';
@@ -34,6 +36,8 @@ import { UrlProbeHelper } from './helpers/url-probe.helper';
     AuditModule,
     IntegrationsModule,
     StorageModule,
+    NativeSdkCodegenModule,
+    SdkArtifactsModule,
   ],
   controllers: [MiniappsController],
   providers: [

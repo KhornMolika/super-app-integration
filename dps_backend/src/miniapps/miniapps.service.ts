@@ -2,6 +2,7 @@ import {
   Injectable,
   Logger,
   BadRequestException,
+  BadGatewayException,
   NotFoundException,
   OnApplicationBootstrap,
 } from '@nestjs/common';
@@ -18,6 +19,8 @@ import { VersionDiffHelper } from './helpers/version-diff.helper';
 import { ArtifactDistributionHelper } from './helpers/artifact-distribution.helper';
 import { DomainAssociationHelper } from './helpers/domain-association.helper';
 import { MiniappMutationHelper } from './helpers/miniapp-mutation.helper';
+import { NativeSdkCodegenService } from '../native-sdk-codegen/native-sdk-codegen.service';
+import { SdkArtifactUploadService } from '../sdk-artifacts/sdk-artifact-upload.service';
 import { resolveOrganizationDetails } from '../common/constants/fsa-organizations';
 
 @Injectable()
@@ -41,6 +44,8 @@ export class MiniappsService implements OnApplicationBootstrap {
     private artifactDistributionHelper: ArtifactDistributionHelper,
     private domainAssociationHelper: DomainAssociationHelper,
     private miniappMutationHelper: MiniappMutationHelper,
+    private nativeSdkCodegenService: NativeSdkCodegenService,
+    private sdkArtifactUploadService: SdkArtifactUploadService,
   ) {}
 
   async onApplicationBootstrap() {
@@ -269,12 +274,26 @@ export class MiniappsService implements OnApplicationBootstrap {
   async publishRevision(id: string, actorId: string) {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
-    return this.lifecycleHelper.publishRevision(
+
+    const isNativeSdk = this.assertNativeSdkReady(app);
+    if (isNativeSdk) {
+      await this.ensureNativeSdkPublished(app);
+    }
+
+    const published = await this.lifecycleHelper.publishRevision(
       app,
       actorId,
       (mId, aId, aType, t, d, aAction, oVal, nVal) =>
         this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal),
     );
+
+    if (isNativeSdk) {
+      this.logger.log(
+        `Universal Native Launcher: Native SDK mini app ${published.name} (${published.appId}) revision published.`,
+      );
+    }
+
+    return published;
   }
 
   async discardRevision(id: string, actorId: string, reason?: string) {
@@ -329,15 +348,167 @@ export class MiniappsService implements OnApplicationBootstrap {
     );
   }
 
+  /**
+   * NATIVE_SDK artifact gate shared by approve() and publishRevision(). Gates on
+   * exactly what the lifecycle helper will apply: it REPLACES method/config with
+   * the pending revision's when present. Returns whether the effective
+   * integration method is NATIVE_SDK; throws 400 when artifacts are missing.
+   */
+  private assertNativeSdkReady(app: any): boolean {
+    const rev = app.pendingRevision;
+    const effectiveMethod = rev?.integrationMethod ?? app.integrationMethod;
+    const effectiveConfig = rev?.integrationConfig ?? app.integrationConfig;
+    if (effectiveMethod !== 'NATIVE_SDK') return false;
+    const hasIos = Boolean(
+      effectiveConfig?.iosNexusZipUrl || effectiveConfig?.iosMinioKey,
+    );
+    const hasAndroid = Boolean(
+      effectiveConfig?.androidNexusMavenUrl || effectiveConfig?.androidMinioKey,
+    );
+    if (!hasIos || !hasAndroid) {
+      throw new BadRequestException(
+        'Both iOS and Android artifacts must be uploaded before approval.',
+      );
+    }
+    return true;
+  }
+
+  private async ensureNativeSdkPublished(app: any): Promise<void> {
+    const rev = app.pendingRevision;
+    const effectiveConfig = rev?.integrationConfig ?? app.integrationConfig;
+    if (
+      (effectiveConfig?.androidMinioKey &&
+        !effectiveConfig?.androidNexusMavenUrl) ||
+      (effectiveConfig?.iosMinioKey && !effectiveConfig?.iosNexusZipUrl)
+    ) {
+      const nexusUrls = await this.sdkArtifactUploadService.publishToNexus(
+        app.id,
+      );
+      if (app.integrationConfig) {
+        Object.assign(app.integrationConfig, nexusUrls);
+      }
+      if (app.pendingRevision?.integrationConfig) {
+        Object.assign(app.pendingRevision.integrationConfig, nexusUrls);
+      }
+    }
+  }
+
+  /**
+   * Atomically merges keys into `integrationConfig` (jsonb `||`). Never rewrites a
+   * previously loaded copy, so it cannot erase keys another request wrote meanwhile.
+   */
+  private async mergeIntegrationConfig(
+    id: string,
+    patch: Record<string, any>,
+  ): Promise<void> {
+    await this.miniappRepository
+      .createQueryBuilder()
+      .update(MiniApp)
+      .set({
+        integrationConfig: () =>
+          `COALESCE("integrationConfig", '{}'::jsonb) || CAST(:patch AS jsonb)`,
+      })
+      .where('id = :id', { id })
+      .setParameters({ patch: JSON.stringify(patch) })
+      .execute();
+  }
+
+  /** Runs codegen and records the outcome on the app. Throws on codegen failure. */
+  private async generateAndRecord(
+    id: string,
+  ): Promise<{ prUrl?: string; changedFiles: number }> {
+    const { prUrl, changedFiles } =
+      await this.nativeSdkCodegenService.regenerate();
+    const patch: Record<string, any> = {
+      codegenChangedFiles: changedFiles.size,
+    };
+    if (prUrl) patch.codegenPrUrl = prUrl;
+    await this.mergeIntegrationConfig(id, patch);
+    return { prUrl, changedFiles: changedFiles.size };
+  }
+
+  /**
+   * Post-publish, non-blocking native SDK codegen. Runs after the app is live so
+   * it is part of the vendor set; a failure is logged only.
+   */
+  private async runNativeSdkCodegen(published: any): Promise<void> {
+    try {
+      const { prUrl, changedFiles } = await this.generateAndRecord(
+        published.id,
+      );
+      published.integrationConfig = {
+        ...(published.integrationConfig ?? {}),
+        codegenChangedFiles: changedFiles,
+        ...(prUrl ? { codegenPrUrl: prUrl } : {}),
+      };
+    } catch (err: any) {
+      // Non-blocking: the approval/publish already succeeded.
+      this.logger.error(`Native SDK codegen failed: ${err?.message ?? err}`);
+    }
+  }
+
+  /**
+   * Explicit, admin-triggered re-run of the native SDK codegen (opens/updates the
+   * GitLab merge request). Unlike the post-approval run this reports failures to the
+   * caller, so a misconfiguration (missing markers, bad token) is visible in the UI.
+   */
+  async rerunNativeSdkCodegen(id: string, actorId: string) {
+    const app = await this.findOne(id);
+    if (!app) throw new NotFoundException('Mini app not found');
+    if (app.integrationMethod !== 'NATIVE_SDK') {
+      throw new BadRequestException(
+        'Codegen only applies to NATIVE_SDK mini apps.',
+      );
+    }
+    if (!['APPROVED', 'ACTIVE'].includes(app.status?.toUpperCase())) {
+      throw new BadRequestException(
+        'Approve the mini app before verifying native launcher configuration.',
+      );
+    }
+    this.assertNativeSdkReady(app);
+    await this.ensureNativeSdkPublished(app);
+
+    await this.logActivity(
+      app.id,
+      actorId,
+      'UNIVERSAL_LAUNCHER',
+      'Universal Native Mini App Launcher verified',
+      'Mini app is configured for dynamic invocation via superapp/native_launcher platform channel.',
+      'NATIVE_SDK_LAUNCHER_VERIFIED',
+    );
+
+    return {
+      prUrl: null,
+      changedFiles: 0,
+      upToDate: true,
+      message:
+        'Universal Native Mini App Launcher is active. Dynamic reflection dispatch enabled via superapp/native_launcher.',
+    };
+  }
+
   async approve(id: string, actorId: string) {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
-    return this.lifecycleHelper.approve(
+
+    const isNativeSdk = this.assertNativeSdkReady(app);
+    if (isNativeSdk) {
+      await this.ensureNativeSdkPublished(app);
+    }
+
+    const approved = await this.lifecycleHelper.approve(
       app,
       actorId,
       (mId, aId, aType, t, d, aAction, oVal, nVal) =>
         this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal),
     );
+
+    if (isNativeSdk) {
+      this.logger.log(
+        `Universal Native Launcher: Native SDK mini app ${approved.name} (${approved.appId}) approved and available for runtime reflection.`,
+      );
+    }
+
+    return approved;
   }
 
   async reject(id: string, reason: string, actorId: string) {

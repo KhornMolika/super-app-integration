@@ -4,40 +4,44 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
+import {
+  AuthService,
+  BACK_OFFICE_TYP,
+  END_USER_AUDIENCE,
+  END_USER_TYP,
+} from '../auth.service';
 
+/** Back-office guard: allowlist (typ=back_office) plus end-user denylist, verified by signature. */
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  constructor(private jwtService: JwtService) {}
+  constructor(private authService: AuthService) {}
 
-  async canActivate(context: ExecutionContext): Promise<boolean> {
+  canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<Request>();
-    const token = this.extractTokenFromHeader(request);
+    const token = this.extractToken(request);
     if (!token) {
       throw new UnauthorizedException();
     }
-    try {
-      const payload = await this.jwtService.verifyAsync(token, {
-        // Since we are mocking, we will just decode it for now, or if AuthService exposes public key, we use it.
-        // Better yet, just decode since it's a POC, or let's use the secret if we exported it.
-      });
-      request['user'] = payload;
-    } catch {
-      // For POC, if verification fails because we didn't inject the dynamic key, let's just decode it
-      const decoded = this.jwtService.decode(token);
-      if (!decoded) throw new UnauthorizedException();
-      request['user'] = decoded;
+    const payload = this.authService.verifyToken(token, {
+      typ: BACK_OFFICE_TYP,
+    });
+    const aud = Array.isArray(payload?.aud) ? payload.aud : [payload?.aud];
+    if (payload?.typ === END_USER_TYP || aud.includes(END_USER_AUDIENCE)) {
+      throw new UnauthorizedException();
     }
+    request['user'] = payload;
     return true;
   }
 
-  private extractTokenFromHeader(request: Request): string | undefined {
+  private extractToken(request: Request): string | undefined {
     const [type, token] = request.headers.authorization?.split(' ') ?? [];
-    if (type === 'Bearer' && token) return token;
-    const queryToken = (request.query?.token || request.query?.access_token) as string;
-    if (queryToken) return queryToken;
+    if (type?.toLowerCase() === 'bearer' && token) return token;
+    // NOTE: query-param tokens leak into access logs/history/referrers. Only
+    // `access_token` is honoured; `token` is NOT, because it collides with the
+    // invite-token param used on the miniapps download routes.
+    const queryToken = request.query?.access_token;
+    if (typeof queryToken === 'string' && queryToken) return queryToken;
     return undefined;
   }
 }
-

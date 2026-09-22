@@ -14,6 +14,9 @@ import { SuperAppModule } from './super-app/super-app.module';
 import { IntegrationsModule } from './integrations/integrations.module';
 import { StorageModule } from './storage/storage.module';
 import { SettingsModule } from './settings/settings.module';
+import { MobileModule } from './mobile/mobile.module';
+import { SdkArtifactsModule } from './sdk-artifacts/sdk-artifacts.module';
+import { NativeSdkCodegenModule } from './native-sdk-codegen/native-sdk-codegen.module';
 
 @Module({
   imports: [
@@ -48,6 +51,9 @@ import { SettingsModule } from './settings/settings.module';
     IntegrationsModule,
     StorageModule,
     SettingsModule,
+    MobileModule,
+    SdkArtifactsModule,
+    NativeSdkCodegenModule,
   ],
 })
 export class AppModule {}

@@ -23,6 +23,7 @@ import { MiniAppStatus } from './entities/miniapp.entity';
 import { UpdateMiniAppDto } from './dto/update-miniapp.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RbacGuard } from '../access-control/guards/rbac.guard';
+import { stripNativeSdkServerKeys } from './helpers/native-sdk-config.helper';
 import { UrlProbeHelper } from './helpers/url-probe.helper';
 
 import { RequirePermissions } from '../access-control/decorators/require-permissions.decorator';
@@ -47,94 +48,69 @@ export class MiniappsController {
     return this.miniappService.findAllIssues();
   }
 
-  @Post('draft')
-  @RequirePermissions('miniapp:create')
-  createDraft(@Body() createData: any, @Req() req: any) {
-    const dataToSave: any = { ...createData, status: MiniAppStatus.DRAFT };
-    dataToSave.ownerId = req.user.sub;
-    if (createData.integrationMethod === 'WEBVIEW') {
-      dataToSave.integrationConfig = createData.integrationConfigWebView;
-      if (createData.isDomainVerified !== undefined) {
-        dataToSave.isDomainVerified = createData.isDomainVerified;
+  private extractIntegrationConfig(dto: any): any {
+    const dataToSave: any = { ...dto };
+    if (dto.integrationMethod === 'WEBVIEW') {
+      dataToSave.integrationConfig = dto.integrationConfigWebView;
+      if (dto.isDomainVerified !== undefined) {
+        dataToSave.isDomainVerified = dto.isDomainVerified;
       } else if (
-        createData.integrationConfigWebView?.isDomainVerified !== undefined
+        dto.integrationConfigWebView?.isDomainVerified !== undefined
       ) {
         dataToSave.isDomainVerified =
-          createData.integrationConfigWebView.isDomainVerified;
+          dto.integrationConfigWebView.isDomainVerified;
       }
-      if (createData.domainVerifiedAt !== undefined) {
-        dataToSave.domainVerifiedAt = createData.domainVerifiedAt;
+      if (dto.domainVerifiedAt !== undefined) {
+        dataToSave.domainVerifiedAt = dto.domainVerifiedAt;
       } else if (
-        createData.integrationConfigWebView?.domainVerifiedAt !== undefined
+        dto.integrationConfigWebView?.domainVerifiedAt !== undefined
       ) {
         dataToSave.domainVerifiedAt =
-          createData.integrationConfigWebView.domainVerifiedAt;
+          dto.integrationConfigWebView.domainVerifiedAt;
       }
       const token =
-        createData.verificationToken ||
-        createData.integrationConfigWebView?.verificationToken;
+        dto.verificationToken ||
+        dto.integrationConfigWebView?.verificationToken;
       if (token) {
         dataToSave.verificationToken = token;
         if (dataToSave.integrationConfig) {
           dataToSave.integrationConfig.verificationToken = token;
         }
       }
-    } else if (createData.integrationMethod === 'FLUTTER_PACKAGE') {
-      dataToSave.integrationConfig = createData.integrationConfigFlutter;
-    } else if (createData.integrationMethod === 'DEEP_LINK') {
-      dataToSave.integrationConfig = createData.integrationConfigDeepLink;
-    }
-    delete dataToSave.integrationConfigWebView;
-    delete dataToSave.integrationConfigFlutter;
-    delete dataToSave.integrationConfigDeepLink;
-    return this.miniappService.create(dataToSave, req.user.sub);
-  }
-
-  @Post()
-  @RequirePermissions('miniapp:create')
-  create(@Body() createData: CreateMiniAppDto, @Req() req: any) {
-    const dataToSave: any = { ...createData, status: MiniAppStatus.IN_REVIEW };
-
-    // Assign the ownerId from the authenticated user token payload
-    dataToSave.ownerId = req.user.sub;
-    if (createData.integrationMethod === 'WEBVIEW') {
-      dataToSave.integrationConfig = createData.integrationConfigWebView;
-      if (createData.isDomainVerified !== undefined) {
-        dataToSave.isDomainVerified = createData.isDomainVerified;
-      } else if (
-        createData.integrationConfigWebView?.isDomainVerified !== undefined
-      ) {
-        dataToSave.isDomainVerified =
-          createData.integrationConfigWebView.isDomainVerified;
-      }
-      if (createData.domainVerifiedAt !== undefined) {
-        dataToSave.domainVerifiedAt = createData.domainVerifiedAt;
-      } else if (
-        createData.integrationConfigWebView?.domainVerifiedAt !== undefined
-      ) {
-        dataToSave.domainVerifiedAt =
-          createData.integrationConfigWebView.domainVerifiedAt;
-      }
-      const token =
-        createData.verificationToken ||
-        createData.integrationConfigWebView?.verificationToken;
-      if (token) {
-        dataToSave.verificationToken = token;
-        if (dataToSave.integrationConfig) {
-          dataToSave.integrationConfig.verificationToken = token;
-        }
-      }
-    } else if (createData.integrationMethod === 'FLUTTER_PACKAGE') {
-      dataToSave.integrationConfig = createData.integrationConfigFlutter;
-    } else if (createData.integrationMethod === 'DEEP_LINK') {
-      dataToSave.integrationConfig = createData.integrationConfigDeepLink;
+    } else if (dto.integrationMethod === 'FLUTTER_PACKAGE') {
+      dataToSave.integrationConfig = dto.integrationConfigFlutter;
+    } else if (dto.integrationMethod === 'DEEP_LINK') {
+      dataToSave.integrationConfig = dto.integrationConfigDeepLink;
+    } else if (dto.integrationMethod === 'NATIVE_SDK') {
+      dataToSave.integrationConfig = stripNativeSdkServerKeys(
+        dto.integrationConfigNativeSdk,
+      );
     }
 
     // Clean up DTO specific fields
     delete dataToSave.integrationConfigWebView;
     delete dataToSave.integrationConfigFlutter;
     delete dataToSave.integrationConfigDeepLink;
+    delete dataToSave.integrationConfigNativeSdk;
 
+    return dataToSave;
+  }
+
+  @Post('draft')
+  @RequirePermissions('miniapp:create')
+  createDraft(@Body() createData: any, @Req() req: any) {
+    const dataToSave = this.extractIntegrationConfig(createData);
+    dataToSave.status = MiniAppStatus.DRAFT;
+    dataToSave.ownerId = req.user.sub;
+    return this.miniappService.create(dataToSave, req.user.sub);
+  }
+
+  @Post()
+  @RequirePermissions('miniapp:create')
+  create(@Body() createData: CreateMiniAppDto, @Req() req: any) {
+    const dataToSave = this.extractIntegrationConfig(createData);
+    dataToSave.status = MiniAppStatus.IN_REVIEW;
+    dataToSave.ownerId = req.user.sub;
     return this.miniappService.create(dataToSave, req.user.sub);
   }
 
@@ -271,6 +247,12 @@ export class MiniappsController {
     return this.miniappService.approve(id, req.user.sub);
   }
 
+  @Post(':id/codegen')
+  @RequirePermissions('miniapp:approve')
+  rerunCodegen(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    return this.miniappService.rerunNativeSdkCodegen(id, req.user.sub);
+  }
+
   @Post(':id/reject')
   @RequirePermissions('miniapp:reject')
   reject(
@@ -344,22 +326,7 @@ export class MiniappsController {
     @Body() updateData: UpdateMiniAppDto,
     @Req() req: any,
   ) {
-    const dataToSave: any = { ...updateData };
-    if (updateData.integrationMethod === 'WEBVIEW') {
-      dataToSave.integrationConfig = updateData.integrationConfigWebView;
-    } else if (updateData.integrationMethod === 'FLUTTER_PACKAGE') {
-      dataToSave.integrationConfig = updateData.integrationConfigFlutter;
-    } else if (updateData.integrationMethod === 'DEEP_LINK') {
-      dataToSave.integrationConfig = (
-        updateData as any
-      ).integrationConfigDeepLink;
-    }
-
-    // Clean up DTO specific fields
-    delete dataToSave.integrationConfigWebView;
-    delete dataToSave.integrationConfigFlutter;
-    delete dataToSave.integrationConfigDeepLink;
-
+    const dataToSave = this.extractIntegrationConfig(updateData);
     return this.miniappService.update(id, dataToSave, req.user.sub);
   }
 

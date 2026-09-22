@@ -1,4 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 export interface NexusPackageValidation {
@@ -16,6 +20,99 @@ export class NexusIntegrationService {
   private readonly logger = new Logger(NexusIntegrationService.name);
 
   constructor(private readonly configService: ConfigService) {}
+
+  private getBaseUrl(): string {
+    return (
+      this.configService.get<string>('NEXUS_BASE_URL') ||
+      'http://localhost:8081'
+    ).replace(/\/+$/, '');
+  }
+
+  private getAuthHeader(): Record<string, string> {
+    const user = this.configService.get<string>('NEXUS_ADMIN_USER', 'admin');
+    const pass = this.configService.get<string>('NEXUS_ADMIN_PASSWORD');
+    if (!pass) {
+      throw new ServiceUnavailableException(
+        'NEXUS_ADMIN_PASSWORD is not configured; cannot upload to Nexus.',
+      );
+    }
+    const b64 = Buffer.from(`${user}:${pass}`).toString('base64');
+    return { Authorization: `Basic ${b64}` };
+  }
+
+  /**
+   * Uploads a single file to a Nexus raw (or other path-addressed) hosted
+   * repository via HTTP PUT and returns its download URL.
+   */
+  async putRawAsset(
+    repo: string,
+    path: string,
+    buffer: Buffer,
+    contentType = 'application/octet-stream',
+  ): Promise<string> {
+    const cleanPath = path.replace(/^\/+/, '');
+    const url = `${this.getBaseUrl()}/repository/${repo}/${cleanPath}`;
+    const authHeader = this.getAuthHeader();
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method: 'PUT',
+        headers: { ...authHeader, 'Content-Type': contentType },
+        body: new Uint8Array(buffer),
+      });
+    } catch (err: any) {
+      throw new Error(`Could not reach Nexus at ${url}: ${err.message}`);
+    }
+    if (!res.ok) {
+      throw new Error(
+        `Nexus upload to ${url} failed with HTTP ${res.status}: ${res.statusText}`,
+      );
+    }
+    return url;
+  }
+
+  /**
+   * Uploads an .aar to a Nexus Maven hosted repository through the
+   * components API and returns the resulting Maven URL.
+   */
+  async uploadMavenAar(options: {
+    repo: string;
+    groupId: string;
+    artifactId: string;
+    version: string;
+    buffer: Buffer;
+    filename: string;
+  }): Promise<string> {
+    const { repo, groupId, artifactId, version, buffer, filename } = options;
+    const form = new FormData();
+    form.append('maven2.groupId', groupId);
+    form.append('maven2.artifactId', artifactId);
+    form.append('maven2.version', version);
+    form.append('maven2.asset1', new Blob([new Uint8Array(buffer)]), filename);
+    form.append('maven2.asset1.extension', 'aar');
+    // Let Nexus generate the POM and mark the packaging so Gradle resolves the .aar.
+    form.append('maven2.generate-pom', 'true');
+    form.append('maven2.packaging', 'aar');
+
+    const endpoint = `${this.getBaseUrl()}/service/rest/v1/components?repository=${encodeURIComponent(repo)}`;
+    const authHeader = this.getAuthHeader();
+    let res: Response;
+    try {
+      res = await fetch(endpoint, {
+        method: 'POST',
+        headers: authHeader,
+        body: form,
+      });
+    } catch (err: any) {
+      throw new Error(`Could not reach Nexus at ${endpoint}: ${err.message}`);
+    }
+    if (!res.ok) {
+      throw new Error(
+        `Nexus Maven upload to ${repo} failed with HTTP ${res.status}: ${res.statusText}`,
+      );
+    }
+    return `${this.getBaseUrl()}/repository/${repo}/${groupId.replace(/\./g, '/')}/${artifactId}/${version}/${artifactId}-${version}.aar`;
+  }
 
   private getPubGroupUrl(): string {
     const configured = this.configService.get<string>('NEXUS_PUB_GROUP_URL');

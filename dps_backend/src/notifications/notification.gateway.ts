@@ -39,4 +39,16 @@ export class NotificationGateway
       this.server.emit('miniapp.stage_updated', data);
     }
   }
+
+  emitBuildStageUpdate(data: any) {
+    if (this.server) {
+      this.server.emit('miniapp.build_stage_updated', data);
+    }
+  }
+
+  emitBuildCompleted(data: any) {
+    if (this.server) {
+      this.server.emit('miniapp.build_completed', data);
+    }
+  }
 }

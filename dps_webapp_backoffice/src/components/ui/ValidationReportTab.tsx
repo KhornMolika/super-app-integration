@@ -364,7 +364,8 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
     });
   }, [stages, miniApp.securityChecks, miniApp.integrationMethod, isFlutterPackage]);
 
-  const jenkinsJobUrl = 'http://localhost:8085/job/miniapp-validation/';
+  const jenkinsBaseUrl = (process.env.NEXT_PUBLIC_JENKINS_URL || 'http://localhost:8085').replace(/\/+$/, '');
+  const jenkinsJobUrl = `${jenkinsBaseUrl}/job/miniapp-validation/`;
 
   const handleReScan = async (checksToRun?: string[]) => {
     setIsReScanning(true);
@@ -713,7 +714,7 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
                 </span>
               </div>
               <p className="text-sm text-amber-800 dark:text-amber-300 mt-1 leading-relaxed">
-                The primary Jenkins CI controller (<code>http://localhost:8085</code>) could not be reached: <em>{report.fallbackReason || 'Connection Refused'}</em>. To prevent the pipeline from hanging, the security audit was automatically executed in-process using the Local Security Engine.
+                The primary Jenkins CI controller (<code>{jenkinsBaseUrl}</code>) could not be reached: <em>{report.fallbackReason || 'Connection Refused'}</em>. To prevent the pipeline from hanging, the security audit was automatically executed in-process using the Local Security Engine.
               </p>
             </div>
           </div>

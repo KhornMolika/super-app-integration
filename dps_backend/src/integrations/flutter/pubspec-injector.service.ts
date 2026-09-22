@@ -56,9 +56,13 @@ export class PubspecInjectorService {
     }
 
     const candidatePaths = [
+      path.resolve(process.cwd(), '../superapp_mobile'),
+      path.resolve(process.cwd(), 'superapp_mobile'),
       path.resolve(process.cwd(), '../dps_mobile_app'),
       path.resolve(process.cwd(), 'dps_mobile_app'),
+      path.resolve(__dirname, '../../../../superapp_mobile'),
       path.resolve(__dirname, '../../../../dps_mobile_app'),
+      path.resolve(__dirname, '../../../../../superapp_mobile'),
       path.resolve(__dirname, '../../../../../dps_mobile_app'),
     ];
 
@@ -69,7 +73,7 @@ export class PubspecInjectorService {
     }
 
     // Fallback to standard monorepo relative location
-    return path.resolve(process.cwd(), '../dps_mobile_app');
+    return path.resolve(process.cwd(), '../superapp_mobile');
   }
 
   /**

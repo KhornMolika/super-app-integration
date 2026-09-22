@@ -283,7 +283,7 @@ export class ArtifactDistributionHelper {
     const nexusUrl = `${nexusBase}/repository/${repoName}/superapp/${version}/${filename}`;
 
     const adminUser = process.env.NEXUS_ADMIN_USER || 'admin';
-    const adminPass = process.env.NEXUS_ADMIN_PASSWORD || 'admin123';
+    const adminPass = process.env.NEXUS_ADMIN_PASSWORD || '';
     const b64 = Buffer.from(`${adminUser}:${adminPass}`).toString('base64');
 
     try {
@@ -293,10 +293,17 @@ export class ArtifactDistributionHelper {
 
       if (!response.ok) {
         // Try local disk fallback from mobile app build
+        const mobileDir = process.env.MOBILE_APP_DIR
+          ? path.resolve(process.env.MOBILE_APP_DIR)
+          : path.resolve(process.cwd(), '../superapp_mobile');
+        const legacyMobileDir = path.resolve(process.cwd(), '../dps_mobile_app');
         const localApkPaths = [
-          path.resolve(process.cwd(), '../dps_mobile_app/build/app/outputs/flutter-apk/app-debug.apk'),
-          path.resolve(process.cwd(), '../dps_mobile_app/build/app/outputs/apk/debug/app-debug.apk'),
-          path.resolve(process.cwd(), '../dps_mobile_app/build/app/outputs/flutter-apk/app-release.apk'),
+          path.resolve(mobileDir, 'build/app/outputs/flutter-apk/app-debug.apk'),
+          path.resolve(mobileDir, 'build/app/outputs/apk/debug/app-debug.apk'),
+          path.resolve(mobileDir, 'build/app/outputs/flutter-apk/app-release.apk'),
+          path.resolve(legacyMobileDir, 'build/app/outputs/flutter-apk/app-debug.apk'),
+          path.resolve(legacyMobileDir, 'build/app/outputs/apk/debug/app-debug.apk'),
+          path.resolve(legacyMobileDir, 'build/app/outputs/flutter-apk/app-release.apk'),
         ];
         for (const lp of localApkPaths) {
           if (fs.existsSync(lp)) {

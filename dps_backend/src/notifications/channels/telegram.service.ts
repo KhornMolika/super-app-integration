@@ -1219,7 +1219,22 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       formData.append('parse_mode', 'HTML');
 
       // Candidate local build paths
+      const mobileDir = this.configService.get<string>('MOBILE_APP_DIR');
       const candidatePaths = [
+        ...(mobileDir
+          ? [
+              path.resolve(mobileDir, 'build/app/outputs/flutter-apk/app-debug.apk'),
+              path.resolve(mobileDir, 'build/app/outputs/apk/debug/app-debug.apk'),
+            ]
+          : []),
+        path.resolve(
+          process.cwd(),
+          'superapp_mobile/build/app/outputs/flutter-apk/app-debug.apk',
+        ),
+        path.resolve(
+          process.cwd(),
+          '../superapp_mobile/build/app/outputs/flutter-apk/app-debug.apk',
+        ),
         path.resolve(
           process.cwd(),
           'dps_mobile_app/build/app/outputs/flutter-apk/app-debug.apk',
@@ -1230,11 +1245,23 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         ),
         path.resolve(
           process.cwd(),
+          'superapp_mobile/build/app/outputs/apk/debug/app-debug.apk',
+        ),
+        path.resolve(
+          process.cwd(),
+          '../superapp_mobile/build/app/outputs/apk/debug/app-debug.apk',
+        ),
+        path.resolve(
+          process.cwd(),
           'dps_mobile_app/build/app/outputs/apk/debug/app-debug.apk',
         ),
         path.resolve(
           process.cwd(),
           '../dps_mobile_app/build/app/outputs/apk/debug/app-debug.apk',
+        ),
+        path.resolve(
+          process.cwd(),
+          'ma_flutter_trust_regulator/example/build/app/outputs/flutter-apk/app-debug.apk',
         ),
         path.resolve(
           process.cwd(),

@@ -765,4 +765,66 @@ export class MailService {
       this.logger.error(`Failed to send activation email to ${toEmail}:`, error);
     }
   }
+
+  /**
+   * Mobile end-user email verification. `verifyUrl` embeds a secret token, so it
+   * must NEVER be logged (neither on success, in the dummy path, nor on error).
+   */
+  async sendEmailVerification(
+    toEmail: string,
+    name: string,
+    verifyUrl: string,
+  ): Promise<void> {
+    if (!this.resend) {
+      this.logger.log(
+        `[DUMMY] Would have sent email verification to ${toEmail} (mail is not configured)`,
+      );
+      return;
+    }
+    if (!this.isDeliverableEmail(toEmail)) {
+      this.logger.debug(
+        `[SKIPPED] Skipped email verification to mock/test address: ${toEmail}`,
+      );
+      return;
+    }
+    const esc = (v: string) =>
+      v
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    try {
+      const result = await this.resend.emails.send({
+        from: `Super App <${this.fromEmail}>`,
+        to: toEmail,
+        subject: 'Verify your Super App email address',
+        html: `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+            <div style="background: #0f172a; padding: 32px 24px; text-align: left; color: #ffffff; border-bottom: 3px solid #0284c7;">
+              <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #38bdf8; font-weight: 700;">Super App</span>
+              <h1 style="margin: 8px 0 0 0; font-size: 22px; font-weight: 700; color: #ffffff;">Verify your email</h1>
+            </div>
+            <div style="padding: 32px 24px;">
+              <p style="font-size: 14px; line-height: 1.6; margin-top: 0;">Hello <strong>${esc(name)}</strong>,</p>
+              <p style="font-size: 14px; line-height: 1.6;">
+                Tap the button below on your phone to verify your email address and finish creating your account. The link expires in 24 hours.
+              </p>
+              <p style="margin: 24px 0;">
+                <a href="${esc(verifyUrl)}" style="display: inline-block; background: #0284c7; color: #ffffff; text-decoration: none; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 700;">Verify email</a>
+              </p>
+              <p style="font-size: 13px; color: #64748b; line-height: 1.5;">If you did not create this account you can ignore this email.</p>
+            </div>
+          </div>
+        `,
+      });
+      if (result.error) {
+        this.logger.error(
+          `Resend API error sending email verification: ${result.error.message}`,
+        );
+      }
+    } catch (err: any) {
+      this.logger.error(`Failed to send email verification: ${err?.message}`);
+    }
+  }
 }

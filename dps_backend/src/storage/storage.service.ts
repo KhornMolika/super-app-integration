@@ -595,4 +595,19 @@ export class StorageService implements OnModuleInit {
       size: file.size,
     };
   }
+
+  /**
+   * Retrieves an object from MinIO as a Buffer
+   */
+  async getObjectBuffer(bucket: string, key: string): Promise<Buffer> {
+    const stream = await this.minioClient.getObject(bucket, key);
+    return new Promise((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      stream.on('data', (chunk: any) =>
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)),
+      );
+      stream.on('end', () => resolve(Buffer.concat(chunks)));
+      stream.on('error', (err: any) => reject(err));
+    });
+  }
 }

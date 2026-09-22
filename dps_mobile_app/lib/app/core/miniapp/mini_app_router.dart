@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../config/api_config.dart';
 import '../../routes/app_pages.dart';
+import '../../services/auth_service.dart';
 import 'mini_app_registry.dart';
 import '../../modules/miniapp/views/mini_app_standby_view.dart';
 
@@ -23,7 +25,16 @@ class MiniAppRouter {
     final appId = (app['appId'] ?? app['id'] ?? '').toString();
     final name = (app['name'] ?? 'Mini App').toString();
     final config = app['integrationConfig'];
-    final packageName = (config is Map ? (config['packageName'] ?? '') : '').toString();
+
+    // Safely parse JSON string configuration if needed
+    dynamic parsedConfig = config;
+    if (parsedConfig is String && parsedConfig.trim().isNotEmpty) {
+      try {
+        parsedConfig = jsonDecode(parsedConfig);
+      } catch (_) {}
+    }
+
+    final packageName = (parsedConfig is Map ? (parsedConfig['packageName'] ?? '') : '').toString();
 
     // 1. FLUTTER PACKAGE INTEGRATION
     if (integrationMethod == 'FLUTTER_PACKAGE') {
@@ -34,8 +45,8 @@ class MiniAppRouter {
       ];
 
       // Also extract package name from Git URL if present
-      if (config is Map && config['gitUrl'] != null) {
-        final gitUrl = config['gitUrl'].toString();
+      if (parsedConfig is Map && parsedConfig['gitUrl'] != null) {
+        final gitUrl = parsedConfig['gitUrl'].toString();
         final match = RegExp(r'[\/:]([^\/:]+?)(\.git)?$').firstMatch(gitUrl);
         if (match != null && match.group(1) != null) {
           candidateKeys.add(match.group(1)!);
@@ -89,46 +100,113 @@ class MiniAppRouter {
 
     // 2. DEEP LINK INTEGRATION
     if (integrationMethod == 'DEEP_LINK') {
-      if (config is Map && config['urlScheme'] != null) {
-        final urlScheme = config['urlScheme'].toString();
+      if (parsedConfig is Map && parsedConfig['urlScheme'] != null) {
+        final urlScheme = parsedConfig['urlScheme'].toString();
         final uri = Uri.parse(urlScheme);
         try {
           final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-          if (!launched && config['fallbackUrl'] != null) {
-            await launchUrl(Uri.parse(config['fallbackUrl'].toString()), mode: LaunchMode.externalApplication);
+          if (!launched) {
+            final fallbackUrl = parsedConfig['fallbackUrl'] ??
+                parsedConfig['appStoreUrl'] ??
+                parsedConfig['playStoreUrl'];
+            if (fallbackUrl != null && fallbackUrl.toString().isNotEmpty) {
+              await launchUrl(Uri.parse(fallbackUrl.toString()),
+                  mode: LaunchMode.externalApplication);
+            } else {
+              Get.snackbar(
+                'Launch Failed',
+                'Deep link could not be opened and no fallback URL was provided.',
+                snackPosition: SnackPosition.BOTTOM,
+                backgroundColor: Colors.amber.shade50,
+                colorText: Colors.amber.shade900,
+                icon: const Icon(Icons.warning_amber_rounded, color: Colors.amber),
+              );
+            }
           }
         } catch (e) {
-          Get.snackbar('Launch Failed', 'Could not open deep link: $e',
-              snackPosition: SnackPosition.BOTTOM,
-              backgroundColor: Colors.red.shade50,
-              colorText: Colors.red.shade900);
+          Get.snackbar(
+            'Launch Failed',
+            'Could not open deep link: $e',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red.shade50,
+            colorText: Colors.red.shade900,
+            icon: const Icon(Icons.error_outline, color: Colors.red),
+          );
         }
       }
       return;
     }
 
-    // 3. NATIVE SDK INTEGRATION
+    // 3. NATIVE SDK INTEGRATION (Universal Native Launcher)
     if (integrationMethod == 'NATIVE_SDK') {
-      Get.defaultDialog(
-        title: 'Native SDK Mini App',
-        middleText: 'Initiating native SDK runtime bridge for "$name" ($appId)...',
-        confirm: ElevatedButton.icon(
-          icon: const Icon(Icons.check, size: 16),
-          label: const Text('OK'),
-          onPressed: () => Get.back(),
-        ),
-      );
+      try {
+        const platform = MethodChannel('superapp/native_launcher');
+        final authService = Get.isRegistered<AuthService>() ? Get.find<AuthService>() : null;
+
+        final isAndroid = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+        final isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
+        String? entryClass;
+        if (parsedConfig is Map) {
+          if (isAndroid) {
+            entryClass = parsedConfig['androidEntryClass'] ?? parsedConfig['entryClass'];
+          } else if (isIOS) {
+            entryClass = parsedConfig['iosEntryClass'] ?? parsedConfig['entryClass'];
+          } else {
+            entryClass = parsedConfig['entryClass'];
+          }
+        }
+
+        if (entryClass == null || entryClass.isEmpty) {
+          Get.snackbar(
+            'Configuration Missing',
+            'Native entry class not configured for this platform.',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.amber.shade50,
+            colorText: Colors.amber.shade900,
+            icon: const Icon(Icons.warning_amber_rounded, color: Colors.amber),
+          );
+          return;
+        }
+
+        final Map<String, dynamic> params = {};
+        if (parsedConfig is Map) {
+          parsedConfig.forEach((key, val) {
+            params[key.toString()] = val;
+          });
+        }
+        params['appId'] = appId;
+        params['name'] = name;
+
+        await platform.invokeMethod('launch', {
+          'entryClass': entryClass,
+          'userId': authService?.userId ?? '',
+          'authToken': authService?.token ?? '',
+          'params': params,
+        });
+      } on PlatformException catch (pe) {
+        Get.snackbar(
+          'Native Launch Failed',
+          pe.message ?? 'Could not launch native mini app',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.shade50,
+          colorText: Colors.red.shade900,
+          icon: const Icon(Icons.error_outline, color: Colors.red),
+        );
+      } catch (e) {
+        Get.snackbar(
+          'Launch Failed',
+          'Failed to invoke native launcher: $e',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.shade50,
+          colorText: Colors.red.shade900,
+          icon: const Icon(Icons.error_outline, color: Colors.red),
+        );
+      }
       return;
     }
 
     // 4. WEBVIEW INTEGRATION (Default)
-    dynamic parsedConfig = config;
-    if (parsedConfig is String) {
-      try {
-        parsedConfig = jsonDecode(parsedConfig);
-      } catch (_) {}
-    }
-
     String? extractedUrl = app['url'];
     if (parsedConfig is Map) {
       extractedUrl ??= parsedConfig['productionUrl'] ?? parsedConfig['stagingUrl'] ?? parsedConfig['url'];

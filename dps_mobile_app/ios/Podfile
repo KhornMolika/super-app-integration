@@ -10,6 +10,8 @@ project 'Runner', {
   'Release' => :release,
 }
 
+source 'https://cdn.cocoapods.org/'
+
 def flutter_root
   generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
   unless File.exist?(generated_xcode_build_settings_path)
@@ -31,7 +33,6 @@ target 'Runner' do
   use_frameworks!
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
-  pod 'SpaBookingSDK', :path => '../../vendor-artifacts'
   
   target 'RunnerTests' do
     inherit! :search_paths
