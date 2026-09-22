@@ -57,6 +57,20 @@ export class TelegramController {
     };
   }
 
+  @Get('add-group-url')
+  @UseGuards(JwtAuthGuard)
+  async getAddGroupUrl(@Req() req: any) {
+    const userId = req.user?.sub || req.user?.id;
+    return {
+      url: this.telegramService.getAddGroupUrl(userId ? `user_${userId}` : undefined),
+    };
+  }
+
+  @Post('webhook')
+  async handleWebhook(@Body() update: any) {
+    return this.telegramService.handleWebhookUpdate(update);
+  }
+
   @Get('recent-groups')
   @UseGuards(JwtAuthGuard)
   async getRecentGroups(@Req() req: any) {
@@ -135,6 +149,16 @@ export class TelegramController {
       body.teamTelegramChatId?.trim() || null,
     );
 
+    if (body.teamTelegramChatId?.trim()) {
+      this.telegramService
+        .persistDiscoveredGroup(
+          body.teamTelegramChatId.trim(),
+          'Saved User Team Channel',
+          'group',
+        )
+        .catch(() => {});
+    }
+
     return { success: true, teamTelegramChatId: user?.teamTelegramChatId || null };
   }
 
@@ -205,6 +229,12 @@ export class TelegramController {
       msgText,
       targetChat,
     );
+
+    if (result && result.success) {
+      this.telegramService
+        .persistDiscoveredGroup(targetChat, appName, 'group')
+        .catch(() => {});
+    }
 
     return result;
   }

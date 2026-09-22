@@ -27,13 +27,23 @@ export class GitIntegrationController {
   @Post('branches')
   @HttpCode(HttpStatus.OK)
   getBranches(@Body() dto: GitRepoQueryDto) {
-    return this.gitService.getBranches(dto.url, dto.provider, dto.token);
+    return this.gitService.getBranches(
+      dto.url,
+      dto.provider,
+      dto.token,
+      dto.deployKey,
+    );
   }
 
   @Post('tags')
   @HttpCode(HttpStatus.OK)
   getTags(@Body() dto: GitRepoQueryDto) {
-    return this.gitService.getTags(dto.url, dto.provider, dto.token);
+    return this.gitService.getTags(
+      dto.url,
+      dto.provider,
+      dto.token,
+      dto.deployKey,
+    );
   }
 
   @Post('commits')
@@ -69,13 +79,21 @@ export class GitIntegrationController {
   @Post('resolve-sha')
   @HttpCode(HttpStatus.OK)
   resolveCommitSha(
-    @Body() dto: { url: string; ref: string; provider?: any; token?: string },
+    @Body()
+    dto: {
+      url: string;
+      ref: string;
+      provider?: any;
+      token?: string;
+      deployKey?: string;
+    },
   ) {
     return this.gitService.resolveCommitSha(
       dto.url,
       dto.ref,
       dto.provider,
       dto.token,
+      dto.deployKey,
     );
   }
 

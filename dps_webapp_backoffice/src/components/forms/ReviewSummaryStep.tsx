@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ShieldCheckIcon } from '@/components/ui/Icons';
+import { ShieldCheckIcon, BuildingIcon } from '@/components/ui/Icons';
+import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 import { CreateMiniAppDto, IntegrationMethod } from '@/types/miniapp.types';
+import { getOrganizationCode, getOrganizationFullName } from '@/lib/constants/fsa-organizations';
 
 export interface ReviewSummaryStepProps {
   formData: Partial<CreateMiniAppDto>;
@@ -177,12 +179,13 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                 <h3 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                   {formData.name || 'Untitled Mini App'}
                 </h3>
-                {formData.category && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300 border border-brand-200/60 dark:border-brand-800">
-                    <svg className="w-3 h-3 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                    </svg>
-                    {formData.category}
+                {(formData.organization || formData.category) && (
+                  <span 
+                    className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 border border-sky-200/60 dark:border-sky-800"
+                    title={getOrganizationFullName(formData.organization || formData.category)}
+                  >
+                    <BuildingIcon className="w-3 h-3 text-sky-500" />
+                    <span>{getOrganizationCode(formData.organization || formData.category)}</span>
                   </span>
                 )}
                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${methodMeta.color}`}>
@@ -267,9 +270,14 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
               </div>
               <div>
                 <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">
-                  Category
+                  Organization
                 </span>
-                <span className="font-medium text-slate-800 dark:text-slate-200">{formData.category || '-'}</span>
+                <span className="font-medium text-slate-800 dark:text-slate-200">
+                  {getOrganizationCode(formData.organization || formData.category)}
+                  <span className="text-xs font-normal text-slate-500 ml-1.5 block sm:inline">
+                    ({getOrganizationFullName(formData.organization || formData.category)})
+                  </span>
+                </span>
               </div>
             </div>
 
@@ -658,9 +666,9 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                       )}
                     </div>
                     {formData.termsDescription && (
-                      <p className="text-xs text-slate-600 dark:text-slate-400 whitespace-pre-wrap max-h-24 overflow-y-auto font-sans leading-relaxed">
-                        {formData.termsDescription}
-                      </p>
+                      <div className="max-h-36 overflow-y-auto pr-1 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+                        <MarkdownRenderer content={formData.termsDescription} />
+                      </div>
                     )}
                   </div>
                 )}
@@ -688,9 +696,9 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                       )}
                     </div>
                     {formData.privacyPolicyDescription && (
-                      <p className="text-xs text-slate-600 dark:text-slate-400 whitespace-pre-wrap max-h-24 overflow-y-auto font-sans leading-relaxed">
-                        {formData.privacyPolicyDescription}
-                      </p>
+                      <div className="max-h-36 overflow-y-auto pr-1 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+                        <MarkdownRenderer content={formData.privacyPolicyDescription} />
+                      </div>
                     )}
                   </div>
                 )}

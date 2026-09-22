@@ -34,7 +34,9 @@ export default function RegisterMiniAppPage() {
   const [formData, setFormData] = useState<Partial<CreateMiniAppDto>>({
     name: '',
     appId: '',
-    category: 'Insurance',
+    category: 'General Secretariat (which houses administrative units, including the FinTech Center)',
+    organization: 'General Secretariat (which houses administrative units, including the FinTech Center)',
+    organizationCode: 'FTC',
     shortDescription: '',
     fullDescription: '',
     logo: '',

@@ -8,6 +8,8 @@ import Link from 'next/link';
 import { toast } from '@/components/ui/Toast';
 import { RevisionReviewModal } from '@/components/review/RevisionReviewModal';
 import { permissionsApi, miniappsApi, MiniApp } from '@/api';
+import { BuildingIcon } from '@/components/ui/Icons';
+import { getOrganizationCode, getOrganizationFullName } from '@/lib/constants/fsa-organizations';
 
 type Proposal = {
   id: string;
@@ -276,7 +278,7 @@ export default function ReviewQueuePage() {
                 <thead className="bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/50">
                   <tr>
                     <th className="w-[26%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Mini App</th>
-                    <th className="w-[18%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Category</th>
+                    <th className="w-[18%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Organization</th>
                     <th className="w-[18%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Date Submitted</th>
                     <th className="w-[22%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Status</th>
                     {isAdminOrSuperAdmin && (
@@ -303,7 +305,21 @@ export default function ReviewQueuePage() {
                             <span className="font-semibold text-slate-900 dark:text-slate-100">{app.name || 'Unknown App'}</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-sm">{app.category}</td>
+                        <td className="px-6 py-4">
+                          {(() => {
+                            const orgCode = (app as any).organizationCode || getOrganizationCode(app.organization || app.category);
+                            const orgFullName = getOrganizationFullName(app.organization || app.category);
+                            return (
+                              <span 
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/60 shadow-xs cursor-default"
+                                title={orgFullName}
+                              >
+                                <BuildingIcon className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+                                <span>{orgCode}</span>
+                              </span>
+                            );
+                          })()}
+                        </td>
                         <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-sm">
                           {app.createdAt ? new Date(app.createdAt).toLocaleDateString() : '-'}
                         </td>

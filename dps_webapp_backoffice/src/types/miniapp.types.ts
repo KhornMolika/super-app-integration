@@ -59,6 +59,8 @@ export interface CreateMiniAppDto {
   appId: string;
   name: string;
   category?: string;
+  organization?: string;
+  organizationCode?: string;
   shortDescription?: string;
   fullDescription?: string;
   logo?: string;

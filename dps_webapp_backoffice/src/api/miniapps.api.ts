@@ -87,6 +87,12 @@ export const miniappsApi = {
   getVersions: (id: string) =>
     apiClient<any[]>(`/api/mini-apps/${id}/versions`),
 
+  rollback: (id: string, targetVersion: string, reason?: string) =>
+    apiClient<{ success: boolean; message?: string }>(`/api/mini-apps/${id}/rollback`, {
+      method: 'POST',
+      body: { targetVersion, reason },
+    }),
+
   rescan: (id: string, securityChecks?: string[]) =>
     apiClient<any>(`/api/mini-apps/${id}/rescan`, {
       method: 'POST',

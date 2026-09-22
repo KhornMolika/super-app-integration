@@ -3,6 +3,7 @@ import {
   Logger,
   BadRequestException,
   NotFoundException,
+  OnApplicationBootstrap,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -17,9 +18,10 @@ import { VersionDiffHelper } from './helpers/version-diff.helper';
 import { ArtifactDistributionHelper } from './helpers/artifact-distribution.helper';
 import { DomainAssociationHelper } from './helpers/domain-association.helper';
 import { MiniappMutationHelper } from './helpers/miniapp-mutation.helper';
+import { resolveOrganizationDetails } from '../common/constants/fsa-organizations';
 
 @Injectable()
-export class MiniappsService {
+export class MiniappsService implements OnApplicationBootstrap {
   private readonly logger = new Logger(MiniappsService.name);
 
   constructor(
@@ -40,6 +42,27 @@ export class MiniappsService {
     private domainAssociationHelper: DomainAssociationHelper,
     private miniappMutationHelper: MiniappMutationHelper,
   ) {}
+
+  async onApplicationBootstrap() {
+    await this.backfillOrganizations();
+  }
+
+  private async backfillOrganizations() {
+    try {
+      const apps = await this.miniappRepository.find();
+      for (const app of apps) {
+        if (!app.organizationCode || !app.organization) {
+          const resolved = resolveOrganizationDetails(app.organization || app.category);
+          app.organization = resolved.name;
+          app.organizationCode = resolved.code;
+          app.category = resolved.name;
+          await this.miniappRepository.save(app);
+        }
+      }
+    } catch (err: any) {
+      this.logger.warn(`Could not backfill mini app organizations: ${err.message}`);
+    }
+  }
 
   async logActivity(
     miniAppId: string,
@@ -477,5 +500,18 @@ export class MiniappsService {
       (app.pendingRevision ? { ...app, ...app.pendingRevision, version: targetVer } : app);
 
     return VersionDiffHelper.computeDiff(baseRecord, targetRecord);
+  }
+
+  async rollback(id: string, targetVersion: string, actorId: string, reason?: string) {
+    const app = await this.findOne(id);
+    if (!app) throw new NotFoundException('Mini App not found');
+    return this.lifecycleHelper.rollbackToVersion(
+      app,
+      targetVersion,
+      actorId,
+      (miniAppId, actor, actionType, title, desc, auditAction, oldV, newV) =>
+        this.logActivity(miniAppId, actor, actionType, title, desc, auditAction, oldV, newV),
+      reason,
+    );
   }
 }

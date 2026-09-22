@@ -1,6 +1,6 @@
 name: dps_miniapp_mobile_trust_regulator
 description: "Trust Regulator Mini App with Restricted Hardware Permissions for Security Testing."
-version: 1.2.0
+version: 1.0.0  
 publish_to: "none"
 
 environment:

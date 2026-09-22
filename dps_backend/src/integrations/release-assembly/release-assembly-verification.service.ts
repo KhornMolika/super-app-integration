@@ -10,6 +10,7 @@ import { JenkinsService } from '../jenkins/jenkins.service';
 import { NexusIntegrationService } from '../nexus/nexus-integration.service';
 import { NotificationsService, MailService } from '../../notifications';
 import { resolveBackofficeBaseUrl } from '../../common/utils/network.utils';
+import { PubspecInjectorService } from '../flutter/pubspec-injector.service';
 import {
   VerifyAndAssembleReleaseDto,
   ReleaseAssemblyAuditResult,
@@ -35,6 +36,7 @@ export class ReleaseAssemblyVerificationService {
     private readonly notificationsService: NotificationsService,
     private readonly mailService: MailService,
     private readonly configService: ConfigService,
+    private readonly pubspecService: PubspecInjectorService,
     @InjectRepository(MiniApp)
     private readonly miniappRepository: Repository<MiniApp>,
   ) {}
@@ -229,6 +231,14 @@ export class ReleaseAssemblyVerificationService {
         this.logger.log(`Wrote release manifest to ${releaseManifestPath}`);
       } catch (err: any) {
         this.logger.warn(`Could not write manifest to disk: ${err.message}`);
+      }
+
+      // Automatically sync and inject all verified Mini App package dependencies into pubspec.yaml
+      try {
+        await this.pubspecService.syncAllApprovedMiniApps();
+        this.logger.log('Synchronized Super App pubspec.yaml dependencies for release assembly.');
+      } catch (err: any) {
+        this.logger.warn(`Pubspec synchronization warning during release assembly: ${err.message}`);
       }
 
       // Transition approved apps to BUILDING and dispatch notifications

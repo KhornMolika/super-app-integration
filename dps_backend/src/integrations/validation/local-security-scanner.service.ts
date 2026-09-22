@@ -10,6 +10,7 @@ import { AuditService } from '../../audit/audit.service';
 import { PermissionsService } from '../../permissions/permissions.service';
 import { ValidationFindingDto } from './validation-callback.controller';
 import { resolveBackofficeBaseUrl } from '../../common/utils/network.utils';
+import { PubVulnerabilityScannerService } from './pub-vulnerability-scanner.service';
 
 export interface SecurityCheckMetadata {
   id: string;
@@ -211,6 +212,7 @@ export class LocalSecurityScannerService {
     private readonly mailService: MailService,
     private readonly permissionsService: PermissionsService,
     private readonly pipelinePacerService: PipelinePacerService,
+    private readonly pubVulnerabilityScanner?: PubVulnerabilityScannerService,
   ) {}
 
   private async delay(ms: number): Promise<void> {
@@ -722,7 +724,8 @@ export class LocalSecurityScannerService {
     );
 
     const findings: ValidationFindingDto[] = [];
-    const checks: Record<string, { passed: boolean; details: string }> = {};
+    const checks: Record<string, { passed: boolean; details: string; advisories?: any[] }> = {};
+    let score = 100;
 
     const stages = buildDynamicValidationStages('FLUTTER_PACKAGE', activeChecks);
     app.validationStages = stages;
@@ -783,13 +786,69 @@ export class LocalSecurityScannerService {
     // --- STAGE: Software Composition Analysis (SCA / CVE) ---
     if (stages.dependency_scan) {
       stages.dependency_scan.status = 'RUNNING';
-      stages.dependency_scan.details = 'Cross-referencing dependencies with OSV / Trivy CVE database...';
+      stages.dependency_scan.details = 'Cross-referencing declared package dependencies with Google OSV database...';
       await emitUpdate('dependency_scan');
-      await this.delay(500);
 
-      stages.dependency_scan.status = 'COMPLETED';
-      stages.dependency_scan.details = 'Dependency CVE audit passed with 0 known critical vulnerabilities.';
-      checks.dependency_scan = { passed: true, details: stages.dependency_scan.details };
+      const declaredDeps =
+        app.integrationConfig?.dependencies ||
+        app.integrationConfig?.declaredDependencies ||
+        {};
+
+      let osvReport: any = null;
+      if (this.pubVulnerabilityScanner) {
+        osvReport = await this.pubVulnerabilityScanner.scanPubDependencies(declaredDeps);
+      }
+
+      if (osvReport && (osvReport.criticalCount > 0 || osvReport.highCount > 0)) {
+        stages.dependency_scan.status = 'FAILED';
+        stages.dependency_scan.details = `Detected ${osvReport.criticalCount} critical and ${osvReport.highCount} high CVE vulnerabilities across declared packages.`;
+        checks.dependency_scan = {
+          passed: false,
+          details: stages.dependency_scan.details,
+          advisories: osvReport.advisories,
+        };
+        score = Math.max(0, score - 30);
+
+        for (const adv of osvReport.advisories.filter(
+          (a: any) => a.severity === 'CRITICAL' || a.severity === 'HIGH',
+        )) {
+          findings.push({
+            id: `CVE-${adv.cveId || adv.package}`,
+            title: `Vulnerable Dependency: ${adv.package}`,
+            severity: adv.severity === 'CRITICAL' ? 'CRITICAL' : 'HIGH',
+            category: 'DEPENDENCY',
+            description: `${adv.title}. Package ${adv.package}@${adv.version}.`,
+            recommendation: `Upgrade ${adv.package} to ${adv.fixedVersion || 'latest patched version'}. Reference: ${adv.advisoryUrl}`,
+          });
+
+          const issue = this.issueRepository.create({
+            miniAppId: app.id,
+            type: 'SECURITY_CHECK',
+            severity: adv.severity === 'CRITICAL' ? 'CRITICAL' : 'HIGH',
+            description: `[${adv.cveId || 'CVE'}] Vulnerable Dependency ${adv.package}@${adv.version}: ${adv.title}. Remediation: Upgrade to ${adv.fixedVersion || 'latest patched version'}. (${adv.advisoryUrl})`,
+            status: 'OPEN',
+            metadata: {
+              package: adv.package,
+              version: adv.version,
+              cveId: adv.cveId,
+              fixedVersion: adv.fixedVersion,
+              advisoryUrl: adv.advisoryUrl,
+            },
+          });
+          await this.issueRepository.save(issue);
+        }
+      } else {
+        stages.dependency_scan.status = 'COMPLETED';
+        stages.dependency_scan.details =
+          osvReport && osvReport.totalScanned > 0
+            ? `Dependency OSV audit passed: 0 critical/high CVEs detected across ${osvReport.totalScanned} packages.`
+            : 'Dependency CVE audit passed with 0 known vulnerabilities.';
+        checks.dependency_scan = {
+          passed: true,
+          details: stages.dependency_scan.details,
+          advisories: osvReport?.advisories || [],
+        };
+      }
       await emitUpdate('dependency_scan');
     }
 
@@ -898,7 +957,9 @@ export class LocalSecurityScannerService {
     const hasCriticalOrHigh = findings.some(
       (f) => f.severity === 'CRITICAL' || f.severity === 'HIGH',
     );
-    const score = hasCriticalOrHigh ? 60 : 100;
+    if (hasCriticalOrHigh) {
+      score = Math.min(score, 60);
+    }
 
     await this.finalizeScan(
       app,

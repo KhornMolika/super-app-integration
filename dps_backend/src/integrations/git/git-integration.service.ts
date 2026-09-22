@@ -2,6 +2,8 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
+import * as crypto from 'crypto';
 import { execFileSync } from 'child_process';
 import {
   FlutterPackageValidation,
@@ -25,6 +27,41 @@ export const DEFAULT_PLATFORM_DEPLOY_KEY =
   'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFm6Vj0b9PqZ3K8W9rV5mQ7l2Y6nJpZ0t8sW5X1yAbCd superapp-deploy-key@superapp-portal.internal';
 export const DEFAULT_PLATFORM_DEPLOY_KEY_FINGERPRINT =
   'SHA256:dSp88vXgN1z0kQm5L9p3rTb7V2mKnY8qJpZ0t8sW5X1y';
+
+/**
+ * Derives a standardized Dart package name from a Git repository URL or subfolder path.
+ * e.g., "git@github.com:KhornMolika/sc-private-miniapp.git" -> "sc_private_miniapp"
+ */
+export function inferPackageNameFromGitUrl(
+  url?: string,
+  gitPath?: string,
+): string {
+  if (gitPath && gitPath.trim()) {
+    const segments = gitPath.trim().replace(/\/+$/, '').split('/');
+    const lastSeg = segments[segments.length - 1];
+    if (lastSeg) {
+      return lastSeg.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    }
+  }
+
+  if (!url || !url.trim()) return '';
+  const cleanUrl = url.trim().replace(/\.git\/?$/, '');
+
+  const sshMatch = cleanUrl.match(
+    /^[a-zA-Z0-9._-]+@[^:]+:(?:[^/]+\/)*([^/]+)$/,
+  );
+  if (sshMatch && sshMatch[1]) {
+    return sshMatch[1].toLowerCase().replace(/[^a-z0-9_]/g, '_');
+  }
+
+  const httpMatch = cleanUrl.match(/^https?:\/\/[^/]+(?:\/[^/]+)*\/([^/?#]+)/);
+  if (httpMatch && httpMatch[1]) {
+    return httpMatch[1].toLowerCase().replace(/[^a-z0-9_]/g, '_');
+  }
+
+  const lastPart = cleanUrl.split(/[/:]/).filter(Boolean).pop() || '';
+  return lastPart.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+}
 
 @Injectable()
 export class GitIntegrationService {
@@ -108,12 +145,25 @@ export class GitIntegrationService {
     url: string,
     explicitProvider?: GitProviderType,
     token?: string,
+    deployKey?: string,
   ): Promise<{ provider: GitProviderType; branches: string[] }> {
     const provider = this.resolveProvider(url, explicitProvider);
-    const branches = await provider.getBranches(url, token);
+    try {
+      const branches = await provider.getBranches(url, token);
+      if (branches && branches.length > 0) {
+        return {
+          provider: provider.type,
+          branches,
+        };
+      }
+    } catch {
+      // REST API failed (e.g. private repo without token), fallback to git ls-remote over SSH
+    }
+
+    const ls = await this.lsRemote(url, deployKey);
     return {
       provider: provider.type,
-      branches,
+      branches: ls.branches,
     };
   }
 
@@ -121,12 +171,25 @@ export class GitIntegrationService {
     url: string,
     explicitProvider?: GitProviderType,
     token?: string,
+    deployKey?: string,
   ): Promise<{ provider: GitProviderType; tags: string[] }> {
     const provider = this.resolveProvider(url, explicitProvider);
-    const tags = await provider.getTags(url, token);
+    try {
+      const tags = await provider.getTags(url, token);
+      if (tags && tags.length > 0) {
+        return {
+          provider: provider.type,
+          tags,
+        };
+      }
+    } catch {
+      // REST API failed, fallback to git ls-remote over SSH
+    }
+
+    const ls = await this.lsRemote(url, deployKey);
     return {
       provider: provider.type,
-      tags,
+      tags: ls.tags,
     };
   }
 
@@ -163,6 +226,10 @@ export class GitIntegrationService {
       token,
       path,
     );
+
+    if (!validation.packageName) {
+      validation.packageName = inferPackageNameFromGitUrl(url, path);
+    }
 
     let snippet: string | undefined;
     if (validation.isValid) {
@@ -202,13 +269,116 @@ export class GitIntegrationService {
     ref: string,
     explicitProvider?: GitProviderType,
     token?: string,
+    deployKey?: string,
   ): Promise<{ provider: GitProviderType; commitSha: string }> {
     const provider = this.resolveProvider(url, explicitProvider);
-    const commitSha = await provider.resolveCommitSha(url, ref, token);
+    const cleanRef = (ref || '').trim();
+
+    if (/^[0-9a-f]{40}$/i.test(cleanRef)) {
+      return {
+        provider: provider.type,
+        commitSha: cleanRef,
+      };
+    }
+
+    try {
+      const commitSha = await provider.resolveCommitSha(url, cleanRef, token);
+      if (commitSha) {
+        return {
+          provider: provider.type,
+          commitSha,
+        };
+      }
+    } catch {
+      // REST API failed, fallback to ls-remote
+    }
+
+    const ls = await this.lsRemote(url, deployKey);
     return {
       provider: provider.type,
-      commitSha,
+      commitSha: ls.headSha || '',
     };
+  }
+
+  /**
+   * Executes 'git ls-remote' using the platform (or custom) SSH deploy key.
+   * Discovers all branches, tags, and HEAD commit SHAs directly over SSH.
+   */
+  async lsRemote(
+    url: string,
+    customDeployKey?: string,
+  ): Promise<{ branches: string[]; tags: string[]; headSha?: string }> {
+    const rawKey = customDeployKey || this.getDeployPrivateKey();
+    let tempKeyFile: string | null = null;
+
+    try {
+      let sshCmd =
+        'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null';
+      if (rawKey) {
+        tempKeyFile = path.join(
+          os.tmpdir(),
+          `deploy_key_${crypto.randomBytes(6).toString('hex')}`,
+        );
+        fs.writeFileSync(tempKeyFile, rawKey + '\n', { mode: 0o600 });
+        const normalizedKeyPath = tempKeyFile.replace(/\\/g, '/');
+        sshCmd = `ssh -i "${normalizedKeyPath}" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null`;
+      }
+
+      // Convert HTTPS to SSH if using SSH deploy key
+      let queryUrl = url.trim();
+      if (rawKey) {
+        if (queryUrl.startsWith('https://github.com/')) {
+          queryUrl = queryUrl.replace('https://github.com/', 'git@github.com:');
+        } else if (queryUrl.startsWith('https://gitlab.com/')) {
+          queryUrl = queryUrl.replace('https://gitlab.com/', 'git@gitlab.com:');
+        }
+      }
+
+      const stdout = execFileSync('git', ['ls-remote', queryUrl], {
+        env: {
+          ...process.env,
+          GIT_SSH_COMMAND: sshCmd,
+        },
+        timeout: 10000,
+        encoding: 'utf8',
+      });
+
+      const branches: string[] = [];
+      const tags: string[] = [];
+      let headSha: string | undefined;
+
+      const lines = stdout.split('\n');
+      for (const line of lines) {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length < 2) continue;
+        const [sha, ref] = parts;
+
+        if (ref === 'HEAD') {
+          headSha = sha;
+        } else if (ref.startsWith('refs/heads/')) {
+          const branchName = ref.replace('refs/heads/', '');
+          if (!branches.includes(branchName)) {
+            branches.push(branchName);
+          }
+        } else if (ref.startsWith('refs/tags/')) {
+          const tagName = ref.replace('refs/tags/', '').replace(/\^{}$/, '');
+          if (!tags.includes(tagName)) {
+            tags.push(tagName);
+          }
+        }
+      }
+
+      return { branches, tags, headSha };
+    } catch (err: any) {
+      this.logger.debug(`ls-remote failed for ${url}: ${err.message}`);
+      return { branches: [], tags: [] };
+    } finally {
+      if (tempKeyFile && fs.existsSync(tempKeyFile)) {
+        try {
+          fs.unlinkSync(tempKeyFile);
+        } catch {}
+      }
+    }
   }
 
   getDeployKey(): GitDeployKeyInfo {

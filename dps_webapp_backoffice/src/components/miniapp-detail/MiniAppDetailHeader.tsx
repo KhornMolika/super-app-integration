@@ -4,6 +4,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { BackButton } from '@/components/ui/BackButton';
 import { Button } from '@/components/ui/inputs';
 import { IntegrationMethod } from '@/types/miniapp.types';
+import { BuildingIcon } from '@/components/ui/Icons';
+import { getOrganizationCode, getOrganizationFullName } from '@/lib/constants/fsa-organizations';
 
 export interface MiniAppDetailHeaderProps {
   formData: any;
@@ -98,10 +100,16 @@ export default function MiniAppDetailHeader({
                 ? 'Deep Link'
                 : 'WebView'}
             </span>
-            {formData.category && (
+            {(formData.organization || formData.category) && (
               <>
                 <span>•</span>
-                <span>{formData.category}</span>
+                <span 
+                  className="inline-flex items-center gap-1 font-semibold text-sky-600 dark:text-sky-400"
+                  title={getOrganizationFullName(formData.organization || formData.category)}
+                >
+                  <BuildingIcon className="w-3.5 h-3.5" />
+                  <span>{getOrganizationCode(formData.organization || formData.category)}</span>
+                </span>
               </>
             )}
           </div>

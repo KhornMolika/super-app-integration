@@ -67,16 +67,23 @@ const ShieldIcon = () => (
   </svg>
 );
 
-const KeyIcon = () => (
-  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+const KeyIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="7.5" cy="15.5" r="5.5" />
     <path d="m21 2-9.6 9.6" />
     <path d="m15.5 7.5 3 3L22 7l-3-3" />
   </svg>
 );
 
-const CheckCircleIcon = () => (
-  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+const LockIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </svg>
+);
+
+const CheckCircleIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
     <polyline points="22 4 12 14.01 9 11.01" />
   </svg>
@@ -877,16 +884,88 @@ export default function GuidelinesPage() {
             </div>
           )}
 
-          {/* Method 3: Flutter Source Code */}
+          {/* Method 3: Flutter Source Code (Git) */}
           {activeMethodTab === "source" && (
-            <div className="space-y-4 pt-2">
+            <div className="space-y-6 pt-2">
               <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
                 <h5 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <FolderIcon /> Flutter Package Source Code (Git)
+                  <FolderIcon /> Flutter Package Source Code (Git Integration)
                 </h5>
                 <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                  Links a Git repository (GitHub/GitLab) with Commit SHA locking. Allows maximum tree-shaking optimization and runtime performance inside the Super App host shell.
+                  Directly links a Git repository (GitHub, GitLab, or self-hosted Git server) to the Super App container. Source code is fetched, analyzed, and injected via native Dart pub Git dependencies with Commit SHA locking for reproducible builds.
                 </p>
+              </div>
+
+              {/* Private Repository Authentication - Owner Credentials Policy */}
+              <div className="p-6 rounded-2xl border-2 border-indigo-500/40 dark:border-indigo-500/30 bg-gradient-to-br from-indigo-50/70 via-slate-50 to-white dark:from-indigo-950/30 dark:via-slate-900/60 dark:to-slate-900/40 shadow-sm space-y-5">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                    <KeyIcon />
+                  </div>
+                  <div>
+                    <h5 className="text-xl font-bold text-slate-900 dark:text-white">
+                      Private Repository Authentication (Owner-Managed Keys)
+                    </h5>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
+                      Zero platform credential sharing. Developers provide their own dedicated read-only Deploy Key or Access Token.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                  <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 space-y-2.5">
+                    <strong className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                      <KeyIcon className="w-4 h-4 text-indigo-500" />
+                      Option A: SSH Deploy Key (Recommended)
+                    </strong>
+                    <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                      Generates a repository-scoped cryptographic key pair. Grants read-only clone permission strictly to this repository without personal account access.
+                    </p>
+                    <div className="p-3 bg-slate-900 text-slate-100 font-mono rounded-lg text-[11px] space-y-1">
+                      <p className="text-slate-400"># 1. Generate dedicated key pair:</p>
+                      <p className="text-indigo-300">ssh-keygen -t ed25519 -C &quot;miniapp-deploy-key&quot; -f ./id_ed25519_miniapp</p>
+                      <p className="text-slate-400"># 2. Add id_ed25519_miniapp.pub to GitHub/GitLab Deploy Keys</p>
+                      <p className="text-slate-400"># 3. Paste id_ed25519_miniapp (private key) into portal</p>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 space-y-2.5">
+                    <strong className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                      <LockIcon className="w-4 h-4 text-indigo-500" />
+                      Option B: Personal / Project Deploy Token
+                    </strong>
+                    <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                      Generate a fine-grained Personal Access Token (PAT) or GitLab Project Deploy Token with strictly <code className="text-indigo-600 dark:text-indigo-400 font-mono">read_repository</code> scope.
+                    </p>
+                    <ul className="space-y-1 list-disc pl-4 text-slate-600 dark:text-slate-400 leading-relaxed">
+                      <li>GitHub: Developer Settings &rarr; Personal access tokens &rarr; Fine-grained (Read-only repo contents).</li>
+                      <li>GitLab: Project Settings &rarr; Repository &rarr; Deploy Tokens (<code className="font-mono text-[11px]">read_repository</code>).</li>
+                      <li>Paste the token into the registration form.</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pubspec Standards & Code Contracts */}
+              <div className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 space-y-4">
+                <h5 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <CheckCircleIcon className="w-5 h-5 text-emerald-500" />
+                  <span>Flutter Package Structure &amp; Pubspec Contract</span>
+                </h5>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1">
+                    <strong className="text-slate-800 dark:text-slate-200 block">1. Canonical Package Name</strong>
+                    <span className="text-slate-500">Must be lowercase with underscores (e.g. <code className="text-indigo-600 dark:text-indigo-400 font-mono">my_transit_miniapp</code>).</span>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1">
+                    <strong className="text-slate-800 dark:text-slate-200 block">2. Root Export File</strong>
+                    <span className="text-slate-500">Must export primary screens / widgets in <code className="text-indigo-600 dark:text-indigo-400 font-mono">lib/&lt;package_name&gt;.dart</code>.</span>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1">
+                    <strong className="text-slate-800 dark:text-slate-200 block">3. Isolated State</strong>
+                    <span className="text-slate-500">Do not execute <code className="text-rose-500 font-mono">exit(0)</code> or override container-level GetX controllers.</span>
+                  </div>
+                </div>
               </div>
             </div>
           )}

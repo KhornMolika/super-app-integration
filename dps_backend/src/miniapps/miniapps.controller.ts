@@ -388,6 +388,22 @@ export class MiniappsController {
     return this.miniappService.getDiff(id, baseVersion, targetVersion);
   }
 
+  @Post(':id/rollback')
+  @RequirePermissions('miniapp:update')
+  async rollback(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body('targetVersion') targetVersion: string,
+    @Body('reason') reason: string,
+    @Req() req: any,
+  ) {
+    return this.miniappService.rollback(
+      id,
+      targetVersion,
+      req.user?.sub,
+      reason,
+    );
+  }
+
   @Post(':id/invite-token')
   @RequirePermissions('miniapp:read')
   async createInviteToken(

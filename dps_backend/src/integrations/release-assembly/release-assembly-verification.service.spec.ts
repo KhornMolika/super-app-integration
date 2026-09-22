@@ -6,6 +6,7 @@ import { JenkinsService } from '../jenkins/jenkins.service';
 import { NotificationsService, MailService } from '../../notifications';
 import { ConfigService } from '@nestjs/config';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
+import { PubspecInjectorService } from '../flutter/pubspec-injector.service';
 
 describe('ReleaseAssemblyVerificationService', () => {
   let service: ReleaseAssemblyVerificationService;
@@ -61,6 +62,13 @@ describe('ReleaseAssemblyVerificationService', () => {
         { provide: NotificationsService, useValue: notificationsService },
         { provide: MailService, useValue: mailService },
         { provide: ConfigService, useValue: configService },
+        {
+          provide: PubspecInjectorService,
+          useValue: {
+            syncAllApprovedMiniApps: jest.fn().mockResolvedValue({ success: true }),
+            validateDependencies: jest.fn().mockResolvedValue({ success: true }),
+          },
+        },
         { provide: getRepositoryToken(MiniApp), useValue: mockMiniappRepo },
       ],
     }).compile();

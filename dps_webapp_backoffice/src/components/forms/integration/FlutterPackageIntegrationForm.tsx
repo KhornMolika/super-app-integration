@@ -3,7 +3,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Button, Input, Label, Select } from "@/components/ui/inputs";
 import { SourceType } from "@/types/miniapp.types";
-import { miniappsApi, integrationsApi } from "@/api";
+import { miniappsApi, integrationsApi, pubspecApi } from "@/api";
+import { useAuth } from "@/lib/auth";
+import { inferPackageNameFromGitUrl } from "@/lib/miniapp-form.validator";
 import {
   ShieldIcon,
   ShieldCheckIcon,
@@ -15,6 +17,7 @@ import {
   CheckIcon,
   CheckCircleIcon,
   XIcon,
+  XCircleIcon,
   GlobeIcon,
   KeyIcon,
   CopyIcon,
@@ -43,6 +46,13 @@ export default function FlutterPackageIntegrationForm({
   onUpdateFlutterConfig,
   isEditable = true,
 }: FlutterPackageIntegrationFormProps) {
+  const { can, hasRole } = useAuth();
+  const isSuperAdminOrAdmin =
+    hasRole('SUPER_ADMIN') ||
+    hasRole('ADMIN') ||
+    can('super_app:manage') ||
+    can('miniapp:approve');
+
   const flutterConfig = formData.integrationConfigFlutter || {};
 
   // Repository Visibility & Deploy Key States
@@ -50,41 +60,62 @@ export default function FlutterPackageIntegrationForm({
   const authMethod: "deploy_key" | "token" =
     flutterConfig.authMethod === "token" ? "token" : "deploy_key";
 
-  const [platformDeployKey, setPlatformDeployKey] = useState<string>(
-    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFm6Vj0b9PqZ3K8W9rV5mQ7l2Y6nJpZ0t8sW5X1yAbCd superapp-deploy-key@superapp-portal.internal",
-  );
-  const [deployKeyFingerprint, setDeployKeyFingerprint] = useState<string>(
-    "SHA256:dSp88vXgN1z0kQm5L9p3rTb7V2mKnY8qJpZ0t8sW5X1y",
-  );
-  const [copiedKey, setCopiedKey] = useState(false);
-  const [showCustomPrivateKey, setShowCustomPrivateKey] = useState(
-    Boolean(flutterConfig.deployKey),
-  );
   const [showTokenPassword, setShowTokenPassword] = useState(false);
   const [activeGuideTab, setActiveGuideTab] = useState<"github" | "gitlab">(
     "github",
   );
+  const [isPrechecking, setIsPrechecking] = useState(false);
+  const [precheckResult, setPrecheckResult] = useState<any>(null);
 
-  // Fetch Platform Public Deploy Key on mount
-  useEffect(() => {
-    integrationsApi
-      .getDeployKey()
-      .then((res) => {
-        if (res?.publicKey) {
-          setPlatformDeployKey(res.publicKey);
-          if (res.fingerprint) setDeployKeyFingerprint(res.fingerprint);
-        }
-      })
-      .catch(() => {
-        // Fallback to default
+  const handleRunPrecheck = async () => {
+    const rawPkg = (
+      flutterConfig.packageName ||
+      formData.name ||
+      formData.appId ||
+      ""
+    )
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, "_");
+
+    if (!rawPkg) {
+      alert("Please enter a package name before running pre-check simulation.");
+      return;
+    }
+
+    setIsPrechecking(true);
+    try {
+      const res = await pubspecApi.precheckConflicts({
+        packageName: rawPkg,
+        gitUrl: flutterConfig.gitUrl || flutterConfig.repoUrl,
+        ref:
+          flutterConfig.gitBranch ||
+          flutterConfig.gitTag ||
+          flutterConfig.commitSha ||
+          flutterConfig.ref ||
+          "main",
+        path: flutterConfig.gitPath || flutterConfig.packagePath,
+        version:
+          flutterConfig.versionConstraint || flutterConfig.packageVersion,
+        isHosted:
+          flutterConfig.isHosted ||
+          Boolean(flutterConfig.packageStoragePath),
+        hostedUrl: flutterConfig.nexusUrl || flutterConfig.hostedUrl,
+        deployKey: flutterConfig.deployKey,
+        gitAccessToken: flutterConfig.gitAccessToken,
       });
-  }, []);
-
-  const handleCopyDeployKey = () => {
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(platformDeployKey);
-      setCopiedKey(true);
-      setTimeout(() => setCopiedKey(false), 2500);
+      setPrecheckResult(res);
+    } catch (err: any) {
+      setPrecheckResult({
+        compatible: false,
+        packageName: rawPkg,
+        directConflicts: [err.message || "Failed to execute pre-check simulation."],
+        transitiveBumps: [],
+        newPackages: [],
+        message: "Simulation failed to execute.",
+        rawOutput: err.message,
+      });
+    } finally {
+      setIsPrechecking(false);
     }
   };
 
@@ -148,6 +179,79 @@ export default function FlutterPackageIntegrationForm({
   // Debounce timers
   const gitDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const nexusDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  // State for Container Pubspec Dependency & Live Resolution
+  const [pubspecStatus, setPubspecStatus] = useState<any>(null);
+  const [isLoadingPubspecStatus, setIsLoadingPubspecStatus] = useState(false);
+  const [isTestingResolution, setIsTestingResolution] = useState(false);
+  const [resolutionResult, setResolutionResult] = useState<any>(null);
+  const [isSyncingPubspec, setIsSyncingPubspec] = useState(false);
+  const [isRebuildingSandbox, setIsRebuildingSandbox] = useState(false);
+  const [sandboxRebuildMessage, setSandboxRebuildMessage] = useState<string | null>(null);
+
+  const loadPubspecStatus = async () => {
+    try {
+      setIsLoadingPubspecStatus(true);
+      const res = await pubspecApi.getStatus();
+      setPubspecStatus(res);
+    } catch (_) {
+    } finally {
+      setIsLoadingPubspecStatus(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPubspecStatus();
+  }, []);
+
+  const handleTestResolution = async () => {
+    try {
+      setIsTestingResolution(true);
+      setResolutionResult(null);
+      const res = await pubspecApi.validate(true);
+      setResolutionResult(res);
+    } catch (err: any) {
+      setResolutionResult({
+        success: false,
+        message: err.message || 'Dependency resolution validation failed.',
+        conflicts: [err.message || 'Network / execution error.'],
+      });
+    } finally {
+      setIsTestingResolution(false);
+    }
+  };
+
+  const handleSyncPubspec = async () => {
+    try {
+      setIsSyncingPubspec(true);
+      const res = await pubspecApi.syncApprovedMiniApps();
+      await loadPubspecStatus();
+      if (res?.validationResult) {
+        setResolutionResult(res.validationResult);
+      }
+    } catch (err: any) {
+      setResolutionResult({
+        success: false,
+        message: err.message || 'Sync failed.',
+        conflicts: [err.message],
+      });
+    } finally {
+      setIsSyncingPubspec(false);
+    }
+  };
+
+  const handleRebuildSandbox = async () => {
+    try {
+      setIsRebuildingSandbox(true);
+      setSandboxRebuildMessage(null);
+      const res = await pubspecApi.triggerSandboxBuild();
+      setSandboxRebuildMessage(res?.message || 'Sandbox compilation triggered in background.');
+    } catch (err: any) {
+      setSandboxRebuildMessage(`Failed to trigger sandbox build: ${err.message}`);
+    } finally {
+      setIsRebuildingSandbox(false);
+    }
+  };
 
   // Archive inspection handler (inspects & sanitizes in memory before storing in MinIO on submit)
   const handleArchiveFileChange = async (
@@ -285,23 +389,74 @@ export default function FlutterPackageIntegrationForm({
       cleanUrl = `https://${host}/${project}`;
     }
 
-    if (extractedPath) {
-      handleFlutterChange({
-        target: { name: "gitPath", value: extractedPath },
-      } as any);
+    const activePath =
+      extractedPath || flutterConfig.gitPath || flutterConfig.path || "";
+    const derivedPkgName = inferPackageNameFromGitUrl(cleanUrl, activePath);
+
+    if (rawVal.trim().startsWith("git@") && !isPrivateRepo) {
+      handleRepoVisibilityChange(true);
+      handleAuthMethodChange("deploy_key");
     }
 
-    if (extractedRef) {
-      setSelectedRef(extractedRef);
-      setSelectedRefType("branch");
+    if (onUpdateFlutterConfig) {
+      const updates: Record<string, any> = {
+        gitUrl: cleanUrl,
+        packageName: derivedPkgName,
+      };
+      if (extractedPath) updates.gitPath = extractedPath;
+      if (extractedRef) {
+        updates.gitBranch = extractedRef;
+        setSelectedRef(extractedRef);
+        setSelectedRefType("branch");
+      }
+      onUpdateFlutterConfig(updates);
+    } else {
+      if (extractedPath) {
+        handleFlutterChange({
+          target: { name: "gitPath", value: extractedPath },
+        } as any);
+      }
+      if (extractedRef) {
+        setSelectedRef(extractedRef);
+        setSelectedRefType("branch");
+        handleFlutterChange({
+          target: { name: "gitBranch", value: extractedRef },
+        } as any);
+      }
+      if (derivedPkgName) {
+        handleFlutterChange({
+          target: { name: "packageName", value: derivedPkgName },
+        } as any);
+      }
       handleFlutterChange({
-        target: { name: "gitBranch", value: extractedRef },
+        target: { name: "gitUrl", value: cleanUrl },
       } as any);
     }
+  };
 
-    handleFlutterChange({
-      target: { name: "gitUrl", value: cleanUrl },
-    } as any);
+  const handleGitPathChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newPath = e.target.value;
+    const derivedPkgName = inferPackageNameFromGitUrl(
+      flutterConfig.gitUrl,
+      newPath,
+    );
+
+    if (onUpdateFlutterConfig) {
+      const updates: Record<string, any> = {
+        gitPath: newPath,
+      };
+      if (derivedPkgName) {
+        updates.packageName = derivedPkgName;
+      }
+      onUpdateFlutterConfig(updates);
+    } else {
+      handleFlutterChange(e);
+      if (derivedPkgName) {
+        handleFlutterChange({
+          target: { name: "packageName", value: derivedPkgName },
+        } as any);
+      }
+    }
   };
 
   // Real-time Git URL Validation with Debounce (600ms)
@@ -336,11 +491,14 @@ export default function FlutterPackageIntegrationForm({
     ) {
       setIsGitValidating(true);
       gitDebounceRef.current = setTimeout(async () => {
+        const isDeployKey =
+          (isPrivateRepo && authMethod === "deploy_key") ||
+          url.startsWith("git@");
         const tokenToUse =
           isPrivateRepo && authMethod === "token"
             ? flutterConfig.gitAccessToken || undefined
             : undefined;
-        const isDeployKey = isPrivateRepo && authMethod === "deploy_key";
+        const derivedPkgName = inferPackageNameFromGitUrl(url, path);
 
         try {
           const valData = await integrationsApi.validateGit({
@@ -348,10 +506,13 @@ export default function FlutterPackageIntegrationForm({
             ref: selectedRef || flutterConfig.gitBranch || undefined,
             token: tokenToUse,
             path: path || undefined,
-            isPrivate: isPrivateRepo,
-            authMethod,
+            isPrivate: isPrivateRepo || url.startsWith("git@"),
+            authMethod: isDeployKey ? "deploy_key" : authMethod,
             deployKey: flutterConfig.deployKey || undefined,
           });
+
+          const effectivePkg =
+            valData.validation?.packageName || derivedPkgName;
 
           if (!valData.validation?.isValid && isDeployKey) {
             setGitValidationResult({
@@ -359,62 +520,95 @@ export default function FlutterPackageIntegrationForm({
               isDeployKeyNotice: true,
               message:
                 "Private repository configured with Deploy Key. Full pubspec extraction & verification will run in the CI/CD build runner.",
-              packageName:
-                valData.validation?.packageName ||
-                flutterConfig.packageName ||
-                "",
+              packageName: effectivePkg,
             });
           } else {
-            setGitValidationResult(valData.validation || valData);
+            const resVal = valData.validation || valData;
+            if (
+              !resVal.isValid &&
+              resVal.error &&
+              (resVal.error.toLowerCase().includes("not found") ||
+                resVal.error.includes("404"))
+            ) {
+              resVal.error = `File 'pubspec.yaml' not found or repository is private. If this repository is private, please select '🔒 Private Repository' above and configure SSH Deploy Key or Access Token.`;
+            }
+            if (effectivePkg) {
+              resVal.packageName = effectivePkg;
+            }
+            setGitValidationResult(resVal);
           }
 
           if (valData.provider) {
             setDetectedProvider(valData.provider);
           }
 
-          if (valData.validation?.packageName && !flutterConfig.packageName) {
-            handleFlutterChange({
-              target: {
-                name: "packageName",
-                value: valData.validation.packageName,
-              },
-            } as any);
+          if (effectivePkg && flutterConfig.packageName !== effectivePkg) {
+            if (onUpdateFlutterConfig) {
+              onUpdateFlutterConfig({ packageName: effectivePkg });
+            } else {
+              handleFlutterChange({
+                target: {
+                  name: "packageName",
+                  value: effectivePkg,
+                },
+              } as any);
+            }
           }
 
-          // Fetch tags in background
+          // Fetch tags in background (supports REST API + SSH Deploy Key ls-remote)
           try {
             const tagsData = await integrationsApi.getGitTags({
               url,
               token: tokenToUse,
+              deployKey: flutterConfig.deployKey || undefined,
+              isPrivate: isPrivateRepo || url.startsWith("git@"),
+              authMethod: isDeployKey ? "deploy_key" : authMethod,
             });
             if (tagsData.tags && Array.isArray(tagsData.tags)) {
               setTags(tagsData.tags);
               if (
                 tagsData.tags.length > 0 &&
                 !selectedRef &&
-                !flutterConfig.gitBranch
+                !flutterConfig.gitBranch &&
+                selectedRefType === "tag"
               ) {
-                setSelectedRef(tagsData.tags[0]);
+                handleRefChange(tagsData.tags[0]);
               }
             }
           } catch {}
 
-          // Fetch branches in background
+          // Fetch branches in background (supports REST API + SSH Deploy Key ls-remote)
           try {
             const branchesData = await integrationsApi.getGitBranches({
               url,
               token: tokenToUse,
+              deployKey: flutterConfig.deployKey || undefined,
+              isPrivate: isPrivateRepo || url.startsWith("git@"),
+              authMethod: isDeployKey ? "deploy_key" : authMethod,
             });
             if (branchesData.branches && Array.isArray(branchesData.branches)) {
               setBranches(branchesData.branches);
+              if (
+                branchesData.branches.length > 0 &&
+                !selectedRef &&
+                !flutterConfig.gitBranch &&
+                selectedRefType === "branch"
+              ) {
+                const defaultBranch = branchesData.branches.includes("main")
+                  ? "main"
+                  : branchesData.branches[0];
+                handleRefChange(defaultBranch);
+              }
             }
           } catch {}
 
-          // Resolve commit SHA
+          // Resolve commit SHA (supports REST API + SSH Deploy Key ls-remote)
           try {
             const shaData = await integrationsApi.resolveGitSha({
               url,
               ref: selectedRef || flutterConfig.gitBranch || "main",
+              token: tokenToUse,
+              deployKey: flutterConfig.deployKey || undefined,
             });
             if (shaData.sha) {
               setLockedCommitSha(shaData.sha);
@@ -424,14 +618,64 @@ export default function FlutterPackageIntegrationForm({
             }
           } catch {}
         } catch (err: any) {
+          const fallbackPkg = derivedPkgName;
           if (isDeployKey) {
             setGitValidationResult({
               isValid: true,
               isDeployKeyNotice: true,
               message:
                 "Private repository configured with Deploy Key. Full verification will be orchestrated via Jenkins CI runner.",
-              packageName: flutterConfig.packageName || "",
+              packageName: fallbackPkg,
             });
+            if (fallbackPkg && flutterConfig.packageName !== fallbackPkg) {
+              if (onUpdateFlutterConfig) {
+                onUpdateFlutterConfig({ packageName: fallbackPkg });
+              } else {
+                handleFlutterChange({
+                  target: { name: "packageName", value: fallbackPkg },
+                } as any);
+              }
+            }
+
+            // Still query tags & branches via SSH deploy key fallback
+            try {
+              const tagsData = await integrationsApi.getGitTags({
+                url,
+                deployKey: flutterConfig.deployKey || undefined,
+                isPrivate: true,
+                authMethod: "deploy_key",
+              });
+              if (tagsData.tags && Array.isArray(tagsData.tags)) {
+                setTags(tagsData.tags);
+              }
+            } catch {}
+
+            try {
+              const branchesData = await integrationsApi.getGitBranches({
+                url,
+                deployKey: flutterConfig.deployKey || undefined,
+                isPrivate: true,
+                authMethod: "deploy_key",
+              });
+              if (branchesData.branches && Array.isArray(branchesData.branches)) {
+                setBranches(branchesData.branches);
+                if (!selectedRef && !flutterConfig.gitBranch) {
+                  const defB = branchesData.branches.includes("main") ? "main" : branchesData.branches[0];
+                  handleRefChange(defB);
+                }
+              }
+            } catch {}
+
+            try {
+              const shaData = await integrationsApi.resolveGitSha({
+                url,
+                ref: selectedRef || flutterConfig.gitBranch || "main",
+                deployKey: flutterConfig.deployKey || undefined,
+              });
+              if (shaData.sha) {
+                setLockedCommitSha(shaData.sha);
+              }
+            } catch {}
           } else {
             setGitValidationResult({
               isValid: false,
@@ -507,6 +751,38 @@ export default function FlutterPackageIntegrationForm({
       if (nexusDebounceRef.current) clearTimeout(nexusDebounceRef.current);
     };
   }, [flutterConfig.packageName, flutterConfig.sourceType]);
+
+  const handleRefChange = (val: string) => {
+    setSelectedRef(val);
+    if (onUpdateFlutterConfig) {
+      onUpdateFlutterConfig({
+        gitBranch: val,
+        ref: val,
+      });
+    } else {
+      handleFlutterChange({
+        target: { name: "gitBranch", value: val },
+      } as any);
+    }
+  };
+
+  const handleRefTypeChange = (type: "tag" | "branch" | "commit") => {
+    setSelectedRefType(type);
+    let defaultVal = selectedRef;
+    if (type === "tag" && tags.length > 0) {
+      defaultVal = tags[0];
+    } else if (type === "branch") {
+      defaultVal =
+        branches.length > 0
+          ? branches[0]
+          : flutterConfig.gitBranch || "main";
+    } else if (type === "commit" && lockedCommitSha) {
+      defaultVal = lockedCommitSha;
+    }
+    if (defaultVal) {
+      handleRefChange(defaultVal);
+    }
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -675,61 +951,57 @@ export default function FlutterPackageIntegrationForm({
 
               {authMethod === "deploy_key" ? (
                 <div className="space-y-4 pt-1">
-                  <div className="text-xs sm:text-sm text-slate-600 dark:text-slate-300">
-                    Add the Super App <strong>Public Deploy Key</strong> to your
-                    repository settings. This grants read-only clone access
-                    strictly to this repository with zero personal account
-                    exposure.
+                  <div className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 flex items-start gap-2 bg-indigo-50/70 dark:bg-indigo-950/40 p-3.5 rounded-xl border border-indigo-100 dark:border-indigo-900/60">
+                    <KeyIcon className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+                    <div className="leading-relaxed">
+                      <strong className="text-slate-800 dark:text-slate-200">Owner-Provided Deploy Key:</strong>{" "}
+                      Please generate an SSH key pair for your repository, add the public key to your repository&apos;s Deploy Keys (read-only), and input your private key below. The platform never shares platform keys and uses your key ephemerally during package verification.
+                    </div>
                   </div>
 
-                  {/* Key Box */}
-                  <div className="bg-slate-900 dark:bg-slate-950 text-slate-100 p-3.5 rounded-xl border border-slate-800 relative group">
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <span className="text-[11px] font-mono text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                        <KeyIcon className="w-3.5 h-3.5 text-indigo-400" />
-                        <span>Super App Public Deploy Key (ED25519)</span>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleCopyDeployKey}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                          copiedKey
-                            ? "bg-emerald-600 text-white"
-                            : "bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm"
-                        }`}
-                      >
-                        {copiedKey ? (
-                          <>
-                            <ClipboardCheckIcon className="w-3.5 h-3.5" />
-                            <span>Copied to Clipboard!</span>
-                          </>
-                        ) : (
-                          <>
-                            <CopyIcon className="w-3.5 h-3.5" />
-                            <span>Copy Public Key</span>
-                          </>
-                        )}
-                      </button>
+                  {/* Direct Input for Owner's Private Key */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                        <KeyIcon className="w-3.5 h-3.5 text-indigo-500" />
+                        <span>SSH Private Key (Deploy Key) <span className="text-rose-500">*</span></span>
+                      </Label>
+                      <span className="text-[11px] text-slate-500 font-mono">ED25519 or RSA (PEM format)</span>
                     </div>
-                    <pre className="font-mono text-xs text-indigo-200 dark:text-indigo-300 whitespace-pre-wrap break-all select-all leading-relaxed bg-black/40 p-2.5 rounded-lg border border-slate-800">
-                      {platformDeployKey}
-                    </pre>
-                    {deployKeyFingerprint && (
-                      <div className="mt-2 text-[11px] font-mono text-slate-400">
-                        Fingerprint:{" "}
-                        <span className="text-slate-300">
-                          {deployKeyFingerprint}
-                        </span>
-                      </div>
+                    <textarea
+                      name="deployKey"
+                      value={flutterConfig?.deployKey || ""}
+                      onChange={(e: any) => {
+                        if (onUpdateFlutterConfig) {
+                          onUpdateFlutterConfig({
+                            deployKey: e.target.value,
+                          });
+                        } else {
+                          handleFlutterChange(e);
+                        }
+                      }}
+                      disabled={!isEditable}
+                      rows={5}
+                      placeholder={"-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAA...\n-----END OPENSSH PRIVATE KEY-----"}
+                      className={`w-full font-mono text-xs p-3 rounded-xl border bg-slate-900 dark:bg-slate-950 text-indigo-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all ${
+                        allErrors["integrationConfigFlutter.deployKey"]
+                          ? "border-rose-500 ring-1 ring-rose-500"
+                          : "border-slate-800"
+                      }`}
+                    />
+                    {allErrors["integrationConfigFlutter.deployKey"] && (
+                      <p className="text-[11px] text-rose-500 font-medium">
+                        {allErrors["integrationConfigFlutter.deployKey"]}
+                      </p>
                     )}
                   </div>
 
-                  {/* Step-by-Step Instructions */}
-                  <div className="bg-slate-100/70 dark:bg-slate-800/50 rounded-xl p-3.5 border border-slate-200 dark:border-slate-700/60 text-xs">
+                  {/* Step-by-Step Generation Guide */}
+                  <div className="bg-slate-100/80 dark:bg-slate-800/50 rounded-xl p-3.5 border border-slate-200 dark:border-slate-700/60 text-xs">
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                         <SettingsIcon className="w-3.5 h-3.5 text-slate-500" />
-                        <span>Quick Setup Guide:</span>
+                        <span>How to Generate &amp; Add Your Deploy Key:</span>
                       </span>
                       <div className="flex items-center gap-1 bg-white dark:bg-slate-900 rounded-lg p-0.5 border border-slate-200 dark:border-slate-700 text-[11px]">
                         <button
@@ -758,107 +1030,46 @@ export default function FlutterPackageIntegrationForm({
                     </div>
 
                     {activeGuideTab === "github" ? (
-                      <ol className="list-decimal list-inside space-y-1 text-slate-600 dark:text-slate-300 leading-relaxed">
+                      <ol className="list-decimal list-inside space-y-1.5 text-slate-600 dark:text-slate-300 leading-relaxed">
                         <li>
-                          In your GitHub repo, go to <strong>Settings</strong>{" "}
-                          &rarr; <strong>Deploy keys</strong> &rarr; click{" "}
+                          Run on your machine:{" "}
+                          <code className="bg-black/10 dark:bg-black/40 px-1.5 py-0.5 rounded text-indigo-600 dark:text-indigo-400 font-mono text-[11px]">
+                            ssh-keygen -t ed25519 -C &quot;miniapp-deploy-key&quot; -f ./id_ed25519_miniapp
+                          </code>
+                        </li>
+                        <li>
+                          In your GitHub repo: <strong>Settings</strong> &rarr;{" "}
+                          <strong>Deploy keys</strong> &rarr; click{" "}
                           <strong>Add deploy key</strong>.
                         </li>
                         <li>
-                          Set title to{" "}
-                          <code className="text-indigo-600 dark:text-indigo-400 font-semibold">
-                            Super App Deploy Key
-                          </code>
-                          .
+                          Paste the content of <code className="font-mono text-[11px]">./id_ed25519_miniapp.pub</code> (public key). Keep <strong>&quot;Allow write access&quot; unchecked</strong> (read-only).
                         </li>
                         <li>
-                          Paste the public key above. Keep{" "}
-                          <strong>
-                            &quot;Allow write access&quot; unchecked
-                          </strong>{" "}
-                          (read-only).
-                        </li>
-                        <li>
-                          Use the SSH clone URL format below (e.g.{" "}
-                          <code className="text-indigo-600 dark:text-indigo-400 font-semibold">
-                            git@github.com:org/repo.git
-                          </code>
-                          ).
+                          Copy the content of <code className="font-mono text-[11px]">./id_ed25519_miniapp</code> (private key) and paste it into the input field above.
                         </li>
                       </ol>
                     ) : (
-                      <ol className="list-decimal list-inside space-y-1 text-slate-600 dark:text-slate-300 leading-relaxed">
+                      <ol className="list-decimal list-inside space-y-1.5 text-slate-600 dark:text-slate-300 leading-relaxed">
                         <li>
-                          In your GitLab repo, go to <strong>Settings</strong>{" "}
-                          &rarr; <strong>Repository</strong> &rarr; expand{" "}
-                          <strong>Deploy keys</strong>.
-                        </li>
-                        <li>
-                          Title:{" "}
-                          <code className="text-orange-600 dark:text-orange-400 font-semibold">
-                            Super App Deploy Key
+                          Run on your machine:{" "}
+                          <code className="bg-black/10 dark:bg-black/40 px-1.5 py-0.5 rounded text-orange-600 dark:text-orange-400 font-mono text-[11px]">
+                            ssh-keygen -t ed25519 -C &quot;miniapp-deploy-key&quot; -f ./id_ed25519_miniapp
                           </code>
-                          , paste public key, and click <strong>Add key</strong>
-                          .
                         </li>
                         <li>
-                          Leave &quot;Grant write permissions&quot; unchecked.
+                          In your GitLab repo: <strong>Settings</strong> &rarr;{" "}
+                          <strong>Repository</strong> &rarr; expand{" "}
+                          <strong>Deploy keys</strong> &rarr; click{" "}
+                          <strong>Add key</strong>.
                         </li>
                         <li>
-                          Use the SSH clone URL format below (e.g.{" "}
-                          <code className="text-orange-600 dark:text-orange-400 font-semibold">
-                            git@gitlab.com:org/repo.git
-                          </code>
-                          ).
+                          Paste <code className="font-mono text-[11px]">./id_ed25519_miniapp.pub</code> (public key) and leave &quot;Grant write permissions&quot; unchecked.
+                        </li>
+                        <li>
+                          Copy the content of <code className="font-mono text-[11px]">./id_ed25519_miniapp</code> (private key) and paste it into the input field above.
                         </li>
                       </ol>
-                    )}
-                  </div>
-
-                  {/* Optional Custom Private Key Toggle */}
-                  <div className="pt-2 border-t border-indigo-100 dark:border-indigo-950/60">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setShowCustomPrivateKey(!showCustomPrivateKey)
-                      }
-                      className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1"
-                    >
-                      <span>
-                        {showCustomPrivateKey
-                          ? "▲ Hide Custom SSH Private Key"
-                          : "▼ Or provide dedicated SSH Private Key instead (Optional)"}
-                      </span>
-                    </button>
-
-                    {showCustomPrivateKey && (
-                      <div className="mt-3 space-y-1.5 animate-in fade-in">
-                        <Label className="text-xs">
-                          Custom SSH Private Key (PEM format)
-                        </Label>
-                        <textarea
-                          name="deployKey"
-                          value={flutterConfig?.deployKey || ""}
-                          onChange={(e: any) => {
-                            if (onUpdateFlutterConfig) {
-                              onUpdateFlutterConfig({
-                                deployKey: e.target.value,
-                              });
-                            } else {
-                              handleFlutterChange(e);
-                            }
-                          }}
-                          disabled={!isEditable}
-                          rows={4}
-                          placeholder="-----BEGIN OPENSSH PRIVATE KEY-----\n...\n-----END OPENSSH PRIVATE KEY-----"
-                          className="w-full font-mono text-xs p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                          Leave blank to use the standard platform deploy key
-                          above. If entered, this private key will only be used
-                          ephemerally inside the CI/CD runner.
-                        </p>
-                      </div>
                     )}
                   </div>
                 </div>
@@ -962,27 +1173,27 @@ export default function FlutterPackageIntegrationForm({
               </p>
             </div>
 
-            {/* Monorepo Subdirectory / Path Field */}
-            <div className="col-span-1 md:col-span-2">
-              <Label>Monorepo Subdirectory / Package Path (Optional)</Label>
-              <Input
-                name="gitPath"
-                value={flutterConfig?.gitPath || flutterConfig?.path || ""}
-                onChange={handleFlutterChange}
-                disabled={!isEditable}
-                placeholder="e.g. dsp_miniapp_trust_regulator or packages/miniapp"
-              />
-              <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
-                If your repository is a monorepo, specify the relative path to
-                the folder containing <code>pubspec.yaml</code>.
-              </p>
-            </div>
+              {/* Monorepo Subdirectory / Path Field */}
+              <div className="col-span-1 md:col-span-2">
+                <Label>Monorepo Subdirectory / Package Path (Optional)</Label>
+                <Input
+                  name="gitPath"
+                  value={flutterConfig?.gitPath || flutterConfig?.path || ""}
+                  onChange={handleGitPathChange}
+                  disabled={!isEditable}
+                  placeholder="e.g. dsp_miniapp_trust_regulator or packages/miniapp"
+                />
+                <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
+                  If your repository is a monorepo, specify the relative path to
+                  the folder containing <code>pubspec.yaml</code>.
+                </p>
+              </div>
 
             <div>
               <Label>Reference Type</Label>
               <Select
                 value={selectedRefType}
-                onChange={(e: any) => setSelectedRefType(e.target.value)}
+                onChange={(e: any) => handleRefTypeChange(e.target.value)}
                 disabled={!isEditable}
               >
                 <option value="tag">
@@ -1007,8 +1218,8 @@ export default function FlutterPackageIntegrationForm({
               </Label>
               {selectedRefType === "tag" && tags.length > 0 ? (
                 <Select
-                  value={selectedRef}
-                  onChange={(e: any) => setSelectedRef(e.target.value)}
+                  value={selectedRef || (tags.length > 0 ? tags[0] : "")}
+                  onChange={(e: any) => handleRefChange(e.target.value)}
                   disabled={!isEditable}
                 >
                   {tags.map((t) => (
@@ -1019,8 +1230,8 @@ export default function FlutterPackageIntegrationForm({
                 </Select>
               ) : selectedRefType === "branch" && branches.length > 0 ? (
                 <Select
-                  value={selectedRef}
-                  onChange={(e: any) => setSelectedRef(e.target.value)}
+                  value={selectedRef || (branches.length > 0 ? branches[0] : "")}
+                  onChange={(e: any) => handleRefChange(e.target.value)}
                   disabled={!isEditable}
                 >
                   {branches.map((b) => (
@@ -1031,8 +1242,8 @@ export default function FlutterPackageIntegrationForm({
                 </Select>
               ) : (
                 <Input
-                  value={selectedRef}
-                  onChange={(e: any) => setSelectedRef(e.target.value)}
+                  value={selectedRef || flutterConfig?.gitBranch || ""}
+                  onChange={(e: any) => handleRefChange(e.target.value)}
                   disabled={!isEditable}
                   placeholder={
                     selectedRefType === "tag"
@@ -1390,6 +1601,271 @@ export default function FlutterPackageIntegrationForm({
           </div>
         </div>
       )}
+
+      {/* Super App Container pubspec.yaml Integration & Live Resolution */}
+      <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <h4 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <PackageIcon className="w-5 h-5 text-brand-600 dark:text-brand-400" />
+                <span>Super App Container Dependency Integration</span>
+              </h4>
+              {isSuperAdminOrAdmin && (
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 flex items-center gap-1">
+                  <ShieldCheckIcon className="w-3 h-3" />
+                  <span>SA Admin</span>
+                </span>
+              )}
+            </div>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
+              Automated extraction and dynamic AST injection into <code className="text-xs font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-brand-600 dark:text-brand-400 font-semibold">dps_mobile_app/pubspec.yaml</code>.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleRunPrecheck}
+              disabled={isPrechecking || isTestingResolution || isSyncingPubspec}
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 shadow-sm"
+              title="Simulate candidate dependency injection in an isolated dry-run workspace to pre-check conflicts before approval"
+            >
+              <ShieldCheckIcon className={`w-3.5 h-3.5 ${isPrechecking ? 'animate-spin' : ''}`} />
+              <span>{isPrechecking ? 'Pre-checking...' : 'Pre-check Conflicts'}</span>
+            </Button>
+
+            {isSuperAdminOrAdmin && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleSyncPubspec}
+                disabled={isSyncingPubspec || isTestingResolution}
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 border-purple-300 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/40"
+                title="Synchronize all approved mini app packages into container pubspec.yaml (SA Admin only)"
+              >
+                <PackageIcon className={`w-3.5 h-3.5 ${isSyncingPubspec ? 'animate-spin' : ''}`} />
+                <span>{isSyncingPubspec ? 'Syncing...' : 'Sync Container'}</span>
+              </Button>
+            )}
+
+            <Button
+              type="button"
+              variant="primary"
+              onClick={handleTestResolution}
+              disabled={isTestingResolution || isSyncingPubspec}
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white shadow-sm"
+              title="Run flutter pub get --dry-run in container to verify dependency compatibility"
+            >
+              <ZapIcon className={`w-3.5 h-3.5 ${isTestingResolution ? 'animate-spin text-amber-300' : 'text-amber-400'}`} />
+              <span>{isTestingResolution ? 'Resolving...' : 'Test Pubspec Resolution'}</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* Status Card - Focused Exclusively on this Mini App */}
+        <div className="p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 space-y-4">
+          {(() => {
+            const rawPkg = (flutterConfig.packageName || formData.name || '').toLowerCase().replace(/[^a-z0-9_]/g, '_');
+            const targetPkg = rawPkg.replace(/-/g, '_');
+            const boundConfig =
+              pubspecStatus?.miniAppDependencies?.[targetPkg] ||
+              pubspecStatus?.miniAppDependencies?.[rawPkg] ||
+              pubspecStatus?.miniAppDependencies?.[(formData.appId || '').toLowerCase().replace(/[^a-z0-9_]/g, '_')];
+            const isInjected = Boolean(boundConfig);
+
+            const bindingDesc = typeof boundConfig === 'string'
+              ? boundConfig
+              : boundConfig?.path
+              ? `path: ${boundConfig.path}`
+              : boundConfig?.git
+              ? `git: ${typeof boundConfig.git === 'string' ? boundConfig.git : boundConfig.git.url || ''} (ref: ${boundConfig.git?.ref || 'main'}${boundConfig.git?.path ? `, path: ${boundConfig.git.path}` : ''})`
+              : boundConfig?.hosted
+              ? `hosted: ${typeof boundConfig.hosted === 'object' ? boundConfig.hosted.name || targetPkg : boundConfig.hosted} (${boundConfig.version || '^1.0.0'})`
+              : isInjected
+              ? JSON.stringify(boundConfig)
+              : (flutterConfig.gitUrl || flutterConfig.repoUrl)
+              ? `git: ${flutterConfig.gitUrl || flutterConfig.repoUrl} (ref: ${flutterConfig.gitBranch || flutterConfig.gitTag || flutterConfig.commitSha || flutterConfig.ref || 'main'}${flutterConfig.gitPath || flutterConfig.packagePath ? `, path: ${flutterConfig.gitPath || flutterConfig.packagePath}` : ''})`
+              : flutterConfig.packageStoragePath
+              ? `artifact: ${flutterConfig.versionConstraint || '^1.0.0'}`
+              : 'Configured source will be injected into container upon approval';
+
+            return (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 shadow-sm">
+                <div className="space-y-1.5 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <PackageIcon className="w-4 h-4 text-brand-600 dark:text-brand-400 flex-shrink-0" />
+                    <span className="font-mono font-bold text-sm text-slate-900 dark:text-white truncate">
+                      {targetPkg || 'flutter_miniapp'}
+                    </span>
+                    {isInjected ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                        <CheckCircleIcon className="w-3.5 h-3.5" />
+                        <span>INJECTED &amp; BOUND</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                        <AlertTriangleIcon className="w-3.5 h-3.5" />
+                        <span>PENDING (Auto on Approval)</span>
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 font-mono break-all flex items-center gap-1.5">
+                    <span className="text-slate-400">Binding:</span>
+                    <span className="bg-slate-100 dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium">
+                      {bindingDesc}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="text-xs text-slate-400 dark:text-slate-500 sm:text-right flex-shrink-0">
+                  <div>Container: <span className="font-mono text-slate-600 dark:text-slate-300">dps_mobile_app</span></div>
+                  <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center sm:justify-end gap-1 mt-0.5">
+                    <ShieldCheckIcon className="w-3 h-3" />
+                    <span>AST Safe Backup Active</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Web Sandbox Rebuild Trigger */}
+          {isSuperAdminOrAdmin && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-200/60 dark:border-slate-800">
+              <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+                <GlobeIcon className="w-4 h-4 text-sky-500 flex-shrink-0" />
+                <span>Need to compile and sync changes immediately to the live Super App Web Sandbox preview?</span>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleRebuildSandbox}
+                disabled={isRebuildingSandbox}
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 text-sky-700 dark:text-sky-300 border-sky-300 dark:border-sky-800 hover:bg-sky-50 dark:hover:bg-sky-950/40"
+                title="Trigger background Flutter Web sandbox compilation (SA Admin only)"
+              >
+                <GlobeIcon className={`w-3.5 h-3.5 ${isRebuildingSandbox ? 'animate-spin' : ''}`} />
+                <span>{isRebuildingSandbox ? 'Rebuilding...' : 'Rebuild Web Sandbox Preview'}</span>
+              </Button>
+            </div>
+          )}
+
+          {sandboxRebuildMessage && (
+            <div className="p-2.5 rounded-lg bg-sky-50 dark:bg-sky-950/50 border border-sky-200 dark:border-sky-800 text-xs text-sky-800 dark:text-sky-300 flex items-center gap-2 animate-in fade-in">
+              <CheckCircleIcon className="w-4 h-4 flex-shrink-0 text-sky-600" />
+              <span>{sandboxRebuildMessage}</span>
+            </div>
+          )}
+
+          {/* Pre-check Conflict Simulation Diagnostics Card */}
+          {precheckResult && (
+            <div
+              className={`p-4 rounded-xl border text-xs sm:text-sm space-y-2 transition-all ${
+                precheckResult.compatible
+                  ? "bg-emerald-50/90 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200"
+                  : "bg-rose-50/90 dark:bg-rose-950/30 border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200"
+              }`}
+            >
+              <div className="flex items-center justify-between font-bold">
+                <span className="flex items-center gap-2">
+                  {precheckResult.compatible ? (
+                    <CheckCircleIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  ) : (
+                    <AlertTriangleIcon className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                  )}
+                  <span>
+                    {precheckResult.compatible
+                      ? "Pre-check Passed: 100% Compatible with Super App Container"
+                      : "Pre-check Conflict Detected"}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setPrecheckResult(null)}
+                  className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                >
+                  ✕ Close
+                </button>
+              </div>
+              <p className="text-xs leading-relaxed">{precheckResult.message}</p>
+
+              {precheckResult.directConflicts && precheckResult.directConflicts.length > 0 && (
+                <div className="p-2.5 rounded-lg bg-rose-100/80 dark:bg-rose-900/40 border border-rose-300 dark:border-rose-800 space-y-1 font-mono text-[11px] text-rose-800 dark:text-rose-200">
+                  <div className="font-bold flex items-center gap-1.5 text-rose-900 dark:text-rose-100">
+                    <AlertTriangleIcon className="w-3.5 h-3.5" />
+                    <span>Version Incompatibilities:</span>
+                  </div>
+                  {precheckResult.directConflicts.map((c: string, i: number) => (
+                    <div key={i} className="pl-4 leading-relaxed">&bull; {c}</div>
+                  ))}
+                </div>
+              )}
+
+              {precheckResult.newPackages && precheckResult.newPackages.length > 0 && (
+                <div className="text-[11px] text-slate-600 dark:text-slate-400">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">Introduced Dependencies: </span>
+                  {precheckResult.newPackages.map((p: any) => `${p.package} (${p.version})`).join(', ')}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Terminal Console Output for Pub Resolution */}
+          {resolutionResult && (
+            <div className="mt-3 p-3.5 rounded-xl bg-slate-950 text-slate-100 font-mono text-xs border border-slate-800 shadow-inner space-y-2 animate-in fade-in duration-300">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-2 text-[11px] text-slate-400">
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${resolutionResult.success ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                  <span className="font-bold text-slate-200">
+                    flutter pub get {resolutionResult.dryRun ? '--dry-run' : ''}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span>Exit Code: <strong className={resolutionResult.success ? 'text-emerald-400' : 'text-rose-400'}>{resolutionResult.exitCode}</strong></span>
+                  <button
+                    type="button"
+                    onClick={() => setResolutionResult(null)}
+                    className="text-slate-400 hover:text-slate-200 text-xs px-1"
+                  >
+                    ✕ Close
+                  </button>
+                </div>
+              </div>
+
+              {resolutionResult.message && (
+                <p className={`text-xs ${resolutionResult.success ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {resolutionResult.message}
+                </p>
+              )}
+
+              {resolutionResult.conflicts && resolutionResult.conflicts.length > 0 && (
+                <div className="p-2 rounded bg-rose-950/50 border border-rose-800 text-rose-300 space-y-1">
+                  <span className="font-bold text-[11px] flex items-center gap-1">
+                    <AlertTriangleIcon className="w-3.5 h-3.5 text-rose-400" />
+                    Detected Conflicts / Errors:
+                  </span>
+                  {resolutionResult.conflicts.map((c: string, idx: number) => (
+                    <div key={idx} className="text-[11px] pl-4">{c}</div>
+                  ))}
+                </div>
+              )}
+
+              {resolutionResult.stdout && (
+                <pre className="max-h-48 overflow-y-auto text-[11px] text-slate-300 whitespace-pre-wrap scrollbar-thin">
+                  {resolutionResult.stdout}
+                </pre>
+              )}
+
+              {resolutionResult.stderr && !resolutionResult.success && (
+                <pre className="max-h-36 overflow-y-auto text-[11px] text-rose-300 whitespace-pre-wrap scrollbar-thin">
+                  {resolutionResult.stderr}
+                </pre>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

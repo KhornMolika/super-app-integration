@@ -9,9 +9,11 @@ import { miniappsApi } from '@/api';
 
 export interface VersionRecord {
   version: string;
-  saVersion?: string;
+  gitRef?: string;
+  packageName?: string;
+  sourceType?: 'GIT' | 'ARTIFACT' | 'WEBVIEW';
   type: 'PRODUCTION' | 'TEST' | 'DRAFT';
-  status: 'ACTIVE' | 'TESTING' | 'PREVIOUS' | 'DEPRECATED' | 'SUPERSEDED' | 'ARCHIVED';
+  status: 'ACTIVE' | 'TESTING' | 'PREVIOUS' | 'DEPRECATED' | 'SUPERSEDED' | 'ARCHIVED' | 'IN_REVIEW' | 'APPROVED' | 'DRAFT';
   changelog?: string;
   artifactUrl?: string;
   apkSize?: string;
@@ -19,7 +21,6 @@ export interface VersionRecord {
   releasedAt: string;
   releasedBy?: string;
   buildNumber?: number;
-  jenkinsJobUrl?: string;
 }
 
 export interface VersionHistoryData {
@@ -27,11 +28,12 @@ export interface VersionHistoryData {
   appName: string;
   appId: string;
   status: string;
+  packageName?: string;
+  gitRef?: string;
+  sourceType?: string;
   currentReleaseVersion: string;
   activeTestVersion: string | null;
   draftVersion: string | null;
-  superAppReleaseVersion?: string;
-  superAppTestVersion?: string;
   pendingRevision?: any;
   versions: VersionRecord[];
 }
@@ -78,6 +80,37 @@ export default function VersionHistoryTab({
     version: '1.0.0',
     buildType: 'test',
   });
+  const [rollbackModalState, setRollbackModalState] = useState<{
+    isOpen: boolean;
+    targetVersion?: string;
+    reason: string;
+  }>({
+    isOpen: false,
+    reason: '',
+  });
+  const [isRollingBack, setIsRollingBack] = useState(false);
+
+  const handleExecuteRollback = async () => {
+    if (!rollbackModalState.targetVersion) return;
+    setIsRollingBack(true);
+    try {
+      await miniappsApi.rollback(
+        miniAppId,
+        rollbackModalState.targetVersion,
+        rollbackModalState.reason || `Rolled back to ${rollbackModalState.targetVersion} by Super Admin`,
+      );
+      toast.success(
+        `Successfully rolled back ${miniAppName} to version ${rollbackModalState.targetVersion}`,
+        'Rollback Completed',
+      );
+      setRollbackModalState({ isOpen: false, reason: '' });
+      await fetchVersions();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to execute rollback', 'Rollback Failed');
+    } finally {
+      setIsRollingBack(false);
+    }
+  };
 
   const fetchVersions = async () => {
     if (!miniAppId) return;
@@ -106,7 +139,7 @@ export default function VersionHistoryTab({
   const handleDownload = (ver: string, type: 'test' | 'release') => {
     const downloadUrl = `/api/mini-apps/${miniAppId}/artifacts/${type === 'release' ? 'release-apk' : 'test-apk'}?version=${encodeURIComponent(ver)}`;
     window.open(downloadUrl, '_blank');
-    toast.info(`Starting download of ${miniAppName} (${ver})...`, 'Download Started');
+    toast.info(`Starting download of ${miniAppName} package (${ver})...`, 'Download Started');
   };
 
   const openInviteModal = (version: string, buildType: 'test' | 'release') => {
@@ -124,8 +157,8 @@ export default function VersionHistoryTab({
   });
 
   const activeProductionRecord = versionsList.find(
-    (v) => v.type === 'PRODUCTION' && v.status === 'ACTIVE',
-  ) || versionsList.find((v) => v.type === 'PRODUCTION');
+    (v) => v.type === 'PRODUCTION' && (v.status === 'ACTIVE' || v.status === 'IN_REVIEW'),
+  ) || versionsList.find((v) => v.type === 'PRODUCTION') || versionsList[0];
 
   const activeTestRecord = versionsList.find(
     (v) => v.type === 'TEST' && v.status === 'TESTING',
@@ -137,46 +170,50 @@ export default function VersionHistoryTab({
     <div className="space-y-6">
       {/* 1. Header Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {/* Card A: Current Live Production Release */}
+        {/* Card A: Current Active Mini App Version */}
         <div className="relative overflow-hidden rounded-2xl border border-emerald-200/80 dark:border-emerald-800/60 bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/20 dark:from-emerald-950/30 dark:via-slate-900 dark:to-slate-900 p-5 shadow-sm">
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-2.5">
               <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                 </svg>
               </div>
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-                    Live Production Version
+                    Mini App Current Version
                   </span>
-                  {data?.superAppReleaseVersion && (
+                  {data?.packageName && (
                     <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300">
-                      SA: {data.superAppReleaseVersion}
+                      {data.packageName}
                     </span>
                   )}
                 </div>
                 <h4 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2 mt-0.5">
                   <span>{data?.currentReleaseVersion || '1.0.0'}</span>
-                  {currentStatus === 'ACTIVE' && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                      <span>ACTIVE</span>
-                    </span>
-                  )}
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
+                    currentStatus === 'ACTIVE'
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
+                      : currentStatus === 'IN_REVIEW'
+                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300'
+                      : 'bg-brand-100 text-brand-800 dark:bg-brand-900/60 dark:text-brand-300'
+                  }`}>
+                    {currentStatus === 'ACTIVE' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+                    <span>{currentStatus}</span>
+                  </span>
                 </h4>
               </div>
             </div>
           </div>
 
           <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-4">
-            {activeProductionRecord?.changelog || 'Initial production release published to Super App ecosystem'}
+            {activeProductionRecord?.changelog || `Official package release ${data?.currentReleaseVersion || '1.0.0'} for ${miniAppName}`}
           </p>
 
           <div className="pt-3 border-t border-emerald-100 dark:border-emerald-900/40 flex items-center justify-between gap-2">
             <span className="text-[11px] text-slate-500 dark:text-slate-400">
-              Size: <strong className="text-slate-700 dark:text-slate-300">{activeProductionRecord?.apkSize || '52.4 MB'}</strong>
+              Ref: <strong className="text-slate-700 dark:text-slate-300 font-mono">{data?.gitRef || 'Tag: ' + (data?.currentReleaseVersion || 'v1.0.0')}</strong>
             </span>
             <div className="flex items-center gap-1.5">
               <button
@@ -189,21 +226,21 @@ export default function VersionHistoryTab({
                 </svg>
                 <span>Invite</span>
               </button>
-              <button
-                type="button"
-                onClick={() => handleDownload(data?.currentReleaseVersion || '1.0.0', 'release')}
+              <a
+                href="/super-app"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-colors"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span>Download APK</span>
-              </button>
+                <span>Test Sandbox</span>
+              </a>
             </div>
           </div>
         </div>
 
-        {/* Card B: Active Test Build */}
+        {/* Card B: Sandbox Staged Version */}
         <div className="relative overflow-hidden rounded-2xl border border-brand-200/80 dark:border-brand-800/60 bg-gradient-to-br from-brand-50/70 via-white to-brand-50/20 dark:from-brand-950/30 dark:via-slate-900 dark:to-slate-900 p-5 shadow-sm">
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-2.5">
@@ -215,16 +252,14 @@ export default function VersionHistoryTab({
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-brand-700 dark:text-brand-400">
-                    Active Sandbox Test Build
+                    Sandbox Test Version
                   </span>
-                  {data?.superAppTestVersion && (
-                    <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-brand-100 dark:bg-brand-900/60 text-brand-800 dark:text-brand-300">
-                      SA: {data.superAppTestVersion}
-                    </span>
-                  )}
+                  <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-brand-100 dark:bg-brand-900/60 text-brand-800 dark:text-brand-300">
+                    STAGING
+                  </span>
                 </div>
                 <h4 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2 mt-0.5">
-                  <span>{data?.activeTestVersion || 'v0.3.1'}</span>
+                  <span>{data?.activeTestVersion || 'develop'}</span>
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-brand-100 text-brand-800 dark:bg-brand-900/60 dark:text-brand-300">
                     <span>TESTING</span>
                   </span>
@@ -234,33 +269,23 @@ export default function VersionHistoryTab({
           </div>
 
           <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-4">
-            {activeTestRecord?.changelog || 'Candidate test build for sandbox validation'}
+            {activeTestRecord?.changelog || 'Candidate branch/tag compiled for Super App sandbox integration validation.'}
           </p>
 
           <div className="pt-3 border-t border-brand-100 dark:border-brand-900/40 flex items-center justify-between gap-2">
             <span className="text-[11px] text-slate-500 dark:text-slate-400">
-              Size: <strong className="text-slate-700 dark:text-slate-300">{activeTestRecord?.apkSize || '48.1 MB'}</strong>
+              Source: <strong className="text-slate-700 dark:text-slate-300 font-mono">{data?.sourceType || 'Git Repository'}</strong>
             </span>
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
-                onClick={() => openInviteModal(data?.activeTestVersion || 'v0.3.1', 'test')}
+                onClick={() => openInviteModal(data?.activeTestVersion || 'develop', 'test')}
                 className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-brand-600 hover:bg-brand-700 text-white shadow-sm transition-colors"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
                 </svg>
                 <span>Invite Testers</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDownload(data?.activeTestVersion || 'v0.3.1', 'test')}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                <span>Download APK</span>
               </button>
             </div>
           </div>
@@ -338,10 +363,10 @@ export default function VersionHistoryTab({
               <svg className="w-5 h-5 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span>Release &amp; Build Timeline</span>
+              <span>Mini App Version History &amp; Release Timeline</span>
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Complete historical record of official production releases and sandbox test builds.
+              Historical record of package versions, Git release tags, commit SHAs, and sandbox revisions for {miniAppName}.
             </p>
           </div>
 
@@ -360,10 +385,10 @@ export default function VersionHistoryTab({
                 className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none"
               >
                 {versionsList.map((v) => {
-                  const isLive = v.type === 'PRODUCTION' && v.status === 'ACTIVE';
-                  const isOld = v.type === 'PRODUCTION' && v.status !== 'ACTIVE';
-                  const prefix = isLive ? '[Live] ' : isOld ? '[Prev] ' : '[Test] ';
-                  const suffix = isLive ? ' (Live Production)' : isOld ? ' (Previous Version)' : ' (Sandbox Build)';
+                  const isLive = v.type === 'PRODUCTION' && (v.status === 'ACTIVE' || v.status === 'IN_REVIEW');
+                  const isOld = v.type === 'PRODUCTION' && v.status !== 'ACTIVE' && v.status !== 'IN_REVIEW';
+                  const prefix = isLive ? '[Current] ' : isOld ? '[Prev] ' : '[Test] ';
+                  const suffix = isLive ? ' (Current Version)' : isOld ? ' (Previous Release)' : ' (Sandbox Staging)';
                   return (
                     <option key={`base-${v.version}`} value={v.version}>
                       {prefix}{v.version}{suffix}
@@ -373,7 +398,7 @@ export default function VersionHistoryTab({
               </select>
               <span className="text-slate-400 font-bold px-0.5">vs</span>
               <select
-                value={compareTarget || (pendingRevision ? 'v1.1.0-draft' : data?.activeTestVersion || 'v0.3.1')}
+                value={compareTarget || (pendingRevision ? 'v1.1.0-draft' : data?.activeTestVersion || 'develop')}
                 onChange={(e) => setCompareTarget(e.target.value)}
                 className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none"
               >
@@ -381,10 +406,10 @@ export default function VersionHistoryTab({
                   <option value="v1.1.0-draft">[Draft] Proposed Revision</option>
                 )}
                 {versionsList.map((v) => {
-                  const isLive = v.type === 'PRODUCTION' && v.status === 'ACTIVE';
-                  const isOld = v.type === 'PRODUCTION' && v.status !== 'ACTIVE';
-                  const prefix = isLive ? '[Live] ' : isOld ? '[Prev] ' : '[Test] ';
-                  const suffix = isLive ? ' (Live Production)' : isOld ? ' (Previous Version)' : ' (Sandbox Build)';
+                  const isLive = v.type === 'PRODUCTION' && (v.status === 'ACTIVE' || v.status === 'IN_REVIEW');
+                  const isOld = v.type === 'PRODUCTION' && v.status !== 'ACTIVE' && v.status !== 'IN_REVIEW';
+                  const prefix = isLive ? '[Current] ' : isOld ? '[Prev] ' : '[Test] ';
+                  const suffix = isLive ? ' (Current Version)' : isOld ? ' (Previous Release)' : ' (Sandbox Staging)';
                   return (
                     <option key={`target-${v.version}`} value={v.version}>
                       {prefix}{v.version}{suffix}
@@ -398,7 +423,7 @@ export default function VersionHistoryTab({
                   setCompareModalState({
                     isOpen: true,
                     baseVersion: compareBase || data?.currentReleaseVersion || '1.0.0',
-                    targetVersion: compareTarget || (pendingRevision ? 'v1.1.0-draft' : data?.activeTestVersion || 'v0.3.1'),
+                    targetVersion: compareTarget || (pendingRevision ? 'v1.1.0-draft' : data?.activeTestVersion || 'develop'),
                   });
                 }}
                 className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1 transition-colors shadow-xs"
@@ -423,7 +448,7 @@ export default function VersionHistoryTab({
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >
-                  {mode === 'ALL' ? 'All Builds' : mode === 'PRODUCTION' ? 'Production' : 'Test Builds'}
+                  {mode === 'ALL' ? 'All Versions' : mode === 'PRODUCTION' ? 'Releases' : 'Test / Staging'}
                 </button>
               ))}
             </div>
@@ -436,11 +461,11 @@ export default function VersionHistoryTab({
             <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 text-xs font-bold uppercase tracking-wider border-b border-slate-200/80 dark:border-slate-800">
               <tr>
                 <th className="py-3 px-4">Version</th>
-                <th className="py-3 px-4">Type</th>
+                <th className="py-3 px-4">Package &amp; Ref</th>
                 <th className="py-3 px-4">Status</th>
                 <th className="py-3 px-4">Published Date</th>
-                <th className="py-3 px-4">Author / Pipeline</th>
-                <th className="py-3 px-4">SHA-256 Checksum</th>
+                <th className="py-3 px-4">Developer</th>
+                <th className="py-3 px-4">Checksum</th>
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -459,46 +484,52 @@ export default function VersionHistoryTab({
                   >
                     <td className="py-3.5 px-4">
                       <div className="flex flex-col">
-                        <span className="font-mono font-bold text-slate-900 dark:text-slate-100">
-                          {rec.version}
+                        <span className="font-mono font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                          <span>{rec.version}</span>
+                          {rec.sourceType === 'GIT' ? (
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300 border border-brand-200/60 dark:border-brand-800">
+                              📦 Git
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                              📁 Pkg
+                            </span>
+                          )}
                         </span>
-                        {rec.saVersion && (
-                          <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                            SA: {rec.saVersion}
-                          </span>
-                        )}
                       </div>
                     </td>
                     <td className="py-3.5 px-4">
-                      {rec.type === 'PRODUCTION' && rec.status === 'ACTIVE' ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-                          <DotBadge color="emerald" pulse />
-                          <span>LIVE PRODUCTION</span>
+                      <div className="flex flex-col">
+                        <span className="font-mono text-xs font-semibold text-slate-800 dark:text-slate-200">
+                          {rec.packageName || data?.packageName || appId || 'miniapp'}
                         </span>
-                      ) : rec.type === 'PRODUCTION' ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-300 dark:border-slate-700">
-                          <DotBadge color="slate" />
-                          <span>PREVIOUS VERSION</span>
+                        <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                          {rec.gitRef || (rec.type === 'TEST' ? 'branch: develop' : `tag: ${rec.version}`)}
                         </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-brand-100 text-brand-800 dark:bg-brand-950/60 dark:text-brand-300 border border-brand-300 dark:border-brand-800">
-                          <DotBadge color="blue" />
-                          <span>SANDBOX TEST BUILD</span>
-                        </span>
-                      )}
+                      </div>
                     </td>
                     <td className="py-3.5 px-4">
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                          rec.status === 'ACTIVE'
-                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                            : rec.status === 'TESTING'
-                            ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300 border border-brand-200 dark:border-brand-800'
-                            : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-                        }`}
-                      >
-                        <span>{rec.status === 'SUPERSEDED' ? 'PREVIOUS' : rec.status}</span>
-                      </span>
+                      {rec.status === 'ACTIVE' ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                          <DotBadge color="emerald" pulse />
+                          <span>LIVE ACTIVE</span>
+                        </span>
+                      ) : rec.status === 'IN_REVIEW' ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                          <DotBadge color="amber" pulse />
+                          <span>IN REVIEW</span>
+                        </span>
+                      ) : rec.status === 'TESTING' ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-brand-100 text-brand-800 dark:bg-brand-950/60 dark:text-brand-300 border border-brand-300 dark:border-brand-800">
+                          <DotBadge color="blue" />
+                          <span>SANDBOX TESTING</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-300 dark:border-slate-700">
+                          <DotBadge color="slate" />
+                          <span>PREVIOUS</span>
+                        </span>
+                      )}
                     </td>
                     <td className="py-3.5 px-4 text-xs text-slate-500 dark:text-slate-400">
                       {new Date(rec.releasedAt).toLocaleDateString('en-US', {
@@ -510,7 +541,7 @@ export default function VersionHistoryTab({
                       })}
                     </td>
                     <td className="py-3.5 px-4 text-xs font-medium text-slate-700 dark:text-slate-300">
-                      {rec.releasedBy || 'Mini App Manager'}
+                      {rec.releasedBy || 'Mini App Developer'}
                     </td>
                     <td className="py-3.5 px-4">
                       {rec.checksum ? (
@@ -551,7 +582,7 @@ export default function VersionHistoryTab({
                             });
                           }}
                           className="p-1.5 rounded-lg text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors"
-                          title={`Compare ${rec.version} with Live Production`}
+                          title={`Compare ${rec.version} with Current Version`}
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
@@ -567,16 +598,24 @@ export default function VersionHistoryTab({
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
                           </svg>
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDownload(rec.version, rec.type === 'PRODUCTION' ? 'release' : 'test')}
-                          className="p-1.5 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                          title="Download APK Binary"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                          </svg>
-                        </button>
+                        {rec.version !== data?.currentReleaseVersion && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setRollbackModalState({
+                                isOpen: true,
+                                targetVersion: rec.version,
+                                reason: '',
+                              })
+                            }
+                            className="p-1.5 rounded-lg text-rose-600 hover:text-rose-800 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                            title={`Rollback Super App to ${rec.version}`}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                            </svg>
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -675,6 +714,64 @@ export default function VersionHistoryTab({
         buildType={inviteModalState.buildType}
         teamTelegramChatId={teamTelegramChatId}
       />
+      {/* Rollback Confirmation Modal */}
+      {rollbackModalState.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  Rollback to Version {rollbackModalState.targetVersion}?
+                </h3>
+                <p className="text-xs text-slate-500">
+                  This will restore historical configuration and re-inject dependencies.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-xl border border-amber-200 dark:border-amber-900/50 text-xs text-amber-800 dark:text-amber-200">
+              Active production version will be rolled back from <strong>{data?.currentReleaseVersion}</strong> to <strong>{rollbackModalState.targetVersion}</strong>.
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                Rollback Justification / Audit Reason
+              </label>
+              <textarea
+                value={rollbackModalState.reason}
+                onChange={(e) => setRollbackModalState(prev => ({ ...prev, reason: e.target.value }))}
+                placeholder="Reason for roll back (e.g. Critical bug in latest release)..."
+                rows={3}
+                className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setRollbackModalState({ isOpen: false, reason: '' })}
+                disabled={isRollingBack}
+                className="px-4 py-2 rounded-xl text-xs font-semibold border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteRollback}
+                disabled={isRollingBack}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white flex items-center gap-1.5 shadow-sm"
+              >
+                {isRollingBack ? 'Rolling back...' : 'Confirm Rollback'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

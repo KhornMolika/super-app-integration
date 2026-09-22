@@ -33,6 +33,13 @@ describe('MiniappLifecycleHelper - Revision & Approval Lifecycle', () => {
       getAndRegisterNextVersion: jest.fn().mockResolvedValue('v1.1.1'),
     };
     mockLocalSecurityScannerService = {};
+    const mockPipelinePacerService = { paceBuildTrigger: jest.fn().mockResolvedValue(undefined) };
+    const mockGitService = { getDeployPrivateKey: jest.fn().mockReturnValue('') };
+    const mockPubspecService = {
+      injectMiniApp: jest.fn().mockResolvedValue({ success: true, packageName: 'test' }),
+      validateDependencies: jest.fn().mockResolvedValue({ success: true }),
+      triggerSandboxRebuild: jest.fn().mockResolvedValue({ success: true }),
+    };
     mockLogActivityFn = jest.fn().mockResolvedValue(undefined);
 
     helper = new MiniappLifecycleHelper(
@@ -42,6 +49,9 @@ describe('MiniappLifecycleHelper - Revision & Approval Lifecycle', () => {
       mockJenkinsService,
       mockSuperAppService,
       mockLocalSecurityScannerService,
+      mockPipelinePacerService as any,
+      mockGitService as any,
+      mockPubspecService as any,
     );
   });
 

@@ -5,9 +5,10 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/inputs';
 import ClickableTableRow from '@/components/ui/ClickableTableRow';
 import { RegisterMiniAppButton } from '@/components/ui/RegisterMiniAppButton';
-import { TagIcon, SettingsIcon, ArrowRightIcon } from '@/components/ui/Icons';
+import { TagIcon, SettingsIcon, ArrowRightIcon, BuildingIcon } from '@/components/ui/Icons';
 import { miniappsApi } from '@/api';
 import { useAuth } from '@/lib/auth';
+import { getOrganizationCode, getOrganizationFullName } from '@/lib/constants/fsa-organizations';
 
 export default function MiniAppsPage() {
   const { role } = useAuth();
@@ -57,7 +58,7 @@ export default function MiniAppsPage() {
             <thead className="bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/50">
               <tr>
                 <th className="w-[22%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">App Name</th>
-                <th className="w-[12%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Category</th>
+                <th className="w-[12%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Organization</th>
                 <th className="w-[13%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Integration</th>
                 <th className="w-[9%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Version</th>
                 <th className="w-[12%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Permissions</th>
@@ -109,10 +110,19 @@ export default function MiniAppsPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600/50">
-                          <TagIcon className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                          <span>{app.category || '-'}</span>
-                        </span>
+                        {(() => {
+                          const orgCode = app.organizationCode || getOrganizationCode(app.organization || app.category);
+                          const orgFullName = getOrganizationFullName(app.organization || app.category);
+                          return (
+                            <span 
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/60 shadow-xs hover:border-sky-300 cursor-default"
+                              title={orgFullName}
+                            >
+                              <BuildingIcon className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+                              <span>{orgCode}</span>
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="px-6 py-4">
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600/50 font-mono">

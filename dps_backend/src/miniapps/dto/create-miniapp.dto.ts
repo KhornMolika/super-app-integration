@@ -217,6 +217,14 @@ export class CreateMiniAppDto {
 
   @IsString()
   @IsOptional()
+  organization?: string;
+
+  @IsString()
+  @IsOptional()
+  organizationCode?: string;
+
+  @IsString()
+  @IsOptional()
   termsUrl?: string;
 
   @IsString()

@@ -2,6 +2,7 @@ import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Organization, OrganizationStatus } from './entities/organization.entity';
+import { FSA_ORGANIZATIONS } from '../common/constants/fsa-organizations';
 
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
@@ -18,35 +19,36 @@ export class OrganizationsService implements OnApplicationBootstrap {
   }
 
   private async seedInitialOrganizations() {
-    const count = await this.organizationRepository.count();
-    if (count > 0) return;
-
-    const initial = [
-      {
-        name: 'Insurance Authority',
-        domain: 'insurance.gov.kh',
-        description: 'National regulatory body for general, life, and micro-insurance programs.',
+    for (const org of FSA_ORGANIZATIONS) {
+      const existing = await this.organizationRepository.findOne({
+        where: [{ domain: org.domain }, { name: org.name }],
+      });
+      const orgData = {
+        name: org.name,
+        code: org.code,
+        domain: org.domain,
+        description: org.description,
         status: OrganizationStatus.ACTIVE,
-        contactEmail: 'support@insurance.gov.kh',
-      },
-      {
-        name: 'National Bank of Cambodia (NBC)',
-        domain: 'nbc.org.kh',
-        description: 'Central bank and financial regulator oversight for digital payment services.',
-        status: OrganizationStatus.ACTIVE,
-        contactEmail: 'info@nbc.org.kh',
-      },
-      {
-        name: 'Ministry of Economy and Finance (MEF)',
-        domain: 'mef.gov.kh',
-        description: 'Public sector digital integration and financial governance.',
-        status: OrganizationStatus.ACTIVE,
-        contactEmail: 'digital@mef.gov.kh',
-      },
-    ];
-
-    for (const org of initial) {
-      await this.organizationRepository.save(this.organizationRepository.create(org));
+        contactEmail: org.contactEmail,
+        metadata: {
+          shortCode: org.code,
+          acronym: org.code,
+          entityType: org.entityType,
+          entityTypeLabel: org.entityTypeLabel,
+          parentAuthority: org.parentAuthority,
+          parentMinistry: org.parentMinistry,
+        },
+      };
+      if (!existing) {
+        await this.organizationRepository.save(this.organizationRepository.create(orgData));
+      } else {
+        existing.code = orgData.code;
+        existing.name = orgData.name;
+        existing.description = orgData.description;
+        existing.contactEmail = orgData.contactEmail;
+        existing.metadata = orgData.metadata;
+        await this.organizationRepository.save(existing);
+      }
     }
   }
 

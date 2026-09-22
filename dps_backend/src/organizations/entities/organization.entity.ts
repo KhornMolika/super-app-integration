@@ -20,6 +20,9 @@ export class Organization {
   @Column({ unique: true })
   name!: string;
 
+  @Column({ nullable: true })
+  code?: string;
+
   @Column({ unique: true })
   domain!: string;
 

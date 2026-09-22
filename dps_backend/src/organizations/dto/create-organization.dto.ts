@@ -14,6 +14,10 @@ export class CreateOrganizationDto {
   name!: string;
 
   @IsString()
+  @IsOptional()
+  code?: string;
+
+  @IsString()
   @IsNotEmpty({ message: 'Domain is required' })
   domain!: string;
 

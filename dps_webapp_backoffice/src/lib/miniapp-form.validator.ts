@@ -9,6 +9,41 @@ export interface ValidationResult {
 }
 
 /**
+ * Derives a standardized Dart package name from a Git repository URL or subfolder path.
+ * e.g., "git@github.com:KhornMolika/sc-private-miniapp.git" -> "sc_private_miniapp"
+ */
+export function inferPackageNameFromGitUrl(
+  url?: string,
+  gitPath?: string,
+): string {
+  if (gitPath && gitPath.trim()) {
+    const segments = gitPath.trim().replace(/\/+$/, '').split('/');
+    const lastSeg = segments[segments.length - 1];
+    if (lastSeg) {
+      return lastSeg.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    }
+  }
+
+  if (!url || !url.trim()) return '';
+  const cleanUrl = url.trim().replace(/\.git\/?$/, '');
+
+  const sshMatch = cleanUrl.match(
+    /^[a-zA-Z0-9._-]+@[^:]+:(?:[^/]+\/)*([^/]+)$/,
+  );
+  if (sshMatch && sshMatch[1]) {
+    return sshMatch[1].toLowerCase().replace(/[^a-z0-9_]/g, '_');
+  }
+
+  const httpMatch = cleanUrl.match(/^https?:\/\/[^/]+(?:\/[^/]+)*\/([^/?#]+)/);
+  if (httpMatch && httpMatch[1]) {
+    return httpMatch[1].toLowerCase().replace(/[^a-z0-9_]/g, '_');
+  }
+
+  const lastPart = cleanUrl.split(/[/:]/).filter(Boolean).pop() || '';
+  return lastPart.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+}
+
+/**
  * Validates form step data for Mini App registration and editing
  */
 export async function validateMiniAppStep(
@@ -152,13 +187,29 @@ export async function validateMiniAppStep(
         if (!conf?.gitUrl || !conf.gitUrl.trim()) {
           errors['integrationConfigFlutter.gitUrl'] = 'Git URL is required';
           isValid = false;
-        } else if (conf?.isPrivateRepo && conf?.authMethod === 'token' && !conf?.gitAccessToken?.trim()) {
-          errors['integrationConfigFlutter.gitAccessToken'] =
-            'Access Token is required for private repositories when Token authentication is selected.';
-          isValid = false;
-        } else if (isValid) {
+        } else {
+          if (
+            conf?.isPrivateRepo &&
+            conf?.authMethod === 'token' &&
+            !conf?.gitAccessToken?.trim()
+          ) {
+            errors['integrationConfigFlutter.gitAccessToken'] =
+              'Access Token is required for private repositories when Token authentication is selected.';
+            isValid = false;
+          }
+
           const isDeployKey =
-            conf?.isPrivateRepo && (conf?.authMethod === 'deploy_key' || !conf?.authMethod);
+            (Boolean(conf?.isPrivateRepo) && conf?.authMethod !== 'token') ||
+            Boolean(conf?.gitUrl?.trim().startsWith('git@'));
+
+          // Infer package name if missing
+          const inferredPkg = inferPackageNameFromGitUrl(
+            conf.gitUrl,
+            conf.gitPath,
+          );
+          if (inferredPkg && (!conf.packageName || !conf.packageName.trim())) {
+            conf.packageName = inferredPkg;
+          }
 
           try {
             const data = await integrationsApi.validateGit({
@@ -171,10 +222,23 @@ export async function validateMiniAppStep(
               deployKey: conf.deployKey,
             });
             if (data && data.validation) {
+              if (data.validation.packageName) {
+                conf.packageName = data.validation.packageName;
+              }
+
               if (!data.validation.isValid) {
                 if (!isDeployKey) {
-                  errors['integrationConfigFlutter.gitUrl'] =
-                    data.validation.error || 'Git repository or pubspec.yaml could not be verified.';
+                  const is404NotFound =
+                    data.validation.error?.toLowerCase().includes('not found') ||
+                    data.validation.error?.includes('404');
+                  if (is404NotFound) {
+                    errors['integrationConfigFlutter.gitUrl'] =
+                      `File 'pubspec.yaml' not found or repository is private. If this repository is private, please select '🔒 Private Repository' and configure an SSH Deploy Key or Access Token.`;
+                  } else {
+                    errors['integrationConfigFlutter.gitUrl'] =
+                      data.validation.error ||
+                      'Git repository or pubspec.yaml could not be verified.';
+                  }
                   isValid = false;
                 }
               } else {
@@ -195,7 +259,10 @@ export async function validateMiniAppStep(
                 let added = false;
                 Object.keys(deps).forEach((dep) => {
                   const permType = pluginMap[dep];
-                  if (permType && !currentPerms.some((p) => p.type === permType)) {
+                  if (
+                    permType &&
+                    !currentPerms.some((p) => p.type === permType)
+                  ) {
                     currentPerms.push({
                       type: permType,
                       purpose: `Required for ${dep} platform capability`,

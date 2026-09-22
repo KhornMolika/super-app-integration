@@ -96,20 +96,14 @@ packages:
       relative: true
     source: path
     version: "1.0.0"
-  dps_miniapp_mobile_kyc_verifier:
-    dependency: "direct main"
-    description:
-      path: "../dsp_miniapp_kyc_verifier"
-      relative: true
-    source: path
-    version: "1.0.0"
   dps_miniapp_mobile_trust_regulator:
     dependency: "direct main"
     description:
-      path: "../dsp_miniapp_trust_regulator"
-      relative: true
-    source: path
-    version: "1.2.0"
+      name: dps_miniapp_mobile_trust_regulator
+      sha256: "290be45f641a2ac447b53f7b8a9dfffa9a1b01976861180e1e71d4336713abf2"
+      url: "http://localhost:8081/repository/pub-group/"
+    source: hosted
+    version: "1.0.0"
   fake_async:
     dependency: transitive
     description:
@@ -592,16 +586,20 @@ packages:
   sc_private_miniapp:
     dependency: "direct main"
     description:
-      path: "../sc-private-miniapp"
-      relative: true
-    source: path
+      path: "."
+      ref: main
+      resolved-ref: "00d16a0eb6719c85717ffc9f50c0c4024571063c"
+      url: "https://github.com/KhornMolika/sc-private-miniapp.git"
+    source: git
     version: "1.0.0"
   sc_public_miniapp:
     dependency: "direct main"
     description:
-      path: "../sc-public-miniapp"
-      relative: true
-    source: path
+      path: "."
+      ref: "v1.0.0"
+      resolved-ref: "124d536be4a4ad26a9c6cf8f0120c70b44861b8b"
+      url: "https://github.com/KhornMolika/sc-public-miniapp.git"
+    source: git
     version: "1.0.0"
   sky_engine:
     dependency: transitive

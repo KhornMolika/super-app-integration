@@ -3,11 +3,10 @@ import 'package:get/get.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../services/auth_service.dart';
-import '../../../routes/app_pages.dart';
 import 'package:dps_mobile_app/app/config/api_config.dart';
 import '../widgets/miniapp_consent_sheet.dart';
+import '../../../core/miniapp/mini_app_router.dart';
 
 class HomeController extends GetxController {
   var miniApps = [].obs;
@@ -129,95 +128,6 @@ class HomeController extends GetxController {
   }
 
   Future<void> _executeMiniAppLaunch(dynamic app) async {
-    final redirectUri = app['redirectUri'];
-    if (redirectUri != null && redirectUri.isNotEmpty) {
-      Get.toNamed(redirectUri);
-      return;
-    }
-
-    final integrationMethod = (app['integrationMethod'] ?? '').toString();
-    final appId = (app['appId'] ?? app['id'] ?? '').toString();
-    final name = (app['name'] ?? '').toString();
-    final integrationConfig = app['integrationConfig'];
-    final packageName = (integrationConfig is Map ? (integrationConfig['packageName'] ?? '') : '').toString();
-
-    // Route SC Public (Transit & Metro Pass) Mini App
-    if (packageName.contains('sc_public') ||
-        packageName.contains('transit') ||
-        appId.contains('transit') ||
-        appId.contains('public') ||
-        name.toLowerCase().contains('transit') ||
-        name.toLowerCase().contains('metro')) {
-      Get.toNamed(Routes.SC_PUBLIC_TRANSIT, arguments: app);
-      return;
-    }
-
-    // Route SC Private (Loyalty Rewards & VIP Vouchers) Mini App
-    if (packageName.contains('sc_private') ||
-        packageName.contains('loyalty') ||
-        packageName.contains('reward') ||
-        appId.contains('loyalty') ||
-        appId.contains('reward') ||
-        appId.contains('private') ||
-        name.toLowerCase().contains('loyalty') ||
-        name.toLowerCase().contains('reward') ||
-        name.toLowerCase().contains('voucher')) {
-      Get.toNamed(Routes.SC_PRIVATE_LOYALTY, arguments: app);
-      return;
-    }
-
-    // Route KYC Mini App
-    if (packageName.contains('kyc') ||
-        appId.contains('kyc') ||
-        name.toLowerCase().contains('kyc')) {
-      Get.toNamed(Routes.KYC_VERIFIER, arguments: app);
-      return;
-    }
-
-    // Route Trust Regulator Mini App
-    if (packageName.contains('trust_regulator') ||
-        appId == 'com.fsa.trust_regulator' ||
-        name.contains('Trust Regulator')) {
-      Get.toNamed(Routes.TRUST_REGULATOR, arguments: app);
-      return;
-    }
-
-    if (integrationMethod == 'FLUTTER_PACKAGE') {
-      Get.toNamed(Routes.KYC_VERIFIER, arguments: app);
-      return;
-    }
-    if (integrationMethod == 'DEEP_LINK') {
-      final config = app['integrationConfig'];
-      if (config != null && config['urlScheme'] != null) {
-        final urlScheme = config['urlScheme'];
-        final uri = Uri.parse(urlScheme);
-        try {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-        } catch (e) {
-          Get.snackbar('Error', 'Failed to launch URL: $e');
-        }
-      }
-      return;
-    }
-
-    dynamic config = app['integrationConfig'];
-    if (config is String) {
-      try {
-        config = jsonDecode(config);
-      } catch (_) {}
-    }
-
-    String? extractedUrl = app['url'];
-    if (config is Map) {
-      extractedUrl ??= config['productionUrl'] ?? config['stagingUrl'] ?? config['url'];
-    }
-    String url = extractedUrl ?? (kIsWeb ? 'http://localhost:3003' : ApiConfig.baseUrl);
-    url = ApiConfig.resolveUrl(url);
-
-    Get.toNamed(Routes.MINIAPP, arguments: {
-      'url': url,
-      'permissions': app['permissions'] ?? [],
-      'name': app['name'] ?? 'Mini App',
-    });
+    await MiniAppRouter.launch(app);
   }
 }

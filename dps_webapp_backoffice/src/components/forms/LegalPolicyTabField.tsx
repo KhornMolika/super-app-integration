@@ -10,6 +10,7 @@ import {
   CheckIcon,
   EyeIcon,
 } from '@/components/ui/Icons';
+import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 import { IntegrationMethod } from '@/types/miniapp.types';
 
 export interface LegalPolicyTabFieldProps {
@@ -280,12 +281,15 @@ export default function LegalPolicyTabField({
 
           {/* Formatted Markdown Preview Drawer */}
           {showPreview && descValue && (
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300 space-y-2 whitespace-pre-wrap max-h-48 overflow-y-auto font-sans leading-relaxed animate-in fade-in duration-150">
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300 space-y-2 max-h-56 overflow-y-auto font-sans leading-relaxed animate-in fade-in duration-150 shadow-inner">
               <div className="font-bold text-slate-900 dark:text-white border-b border-slate-200 dark:border-slate-700 pb-1.5 flex items-center justify-between">
-                <span>Rendered Policy Preview</span>
-                <span className="text-[10px] font-mono text-slate-400 uppercase">Super App Native View</span>
+                <span className="flex items-center gap-1.5">
+                  <EyeIcon className="w-3.5 h-3.5 text-brand-600" />
+                  <span>Rendered Policy Preview</span>
+                </span>
+                <span className="text-[10px] font-mono text-slate-400 uppercase bg-slate-200/60 dark:bg-slate-700 px-1.5 py-0.5 rounded">Super App Native View</span>
               </div>
-              <div>{descValue}</div>
+              <MarkdownRenderer content={descValue} />
             </div>
           )}
         </div>

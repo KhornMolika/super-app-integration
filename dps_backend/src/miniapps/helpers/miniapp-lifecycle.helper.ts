@@ -8,6 +8,7 @@ import { PipelinePacerService } from '../../notifications/pipeline-pacer.service
 import { JenkinsService } from '../../integrations/jenkins/jenkins.service';
 import { SuperAppService } from '../../super-app/super-app.service';
 import { GitIntegrationService } from '../../integrations/git/git-integration.service';
+import { PubspecInjectorService } from '../../integrations/flutter/pubspec-injector.service';
 import {
   LocalSecurityScannerService,
   buildDynamicValidationStages,
@@ -33,6 +34,7 @@ export class MiniappLifecycleHelper {
     private localSecurityScannerService: LocalSecurityScannerService,
     private pipelinePacerService: PipelinePacerService,
     private gitService: GitIntegrationService,
+    private pubspecService: PubspecInjectorService,
   ) {}
 
   async submitForReview(
@@ -484,6 +486,18 @@ export class MiniappLifecycleHelper {
 
     app.status = 'APPROVED';
     await this.miniappRepository.save(app);
+
+    // Auto-inject Flutter package dependency into Super App pubspec.yaml if applicable
+    if ((app.integrationMethod || '').toUpperCase() === 'FLUTTER_PACKAGE') {
+      try {
+        await this.pubspecService.injectMiniApp(app);
+        await this.pubspecService.validateDependencies({ dryRun: true });
+        this.pubspecService.triggerSandboxRebuild(`Approval of ${app.name}`).catch(() => {});
+        this.logger.log(`Auto-injected and validated Flutter package ${app.name} into Super App pubspec.yaml`);
+      } catch (err: any) {
+        this.logger.warn(`Pubspec auto-injection warning on approve for ${app.name}: ${err.message}`);
+      }
+    }
 
     // 1. Dispatch Notification (WebSocket + Telegram to MA Manager, MA Team Group, & SA Admins)
     if (app.ownerId) {
@@ -1051,6 +1065,18 @@ export class MiniappLifecycleHelper {
 
     await this.miniappRepository.save(app);
 
+    // Auto-update Flutter package dependency in Super App pubspec.yaml if applicable
+    if ((app.integrationMethod || '').toUpperCase() === 'FLUTTER_PACKAGE') {
+      try {
+        await this.pubspecService.injectMiniApp(app);
+        await this.pubspecService.validateDependencies({ dryRun: true });
+        this.pubspecService.triggerSandboxRebuild(`Publish revision ${nextVersion} for ${app.name}`).catch(() => {});
+        this.logger.log(`Auto-updated and validated Flutter package ${app.name} (${nextVersion}) in Super App pubspec.yaml`);
+      } catch (err: any) {
+        this.logger.warn(`Pubspec auto-update warning on revision publish for ${app.name}: ${err.message}`);
+      }
+    }
+
     await this.notificationsService.createNotification(
       app.ownerId || '',
       'Revision Published',
@@ -1129,6 +1155,111 @@ export class MiniappLifecycleHelper {
       'DISCARD_REVISION',
       oldRev,
       null,
+    );
+
+    return app;
+  }
+
+  async rollbackToVersion(
+    app: MiniApp,
+    targetVersion: string,
+    actorId: string,
+    logActivityFn: (
+      miniAppId: string,
+      actorId: string,
+      actionType: string,
+      title: string,
+      description: string,
+      auditAction: string,
+      oldVal?: any,
+      newVal?: any,
+    ) => Promise<void>,
+    reason?: string,
+  ) {
+    if (!targetVersion) {
+      throw new BadRequestException('Target version is required for rollback');
+    }
+
+    const history = Array.isArray(app.versionHistory) ? [...app.versionHistory] : [];
+    const targetRecord = history.find((h: any) => h.version === targetVersion);
+    if (!targetRecord) {
+      throw new BadRequestException(
+        `Version "${targetVersion}" was not found in release history for ${app.name}`,
+      );
+    }
+
+    const oldVal = { ...app };
+    const prevVersion = app.currentReleaseVersion || app.version;
+
+    app.currentReleaseVersion = targetVersion;
+    app.version = targetVersion;
+    app.status = 'ACTIVE';
+
+    if (targetRecord.integrationConfig) {
+      app.integrationConfig = {
+        ...app.integrationConfig,
+        ...targetRecord.integrationConfig,
+      };
+    }
+    if (targetRecord.permissions) {
+      app.permissions = targetRecord.permissions;
+    }
+    if (targetRecord.packageName && app.integrationConfig) {
+      app.integrationConfig.packageName = targetRecord.packageName;
+    }
+    if (targetRecord.gitRef && app.integrationConfig) {
+      app.integrationConfig.gitRef = targetRecord.gitRef;
+      app.integrationConfig.gitBranch = targetRecord.gitRef;
+    }
+
+    history.forEach((h: any) => {
+      if (h.version === targetVersion) {
+        h.status = 'ACTIVE';
+        h.type = 'PRODUCTION';
+      } else if (h.status === 'ACTIVE') {
+        h.status = 'SUPERSEDED';
+      }
+    });
+    app.versionHistory = history;
+
+    await this.miniappRepository.save(app);
+
+    if ((app.integrationMethod || '').toUpperCase() === 'FLUTTER_PACKAGE') {
+      try {
+        await this.pubspecService.injectMiniApp(app);
+        await this.pubspecService.validateDependencies({ dryRun: true });
+        this.pubspecService.triggerSandboxRebuild(`Rollback to ${targetVersion} for ${app.name}`).catch(() => {});
+        this.logger.log(
+          `Rolled back Flutter package ${app.name} to ${targetVersion} in pubspec.yaml`,
+        );
+      } catch (err: any) {
+        this.logger.warn(
+          `Pubspec auto-update warning on rollback for ${app.name}: ${err.message}`,
+        );
+      }
+    }
+
+    if (app.ownerId) {
+      await this.notificationsService.createNotification(
+        app.ownerId,
+        'Mini App Rolled Back',
+        `Mini App "${app.name}" was rolled back from ${prevVersion} to ${targetVersion}.${
+          reason ? ` Reason: ${reason}` : ''
+        }`,
+        'MINIAPP_ROLLED_BACK',
+        app.id,
+      );
+    }
+
+    await logActivityFn(
+      app.id,
+      actorId || 'system',
+      'STATUS_CHANGE',
+      `Rolled back ${app.name} to ${targetVersion}`,
+      reason || `Production release rolled back from ${prevVersion} to ${targetVersion}`,
+      'ROLLBACK_VERSION',
+      oldVal,
+      app,
     );
 
     return app;

@@ -20,6 +20,11 @@ import { DomainVerificationService } from './webview/domain-verification.service
 import { ValidationCallbackController } from './validation/validation-callback.controller';
 import { JenkinsService } from './jenkins/jenkins.service';
 import { LocalSecurityScannerService } from './validation/local-security-scanner.service';
+import { PubspecInjectorService } from './flutter/pubspec-injector.service';
+import { PubspecPrecheckService } from './flutter/pubspec-precheck.service';
+import { SandboxBuildManagerService } from './flutter/sandbox-build-manager.service';
+import { PubVulnerabilityScannerService } from './validation/pub-vulnerability-scanner.service';
+import { PubspecInjectorController } from './flutter/pubspec-injector.controller';
 
 @Module({
   imports: [
@@ -34,6 +39,7 @@ import { LocalSecurityScannerService } from './validation/local-security-scanner
     NexusIntegrationController,
     ReleaseAssemblyVerificationController,
     ValidationCallbackController,
+    PubspecInjectorController,
   ],
   providers: [
     GitIntegrationService,
@@ -44,6 +50,10 @@ import { LocalSecurityScannerService } from './validation/local-security-scanner
     DomainVerificationService,
     JenkinsService,
     LocalSecurityScannerService,
+    PubspecInjectorService,
+    PubspecPrecheckService,
+    SandboxBuildManagerService,
+    PubVulnerabilityScannerService,
   ],
   exports: [
     GitIntegrationService,
@@ -54,6 +64,10 @@ import { LocalSecurityScannerService } from './validation/local-security-scanner
     DomainVerificationService,
     JenkinsService,
     LocalSecurityScannerService,
+    PubspecInjectorService,
+    PubspecPrecheckService,
+    SandboxBuildManagerService,
+    PubVulnerabilityScannerService,
   ],
 })
 export class IntegrationsModule {}

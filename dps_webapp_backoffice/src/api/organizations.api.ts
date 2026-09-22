@@ -3,10 +3,12 @@ import { apiClient } from './client';
 export interface Organization {
   id: string;
   name: string;
+  code?: string;
   domain: string;
   description?: string;
   contactEmail?: string;
   status: 'ACTIVE' | 'INACTIVE' | 'PENDING';
+  metadata?: any;
   createdAt?: string;
   updatedAt?: string;
 }

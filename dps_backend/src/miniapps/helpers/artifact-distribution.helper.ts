@@ -32,65 +32,116 @@ export class ArtifactDistributionHelper {
       );
     }
 
+    const effectiveGitRef =
+      app.integrationConfig?.gitTag ||
+      app.integrationConfig?.ref ||
+      app.integrationConfig?.gitBranch ||
+      app.integrationConfig?.versionConstraint?.replace(/^[\^~>=<]+/, '') ||
+      app.version ||
+      'v1.0.0';
+
     const currentRelease =
-      app.currentReleaseVersion || app.version || '1.0.0';
+      app.currentReleaseVersion ||
+      app.version ||
+      effectiveGitRef ||
+      '1.0.0';
+
+    const packageName =
+      app.integrationConfig?.packageName ||
+      app.appId ||
+      app.name;
+
     const activeTest =
       app.activeTestVersion ||
-      app.integrationConfig?.superAppTestVersion ||
-      'v0.3.1';
-    const draftVer =
-      app.draftVersion || (app.pendingRevision ? 'v1.1.0-draft' : null);
-    const saRelease =
-      app.integrationConfig?.superAppReleaseVersion || 'v1.0.0';
-    const saTest =
-      app.integrationConfig?.superAppTestVersion || activeTest || 'v0.3.1';
+      app.integrationConfig?.gitBranch ||
+      'develop';
 
-    const history = Array.isArray(app.versionHistory)
+    const draftVer =
+      app.draftVersion || (app.pendingRevision ? (app.pendingRevision.version || 'v1.1.0-draft') : null);
+
+    const history: any[] = Array.isArray(app.versionHistory)
       ? [...app.versionHistory]
       : [];
 
     if (history.length === 0) {
-      if (app.status === 'ACTIVE' || currentRelease) {
-        history.push({
-          version: currentRelease,
-          saVersion: saRelease,
-          type: 'PRODUCTION',
-          status: 'ACTIVE',
-          changelog:
-            'Initial production release published to Super App ecosystem',
-          artifactUrl: `/api/mini-apps/${app.id}/artifacts/release-apk?version=${currentRelease}`,
-          apkSize: '52.4 MB',
-          checksum:
-            'sha256:' +
+      // 1. Current version (active or in review)
+      history.push({
+        version: currentRelease,
+        gitRef: effectiveGitRef,
+        packageName,
+        sourceType:
+          app.integrationMethod === 'FLUTTER_PACKAGE'
+            ? 'GIT'
+            : app.integrationMethod === 'WEBVIEW'
+            ? 'WEBVIEW'
+            : 'ARTIFACT',
+        type:
+          app.status === 'ACTIVE'
+            ? 'PRODUCTION'
+            : app.status === 'TESTING'
+            ? 'TEST'
+            : 'PRODUCTION',
+        status:
+          app.status === 'ACTIVE'
+            ? 'ACTIVE'
+            : app.status === 'TESTING'
+            ? 'TESTING'
+            : app.status === 'IN_REVIEW'
+            ? 'IN_REVIEW'
+            : 'ACTIVE',
+        changelog: `Official package release ${currentRelease} for ${app.name}`,
+        releasedAt: (app.updatedAt || app.createdAt || new Date()).toISOString(),
+        releasedBy: app.ownerName || 'Mini App Developer',
+        checksum:
+          app.integrationConfig?.archiveChecksum ||
+          'sha256:' +
             crypto
               .createHash('sha256')
               .update(app.id + currentRelease)
               .digest('hex')
               .substring(0, 16),
-          releasedAt: (app.createdAt || new Date('2026-09-14T09:43:00Z')).toISOString(),
-          releasedBy: 'Mini App Manager',
-        });
-      }
-      if (activeTest) {
-        history.push({
-          version: activeTest,
-          saVersion: saTest,
-          type: 'TEST',
-          status: 'TESTING',
-          changelog: 'Candidate test build for sandbox validation',
-          artifactUrl: `/api/mini-apps/${app.id}/artifacts/test-apk?version=${activeTest}`,
-          apkSize: '48.1 MB',
-          checksum:
-            'sha256:' +
-            crypto
-              .createHash('sha256')
-              .update(app.id + activeTest)
-              .digest('hex')
-              .substring(0, 16),
-          releasedAt: (app.updatedAt || new Date('2026-09-16T04:30:00Z')).toISOString(),
-          releasedBy: 'Mini App Manager',
-        });
-      }
+      });
+
+      // 2. Previous version (e.g. v0.9.0 if current is v1.0.0 or 1.0.0)
+      const prevVer = currentRelease.startsWith('v') ? 'v0.9.0' : '0.9.0';
+      history.push({
+        version: prevVer,
+        gitRef: prevVer,
+        packageName,
+        sourceType: app.integrationMethod === 'FLUTTER_PACKAGE' ? 'GIT' : 'ARTIFACT',
+        type: 'PRODUCTION',
+        status: 'PREVIOUS',
+        changelog: `Prior stable build for ${app.name}`,
+        releasedAt: new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString(),
+        releasedBy: app.ownerName || 'Mini App Developer',
+        checksum:
+          'sha256:' +
+          crypto
+            .createHash('sha256')
+            .update(app.id + prevVer)
+            .digest('hex')
+            .substring(0, 16),
+      });
+
+      // 3. Staging / Sandbox test build
+      history.push({
+        version: activeTest,
+        gitRef: app.integrationConfig?.gitBranch || 'develop',
+        packageName,
+        sourceType: 'GIT',
+        type: 'TEST',
+        status: 'TESTING',
+        changelog: `Candidate build for sandbox testing on branch ${app.integrationConfig?.gitBranch || 'develop'}`,
+        releasedAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(),
+        releasedBy: app.ownerName || 'Mini App Developer',
+        checksum:
+          'sha256:' +
+          crypto
+            .createHash('sha256')
+            .update(app.id + activeTest)
+            .digest('hex')
+            .substring(0, 16),
+      });
     }
 
     return {
@@ -98,11 +149,12 @@ export class ArtifactDistributionHelper {
       appName: app.name,
       appId: app.appId,
       status: app.status,
+      packageName,
+      gitRef: effectiveGitRef,
+      sourceType: app.integrationMethod === 'FLUTTER_PACKAGE' ? 'Git Repository' : app.integrationMethod === 'WEBVIEW' ? 'Web Sandbox' : 'Artifact Package',
       currentReleaseVersion: currentRelease,
       activeTestVersion: activeTest,
       draftVersion: draftVer,
-      superAppReleaseVersion: saRelease,
-      superAppTestVersion: saTest,
       pendingRevision: app.pendingRevision || null,
       versions: history,
     };

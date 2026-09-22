@@ -20,16 +20,23 @@ dependencies:
 
   dps_core_package:
     path: ../dps_core_package
-  dps_miniapp_mobile_trust_regulator:
-    path: ../dsp_miniapp_trust_regulator
-  dps_miniapp_mobile_kyc_verifier:
-    path: ../dsp_miniapp_kyc_verifier
-  sc_public_miniapp:
-    path: ../sc-public-miniapp
-  sc_private_miniapp:
-    path: ../sc-private-miniapp
   url_launcher: ^6.3.2
   webview_flutter_web: ^0.2.3+4
+  dps_miniapp_mobile_trust_regulator:
+    hosted:
+      name: dps_miniapp_mobile_trust_regulator
+      url: http://localhost:8081/repository/pub-group
+    version: ^1.0.0
+  sc_private_miniapp:
+    git:
+      url: https://github.com/KhornMolika/sc-private-miniapp.git
+      ref: main
+  sc_public_miniapp:
+    git:
+      url: https://github.com/KhornMolika/sc-public-miniapp.git
+      ref: v1.0.0
+  dps_miniapp_mobile_kyc_verifier:
+    path: ../dsp_miniapp_kyc_verifier
 
 dev_dependencies:
   flutter_test:
@@ -38,4 +45,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-

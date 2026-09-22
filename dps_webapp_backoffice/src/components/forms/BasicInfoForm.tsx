@@ -1,8 +1,9 @@
 "use client";
 import { Input, Label, Select, Textarea } from '@/components/ui/inputs';
 import { LogoUploadInput } from '@/components/ui/LogoUploadInput';
-import { LockIcon } from '@/components/ui/Icons';
+import { LockIcon, BuildingIcon } from '@/components/ui/Icons';
 import { CreateMiniAppDto, IntegrationMethod, SourceType } from '@/types/miniapp.types';
+import { FSA_ORGANIZATIONS, FSA_ORGANIZATION_GROUPS } from '@/lib/constants/fsa-organizations';
 
 export default function BasicInfoForm({ formData, handleChange, allErrors = {}, isEditable = true }: any) {
   return (
@@ -39,12 +40,34 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
               {allErrors.appId && <p className="mt-1.5 text-sm text-rose-600 font-medium">{allErrors.appId}</p>}
             </div>
             <div>
-              <Label>Category <span className="text-rose-500">*</span></Label>
-              <Select name="category" value={formData.category} onChange={handleChange}>
-                <option>Banking</option>
-                <option>Insurance</option>
-                <option>Lifestyle</option>
-                <option>Shopping</option>
+              <div className="flex items-center justify-between mb-1">
+                <Label className="flex items-center gap-1.5">
+                  <BuildingIcon className="w-3.5 h-3.5 text-sky-500" />
+                  <span>Organization <span className="text-rose-500">*</span></span>
+                </Label>
+                <span className="text-[11px] text-slate-400 font-medium">FSA Subordinate Entity (MEF)</span>
+              </div>
+              <Select 
+                name="organization" 
+                value={formData.organization || formData.category || FSA_ORGANIZATIONS[0].name} 
+                onChange={(e) => {
+                  handleChange(e);
+                  if (handleChange) {
+                    handleChange({ target: { name: 'category', value: e.target.value } } as any);
+                  }
+                }}
+                disabled={!isEditable}
+                className="text-sm font-medium"
+              >
+                {FSA_ORGANIZATION_GROUPS.map((group) => (
+                  <optgroup key={group.type} label={group.label} className="font-semibold text-slate-700 dark:text-slate-200">
+                    {group.organizations.map((org) => (
+                      <option key={org.code} value={org.name} className="font-normal text-slate-800 dark:text-slate-300">
+                        {org.code} - {org.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
               </Select>
             </div>
             <div>

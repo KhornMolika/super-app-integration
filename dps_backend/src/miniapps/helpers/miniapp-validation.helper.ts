@@ -282,8 +282,8 @@ export class MiniappValidationHelper {
             'Access Token is required for Private repository with Token authentication.';
         } else {
           const isDeployKey =
-            flutterConfig.isPrivateRepo &&
-            (flutterConfig.authMethod === 'deploy_key' || !flutterConfig.authMethod);
+            Boolean(flutterConfig.isPrivateRepo && flutterConfig.authMethod !== 'token') ||
+            gitUrl.startsWith('git@');
 
           checks.push(
             this.gitService
@@ -301,9 +301,15 @@ export class MiniappValidationHelper {
                       `Private Git repository configured with Deploy Key for ${gitUrl}. Full package verification will be orchestrated via Jenkins runner.`,
                     );
                   } else {
-                    errors['integrationConfigFlutter.gitUrl'] =
-                      result.validation.error ||
-                      `Git repository or pubspec.yaml could not be verified for ${gitUrl}.`;
+                    const is404NotFound = result.validation.error?.toLowerCase().includes('not found') || result.validation.error?.includes('404');
+                    if (is404NotFound) {
+                      errors['integrationConfigFlutter.gitUrl'] =
+                        `File 'pubspec.yaml' not found or repository '${gitUrl}' is private. If this repository is private, please select '🔒 Private Repository' and configure an SSH Deploy Key or Access Token.`;
+                    } else {
+                      errors['integrationConfigFlutter.gitUrl'] =
+                        result.validation.error ||
+                        `Git repository or pubspec.yaml could not be verified for ${gitUrl}.`;
+                    }
                   }
                 } else {
                   this.logger.log(
@@ -317,8 +323,14 @@ export class MiniappValidationHelper {
                     `Private Git repository with Deploy Key for ${gitUrl}: REST check skipped (${err.message}). Jenkins runner will verify with deploy key.`,
                   );
                 } else {
-                  errors['integrationConfigFlutter.gitUrl'] =
-                    `Could not verify Git repository "${gitUrl}": ${err.message}`;
+                  const is404NotFound = err.message?.toLowerCase().includes('not found') || err.message?.includes('404');
+                  if (is404NotFound) {
+                    errors['integrationConfigFlutter.gitUrl'] =
+                      `Repository '${gitUrl}' was not found or is private. If this repository is private, please select '🔒 Private Repository' and configure an SSH Deploy Key or Access Token.`;
+                  } else {
+                    errors['integrationConfigFlutter.gitUrl'] =
+                      `Could not verify Git repository "${gitUrl}": ${err.message}`;
+                  }
                 }
               }),
           );

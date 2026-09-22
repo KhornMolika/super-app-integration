@@ -1,4 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  Optional,
+  OnModuleInit,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as fs from 'fs';
@@ -45,13 +51,15 @@ export interface TelegramGroupItem {
 }
 
 @Injectable()
-export class TelegramService {
+export class TelegramService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(TelegramService.name);
   private readonly botToken = process.env.TELEGRAM_BOT_TOKEN;
   private readonly defaultChatId = process.env.TELEGRAM_CHAT_ID;
   private readonly isEnabled = process.env.TELEGRAM_ENABLED !== 'false';
   private botId: number | null = null;
   private botUsername = 'superapp_notification_bot';
+  private lastUpdateOffset = 0;
+  private pollingInterval: NodeJS.Timeout | null = null;
 
   private get backofficeBaseUrl(): string {
     return resolveBackofficeBaseUrl();
@@ -62,9 +70,91 @@ export class TelegramService {
     private userRepository: Repository<User>,
     @InjectRepository(MiniApp)
     private miniAppRepository: Repository<MiniApp>,
+    @Optional()
     private readonly settingsService?: SettingsService,
   ) {
     this.fetchBotProfile();
+  }
+
+  async onModuleInit() {
+    await this.fetchBotProfile();
+    this.startBackgroundPoller();
+  }
+
+  onModuleDestroy() {
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+      this.pollingInterval = null;
+    }
+  }
+
+  private startBackgroundPoller() {
+    if (!this.botToken || !this.isEnabled) return;
+    setTimeout(() => this.pollUpdates().catch(() => {}), 2000);
+    this.pollingInterval = setInterval(() => {
+      this.pollUpdates().catch(() => {});
+    }, 10000);
+  }
+
+  getAddGroupUrl(param?: string): string {
+    const p = param ? `?startgroup=${encodeURIComponent(param)}` : '?startgroup=true';
+    return `https://t.me/${this.botUsername}${p}&admin=post_messages+manage_chat`;
+  }
+
+  async pollUpdates(): Promise<void> {
+    if (!this.botToken || !this.isEnabled) return;
+    try {
+      const offsetParam = this.lastUpdateOffset ? `offset=${this.lastUpdateOffset}&` : '';
+      const url = `https://api.telegram.org/bot${this.botToken}/getUpdates?${offsetParam}timeout=0&allowed_updates=["message","channel_post","my_chat_member","chat_member"]`;
+      const res = await fetch(url);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data.ok || !Array.isArray(data.result) || data.result.length === 0) return;
+
+      for (const update of data.result) {
+        if (update.update_id >= this.lastUpdateOffset) {
+          this.lastUpdateOffset = update.update_id + 1;
+        }
+
+        const chat =
+          update.message?.chat ||
+          update.my_chat_member?.chat ||
+          update.channel_post?.chat;
+
+        if (
+          chat &&
+          (chat.type === 'group' ||
+            chat.type === 'supergroup' ||
+            chat.type === 'channel')
+        ) {
+          const chatId = chat.id.toString();
+          const title = chat.title || 'Discovered Telegram Group';
+          await this.persistDiscoveredGroup(chatId, title, chat.type);
+        }
+      }
+    } catch (_) {}
+  }
+
+  async handleWebhookUpdate(update: any): Promise<{ ok: boolean }> {
+    if (!update) return { ok: true };
+    try {
+      const chat =
+        update.message?.chat ||
+        update.my_chat_member?.chat ||
+        update.channel_post?.chat;
+
+      if (
+        chat &&
+        (chat.type === 'group' ||
+          chat.type === 'supergroup' ||
+          chat.type === 'channel')
+      ) {
+        const chatId = chat.id.toString();
+        const title = chat.title || 'Discovered Telegram Group';
+        await this.persistDiscoveredGroup(chatId, title, chat.type);
+      }
+    } catch (_) {}
+    return { ok: true };
   }
 
   private async fetchBotProfile() {
@@ -344,6 +434,10 @@ export class TelegramService {
         }
       }
 
+      if (type === 'group' || type === 'supergroup' || type === 'channel') {
+        this.persistDiscoveredGroup(chatId, title, type).catch(() => {});
+      }
+
       return {
         isValid: true,
         title,
@@ -354,6 +448,48 @@ export class TelegramService {
         isValid: false,
         error: err.message || 'Network error verifying group status with Telegram',
       };
+    }
+  }
+
+  /**
+   * Persistently records a discovered or verified Telegram group into SettingsService
+   */
+  async persistDiscoveredGroup(
+    chatId: string,
+    title?: string,
+    type: string = 'group',
+  ): Promise<void> {
+    if (!this.settingsService || !chatId) return;
+    try {
+      const existing = await this.settingsService.getSetting<any[]>(
+        'TELEGRAM_DISCOVERED_GROUPS',
+        [],
+      );
+      const list = Array.isArray(existing) ? [...existing] : [];
+      const idx = list.findIndex((g) => g.id === chatId);
+      if (idx >= 0) {
+        if (title) list[idx].title = title;
+        if (type) list[idx].type = type;
+        list[idx].lastVerifiedAt = new Date().toISOString();
+      } else {
+        list.push({
+          id: chatId,
+          title: title || 'Verified Telegram Channel',
+          type,
+          associatedWith: [
+            { type: 'BOT_SCAN', label: 'Verified Telegram Channel' },
+          ],
+          savedAt: new Date().toISOString(),
+          lastVerifiedAt: new Date().toISOString(),
+        });
+      }
+      await this.settingsService.setSetting(
+        'TELEGRAM_DISCOVERED_GROUPS',
+        list,
+        'Persistently discovered Telegram groups and channels',
+      );
+    } catch (err: any) {
+      this.logger.warn(`Failed to persist Telegram group ${chatId}: ${err.message}`);
     }
   }
 
@@ -697,15 +833,43 @@ export class TelegramService {
       }
     }
 
-    // 3. Scan recent updates from Telegram bot
+    // 3. Load persistently stored groups from SettingsService
+    if (this.settingsService) {
+      try {
+        const cached = await this.settingsService.getSetting<any[]>(
+          'TELEGRAM_DISCOVERED_GROUPS',
+          [],
+        );
+        if (Array.isArray(cached)) {
+          for (const g of cached) {
+            if (g?.id && !groupsMap.has(g.id)) {
+              groupsMap.set(g.id, {
+                id: g.id,
+                title: g.title || 'Saved Telegram Group',
+                type: g.type || 'group',
+                isLive: true,
+                associatedWith: g.associatedWith || [
+                  { type: 'BOT_SCAN', label: 'Persisted Telegram Group' },
+                ],
+              });
+            }
+          }
+        }
+      } catch (cErr: any) {
+        this.logger.warn(`Failed to load cached Telegram groups: ${cErr.message}`);
+      }
+    }
+
+    // 4. Scan recent updates from Telegram bot (with explicit allowed_updates)
     if (this.botToken) {
       try {
         const res = await fetch(
-          `https://api.telegram.org/bot${this.botToken}/getUpdates`,
+          `https://api.telegram.org/bot${this.botToken}/getUpdates?allowed_updates=["message","channel_post","my_chat_member","chat_member"]`,
         );
         if (res.ok) {
           const data = await res.json();
           const updates = data.result || [];
+          let newlyFound = false;
           for (const update of updates) {
             const chat =
               update.message?.chat ||
@@ -723,6 +887,7 @@ export class TelegramService {
                 if (chat.title) existing.title = chat.title;
                 if (chat.type) existing.type = chat.type;
               } else {
+                newlyFound = true;
                 groupsMap.set(chatId, {
                   id: chatId,
                   title: chat.title || 'Discovered Telegram Group',
@@ -737,6 +902,23 @@ export class TelegramService {
                 });
               }
             }
+          }
+
+          if (newlyFound && this.settingsService) {
+            const allCached = Array.from(groupsMap.values()).map((g) => ({
+              id: g.id,
+              title: g.title,
+              type: g.type,
+              associatedWith: g.associatedWith,
+              lastDiscoveredAt: new Date().toISOString(),
+            }));
+            this.settingsService
+              .setSetting(
+                'TELEGRAM_DISCOVERED_GROUPS',
+                allCached,
+                'Persistently discovered Telegram groups and channels',
+              )
+              .catch(() => {});
           }
         }
       } catch (err) {
@@ -848,9 +1030,33 @@ export class TelegramService {
       isDirectUser: boolean;
     }>();
 
+    if (this.settingsService) {
+      try {
+        const cached = await this.settingsService.getSetting<any[]>(
+          'TELEGRAM_DISCOVERED_GROUPS',
+          [],
+        );
+        if (Array.isArray(cached)) {
+          for (const g of cached) {
+            if (g?.id && !contactsMap.has(g.id)) {
+              contactsMap.set(g.id, {
+                chatId: g.id,
+                type: g.type || 'group',
+                name: g.title || 'Saved Telegram Group',
+                lastActive: g.lastDiscoveredAt || g.savedAt || new Date().toISOString(),
+                isDirectUser: false,
+              });
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
     if (this.botToken) {
       try {
-        const res = await fetch(`https://api.telegram.org/bot${this.botToken}/getUpdates`);
+        const res = await fetch(
+          `https://api.telegram.org/bot${this.botToken}/getUpdates?allowed_updates=["message","channel_post","my_chat_member","chat_member"]`,
+        );
         if (res.ok) {
           const data = await res.json();
           const updates = data.result || [];

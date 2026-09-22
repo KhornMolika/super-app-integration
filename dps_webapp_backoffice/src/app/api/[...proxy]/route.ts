@@ -52,6 +52,7 @@ const ALLOWED_ROUTES = [
   'notifications',
   'auth',
   'api',
+  'pubspec',
 ];
 
 async function handleProxy(request: Request, { params }: { params: Promise<{ proxy: string[] }> }) {

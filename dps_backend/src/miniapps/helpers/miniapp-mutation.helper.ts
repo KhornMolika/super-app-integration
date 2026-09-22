@@ -1,6 +1,7 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as crypto from 'crypto';
 import { MiniApp } from '../entities/miniapp.entity';
 import { StorageService } from '../../storage/storage.service';
 import { DomainAssociationHelper } from './domain-association.helper';
@@ -8,6 +9,8 @@ import { NotificationsService, MailService } from '../../notifications';
 import { MiniappValidationHelper } from './miniapp-validation.helper';
 import { PermissionDetectorHelper } from './permission-detector.helper';
 import { VersionDiffHelper } from './version-diff.helper';
+import { inferPackageNameFromGitUrl } from '../../integrations/git/git-integration.service';
+import { resolveOrganizationDetails } from '../../common/constants/fsa-organizations';
 
 @Injectable()
 export class MiniappMutationHelper {
@@ -43,6 +46,12 @@ export class MiniappMutationHelper {
     data.currentReleaseVersion = undefined;
     data.pendingRevision = null;
 
+    // Resolve & normalize organization name and short code (e.g. FTC, IRC, etc.)
+    const orgInfo = resolveOrganizationDetails(data.organization || data.category);
+    data.organization = orgInfo.name;
+    data.organizationCode = orgInfo.code;
+    data.category = orgInfo.name;
+
     // Automatically upload base64 image data to MinIO object storage on submission
     const isBase64Logo =
       data.logo &&
@@ -73,6 +82,54 @@ export class MiniappMutationHelper {
       if (data.integrationConfig) {
         data.integrationConfig.verificationToken = data.verificationToken;
       }
+    } else if (data.integrationMethod === 'FLUTTER_PACKAGE') {
+      if (data.integrationConfig) {
+        if (!data.integrationConfig.packageName && data.integrationConfig.gitUrl) {
+          data.integrationConfig.packageName = inferPackageNameFromGitUrl(
+            data.integrationConfig.gitUrl,
+            data.integrationConfig.gitPath || data.integrationConfig.path,
+          );
+        }
+      }
+    }
+
+    const packageVer =
+      data.integrationConfig?.gitTag ||
+      data.integrationConfig?.ref ||
+      data.integrationConfig?.versionConstraint?.replace(/^[\^~>=<]+/, '') ||
+      data.version ||
+      '1.0.0';
+    data.version = packageVer;
+    data.currentReleaseVersion = packageVer;
+
+    if (!data.versionHistory || data.versionHistory.length === 0) {
+      data.versionHistory = [
+        {
+          version: packageVer,
+          gitRef:
+            data.integrationConfig?.gitTag ||
+            data.integrationConfig?.ref ||
+            data.integrationConfig?.gitBranch ||
+            packageVer,
+          packageName:
+            data.integrationConfig?.packageName ||
+            data.appId ||
+            data.name,
+          type: 'PRODUCTION',
+          status: 'IN_REVIEW',
+          changelog: (data as any).changelog || `Initial submission of version ${packageVer}`,
+          releasedAt: new Date().toISOString(),
+          releasedBy: actorId || data.ownerName || 'Mini App Developer',
+          checksum:
+            data.integrationConfig?.archiveChecksum ||
+            'sha256:' +
+              crypto
+                .createHash('sha256')
+                .update((data.appId || 'miniapp') + packageVer)
+                .digest('hex')
+                .substring(0, 16),
+        },
+      ];
     }
 
     const app = this.miniappRepository.create(data);
@@ -395,6 +452,12 @@ export class MiniappMutationHelper {
     if (data.teamTelegramChatId !== undefined) {
       merged.teamTelegramChatId = data.teamTelegramChatId;
     }
+    if (data.organization || data.category) {
+      const orgInfo = resolveOrganizationDetails(data.organization || data.category);
+      merged.organization = orgInfo.name;
+      merged.organizationCode = orgInfo.code;
+      merged.category = orgInfo.name;
+    }
 
     // Reset domain verification status if productionUrl changes
     const oldProdUrl = existing.integrationConfig?.productionUrl;
@@ -403,6 +466,72 @@ export class MiniappMutationHelper {
       merged.isDomainVerified = false;
       merged.domainVerifiedAt = null as any;
     }
+
+    if (
+      merged.integrationMethod === 'FLUTTER_PACKAGE' &&
+      merged.integrationConfig
+    ) {
+      if (
+        !merged.integrationConfig.packageName &&
+        merged.integrationConfig.gitUrl
+      ) {
+        merged.integrationConfig.packageName = inferPackageNameFromGitUrl(
+          merged.integrationConfig.gitUrl,
+          merged.integrationConfig.gitPath || merged.integrationConfig.path,
+        );
+      }
+    }
+
+    const effectiveVer =
+      data.integrationConfig?.gitTag ||
+      data.integrationConfig?.ref ||
+      data.integrationConfig?.versionConstraint?.replace(/^[\^~>=<]+/, '') ||
+      data.version;
+    if (effectiveVer) {
+      merged.version = effectiveVer;
+      merged.currentReleaseVersion = effectiveVer;
+    }
+
+    const currentHistory = Array.isArray(merged.versionHistory)
+      ? [...merged.versionHistory]
+      : [];
+    const verToAdd = effectiveVer || merged.version || '1.0.0';
+    const existingVerIdx = currentHistory.findIndex((h: any) => h.version === verToAdd);
+    const newRecord = {
+      version: verToAdd,
+      gitRef:
+        merged.integrationConfig?.gitTag ||
+        merged.integrationConfig?.ref ||
+        merged.integrationConfig?.gitBranch ||
+        verToAdd,
+      packageName:
+        merged.integrationConfig?.packageName ||
+        merged.appId ||
+        merged.name,
+      type: (merged.status === 'ACTIVE' ? 'PRODUCTION' : 'TEST') as 'PRODUCTION' | 'TEST' | 'DRAFT',
+      status: (merged.status === 'ACTIVE' ? 'ACTIVE' : 'IN_REVIEW') as any,
+      changelog: (data as any).changelog || `Version update to ${verToAdd}`,
+      releasedAt: new Date().toISOString(),
+      releasedBy: actorId || merged.ownerName || 'Mini App Developer',
+      checksum:
+        merged.integrationConfig?.archiveChecksum ||
+        'sha256:' +
+          crypto
+            .createHash('sha256')
+            .update(merged.id + verToAdd + Date.now())
+            .digest('hex')
+            .substring(0, 16),
+    };
+
+    if (existingVerIdx >= 0) {
+      currentHistory[existingVerIdx] = {
+        ...currentHistory[existingVerIdx],
+        ...newRecord,
+      };
+    } else {
+      currentHistory.unshift(newRecord);
+    }
+    merged.versionHistory = currentHistory;
 
     await this.miniappRepository.save(merged);
 

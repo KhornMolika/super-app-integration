@@ -50,6 +50,12 @@ export class MiniApp {
   @Column({ nullable: true })
   category!: string;
 
+  @Column({ nullable: true })
+  organization?: string;
+
+  @Column({ nullable: true })
+  organizationCode?: string;
+
   @Column({ default: 'DRAFT' })
   status!: string;
 
@@ -150,6 +156,9 @@ export class MiniApp {
   @Column({ type: 'jsonb', nullable: true, default: () => "'[]'" })
   versionHistory?: {
     version: string;
+    gitRef?: string;
+    packageName?: string;
+    sourceType?: 'GIT' | 'ARTIFACT' | 'WEBVIEW' | string;
     saVersion?: string;
     type: 'PRODUCTION' | 'TEST' | 'DRAFT';
     status:
@@ -158,7 +167,10 @@ export class MiniApp {
       | 'PREVIOUS'
       | 'DEPRECATED'
       | 'SUPERSEDED'
-      | 'ARCHIVED';
+      | 'ARCHIVED'
+      | 'IN_REVIEW'
+      | 'APPROVED'
+      | 'DRAFT';
     changelog?: string;
     artifactUrl?: string;
     apkSize?: string;
@@ -167,6 +179,8 @@ export class MiniApp {
     releasedBy?: string;
     buildNumber?: number;
     jenkinsJobUrl?: string;
+    integrationConfig?: Record<string, any>;
+    permissions?: string[];
   }[];
 
   @OneToMany(() => MiniAppIssue, (issue) => issue.miniApp, {

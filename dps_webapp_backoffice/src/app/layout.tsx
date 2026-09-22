@@ -16,6 +16,7 @@ import { NotificationBell } from '@/components/ui/NotificationBell';
 import { ConfirmationProvider } from '@/components/ui/ConfirmationProvider';
 import { ToastProvider } from '@/components/ui/Toast';
 import { SidebarProvider } from '@/components/ui/SidebarContext';
+import SandboxBuildStatusIndicator from '@/components/ui/SandboxBuildStatusIndicator';
 
 export const metadata: Metadata = {
   title: 'DPS Back Office',
@@ -47,6 +48,7 @@ export default function RootLayout({
                         </h2>
                       </div>
                       <div className="ml-auto flex items-center space-x-3 sm:space-x-4">
+                        <SandboxBuildStatusIndicator />
                         <NotificationBell />
                         <ThemeToggle />
                         <div className="h-8 w-px bg-slate-200 dark:bg-slate-700 ml-1 sm:ml-2"></div>

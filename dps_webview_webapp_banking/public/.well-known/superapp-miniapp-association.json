@@ -1,12 +1,11 @@
 {
-  "appId": "miniapp_mm_32f25f",
-  "verificationToken": "tok_live_b37ca9537b29ee69faa41b4832902dc7",
+  "appId": "miniapp_webview_885667",
+  "verificationToken": "tok_live_9af7e5574911e4c72ce07bd64bb99481",
   "environment": "DEV",
   "allowedDomains": [
-    "domain.com"
+    "localhost"
   ],
   "permissions": [
-    "Camera",
-    "Biometrics"
+    "Camera"
   ]
 }
