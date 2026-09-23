@@ -1,6 +1,6 @@
 {
-    "name": "DPS_mobile",
-    "short_name": "DPS_mobile",
+    "name": "SuperApp",
+    "short_name": "SuperApp",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

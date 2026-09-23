@@ -131,7 +131,7 @@ describe('MobileAuthService', () => {
 
     it('per-email mail bucket: 6th registration within the hour returns the same 202 but sends/changes nothing', async () => {
       const c = build();
-      const results = [];
+      const results: unknown[] = [];
       for (let i = 0; i < 6; i++) {
         results.push(await c.svc.register({ email: 'bomb@example.io', password: `password-num-${i}x`, name: `N${i}` }));
       }

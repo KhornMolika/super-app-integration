@@ -19,7 +19,7 @@ sample-private-key-content-12345
       gitAccessToken: 'ghp_secrettoken123',
     };
 
-    const secured = secureFlutterIntegrationConfig(incoming);
+    const secured = secureFlutterIntegrationConfig(incoming)!;
     expect(isEncryptedCredential(secured.deployKey)).toBe(true);
     expect(isEncryptedCredential(secured.gitAccessToken)).toBe(true);
 
@@ -31,7 +31,7 @@ sample-private-key-content-12345
   it('preserves existing encrypted deployKey when update sends masked value', () => {
     const existing = {
       packageName: 'my_flutter_app',
-      deployKey: secureFlutterIntegrationConfig({ deployKey: samplePrivateKey })
+      deployKey: secureFlutterIntegrationConfig({ deployKey: samplePrivateKey })!
         .deployKey,
     };
 
@@ -40,7 +40,7 @@ sample-private-key-content-12345
       deployKey: '********',
     };
 
-    const secured = secureFlutterIntegrationConfig(updateWithMask, existing);
+    const secured = secureFlutterIntegrationConfig(updateWithMask, existing)!;
     expect(secured.deployKey).toEqual(existing.deployKey);
     expect(extractDecryptedDeployKey(secured)).toEqual(samplePrivateKey);
   });
@@ -48,7 +48,7 @@ sample-private-key-content-12345
   it('preserves existing deployKey when update leaves deployKey empty', () => {
     const existing = {
       packageName: 'my_flutter_app',
-      deployKey: secureFlutterIntegrationConfig({ deployKey: samplePrivateKey })
+      deployKey: secureFlutterIntegrationConfig({ deployKey: samplePrivateKey })!
         .deployKey,
     };
 
@@ -56,14 +56,14 @@ sample-private-key-content-12345
       packageName: 'my_flutter_app_renamed',
     };
 
-    const secured = secureFlutterIntegrationConfig(updateWithoutKey, existing);
+    const secured = secureFlutterIntegrationConfig(updateWithoutKey, existing)!;
     expect(secured.deployKey).toEqual(existing.deployKey);
     expect(extractDecryptedDeployKey(secured)).toEqual(samplePrivateKey);
   });
 
   it('updates deployKey if a new real private key is provided in update', () => {
     const existing = {
-      deployKey: secureFlutterIntegrationConfig({ deployKey: samplePrivateKey })
+      deployKey: secureFlutterIntegrationConfig({ deployKey: samplePrivateKey })!
         .deployKey,
     };
 
@@ -72,7 +72,7 @@ sample-private-key-content-12345
       deployKey: newKey,
     };
 
-    const secured = secureFlutterIntegrationConfig(updateWithNewKey, existing);
+    const secured = secureFlutterIntegrationConfig(updateWithNewKey, existing)!;
     expect(secured.deployKey).not.toEqual(existing.deployKey);
     expect(extractDecryptedDeployKey(secured)).toEqual(newKey);
   });
@@ -85,25 +85,28 @@ sample-private-key-content-12345
         gitUrl: 'git@github.com:org/repo.git',
         deployKey: secureFlutterIntegrationConfig({
           deployKey: samplePrivateKey,
-        }).deployKey,
+        })!.deployKey,
         gitAccessToken: 'enc:v1:fake:token',
       },
       pendingRevision: {
         integrationConfig: {
           deployKey: secureFlutterIntegrationConfig({
             deployKey: samplePrivateKey,
-          }).deployKey,
+          })!.deployKey,
         },
       },
     };
 
     const masked = maskMiniAppCredentials(app);
-    expect(masked.integrationConfig.deployKey).toBe('********');
-    expect(masked.integrationConfig.hasDeployKey).toBe(true);
-    expect(masked.integrationConfig.gitAccessToken).toBe('********');
-    expect(masked.integrationConfig.hasGitAccessToken).toBe(true);
+    const maskedConfig = masked.integrationConfig as Record<string, unknown>;
+    const maskedPending = masked.pendingRevision.integrationConfig as Record<string, unknown>;
 
-    expect(masked.pendingRevision.integrationConfig.deployKey).toBe('********');
-    expect(masked.pendingRevision.integrationConfig.hasDeployKey).toBe(true);
+    expect(maskedConfig.deployKey).toBe('********');
+    expect(maskedConfig.hasDeployKey).toBe(true);
+    expect(maskedConfig.gitAccessToken).toBe('********');
+    expect(maskedConfig.hasGitAccessToken).toBe(true);
+
+    expect(maskedPending.deployKey).toBe('********');
+    expect(maskedPending.hasDeployKey).toBe(true);
   });
 });

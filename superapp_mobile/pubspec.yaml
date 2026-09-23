@@ -17,10 +17,7 @@ dependencies:
   geolocator: ^14.0.3
   image_picker: ^1.2.3
   local_auth: ^3.0.2
-
   url_launcher: ^6.3.2
-  ma_flutter_trust_regulator:
-    path: ../ma_flutter_trust_regulator
 
 dev_dependencies:
   flutter_test:

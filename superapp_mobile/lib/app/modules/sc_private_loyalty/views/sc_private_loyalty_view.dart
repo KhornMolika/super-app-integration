@@ -1,27 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:sc_private_miniapp/sc_private_miniapp.dart';
-import '../../../services/auth_service.dart';
+import '../../miniapp/views/mini_app_standby_view.dart';
 
 class ScPrivateLoyaltyView extends GetView {
   const ScPrivateLoyaltyView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    String userName = 'Super App VIP Member';
-    try {
-      final auth = Get.find<AuthService>();
-      if (auth.userName.isNotEmpty) {
-        userName = auth.userName;
-      }
-    } catch (_) {}
+    final dynamic appArgs = Get.arguments;
+    final Map<String, dynamic> appData = appArgs is Map<String, dynamic>
+        ? appArgs
+        : {
+            'appId': 'kh.gov.loyalty.points',
+            'name': 'Loyalty Rewards & Points',
+            'integrationMethod': 'FLUTTER_PACKAGE',
+            'integrationConfig': {
+              'packageName': 'sc_private_miniapp',
+            },
+            'currentReleaseVersion': '1.0.0',
+          };
 
-    return LoyaltyRewardsScreen(
-      userName: userName,
-      userTier: 'Gold Elite Member',
-      onExit: () {
-        Get.back();
-      },
-    );
+    return MiniAppStandbyView(app: appData);
   }
 }

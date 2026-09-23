@@ -648,9 +648,15 @@ export class PubspecInjectorService {
       return this.sandboxBuildManager.triggerBuild(triggeredBy);
     }
 
-    const scriptPath = path.resolve(process.cwd(), '../scripts/build-sandbox.ps1');
-    if (!fs.existsSync(scriptPath)) {
-      this.logger.warn(`Sandbox build script not found at ${scriptPath}`);
+    const candidates = [
+      path.resolve(process.cwd(), 'scripts/build-sandbox.ps1'),
+      path.resolve(process.cwd(), 'superapp_backend/scripts/build-sandbox.ps1'),
+      path.resolve(__dirname, '../../../scripts/build-sandbox.ps1'),
+      path.resolve(process.cwd(), '../scripts/build-sandbox.ps1'),
+    ];
+    const scriptPath = candidates.find((p) => fs.existsSync(p));
+    if (!scriptPath) {
+      this.logger.warn('Sandbox build script not found on host filesystem');
       return { success: false, message: 'build-sandbox.ps1 script not found' };
     }
 

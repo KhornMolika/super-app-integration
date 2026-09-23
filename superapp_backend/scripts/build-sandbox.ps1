@@ -4,12 +4,22 @@
 $ErrorActionPreference = "Stop"
 
 $ProjectRoot = Resolve-Path "$PSScriptRoot/.."
-$MobileAppDir = "$ProjectRoot/dps_mobile_app"
-$SandboxDestDir = "$ProjectRoot/dps_webapp_backoffice/public/superapp-sandbox"
-$FlutterWebDestDir = "$ProjectRoot/dps_webapp_backoffice/public/flutter-web"
+
+$MobileAppDir = "$ProjectRoot/superapp_mobile"
+if (-not (Test-Path $MobileAppDir)) {
+    $MobileAppDir = "$ProjectRoot/dps_mobile_app"
+}
+
+$BackofficeDir = "$ProjectRoot/superapp_backoffice"
+if (-not (Test-Path $BackofficeDir)) {
+    $BackofficeDir = "$ProjectRoot/dps_webapp_backoffice"
+}
+
+$SandboxDestDir = "$BackofficeDir/public/superapp-sandbox"
+$FlutterWebDestDir = "$BackofficeDir/public/flutter-web"
 
 Write-Host "=========================================" -ForegroundColor Cyan
-Write-Host "🚀 Compiling Flutter Web Super App Sandbox" -ForegroundColor Cyan
+Write-Host "[BUILD] Compiling Flutter Web Super App Sandbox" -ForegroundColor Cyan
 Write-Host "=========================================" -ForegroundColor Cyan
 
 Set-Location $MobileAppDir
@@ -33,4 +43,4 @@ if (-not (Test-Path $FlutterWebDestDir)) {
 }
 Copy-Item -Path "$MobileAppDir/build/web/*" -Destination $FlutterWebDestDir -Recurse -Force
 
-Write-Host "✅ Flutter Web Super App Sandbox compiled and synced successfully!" -ForegroundColor Green
+Write-Host "[SUCCESS] Flutter Web Super App Sandbox compiled and synced successfully!" -ForegroundColor Green

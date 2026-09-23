@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev -H 0.0.0.0 -p 3002",
     "build": "next build",
-    "build:sandbox": "powershell -ExecutionPolicy Bypass -File ../scripts/build-sandbox.ps1",
+    "build:sandbox": "node -e \"fetch('http://localhost:3000/pubspec/sandbox-build/trigger', {method:'POST'}).then(r=>r.json()).then(console.log)\"",
     "start": "next start -H 0.0.0.0 -p 3002",
     "lint": "eslint",
     "push:fintech:dev": "git -C .. subtree push --prefix=superapp_backoffice https://git.fintechcenterfsa.com/frontend/super-app-manager.git development",

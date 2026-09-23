@@ -66,9 +66,13 @@ export class SandboxBuildManagerService {
       };
     }
 
-    const scriptPath = path.resolve(process.cwd(), '../scripts/build-sandbox.ps1');
-    const altScriptPath = path.resolve(process.cwd(), 'scripts/build-sandbox.ps1');
-    const resolvedScript = fs.existsSync(scriptPath) ? scriptPath : fs.existsSync(altScriptPath) ? altScriptPath : null;
+    const candidates = [
+      path.resolve(process.cwd(), 'scripts/build-sandbox.ps1'),
+      path.resolve(process.cwd(), 'superapp_backend/scripts/build-sandbox.ps1'),
+      path.resolve(__dirname, '../../../scripts/build-sandbox.ps1'),
+      path.resolve(process.cwd(), '../scripts/build-sandbox.ps1'),
+    ];
+    const resolvedScript = candidates.find((p) => fs.existsSync(p)) || null;
 
     if (!resolvedScript) {
       this.state = 'FAILED';
