@@ -326,6 +326,10 @@ export class ReleaseAssemblyVerificationService {
       if (body.status === 'FAILED') {
         app.buildStatus = 'FAILED';
         app.buildError = body.details || body.errorMessage || `Stage ${body.stageName || body.stageId} failed.`;
+      } else if (body.stageId === 'publish' && (body.status === 'COMPLETED' || body.status === 'SUCCESS')) {
+        app.status = 'TESTING';
+        app.buildStatus = 'COMPLETED';
+        app.buildError = undefined;
       }
       await this.miniappRepository.save(app);
     }
