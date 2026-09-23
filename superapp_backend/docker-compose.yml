@@ -1,29 +1,36 @@
 services:
+  # ==========================================
+  # 1. DATABASE & STORAGE SERVICES
+  # ==========================================
   postgres:
     image: postgres:15
     container_name: superapp-postgres
     restart: unless-stopped
     env_file:
-      - .env
+      - .env.docker
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-${DB_USERNAME:-admin}}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-${DB_PASSWORD}}
-      POSTGRES_DB: ${POSTGRES_DB:-${DB_DATABASE:-superapp_db}}
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-superapp_db}
     ports:
       - '${POSTGRES_PORT:-5432}:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - ci_network
 
   nexus:
     image: sonatype/nexus3:latest
     container_name: superapp-nexus
     restart: unless-stopped
     env_file:
-      - .env
+      - .env.docker
     ports:
       - '${NEXUS_PORT:-8081}:8081'
     volumes:
       - nexus-data:/nexus-data
+    networks:
+      - ci_network
 
   minio:
     image: ${MINIO_IMAGE:-quay.io/minio/aistor/minio:RELEASE.2026-09-07T08-39-31Z}
@@ -31,10 +38,10 @@ services:
     restart: unless-stopped
     command: server /data --console-address ":9001"
     env_file:
-      - .env
+      - .env.docker
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-${MINIO_ACCESS_KEY:-admin}}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-${MINIO_SECRET_KEY}}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
       MINIO_SUBNET_LICENSE: ${MINIO_SUBNET_LICENSE:-}
       MINIO_AISTOR_LICENSE: ${MINIO_SUBNET_LICENSE:-}
       MINIO_LICENSE: ${MINIO_SUBNET_LICENSE:-}
@@ -43,6 +50,8 @@ services:
       - '${MINIO_CONSOLE_PORT:-9001}:9001'
     volumes:
       - minio_data:/data
+    networks:
+      - ci_network
 
   minio-init:
     image: minio/mc:latest
@@ -50,16 +59,129 @@ services:
     depends_on:
       - minio
     env_file:
-      - .env
+      - .env.docker
+    entrypoint: >
+      /bin/sh -c "
+      echo 'Waiting for MinIO server at http://minio:9000...';
+      until /usr/bin/mc alias set myminio http://minio:9000 \"$$MINIO_ROOT_USER\" \"$$MINIO_ROOT_PASSWORD\"; do
+        echo 'MinIO server not ready yet, retrying in 2 seconds...';
+        sleep 2;
+      done;
+      echo 'Connected to MinIO.';
+      if [ -n \"$$MINIO_SUBNET_LICENSE\" ]; then
+        /usr/bin/mc license register myminio --api-key \"$$MINIO_SUBNET_LICENSE\" || true;
+      fi;
+      /usr/bin/mc mb myminio/mini-app-logos --ignore-existing || true;
+      /usr/bin/mc anonymous set download myminio/mini-app-logos || true;
+      /usr/bin/mc mb myminio/submissions --ignore-existing || true;
+      echo 'MinIO buckets and policies configured successfully.';
+      exit 0;
+      "
+    networks:
+      - ci_network
+
+  # ==========================================
+  # 2. CI/CD ORCHESTRATION & BUILD ENGINE
+  # ==========================================
+  jenkins-controller:
+    image: jenkins/jenkins:lts-jdk21
+    container_name: superapp-jenkins-controller
+    restart: unless-stopped
+    user: root
+    ports:
+      - "8085:8080"
+      - "50000:50000"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-${MINIO_ACCESS_KEY:-admin}}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-${MINIO_SECRET_KEY}}
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-${MINIO_ROOT_USER:-admin}}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-${MINIO_ROOT_PASSWORD}}
-      MINIO_SUBNET_LICENSE: ${MINIO_SUBNET_LICENSE:-}
+      - TZ=Asia/Phnom_Penh
+      - DOCKER_HOST=tcp://docker:2376
+      - DOCKER_CERT_PATH=/certs/client
+      - DOCKER_TLS_VERIFY=1
+      - JAVA_OPTS=-Xmx2048m -Xms1024m -Duser.timezone=Asia/Phnom_Penh
     volumes:
-      - ./scripts/minio-init.sh:/minio-init.sh:ro
-    entrypoint: ["/bin/sh", "/minio-init.sh"]
+      - jenkins_data:/var/jenkins_home
+      - jenkins_certs:/certs/client:ro
+      - scan_reports:/var/reports
+    depends_on:
+      - docker-dind
+    networks:
+      - ci_network
+    entrypoint: >
+      bash -c "
+      if ! command -v pnpm &> /dev/null; then
+        echo 'Installing Node.js, jq, and pnpm on Jenkins...';
+        apt-get update &&
+        apt-get install -y --no-install-recommends curl jq nodejs &&
+        curl -fsSL https://get.pnpm.io/install.sh | SHELL=/bin/bash bash - &&
+        chmod -R 755 /root/.local/share/pnpm &&
+        ln -sf /root/.local/share/pnpm/bin/pnpm /usr/local/bin/pnpm &&
+        ln -sf /root/.local/share/pnpm/bin/pnpm /usr/bin/pnpm &&
+        rm -rf /var/lib/apt/lists/*;
+      fi;
+      exec /usr/bin/tini -s -- /usr/local/bin/jenkins.sh;
+      "
+
+  docker-dind:
+    image: docker:dind
+    container_name: superapp-jenkins-docker-dind
+    privileged: true
+    restart: unless-stopped
+    environment:
+      - DOCKER_TLS_CERTDIR=/certs
+    volumes:
+      - jenkins_data:/var/jenkins_home
+      - jenkins_certs:/certs/client
+      - scan_reports:/var/reports
+    networks:
+      ci_network:
+        aliases:
+          - docker
+    ports:
+      - "2376:2376"
+
+  # ==========================================
+  # 3. SECURITY & VERIFICATION SCANNERS
+  # ==========================================
+  owasp-zap:
+    image: zaproxy/zap-stable
+    container_name: superapp-zap
+    restart: unless-stopped
+    command: zap.sh -daemon -host 0.0.0.0 -port 8090 -config api.disablekey=true -config api.addrs.addr.name=.* -config api.addrs.addr.regex=true
+    ports:
+      - "8090:8090"
+    volumes:
+      - scan_reports:/zap/wrk
+    networks:
+      - ci_network
+
+  testssl:
+    image: drwetter/testssl.sh
+    platform: linux/amd64
+    container_name: superapp-testssl
+    entrypoint: ["tail", "-f", "/dev/null"]
+    restart: unless-stopped
+    volumes:
+      - scan_reports:/home/testssl/reports
+    networks:
+      - ci_network
+
+  nuclei:
+    image: projectdiscovery/nuclei:latest
+    container_name: superapp-nuclei
+    entrypoint: ["tail", "-f", "/dev/null"]
+    restart: unless-stopped
+    volumes:
+      - nuclei_templates:/root/nuclei-templates
+      - scan_reports:/reports
+    networks:
+      - ci_network
+
+# ==========================================
+# NETWORKS & PERSISTENT VOLUMES
+# ==========================================
+networks:
+  ci_network:
+    name: ci_network
+    driver: bridge
 
 volumes:
   pgdata:
@@ -68,8 +190,11 @@ volumes:
     name: superapp_nexus_data
   minio_data:
     name: superapp_minio_data
-
-networks:
-  default:
-    name: ci_network
-    external: true
+  jenkins_data:
+    name: superapp_jenkins_data
+  jenkins_certs:
+    name: superapp_jenkins_certs
+  scan_reports:
+    name: superapp_scan_reports
+  nuclei_templates:
+    name: superapp_nuclei_templates
