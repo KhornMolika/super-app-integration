@@ -202,7 +202,7 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
       const conf = formData.integrationConfigFlutter;
       const target = conf?.sourceType === SourceType.GIT
         ? conf.gitUrl || ''
-        : `http://localhost:8081/repository/pub-group/api/packages/${conf?.packageName || 'superapp_core'}`;
+        : `http://localhost:8081/repository/pub-group/api/packages/${conf?.packageName || 'ma_flutter_trust_regulator'}`;
       setPreviewUrl(target);
     }
     setShowPreview(true);
@@ -275,7 +275,7 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
               const target =
                 conf?.sourceType === SourceType.GIT
                   ? conf.gitUrl || ''
-                  : `http://localhost:8081/repository/pub-group/api/packages/${conf?.packageName || 'superapp_core'}`;
+                  : `http://localhost:8081/repository/pub-group/api/packages/${conf?.packageName || 'ma_flutter_trust_regulator'}`;
               setPreviewUrl(target);
             }
             setShowPreview(true);

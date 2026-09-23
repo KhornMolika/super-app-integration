@@ -788,7 +788,7 @@ class _TrustRegulatorAppEntryState extends State<TrustRegulatorAppEntry> {
                   children: [
                     Icon(Icons.extension_rounded, size: 16, color: primarySlate),
                     SizedBox(width: 8),
-                    Text('SDK Contract: dps_core_package v1.0.0', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+                    Text('SDK Contract: Native Parameter Interface', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
                   ],
                 ),
               ],

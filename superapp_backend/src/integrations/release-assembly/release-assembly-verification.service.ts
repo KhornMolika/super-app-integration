@@ -94,8 +94,6 @@ export class ReleaseAssemblyVerificationService {
                 process.cwd(),
                 `../dsp_miniapp_trust_regulator/pubspec.yaml`,
               ),
-              path.resolve(process.cwd(), `../superapp_core/pubspec.yaml`),
-              path.resolve(process.cwd(), `../dps_core_package/pubspec.yaml`),
             ];
             let foundLocal = false;
             for (const p of localPubspecPaths) {

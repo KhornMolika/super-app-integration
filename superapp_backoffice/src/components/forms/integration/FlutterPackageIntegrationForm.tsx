@@ -1486,7 +1486,7 @@ export default function FlutterPackageIntegrationForm({
                 value={flutterConfig?.packageName || ""}
                 onChange={handleFlutterChange}
                 disabled={!isEditable}
-                placeholder="e.g. superapp_core"
+                placeholder="e.g. ma_flutter_trust_regulator"
                 className={
                   nexusValidationResult?.exists === false &&
                   !archiveUploadSuccess &&

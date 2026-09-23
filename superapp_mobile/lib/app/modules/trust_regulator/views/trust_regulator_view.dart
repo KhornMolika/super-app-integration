@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:superapp_core/superapp_core.dart';
 import 'package:dps_miniapp_mobile_trust_regulator/dsp_miniapp_trust_regulator.dart';
 
 class TrustRegulatorView extends GetView {
@@ -8,15 +7,9 @@ class TrustRegulatorView extends GetView {
 
   @override
   Widget build(BuildContext context) {
-    // In a real app, this AuthContext would be retrieved from a global auth service.
-    // We mock it here for the PoC to demonstrate successful injection.
-    final authContext = AuthContext(
+    return TrustRegulatorAppEntry(
       jwtToken: 'super_app_jwt_xyz789',
       userId: 'super_app_user_456',
-    );
-
-    return TrustRegulatorAppEntry(
-      authContext: authContext,
       onExit: () {
         Get.back();
       },
