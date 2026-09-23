@@ -1,5 +1,5 @@
 # superapp_mobile/scripts/build-sandbox.ps1
-# Automates compiling Flutter Web and syncing to the Backoffice superapp-sandbox and flutter-web directories
+# Automates compiling Flutter Web and syncing to the Backoffice superapp-sandbox directory
 
 $ErrorActionPreference = "Stop"
 
@@ -12,7 +12,6 @@ if (-not (Test-Path $BackofficeDir)) {
 }
 
 $SandboxDestDir = "$BackofficeDir/public/superapp-sandbox"
-$FlutterWebDestDir = "$BackofficeDir/public/flutter-web"
 
 Write-Host "=========================================" -ForegroundColor Cyan
 Write-Host "[BUILD] Compiling Flutter Web Super App Sandbox" -ForegroundColor Cyan
@@ -34,12 +33,6 @@ if (Test-Path $BackofficeDir) {
         New-Item -ItemType Directory -Path $SandboxDestDir -Force | Out-Null
     }
     Copy-Item -Path "$MobileAppDir/build/web/*" -Destination $SandboxDestDir -Recurse -Force
-
-    Write-Host "Syncing build artifacts to $FlutterWebDestDir..." -ForegroundColor Yellow
-    if (-not (Test-Path $FlutterWebDestDir)) {
-        New-Item -ItemType Directory -Path $FlutterWebDestDir -Force | Out-Null
-    }
-    Copy-Item -Path "$MobileAppDir/build/web/*" -Destination $FlutterWebDestDir -Recurse -Force
     Write-Host "[SUCCESS] Flutter Web Super App Sandbox compiled and synced to Backoffice successfully!" -ForegroundColor Green
 } else {
     Write-Host "[SUCCESS] Flutter Web build completed at $MobileAppDir/build/web" -ForegroundColor Green

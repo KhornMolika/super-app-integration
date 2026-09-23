@@ -51,7 +51,7 @@ export default function PreviewModal({
   const [customDimensions, setCustomDimensions] = useState({ width: 800, height: 600 });
   const [reloadKey, setReloadKey] = useState(0);
   const [mounted, setMounted] = useState(false);
-  const [currentScreen, setCurrentScreen] = useState<'flutter-web' | 'miniapp'>('flutter-web');
+  const [currentScreen, setCurrentScreen] = useState<'sandbox' | 'miniapp'>('sandbox');
   
   const previewAreaRef = useRef<HTMLDivElement>(null);
   const [autoScale, setAutoScale] = useState(1);
@@ -60,13 +60,13 @@ export default function PreviewModal({
   // Set initial active screen whenever preview opens
   useEffect(() => {
     if (isOpen) {
-      setCurrentScreen(isFlutter ? 'flutter-web' : 'miniapp');
+      setCurrentScreen(isFlutter ? 'sandbox' : 'miniapp');
     }
   }, [isOpen, isFlutter]);
 
   // Effective preview URL: If Flutter package, load the real compiled Flutter Web binary!
   const effectiveUrl = (isFlutter || url.includes('localhost:8081') || !url.startsWith('http'))
-    ? '/flutter-web/index.html'
+    ? '/superapp-sandbox/index.html'
     : url;
 
   useEffect(() => {
@@ -261,9 +261,9 @@ export default function PreviewModal({
           <div className="flex bg-slate-800/90 rounded-xl p-0.5 border border-slate-700/80 text-xs shadow-xs">
             <button
               type="button"
-              onClick={() => setCurrentScreen('flutter-web')}
+              onClick={() => setCurrentScreen('sandbox')}
               className={`px-3 py-1 font-semibold rounded-lg transition-all flex items-center gap-1.5 ${
-                currentScreen === 'flutter-web'
+                currentScreen === 'sandbox'
                   ? 'bg-brand-600 text-white shadow-xs'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
@@ -350,7 +350,7 @@ export default function PreviewModal({
               )}
 
               {/* Viewport Content: Flutter Web Super App Container vs Mock Home vs Direct Mini App */}
-              {currentScreen === 'flutter-web' ? (
+              {currentScreen === 'sandbox' ? (
                 <div className="w-full h-full relative z-10 flex flex-col bg-slate-950 overflow-hidden">
                   {/* Top Bar for Flutter Web Container */}
                   <div className="h-10 pt-2 px-4 bg-slate-900 border-b border-slate-800 text-white flex items-center justify-between z-20 flex-shrink-0">
@@ -387,7 +387,7 @@ export default function PreviewModal({
                   <div className="h-12 bg-slate-900 border-b border-slate-800 text-white px-3 flex items-center justify-between z-20 flex-shrink-0">
                     <button
                       type="button"
-                      onClick={() => setCurrentScreen('flutter-web')}
+                      onClick={() => setCurrentScreen('sandbox')}
                       className="flex items-center gap-1.5 text-xs text-brand-400 hover:text-brand-300 font-semibold px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors"
                       title="Switch to Flutter Super App Container"
                     >
@@ -416,7 +416,7 @@ export default function PreviewModal({
                       </button>
                       <button
                         type="button"
-                        onClick={() => setCurrentScreen('flutter-web')}
+                        onClick={() => setCurrentScreen('sandbox')}
                         className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-800"
                         title="Back to Super App"
                       >
