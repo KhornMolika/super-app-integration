@@ -17,6 +17,18 @@ import {
   ReassignGroupDto,
   AssignAppGroupDto,
 } from './dto/telegram-channel.dto';
+import type { TelegramUpdate } from './helpers/telegram.types';
+
+interface AuthenticatedRequest {
+  user?: {
+    sub?: string;
+    id?: string;
+    email?: string;
+    name?: string;
+    telegramChatId?: string;
+    telegramUsername?: string;
+  };
+}
 
 @Controller(['telegram', 'api/telegram'])
 export class TelegramController {
@@ -24,7 +36,7 @@ export class TelegramController {
 
   @Get('status')
   @UseGuards(JwtAuthGuard)
-  async getStatus(@Req() req: any) {
+  async getStatus(@Req() req: AuthenticatedRequest) {
     const botInfo = this.telegramService.getBotInfo();
     const userId = req.user?.sub || req.user?.id;
     const dbUser = userId ? await this.telegramService.getUser(userId) : null;
@@ -46,7 +58,7 @@ export class TelegramController {
 
   @Get('connect-url')
   @UseGuards(JwtAuthGuard)
-  async getConnectUrl(@Req() req: any) {
+  getConnectUrl(@Req() req: AuthenticatedRequest) {
     const userId = req.user?.sub || req.user?.id;
     if (!userId) {
       throw new BadRequestException('User ID not found');
@@ -59,21 +71,23 @@ export class TelegramController {
 
   @Get('add-group-url')
   @UseGuards(JwtAuthGuard)
-  async getAddGroupUrl(@Req() req: any) {
+  getAddGroupUrl(@Req() req: AuthenticatedRequest) {
     const userId = req.user?.sub || req.user?.id;
     return {
-      url: this.telegramService.getAddGroupUrl(userId ? `user_${userId}` : undefined),
+      url: this.telegramService.getAddGroupUrl(
+        userId ? `user_${userId}` : undefined,
+      ),
     };
   }
 
   @Post('webhook')
-  async handleWebhook(@Body() update: any) {
+  async handleWebhook(@Body() update: TelegramUpdate) {
     return this.telegramService.handleWebhookUpdate(update);
   }
 
   @Get('recent-groups')
   @UseGuards(JwtAuthGuard)
-  async getRecentGroups(@Req() req: any) {
+  async getRecentGroups(@Req() req: AuthenticatedRequest) {
     const userId = req.user?.sub || req.user?.id;
     const groups = await this.telegramService.getRecentGroups(userId);
     return { groups };
@@ -88,7 +102,7 @@ export class TelegramController {
 
   @Get('user-groups')
   @UseGuards(JwtAuthGuard)
-  async getUserGroups(@Req() req: any) {
+  async getUserGroups(@Req() req: AuthenticatedRequest) {
     const userId = req.user?.sub || req.user?.id;
     const groups = await this.telegramService.getUserTelegramGroups(userId);
     return { groups };
@@ -105,7 +119,7 @@ export class TelegramController {
 
   @Post('check-sync')
   @UseGuards(JwtAuthGuard)
-  async checkSync(@Req() req: any) {
+  async checkSync(@Req() req: AuthenticatedRequest) {
     const userId = req.user?.sub || req.user?.id;
     if (!userId) {
       throw new BadRequestException('User ID not found');
@@ -118,12 +132,13 @@ export class TelegramController {
   @Post('manual-connect')
   @UseGuards(JwtAuthGuard)
   async manualConnect(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body() body: ManualConnectDto,
   ) {
     const userId = req.user?.sub || req.user?.id;
     if (!userId) throw new BadRequestException('User ID not found');
-    if (!body.chatId?.trim()) throw new BadRequestException('Chat ID is required');
+    if (!body.chatId?.trim())
+      throw new BadRequestException('Chat ID is required');
 
     const user = await this.telegramService.linkTelegramAccount(
       userId,
@@ -138,7 +153,7 @@ export class TelegramController {
   @Post('save-team-chat')
   @UseGuards(JwtAuthGuard)
   async saveTeamChat(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body() body: SaveTeamChatDto,
   ) {
     const userId = req.user?.sub || req.user?.id;
@@ -150,21 +165,26 @@ export class TelegramController {
     );
 
     if (body.teamTelegramChatId?.trim()) {
-      this.telegramService
+      void this.telegramService
         .persistDiscoveredGroup(
           body.teamTelegramChatId.trim(),
           'Saved User Team Channel',
           'group',
         )
-        .catch(() => {});
+        .catch(() => {
+          /* ignore */
+        });
     }
 
-    return { success: true, teamTelegramChatId: user?.teamTelegramChatId || null };
+    return {
+      success: true,
+      teamTelegramChatId: user?.teamTelegramChatId || null,
+    };
   }
 
   @Post('disconnect')
   @UseGuards(JwtAuthGuard)
-  async disconnect(@Req() req: any) {
+  async disconnect(@Req() req: AuthenticatedRequest) {
     const userId = req.user?.sub || req.user?.id;
     if (!userId) throw new BadRequestException('User ID not found');
 
@@ -174,7 +194,7 @@ export class TelegramController {
 
   @Post('test-user')
   @UseGuards(JwtAuthGuard)
-  async testUserAlert(@Req() req: any) {
+  async testUserAlert(@Req() req: AuthenticatedRequest) {
     const userId = req.user?.sub || req.user?.id;
     const dbUser = userId ? await this.telegramService.getUser(userId) : null;
     const chatId = dbUser?.telegramChatId || req.user?.telegramChatId;
@@ -202,7 +222,7 @@ export class TelegramController {
   @Post('test-team')
   @UseGuards(JwtAuthGuard)
   async testTeamAlert(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body() body: TestTeamAlertDto,
   ) {
     const userId = req.user?.sub || req.user?.id;
@@ -231,9 +251,11 @@ export class TelegramController {
     );
 
     if (result && result.success) {
-      this.telegramService
+      void this.telegramService
         .persistDiscoveredGroup(targetChat, appName, 'group')
-        .catch(() => {});
+        .catch(() => {
+          /* ignore */
+        });
     }
 
     return result;
@@ -242,7 +264,7 @@ export class TelegramController {
   @Post('reassign-group')
   @UseGuards(JwtAuthGuard)
   async reassignGroup(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body() body: ReassignGroupDto,
   ) {
     const userId = req.user?.sub || req.user?.id;
@@ -260,7 +282,7 @@ export class TelegramController {
   @Post('assign-app-group')
   @UseGuards(JwtAuthGuard)
   async assignAppGroup(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body() body: AssignAppGroupDto,
   ) {
     const userId = req.user?.sub || req.user?.id;
@@ -277,7 +299,7 @@ export class TelegramController {
 
   @Post('cleanup-inactive')
   @UseGuards(JwtAuthGuard)
-  async cleanupInactive(@Req() req: any) {
+  async cleanupInactive(@Req() req: AuthenticatedRequest) {
     const userId = req.user?.sub || req.user?.id;
     return this.telegramService.cleanupInactiveGroups(userId);
   }

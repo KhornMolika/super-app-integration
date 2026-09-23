@@ -955,9 +955,19 @@ export default function FlutterPackageIntegrationForm({
                     <KeyIcon className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
                     <div className="leading-relaxed">
                       <strong className="text-slate-800 dark:text-slate-200">Owner-Provided Deploy Key:</strong>{" "}
-                      Please generate an SSH key pair for your repository, add the public key to your repository&apos;s Deploy Keys (read-only), and input your private key below. The platform never shares platform keys and uses your key ephemerally during package verification.
+                      Please generate an SSH key pair for your repository, add the public key to your repository&apos;s Deploy Keys (read-only), and input your private key below. The platform stores your key encrypted at rest (AES-256-GCM) and uses it ephemerally during package verification.
                     </div>
                   </div>
+
+                  {/* If key is already configured & encrypted */}
+                  {Boolean(flutterConfig?.hasDeployKey || flutterConfig?.deployKey === '********') && (
+                    <div className="flex items-center gap-2.5 bg-emerald-50/90 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 px-3.5 py-2.5 rounded-xl text-xs text-emerald-800 dark:text-emerald-200">
+                      <ShieldCheckIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <div className="flex-1 leading-relaxed">
+                        <strong>Deploy Key Configured &amp; Encrypted:</strong> A private deploy key is already saved and secured with AES-256-GCM. Leave the field below as is to keep your existing key, or paste a new private key to replace it.
+                      </div>
+                    </div>
+                  )}
 
                   {/* Direct Input for Owner's Private Key */}
                   <div className="space-y-1.5">
@@ -1071,6 +1081,13 @@ export default function FlutterPackageIntegrationForm({
                         </li>
                       </ol>
                     )}
+
+                    <div className="mt-2.5 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-[11px] text-amber-800 dark:text-amber-200 flex items-start gap-2">
+                      <AlertTriangleIcon className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                      <div>
+                        <strong>Security Rule:</strong> Always keep <strong>&quot;Allow write access&quot; unchecked</strong> (read-only) in your repository settings. The platform only requires read access to verify and build your package.
+                      </div>
+                    </div>
                   </div>
                 </div>
               ) : (

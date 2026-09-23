@@ -10,7 +10,7 @@ export class StorageService implements OnModuleInit {
   private minioClient: MinioClient;
   private assetsBucket: string;
   private packageSubmissionsBucket: string;
-  private sdkSubmissionsBucket: string;
+  readonly sdkSubmissionsBucket: string;
   private publicUrl: string;
 
   constructor(private readonly configService: ConfigService) {

@@ -15,6 +15,7 @@ import {
 } from './git-provider.interface';
 import { GitHubProvider } from './providers/github.provider';
 import { GitLabProvider } from './providers/gitlab.provider';
+import { decryptCredential } from '../../common/utils/credential-cipher.util';
 
 export interface GitDeployKeyInfo {
   publicKey: string;
@@ -293,7 +294,7 @@ export class GitIntegrationService {
       // REST API failed, fallback to ls-remote
     }
 
-    const ls = await this.lsRemote(url, deployKey);
+    const ls = await this.lsRemote(url, decryptCredential(deployKey));
     return {
       provider: provider.type,
       commitSha: ls.headSha || '',
@@ -308,7 +309,8 @@ export class GitIntegrationService {
     url: string,
     customDeployKey?: string,
   ): Promise<{ branches: string[]; tags: string[]; headSha?: string }> {
-    const rawKey = customDeployKey || this.getDeployPrivateKey();
+    const rawKey =
+      decryptCredential(customDeployKey) || this.getDeployPrivateKey();
     let tempKeyFile: string | null = null;
 
     try {

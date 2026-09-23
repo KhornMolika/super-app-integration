@@ -10,6 +10,15 @@ import { MailService } from './mail.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { SendTestEmailDto } from './dto/mail-channel.dto';
 
+interface AuthenticatedRequest {
+  user?: {
+    email?: string;
+    name?: string;
+    sub?: string;
+    id?: string;
+  };
+}
+
 @Controller(['mail', 'api/mail'])
 export class MailController {
   constructor(private readonly mailService: MailService) {}
@@ -17,7 +26,7 @@ export class MailController {
   @Post('test')
   @UseGuards(JwtAuthGuard)
   async sendTestEmail(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body() body: SendTestEmailDto,
   ) {
     const targetEmail = body.email?.trim() || req.user?.email;
@@ -28,7 +37,9 @@ export class MailController {
     const userName = req.user?.name || 'User';
     const result = await this.mailService.sendTestEmail(targetEmail, userName);
     if (!result.success) {
-      throw new BadRequestException(result.message || 'Failed to send test email');
+      throw new BadRequestException(
+        result.message || 'Failed to send test email',
+      );
     }
 
     return result;

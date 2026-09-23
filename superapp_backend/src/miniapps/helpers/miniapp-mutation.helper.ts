@@ -11,6 +11,7 @@ import { PermissionDetectorHelper } from './permission-detector.helper';
 import { VersionDiffHelper } from './version-diff.helper';
 import { inferPackageNameFromGitUrl } from '../../integrations/git/git-integration.service';
 import { resolveOrganizationDetails } from '../../common/constants/fsa-organizations';
+import { secureFlutterIntegrationConfig } from './flutter-credential.helper';
 
 @Injectable()
 export class MiniappMutationHelper {
@@ -84,6 +85,9 @@ export class MiniappMutationHelper {
       }
     } else if (data.integrationMethod === 'FLUTTER_PACKAGE') {
       if (data.integrationConfig) {
+        data.integrationConfig = secureFlutterIntegrationConfig(
+          data.integrationConfig,
+        );
         if (!data.integrationConfig.packageName && data.integrationConfig.gitUrl) {
           data.integrationConfig.packageName = inferPackageNameFromGitUrl(
             data.integrationConfig.gitUrl,
@@ -359,9 +363,15 @@ export class MiniappMutationHelper {
           existingRev.integrationMethod ??
           existing.integrationMethod,
         integrationConfig:
-          data.integrationConfig ??
-          existingRev.integrationConfig ??
-          existing.integrationConfig,
+          data.integrationMethod === 'FLUTTER_PACKAGE' ||
+          existing.integrationMethod === 'FLUTTER_PACKAGE'
+            ? secureFlutterIntegrationConfig(
+                data.integrationConfig,
+                existingRev.integrationConfig ?? existing.integrationConfig,
+              )
+            : (data.integrationConfig ??
+              existingRev.integrationConfig ??
+              existing.integrationConfig),
         permissions:
           data.permissions ?? existingRev.permissions ?? existing.permissions,
         securityChecks:
@@ -471,6 +481,10 @@ export class MiniappMutationHelper {
       merged.integrationMethod === 'FLUTTER_PACKAGE' &&
       merged.integrationConfig
     ) {
+      merged.integrationConfig = secureFlutterIntegrationConfig(
+        merged.integrationConfig,
+        existing.integrationConfig,
+      );
       if (
         !merged.integrationConfig.packageName &&
         merged.integrationConfig.gitUrl

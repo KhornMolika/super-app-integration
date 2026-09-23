@@ -100,8 +100,8 @@ export class ArtifactScannerService {
   async scanAar(
     buffer: Buffer,
     filename: string,
-  ): Promise<Partial<NativeSdkConfigDto>> {
-    const result: Partial<NativeSdkConfigDto> = {
+  ): Promise<ScannedNativeSdkResult> {
+    const result: ScannedNativeSdkResult = {
       androidArtifactFilename: filename,
     };
 

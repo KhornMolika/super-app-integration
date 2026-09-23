@@ -15,6 +15,10 @@ import {
   getDefaultChecksForMethod,
 } from '../../integrations/validation/local-security-scanner.service';
 import { resolveBackofficeBaseUrl } from '../../common/utils/network.utils';
+import {
+  extractDecryptedDeployKey,
+  extractDecryptedGitToken,
+} from './flutter-credential.helper';
 
 @Injectable()
 export class MiniappLifecycleHelper {
@@ -126,8 +130,12 @@ export class MiniappLifecycleHelper {
         checks: app.securityChecks || getDefaultChecksForMethod(method),
         isPrivateRepo: cfg.isPrivateRepo === true,
         gitAuthMethod: cfg.authMethod || (cfg.isPrivateRepo ? 'deploy_key' : 'none'),
-        gitAccessToken: cfg.gitAccessToken || cfg.token || '',
-        deployKey: cfg.deployKey || '',
+        gitAccessToken: extractDecryptedGitToken(cfg),
+        deployKey:
+          extractDecryptedDeployKey(cfg) ||
+          (cfg.authMethod === 'deploy_key' || (cfg.isPrivateRepo && !cfg.gitAccessToken)
+            ? this.gitService.getDeployPrivateKey()
+            : ''),
       })
       .then(async (res) => {
         if (!res?.success) {
@@ -261,9 +269,9 @@ export class MiniappLifecycleHelper {
         checks: activeChecks,
         isPrivateRepo: cfg.isPrivateRepo === true,
         gitAuthMethod: cfg.authMethod || (cfg.isPrivateRepo ? 'deploy_key' : 'none'),
-        gitAccessToken: cfg.gitAccessToken || cfg.token || '',
+        gitAccessToken: extractDecryptedGitToken(cfg),
         deployKey:
-          cfg.deployKey ||
+          extractDecryptedDeployKey(cfg) ||
           (cfg.authMethod === 'deploy_key' || (cfg.isPrivateRepo && !cfg.gitAccessToken)
             ? this.gitService.getDeployPrivateKey()
             : ''),

@@ -25,6 +25,10 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RbacGuard } from '../access-control/guards/rbac.guard';
 import { stripNativeSdkServerKeys } from './helpers/native-sdk-config.helper';
 import { UrlProbeHelper } from './helpers/url-probe.helper';
+import {
+  maskMiniAppCredentials,
+  secureFlutterIntegrationConfig,
+} from './helpers/flutter-credential.helper';
 
 import { RequirePermissions } from '../access-control/decorators/require-permissions.decorator';
 
@@ -78,7 +82,9 @@ export class MiniappsController {
         }
       }
     } else if (dto.integrationMethod === 'FLUTTER_PACKAGE') {
-      dataToSave.integrationConfig = dto.integrationConfigFlutter;
+      dataToSave.integrationConfig = secureFlutterIntegrationConfig(
+        dto.integrationConfigFlutter,
+      );
     } else if (dto.integrationMethod === 'DEEP_LINK') {
       dataToSave.integrationConfig = dto.integrationConfigDeepLink;
     } else if (dto.integrationMethod === 'NATIVE_SDK') {
@@ -98,20 +104,22 @@ export class MiniappsController {
 
   @Post('draft')
   @RequirePermissions('miniapp:create')
-  createDraft(@Body() createData: any, @Req() req: any) {
+  async createDraft(@Body() createData: any, @Req() req: any) {
     const dataToSave = this.extractIntegrationConfig(createData);
     dataToSave.status = MiniAppStatus.DRAFT;
     dataToSave.ownerId = req.user.sub;
-    return this.miniappService.create(dataToSave, req.user.sub);
+    const created = await this.miniappService.create(dataToSave, req.user.sub);
+    return maskMiniAppCredentials(created);
   }
 
   @Post()
   @RequirePermissions('miniapp:create')
-  create(@Body() createData: CreateMiniAppDto, @Req() req: any) {
+  async create(@Body() createData: CreateMiniAppDto, @Req() req: any) {
     const dataToSave = this.extractIntegrationConfig(createData);
     dataToSave.status = MiniAppStatus.IN_REVIEW;
     dataToSave.ownerId = req.user.sub;
-    return this.miniappService.create(dataToSave, req.user.sub);
+    const created = await this.miniappService.create(dataToSave, req.user.sub);
+    return maskMiniAppCredentials(created);
   }
 
   @Get()
@@ -121,7 +129,10 @@ export class MiniappsController {
     const user = req?.user;
     const roles = user?.roles || [];
     try {
-      return await this.miniappService.findAll(query, roles, user);
+      const apps = await this.miniappService.findAll(query, roles, user);
+      return Array.isArray(apps)
+        ? apps.map((a) => maskMiniAppCredentials(a))
+        : maskMiniAppCredentials(apps);
     } catch (error: any) {
       console.error('FIND ALL ERROR:', error);
       throw new HttpException(
@@ -315,19 +326,25 @@ export class MiniappsController {
 
   @Get(':id')
   @RequirePermissions('miniapp:read')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.miniappService.findOne(id);
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
+    const app = await this.miniappService.findOne(id);
+    return maskMiniAppCredentials(app);
   }
 
   @Patch(':id')
   @RequirePermissions('miniapp:update')
-  update(
+  async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateData: UpdateMiniAppDto,
     @Req() req: any,
   ) {
     const dataToSave = this.extractIntegrationConfig(updateData);
-    return this.miniappService.update(id, dataToSave, req.user.sub);
+    const updated = await this.miniappService.update(
+      id,
+      dataToSave,
+      req.user.sub,
+    );
+    return maskMiniAppCredentials(updated);
   }
 
   @Delete(':id')
