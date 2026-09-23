@@ -90,7 +90,7 @@ dsp-poc/
 ### 4.1. The 5 Integration Tiers
 1. **WebView (`WEBVIEW`)**:
    * Mini Apps run as responsive web applications served from partner infrastructure.
-   * Super App embeds the webview and injects `DSPNativeBridge` into `window` for secure bidirectional JavaScript-to-Native communication.
+   * Super App embeds the webview and injects `SuperAppJSBridge` into `window` for secure bidirectional JavaScript-to-Native communication.
    * Access to native capabilities (`getLocation`, `getBiometrics`, `openCamera`, `getDeviceInfo`, secure storage) is guarded by permissions approved in the Backoffice.
 2. **Flutter Package Artifact (`FLUTTER_PACKAGE_ARTIFACT`)**:
    * Pre-compiled / published Dart package artifacts hosted in a private repository (e.g., Sonatype Nexus hosted Pub repository).

@@ -31,29 +31,13 @@ declare global {
     SuperAppJSBridge?: {
       postMessage: (message: string) => void;
     };
-    SuperAppNativeBridge?: {
-      postMessage: (message: string) => void;
-    };
-    DSPNativeBridge?: {
-      postMessage: (message: string) => void;
-    };
-    SuperAppJSBridge?: {
-      postMessage: (message: string) => void;
-    };
     superappCallback?: (callbackId: string, data: unknown) => void;
-    dspCallback?: (callbackId: string, data: unknown) => void;
-    DPSCallback?: (callbackId: string, data: unknown) => void;
   }
 }
 
 function getBridge() {
   if (typeof window === "undefined") return undefined;
-  return (
-    window.SuperAppJSBridge ||
-    window.SuperAppNativeBridge ||
-    window.DSPNativeBridge ||
-    window.SuperAppJSBridge
-  );
+  return window.SuperAppJSBridge;
 }
 
 function subscribeBridge(callback: () => void) {

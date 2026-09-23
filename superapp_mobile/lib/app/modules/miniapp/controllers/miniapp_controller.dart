@@ -80,14 +80,6 @@ class MiniappController extends GetxController {
         'SuperAppJSBridge',
         onMessageReceived: (JavaScriptMessage message) => _handleBridgeMessage(ctrl, message.message),
       )
-      ..addJavaScriptChannel(
-        'SuperAppNativeBridge',
-        onMessageReceived: (JavaScriptMessage message) => _handleBridgeMessage(ctrl, message.message),
-      )
-      ..addJavaScriptChannel(
-        'DSPNativeBridge',
-        onMessageReceived: (JavaScriptMessage message) => _handleBridgeMessage(ctrl, message.message),
-      )
       ..loadRequest(Uri.parse(finalUrl));
     webViewController = ctrl;
   }

@@ -46,7 +46,7 @@ flowchart TD
     subgraph MobileRuntime["Super App Mobile Runtime"]
         RealPhone["Physical Android Phone (arm64-v8a)"]
         SuperAppUI["Super App OneHub UI"]
-        NativeBridge["DSPNativeBridge (Biometrics, Geo, Camera)"]
+        NativeBridge["SuperAppJSBridge (Biometrics, Geo, Camera)"]
     end
 
     Dev -->|1. Register & Submit| BO_UI
@@ -86,7 +86,7 @@ The platform natively supports five distinct integration tiers:
 
 1. **WebView (`WEBVIEW`)**:
    * Mini Apps run as responsive web applications served from partner infrastructure.
-   * Super App injects `DSPNativeBridge` into `window` for secure bidirectional communication between web and native device layers.
+   * Super App injects `SuperAppJSBridge` into `window` for secure bidirectional communication between web and native device layers.
    * Access to native capabilities (e.g., `getLocation`, `getBiometrics`, `openCamera`, `getDeviceInfo`, secure storage) is governed by granular permissions approved in the Backoffice.
 
 2. **Flutter Package Artifact (`FLUTTER_PACKAGE_ARTIFACT`)**:

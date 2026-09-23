@@ -20,12 +20,7 @@ export interface NativeBridgeChannel {
 declare global {
   interface Window {
     SuperAppJSBridge?: NativeBridgeChannel;
-    SuperAppNativeBridge?: NativeBridgeChannel;
-    DSPNativeBridge?: NativeBridgeChannel;
-    SuperAppJSBridge?: NativeBridgeChannel;
     superappCallback?: (callbackId: string, data: unknown) => void;
-    dspCallback?: (callbackId: string, data: unknown) => void;
-    DPSCallback?: (callbackId: string, data: unknown) => void;
   }
 }
 
@@ -34,10 +29,5 @@ declare global {
  */
 export function getSuperAppBridge(): NativeBridgeChannel | undefined {
   if (typeof window === "undefined") return undefined;
-  return (
-    window.SuperAppJSBridge ||
-    window.SuperAppNativeBridge ||
-    window.DSPNativeBridge ||
-    window.SuperAppJSBridge
-  );
+  return window.SuperAppJSBridge;
 }
