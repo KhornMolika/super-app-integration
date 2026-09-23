@@ -84,32 +84,10 @@ export class ReleaseAssemblyVerificationService {
             app.packageName,
           );
           if (!pkgInfo.exists) {
-            const localPubspecPaths = [
-              path.resolve(process.cwd(), `../${app.packageName}/pubspec.yaml`),
-              path.resolve(
-                process.cwd(),
-                `../ma_flutter_trust_regulator/pubspec.yaml`,
-              ),
-            ];
-            let foundLocal = false;
-            for (const p of localPubspecPaths) {
-              if (fs.existsSync(p)) {
-                foundLocal = true;
-                const content = fs.readFileSync(p, 'utf-8');
-                nexusChecksum = crypto
-                  .createHash('sha256')
-                  .update(content)
-                  .digest('hex');
-                break;
-              }
-            }
-
-            if (!foundLocal) {
-              conflicts.push(
-                `Package '${app.packageName}' not found on Nexus pub-group.`,
-              );
-              allChecksumsMatched = false;
-            }
+            conflicts.push(
+              `Package '${app.packageName}' not found on Nexus pub-group.`,
+            );
+            allChecksumsMatched = false;
           } else {
             // Look up specific version
             const versionDetail =
@@ -221,10 +199,11 @@ export class ReleaseAssemblyVerificationService {
 
     if (passed) {
       try {
-        const releaseManifestPath = path.resolve(
-          this.pubspecService.getMobileAppDir(),
-          'super_app_release.json',
-        );
+        const dataDir = path.resolve(process.cwd(), 'data');
+        if (!fs.existsSync(dataDir)) {
+          fs.mkdirSync(dataDir, { recursive: true });
+        }
+        const releaseManifestPath = path.join(dataDir, 'super_app_release.json');
         fs.writeFileSync(
           releaseManifestPath,
           JSON.stringify(manifest, null, 2),

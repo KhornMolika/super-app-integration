@@ -54,20 +54,17 @@ dsp-poc/
 │   │   │   │   ├── login/           # Auth screen with runtime host configuration
 │   │   │   │   └── miniapp/         # Native WebView container with JS Bridge
 │   │   │   └── routes/              # GetX navigation routes
-│   └── build/                       # Multi-arch APK & Web artifacts
+│   └── scripts/                     # Mobile build & APK download scripts
 │
-├── dps_core_package/                # Shared Dart/Flutter library across packages
-├── ma_flutter_trust_regulator/     # Example Flutter In-App Module Mini App
-├── dps_webview_webapp_banking/      # Sample WebView Mini App: Banking (Port 3003)
-├── dps_webview_webapp_insurance/    # Sample WebView Mini App: Insurance (Port 3004)
-├── scripts/
-│   ├── jenkins/
-│   │   ├── Jenkinsfile.superapp-test-build # CI/CD pipeline for APK & Web builds
-│   │   └── Jenkinsfile.miniapp-validation  # Universal security gate pipeline (all methods)
-│   ├── download-test-apk.ps1       # One-click Windows PowerShell download script
-│   └── download-test-apk.sh        # Bash download script for Linux/macOS
-└── doc/
-    └── Mini_App_Integration_Architecture_v2.md # End-to-end architecture specification
+└── ../superapp-miniapps/            # Standalone Partner Mini-Apps Repository
+    ├── ma_flutter_trust_regulator/  # Example Flutter In-App Module Mini App
+    ├── ma_flutter_kyc/              # Cambodia Digital KYC Verifier SDK
+    ├── ma_flutter_loyalty/          # Loyalty Rewards & Points module
+    ├── ma_flutter_transit/          # Smart City Transit Pass module
+    ├── ma_webview_banking/          # Sample WebView Mini App: Banking (Port 3003)
+    ├── ma_webview_insurance/        # Sample WebView Mini App: Insurance (Port 3004)
+    ├── ma_deeplink_tax/             # Deep Link Mini App: Cambodia E-Tax
+    └── ma_nativesdk_spa/            # Native SDK Mini App: Lotus Spa
 ```
 
 ---

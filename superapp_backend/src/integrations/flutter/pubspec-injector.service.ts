@@ -186,13 +186,17 @@ export class PubspecInjectorService {
     } else if (version) {
       dependencyValue = version;
     } else {
-      // Default: Check if local package exists in workspace directory
-      const candidateLocalDir = path.resolve(this.getMobileAppDir(), `../${packageName}`);
-      if (fs.existsSync(candidateLocalDir)) {
-        dependencyValue = { path: `../${packageName}` };
-      } else {
-        dependencyValue = `^${version || '1.0.0'}`;
-      }
+      // Default: Resolve dynamically from private Nexus pub-group registry
+      const nexusPubGroup =
+        hostedUrl ||
+        `${(this.configService.get<string>('NEXUS_BASE_URL') || 'http://localhost:8081').replace(/\/+$/, '')}/repository/pub-group`;
+      dependencyValue = {
+        hosted: {
+          name: packageName,
+          url: nexusPubGroup,
+        },
+        version: version ? `^${version}` : '^1.0.0',
+      };
     }
 
     dependenciesNode?.set(packageName, dependencyValue);

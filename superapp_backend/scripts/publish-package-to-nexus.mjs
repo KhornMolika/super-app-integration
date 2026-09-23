@@ -112,9 +112,16 @@ async function publishPackage(pkgDir, pkgName, version = '1.0.0') {
 }
 
 async function main() {
-  const rootDir = process.cwd();
-  const trustDir = path.join(rootDir, 'ma_flutter_trust_regulator');
-  await publishPackage(trustDir, 'ma_flutter_trust_regulator', '1.0.0');
+  const targetDir = process.argv[2] || process.env.PACKAGE_DIR;
+  if (!targetDir) {
+    console.log('Usage: node scripts/publish-package-to-nexus.mjs <package_directory> [package_name] [version]');
+    console.log('Example: node scripts/publish-package-to-nexus.mjs ../superapp-miniapps/ma_flutter_trust_regulator ma_flutter_trust_regulator 1.0.0');
+    return;
+  }
+  const resolvedDir = path.resolve(targetDir);
+  const pkgName = process.argv[3] || path.basename(resolvedDir);
+  const version = process.argv[4] || '1.0.0';
+  await publishPackage(resolvedDir, pkgName, version);
 }
 
 main().catch((err) => {

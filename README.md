@@ -70,13 +70,10 @@ flowchart TD
 
 | Component | Directory | Technology | Default Port | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| **Backend API** | [`dps_backend/`](file:///d:/Projects/fintect/dsp-poc/dps_backend) | NestJS, TypeORM, PostgreSQL | `3000` | Central API managing auth, Mini App lifecycles, Jenkins CI/CD callbacks, and issue tracking. |
-| **Backoffice Portal** | [`dps_webapp_backoffice/`](file:///d:/Projects/fintect/dsp-poc/dps_webapp_backoffice) | Next.js 16 (Turbopack), Tailwind CSS | `3002` | Admin dashboard for reviewing apps, inspecting JS bridges, running Flutter Web sandbox, and downloading APKs. |
-| **Super App Mobile Container** | [`dps_mobile_app/`](file:///d:/Projects/fintect/dsp-poc/dps_mobile_app) | Flutter 3.44+, Dart 3.12+, GetX | N/A (App) | Production-ready Super App featuring OneHub UI, digital wallet, featured mini app launcher, and dynamic LAN IP resolver. |
-| **Core Shared Library** | [`dps_core_package/`](file:///d:/Projects/fintect/dsp-poc/dps_core_package) | Dart / Flutter | N/A (Package) | Shared contracts, base models, and native communication interfaces. |
-| **Example Flutter Mini App** | [`ma_flutter_trust_regulator/`](file:///d:/Projects/fintect/dsp-poc/ma_flutter_trust_regulator) | Flutter / Dart | N/A (Module) | Sample in-app package mini app compiled directly into the Super App runtime. |
-| **Banking Mini App** | [`dps_webview_webapp_banking/`](file:///d:/Projects/fintect/dsp-poc/dps_webview_webapp_banking) | Next.js, React, Tailwind CSS | `3003` | Sample WebView Mini App with live biometrics, camera, and location bridge calls. |
-| **Insurance Mini App** | [`dps_webview_webapp_insurance/`](file:///d:/Projects/fintect/dsp-poc/dps_webview_webapp_insurance) | Next.js, React, Tailwind CSS | `3004` | Sample WebView Mini App for policy management and claims verification. |
+| **Backend API** | [`superapp_backend/`](file:///d:/Projects/fintect/dsp-poc/superapp_backend) | NestJS, TypeORM, PostgreSQL | `3000` | Central API managing auth, Mini App lifecycles, Jenkins CI/CD callbacks, and issue tracking. |
+| **Backoffice Portal** | [`superapp_backoffice/`](file:///d:/Projects/fintect/dsp-poc/superapp_backoffice) | Next.js 16 (Turbopack), Tailwind CSS | `3002` | Admin dashboard for reviewing apps, inspecting JS bridges, running Flutter Web sandbox, and downloading APKs. |
+| **Super App Mobile Shell** | [`superapp_mobile/`](file:///d:/Projects/fintect/dsp-poc/superapp_mobile) | Flutter 3.44+, Dart 3.12+, GetX | N/A (App) | Dynamic clean base simulator shell; approved mini-apps are injected dynamically via Nexus or remote Git. |
+| **Partner Mini-Apps** | `../superapp-miniapps/` | Flutter / Webview / Native SDK | Various | Independent catalog of partner mini-apps maintained in standalone repository. |
 
 ---
 

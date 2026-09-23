@@ -171,9 +171,10 @@ export class SuperAppService implements OnApplicationBootstrap {
     try {
       const mobileDir = this.configService.get<string>('MOBILE_APP_DIR');
       const candidatePaths = [
+        path.resolve(process.cwd(), 'data/super_app_release.json'),
+        path.resolve(__dirname, '../../data/super_app_release.json'),
         ...(mobileDir ? [path.resolve(process.cwd(), mobileDir, 'super_app_release.json')] : []),
         path.resolve(process.cwd(), '../superapp_mobile/super_app_release.json'),
-        path.resolve(process.cwd(), '../dps_mobile_app/super_app_release.json'),
       ];
       for (const releaseManifestPath of candidatePaths) {
         if (fs.existsSync(releaseManifestPath)) {

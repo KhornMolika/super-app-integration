@@ -1,0 +1,15 @@
+{
+  "superAppVersion": "1.0.0",
+  "buildTimestamp": "2026-09-23T10:02:54.142Z",
+  "bundledMiniApps": [
+    {
+      "id": "app-1",
+      "packageName": "p",
+      "version": "1.0.0",
+      "checksum": "2817a76ad7b35522ecf5f4b299eec877b3b0051b4f54614a9d56712937563e0e",
+      "entryPoint": "package:p/p.dart"
+    }
+  ],
+  "consolidatedPermissions": [],
+  "integrityDigest": "e740402f6ac759f69155e3288b406a8e4104fbe9e22a1660c1239ee923474604"
+}
