@@ -319,7 +319,7 @@ export class ArtifactDistributionHelper {
         }
 
         const mockContent = Buffer.from(
-          `DPS_APK_BINARY_PAYLOAD [MiniApp: ${app.name}, Version: ${version}, Type: ${artifactType.toUpperCase()}]`,
+          `SUPERAPP_APK_BINARY_PAYLOAD [MiniApp: ${app.name}, Version: ${version}, Type: ${artifactType.toUpperCase()}]`,
         );
         res?.setHeader?.(
           'Content-Type',
@@ -351,7 +351,7 @@ export class ArtifactDistributionHelper {
     } catch (err: any) {
       this.logger.error(`Error proxying artifact from Nexus: ${err.message}`);
       const mockContent = Buffer.from(
-        `DPS_APK_BINARY_PAYLOAD [MiniApp: ${app.name}, Version: ${version}, Type: ${artifactType.toUpperCase()}]`,
+        `SUPERAPP_APK_BINARY_PAYLOAD [MiniApp: ${app.name}, Version: ${version}, Type: ${artifactType.toUpperCase()}]`,
       );
       res?.setHeader?.('Content-Type', 'application/vnd.android.package-archive');
       res?.setHeader?.(

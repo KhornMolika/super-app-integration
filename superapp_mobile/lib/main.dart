@@ -10,15 +10,16 @@ import 'app/modules/kyc_verifier/views/kyc_verifier_view.dart';
 
 void _initMiniAppRegistry() {
   MiniAppRegistry.registerAliases(
-    ['sc_public_miniapp', 'smart_transit_pass', 'sc-public-miniapp'],
+    ['sc_public_miniapp', 'smart_transit_pass', 'sc-public-miniapp', 'ma_flutter_transit'],
     (context, args) => const ScPublicTransitView(),
   );
   MiniAppRegistry.registerAliases(
-    ['sc_private_miniapp', 'loyalty_rewards_and_points', 'sc-private-miniapp'],
+    ['sc_private_miniapp', 'loyalty_rewards_and_points', 'sc-private-miniapp', 'ma_flutter_loyalty'],
     (context, args) => const ScPrivateLoyaltyView(),
   );
   MiniAppRegistry.registerAliases(
     [
+      'ma_flutter_trust_regulator',
       'dps_miniapp_mobile_trust_regulator',
       'dsp_miniapp_trust_regulator',
       'trust_regulator',
@@ -28,6 +29,7 @@ void _initMiniAppRegistry() {
   );
   MiniAppRegistry.registerAliases(
     [
+      'ma_flutter_kyc',
       'dps_miniapp_mobile_kyc_verifier',
       'dsp_miniapp_kyc_verifier',
       'kyc_verifier',
@@ -40,16 +42,18 @@ void _initMiniAppRegistry() {
 void main() {
   Get.put(AuthService());
   _initMiniAppRegistry();
-  runApp(const DSPMobileApp());
+  runApp(const SuperApp());
 }
 
-class DSPMobileApp extends StatelessWidget {
-  const DSPMobileApp({super.key});
+typedef DSPMobileApp = SuperApp;
+
+class SuperApp extends StatelessWidget {
+  const SuperApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
-      title: 'DSP Super App',
+      title: 'Super App',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,

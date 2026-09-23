@@ -21,7 +21,9 @@ export async function verifySsoToken(token?: string | null): Promise<VerifiedUse
   }
 
   try {
-    const jwksUrl = process.env.DPS_AUTH_JWKS_URL || 'http://localhost:3000/auth/jwks';
+    const jwksUrl =
+      process.env.SUPERAPP_AUTH_JWKS_URL ||
+      'http://localhost:3000/auth/jwks';
     const JWKS = jose.createRemoteJWKSet(new URL(jwksUrl));
     const { payload } = await jose.jwtVerify(token, JWKS);
     

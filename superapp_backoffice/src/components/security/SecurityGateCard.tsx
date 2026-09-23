@@ -85,7 +85,7 @@ export default function SecurityGateCard({ miniApp }: SecurityGateCardProps) {
 
       const gitUrl = flutterConfig.gitUrl || process.env.NEXT_PUBLIC_SUPERAPP_GIT_REPO_URL || 'https://git.fintechcenterfsa.com/frontend/super-app';
       const ref = flutterConfig.gitBranch || 'main';
-      const path = flutterConfig.gitPath || 'dsp_miniapp_trust_regulator';
+      const path = flutterConfig.gitPath || 'ma_flutter_trust_regulator';
 
       const data = await integrationsApi.runGate1Scan({
         url: gitUrl,
@@ -130,7 +130,7 @@ export default function SecurityGateCard({ miniApp }: SecurityGateCardProps) {
         return;
       }
 
-      const pkgName = flutterConfig.packageName || (isFlutter ? 'dps_miniapp_mobile_trust_regulator' : 'webview_package');
+      const pkgName = flutterConfig.packageName || (isFlutter ? 'ma_flutter_trust_regulator' : 'webview_package');
       const payload = {
         releaseVersion: 'v0.0.1',
         miniApps: [

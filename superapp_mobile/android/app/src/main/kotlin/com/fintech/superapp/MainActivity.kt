@@ -1,4 +1,4 @@
-package com.example.dsp_mobile
+package com.fintech.superapp
 
 import android.content.Intent
 import io.flutter.embedding.android.FlutterFragmentActivity

@@ -19,8 +19,8 @@ import { SidebarProvider } from '@/components/ui/SidebarContext';
 import SandboxBuildStatusIndicator from '@/components/ui/SandboxBuildStatusIndicator';
 
 export const metadata: Metadata = {
-  title: 'DPS Back Office',
-  description: 'Digital Service Provider Administration',
+  title: 'Super App Back Office',
+  description: 'Super App Administration & Mini App Ecosystem Platform',
 };
 
 export default function RootLayout({

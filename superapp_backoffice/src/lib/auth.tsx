@@ -91,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('dps_mock_role') as Role;
+      const saved = (localStorage.getItem('superapp_mock_role') || localStorage.getItem('dps_mock_role')) as Role;
       if (saved && ROLE_PERMISSIONS[saved]) {
         setRoleState(saved);
         performLogin(saved);
@@ -105,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const setRole = async (newRole: Role) => {
     try {
-      localStorage.setItem('dps_mock_role', newRole);
+      localStorage.setItem('superapp_mock_role', newRole);
     } catch (_) {}
     await performLogin(newRole);
     setRoleState(newRole);

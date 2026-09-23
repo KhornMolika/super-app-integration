@@ -317,7 +317,7 @@ export class SuperAppService implements OnApplicationBootstrap {
         packageName:
           a.integrationConfig?.packageName ||
           (a.integrationMethod === 'FLUTTER_PACKAGE'
-            ? 'dps_miniapp_mobile_trust_regulator'
+            ? 'ma_flutter_trust_regulator'
             : 'webview_package'),
         version: a.version || '0.0.2',
         integrationMethod: a.integrationMethod,
@@ -357,7 +357,7 @@ export class SuperAppService implements OnApplicationBootstrap {
           packageName:
             a.integrationConfig?.packageName ||
             (a.integrationMethod === 'FLUTTER_PACKAGE'
-              ? 'dps_miniapp_mobile_trust_regulator'
+              ? 'ma_flutter_trust_regulator'
               : 'webview_package'),
           version: a.currentReleaseVersion || '1.0.0',
           integrationMethod: a.integrationMethod,
@@ -385,8 +385,8 @@ export class SuperAppService implements OnApplicationBootstrap {
       bundledMiniApps: [
         {
           id: 'initial-banking-id',
-          name: 'DSP Banking Core',
-          packageName: 'dps_miniapp_banking_core',
+          name: 'SuperApp Banking Core',
+          packageName: 'ma_webview_banking',
           version: '1.0.0',
           integrationMethod: 'WEBVIEW',
           permissions: [{ type: 'CAMERA' }],

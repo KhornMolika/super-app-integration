@@ -15,7 +15,7 @@ class KycVerifierView extends GetView {
             'name': 'Cambodia KYC Verifier',
             'integrationMethod': 'FLUTTER_PACKAGE',
             'integrationConfig': {
-              'packageName': 'dps_miniapp_mobile_kyc_verifier',
+              'packageName': 'ma_flutter_kyc',
             },
             'currentReleaseVersion': '1.0.0',
           };

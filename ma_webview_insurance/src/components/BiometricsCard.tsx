@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { getSuperAppBridge } from '@/types/bridge';
 
 interface AuthResponse {
   error?: string;
@@ -27,14 +28,9 @@ export default function BiometricsCard() {
     };
 
     if (typeof window !== 'undefined') {
-      const originalCallback = window.DPSCallback;
-      window.DPSCallback = (callbackId: string, response: unknown) => {
-        if (callbackId === 'auth-request') {
-          handleAuthResponse(callbackId, response);
-        } else if (originalCallback) {
-          originalCallback(callbackId, response);
-        }
-      };
+      window.superappCallback = handleAuthResponse;
+      window.dspCallback = handleAuthResponse;
+      window.DPSCallback = handleAuthResponse;
     }
   }, []);
 
@@ -42,14 +38,15 @@ export default function BiometricsCard() {
     setIsAuthenticating(true);
     setError(null);
 
-    if (typeof window !== 'undefined' && window.DPSNativeBridge) {
-      window.DPSNativeBridge.postMessage(JSON.stringify({
+    const bridge = getSuperAppBridge();
+    if (bridge) {
+      bridge.postMessage(JSON.stringify({
         action: 'authenticate',
         callbackId: 'auth-request'
       }));
     } else {
       setTimeout(() => {
-        setError("Not running inside DPS Super App");
+        setError("Not running inside Super App");
         setIsAuthenticating(false);
       }, 500);
     }

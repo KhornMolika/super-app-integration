@@ -1,4 +1,4 @@
-name: dps_miniapp_mobile_kyc_verifier
+name: ma_flutter_kyc
 description: "Digital KYC Identity & Document Verification Flutter Mini App."
 version: 1.0.0
 publish_to: "none"

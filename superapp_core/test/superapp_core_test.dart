@@ -1,9 +1,9 @@
-import 'package:superapp_core/dps_core.dart';
+import 'package:superapp_core/superapp_core.dart';
 import 'package:test/test.dart';
 
 void main() {
-  group('AuthContext (backward compatibility)', () {
-    test('initializes with jwtToken and userId via dps_core', () {
+  group('AuthContext', () {
+    test('initializes with jwtToken and userId', () {
       final auth = AuthContext(
         jwtToken: 'sample-token',
         userId: 'user-123',

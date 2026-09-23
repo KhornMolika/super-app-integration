@@ -201,7 +201,9 @@ export class ReleaseAssemblyVerificationService {
       packageName: app.packageName,
       version: app.version,
       checksum: app.nexusChecksum,
-      entryPoint: `package:${app.packageName}/${app.packageName.replace('dps_miniapp_mobile_', 'dsp_miniapp_')}.dart`,
+      entryPoint: app.packageName.startsWith('ma_')
+        ? `package:${app.packageName}/${app.packageName}.dart`
+        : `package:${app.packageName}/${app.packageName.replace('dps_miniapp_mobile_', 'dsp_miniapp_')}.dart`,
     }));
 
     const consolidatedPermissions = Array.from(consolidatedPermissionsSet);

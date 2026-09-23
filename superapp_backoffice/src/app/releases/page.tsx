@@ -51,7 +51,7 @@ export default function ReleasesPage() {
         miniApps: apps.map(a => ({
           id: a.id,
           name: a.name || 'Mini App',
-          packageName: a.integrationConfig?.packageName || (a.integrationMethod === 'FLUTTER_PACKAGE' ? 'dps_miniapp_mobile_trust_regulator' : a.integrationMethod === 'DEEP_LINK' ? (a.integrationConfig?.urlScheme || a.appId) : 'webview_package'),
+          packageName: a.integrationConfig?.packageName || (a.integrationMethod === 'FLUTTER_PACKAGE' ? 'ma_flutter_trust_regulator' : a.integrationMethod === 'DEEP_LINK' ? (a.integrationConfig?.urlScheme || a.appId) : 'webview_package'),
           version: a.version || '0.0.2',
           declaredPermissions: a.permissions || [{ type: 'NFC' }],
         })),
@@ -371,7 +371,7 @@ export default function ReleasesPage() {
                           {app.name || 'Unknown'}
                         </Link>
                         <div className="font-mono text-xs text-slate-400">
-                          {app.integrationConfig?.packageName || app.appId || 'dps_miniapp_mobile_trust_regulator'}
+                          {app.integrationConfig?.packageName || app.appId || 'ma_flutter_trust_regulator'}
                         </div>
                       </td>
                       <td className="px-6 py-4">

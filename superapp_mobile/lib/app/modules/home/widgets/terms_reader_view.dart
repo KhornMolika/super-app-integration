@@ -36,6 +36,18 @@ class _TermsReaderViewState extends State<TermsReaderView> {
       _webViewController = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
         ..addJavaScriptChannel(
+          'SuperAppJSBridge',
+          onMessageReceived: (JavaScriptMessage message) {
+            Get.back();
+          },
+        )
+        ..addJavaScriptChannel(
+          'SuperAppNativeBridge',
+          onMessageReceived: (JavaScriptMessage message) {
+            Get.back();
+          },
+        )
+        ..addJavaScriptChannel(
           'DSPNativeBridge',
           onMessageReceived: (JavaScriptMessage message) {
             Get.back();

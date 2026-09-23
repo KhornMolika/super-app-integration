@@ -156,8 +156,10 @@ export class PermissionDetectorHelper {
 
           const lower = combinedCode.toLowerCase();
 
-          // Scan Super App Native Bridge (DPSNativeBridge)
+          // Scan Super App Native Bridge (SuperAppJSBridge / SuperAppNativeBridge / DPSNativeBridge)
           const hasBridge =
+            lower.includes('superappjsbridge') ||
+            lower.includes('superappnativebridge') ||
             lower.includes('dpsnativebridge') ||
             lower.includes('dspnativebridge') ||
             lower.includes('superapp') ||
@@ -175,7 +177,7 @@ export class PermissionDetectorHelper {
               'To scan QR codes and capture verification photos',
               hasBridge &&
                 (lower.includes('opencamera') || lower.includes('capturephoto'))
-                ? 'JS Bridge: DPSNativeBridge (openCamera)'
+                ? 'JS Bridge: SuperAppJSBridge (openCamera)'
                 : 'Code Scan (Camera API)',
               'HIGH',
             );
@@ -191,7 +193,7 @@ export class PermissionDetectorHelper {
               'Location',
               'To provide location-based services and map features',
               hasBridge && lower.includes('getlocation')
-                ? 'JS Bridge: DPSNativeBridge (getLocation)'
+                ? 'JS Bridge: SuperAppJSBridge (getLocation)'
                 : 'Code Scan (Geolocation API)',
               'HIGH',
             );
@@ -208,7 +210,7 @@ export class PermissionDetectorHelper {
               'Biometrics',
               'To authenticate user identity and authorize transactions securely',
               hasBridge && lower.includes('authenticate')
-                ? 'JS Bridge: DPSNativeBridge (authenticate)'
+                ? 'JS Bridge: SuperAppJSBridge (authenticate)'
                 : 'Code Scan (WebAuthn / Biometrics)',
               'HIGH',
             );
@@ -226,7 +228,7 @@ export class PermissionDetectorHelper {
               hasBridge &&
                 (lower.includes('openmicrophone') ||
                   lower.includes('recordaudio'))
-                ? 'JS Bridge: DPSNativeBridge (openMicrophone)'
+                ? 'JS Bridge: SuperAppJSBridge (openMicrophone)'
                 : 'Code Scan (Audio / Microphone)',
               'HIGH',
             );
@@ -240,7 +242,7 @@ export class PermissionDetectorHelper {
             addPerm(
               'NFC',
               'To scan contactless NFC tags and identity chips',
-              'JS Bridge: DPSNativeBridge (nfcScan)',
+              'JS Bridge: SuperAppJSBridge (nfcScan)',
               'HIGH',
             );
           }
@@ -250,7 +252,7 @@ export class PermissionDetectorHelper {
               'Bluetooth',
               'To communicate with nearby Bluetooth devices',
               hasBridge && lower.includes('openbluetooth')
-                ? 'JS Bridge: DPSNativeBridge (openBluetooth)'
+                ? 'JS Bridge: SuperAppJSBridge (openBluetooth)'
                 : 'Code Scan (Bluetooth)',
               'MEDIUM',
             );
@@ -263,7 +265,7 @@ export class PermissionDetectorHelper {
             addPerm(
               'Contacts',
               'To select recipients and contacts from the address book',
-              'JS Bridge: DPSNativeBridge (getContacts)',
+              'JS Bridge: SuperAppJSBridge (getContacts)',
               'MEDIUM',
             );
           }

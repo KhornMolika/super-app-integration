@@ -8,7 +8,7 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-${DB_USERNAME:-admin}}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-${DB_PASSWORD}}
-      POSTGRES_DB: ${POSTGRES_DB:-${DB_DATABASE:-dps_db}}
+      POSTGRES_DB: ${POSTGRES_DB:-${DB_DATABASE:-superapp_db}}
     ports:
       - '${POSTGRES_PORT:-5432}:5432'
     volumes:

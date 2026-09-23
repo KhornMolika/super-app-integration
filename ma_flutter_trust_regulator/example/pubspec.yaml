@@ -32,8 +32,8 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
-  dps_miniapp_mobile_trust_regulator:
-    path: ../../dsp_miniapp_trust_regulator
+  ma_flutter_trust_regulator:
+    path: ../
 
 dev_dependencies:
   flutter_test:

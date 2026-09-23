@@ -142,7 +142,7 @@ export async function GET(request: NextRequest) {
 
   // 4. Return Simulated APK Payload
   const fallbackContent = Buffer.from(
-    `DPS_APK_BINARY_PAYLOAD [AppName: ${appName}, Version: ${rawVersion}, Repo: ${repoName}]`,
+    `SUPERAPP_APK_BINARY_PAYLOAD [AppName: ${appName}, Version: ${rawVersion}, Repo: ${repoName}]`,
   );
   const headers = new Headers();
   headers.set('Content-Type', 'application/vnd.android.package-archive');

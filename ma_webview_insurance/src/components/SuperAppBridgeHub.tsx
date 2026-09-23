@@ -24,11 +24,32 @@ interface BridgeResponse {
 
 declare global {
   interface Window {
+    SuperAppJSBridge?: {
+      postMessage: (message: string) => void;
+    };
+    SuperAppNativeBridge?: {
+      postMessage: (message: string) => void;
+    };
+    DSPNativeBridge?: {
+      postMessage: (message: string) => void;
+    };
     DPSNativeBridge?: {
       postMessage: (message: string) => void;
     };
+    superappCallback?: (callbackId: string, data: unknown) => void;
+    dspCallback?: (callbackId: string, data: unknown) => void;
     DPSCallback?: (callbackId: string, data: unknown) => void;
   }
+}
+
+function getBridge() {
+  if (typeof window === "undefined") return undefined;
+  return (
+    window.SuperAppJSBridge ||
+    window.SuperAppNativeBridge ||
+    window.DSPNativeBridge ||
+    window.DPSNativeBridge
+  );
 }
 
 function subscribeBridge(callback: () => void) {
@@ -37,8 +58,7 @@ function subscribeBridge(callback: () => void) {
 }
 
 function getBridgeSnapshot(): boolean {
-  if (typeof window === "undefined") return false;
-  return Boolean(window.DPSNativeBridge);
+  return Boolean(getBridge());
 }
 
 function getBridgeServerSnapshot(): boolean {
@@ -68,11 +88,10 @@ export default function SuperAppBridgeHub() {
   const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Setup unified DPS Callback dispatcher
+    // Setup unified Super App Callback dispatcher
     if (typeof window !== "undefined") {
-      const existingCallback = window.DPSCallback;
-      window.DPSCallback = (callbackId: string, rawData: unknown) => {
-        console.log("DPS Bridge Callback:", callbackId, rawData);
+      const handleBridgeCallback = (callbackId: string, rawData: unknown) => {
+        console.log("SuperApp Bridge Callback:", callbackId, rawData);
         const data = rawData as BridgeResponse | undefined;
 
         if (callbackId === "req_loc_1") {
@@ -109,11 +128,11 @@ export default function SuperAppBridgeHub() {
             setAuthError(null);
           }
         }
-
-        if (existingCallback) {
-          existingCallback(callbackId, rawData);
-        }
       };
+
+      window.superappCallback = handleBridgeCallback;
+      window.dspCallback = handleBridgeCallback;
+      window.DPSCallback = handleBridgeCallback;
     }
   }, []);
 
@@ -122,17 +141,18 @@ export default function SuperAppBridgeHub() {
     setLocationLoading(true);
     setLocationError(null);
 
-    if (typeof window !== "undefined" && window.DPSNativeBridge) {
+    const bridge = getBridge();
+    if (bridge) {
       try {
-        window.DPSNativeBridge.postMessage(
+        bridge.postMessage(
           JSON.stringify({
             action: "getLocation",
             callbackId: "req_loc_1",
           })
         );
       } catch (err) {
-        console.error("Native bridge postMessage error:", err);
-        setLocationError("Failed to communicate with DPS Super App bridge.");
+        console.error("SuperApp bridge postMessage error:", err);
+        setLocationError("Failed to communicate with Super App bridge.");
         setLocationLoading(false);
       }
     } else {
@@ -176,9 +196,10 @@ export default function SuperAppBridgeHub() {
     setCameraLoading(true);
     setCameraError(null);
 
-    if (typeof window !== "undefined" && window.DPSNativeBridge) {
+    const bridge = getBridge();
+    if (bridge) {
       try {
-        window.DPSNativeBridge.postMessage(
+        bridge.postMessage(
           JSON.stringify({
             action: "openCamera",
             callbackId: "camera-request",
@@ -204,9 +225,10 @@ export default function SuperAppBridgeHub() {
     setAuthLoading(true);
     setAuthError(null);
 
-    if (typeof window !== "undefined" && window.DPSNativeBridge) {
+    const bridge = getBridge();
+    if (bridge) {
       try {
-        window.DPSNativeBridge.postMessage(
+        bridge.postMessage(
           JSON.stringify({
             action: "authenticate",
             callbackId: "auth-request",

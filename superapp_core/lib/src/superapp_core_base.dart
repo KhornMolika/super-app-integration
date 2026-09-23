@@ -1,4 +1,4 @@
-/// Base implementation and public classes for dps_core_package.
+/// Base implementation and public classes for superapp_core.
 library;
 
 /// Checks if you are awesome. Spoiler: you are.

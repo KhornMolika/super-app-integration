@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:dps_miniapp_mobile_trust_regulator/dsp_miniapp_trust_regulator.dart';
+import 'package:ma_flutter_trust_regulator/ma_flutter_trust_regulator.dart';
 
 void main() {
   runApp(const StandaloneExampleApp());

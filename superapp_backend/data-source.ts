@@ -10,7 +10,7 @@ export const dataSourceOptions: DataSourceOptions = {
   port: parseInt(process.env.DB_PORT || '5432', 10),
   username: process.env.DB_USERNAME || 'admin',
   password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_DATABASE || 'dps_db',
+  database: process.env.DB_DATABASE || 'superapp_db',
   entities: ['src/**/*.entity{.ts,.js}'],
   migrations: ['src/migrations/*{.ts,.js}'],
   synchronize: false,

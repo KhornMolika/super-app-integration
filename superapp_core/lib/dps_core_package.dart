@@ -1,3 +1,4 @@
-library;
+/// Backward compatibility export for legacy dps_core_package consumers.
+library dps_core_package;
 
-export 'dps_core.dart';
+export 'superapp_core.dart';

@@ -16,7 +16,7 @@ export async function verifySsoToken(token?: string | null): Promise<VerifiedUse
 
   try {
     const jwksUrl =
-      process.env.DPS_AUTH_JWKS_URL ||
+      process.env.SUPERAPP_AUTH_JWKS_URL ||
       (process.env.NEXT_PUBLIC_API_URL
         ? `${process.env.NEXT_PUBLIC_API_URL}/auth/jwks`
         : 'http://localhost:3000/auth/jwks');

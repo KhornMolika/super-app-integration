@@ -11,7 +11,8 @@ export default function TrustRegulatorTermsPage() {
         window.parent.postMessage({ type: 'CLOSE_TERMS' }, '*');
       } catch (_) {}
       try {
-        (window as any).DSPNativeBridge?.postMessage?.(JSON.stringify({ action: 'closeTerms' }));
+        const bridge = (window as any).SuperAppJSBridge || (window as any).SuperAppNativeBridge || (window as any).DSPNativeBridge || (window as any).DPSNativeBridge;
+        bridge?.postMessage?.(JSON.stringify({ action: 'closeTerms' }));
       } catch (_) {}
       if (window.history.length > 1) {
         window.history.back();

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { getSuperAppBridge } from '@/types/bridge';
 
 interface CameraResponse {
   error?: string;
@@ -27,9 +28,9 @@ export default function CameraCard() {
     };
 
     if (typeof window !== 'undefined') {
-      window.DPSCallback = (callbackId: string, response: unknown) => {
-        handleCameraResponse(callbackId, response);
-      };
+      window.superappCallback = handleCameraResponse;
+      window.dspCallback = handleCameraResponse;
+      window.DPSCallback = handleCameraResponse;
     }
   }, []);
 
@@ -37,14 +38,15 @@ export default function CameraCard() {
     setIsCapturing(true);
     setError(null);
 
-    if (typeof window !== 'undefined' && window.DPSNativeBridge) {
-      window.DPSNativeBridge.postMessage(JSON.stringify({
+    const bridge = getSuperAppBridge();
+    if (bridge) {
+      bridge.postMessage(JSON.stringify({
         action: 'openCamera',
         callbackId: 'camera-request'
       }));
     } else {
       setTimeout(() => {
-        setError("Not running inside DPS Super App");
+        setError("Not running inside Super App");
         setIsCapturing(false);
       }, 500);
     }

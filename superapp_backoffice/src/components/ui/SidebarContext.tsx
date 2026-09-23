@@ -16,7 +16,7 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('dps_sidebar_collapsed');
+      const saved = localStorage.getItem('superapp_sidebar_collapsed') ?? localStorage.getItem('dps_sidebar_collapsed');
       if (saved !== null) {
         setIsCollapsedState(saved === 'true');
       }
@@ -29,7 +29,7 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
   const setIsCollapsed = (collapsed: boolean) => {
     setIsCollapsedState(collapsed);
     try {
-      localStorage.setItem('dps_sidebar_collapsed', String(collapsed));
+      localStorage.setItem('superapp_sidebar_collapsed', String(collapsed));
     } catch {
       // Ignore localStorage errors
     }

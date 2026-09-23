@@ -1181,7 +1181,7 @@ export default function FlutterPackageIntegrationForm({
                   value={flutterConfig?.gitPath || flutterConfig?.path || ""}
                   onChange={handleGitPathChange}
                   disabled={!isEditable}
-                  placeholder="e.g. dsp_miniapp_trust_regulator or packages/miniapp"
+                  placeholder="e.g. ma_flutter_trust_regulator or packages/miniapp"
                 />
                 <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
                   If your repository is a monorepo, specify the relative path to
@@ -1486,7 +1486,7 @@ export default function FlutterPackageIntegrationForm({
                 value={flutterConfig?.packageName || ""}
                 onChange={handleFlutterChange}
                 disabled={!isEditable}
-                placeholder="e.g. dsp_core_package"
+                placeholder="e.g. superapp_core"
                 className={
                   nexusValidationResult?.exists === false &&
                   !archiveUploadSuccess &&
@@ -1619,7 +1619,7 @@ export default function FlutterPackageIntegrationForm({
               )}
             </div>
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
-              Automated extraction and dynamic AST injection into <code className="text-xs font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-brand-600 dark:text-brand-400 font-semibold">dps_mobile_app/pubspec.yaml</code>.
+              Automated extraction and dynamic AST injection into <code className="text-xs font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-brand-600 dark:text-brand-400 font-semibold">superapp_mobile/pubspec.yaml</code>.
             </p>
           </div>
 
@@ -1720,7 +1720,7 @@ export default function FlutterPackageIntegrationForm({
                 </div>
 
                 <div className="text-xs text-slate-400 dark:text-slate-500 sm:text-right flex-shrink-0">
-                  <div>Container: <span className="font-mono text-slate-600 dark:text-slate-300">dps_mobile_app</span></div>
+                  <div>Container: <span className="font-mono text-slate-600 dark:text-slate-300">superapp_mobile</span></div>
                   <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center sm:justify-end gap-1 mt-0.5">
                     <ShieldCheckIcon className="w-3 h-3" />
                     <span>AST Safe Backup Active</span>

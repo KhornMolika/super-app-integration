@@ -2,16 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { MapPin } from 'lucide-react';
-
-// Extend Window interface for TypeScript
-declare global {
-  interface Window {
-    DPSNativeBridge?: {
-      postMessage: (message: string) => void;
-    };
-    DPSCallback?: (callbackId: string, data: unknown) => void;
-  }
-}
+import { getSuperAppBridge } from '@/types/bridge';
 
 interface LocationData {
   error?: string;
@@ -25,9 +16,9 @@ export default function LocationCard() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Register the global callback that Flutter will invoke
-    window.DPSCallback = (callbackId: string, rawData: unknown) => {
-      console.log('Received from Flutter:', callbackId, rawData);
+    // Register the global callbacks that the Super App will invoke
+    const handleLocationResponse = (callbackId: string, rawData: unknown) => {
+      console.log('Received from Super App:', callbackId, rawData);
       const data = rawData as LocationData | undefined;
       if (callbackId === 'req_loc_1') {
         if (data?.error) {
@@ -41,8 +32,14 @@ export default function LocationCard() {
       }
     };
 
+    window.superappCallback = handleLocationResponse;
+    window.dspCallback = handleLocationResponse;
+    window.DPSCallback = handleLocationResponse;
+
     return () => {
       // Cleanup
+      delete window.superappCallback;
+      delete window.dspCallback;
       delete window.DPSCallback;
     };
   }, []);
@@ -51,15 +48,16 @@ export default function LocationCard() {
     setLoading(true);
     setError(null);
 
+    const bridge = getSuperAppBridge();
     // Check if the Native Bridge exists (meaning we are inside the Flutter Super App)
-    if (window.DPSNativeBridge) {
+    if (bridge) {
       const payload = {
         action: 'getLocation',
         callbackId: 'req_loc_1',
       };
       
       try {
-        window.DPSNativeBridge.postMessage(JSON.stringify(payload));
+        bridge.postMessage(JSON.stringify(payload));
       } catch (err) {
         console.error('Error posting to native bridge:', err);
         setError('Failed to communicate with Super App.');
@@ -67,7 +65,7 @@ export default function LocationCard() {
       }
     } else {
       // We are in a normal web browser, not the Super App
-      setError('Native Bridge not found. Please open this app inside the DPS Super App.');
+      setError('Super App bridge not found. Please open this app inside the Super App.');
       setLoading(false);
     }
   };
