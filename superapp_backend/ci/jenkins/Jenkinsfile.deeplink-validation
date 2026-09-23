@@ -41,7 +41,7 @@ pipeline {
                         let error = null;
 
                         const reserved = ["http", "https", "file", "javascript", "data", "about", "vbscript", "intent"];
-                        const cleanScheme = scheme.replace(/:\/\/?.*$/, "");
+                        const cleanScheme = scheme.split(":")[0];
 
                         if (!cleanScheme) {
                             passed = false;
@@ -49,7 +49,7 @@ pipeline {
                         } else if (reserved.includes(cleanScheme)) {
                             passed = false;
                             error = "Scheme \\"" + cleanScheme + "\\" collides with reserved system protocol.";
-                        } else if (!/^[a-z][a-z0-9+.-]*$/.test(cleanScheme)) {
+                        } else if (!new RegExp("^[a-z][a-z0-9+.-]*" + String.fromCharCode(36)).test(cleanScheme)) {
                             passed = false;
                             error = "Scheme \\"" + cleanScheme + "\\" violates RFC 3986 syntax requirements.";
                         }

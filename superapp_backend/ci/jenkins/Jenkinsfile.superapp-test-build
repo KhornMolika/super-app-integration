@@ -102,11 +102,13 @@ pipeline {
                     sh """
                     APK_FILE="/var/reports/app-debug.apk"
                     NEXUS_USER="\${NEXUS_USER:-admin}"
-                    NEXUS_PASSWORD="\${NEXUS_PASSWORD}"
+                    NEXUS_PASSWORD="\${NEXUS_PASSWORD:-admin123}"
                     if [ -f "\$APK_FILE" ]; then
                         echo "Uploading ${targetName} to Nexus repository ${repoName} at ${params.NEXUS_URL}/repository/${repoName}/${params.APP_NAME}/${params.RELEASE_VERSION}/${targetName}..."
                         curl -s -f -u "\${NEXUS_USER}:\${NEXUS_PASSWORD}" --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/${repoName}/${params.APP_NAME}/${params.RELEASE_VERSION}/${targetName}" || \
                         curl -s -f -u "\${NEXUS_USER}:\${NEXUS_PASSWORD}" --upload-file "\$APK_FILE" "http://superapp-nexus:8081/repository/${repoName}/${params.APP_NAME}/${params.RELEASE_VERSION}/${targetName}"
+                        # Also update latest dynamic pointer
+                        curl -s -f -u "\${NEXUS_USER}:\${NEXUS_PASSWORD}" --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/${repoName}/${params.APP_NAME}/latest/${targetName}" 2>/dev/null || true
                         echo "Upload to Sonatype Nexus ${repoName} successfully completed!"
                     else
                         echo "Warning: \$APK_FILE not found, packaging build metadata archive..."
