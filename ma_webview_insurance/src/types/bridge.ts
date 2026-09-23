@@ -22,7 +22,7 @@ declare global {
     SuperAppJSBridge?: NativeBridgeChannel;
     SuperAppNativeBridge?: NativeBridgeChannel;
     DSPNativeBridge?: NativeBridgeChannel;
-    DPSNativeBridge?: NativeBridgeChannel;
+    SuperAppJSBridge?: NativeBridgeChannel;
     superappCallback?: (callbackId: string, data: unknown) => void;
     dspCallback?: (callbackId: string, data: unknown) => void;
     DPSCallback?: (callbackId: string, data: unknown) => void;
@@ -38,6 +38,6 @@ export function getSuperAppBridge(): NativeBridgeChannel | undefined {
     window.SuperAppJSBridge ||
     window.SuperAppNativeBridge ||
     window.DSPNativeBridge ||
-    window.DPSNativeBridge
+    window.SuperAppJSBridge
   );
 }

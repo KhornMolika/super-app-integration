@@ -32,14 +32,14 @@ pipeline {
 
                 sh "mkdir -p ${env.SANDBOX_OUTPUT_DIR} && chmod -R 777 /var/reports"
                 sh """
-                if [ ! -d "dps_mobile_app" ]; then
-                    echo "Cloning repository from ${params.REPO_URL} (branch ${params.BRANCH})..."
-                    git clone --depth 1 -b ${params.BRANCH} ${params.REPO_URL} . || true
-                else
-                    echo "Updating existing workspace..."
+                if [ -d "superapp_mobile" ] || [ -d "dps_mobile_app" ] || [ -f "pubspec.yaml" ]; then
+                    echo "Workspace already initialized. Pulling latest changes..."
                     git fetch origin ${params.BRANCH} --depth 1 || true
                     git checkout ${params.BRANCH} || true
                     git pull origin ${params.BRANCH} || true
+                else
+                    echo "Cloning repository from ${params.REPO_URL} (branch ${params.BRANCH})..."
+                    git clone --depth 1 -b ${params.BRANCH} ${params.REPO_URL} . || true
                 fi
                 """
             }
@@ -49,8 +49,15 @@ pipeline {
             steps {
                 echo "[INFO] Resolving Flutter dependencies & Compiling Flutter Web (--base-href ${params.BASE_HREF})..."
                 sh """
+                APP_DIR="."
+                if [ -d "superapp_mobile" ]; then
+                    APP_DIR="superapp_mobile"
+                elif [ -d "dps_mobile_app" ]; then
+                    APP_DIR="dps_mobile_app"
+                fi
+
                 docker run --rm \
-                    -v "\$(pwd)/dps_mobile_app:/app" \
+                    -v "\$(pwd)/\${APP_DIR}:/app" \
                     -v /var/reports:/var/reports \
                     -e PUB_HOSTED_URL="${params.NEXUS_URL}/repository/pub-group" \
                     -w /app \

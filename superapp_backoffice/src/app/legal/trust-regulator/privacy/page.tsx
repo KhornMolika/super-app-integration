@@ -1,18 +1,22 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { ShieldIcon, XIcon, ArrowRightIcon } from '@/components/ui/Icons';
+import React from "react";
+import Link from "next/link";
+import { ShieldIcon, XIcon, ArrowRightIcon } from "@/components/ui/Icons";
 
 export default function TrustRegulatorPrivacyPage() {
   const handleBack = () => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       try {
-        window.parent.postMessage({ type: 'CLOSE_TERMS' }, '*');
+        window.parent.postMessage({ type: "CLOSE_TERMS" }, "*");
       } catch (_) {}
       try {
-        const bridge = (window as any).SuperAppJSBridge || (window as any).SuperAppNativeBridge || (window as any).DSPNativeBridge || (window as any).DPSNativeBridge;
-        bridge?.postMessage?.(JSON.stringify({ action: 'closeTerms' }));
+        const bridge =
+          (window as any).SuperAppJSBridge ||
+          (window as any).SuperAppNativeBridge ||
+          (window as any).DPSNativeBridge ||
+          (window as any).DSPNativeBridge;
+        bridge?.postMessage?.(JSON.stringify({ action: "closeTerms" }));
       } catch (_) {}
       if (window.history.length > 1) {
         window.history.back();
@@ -34,7 +38,8 @@ export default function TrustRegulatorPrivacyPage() {
                 Trust Regulator — Privacy & Data Protection Policy
               </h1>
               <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-                Non-Bank Financial Services Authority (FSA) • Statutory Privacy Policy
+                Non-Bank Financial Services Authority (FSA) • Statutory Privacy
+                Policy
               </p>
             </div>
           </div>
@@ -54,7 +59,10 @@ export default function TrustRegulatorPrivacyPage() {
             1. Regulatory Data Processing
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            The Trust Regulator processes entity registration identifiers, authorized representative credentials, and cryptographic certificate keys solely to maintain the national Trust Registry and verify compliance under the Trust Law of Cambodia.
+            The Trust Regulator processes entity registration identifiers,
+            authorized representative credentials, and cryptographic certificate
+            keys solely to maintain the national Trust Registry and verify
+            compliance under the Trust Law of Cambodia.
           </p>
         </div>
 
@@ -64,7 +72,11 @@ export default function TrustRegulatorPrivacyPage() {
             2. Confidentiality & Non-Disclosure
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            All private trust records, beneficiary schedules, and asset declarations are classified as confidential regulatory records. Access is strictly restricted to authorized FSA inspection officers and authenticated trust administrators via Super App cryptographic RBAC policies.
+            All private trust records, beneficiary schedules, and asset
+            declarations are classified as confidential regulatory records.
+            Access is strictly restricted to authorized FSA inspection officers
+            and authenticated trust administrators via Super App cryptographic
+            RBAC policies.
           </p>
         </div>
 
@@ -74,7 +86,9 @@ export default function TrustRegulatorPrivacyPage() {
             3. Cryptographic Proof & Ledger Integrity
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            Verification events and audit logs are signed with SHA-256 cryptographic signatures. No biometric authentication templates or camera streams are permanently stored on remote servers.
+            Verification events and audit logs are signed with SHA-256
+            cryptographic signatures. No biometric authentication templates or
+            camera streams are permanently stored on remote servers.
           </p>
         </div>
 
@@ -84,7 +98,10 @@ export default function TrustRegulatorPrivacyPage() {
             4. Statutory Data Retention
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            In compliance with statutory financial regulations, trust verification audit trails are retained in secure cold storage for a period of ten (10) years following trust liquidation or deregistration.
+            In compliance with statutory financial regulations, trust
+            verification audit trails are retained in secure cold storage for a
+            period of ten (10) years following trust liquidation or
+            deregistration.
           </p>
         </div>
 

@@ -1,18 +1,22 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { Lock, ArrowLeft, ExternalLink, X } from 'lucide-react';
+import React from "react";
+import Link from "next/link";
+import { Lock, ArrowLeft, ExternalLink, X } from "lucide-react";
 
 export default function InsurancePrivacyPage() {
   const handleBack = () => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       try {
-        window.parent.postMessage({ type: 'CLOSE_TERMS' }, '*');
+        window.parent.postMessage({ type: "CLOSE_TERMS" }, "*");
       } catch (_) {}
       try {
-        const bridge = (window as any).SuperAppJSBridge || (window as any).SuperAppNativeBridge || (window as any).DSPNativeBridge || (window as any).DPSNativeBridge;
-        bridge?.postMessage?.(JSON.stringify({ action: 'closeTerms' }));
+        const bridge =
+          (window as any).SuperAppJSBridge ||
+          (window as any).SuperAppNativeBridge ||
+          (window as any).DPSNativeBridge ||
+          (window as any).DSPNativeBridge;
+        bridge?.postMessage?.(JSON.stringify({ action: "closeTerms" }));
       } catch (_) {}
       if (window.history.length > 1) {
         window.history.back();
@@ -34,7 +38,8 @@ export default function InsurancePrivacyPage() {
                 Nova Digital Insurance — Privacy Policy
               </h1>
               <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-                Effective Date: September 2026 • Policyholder Data Protection Standard
+                Effective Date: September 2026 • Policyholder Data Protection
+                Standard
               </p>
             </div>
           </div>
@@ -54,12 +59,24 @@ export default function InsurancePrivacyPage() {
             1. Information We Collect
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            When you use the Nova Insurance Mini App via the Super App container, we collect:
+            When you use the Nova Insurance Mini App via the Super App
+            container, we collect:
           </p>
           <ul className="list-disc list-inside text-sm text-slate-300 space-y-1.5 leading-relaxed pl-1">
-            <li><strong>Super App SSO Data:</strong> Verified Citizen ID, full name, and authenticated contact details.</li>
-            <li><strong>Policy &amp; Quote Information:</strong> Coverage type, insured asset details (device model, rental address, transit vehicle ID).</li>
-            <li><strong>Claim Evidence:</strong> Photos of damaged goods, timestamps, and GPS incident coordinates captured via Super App Native Bridge.</li>
+            <li>
+              <strong>Super App SSO Data:</strong> Verified Citizen ID, full
+              name, and authenticated contact details.
+            </li>
+            <li>
+              <strong>Policy &amp; Quote Information:</strong> Coverage type,
+              insured asset details (device model, rental address, transit
+              vehicle ID).
+            </li>
+            <li>
+              <strong>Claim Evidence:</strong> Photos of damaged goods,
+              timestamps, and GPS incident coordinates captured via Super App
+              Native Bridge.
+            </li>
           </ul>
         </div>
 
@@ -69,7 +86,9 @@ export default function InsurancePrivacyPage() {
             2. How We Use Your Information
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            We use your data solely for underwriting micro-insurance plans, executing automated smart claims payouts, preventing fraudulent submissions, and fulfilling statutory regulatory solvency reporting.
+            We use your data solely for underwriting micro-insurance plans,
+            executing automated smart claims payouts, preventing fraudulent
+            submissions, and fulfilling statutory regulatory solvency reporting.
           </p>
         </div>
 
@@ -79,7 +98,9 @@ export default function InsurancePrivacyPage() {
             3. Hardware Permission Safeguards
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            Camera and Location access is requested on-demand only when you submit an active claim or request roadside dispatch. We never run background location tracking or unprompted camera captures.
+            Camera and Location access is requested on-demand only when you
+            submit an active claim or request roadside dispatch. We never run
+            background location tracking or unprompted camera captures.
           </p>
         </div>
 
@@ -89,7 +110,10 @@ export default function InsurancePrivacyPage() {
             4. Data Retention &amp; Encryption
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            All communications are encrypted using 256-bit TLS encryption in transit and AES-256 at rest. Active policy records are maintained throughout the policy lifespan and archived securely in compliance with insurance statutory guidelines.
+            All communications are encrypted using 256-bit TLS encryption in
+            transit and AES-256 at rest. Active policy records are maintained
+            throughout the policy lifespan and archived securely in compliance
+            with insurance statutory guidelines.
           </p>
         </div>
 

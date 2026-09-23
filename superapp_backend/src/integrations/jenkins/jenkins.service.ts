@@ -132,8 +132,8 @@ export class JenkinsService {
     gitAuthMethod?: string;
     gitAccessToken?: string;
     deployKey?: string;
+    jobName?: string;
   }): Promise<{ success: boolean; message: string }> {
-    const jobName = 'miniapp-validation';
     const callbackUrl = `${this.callbackBaseUrl}/api/integrations/validation/callback`;
     const allowedDomainsStr = (options.allowedDomains || []).join(',');
     const allowedCapsStr = (options.allowedCapabilities || ['camera', 'geolocator', 'local_auth']).join(',');
@@ -166,10 +166,21 @@ export class JenkinsService {
       ALLOW_LOCAL: allowLocalStr,
     });
 
-    const triggerUrl = `${this.jenkinsUrl}/job/${jobName}/buildWithParameters?${params.toString()}`;
-    this.logger.log(`Triggering Jenkins miniapp-validation pipeline (${options.integrationMethod}): ${triggerUrl}`);
+    const methodJobMap: Record<string, string> = {
+      WEBVIEW: 'miniapp-validation-webview',
+      FLUTTER_PACKAGE: 'miniapp-validation-flutter-package',
+      NATIVE_SDK: 'miniapp-validation-native-sdk',
+      DEEP_LINK: 'miniapp-validation-deep-link',
+    };
 
-    try {
+    const targetJob = options.jobName || methodJobMap[options.integrationMethod] || 'miniapp-validation';
+
+    const executeTrigger = async (
+      job: string,
+    ): Promise<{ success: boolean; message: string; notFound?: boolean }> => {
+      const triggerUrl = `${this.jenkinsUrl}/job/${job}/buildWithParameters?${params.toString()}`;
+      this.logger.log(`Triggering Jenkins job "${job}" (${options.integrationMethod}): ${triggerUrl}`);
+
       const headers: Record<string, string> = {
         'Content-Type': 'application/x-www-form-urlencoded',
       };
@@ -194,24 +205,50 @@ export class JenkinsService {
 
       if (response.status === 201 || response.status === 200) {
         this.logger.log(
-          `Jenkins job "${jobName}" triggered successfully for ${options.integrationMethod} Mini App ${options.miniAppId}`,
+          `Jenkins job "${job}" triggered successfully for ${options.integrationMethod} Mini App ${options.miniAppId}`,
         );
         return {
           success: true,
-          message: 'Jenkins miniapp-validation pipeline triggered successfully',
+          message: `Jenkins ${job} pipeline triggered successfully`,
+        };
+      }
+
+      if (response.status === 404) {
+        return {
+          success: false,
+          notFound: true,
+          message: `Jenkins job "${job}" not found (HTTP 404)`,
         };
       }
 
       const responseBody = await response.text();
       this.logger.warn(
-        `Jenkins trigger returned HTTP ${response.status}: ${responseBody.substring(0, 300)}`,
+        `Jenkins trigger for "${job}" returned HTTP ${response.status}: ${responseBody.substring(0, 300)}`,
       );
       return {
         success: false,
         message: `Jenkins returned HTTP ${response.status}: ${responseBody.substring(0, 150)}`,
       };
+    };
+
+    try {
+      const result = await executeTrigger(targetJob);
+      if (result.success) {
+        return result;
+      }
+
+      // If dedicated job was not found on Jenkins (404), fall back to the monolithic orchestrator pipeline
+      if (result.notFound && targetJob !== 'miniapp-validation') {
+        this.logger.warn(
+          `Dedicated Jenkins job "${targetJob}" not found (HTTP 404). Falling back to master "miniapp-validation" pipeline.`,
+        );
+        const fallbackResult = await executeTrigger('miniapp-validation');
+        return fallbackResult;
+      }
+
+      return result;
     } catch (err: any) {
-      this.logger.error(`Failed to trigger Jenkins miniapp-validation pipeline: ${err.message}`);
+      this.logger.error(`Failed to trigger Jenkins pipeline (${targetJob}): ${err.message}`);
       return {
         success: false,
         message: `Could not connect to Jenkins: ${err.message}`,
@@ -276,6 +313,62 @@ export class JenkinsService {
       gitAuthMethod: options.gitAuthMethod,
       gitAccessToken: options.gitAccessToken,
       deployKey: options.deployKey,
+    });
+  }
+
+  /**
+   * Triggers the miniapp-validation parameterized pipeline in Jenkins for Native SDKs
+   */
+  async triggerNativeSdkValidation(options: {
+    miniAppId: string;
+    packageName?: string;
+    version?: string;
+    integrationType?: 'ARTIFACT' | 'SOURCE_CODE';
+    sourceStoragePath?: string;
+    repoUrl?: string;
+    commitSha?: string;
+    allowedCapabilities?: string[];
+    requiredCapabilities?: string[];
+    checks?: string[];
+  }): Promise<{ success: boolean; message: string }> {
+    return this.triggerMiniAppValidation({
+      miniAppId: options.miniAppId,
+      integrationMethod: 'NATIVE_SDK',
+      packageName: options.packageName,
+      version: options.version,
+      integrationType: options.integrationType,
+      sourceStoragePath: options.sourceStoragePath,
+      repoUrl: options.repoUrl,
+      commitSha: options.commitSha,
+      allowedCapabilities: options.allowedCapabilities,
+      requiredCapabilities: options.requiredCapabilities,
+      checks: options.checks,
+    });
+  }
+
+  /**
+   * Triggers the miniapp-validation parameterized pipeline in Jenkins for Deep Links
+   */
+  async triggerDeepLinkValidation(options: {
+    miniAppId: string;
+    urlScheme: string;
+    appStoreUrl?: string;
+    targetUrl?: string;
+    allowedDomains?: string[];
+    allowedCapabilities?: string[];
+    requiredCapabilities?: string[];
+    checks?: string[];
+  }): Promise<{ success: boolean; message: string }> {
+    return this.triggerMiniAppValidation({
+      miniAppId: options.miniAppId,
+      integrationMethod: 'DEEP_LINK',
+      urlScheme: options.urlScheme,
+      appStoreUrl: options.appStoreUrl,
+      targetUrl: options.targetUrl,
+      allowedDomains: options.allowedDomains,
+      allowedCapabilities: options.allowedCapabilities,
+      requiredCapabilities: options.requiredCapabilities,
+      checks: options.checks,
     });
   }
 

@@ -1,17 +1,21 @@
 "use client";
 
 import React, { useState, useEffect, useSyncExternalStore } from "react";
-import { 
-  MapPin, 
-  Camera, 
-  Fingerprint, 
-  Sparkles, 
-  CheckCircle2, 
-  AlertCircle, 
+import {
+  MapPin,
+  Camera,
+  Fingerprint,
+  Sparkles,
+  CheckCircle2,
+  AlertCircle,
   RefreshCw,
-  ShieldCheck
+  ShieldCheck,
 } from "lucide-react";
-import { LiquidGlassContainer, LiquidGlassButton, LiquidGlassBadge } from "./LiquidGlass";
+import {
+  LiquidGlassContainer,
+  LiquidGlassButton,
+  LiquidGlassBadge,
+} from "./LiquidGlass";
 
 interface BridgeResponse {
   error?: string;
@@ -33,7 +37,7 @@ declare global {
     DSPNativeBridge?: {
       postMessage: (message: string) => void;
     };
-    DPSNativeBridge?: {
+    SuperAppJSBridge?: {
       postMessage: (message: string) => void;
     };
     superappCallback?: (callbackId: string, data: unknown) => void;
@@ -48,7 +52,7 @@ function getBridge() {
     window.SuperAppJSBridge ||
     window.SuperAppNativeBridge ||
     window.DSPNativeBridge ||
-    window.DPSNativeBridge
+    window.SuperAppJSBridge
   );
 }
 
@@ -69,11 +73,15 @@ export default function SuperAppBridgeHub() {
   const isInsideSuperApp = useSyncExternalStore(
     subscribeBridge,
     getBridgeSnapshot,
-    getBridgeServerSnapshot
+    getBridgeServerSnapshot,
   );
 
   // 1. Location State
-  const [location, setLocation] = useState<{ lat: number; lng: number; address?: string } | null>(null);
+  const [location, setLocation] = useState<{
+    lat: number;
+    lng: number;
+    address?: string;
+  } | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
 
@@ -148,7 +156,7 @@ export default function SuperAppBridgeHub() {
           JSON.stringify({
             action: "getLocation",
             callbackId: "req_loc_1",
-          })
+          }),
         );
       } catch (err) {
         console.error("SuperApp bridge postMessage error:", err);
@@ -176,7 +184,7 @@ export default function SuperAppBridgeHub() {
               setLocationLoading(false);
             }, 600);
           },
-          { timeout: 3000 }
+          { timeout: 3000 },
         );
       } else {
         setTimeout(() => {
@@ -203,7 +211,7 @@ export default function SuperAppBridgeHub() {
           JSON.stringify({
             action: "openCamera",
             callbackId: "camera-request",
-          })
+          }),
         );
       } catch (err) {
         console.error("Camera bridge postMessage error:", err);
@@ -213,7 +221,7 @@ export default function SuperAppBridgeHub() {
     } else {
       setTimeout(() => {
         setPhoto(
-          "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='260' viewBox='0 0 400 260'><rect width='400' height='260' fill='%23e0e7ff'/><circle cx='200' cy='110' r='40' fill='%236366f1'/><path d='M150 200 C 170 160, 230 160, 250 200 Z' fill='%234338ca'/><text x='200' y='235' font-family='sans-serif' font-size='14' text-anchor='middle' fill='%233730a3' font-weight='bold'>Verified Camera Proof Captured</text></svg>"
+          "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='260' viewBox='0 0 400 260'><rect width='400' height='260' fill='%23e0e7ff'/><circle cx='200' cy='110' r='40' fill='%236366f1'/><path d='M150 200 C 170 160, 230 160, 250 200 Z' fill='%234338ca'/><text x='200' y='235' font-family='sans-serif' font-size='14' text-anchor='middle' fill='%233730a3' font-weight='bold'>Verified Camera Proof Captured</text></svg>",
         );
         setCameraLoading(false);
       }, 700);
@@ -232,7 +240,7 @@ export default function SuperAppBridgeHub() {
           JSON.stringify({
             action: "authenticate",
             callbackId: "auth-request",
-          })
+          }),
         );
       } catch (err) {
         console.error("Auth bridge postMessage error:", err);
@@ -250,7 +258,6 @@ export default function SuperAppBridgeHub() {
   return (
     <section id="bridge-perks" className="py-20 relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
         {/* Header */}
         <div className="text-center max-w-2xl mx-auto mb-16">
           <LiquidGlassBadge
@@ -263,14 +270,18 @@ export default function SuperAppBridgeHub() {
             High-Tech Perks in Your Pocket
           </h2>
           <p className="mt-4 text-base text-slate-600 dark:text-slate-300">
-            Nova connects directly to your phone’s native sensors via the DPS Super App bridge for instant GPS claims, camera proof, and biometrics.
+            Nova connects directly to your phone’s native sensors via the DPS
+            Super App bridge for instant GPS claims, camera proof, and
+            biometrics.
           </p>
 
           {/* Super App Bridge Status Pill in Liquid Glass */}
           <div className="mt-4 inline-flex items-center gap-2 px-3.5 py-1.5 liquid-glass-pill liquid-glass-nested text-xs font-semibold">
             <span
               className={`w-2 h-2 rounded-full ${
-                isInsideSuperApp ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
+                isInsideSuperApp
+                  ? "bg-emerald-500 animate-pulse"
+                  : "bg-amber-500"
               }`}
             />
             <span className="text-slate-600 dark:text-slate-300">
@@ -283,7 +294,6 @@ export default function SuperAppBridgeHub() {
 
         {/* 3 Liquid Glass Bridge Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          
           {/* 1. Location Card */}
           <LiquidGlassContainer
             variant="rounded"
@@ -304,13 +314,15 @@ export default function SuperAppBridgeHub() {
                 1-Tap Roadside / Theft GPS
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-5">
-                Pinpoint exact accident or incident coordinates securely via the device bridge without manual typing.
+                Pinpoint exact accident or incident coordinates securely via the
+                device bridge without manual typing.
               </p>
 
               {location && (
                 <div className="mb-4 p-3.5 rounded-2xl liquid-glass-nested text-xs">
                   <div className="font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5 mb-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Coordinates Verified
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Coordinates
+                    Verified
                   </div>
                   <div className="text-slate-600 dark:text-slate-400 font-mono text-[11px]">
                     Lat: {location.lat}, Lng: {location.lng}
@@ -346,7 +358,9 @@ export default function SuperAppBridgeHub() {
               ) : (
                 <>
                   <MapPin className="w-3.5 h-3.5 mr-1.5" />
-                  <span>{location ? "Refresh Coordinates" : "Get Device Location"}</span>
+                  <span>
+                    {location ? "Refresh Coordinates" : "Get Device Location"}
+                  </span>
                 </>
               )}
             </LiquidGlassButton>
@@ -372,7 +386,8 @@ export default function SuperAppBridgeHub() {
                 Snap Damage & ID Proof
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-5">
-                Take a quick photo of damaged hardware or your ID card. Instantly cryptographically attached to your claim.
+                Take a quick photo of damaged hardware or your ID card.
+                Instantly cryptographically attached to your claim.
               </p>
 
               {photo && (
@@ -441,7 +456,8 @@ export default function SuperAppBridgeHub() {
                 FaceID / Fingerprint Sign
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-5">
-                Sign insurance policies and approve claim payouts with your phone’s biometric security. Zero passwords.
+                Sign insurance policies and approve claim payouts with your
+                phone’s biometric security. Zero passwords.
               </p>
 
               {authSuccess && (
@@ -490,9 +506,7 @@ export default function SuperAppBridgeHub() {
               )}
             </LiquidGlassButton>
           </LiquidGlassContainer>
-
         </div>
-
       </div>
     </section>
   );

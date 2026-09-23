@@ -124,6 +124,10 @@ async function main() {
   console.log('🔄 Synchronizing declarative pipelines with Jenkins controller...');
   console.log(`Connecting to: ${jenkinsUrl}`);
   await syncJob('miniapp-validation', 'scripts/jenkins/Jenkinsfile.miniapp-validation');
+  await syncJob('miniapp-validation-webview', 'scripts/jenkins/Jenkinsfile.webview-validation');
+  await syncJob('miniapp-validation-flutter-package', 'scripts/jenkins/Jenkinsfile.package-validation');
+  await syncJob('miniapp-validation-native-sdk', 'scripts/jenkins/Jenkinsfile.nativesdk-validation');
+  await syncJob('miniapp-validation-deep-link', 'scripts/jenkins/Jenkinsfile.deeplink-validation');
   await syncJob('superapp-sandbox-build', 'scripts/jenkins/Jenkinsfile.superapp-sandbox-build');
   await syncJob('superapp-test-build', 'scripts/jenkins/Jenkinsfile.superapp-test-build');
   console.log('✨ All Jenkins jobs processed successfully.');

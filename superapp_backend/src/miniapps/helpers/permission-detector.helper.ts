@@ -156,7 +156,7 @@ export class PermissionDetectorHelper {
 
           const lower = combinedCode.toLowerCase();
 
-          // Scan Super App Native Bridge (SuperAppJSBridge / SuperAppNativeBridge / DPSNativeBridge)
+          // Scan Super App Native Bridge (SuperAppJSBridge / SuperAppNativeBridge / legacy DPSNativeBridge)
           const hasBridge =
             lower.includes('superappjsbridge') ||
             lower.includes('superappnativebridge') ||

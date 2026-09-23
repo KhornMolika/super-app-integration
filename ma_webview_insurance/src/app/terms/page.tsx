@@ -1,18 +1,22 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { ShieldCheck, ArrowLeft, ExternalLink, X } from 'lucide-react';
+import React from "react";
+import Link from "next/link";
+import { ShieldCheck, ArrowLeft, ExternalLink, X } from "lucide-react";
 
 export default function InsuranceTermsPage() {
   const handleBack = () => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       try {
-        window.parent.postMessage({ type: 'CLOSE_TERMS' }, '*');
+        window.parent.postMessage({ type: "CLOSE_TERMS" }, "*");
       } catch (_) {}
       try {
-        const bridge = (window as any).SuperAppJSBridge || (window as any).SuperAppNativeBridge || (window as any).DSPNativeBridge || (window as any).DPSNativeBridge;
-        bridge?.postMessage?.(JSON.stringify({ action: 'closeTerms' }));
+        const bridge =
+          (window as any).SuperAppJSBridge ||
+          (window as any).SuperAppNativeBridge ||
+          (window as any).DPSNativeBridge ||
+          (window as any).DSPNativeBridge;
+        bridge?.postMessage?.(JSON.stringify({ action: "closeTerms" }));
       } catch (_) {}
       if (window.history.length > 1) {
         window.history.back();
@@ -54,7 +58,11 @@ export default function InsuranceTermsPage() {
             1. Policy Issuance & Digital Enrollment
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            Nova Insurance is a verified Mini App operating inside the Super App container. By purchasing or managing insurance policies (Tech, Renters, Transit, Travel) through this app, you agree that digital policy certificates and electronic signatures carry full legal validity under applicable insurance regulations.
+            Nova Insurance is a verified Mini App operating inside the Super App
+            container. By purchasing or managing insurance policies (Tech,
+            Renters, Transit, Travel) through this app, you agree that digital
+            policy certificates and electronic signatures carry full legal
+            validity under applicable insurance regulations.
           </p>
         </div>
 
@@ -64,12 +72,22 @@ export default function InsuranceTermsPage() {
             2. Instant Claims & Native Hardware Verification
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            To provide zero-paperwork, instant claims assessments, this Mini App utilizes the Super App Native Bridge:
+            To provide zero-paperwork, instant claims assessments, this Mini App
+            utilizes the Super App Native Bridge:
           </p>
           <ul className="list-disc list-inside text-sm text-slate-300 space-y-1.5 leading-relaxed pl-1">
-            <li><strong>Camera:</strong> Capturing live damage photos and receipt proofs during claim filing.</li>
-            <li><strong>Location / GPS:</strong> Verifying incident locations for roadside transit and travel assistance.</li>
-            <li><strong>Biometrics:</strong> Secure authorization of payout transfers and policy modifications.</li>
+            <li>
+              <strong>Camera:</strong> Capturing live damage photos and receipt
+              proofs during claim filing.
+            </li>
+            <li>
+              <strong>Location / GPS:</strong> Verifying incident locations for
+              roadside transit and travel assistance.
+            </li>
+            <li>
+              <strong>Biometrics:</strong> Secure authorization of payout
+              transfers and policy modifications.
+            </li>
           </ul>
         </div>
 
@@ -79,7 +97,10 @@ export default function InsuranceTermsPage() {
             3. Premium Payments & Automatic Renewal
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            Premiums are debited via your linked Super App Digital Wallet or Bakong payment rails upon your explicit confirmation. You can pause, adjust, or cancel active monthly coverage anytime directly from the Mini App dashboard with no hidden penalties.
+            Premiums are debited via your linked Super App Digital Wallet or
+            Bakong payment rails upon your explicit confirmation. You can pause,
+            adjust, or cancel active monthly coverage anytime directly from the
+            Mini App dashboard with no hidden penalties.
           </p>
         </div>
 
@@ -89,7 +110,10 @@ export default function InsuranceTermsPage() {
             4. Fraud Prevention & Claims Audit
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            Submitting fraudulent incident photos, falsified invoices, or manipulated timestamps constitutes a breach of policy and will result in immediate claim denial and notification to statutory regulatory authorities.
+            Submitting fraudulent incident photos, falsified invoices, or
+            manipulated timestamps constitutes a breach of policy and will
+            result in immediate claim denial and notification to statutory
+            regulatory authorities.
           </p>
         </div>
 
@@ -99,7 +123,12 @@ export default function InsuranceTermsPage() {
             5. Contact & Claims Support
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            For claims assistance or coverage inquiries, contact our Concierge Desk at <span className="text-violet-400 font-mono">support@nova-insurance.com</span>.
+            For claims assistance or coverage inquiries, contact our Concierge
+            Desk at{" "}
+            <span className="text-violet-400 font-mono">
+              support@nova-insurance.com
+            </span>
+            .
           </p>
         </div>
 

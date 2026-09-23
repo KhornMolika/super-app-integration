@@ -1,17 +1,21 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Link from 'next/link';
+import React from "react";
+import Link from "next/link";
 
 export default function BankingTermsPage() {
   const handleBack = () => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       try {
-        window.parent.postMessage({ type: 'CLOSE_TERMS' }, '*');
+        window.parent.postMessage({ type: "CLOSE_TERMS" }, "*");
       } catch (_) {}
       try {
-        const bridge = (window as any).SuperAppJSBridge || (window as any).SuperAppNativeBridge || (window as any).DSPNativeBridge || (window as any).DPSNativeBridge;
-        bridge?.postMessage?.(JSON.stringify({ action: 'closeTerms' }));
+        const bridge =
+          (window as any).SuperAppJSBridge ||
+          (window as any).SuperAppNativeBridge ||
+          (window as any).DPSNativeBridge ||
+          (window as any).DSPNativeBridge;
+        bridge?.postMessage?.(JSON.stringify({ action: "closeTerms" }));
       } catch (_) {}
       if (window.history.length > 1) {
         window.history.back();
@@ -42,8 +46,18 @@ export default function BankingTermsPage() {
             onClick={handleBack}
             className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 hover:text-white transition flex items-center gap-1.5 shrink-0"
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-3.5 h-3.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
             <span>Close</span>
           </button>
@@ -55,7 +69,11 @@ export default function BankingTermsPage() {
             1. Acceptance of Terms & Digital Identity
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            By launching, accessing, or using the Bakong Digital Banking Mini App within the Super App platform, you agree to be bound by these Terms of Service, the National Bank of Cambodia (NBC) payment system guidelines, and applicable banking laws. Access is authenticated through Super App Single Sign-On (SSO).
+            By launching, accessing, or using the Bakong Digital Banking Mini
+            App within the Super App platform, you agree to be bound by these
+            Terms of Service, the National Bank of Cambodia (NBC) payment system
+            guidelines, and applicable banking laws. Access is authenticated
+            through Super App Single Sign-On (SSO).
           </p>
         </div>
 
@@ -65,7 +83,11 @@ export default function BankingTermsPage() {
             2. Electronic Funds Transfer & Bakong QR Payments
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            All instant fund transfers, peer-to-peer payments, and KHQR merchant transactions executed via this Mini App are final once authorized by biometric verification (Face ID / Fingerprint) or Super App secure PIN. Users are responsible for verifying recipient account numbers and payment amounts prior to submission.
+            All instant fund transfers, peer-to-peer payments, and KHQR merchant
+            transactions executed via this Mini App are final once authorized by
+            biometric verification (Face ID / Fingerprint) or Super App secure
+            PIN. Users are responsible for verifying recipient account numbers
+            and payment amounts prior to submission.
           </p>
         </div>
 
@@ -75,7 +97,10 @@ export default function BankingTermsPage() {
             3. Device Access & Camera Authorization
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            This Mini App requests access to your device camera exclusively for scanning Bakong KHQR codes to process transactions. The camera stream is processed in real time and is never stored, recorded, or transmitted to third parties.
+            This Mini App requests access to your device camera exclusively for
+            scanning Bakong KHQR codes to process transactions. The camera
+            stream is processed in real time and is never stored, recorded, or
+            transmitted to third parties.
           </p>
         </div>
 
@@ -85,9 +110,18 @@ export default function BankingTermsPage() {
             4. Security & User Obligations
           </h2>
           <ul className="list-disc list-inside text-sm text-slate-300 space-y-2 leading-relaxed">
-            <li>Keep your Super App authentication credentials and device biometric passkeys confidential.</li>
-            <li>Promptly notify customer support in case of unauthorized transactions or compromised device access.</li>
-            <li>Do not use the banking Mini App on jailbroken, rooted, or tampered operating system environments.</li>
+            <li>
+              Keep your Super App authentication credentials and device
+              biometric passkeys confidential.
+            </li>
+            <li>
+              Promptly notify customer support in case of unauthorized
+              transactions or compromised device access.
+            </li>
+            <li>
+              Do not use the banking Mini App on jailbroken, rooted, or tampered
+              operating system environments.
+            </li>
           </ul>
         </div>
 
@@ -97,7 +131,12 @@ export default function BankingTermsPage() {
             5. Support & Inquiries
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            If you have questions regarding these terms, please reach out to our 24/7 Digital Banking Support Desk at <span className="text-sky-400 font-mono">support@banking.fsa.gov.kh</span>.
+            If you have questions regarding these terms, please reach out to our
+            24/7 Digital Banking Support Desk at{" "}
+            <span className="text-sky-400 font-mono">
+              support@banking.fsa.gov.kh
+            </span>
+            .
           </p>
         </div>
 

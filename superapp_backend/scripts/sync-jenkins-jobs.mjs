@@ -145,6 +145,10 @@ async function main() {
   };
 
   await syncJob('miniapp-validation', resolveScript('Jenkinsfile.miniapp-validation'));
+  await syncJob('miniapp-validation-webview', resolveScript('Jenkinsfile.webview-validation'));
+  await syncJob('miniapp-validation-flutter-package', resolveScript('Jenkinsfile.package-validation'));
+  await syncJob('miniapp-validation-native-sdk', resolveScript('Jenkinsfile.nativesdk-validation'));
+  await syncJob('miniapp-validation-deep-link', resolveScript('Jenkinsfile.deeplink-validation'));
   await syncJob('superapp-sandbox-build', resolveScript('Jenkinsfile.superapp-sandbox-build'));
   await syncJob('superapp-test-build', resolveScript('Jenkinsfile.superapp-test-build'));
   console.log('✨ All Jenkins jobs processed successfully.');

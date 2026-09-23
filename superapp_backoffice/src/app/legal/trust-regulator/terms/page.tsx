@@ -1,18 +1,22 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { XIcon, ArrowRightIcon } from '@/components/ui/Icons';
+import React from "react";
+import Link from "next/link";
+import { XIcon, ArrowRightIcon } from "@/components/ui/Icons";
 
 export default function TrustRegulatorTermsPage() {
   const handleBack = () => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       try {
-        window.parent.postMessage({ type: 'CLOSE_TERMS' }, '*');
+        window.parent.postMessage({ type: "CLOSE_TERMS" }, "*");
       } catch (_) {}
       try {
-        const bridge = (window as any).SuperAppJSBridge || (window as any).SuperAppNativeBridge || (window as any).DSPNativeBridge || (window as any).DPSNativeBridge;
-        bridge?.postMessage?.(JSON.stringify({ action: 'closeTerms' }));
+        const bridge =
+          (window as any).SuperAppJSBridge ||
+          (window as any).SuperAppNativeBridge ||
+          (window as any).DPSNativeBridge ||
+          (window as any).DSPNativeBridge;
+        bridge?.postMessage?.(JSON.stringify({ action: "closeTerms" }));
       } catch (_) {}
       if (window.history.length > 1) {
         window.history.back();
@@ -54,7 +58,11 @@ export default function TrustRegulatorTermsPage() {
             1. Scope & Regulatory Authority
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            The Trust Regulator Mini App operates under the statutory oversight of the Non-Bank Financial Services Authority (FSA). It provides verified public and institutional users with official digital certification, trust registration auditing, and compliance verification.
+            The Trust Regulator Mini App operates under the statutory oversight
+            of the Non-Bank Financial Services Authority (FSA). It provides
+            verified public and institutional users with official digital
+            certification, trust registration auditing, and compliance
+            verification.
           </p>
         </div>
 
@@ -64,7 +72,11 @@ export default function TrustRegulatorTermsPage() {
             2. Trust Certificate Authenticity & Legal Effect
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            Digital trust verification certificates and cryptographic QR stamps generated within this application constitute official proof of registration in the FSA Trust Database. Tampering, counterfeiting, or misrepresenting certificate records constitutes a regulatory offense punishable under the Trust Law of the Kingdom of Cambodia.
+            Digital trust verification certificates and cryptographic QR stamps
+            generated within this application constitute official proof of
+            registration in the FSA Trust Database. Tampering, counterfeiting,
+            or misrepresenting certificate records constitutes a regulatory
+            offense punishable under the Trust Law of the Kingdom of Cambodia.
           </p>
         </div>
 
@@ -74,7 +86,9 @@ export default function TrustRegulatorTermsPage() {
             3. Native Capabilities & Audit Trail
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            This Mini App utilizes native platform capabilities (Camera barcode scanner and secure biometric verification) to validate physical certificates and verify authorized administrative signatories.
+            This Mini App utilizes native platform capabilities (Camera barcode
+            scanner and secure biometric verification) to validate physical
+            certificates and verify authorized administrative signatories.
           </p>
         </div>
 
@@ -84,7 +98,10 @@ export default function TrustRegulatorTermsPage() {
             4. Limitation of Liability
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            The Trust Regulator makes every effort to ensure accurate and real-time synchronization of the trust registry. Users must ensure that submitted documentation and entity declarations are accurate and up-to-date.
+            The Trust Regulator makes every effort to ensure accurate and
+            real-time synchronization of the trust registry. Users must ensure
+            that submitted documentation and entity declarations are accurate
+            and up-to-date.
           </p>
         </div>
 

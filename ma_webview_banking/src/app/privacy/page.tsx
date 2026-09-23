@@ -1,17 +1,21 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Link from 'next/link';
+import React from "react";
+import Link from "next/link";
 
 export default function BankingPrivacyPage() {
   const handleBack = () => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       try {
-        window.parent.postMessage({ type: 'CLOSE_TERMS' }, '*');
+        window.parent.postMessage({ type: "CLOSE_TERMS" }, "*");
       } catch (_) {}
       try {
-        const bridge = (window as any).SuperAppJSBridge || (window as any).SuperAppNativeBridge || (window as any).DSPNativeBridge || (window as any).DPSNativeBridge;
-        bridge?.postMessage?.(JSON.stringify({ action: 'closeTerms' }));
+        const bridge =
+          (window as any).SuperAppJSBridge ||
+          (window as any).SuperAppNativeBridge ||
+          (window as any).DPSNativeBridge ||
+          (window as any).DSPNativeBridge;
+        bridge?.postMessage?.(JSON.stringify({ action: "closeTerms" }));
       } catch (_) {}
       if (window.history.length > 1) {
         window.history.back();
@@ -26,8 +30,18 @@ export default function BankingPrivacyPage() {
         <div className="border-b border-slate-800 pb-6 flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center text-white shrink-0">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                />
               </svg>
             </div>
             <div>
@@ -35,7 +49,8 @@ export default function BankingPrivacyPage() {
                 Bakong Digital Banking — Privacy Policy
               </h1>
               <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-                Effective Date: September 2026 • Privacy &amp; Data Protection Compliance
+                Effective Date: September 2026 • Privacy &amp; Data Protection
+                Compliance
               </p>
             </div>
           </div>
@@ -44,8 +59,18 @@ export default function BankingPrivacyPage() {
             onClick={handleBack}
             className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 hover:text-white transition flex items-center gap-1.5 shrink-0 cursor-pointer"
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-3.5 h-3.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
             <span>Close</span>
           </button>
@@ -57,12 +82,22 @@ export default function BankingPrivacyPage() {
             1. Information We Collect
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            When you interact with the Bakong Digital Banking Mini App via the Super App container, we collect the following essential data:
+            When you interact with the Bakong Digital Banking Mini App via the
+            Super App container, we collect the following essential data:
           </p>
           <ul className="list-disc list-inside text-sm text-slate-300 space-y-1.5 leading-relaxed pl-1">
-            <li><strong>Super App SSO Profile:</strong> User Identifier, Account Name, and verified citizen identity token.</li>
-            <li><strong>Transaction Records:</strong> Payment timestamps, Bakong reference numbers, amounts, and destination account details.</li>
-            <li><strong>Hardware Capability Data:</strong> Device camera authorization status for QR barcode recognition.</li>
+            <li>
+              <strong>Super App SSO Profile:</strong> User Identifier, Account
+              Name, and verified citizen identity token.
+            </li>
+            <li>
+              <strong>Transaction Records:</strong> Payment timestamps, Bakong
+              reference numbers, amounts, and destination account details.
+            </li>
+            <li>
+              <strong>Hardware Capability Data:</strong> Device camera
+              authorization status for QR barcode recognition.
+            </li>
           </ul>
         </div>
 
@@ -75,9 +110,18 @@ export default function BankingPrivacyPage() {
             Your personal and financial information is processed strictly for:
           </p>
           <ul className="list-disc list-inside text-sm text-slate-300 space-y-1.5 leading-relaxed pl-1">
-            <li>Executing real-time payments, transfers, and utility bill settlements.</li>
-            <li>Anti-money laundering (AML) verification and fraud prevention as required by banking regulations.</li>
-            <li>Securing user sessions via Super App mutual TLS and JWT token verification.</li>
+            <li>
+              Executing real-time payments, transfers, and utility bill
+              settlements.
+            </li>
+            <li>
+              Anti-money laundering (AML) verification and fraud prevention as
+              required by banking regulations.
+            </li>
+            <li>
+              Securing user sessions via Super App mutual TLS and JWT token
+              verification.
+            </li>
           </ul>
         </div>
 
@@ -87,7 +131,10 @@ export default function BankingPrivacyPage() {
             3. Data Retention & Cryptographic Security
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            All data in transit is encrypted using TLS 1.3 encryption. Transaction logs are retained in encrypted, immutable audit stores in compliance with the National Bank of Cambodia regulatory retention schedule (minimum 5 years).
+            All data in transit is encrypted using TLS 1.3 encryption.
+            Transaction logs are retained in encrypted, immutable audit stores
+            in compliance with the National Bank of Cambodia regulatory
+            retention schedule (minimum 5 years).
           </p>
         </div>
 
@@ -97,7 +144,9 @@ export default function BankingPrivacyPage() {
             4. Third-Party Sharing
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            We do not sell, rent, or monetize your personal data. Data is shared exclusively with the National Bank of Cambodia (NBC) Bakong settlement network to complete fund routing.
+            We do not sell, rent, or monetize your personal data. Data is shared
+            exclusively with the National Bank of Cambodia (NBC) Bakong
+            settlement network to complete fund routing.
           </p>
         </div>
 
