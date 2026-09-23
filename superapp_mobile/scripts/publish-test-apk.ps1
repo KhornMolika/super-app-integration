@@ -2,7 +2,7 @@
 # Builds the Flutter Mobile App APK and publishes it to Sonatype Nexus & Jenkins test build volume.
 
 param(
-    [string]$Version = "v0.0.1",
+    [string]$Version = "",
     [string]$AppName = "superapp",
     [string]$RepoName = "apk-test-builds",
     [string]$NexusUrl = "",
@@ -13,11 +13,29 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+$MobileAppDir = Resolve-Path "$PSScriptRoot/.."
+$ApkPath = "$MobileAppDir/build/app/outputs/flutter-apk/app-debug.apk"
+
+# Dynamically resolve Version from pubspec.yaml, Git, or environment if not passed
+if (-not $Version) {
+    if ($env:SUPERAPP_VERSION) {
+        $Version = $env:SUPERAPP_VERSION
+    } elseif (Test-Path "$MobileAppDir/pubspec.yaml") {
+        $pubspecContent = Get-Content "$MobileAppDir/pubspec.yaml" -Raw
+        if ($pubspecContent -match 'version:\s*([^\s+]+)') {
+            $Version = "v$($matches[1])"
+        }
+    }
+    if (-not $Version) { $Version = "v1.0.0" }
+}
 if (-not $NexusUrl) {
     if ($env:NEXUS_BASE_URL) { $NexusUrl = $env:NEXUS_BASE_URL }
+    elseif ($env:NEXT_PUBLIC_NEXUS_URL) { $NexusUrl = $env:NEXT_PUBLIC_NEXUS_URL }
     elseif ($env:NEXUS_URL) { $NexusUrl = $env:NEXUS_URL }
     else { $NexusUrl = "http://localhost:8081" }
 }
+$NexusUrl = $NexusUrl.TrimEnd('/')
+
 if (-not $NexusUser) {
     if ($env:NEXUS_ADMIN_USER) { $NexusUser = $env:NEXUS_ADMIN_USER }
     elseif ($env:NEXUS_USER) { $NexusUser = $env:NEXUS_USER }
@@ -28,9 +46,6 @@ if (-not $NexusPassword) {
     elseif ($env:NEXUS_PASSWORD) { $NexusPassword = $env:NEXUS_PASSWORD }
     else { $NexusPassword = "admin123" }
 }
-
-$MobileAppDir = Resolve-Path "$PSScriptRoot/.."
-$ApkPath = "$MobileAppDir/build/app/outputs/flutter-apk/app-debug.apk"
 
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host ">> Super App APK Build & Nexus Publisher" -ForegroundColor Cyan
@@ -60,6 +75,7 @@ Write-Host "`n[OK] Found APK: $($ApkItem.FullName) ($([math]::Round($ApkItem.Len
 
 # 1. Publish directly to Sonatype Nexus
 $UploadUrl = "$NexusUrl/repository/$RepoName/$AppName/$Version/app-debug.apk"
+$LatestUrl = "$NexusUrl/repository/$RepoName/$AppName/latest/app-debug.apk"
 Write-Host "`n[UPLOAD] Uploading APK to Nexus: $UploadUrl..." -ForegroundColor Yellow
 
 try {
@@ -69,6 +85,10 @@ try {
     } else {
         Write-Error "Failed to upload APK to Nexus."
     }
+
+    # Also update dynamic 'latest' pointer on Nexus
+    Write-Host "[UPLOAD] Updating dynamic 'latest' package pointer on Nexus: $LatestUrl..." -ForegroundColor Yellow
+    & curl.exe -s -f -u "${NexusUser}:${NexusPassword}" --upload-file "$ApkPath" "$LatestUrl"
 } catch {
     Write-Error "Upload error: $_"
 }
