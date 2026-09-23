@@ -57,7 +57,7 @@ dsp-poc/
 │   └── build/                       # Multi-arch APK & Web artifacts
 │
 ├── dps_core_package/                # Shared Dart/Flutter library across packages
-├── dsp_miniapp_trust_regulator/     # Example Flutter In-App Module Mini App
+├── ma_flutter_trust_regulator/     # Example Flutter In-App Module Mini App
 ├── dps_webview_webapp_banking/      # Sample WebView Mini App: Banking (Port 3003)
 ├── dps_webview_webapp_insurance/    # Sample WebView Mini App: Insurance (Port 3004)
 ├── scripts/

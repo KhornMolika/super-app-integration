@@ -28,7 +28,7 @@ describe('ReleaseAssemblyVerificationService', () => {
         latest: {
           version: '1.0.0',
           pubspec: {
-            name: 'dps_miniapp_banking',
+            name: 'ma_flutter_banking',
             version: '1.0.0',
             dependencies: { flutter: 'sdk' },
           },
@@ -94,7 +94,7 @@ describe('ReleaseAssemblyVerificationService', () => {
         {
           id: 'app-1',
           name: 'Banking Mini App',
-          packageName: 'dps_miniapp_banking',
+          packageName: 'ma_flutter_banking',
           version: '1.0.0',
         },
       ],
@@ -114,7 +114,7 @@ describe('ReleaseAssemblyVerificationService', () => {
         {
           id: 'app-1',
           name: 'Banking Mini App',
-          packageName: 'dps_miniapp_banking',
+          packageName: 'ma_flutter_banking',
           version: '1.0.0',
         },
       ],

@@ -1263,10 +1263,6 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
           process.cwd(),
           'ma_flutter_trust_regulator/example/build/app/outputs/flutter-apk/app-debug.apk',
         ),
-        path.resolve(
-          process.cwd(),
-          'dsp_miniapp_trust_regulator/example/build/app/outputs/flutter-apk/app-debug.apk',
-        ),
         apkUrlOrPath,
       ];
 

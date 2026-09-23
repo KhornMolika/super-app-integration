@@ -113,9 +113,7 @@ async function publishPackage(pkgDir, pkgName, version = '1.0.0') {
 
 async function main() {
   const rootDir = process.cwd();
-  const trustDir = fs.existsSync(path.join(rootDir, 'ma_flutter_trust_regulator'))
-    ? path.join(rootDir, 'ma_flutter_trust_regulator')
-    : path.join(rootDir, 'dsp_miniapp_trust_regulator');
+  const trustDir = path.join(rootDir, 'ma_flutter_trust_regulator');
   await publishPackage(trustDir, 'ma_flutter_trust_regulator', '1.0.0');
 }
 

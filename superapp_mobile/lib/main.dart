@@ -20,8 +20,6 @@ void _initMiniAppRegistry() {
   MiniAppRegistry.registerAliases(
     [
       'ma_flutter_trust_regulator',
-      'dps_miniapp_mobile_trust_regulator',
-      'dsp_miniapp_trust_regulator',
       'trust_regulator',
       'trust_regulator_digital_certificate',
     ],
@@ -30,8 +28,6 @@ void _initMiniAppRegistry() {
   MiniAppRegistry.registerAliases(
     [
       'ma_flutter_kyc',
-      'dps_miniapp_mobile_kyc_verifier',
-      'dsp_miniapp_kyc_verifier',
       'kyc_verifier',
       'cambodia_kyc_verifier_sdk',
     ],

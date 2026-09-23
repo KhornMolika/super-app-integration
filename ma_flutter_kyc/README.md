@@ -1,4 +1,4 @@
-# Digital KYC Verifier Mini App (`dps_miniapp_mobile_kyc_verifier`)
+# Digital KYC Verifier Mini App (`ma_flutter_kyc`)
 
 A native Flutter package Mini App for Super App ecosystem integration.
 
@@ -10,7 +10,7 @@ A native Flutter package Mini App for Super App ecosystem integration.
 
 ## Super App Usage
 ```dart
-import 'package:dps_miniapp_mobile_kyc_verifier/dsp_miniapp_kyc_verifier.dart';
+import 'package:ma_flutter_kyc/ma_flutter_kyc.dart';
 
 KycVerifierAppEntry(
   jwtToken: activeUserToken,

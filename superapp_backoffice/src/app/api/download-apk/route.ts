@@ -117,7 +117,6 @@ export async function GET(request: NextRequest) {
     path.resolve(legacyMobileDir, 'build/app/outputs/apk/debug/app-debug.apk'),
     path.resolve(legacyMobileDir, 'build/app/outputs/flutter-apk/app-release.apk'),
     path.resolve(process.cwd(), '../ma_flutter_trust_regulator/example/build/app/outputs/flutter-apk/app-debug.apk'),
-    path.resolve(process.cwd(), '../dsp_miniapp_trust_regulator/example/build/app/outputs/flutter-apk/app-debug.apk'),
   ];
 
   for (const localPath of localApkPaths) {

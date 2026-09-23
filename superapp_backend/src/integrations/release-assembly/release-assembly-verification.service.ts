@@ -90,10 +90,6 @@ export class ReleaseAssemblyVerificationService {
                 process.cwd(),
                 `../ma_flutter_trust_regulator/pubspec.yaml`,
               ),
-              path.resolve(
-                process.cwd(),
-                `../dsp_miniapp_trust_regulator/pubspec.yaml`,
-              ),
             ];
             let foundLocal = false;
             for (const p of localPubspecPaths) {
@@ -199,9 +195,7 @@ export class ReleaseAssemblyVerificationService {
       packageName: app.packageName,
       version: app.version,
       checksum: app.nexusChecksum,
-      entryPoint: app.packageName.startsWith('ma_')
-        ? `package:${app.packageName}/${app.packageName}.dart`
-        : `package:${app.packageName}/${app.packageName.replace('dps_miniapp_mobile_', 'dsp_miniapp_')}.dart`,
+      entryPoint: `package:${app.packageName}/${app.packageName}.dart`,
     }));
 
     const consolidatedPermissions = Array.from(consolidatedPermissionsSet);

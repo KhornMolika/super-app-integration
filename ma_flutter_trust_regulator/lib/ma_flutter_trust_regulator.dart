@@ -780,7 +780,7 @@ class _TrustRegulatorAppEntryState extends State<TrustRegulatorAppEntry> {
                   children: [
                     Icon(Icons.info_outline_rounded, size: 16, color: primarySlate),
                     SizedBox(width: 8),
-                    Text('Package: dps_miniapp_mobile_trust_regulator', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+                    Text('Package: ma_flutter_trust_regulator', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
                   ],
                 ),
                 SizedBox(height: 8),

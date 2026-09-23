@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:dps_miniapp_mobile_trust_regulator/dsp_miniapp_trust_regulator.dart';
+import 'package:ma_flutter_trust_regulator/ma_flutter_trust_regulator.dart';
 
 class TrustRegulatorView extends GetView {
   const TrustRegulatorView({super.key});

@@ -19,12 +19,8 @@ dependencies:
   local_auth: ^3.0.2
 
   url_launcher: ^6.3.2
-  webview_flutter_web: ^0.2.3+4
-  dps_miniapp_mobile_trust_regulator:
-    hosted:
-      name: dps_miniapp_mobile_trust_regulator
-      url: http://localhost:8081/repository/pub-group
-    version: ^1.0.0
+  ma_flutter_trust_regulator:
+    path: ../ma_flutter_trust_regulator
 
 dev_dependencies:
   flutter_test:
