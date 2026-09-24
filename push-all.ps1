@@ -104,14 +104,39 @@ if (-not $SourceBranch) {
 Write-Host "`n[OK] Selected source branch: $SourceBranch" -ForegroundColor Green
 
 # ==============================================================================
-# 3. Select Target Branch on Remotes
+# 3. Select Target Branch on Remotes (Numbered Menu to Prevent Mis-typing)
 # ==============================================================================
 if (-not $TargetBranch) {
-    $targetChoice = Read-Host "Enter target remote branch name [Default: $SourceBranch]"
-    if ([string]::IsNullOrWhiteSpace($targetChoice)) {
-        $TargetBranch = $SourceBranch
-    } else {
-        $TargetBranch = $targetChoice
+    Write-Host "Select target remote branch:" -ForegroundColor White
+    Write-Host "  [1] Same as source branch ($SourceBranch) [Default]" -ForegroundColor Cyan
+    Write-Host "  [2] development"
+    Write-Host "  [3] main"
+    Write-Host "  [4] Custom branch name"
+    
+    $tChoice = Read-Host "Enter choice [Default: 1 ($SourceBranch)]"
+    if ([string]::IsNullOrWhiteSpace($tChoice)) {
+        $tChoice = "1"
+    }
+
+    switch ($tChoice) {
+        "1" { $TargetBranch = $SourceBranch }
+        "2" { $TargetBranch = "development" }
+        "3" { $TargetBranch = "main" }
+        "4" {
+            $custom = Read-Host "Enter custom target branch name"
+            if ([string]::IsNullOrWhiteSpace($custom)) {
+                $TargetBranch = $SourceBranch
+            } else {
+                $TargetBranch = $custom
+            }
+        }
+        Default {
+            if ($tChoice -eq $SourceBranch -or $tChoice -eq "development" -or $tChoice -eq "main") {
+                $TargetBranch = $tChoice
+            } else {
+                $TargetBranch = $SourceBranch
+            }
+        }
     }
 }
 
@@ -122,7 +147,7 @@ Write-Host "[OK] Target branch on remotes: $TargetBranch`n" -ForegroundColor Gre
 # ==============================================================================
 if (-not $RemoteOption) {
     Write-Host "Select destination remote(s):" -ForegroundColor White
-    Write-Host "  [1] All Remotes (origin + fintech + fintech-backend)" -ForegroundColor Cyan
+    Write-Host "  [1] All Remotes (origin + fintech + fintech-backend) [Recommended]" -ForegroundColor Cyan
     Write-Host "  [2] GitLab Both (fintech Frontend + fintech-backend Backend)"
     Write-Host "  [3] GitLab Frontend only (fintech -> super-app-manager.git)"
     Write-Host "  [4] GitLab Backend only (fintech-backend -> super-app.git)"

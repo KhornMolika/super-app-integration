@@ -100,18 +100,41 @@ fi
 echo -e "\n${GREEN}✔ Selected source branch: ${BOLD}${SOURCE_BRANCH}${RESET}\n"
 
 # ==============================================================================
-# 3. Select Target Branch on Remotes
+# 3. Select Target Branch on Remotes (Numbered Menu to Prevent Mis-typing)
 # ==============================================================================
 TARGET_BRANCH=""
 if [ -n "$2" ]; then
   TARGET_BRANCH="$2"
   echo -e "${GREEN}✔ Target remote branch passed as argument: ${BOLD}${TARGET_BRANCH}${RESET}"
 else
-  read -r -p "Enter target remote branch name [Default: $SOURCE_BRANCH]: " TARGET_CHOICE
-  TARGET_BRANCH=${TARGET_CHOICE:-$SOURCE_BRANCH}
+  echo -e "${BOLD}Select target remote branch:${RESET}"
+  echo -e "  ${CYAN}[1] Same as source branch ($SOURCE_BRANCH) [Default]${RESET}"
+  echo -e "  [2] development"
+  echo -e "  [3] main"
+  echo -e "  [4] Custom branch name"
+  read -r -p "Enter choice [Default: 1 ($SOURCE_BRANCH)]: " TARGET_MENU_CHOICE
+  TARGET_MENU_CHOICE=${TARGET_MENU_CHOICE:-1}
+
+  case "$TARGET_MENU_CHOICE" in
+    1) TARGET_BRANCH="$SOURCE_BRANCH" ;;
+    2) TARGET_BRANCH="development" ;;
+    3) TARGET_BRANCH="main" ;;
+    4)
+      read -r -p "Enter custom target branch name: " CUSTOM_NAME
+      TARGET_BRANCH=${CUSTOM_NAME:-$SOURCE_BRANCH}
+      ;;
+    *)
+      # If user typed an exact branch name or number
+      if [ "$TARGET_MENU_CHOICE" == "$SOURCE_BRANCH" ] || [ "$TARGET_MENU_CHOICE" == "development" ] || [ "$TARGET_MENU_CHOICE" == "main" ]; then
+        TARGET_BRANCH="$TARGET_MENU_CHOICE"
+      else
+        TARGET_BRANCH="$SOURCE_BRANCH"
+      fi
+      ;;
+  esac
 fi
 
-echo -e "${GREEN}✔ Target branch on remotes: ${BOLD}${TARGET_BRANCH}${RESET}\n"
+echo -e "\n${GREEN}✔ Target branch on remotes: ${BOLD}${TARGET_BRANCH}${RESET}\n"
 
 # ==============================================================================
 # 4. Select Remotes
@@ -121,7 +144,7 @@ if [ -n "$3" ]; then
   REMOTE_CHOICE="$3"
 else
   echo -e "${BOLD}Select destination remote(s):${RESET}"
-  echo -e "  ${CYAN}[1] All Remotes (origin + fintech + fintech-backend)${RESET}"
+  echo -e "  ${CYAN}[1] All Remotes (origin + fintech + fintech-backend) [Recommended]${RESET}"
   echo -e "  [2] GitLab Both (fintech Frontend + fintech-backend Backend)"
   echo -e "  [3] GitLab Frontend only (fintech -> super-app-manager.git)"
   echo -e "  [4] GitLab Backend only (fintech-backend -> super-app.git)"
