@@ -27,7 +27,7 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   exit 1
 fi
 
-CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD | tr -d '\r\n ')
 
 # ==============================================================================
 # 1. Check for Uncommitted Changes & Prompt to Commit (git add . && git commit)
@@ -40,6 +40,7 @@ if [ -n "$STATUS_CHANGES" ]; then
   echo ""
   
   read -r -p "Enter commit message (or leave blank to skip commit): " COMMIT_MSG
+  COMMIT_MSG=$(echo "$COMMIT_MSG" | tr -d '\r')
   
   if [ -n "$COMMIT_MSG" ]; then
     echo -e "\n${CYAN}➜ Running: git add .${RESET}"
@@ -66,7 +67,7 @@ fi
 
 SOURCE_BRANCH=""
 if [ -n "$1" ]; then
-  SOURCE_BRANCH="$1"
+  SOURCE_BRANCH=$(echo "$1" | tr -d '\r\n ')
   echo -e "${GREEN}✔ Source branch passed as argument: ${BOLD}${SOURCE_BRANCH}${RESET}"
 else
   echo -e "${BOLD}Select the local branch you want to push:${RESET}"
@@ -83,6 +84,7 @@ else
   done
 
   read -r -p "Enter number [Default: $CURRENT_INDEX ($CURRENT_BRANCH)]: " BRANCH_CHOICE
+  BRANCH_CHOICE=$(echo "$BRANCH_CHOICE" | tr -d '\r\n ')
   BRANCH_CHOICE=${BRANCH_CHOICE:-$CURRENT_INDEX}
 
   if [[ "$BRANCH_CHOICE" =~ ^[0-9]+$ ]] && [ "$BRANCH_CHOICE" -ge 1 ] && [ "$BRANCH_CHOICE" -le "${#LOCAL_BRANCHES[@]}" ]; then
@@ -97,14 +99,15 @@ else
   fi
 fi
 
+SOURCE_BRANCH=$(echo "$SOURCE_BRANCH" | tr -d '\r\n ')
 echo -e "\n${GREEN}✔ Selected source branch: ${BOLD}${SOURCE_BRANCH}${RESET}\n"
 
 # ==============================================================================
-# 3. Select Target Branch on Remotes (Numbered Menu to Prevent Mis-typing)
+# 3. Select Target Branch on Remotes
 # ==============================================================================
 TARGET_BRANCH=""
 if [ -n "$2" ]; then
-  TARGET_BRANCH="$2"
+  TARGET_BRANCH=$(echo "$2" | tr -d '\r\n ')
   echo -e "${GREEN}✔ Target remote branch passed as argument: ${BOLD}${TARGET_BRANCH}${RESET}"
 else
   echo -e "${BOLD}Select target remote branch:${RESET}"
@@ -113,6 +116,7 @@ else
   echo -e "  [3] main"
   echo -e "  [4] Custom branch name"
   read -r -p "Enter choice [Default: 1 ($SOURCE_BRANCH)]: " TARGET_MENU_CHOICE
+  TARGET_MENU_CHOICE=$(echo "$TARGET_MENU_CHOICE" | tr -d '\r\n ')
   TARGET_MENU_CHOICE=${TARGET_MENU_CHOICE:-1}
 
   case "$TARGET_MENU_CHOICE" in
@@ -121,10 +125,10 @@ else
     3) TARGET_BRANCH="main" ;;
     4)
       read -r -p "Enter custom target branch name: " CUSTOM_NAME
+      CUSTOM_NAME=$(echo "$CUSTOM_NAME" | tr -d '\r\n ')
       TARGET_BRANCH=${CUSTOM_NAME:-$SOURCE_BRANCH}
       ;;
     *)
-      # If user typed an exact branch name or number
       if [ "$TARGET_MENU_CHOICE" == "$SOURCE_BRANCH" ] || [ "$TARGET_MENU_CHOICE" == "development" ] || [ "$TARGET_MENU_CHOICE" == "main" ]; then
         TARGET_BRANCH="$TARGET_MENU_CHOICE"
       else
@@ -134,6 +138,7 @@ else
   esac
 fi
 
+TARGET_BRANCH=$(echo "$TARGET_BRANCH" | tr -d '\r\n ')
 echo -e "\n${GREEN}✔ Target branch on remotes: ${BOLD}${TARGET_BRANCH}${RESET}\n"
 
 # ==============================================================================
@@ -141,7 +146,7 @@ echo -e "\n${GREEN}✔ Target branch on remotes: ${BOLD}${TARGET_BRANCH}${RESET}
 # ==============================================================================
 REMOTE_CHOICE=""
 if [ -n "$3" ]; then
-  REMOTE_CHOICE="$3"
+  REMOTE_CHOICE=$(echo "$3" | tr -d '\r\n ')
 else
   echo -e "${BOLD}Select destination remote(s):${RESET}"
   echo -e "  ${CYAN}[1] All Remotes (origin + fintech + fintech-backend) [Recommended]${RESET}"
@@ -150,8 +155,11 @@ else
   echo -e "  [4] GitLab Backend only (fintech-backend -> super-app.git)"
   echo -e "  [5] GitHub Monorepo only (origin -> super-app-integration.git)"
   read -r -p "Enter choice [Default: 1]: " USER_REMOTE_CHOICE
+  USER_REMOTE_CHOICE=$(echo "$USER_REMOTE_CHOICE" | tr -d '\r\n ')
   REMOTE_CHOICE=${USER_REMOTE_CHOICE:-1}
 fi
+
+REMOTE_CHOICE=$(echo "$REMOTE_CHOICE" | tr -d '\r\n ')
 
 # Summary confirmation
 echo -e "\n${BOLD}${YELLOW}------------------------------------------------------${RESET}"
@@ -164,11 +172,12 @@ case "$REMOTE_CHOICE" in
   3) echo -e "  - Destinations:    ${GREEN}fintech (Frontend)${RESET}" ;;
   4) echo -e "  - Destinations:    ${GREEN}fintech-backend (Backend)${RESET}" ;;
   5) echo -e "  - Destinations:    ${GREEN}origin (Monorepo)${RESET}" ;;
-  *) echo -e "${RED}❌ Invalid remote choice!${RESET}"; exit 1 ;;
+  *) echo -e "${RED}❌ Invalid remote choice: '$REMOTE_CHOICE'${RESET}"; exit 1 ;;
 esac
 echo -e "${BOLD}${YELLOW}------------------------------------------------------${RESET}\n"
 
 read -r -p "Proceed with push? [Y/n]: " CONFIRM
+CONFIRM=$(echo "$CONFIRM" | tr -d '\r\n ')
 if [[ "$CONFIRM" =~ ^[nN] ]]; then
   echo -e "${YELLOW}Push cancelled.${RESET}"
   exit 0
@@ -190,7 +199,7 @@ push_origin() {
 push_fintech() {
   echo -e "${BOLD}${BLUE}🏢 [2/3] Splitting & Pushing superapp_backoffice to fintech ($TARGET_BRANCH)...${RESET}"
   echo -e "  ${CYAN}➜ Computing subtree split for superapp_backoffice...${RESET}"
-  SPLIT_COMMIT=$(git subtree split --prefix=superapp_backoffice "$SOURCE_BRANCH")
+  SPLIT_COMMIT=$(git subtree split --prefix=superapp_backoffice "$SOURCE_BRANCH" | tr -d '\r\n ')
   if [ -z "$SPLIT_COMMIT" ]; then
     echo -e "${RED}❌ Subtree split failed for superapp_backoffice!${RESET}\n"
     return 1
@@ -207,7 +216,7 @@ push_fintech() {
 push_fintech_backend() {
   echo -e "${BOLD}${BLUE}⚙️  [3/3] Splitting & Pushing superapp_backend to fintech-backend ($TARGET_BRANCH)...${RESET}"
   echo -e "  ${CYAN}➜ Computing subtree split for superapp_backend...${RESET}"
-  SPLIT_COMMIT=$(git subtree split --prefix=superapp_backend "$SOURCE_BRANCH")
+  SPLIT_COMMIT=$(git subtree split --prefix=superapp_backend "$SOURCE_BRANCH" | tr -d '\r\n ')
   if [ -z "$SPLIT_COMMIT" ]; then
     echo -e "${RED}❌ Subtree split failed for superapp_backend!${RESET}\n"
     return 1
