@@ -106,9 +106,9 @@ try {
     Write-Warning "Could not update active realms: $_"
 }
 
-# 2.5 Clean up unused default repositories (Nuget, Maven Snapshots)
-Write-Host "Cleaning up unused default factory repositories (nuget-*, maven-*)..."
-$unusedRepos = @("nuget-group", "nuget-hosted", "nuget.org-proxy", "maven-snapshots", "maven-releases", "maven-public", "maven-central")
+# 2.5 Clean up unused default repositories
+Write-Host "Cleaning up unused repositories (nuget-*, maven-*, redundant raw repos)..."
+$unusedRepos = @("nuget-group", "nuget-hosted", "nuget.org-proxy", "maven-snapshots", "maven-releases", "maven-public", "maven-central", "miniapp-packages", "miniapp-native-sdks")
 foreach ($r in $unusedRepos) {
     try {
         Invoke-RestMethod -Uri "$baseUrl/service/rest/v1/repositories/$r" -Headers $authHeader -Method Delete -ErrorAction SilentlyContinue
@@ -119,13 +119,12 @@ foreach ($r in $unusedRepos) {
 }
 
 # 2.6 Create raw repositories for Super App APKs and Artifacts
-Write-Host "Configuring raw repositories (apk-test-builds, apk-releases, superapp-artifacts, miniapp-native-sdks, miniapp-packages)..."
+Write-Host "Configuring raw repositories (apk-test-builds, apk-releases, superapp-artifacts, raw-sdk-artifacts)..."
 $rawRepoConfigs = @(
     @{ name = "apk-test-builds"; writePolicy = "ALLOW" },
     @{ name = "apk-releases"; writePolicy = "ALLOW_ONCE" },
     @{ name = "superapp-artifacts"; writePolicy = "ALLOW" },
-    @{ name = "miniapp-native-sdks"; writePolicy = "ALLOW_ONCE" },
-    @{ name = "miniapp-packages"; writePolicy = "ALLOW" }
+    @{ name = "raw-sdk-artifacts"; writePolicy = "ALLOW" }
 )
 foreach ($cfg in $rawRepoConfigs) {
     try {

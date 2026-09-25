@@ -8,10 +8,11 @@ import type { Multer } from 'multer';
 export class StorageService implements OnModuleInit {
   private readonly logger = new Logger(StorageService.name);
   private minioClient: MinioClient;
-  private assetsBucket: string;
-  private packageSubmissionsBucket: string;
+  readonly assetsBucket: string;
+  readonly packageSubmissionsBucket: string;
   readonly sdkSubmissionsBucket: string;
   private publicUrl: string;
+
 
   constructor(private readonly configService: ConfigService) {
     const endPoint = this.configService.get<string>(
@@ -99,9 +100,10 @@ export class StorageService implements OnModuleInit {
   private async ensureBucketsAndPolicies() {
     const bucketsToCreate = [
       { name: this.assetsBucket, isPublic: true },
-      { name: this.packageSubmissionsBucket, isPublic: true },
-      { name: this.sdkSubmissionsBucket, isPublic: true },
+      { name: this.packageSubmissionsBucket, isPublic: false },
+      { name: this.sdkSubmissionsBucket, isPublic: false },
     ];
+
 
     for (const b of bucketsToCreate) {
       try {
@@ -263,6 +265,7 @@ export class StorageService implements OnModuleInit {
 
   /**
    * Sanitizes a Flutter package zip archive by stripping out local build caches,
+
    * Gradle daemon files, Pods, Git history, IDE settings, and unneeded binaries
    * before storing in MinIO or triggering security scans.
    */

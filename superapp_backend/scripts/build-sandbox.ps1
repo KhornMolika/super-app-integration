@@ -3,19 +3,24 @@
 
 $ErrorActionPreference = "Stop"
 
-$ProjectRoot = Resolve-Path "$PSScriptRoot/.."
+$ProjectRoot = $PSScriptRoot
+while ($ProjectRoot -and -not (Test-Path (Join-Path $ProjectRoot "superapp_mobile"))) {
+    $parent = Split-Path -Parent $ProjectRoot
+    if (-not $parent -or $parent -eq $ProjectRoot) { break }
+    $ProjectRoot = $parent
+}
 
-$MobileAppDir = "$ProjectRoot/superapp_mobile"
+$MobileAppDir = Join-Path $ProjectRoot "superapp_mobile"
 if (-not (Test-Path $MobileAppDir)) {
-    $MobileAppDir = "$ProjectRoot/dps_mobile_app"
+    $MobileAppDir = Join-Path $ProjectRoot "dps_mobile_app"
 }
 
-$BackofficeDir = "$ProjectRoot/superapp_backoffice"
+$BackofficeDir = Join-Path $ProjectRoot "superapp_backoffice"
 if (-not (Test-Path $BackofficeDir)) {
-    $BackofficeDir = "$ProjectRoot/dps_webapp_backoffice"
+    $BackofficeDir = Join-Path $ProjectRoot "dps_webapp_backoffice"
 }
 
-$SandboxDestDir = "$BackofficeDir/public/superapp-sandbox"
+$SandboxDestDir = Join-Path $BackofficeDir "public/superapp-sandbox"
 
 Write-Host "=========================================" -ForegroundColor Cyan
 Write-Host "[BUILD] Compiling Flutter Web Super App Sandbox" -ForegroundColor Cyan

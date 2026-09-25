@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
@@ -14,6 +14,8 @@ import {
   buildDynamicValidationStages,
   getDefaultChecksForMethod,
 } from '../../integrations/validation/local-security-scanner.service';
+import { StorageService } from '../../storage/storage.service';
+import { NexusIntegrationService } from '../../integrations/nexus/nexus-integration.service';
 import { resolveBackofficeBaseUrl } from '../../common/utils/network.utils';
 import {
   extractDecryptedDeployKey,
@@ -39,7 +41,13 @@ export class MiniappLifecycleHelper {
     private pipelinePacerService: PipelinePacerService,
     private gitService: GitIntegrationService,
     private pubspecService: PubspecInjectorService,
+    @Optional()
+    private storageService?: StorageService,
+    @Optional()
+    private nexusService?: NexusIntegrationService,
   ) {}
+
+
 
   async submitForReview(
     app: MiniApp,
@@ -498,6 +506,28 @@ export class MiniappLifecycleHelper {
     // Auto-inject Flutter package dependency into Super App pubspec.yaml if applicable
     if ((app.integrationMethod || '').toUpperCase() === 'FLUTTER_PACKAGE') {
       try {
+        const pkgName = app.integrationConfig?.packageName || (app.name || '').toLowerCase().replace(/[^a-z0-9_]/g, '_');
+        const rawVer = app.integrationConfig?.versionConstraint || app.version || '1.0.0';
+        const pkgVer = String(rawVer).replace(/^[\^~>=<]+/, '') || '1.0.0';
+        const storagePath = app.integrationConfig?.packageStoragePath;
+
+        // Auto-publish candidate package archive to Nexus pub-hosted repository
+        if (storagePath && this.storageService && this.nexusService) {
+          try {
+            const archiveBuf = await this.storageService.getObjectBuffer(
+              this.storageService.packageSubmissionsBucket,
+              storagePath,
+            );
+            if (archiveBuf && archiveBuf.length > 0) {
+              await this.nexusService.publishPubArchive(archiveBuf, pkgName, pkgVer);
+              this.logger.log(`Auto-published package "${pkgName}" (${pkgVer}) to Nexus pub-hosted upon approval.`);
+            }
+          } catch (pubErr: any) {
+            this.logger.warn(`Could not auto-publish archive to Nexus for ${app.name}: ${pubErr.message}`);
+          }
+        }
+
+
         await this.pubspecService.injectMiniApp(app);
         await this.pubspecService.validateDependencies({ dryRun: true });
         this.pubspecService.triggerSandboxRebuild(`Approval of ${app.name}`).catch(() => {});
@@ -506,6 +536,7 @@ export class MiniappLifecycleHelper {
         this.logger.warn(`Pubspec auto-injection warning on approve for ${app.name}: ${err.message}`);
       }
     }
+
 
     // 1. Dispatch Notification (WebSocket + Telegram to MA Manager, MA Team Group, & SA Admins)
     if (app.ownerId) {

@@ -165,6 +165,16 @@ export class PubspecInjectorService {
 
     let dependencyValue: any;
 
+    // Helper to ensure version constraints don't produce duplicate carets (e.g. ^^1.0.0)
+    const normalizeVersionConstraint = (ver?: string): string => {
+      if (!ver || !ver.trim()) return '^1.0.0';
+      const trimmed = ver.trim();
+      if (/^[\^~>=<]/.test(trimmed) || trimmed === 'any') {
+        return trimmed;
+      }
+      return `^${trimmed}`;
+    };
+
     if (gitUrl) {
       const gitConfig: Record<string, string> = { url: gitUrl };
       if (ref) gitConfig.ref = ref;
@@ -179,12 +189,12 @@ export class PubspecInjectorService {
           name: packageName,
           url: nexusPubGroup,
         },
-        version: version || '^1.0.0',
+        version: normalizeVersionConstraint(version),
       };
     } else if (localPath) {
       dependencyValue = { path: localPath };
     } else if (version) {
-      dependencyValue = version;
+      dependencyValue = normalizeVersionConstraint(version);
     } else {
       // Default: Resolve dynamically from private Nexus pub-group registry
       const nexusPubGroup =
@@ -195,7 +205,7 @@ export class PubspecInjectorService {
           name: packageName,
           url: nexusPubGroup,
         },
-        version: version ? `^${version}` : '^1.0.0',
+        version: normalizeVersionConstraint(version),
       };
     }
 

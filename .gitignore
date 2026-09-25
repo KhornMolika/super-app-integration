@@ -31,3 +31,8 @@ secrets/
 *.key
 *.pem
 *.pub
+push-all.sh
+push-all.ps1
+
+# Standalone Mobile Super App clone
+super-app/

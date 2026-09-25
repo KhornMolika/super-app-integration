@@ -149,11 +149,12 @@ if [ -n "$3" ]; then
   REMOTE_CHOICE=$(echo "$3" | tr -d '\r\n ')
 else
   echo -e "${BOLD}Select destination remote(s):${RESET}"
-  echo -e "  ${CYAN}[1] All Remotes (origin + fintech + fintech-backend) [Recommended]${RESET}"
-  echo -e "  [2] GitLab Both (fintech Frontend + fintech-backend Backend)"
-  echo -e "  [3] GitLab Frontend only (fintech -> super-app-manager.git)"
-  echo -e "  [4] GitLab Backend only (fintech-backend -> super-app.git)"
-  echo -e "  [5] GitHub Monorepo only (origin -> super-app-integration.git)"
+  echo -e "  ${CYAN}[1] All Remotes (origin + fintech + fintech-backend + fintech-mobile) [Recommended]${RESET}"
+  echo -e "  [2] GitLab All (fintech Backoffice + fintech-backend Backend + fintech-mobile Mobile)"
+  echo -e "  [3] GitLab Mobile only (fintech-mobile -> super-app.git)"
+  echo -e "  [4] GitLab Backoffice only (fintech -> super-app-manager.git)"
+  echo -e "  [5] GitLab Backend only (fintech-backend -> super-app.git)"
+  echo -e "  [6] GitHub Monorepo only (origin -> super-app-integration.git)"
   read -r -p "Enter choice [Default: 1]: " USER_REMOTE_CHOICE
   USER_REMOTE_CHOICE=$(echo "$USER_REMOTE_CHOICE" | tr -d '\r\n ')
   REMOTE_CHOICE=${USER_REMOTE_CHOICE:-1}
@@ -167,11 +168,12 @@ echo -e "${BOLD}${YELLOW} Push Summary:${RESET}"
 echo -e "  - Source Branch:   ${CYAN}${SOURCE_BRANCH}${RESET}"
 echo -e "  - Target Branch:   ${CYAN}${TARGET_BRANCH}${RESET}"
 case "$REMOTE_CHOICE" in
-  1) echo -e "  - Destinations:    ${GREEN}origin (Monorepo), fintech (Frontend), fintech-backend (Backend)${RESET}" ;;
-  2) echo -e "  - Destinations:    ${GREEN}fintech (Frontend), fintech-backend (Backend)${RESET}" ;;
-  3) echo -e "  - Destinations:    ${GREEN}fintech (Frontend)${RESET}" ;;
-  4) echo -e "  - Destinations:    ${GREEN}fintech-backend (Backend)${RESET}" ;;
-  5) echo -e "  - Destinations:    ${GREEN}origin (Monorepo)${RESET}" ;;
+  1) echo -e "  - Destinations:    ${GREEN}origin (Monorepo), fintech (Backoffice), fintech-backend (Backend), fintech-mobile (Mobile)${RESET}" ;;
+  2) echo -e "  - Destinations:    ${GREEN}fintech (Backoffice), fintech-backend (Backend), fintech-mobile (Mobile)${RESET}" ;;
+  3) echo -e "  - Destinations:    ${GREEN}fintech-mobile (Mobile)${RESET}" ;;
+  4) echo -e "  - Destinations:    ${GREEN}fintech (Backoffice)${RESET}" ;;
+  5) echo -e "  - Destinations:    ${GREEN}fintech-backend (Backend)${RESET}" ;;
+  6) echo -e "  - Destinations:    ${GREEN}origin (Monorepo)${RESET}" ;;
   *) echo -e "${RED}❌ Invalid remote choice: '$REMOTE_CHOICE'${RESET}"; exit 1 ;;
 esac
 echo -e "${BOLD}${YELLOW}------------------------------------------------------${RESET}\n"
@@ -187,7 +189,7 @@ echo ""
 
 # Helper to push to origin (Monorepo)
 push_origin() {
-  echo -e "${BOLD}${BLUE}📦 [1/3] Pushing Monorepo to origin ($TARGET_BRANCH)...${RESET}"
+  echo -e "${BOLD}${BLUE}📦 [1/4] Pushing Monorepo to origin ($TARGET_BRANCH)...${RESET}"
   if git push origin "$SOURCE_BRANCH":"$TARGET_BRANCH"; then
     echo -e "${GREEN}✔ Monorepo successfully pushed to origin/$TARGET_BRANCH!${RESET}\n"
   else
@@ -195,9 +197,9 @@ push_origin() {
   fi
 }
 
-# Helper to push to fintech (Frontend superapp_backoffice)
+# Helper to push to fintech (Backoffice superapp_backoffice)
 push_fintech() {
-  echo -e "${BOLD}${BLUE}🏢 [2/3] Splitting & Pushing superapp_backoffice to fintech ($TARGET_BRANCH)...${RESET}"
+  echo -e "${BOLD}${BLUE}🏢 [2/4] Splitting & Pushing superapp_backoffice to fintech ($TARGET_BRANCH)...${RESET}"
   echo -e "  ${CYAN}➜ Computing subtree split for superapp_backoffice...${RESET}"
   SPLIT_COMMIT=$(git subtree split --prefix=superapp_backoffice "$SOURCE_BRANCH" | tr -d '\r\n ')
   if [ -z "$SPLIT_COMMIT" ]; then
@@ -206,7 +208,7 @@ push_fintech() {
   fi
   echo -e "  ${CYAN}➜ Split commit: $SPLIT_COMMIT${RESET}"
   if git push fintech "$SPLIT_COMMIT":"$TARGET_BRANCH"; then
-    echo -e "${GREEN}✔ Frontend successfully pushed to fintech/$TARGET_BRANCH!${RESET}\n"
+    echo -e "${GREEN}✔ Backoffice successfully pushed to fintech/$TARGET_BRANCH!${RESET}\n"
   else
     echo -e "${RED}❌ Failed to push to fintech/$TARGET_BRANCH.${RESET}\n"
   fi
@@ -214,7 +216,7 @@ push_fintech() {
 
 # Helper to push to fintech-backend (Backend superapp_backend)
 push_fintech_backend() {
-  echo -e "${BOLD}${BLUE}⚙️  [3/3] Splitting & Pushing superapp_backend to fintech-backend ($TARGET_BRANCH)...${RESET}"
+  echo -e "${BOLD}${BLUE}⚙️  [3/4] Splitting & Pushing superapp_backend to fintech-backend ($TARGET_BRANCH)...${RESET}"
   echo -e "  ${CYAN}➜ Computing subtree split for superapp_backend...${RESET}"
   SPLIT_COMMIT=$(git subtree split --prefix=superapp_backend "$SOURCE_BRANCH" | tr -d '\r\n ')
   if [ -z "$SPLIT_COMMIT" ]; then
@@ -229,23 +231,45 @@ push_fintech_backend() {
   fi
 }
 
+# Helper to push to fintech-mobile (Mobile superapp_mobile)
+push_fintech_mobile() {
+  echo -e "${BOLD}${BLUE}📱 [4/4] Splitting & Pushing superapp_mobile to fintech-mobile ($TARGET_BRANCH)...${RESET}"
+  echo -e "  ${CYAN}➜ Computing subtree split for superapp_mobile...${RESET}"
+  SPLIT_COMMIT=$(git subtree split --prefix=superapp_mobile "$SOURCE_BRANCH" | tr -d '\r\n ')
+  if [ -z "$SPLIT_COMMIT" ]; then
+    echo -e "${RED}❌ Subtree split failed for superapp_mobile!${RESET}\n"
+    return 1
+  fi
+  echo -e "  ${CYAN}➜ Split commit: $SPLIT_COMMIT${RESET}"
+  if git push fintech-mobile "$SPLIT_COMMIT":"$TARGET_BRANCH"; then
+    echo -e "${GREEN}✔ Mobile Super App successfully pushed to fintech-mobile/$TARGET_BRANCH!${RESET}\n"
+  else
+    echo -e "${RED}❌ Failed to push to fintech-mobile/$TARGET_BRANCH.${RESET}\n"
+  fi
+}
+
 case "$REMOTE_CHOICE" in
   1)
     push_origin
     push_fintech
     push_fintech_backend
+    push_fintech_mobile
     ;;
   2)
     push_fintech
     push_fintech_backend
+    push_fintech_mobile
     ;;
   3)
-    push_fintech
+    push_fintech_mobile
     ;;
   4)
-    push_fintech_backend
+    push_fintech
     ;;
   5)
+    push_fintech_backend
+    ;;
+  6)
     push_origin
     ;;
 esac

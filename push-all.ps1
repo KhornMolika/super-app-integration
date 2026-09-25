@@ -147,11 +147,12 @@ Write-Host "[OK] Target branch on remotes: $TargetBranch`n" -ForegroundColor Gre
 # ==============================================================================
 if (-not $RemoteOption) {
     Write-Host "Select destination remote(s):" -ForegroundColor White
-    Write-Host "  [1] All Remotes (origin + fintech + fintech-backend) [Recommended]" -ForegroundColor Cyan
-    Write-Host "  [2] GitLab Both (fintech Frontend + fintech-backend Backend)"
-    Write-Host "  [3] GitLab Frontend only (fintech -> super-app-manager.git)"
-    Write-Host "  [4] GitLab Backend only (fintech-backend -> super-app.git)"
-    Write-Host "  [5] GitHub Monorepo only (origin -> super-app-integration.git)"
+    Write-Host "  [1] All Remotes (origin + fintech + fintech-backend + fintech-mobile) [Recommended]" -ForegroundColor Cyan
+    Write-Host "  [2] GitLab All (fintech Backoffice + fintech-backend Backend + fintech-mobile Mobile)"
+    Write-Host "  [3] GitLab Mobile only (fintech-mobile -> super-app.git)"
+    Write-Host "  [4] GitLab Backoffice only (fintech -> super-app-manager.git)"
+    Write-Host "  [5] GitLab Backend only (fintech-backend -> super-app.git)"
+    Write-Host "  [6] GitHub Monorepo only (origin -> super-app-integration.git)"
     
     $userRemote = Read-Host "Enter choice [Default: 1]"
     if ([string]::IsNullOrWhiteSpace($userRemote)) {
@@ -167,11 +168,12 @@ Write-Host " Push Summary:" -ForegroundColor Yellow
 Write-Host "  - Source Branch:   $SourceBranch" -ForegroundColor Cyan
 Write-Host "  - Target Branch:   $TargetBranch" -ForegroundColor Cyan
 switch ($RemoteOption) {
-    "1" { Write-Host "  - Destinations:    origin (Monorepo), fintech (Frontend), fintech-backend (Backend)" -ForegroundColor Green }
-    "2" { Write-Host "  - Destinations:    fintech (Frontend), fintech-backend (Backend)" -ForegroundColor Green }
-    "3" { Write-Host "  - Destinations:    fintech (Frontend)" -ForegroundColor Green }
-    "4" { Write-Host "  - Destinations:    fintech-backend (Backend)" -ForegroundColor Green }
-    "5" { Write-Host "  - Destinations:    origin (Monorepo)" -ForegroundColor Green }
+    "1" { Write-Host "  - Destinations:    origin (Monorepo), fintech (Backoffice), fintech-backend (Backend), fintech-mobile (Mobile)" -ForegroundColor Green }
+    "2" { Write-Host "  - Destinations:    fintech (Backoffice), fintech-backend (Backend), fintech-mobile (Mobile)" -ForegroundColor Green }
+    "3" { Write-Host "  - Destinations:    fintech-mobile (Mobile)" -ForegroundColor Green }
+    "4" { Write-Host "  - Destinations:    fintech (Backoffice)" -ForegroundColor Green }
+    "5" { Write-Host "  - Destinations:    fintech-backend (Backend)" -ForegroundColor Green }
+    "6" { Write-Host "  - Destinations:    origin (Monorepo)" -ForegroundColor Green }
     Default { Write-Host "[ERROR] Invalid remote choice!" -ForegroundColor Red; exit 1 }
 }
 Write-Host "------------------------------------------------------`n" -ForegroundColor Yellow
@@ -185,7 +187,7 @@ if ($confirm -match "^[nN]") {
 Write-Host ""
 
 function Push-ToOrigin {
-    Write-Host "[1/3] Pushing Monorepo to origin ($TargetBranch)..." -ForegroundColor Blue
+    Write-Host "[1/4] Pushing Monorepo to origin ($TargetBranch)..." -ForegroundColor Blue
     git push origin ("{0}:{1}" -f $SourceBranch, $TargetBranch)
     if ($LASTEXITCODE -eq 0) {
         Write-Host "[OK] Monorepo successfully pushed to origin/$TargetBranch!`n" -ForegroundColor Green
@@ -195,7 +197,7 @@ function Push-ToOrigin {
 }
 
 function Push-ToFintech {
-    Write-Host "[2/3] Splitting and Pushing superapp_backoffice to fintech ($TargetBranch)..." -ForegroundColor Blue
+    Write-Host "[2/4] Splitting and Pushing superapp_backoffice to fintech ($TargetBranch)..." -ForegroundColor Blue
     Write-Host "  -> Computing subtree split for superapp_backoffice..." -ForegroundColor Cyan
     $splitCommit = (git subtree split --prefix=superapp_backoffice "$SourceBranch").Trim()
     if (-not $splitCommit) {
@@ -205,14 +207,14 @@ function Push-ToFintech {
     Write-Host "  -> Split commit: $splitCommit" -ForegroundColor Cyan
     git push fintech ("{0}:{1}" -f $splitCommit, $TargetBranch)
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "[OK] Frontend successfully pushed to fintech/$TargetBranch!`n" -ForegroundColor Green
+        Write-Host "[OK] Backoffice successfully pushed to fintech/$TargetBranch!`n" -ForegroundColor Green
     } else {
         Write-Host "[ERROR] Failed to push to fintech/$TargetBranch.`n" -ForegroundColor Red
     }
 }
 
 function Push-ToFintechBackend {
-    Write-Host "[3/3] Splitting and Pushing superapp_backend to fintech-backend ($TargetBranch)..." -ForegroundColor Blue
+    Write-Host "[3/4] Splitting and Pushing superapp_backend to fintech-backend ($TargetBranch)..." -ForegroundColor Blue
     Write-Host "  -> Computing subtree split for superapp_backend..." -ForegroundColor Cyan
     $splitCommit = (git subtree split --prefix=superapp_backend "$SourceBranch").Trim()
     if (-not $splitCommit) {
@@ -228,23 +230,45 @@ function Push-ToFintechBackend {
     }
 }
 
+function Push-ToFintechMobile {
+    Write-Host "[4/4] Splitting and Pushing superapp_mobile to fintech-mobile ($TargetBranch)..." -ForegroundColor Blue
+    Write-Host "  -> Computing subtree split for superapp_mobile..." -ForegroundColor Cyan
+    $splitCommit = (git subtree split --prefix=superapp_mobile "$SourceBranch").Trim()
+    if (-not $splitCommit) {
+        Write-Host "[ERROR] Subtree split failed for superapp_mobile!`n" -ForegroundColor Red
+        return
+    }
+    Write-Host "  -> Split commit: $splitCommit" -ForegroundColor Cyan
+    git push fintech-mobile ("{0}:{1}" -f $splitCommit, $TargetBranch)
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "[OK] Mobile Super App successfully pushed to fintech-mobile/$TargetBranch!`n" -ForegroundColor Green
+    } else {
+        Write-Host "[ERROR] Failed to push to fintech-mobile/$TargetBranch.`n" -ForegroundColor Red
+    }
+}
+
 switch ($RemoteOption) {
     "1" {
         Push-ToOrigin
         Push-ToFintech
         Push-ToFintechBackend
+        Push-ToFintechMobile
     }
     "2" {
         Push-ToFintech
         Push-ToFintechBackend
+        Push-ToFintechMobile
     }
     "3" {
-        Push-ToFintech
+        Push-ToFintechMobile
     }
     "4" {
-        Push-ToFintechBackend
+        Push-ToFintech
     }
     "5" {
+        Push-ToFintechBackend
+    }
+    "6" {
         Push-ToOrigin
     }
 }

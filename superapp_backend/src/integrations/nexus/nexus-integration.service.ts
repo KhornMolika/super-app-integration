@@ -202,6 +202,170 @@ export class NexusIntegrationService {
     }
   }
 
+  /**
+   * Packages a Flutter mini app (.zip / directory buffer) into a standard .tar.gz archive
+   * and publishes it to the Nexus pub-hosted registry via the Pub API.
+   */
+  async publishPubArchive(
+    archiveBuffer: Buffer,
+    packageName: string,
+    version = '1.0.0',
+  ): Promise<{ success: boolean; packageName: string; version: string; message: string }> {
+    const AdmZip = require('adm-zip');
+    const zlib = require('zlib');
+
+    const cleanPkg = packageName.trim().replace(/-/g, '_').toLowerCase();
+    const cleanVer = version.trim().replace(/^[\^~>=<]+/, '') || '1.0.0';
+
+    // Extract zip entries in memory
+    const zip = new AdmZip(archiveBuffer);
+    const zipEntries = zip.getEntries();
+
+    let pubspecContent = '';
+    let hasReadme = false;
+    const filesToPack: { name: string; data: Buffer }[] = [];
+
+    for (const entry of zipEntries) {
+      if (entry.isDirectory) continue;
+      const entryName = entry.entryName.replace(/\\/g, '/');
+      const lower = entryName.toLowerCase();
+
+      // Skip build caches, ide files, and binaries
+      if (
+        lower.startsWith('build/') ||
+        lower.startsWith('.dart_tool/') ||
+        lower.startsWith('.git/') ||
+        lower.startsWith('.gradle/') ||
+        lower.startsWith('.idea/') ||
+        lower.startsWith('.vscode/') ||
+        lower.includes('/.gradle/') ||
+        lower.includes('/.dart_tool/') ||
+        lower.includes('/build/') ||
+        lower.endsWith('.apk') ||
+        lower.endsWith('.aar') ||
+        lower.endsWith('.ipa') ||
+        lower.endsWith('.tmp')
+      ) {
+        continue;
+      }
+
+      let data = entry.getData();
+      if (lower === 'pubspec.yaml' || lower.endsWith('/pubspec.yaml')) {
+        let pubText = data.toString('utf8');
+        pubText = pubText.replace(/publish_to:\s*["']?none["']?/g, '');
+        data = Buffer.from(pubText, 'utf8');
+        pubspecContent = pubText;
+      }
+      if (lower === 'readme.md' || lower.endsWith('/readme.md')) {
+        hasReadme = true;
+      }
+
+      // If zipped inside a wrapper subfolder, strip root wrapper
+      let relativeName = entryName;
+      const slashIdx = entryName.indexOf('/');
+      if (slashIdx > 0 && !entryName.startsWith('lib/') && !entryName.startsWith('assets/')) {
+        const topFolder = entryName.substring(0, slashIdx);
+        if (zipEntries.some(e => e.entryName.includes('pubspec.yaml') && e.entryName.startsWith(topFolder))) {
+          relativeName = entryName.substring(slashIdx + 1);
+        }
+      }
+
+      filesToPack.push({ name: relativeName, data });
+    }
+
+    if (!hasReadme) {
+      filesToPack.push({
+        name: 'README.md',
+        data: Buffer.from(`# ${cleanPkg}\n\nAutomated package distribution for Super App.\n`, 'utf8'),
+      });
+    }
+
+    // Build standard POSIX UStar .tar archive in memory
+    const tarChunks: Buffer[] = [];
+    for (const file of filesToPack) {
+      const header = Buffer.alloc(512);
+      const nameBuf = Buffer.from(file.name, 'utf8');
+      nameBuf.copy(header, 0, 0, Math.min(nameBuf.length, 100));
+
+      header.write('0000644\0', 100, 8, 'ascii'); // mode
+      header.write('0000000\0', 108, 8, 'ascii'); // uid
+      header.write('0000000\0', 116, 8, 'ascii'); // gid
+      const sizeOctal = file.data.length.toString(8).padStart(11, '0') + ' ';
+      header.write(sizeOctal, 124, 12, 'ascii'); // size
+      const mtimeOctal = Math.floor(Date.now() / 1000).toString(8).padStart(11, '0') + ' ';
+      header.write(mtimeOctal, 136, 12, 'ascii'); // mtime
+      header.write('0', 156, 1, 'ascii'); // typeflag regular file
+      header.write('ustar\0', 257, 6, 'ascii'); // magic
+      header.write('00', 263, 2, 'ascii'); // version
+
+      header.fill(32, 148, 156);
+      let chksum = 0;
+      for (let i = 0; i < 512; i++) {
+        chksum += header[i];
+      }
+      const chksumOctal = chksum.toString(8).padStart(6, '0') + '\0 ';
+      header.write(chksumOctal, 148, 8, 'ascii');
+
+      tarChunks.push(header);
+      tarChunks.push(file.data);
+
+      const remainder = file.data.length % 512;
+      if (remainder !== 0) {
+        tarChunks.push(Buffer.alloc(512 - remainder));
+      }
+    }
+
+    tarChunks.push(Buffer.alloc(1024));
+    const tarBuffer = Buffer.concat(tarChunks);
+    const tarGzBuffer = zlib.gzipSync(tarBuffer);
+
+    const hostedUrl = this.getPubHostedUrl();
+    const authHeader = this.getAuthHeader();
+
+    const initRes = await fetch(`${hostedUrl}/api/packages/versions/new`, {
+      headers: {
+        Accept: 'application/vnd.pub.v2+json',
+        ...authHeader,
+      },
+    });
+
+    if (!initRes.ok) {
+      throw new Error(`Failed to initiate Nexus Pub upload: HTTP ${initRes.status} ${initRes.statusText}`);
+    }
+
+    const initData = await initRes.json();
+    const uploadUrl = initData.url || `${hostedUrl}/api/packages/versions/newUpload`;
+
+    const formData = new FormData();
+    const blob = new Blob([tarGzBuffer], { type: 'application/gzip' });
+    formData.append('file', blob, `${cleanPkg}-${cleanVer}.tar.gz`);
+
+    if (initData.fields) {
+      for (const [k, v] of Object.entries(initData.fields)) {
+        formData.append(k, v as string);
+      }
+    }
+
+    const uploadRes = await fetch(uploadUrl, {
+      method: 'POST',
+      body: formData,
+      headers: authHeader,
+    });
+
+    if (!uploadRes.ok && uploadRes.status !== 200 && uploadRes.status !== 204 && uploadRes.status !== 302) {
+      const errText = await uploadRes.text();
+      throw new Error(`Nexus Pub package upload failed with HTTP ${uploadRes.status}: ${errText}`);
+    }
+
+    this.logger.log(`Successfully published "${cleanPkg}" (${cleanVer}) to Nexus pub-hosted repository.`);
+    return {
+      success: true,
+      packageName: cleanPkg,
+      version: cleanVer,
+      message: `Package "${cleanPkg}" successfully published to Nexus pub-hosted registry.`,
+    };
+  }
+
   generateSnippet(options: {
     packageName: string;
     versionConstraint?: string;
@@ -213,3 +377,4 @@ export class NexusIntegrationService {
     return `dependencies:\n  ${pkg}: ${ver}\n\n# Hosted on Sonatype Nexus Private Registry\n# Resolves via environment: PUB_HOSTED_URL=${groupUrl}`;
   }
 }
+

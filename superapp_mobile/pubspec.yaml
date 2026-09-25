@@ -19,6 +19,30 @@ dependencies:
   local_auth: ^3.0.2
   url_launcher: ^6.3.2
 
+  sc_private_miniapp:
+    git:
+      url: https://github.com/KhornMolika/sc-private-miniapp.git
+      ref: main
+  dps_miniapp_mobile_trust_regulator:
+    hosted:
+      name: dps_miniapp_mobile_trust_regulator
+      url: http://localhost:8081/repository/pub-group
+    version: ^1.0.0
+  sc_public_miniapp:
+    git:
+      url: https://github.com/KhornMolika/sc-public-miniapp.git
+      ref: v1.0.0
+  dps_miniapp_mobile_kyc_verifier:
+    hosted:
+      name: dps_miniapp_mobile_kyc_verifier
+      url: http://localhost:8081/repository/pub-group
+    version: ^1.0.0
+  ma_flutter_kyc:
+    hosted:
+      name: ma_flutter_kyc
+      url: http://localhost:8081/repository/pub-group
+    version: ^1.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -148,29 +148,34 @@ Ensure your PostgreSQL, Jenkins, and Sonatype Nexus containers are running:
 * **Sonatype Nexus**: Port `8081` (configured via `.env.development`)
 * **Jenkins Controller**: Port `8085` (configured via `.env.development`)
 
-### 2. Start Backend API
+### 2. Auto-Start Backend & Backoffice (Single Command)
+Run the unified start script from the root directory:
 ```bash
-cd dps_backend
+bash start.sh
+```
+* Backend API: `http://localhost:3000` (Swagger docs: `http://localhost:3000/api/docs`)
+* Backoffice Portal: `http://localhost:3002`
+
+### 3. Manual Start (Optional)
+```bash
+# Terminal 1: Backend API
+cd superapp_backend
 pnpm install
 pnpm run start:dev
-```
-*API running at `http://localhost:3000` (Swagger docs at `/api/docs`).*
 
-### 3. Start Backoffice Web Portal
-```bash
-cd dps_webapp_backoffice
+# Terminal 2: Backoffice Web Portal
+cd superapp_backoffice
 pnpm install
 pnpm run dev
 ```
-*Portal running at `http://localhost:3002`.*
 
-### 4. Start Sample Mini Apps
+### 4. Start Sample Mini Apps (Optional)
 ```bash
-# Terminal 1: Banking Mini App
+# Terminal 3: Banking Mini App
 cd dps_webview_webapp_banking
 pnpm install && pnpm run dev
 
-# Terminal 2: Insurance Mini App
+# Terminal 4: Insurance Mini App
 cd dps_webview_webapp_insurance
 pnpm install && pnpm run dev
 ```
@@ -215,9 +220,12 @@ pnpm install && pnpm run dev
 
 | Script | Path | Purpose |
 | :--- | :--- | :--- |
-| `download-test-apk.ps1` | [`scripts/download-test-apk.ps1`](file:///d:/Projects/fintect/dsp-poc/scripts/download-test-apk.ps1) | Downloads the latest test build APK from Nexus to Windows Downloads with live progress bar. |
-| `Jenkinsfile.superapp-test-build` | [`scripts/jenkins/Jenkinsfile.superapp-test-build`](file:///d:/Projects/fintect/dsp-poc/scripts/jenkins/Jenkinsfile.superapp-test-build) | Jenkins pipeline compiling multi-arch APKs and Flutter Web artifacts to Nexus. |
-| `Jenkinsfile.miniapp-validation` | [`scripts/jenkins/Jenkinsfile.miniapp-validation`](file:///d:/Projects/fintect/dsp-poc/scripts/jenkins/Jenkinsfile.miniapp-validation) | Unified Jenkins security validation pipeline for all Mini App integration methods. |
+| `start.sh` | [`start.sh`](file:///d:/Projects/fintect/superapp-poc/start.sh) | Unified Bash script to auto-start backend & backoffice concurrently with dependency & environment checks. |
+| `push-all.sh` | [`push-all.sh`](file:///d:/Projects/fintect/superapp-poc/push-all.sh) | Multi-remote Git push automation script (Bash). |
+| `push-all.ps1` | [`push-all.ps1`](file:///d:/Projects/fintect/superapp-poc/push-all.ps1) | Multi-remote Git push automation script (PowerShell). |
+| `download-test-apk.ps1` | [`scripts/download-test-apk.ps1`](file:///d:/Projects/fintect/superapp-poc/scripts/download-test-apk.ps1) | Downloads the latest test build APK from Nexus to Windows Downloads with live progress bar. |
+| `Jenkinsfile.superapp-test-build` | [`scripts/jenkins/Jenkinsfile.superapp-test-build`](file:///d:/Projects/fintect/superapp-poc/scripts/jenkins/Jenkinsfile.superapp-test-build) | Jenkins pipeline compiling multi-arch APKs and Flutter Web artifacts to Nexus. |
+| `Jenkinsfile.miniapp-validation` | [`scripts/jenkins/Jenkinsfile.miniapp-validation`](file:///d:/Projects/fintect/superapp-poc/scripts/jenkins/Jenkinsfile.miniapp-validation) | Unified Jenkins security validation pipeline for all Mini App integration methods. |
 
 ---
 

@@ -10,6 +10,7 @@ import { PrecheckConflictDto } from './dto/pubspec-injector.dto';
 export interface PrecheckConflictResult {
   compatible: boolean;
   packageName: string;
+  isPendingPublication?: boolean;
   directConflicts: string[];
   transitiveBumps: Array<{ package: string; oldVersion?: string; newVersion: string }>;
   newPackages: Array<{ package: string; version: string }>;
@@ -115,6 +116,16 @@ export class PubspecPrecheckService {
       // 1. Backup original pubspec.yaml
       fs.copyFileSync(pubspecPath, simBackupPath);
 
+      // Helper to ensure version constraints don't produce duplicate carets (e.g. ^^1.0.0)
+      const normalizeVersionConstraint = (ver?: string): string => {
+        if (!ver || !ver.trim()) return '^1.0.0';
+        const trimmed = ver.trim();
+        if (/^[\^~>=<]/.test(trimmed) || trimmed === 'any') {
+          return trimmed;
+        }
+        return `^${trimmed}`;
+      };
+
       // 2. Compute candidate dependency entry
       let dependencyValue: any;
       if (gitUrl) {
@@ -131,7 +142,7 @@ export class PubspecPrecheckService {
             name: packageName,
             url: nexusPubGroup,
           },
-          version: version || '^1.0.0',
+          version: normalizeVersionConstraint(version),
         };
       } else if (localPath) {
         dependencyValue = { path: localPath };
@@ -140,7 +151,7 @@ export class PubspecPrecheckService {
         if (workspaceMap.has(packageName)) {
           dependencyValue = { path: workspaceMap.get(packageName) };
         } else {
-          dependencyValue = version ? `^${version}` : '^1.0.0';
+          dependencyValue = normalizeVersionConstraint(version);
         }
       }
 
@@ -181,15 +192,33 @@ export class PubspecPrecheckService {
       }
 
       const compatible = validation.success;
+      const rawOut = validation.stderr || validation.stdout || '';
+      const isUnpublishedInNexus =
+        !compatible &&
+        (rawOut.includes(`could not find package ${packageName}`) ||
+          rawOut.includes(`which doesn't exist (could not find package ${packageName}`));
+
+      let finalMessage = compatible
+        ? `Package "${packageName}" is fully compatible with Super App container (0 version conflicts).`
+        : `Dependency conflict detected for "${packageName}".`;
+
+      const conflicts = [...(validation.conflicts || [])];
+
+      if (isUnpublishedInNexus) {
+        finalMessage = `Package "${packageName}" is pending review and has not yet been published to Nexus. It will be published automatically upon approval.`;
+        conflicts.unshift(
+          `ℹ️ Pending Registry Publication: "${packageName}" is not yet published in Nexus (Status: PENDING Approval). Direct HTTP resolution will succeed automatically once published during review approval.`
+        );
+      }
+
       return {
         compatible,
         packageName,
-        directConflicts: validation.conflicts || [],
+        isPendingPublication: isUnpublishedInNexus,
+        directConflicts: conflicts,
         transitiveBumps,
         newPackages,
-        message: compatible
-          ? `Package "${packageName}" is fully compatible with Super App container (0 version conflicts).`
-          : `Dependency conflict detected for "${packageName}".`,
+        message: finalMessage,
         rawOutput: validation.stderr || validation.stdout,
       };
     } finally {
