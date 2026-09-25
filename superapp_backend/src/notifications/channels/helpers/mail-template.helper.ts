@@ -86,15 +86,38 @@ export class MailTemplateHelper {
     const escName = this.escapeHtml(name);
     const escUrl = this.escapeHtml(verifyUrl);
 
+    let tokenCode = '';
+    try {
+      const match = verifyUrl.match(/[?&]token=([^&]+)/);
+      if (match) tokenCode = decodeURIComponent(match[1]);
+    } catch {
+      tokenCode = '';
+    }
+    const escToken = this.escapeHtml(tokenCode || verifyUrl);
+
     const contentHtml = `
       <p style="font-size: 14px; line-height: 1.6; margin-top: 0;">Hello <strong>${escName}</strong>,</p>
       <p style="font-size: 14px; line-height: 1.6;">
-        Tap the button below on your phone to verify your email address and finish creating your account. The link expires in 24 hours.
+        Use the verification code below or paste the link into your Super App to complete your registration. This code expires in 24 hours.
       </p>
-      <p style="margin: 24px 0;">
-        <a href="${escUrl}" style="display: inline-block; background: #0284c7; color: #ffffff; text-decoration: none; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 700;">Verify email</a>
+
+      <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; margin: 20px 0; text-align: center;">
+        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; margin-bottom: 6px;">Your Verification Code / Token</div>
+        <div style="font-family: monospace, Courier, monospace; font-size: 18px; font-weight: 700; color: #0284c7; letter-spacing: 1px; word-break: break-all; user-select: all;">
+          ${escToken}
+        </div>
+      </div>
+
+      <p style="margin: 20px 0;">
+        <a href="${escUrl}" style="display: inline-block; background: #0284c7; color: #ffffff; text-decoration: none; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 700;">Open in Super App</a>
       </p>
-      <p style="font-size: 13px; color: #64748b; line-height: 1.5;">If you did not create this account you can ignore this email.</p>
+
+      <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+        <p style="font-size: 12px; color: #64748b; margin-bottom: 4px;">Direct Link / URL:</p>
+        <code style="font-size: 11px; color: #475569; word-break: break-all; background: #f8fafc; padding: 6px 8px; border-radius: 4px; display: block; border: 1px solid #e2e8f0;">${escUrl}</code>
+      </div>
+
+      <p style="font-size: 13px; color: #64748b; line-height: 1.5; margin-top: 20px;">If you did not create this account you can safely ignore this email.</p>
     `;
 
     return {
