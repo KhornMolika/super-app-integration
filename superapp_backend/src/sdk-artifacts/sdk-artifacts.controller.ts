@@ -29,7 +29,7 @@ export class SdkArtifactsController {
     @UploadedFile() file: Express.Multer.File,
     @Body('version') version?: string,
   ) {
-    this.assertFile(file, /\.xcframework\.zip$/i, '.xcframework.zip');
+    this.assertFile(file, /\.(xcframework\.zip|zip)$/i, '.xcframework.zip or .zip');
     return this.uploads.upload({
       miniAppId,
       platform: 'IOS',

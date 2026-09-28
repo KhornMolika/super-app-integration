@@ -37,6 +37,7 @@ async function getDevAuthToken(forceRefresh = false): Promise<string | null> {
 const ALLOWED_ROUTES = [
   'mini-apps',
   'miniapps',
+  'sdk-artifacts',
   'permissions',
   'permission-proposals',
   'users',
@@ -55,6 +56,7 @@ const ALLOWED_ROUTES = [
   'auth',
   'api',
   'pubspec',
+  'mobile',
 ];
 
 async function handleProxy(request: Request, { params }: { params: Promise<{ proxy: string[] }> }) {
