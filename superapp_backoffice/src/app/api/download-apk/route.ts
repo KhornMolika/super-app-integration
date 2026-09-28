@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
   // 3. Try Local Disk APK from Mobile App Build Directory
   const mobileDir = process.env.MOBILE_APP_DIR
     ? path.resolve(process.env.MOBILE_APP_DIR)
-    : path.resolve(process.cwd(), '../superapp_mobile');
+    : path.resolve(process.cwd(), '../super-app');
   const localApkPaths = [
     path.resolve(mobileDir, 'build/app/outputs/flutter-apk/app-debug.apk'),
     path.resolve(mobileDir, 'build/app/outputs/apk/debug/app-debug.apk'),

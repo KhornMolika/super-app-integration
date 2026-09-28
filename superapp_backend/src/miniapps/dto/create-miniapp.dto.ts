@@ -189,6 +189,38 @@ export class NativeSdkConfigDto {
   iosArtifactFilename!: string; // 'SpaBookingSDK.xcframework.zip'
 
   @IsString()
+  @IsOptional()
+  iosMinioKey?: string;
+
+  @IsString()
+  @IsOptional()
+  iosMinioUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  iosSha256?: string;
+
+  @IsString()
+  @IsOptional()
+  iosStoragePath?: string;
+
+  @IsString()
+  @IsOptional()
+  iosChecksum?: string;
+
+  @IsNumber()
+  @IsOptional()
+  iosSize?: number;
+
+  @IsString()
+  @IsOptional()
+  iosVersion?: string;
+
+  @IsArray()
+  @IsOptional()
+  iosDetectedPermissions?: string[];
+
+  @IsString()
   @IsNotEmpty()
   @Matches(NATIVE_PACKAGE, {
     message: 'androidPackageName must be a dotted package name',
@@ -205,6 +237,38 @@ export class NativeSdkConfigDto {
   @IsString()
   @IsNotEmpty()
   androidArtifactFilename!: string; // 'spa-booking-sdk-1.0.0.aar'
+
+  @IsString()
+  @IsOptional()
+  androidMinioKey?: string;
+
+  @IsString()
+  @IsOptional()
+  androidMinioUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  androidSha256?: string;
+
+  @IsString()
+  @IsOptional()
+  androidStoragePath?: string;
+
+  @IsString()
+  @IsOptional()
+  androidChecksum?: string;
+
+  @IsNumber()
+  @IsOptional()
+  androidSize?: number;
+
+  @IsNumber()
+  @IsOptional()
+  androidMinSdkVersion?: number;
+
+  @IsArray()
+  @IsOptional()
+  androidDetectedPermissions?: string[];
 
   @IsString()
   @IsNotEmpty()

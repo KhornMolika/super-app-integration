@@ -398,35 +398,19 @@ export class TelegramApiHelper {
           : []),
         path.resolve(
           process.cwd(),
-          'superapp_mobile/build/app/outputs/flutter-apk/app-debug.apk',
+          'super-app/build/app/outputs/flutter-apk/app-debug.apk',
         ),
         path.resolve(
           process.cwd(),
-          '../superapp_mobile/build/app/outputs/flutter-apk/app-debug.apk',
+          '../super-app/build/app/outputs/flutter-apk/app-debug.apk',
         ),
         path.resolve(
           process.cwd(),
-          'dps_mobile_app/build/app/outputs/flutter-apk/app-debug.apk',
+          'super-app/build/app/outputs/apk/debug/app-debug.apk',
         ),
         path.resolve(
           process.cwd(),
-          '../dps_mobile_app/build/app/outputs/flutter-apk/app-debug.apk',
-        ),
-        path.resolve(
-          process.cwd(),
-          'superapp_mobile/build/app/outputs/apk/debug/app-debug.apk',
-        ),
-        path.resolve(
-          process.cwd(),
-          '../superapp_mobile/build/app/outputs/apk/debug/app-debug.apk',
-        ),
-        path.resolve(
-          process.cwd(),
-          'dps_mobile_app/build/app/outputs/apk/debug/app-debug.apk',
-        ),
-        path.resolve(
-          process.cwd(),
-          '../dps_mobile_app/build/app/outputs/apk/debug/app-debug.apk',
+          '../super-app/build/app/outputs/apk/debug/app-debug.apk',
         ),
         path.resolve(
           process.cwd(),

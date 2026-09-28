@@ -16,7 +16,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuthRateLimitGuard, RateLimit, RateLimitedException } from './auth-rate-limiter';
 import { EndUserAuthGuard } from './end-user-auth.guard';
-import { MobileAuthService } from './mobile-auth.service';
+import { MobileAuthService, isTokenResponse } from './mobile-auth.service';
 import { MobileCatalogService } from './mobile-catalog.service';
 import { EndUser } from './entities/end-user.entity';
 import {
@@ -43,9 +43,13 @@ export class MobileController {
   async register(
     @Body() dto: RegisterDto,
     @Res({ passthrough: true }) res: Response,
+    @Headers('user-agent') userAgent?: string,
   ) {
     try {
-      return await this.auth.register(dto);
+      const result = await this.auth.register(dto, userAgent);
+      // 202: verification mail pending. 201: verification disabled, session issued.
+      if (isTokenResponse(result)) res.status(201);
+      return result;
     } catch (e) {
       if (e instanceof RateLimitedException) {
         res.setHeader('Retry-After', String(e.retryAfterSeconds));

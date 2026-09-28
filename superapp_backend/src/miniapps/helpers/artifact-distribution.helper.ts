@@ -295,15 +295,11 @@ export class ArtifactDistributionHelper {
         // Try local disk fallback from mobile app build
         const mobileDir = process.env.MOBILE_APP_DIR
           ? path.resolve(process.env.MOBILE_APP_DIR)
-          : path.resolve(process.cwd(), '../superapp_mobile');
-        const legacyMobileDir = path.resolve(process.cwd(), '../dps_mobile_app');
+          : path.resolve(process.cwd(), '../super-app');
         const localApkPaths = [
           path.resolve(mobileDir, 'build/app/outputs/flutter-apk/app-debug.apk'),
           path.resolve(mobileDir, 'build/app/outputs/apk/debug/app-debug.apk'),
           path.resolve(mobileDir, 'build/app/outputs/flutter-apk/app-release.apk'),
-          path.resolve(legacyMobileDir, 'build/app/outputs/flutter-apk/app-debug.apk'),
-          path.resolve(legacyMobileDir, 'build/app/outputs/apk/debug/app-debug.apk'),
-          path.resolve(legacyMobileDir, 'build/app/outputs/flutter-apk/app-release.apk'),
         ];
         for (const lp of localApkPaths) {
           if (fs.existsSync(lp)) {

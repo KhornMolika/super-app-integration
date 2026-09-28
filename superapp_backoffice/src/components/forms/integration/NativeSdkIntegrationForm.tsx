@@ -103,8 +103,9 @@ export default function NativeSdkIntegrationForm({
       );
       setIosUploadSuccess(res);
 
-      // Auto-derive iOS module name from filename if not already set
+      // Auto-derive iOS module name from scanned metadata or filename if not already set
       const derivedModuleName =
+        res.scannedFields?.iosModuleName ||
         nativeConfig.iosModuleName ||
         file.name
           .replace(/\.xcframework\.zip$/i, '')
@@ -112,14 +113,24 @@ export default function NativeSdkIntegrationForm({
           .replace(/[^A-Za-z0-9_]/g, '_');
 
       const derivedTypeName =
-        nativeConfig.iosTypeName || `${derivedModuleName}View`;
+        res.scannedFields?.iosTypeName ||
+        nativeConfig.iosTypeName ||
+        `${derivedModuleName}View`;
+
+      const detected =
+        res.detectedPermissions ||
+        res.scannedFields?.detectedPermissions ||
+        [];
 
       const updates: Partial<NativeSdkConfigDto> = {
         iosArtifactFilename: res.filename || file.name,
-        iosStoragePath: res.artifactUrl,
+        iosMinioKey: res.minioKey,
+        iosMinioUrl: res.minioUrl,
+        iosSha256: res.sha256,
+        iosStoragePath: res.minioUrl || res.artifactUrl || res.minioKey,
         iosChecksum: res.sha256,
-        iosSize: res.size,
-        iosDetectedPermissions: res.detectedPermissions,
+        iosSize: res.size || file.size,
+        iosDetectedPermissions: detected,
         iosModuleName: derivedModuleName,
         iosTypeName: derivedTypeName,
       };
@@ -127,7 +138,7 @@ export default function NativeSdkIntegrationForm({
       if (onUpdateNativeSdkConfig) {
         onUpdateNativeSdkConfig(updates, {
           iosFile: file,
-          detectedPermissions: res.detectedPermissions.map((p) => ({
+          detectedPermissions: detected.map((p) => ({
             type: p,
             purpose: `Required for native SDK capability: ${p}`,
           })),
@@ -175,18 +186,35 @@ export default function NativeSdkIntegrationForm({
         .replace(/\.aar$/i, '')
         .replace(/[^A-Za-z0-9_.-]/g, '-');
 
+      const detected =
+        res.detectedPermissions ||
+        res.scannedFields?.detectedPermissions ||
+        [];
+
       const updates: Partial<NativeSdkConfigDto> = {
         androidArtifactFilename: res.filename || file.name,
-        androidStoragePath: res.artifactUrl,
+        androidMinioKey: res.minioKey,
+        androidMinioUrl: res.minioUrl,
+        androidSha256: res.sha256,
+        androidStoragePath: res.minioUrl || res.artifactUrl || res.minioKey,
         androidChecksum: res.sha256,
-        androidSize: res.size,
-        androidMinSdkVersion: res.minSdkVersion,
-        androidDetectedPermissions: res.detectedPermissions,
-        androidMavenGroupId: nativeConfig.androidMavenGroupId || 'com.fsa.sdk',
+        androidSize: res.size || file.size,
+        androidMinSdkVersion:
+          res.minSdkVersion || res.scannedFields?.minSdkVersion,
+        androidDetectedPermissions: detected,
+        androidMavenGroupId:
+          res.scannedFields?.androidMavenGroupId ||
+          nativeConfig.androidMavenGroupId ||
+          'com.fsa.sdk',
         androidMavenArtifactId:
           nativeConfig.androidMavenArtifactId || baseName,
         androidMavenVersion: nativeConfig.androidMavenVersion || '1.0.0',
+        androidPackageName:
+          res.scannedFields?.androidPackageName ||
+          nativeConfig.androidPackageName ||
+          '',
         androidObjectName:
+          res.scannedFields?.androidObjectName ||
           nativeConfig.androidObjectName ||
           baseName
             .split(/[-_]/)
@@ -197,7 +225,7 @@ export default function NativeSdkIntegrationForm({
       if (onUpdateNativeSdkConfig) {
         onUpdateNativeSdkConfig(updates, {
           androidFile: file,
-          detectedPermissions: res.detectedPermissions.map((p) => ({
+          detectedPermissions: detected.map((p) => ({
             type: p,
             purpose: `Required for native SDK capability: ${p}`,
           })),
@@ -336,7 +364,9 @@ export default function NativeSdkIntegrationForm({
               </div>
             )}
 
-            {(iosUploadSuccess || nativeConfig.iosStoragePath) && (
+            {(iosUploadSuccess ||
+              nativeConfig.iosStoragePath ||
+              nativeConfig.iosMinioKey) && (
               <div className="mt-3 p-3 bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg text-xs text-emerald-900 dark:text-emerald-200 space-y-1.5">
                 <div className="flex items-center justify-between font-semibold">
                   <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
@@ -525,7 +555,9 @@ export default function NativeSdkIntegrationForm({
               </div>
             )}
 
-            {(androidUploadSuccess || nativeConfig.androidStoragePath) && (
+            {(androidUploadSuccess ||
+              nativeConfig.androidStoragePath ||
+              nativeConfig.androidMinioKey) && (
               <div className="mt-3 p-3 bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg text-xs text-emerald-900 dark:text-emerald-200 space-y-1.5">
                 <div className="flex items-center justify-between font-semibold">
                   <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">

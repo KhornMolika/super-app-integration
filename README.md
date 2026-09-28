@@ -72,7 +72,7 @@ flowchart TD
 | :--- | :--- | :--- | :--- | :--- |
 | **Backend API** | [`superapp_backend/`](file:///d:/Projects/fintect/dsp-poc/superapp_backend) | NestJS, TypeORM, PostgreSQL | `3000` | Central API managing auth, Mini App lifecycles, Jenkins CI/CD callbacks, and issue tracking. |
 | **Backoffice Portal** | [`superapp_backoffice/`](file:///d:/Projects/fintect/dsp-poc/superapp_backoffice) | Next.js 16 (Turbopack), Tailwind CSS | `3002` | Admin dashboard for reviewing apps, inspecting JS bridges, running Flutter Web sandbox, and downloading APKs. |
-| **Super App Mobile Shell** | [`superapp_mobile/`](file:///d:/Projects/fintect/dsp-poc/superapp_mobile) | Flutter 3.44+, Dart 3.12+, GetX | N/A (App) | Dynamic clean base simulator shell; approved mini-apps are injected dynamically via Nexus or remote Git. |
+| **Super App Mobile Shell** | [`super-app/`](file:///d:/Projects/fintect/superapp-poc/super-app) | Flutter, Dart, Riverpod | N/A (App) | Dynamic clean base simulator shell; approved mini-apps are injected dynamically via Nexus or remote Git. |
 | **Partner Mini-Apps** | `../superapp-miniapps/` | Flutter / Webview / Native SDK | Various | Independent catalog of partner mini-apps maintained in standalone repository. |
 
 ---

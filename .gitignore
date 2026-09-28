@@ -33,6 +33,9 @@ secrets/
 *.pub
 push-all.sh
 push-all.ps1
+start.sh
 
 # Standalone Mobile Super App clone
 super-app/
+scratch/
+*.patch

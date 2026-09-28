@@ -3,6 +3,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as child_process from 'child_process';
 
+import { JenkinsService } from '../jenkins/jenkins.service';
+
 export type BuildState = 'IDLE' | 'QUEUED' | 'BUILDING' | 'SUCCESS' | 'FAILED';
 
 export interface SandboxBuildStatus {
@@ -27,6 +29,8 @@ export class SandboxBuildManagerService {
   private message: string = 'Sandbox build idle.';
   private readonly logBuffer: string[] = [];
   private currentProcess?: child_process.ChildProcess;
+
+  constructor(private readonly jenkinsService: JenkinsService) {}
 
   /**
    * Appends a log line to the cyclic in-memory buffer (max 200 lines).
@@ -56,7 +60,7 @@ export class SandboxBuildManagerService {
   }
 
   /**
-   * Triggers asynchronous compilation of Flutter Web Sandbox via scripts/build-sandbox.ps1.
+   * Triggers compilation of Flutter Web Sandbox via Jenkins pipeline, with local PowerShell fallback.
    */
   async triggerBuild(triggeredBy: string = 'Super App Admin'): Promise<{ success: boolean; message: string }> {
     if (this.state === 'BUILDING') {
@@ -64,6 +68,29 @@ export class SandboxBuildManagerService {
         success: false,
         message: 'A sandbox build is already in progress. Please wait for it to complete.',
       };
+    }
+
+    this.state = 'BUILDING';
+    this.triggeredBy = triggeredBy;
+    this.exitCode = undefined;
+    this.message = `Triggering Jenkins Super App Web Sandbox pipeline (triggered by ${triggeredBy})...`;
+    this.appendLog(`=== Sandbox Build Started by ${triggeredBy} ===`);
+
+    try {
+      this.appendLog('Connecting to Jenkins to trigger superapp-sandbox-build...');
+      const jenkinsRes = await this.jenkinsService.triggerSuperAppSandboxBuild();
+      if (jenkinsRes.success) {
+        this.message = 'Jenkins superapp-sandbox-build pipeline triggered successfully.';
+        this.appendLog(`✅ ${jenkinsRes.message}`);
+        this.logger.log(this.message);
+        return {
+          success: true,
+          message: this.message,
+        };
+      }
+      this.appendLog(`[WARN] Jenkins trigger returned: ${jenkinsRes.message}. Attempting local fallback build...`);
+    } catch (err: any) {
+      this.appendLog(`[WARN] Failed to trigger Jenkins: ${err.message}. Attempting local fallback build...`);
     }
 
     const candidates = [
@@ -76,17 +103,12 @@ export class SandboxBuildManagerService {
 
     if (!resolvedScript) {
       this.state = 'FAILED';
-      this.message = 'build-sandbox.ps1 script not found on host filesystem.';
+      this.message = 'build-sandbox.ps1 script not found on host filesystem and Jenkins trigger failed.';
       this.appendLog(`ERROR: ${this.message}`);
       return { success: false, message: this.message };
     }
 
-    this.state = 'BUILDING';
-    this.triggeredBy = triggeredBy;
-    this.exitCode = undefined;
-    this.message = `Building Flutter Web Super App Sandbox (triggered by ${triggeredBy})...`;
-    this.appendLog(`=== Sandbox Build Started by ${triggeredBy} ===`);
-    this.appendLog(`Script: ${resolvedScript}`);
+    this.appendLog(`Local Fallback Script: ${resolvedScript}`);
 
     const startTime = Date.now();
     const isWindows = process.platform === 'win32';

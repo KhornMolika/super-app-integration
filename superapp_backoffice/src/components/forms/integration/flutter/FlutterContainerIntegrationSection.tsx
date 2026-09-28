@@ -108,7 +108,7 @@ export default function FlutterContainerIntegrationSection({
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
             Automated extraction and dynamic AST injection into{" "}
             <code className="text-xs font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-brand-600 dark:text-brand-400 font-semibold">
-              superapp_mobile/pubspec.yaml
+              super-app/pubspec.yaml
             </code>
             .
           </p>
@@ -224,7 +224,7 @@ export default function FlutterContainerIntegrationSection({
             <div>
               Container:{" "}
               <span className="font-mono text-slate-600 dark:text-slate-300">
-                superapp_mobile
+                super-app
               </span>
             </div>
             <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center sm:justify-end gap-1 mt-0.5">

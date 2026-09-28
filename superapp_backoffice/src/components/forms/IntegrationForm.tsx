@@ -23,7 +23,7 @@ export interface IntegrationFormProps {
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   allErrors?: Record<string, string>;
   handleWebViewChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleFlutterChange?: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+  handleFlutterChange?: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
   onUpdateFlutterConfig?: (
     updates: Record<string, any>,
     extraData?: { archiveFile?: File; detectedPermissions?: any[] },

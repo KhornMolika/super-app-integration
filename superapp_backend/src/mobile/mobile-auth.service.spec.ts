@@ -1,4 +1,4 @@
-import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService, END_USER_AUDIENCE, END_USER_TYP } from '../auth/auth.service';
 import { FakeRepo } from './testing/fake-repo';
@@ -53,6 +53,78 @@ describe('MobileAuthService', () => {
   afterEach(() => {
     Date.now = realNow;
     delete process.env.MOBILE_VERIFY_URL_BASE;
+    delete process.env.MOBILE_REQUIRE_EMAIL_VERIFICATION;
+  });
+
+  describe('register with MOBILE_REQUIRE_EMAIL_VERIFICATION=false', () => {
+    beforeEach(() => {
+      process.env.MOBILE_REQUIRE_EMAIL_VERIFICATION = 'false';
+    });
+
+    it('creates a verified account, sends no mail and returns a working session', async () => {
+      const c = build();
+      const res: any = await c.svc.register({ email: ' Jane@Example.io ', password: PW, name: ' Jane ' }, 'ua');
+      expect(res).toMatchObject({ expires_in: 900, user: { email: 'jane@example.io', name: 'Jane' } });
+      expect(res.access_token).toBeTruthy();
+      expect(res.refresh_token).toBeTruthy();
+      expect(c.users.rows[0].emailVerifiedAt).toBeInstanceOf(Date);
+      expect(c.users.rows[0].passwordHash.startsWith('scrypt$')).toBe(true);
+      expect(c.mail.sendEmailVerification).not.toHaveBeenCalled();
+      expect(c.vTokens.rows).toHaveLength(0);
+      // The issued access token is a real end-user token; the password works for login too.
+      const claims = c.authService.verifyToken(res.access_token, { audience: END_USER_AUDIENCE, typ: END_USER_TYP });
+      expect(claims.sub).toBe(res.user.id);
+      await expect(c.svc.login({ email: 'jane@example.io', password: PW })).resolves.toBeDefined();
+    });
+
+    it('409 when the email is already registered (verified) and leaves the account untouched', async () => {
+      const c = build();
+      await c.svc.register({ email: 'a@example.io', password: PW, name: 'Original' });
+      const before = { ...c.users.rows[0] };
+      await expect(
+        c.svc.register({ email: 'A@example.io', password: 'another-good-password', name: 'Attacker' }),
+      ).rejects.toThrow(ConflictException);
+      expect(c.users.rows[0].name).toBe('Original');
+      expect(c.users.rows[0].passwordHash).toBe(before.passwordHash);
+    });
+
+    it('never touches a DISABLED account', async () => {
+      const c = build();
+      await c.svc.register({ email: 'a@example.io', password: PW, name: 'A' });
+      c.users.rows[0].status = EndUserStatus.DISABLED;
+      await expect(c.svc.register({ email: 'a@example.io', password: PW, name: 'B' })).rejects.toThrow(ConflictException);
+      expect(c.users.rows[0].status).toBe(EndUserStatus.DISABLED);
+    });
+
+    it('claims a leftover UNVERIFIED row from the verification era', async () => {
+      delete process.env.MOBILE_REQUIRE_EMAIL_VERIFICATION;
+      const c = build();
+      await c.svc.register({ email: 'a@example.io', password: PW, name: 'Old' }); // pending verification
+      expect(c.users.rows[0].emailVerifiedAt).toBeNull();
+      process.env.MOBILE_REQUIRE_EMAIL_VERIFICATION = 'false';
+      const res: any = await c.svc.register({ email: 'a@example.io', password: 'new-good-password', name: 'New' });
+      expect(res.access_token).toBeTruthy();
+      expect(c.users.rows).toHaveLength(1);
+      expect(c.users.rows[0].name).toBe('New');
+      expect(c.users.rows[0].emailVerifiedAt).toBeInstanceOf(Date);
+    });
+
+    it('still enforces the password policy and stores nothing on violation', async () => {
+      const c = build();
+      await expect(c.svc.register({ email: 'a@example.io', password: 'short', name: 'A' })).rejects.toThrow(BadRequestException);
+      expect(c.users.rows).toHaveLength(0);
+    });
+
+    it('is off by default: unset or any value other than "false" keeps verification on', async () => {
+      for (const v of [undefined, 'true', '', '0', 'no']) {
+        const c = build();
+        if (v === undefined) delete process.env.MOBILE_REQUIRE_EMAIL_VERIFICATION;
+        else process.env.MOBILE_REQUIRE_EMAIL_VERIFICATION = v;
+        const res = await c.svc.register({ email: 'a@example.io', password: PW, name: 'A' });
+        expect(res).toEqual({ message: REGISTER_MESSAGE });
+        expect(c.mail.sendEmailVerification).toHaveBeenCalled();
+      }
+    });
   });
 
   describe('register', () => {

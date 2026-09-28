@@ -1,13 +1,24 @@
 import { apiClient } from './client';
 
 export interface SdkArtifactUploadResponse {
-  artifactUrl: string;
-  filename: string;
+  minioUrl: string;
+  minioKey: string;
   sha256: string;
-  size: number;
-  detectedPermissions: string[];
+  filename?: string;
+  size?: number;
+  detectedPermissions?: string[];
   minSdkVersion?: number;
-  isSanitized: boolean;
+  isSanitized?: boolean;
+  artifactUrl?: string;
+  scannedFields?: {
+    iosModuleName?: string;
+    iosTypeName?: string;
+    androidPackageName?: string;
+    androidObjectName?: string;
+    androidMavenGroupId?: string;
+    minSdkVersion?: number;
+    detectedPermissions?: string[];
+  };
 }
 
 export interface SdkArtifactStatusResponse {

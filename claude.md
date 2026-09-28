@@ -45,16 +45,12 @@ dsp-poc/
 │   │   └── public/
 │   │       └── superapp-sandbox/    # Compiled Flutter Web Super App container
 │
-├── dps_mobile_app/                  # Flutter Super App Mobile Container
+├── super-app/                       # Flutter Super App Mobile Container (Official)
 │   ├── lib/
-│   │   ├── app/
-│   │   │   ├── config/api_config.dart # Dynamic LAN/Wi-Fi/Emulator host resolver
-│   │   │   ├── modules/
-│   │   │   │   ├── home/            # Super App OneHub UI (Wallet, Catalog, Featured App)
-│   │   │   │   ├── login/           # Auth screen with runtime host configuration
-│   │   │   │   └── miniapp/         # Native WebView container with JS Bridge
-│   │   │   └── routes/              # GetX navigation routes
-│   └── scripts/                     # Mobile build & APK download scripts
+│   │   ├── features/                # Super App UI (Home, Wallet, Services, Mini App launcher)
+│   │   ├── app/                     # Riverpod state management & GoRouter
+│   │   └── core/                    # Networking, themes & token management
+│   └── pubspec.yaml                 # Core dependencies and approved Mini App packages
 │
 └── ../superapp-miniapps/            # Standalone Partner Mini-Apps Repository
     ├── ma_flutter_trust_regulator/  # Example Flutter In-App Module Mini App
@@ -160,11 +156,11 @@ cd dps_webview_webapp_insurance
 pnpm run dev
 
 # 5. Build Flutter Super App APK (Universal)
-cd dps_mobile_app
+cd super-app
 flutter build apk --debug --target-platform android-arm,android-arm64,android-x64
 
 # 6. Build Flutter Web Super App Container
-cd dps_mobile_app
+cd super-app
 flutter build web --base-href /superapp-sandbox/
 ```
 

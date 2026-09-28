@@ -160,7 +160,7 @@ describe('All Tasks Verification - Multi-Method Mini Apps & Enterprise Plan', ()
     beforeEach(() => {
       mockPubspecService = {
         readPubspecDocument: jest.fn().mockReturnValue({ document: { get: () => null } }),
-        getMobileAppDir: jest.fn().mockReturnValue('superapp_mobile'),
+        getMobileAppDir: jest.fn().mockReturnValue('super-app'),
       };
       pubspecPrecheck = new PubspecPrecheckService({} as any, mockPubspecService as any);
     });

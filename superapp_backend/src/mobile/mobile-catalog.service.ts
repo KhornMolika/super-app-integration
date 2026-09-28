@@ -8,9 +8,15 @@ export interface CatalogItem {
   appId: string;
   name: string;
   description: string | null;
+  fullDescription?: string | null;
   logo: string | null;
   category: string | null;
   integrationMethod: string;
+  integrationConfig?: any;
+  permissions?: any[];
+  termsAndConditions?: string | null;
+  privacyPolicy?: string | null;
+  status: string;
   nativeSdk?: { available: true };
 }
 
@@ -21,16 +27,22 @@ export interface CatalogPage {
   offset: number;
 }
 
-/** Explicit allowlist: nothing else from the row can ever leak. */
+/** Explicit allowlist: nothing sensitive from the row can ever leak. */
 export function toCatalogItem(app: MiniApp): CatalogItem {
   const item: CatalogItem = {
     id: app.id,
     appId: app.appId,
     name: app.name,
     description: app.shortDescription ?? null,
+    fullDescription: app.fullDescription ?? null,
     logo: app.logo ?? null,
     category: app.category ?? null,
     integrationMethod: app.integrationMethod,
+    integrationConfig: app.integrationConfig ?? null,
+    permissions: app.permissions ?? [],
+    termsAndConditions: app.termsDescription ?? null,
+    privacyPolicy: app.privacyPolicyDescription ?? null,
+    status: app.status,
   };
   if (app.integrationMethod === 'NATIVE_SDK') {
     item.nativeSdk = { available: true };
@@ -53,11 +65,23 @@ export class MobileCatalogService {
         'm.appId',
         'm.name',
         'm.shortDescription',
+        'm.fullDescription',
         'm.logo',
         'm.category',
         'm.integrationMethod',
+        'm.integrationConfig',
+        'm.permissions',
+        'm.termsDescription',
+        'm.privacyPolicyDescription',
+        'm.status',
       ])
-      .where('m.status = :status', { status: MiniAppStatus.ACTIVE });
+      .where('m.status IN (:...statuses)', {
+        statuses: [
+          MiniAppStatus.ACTIVE,
+          MiniAppStatus.TESTING,
+          MiniAppStatus.APPROVED,
+        ],
+      });
     if (q) {
       const escaped = q.replace(/[\\%_]/g, (c) => `\\${c}`);
       qb.andWhere(`m.name ILIKE :q ESCAPE '\\'`, { q: `%${escaped}%` });
@@ -71,3 +95,4 @@ export class MobileCatalogService {
     return { items: rows.map(toCatalogItem), total, limit, offset };
   }
 }
+

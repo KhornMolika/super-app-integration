@@ -4,15 +4,19 @@
 $ErrorActionPreference = "Stop"
 
 $ProjectRoot = $PSScriptRoot
-while ($ProjectRoot -and -not (Test-Path (Join-Path $ProjectRoot "superapp_mobile"))) {
+while ($ProjectRoot -and -not (Test-Path (Join-Path $ProjectRoot "super-app"))) {
     $parent = Split-Path -Parent $ProjectRoot
     if (-not $parent -or $parent -eq $ProjectRoot) { break }
     $ProjectRoot = $parent
 }
 
-$MobileAppDir = Join-Path $ProjectRoot "superapp_mobile"
-if (-not (Test-Path $MobileAppDir)) {
-    $MobileAppDir = Join-Path $ProjectRoot "dps_mobile_app"
+$MobileAppDir = $env:MOBILE_APP_DIR
+if ($MobileAppDir -and (Test-Path $MobileAppDir)) {
+    $MobileAppDir = (Resolve-Path $MobileAppDir).Path
+} elseif (Test-Path (Join-Path $ProjectRoot "super-app")) {
+    $MobileAppDir = Join-Path $ProjectRoot "super-app"
+} else {
+    $MobileAppDir = Join-Path $ProjectRoot "super-app"
 }
 
 $BackofficeDir = Join-Path $ProjectRoot "superapp_backoffice"

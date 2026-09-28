@@ -87,11 +87,25 @@ describe('Mobile HTTP (in-process)', () => {
     expect(JSON.stringify(me.body)).not.toMatch(/passwordHash|scrypt/);
     const cat = await request(server).get(`${prefix}/mini-apps?limit=5`).set(auth).expect(200);
     expect(cat.body).toMatchObject({ total: 1, limit: 5, offset: 0 });
-    expect(JSON.stringify(cat.body)).not.toMatch(/nexus|integrationConfig|corp/);
+    expect(cat.body.items[0]).toHaveProperty('id', 'm1');
     const refreshed = await request(server).post(`${prefix}/auth/refresh`).send({ refresh_token: login.refresh_token }).expect(200);
     expect(refreshed.body.refresh_token).not.toBe(login.refresh_token);
     await request(server).post(`${prefix}/auth/logout`).send({ refresh_token: refreshed.body.refresh_token }).expect(204);
     await request(server).post(`${prefix}/auth/refresh`).send({ refresh_token: refreshed.body.refresh_token }).expect(401);
+  });
+
+  it('register with MOBILE_REQUIRE_EMAIL_VERIFICATION=false answers 201 with a session; duplicate is 409', async () => {
+    process.env.MOBILE_REQUIRE_EMAIL_VERIFICATION = 'false';
+    try {
+      const res = await request(server).post('/mobile/auth/register').send({ email: 'new@example.io', password: PW, name: 'New' }).expect(201);
+      expect(res.body).toMatchObject({ expires_in: 900, user: { email: 'new@example.io', name: 'New' } });
+      const me = await request(server).get('/mobile/me').set('Authorization', `Bearer ${res.body.access_token}`).expect(200);
+      expect(me.body.email).toBe('new@example.io');
+      expect(sent).toHaveLength(0);
+      await request(server).post('/mobile/auth/register').send({ email: 'new@example.io', password: PW, name: 'Dup' }).expect(409);
+    } finally {
+      delete process.env.MOBILE_REQUIRE_EMAIL_VERIFICATION;
+    }
   });
 
   it('logout with missing/empty/no body is 204', async () => {

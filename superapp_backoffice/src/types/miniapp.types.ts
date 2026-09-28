@@ -59,14 +59,21 @@ export interface NativeSdkConfigDto {
   iosModuleName: string;
   iosTypeName: string;
   iosArtifactFilename: string;
+  iosMinioKey?: string;
+  iosMinioUrl?: string;
+  iosSha256?: string;
   iosStoragePath?: string;
   iosChecksum?: string;
   iosSize?: number;
+  iosVersion?: string;
   iosDetectedPermissions?: string[];
 
   androidPackageName: string;
   androidObjectName: string;
   androidArtifactFilename: string;
+  androidMinioKey?: string;
+  androidMinioUrl?: string;
+  androidSha256?: string;
   androidMavenGroupId: string;
   androidMavenArtifactId: string;
   androidMavenVersion: string;

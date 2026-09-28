@@ -1,7 +1,9 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   Logger,
+  OnModuleInit,
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -42,6 +44,12 @@ export interface TokenResponse {
   user: { id: string; email: string; name: string };
 }
 
+/** Registration result: verification pending (202) or, with verification disabled, an instant session (201). */
+export type RegisterResult = { message: string } | TokenResponse;
+
+export const isTokenResponse = (r: RegisterResult): r is TokenResponse =>
+  'access_token' in r;
+
 export const sha256Hex = (value: string) =>
   crypto.createHash('sha256').update(value).digest('hex');
 const newOpaqueToken = () => crypto.randomBytes(32).toString('base64url');
@@ -54,7 +62,7 @@ function intEnv(name: string, fallback: number, min: number, max: number): numbe
 }
 
 @Injectable()
-export class MobileAuthService {
+export class MobileAuthService implements OnModuleInit {
   private readonly logger = new Logger(MobileAuthService.name);
 
   constructor(
@@ -69,6 +77,40 @@ export class MobileAuthService {
     private readonly limiter: AuthRateLimiter,
   ) {}
 
+  async onModuleInit() {
+    await this.seedDefaultEndUsers();
+  }
+
+  private async seedDefaultEndUsers(): Promise<void> {
+    if (process.env.NODE_ENV === 'test') return;
+    const defaultUsers = [
+      { email: 'superadmin@example.com', name: 'Super Admin', password: 'Password123!' },
+      { email: 'admin@example.com', name: 'Admin User', password: 'Password123!' },
+      { email: 'user@example.com', name: 'Demo User', password: 'Password123!' },
+    ];
+
+    for (const u of defaultUsers) {
+      try {
+        const email = normalizeEmail(u.email);
+        const existing = await this.users.findOne({ where: { email } });
+        if (!existing) {
+          const passwordHash = await this.passwords.hash(u.password);
+          const endUser = this.users.create({
+            email,
+            name: u.name,
+            passwordHash,
+            emailVerifiedAt: new Date(),
+            status: EndUserStatus.ACTIVE,
+          });
+          await this.users.save(endUser);
+          this.logger.log(`Seeded default mobile EndUser account: ${email}`);
+        }
+      } catch (err: any) {
+        this.logger.warn(`Could not seed default mobile user ${u.email}: ${err?.message}`);
+      }
+    }
+  }
+
   get accessTtlSeconds(): number {
     return intEnv('MOBILE_ACCESS_TOKEN_TTL_SECONDS', 900, 60, 86_400);
   }
@@ -79,11 +121,27 @@ export class MobileAuthService {
 
   // ---------------------------------------------------------------- register
 
-  async register(input: {
-    email: string;
-    password: string;
-    name: string;
-  }): Promise<{ message: string }> {
+  /**
+   * MOBILE_REQUIRE_EMAIL_VERIFICATION (default true). Set to `false` to skip the
+   * email step: accounts are created verified and registration returns a session.
+   * Trade-off: nobody proves they own the address, so anyone can register any
+   * email; only use it where the email is not trusted as an identity (local dev,
+   * closed pilots).
+   */
+  private requireEmailVerification(): boolean {
+    return (
+      (process.env.MOBILE_REQUIRE_EMAIL_VERIFICATION ?? 'true')
+        .trim()
+        .toLowerCase() !== 'false'
+    );
+  }
+
+  private warnedNoVerification = false;
+
+  async register(
+    input: { email: string; password: string; name: string },
+    userAgent?: string,
+  ): Promise<RegisterResult> {
     const email = normalizeEmail(input.email);
     const violation = this.passwords.validatePolicy(input.password, email);
     if (violation) throw new BadRequestException(violation);
@@ -91,6 +149,15 @@ export class MobileAuthService {
     // Hash unconditionally so the response time does not reveal whether the
     // address is already registered.
     const passwordHash = await this.passwords.hash(input.password);
+
+    if (!this.requireEmailVerification()) {
+      return this.registerWithoutVerification(
+        email,
+        input.name,
+        passwordHash,
+        userAgent,
+      );
+    }
 
     // Per-address mail bucket (independent of IP) so an address cannot be
     // mail-bombed from many IPs. Consumed for every registration attempt
@@ -141,6 +208,63 @@ export class MobileAuthService {
       await this.issueVerification(user);
     }
     return { message: REGISTER_MESSAGE };
+  }
+
+  /**
+   * Verification disabled: create the account already verified and sign the user
+   * in. Without a mailbox proof the response necessarily reveals whether the
+   * address is taken (409), which is the accepted trade-off of this mode.
+   */
+  private async registerWithoutVerification(
+    email: string,
+    name: string,
+    passwordHash: string,
+    userAgent?: string,
+  ): Promise<TokenResponse> {
+    if (!this.warnedNoVerification) {
+      this.warnedNoVerification = true;
+      const msg =
+        'MOBILE_REQUIRE_EMAIL_VERIFICATION=false: mobile accounts are created without email verification';
+      if (process.env.NODE_ENV === 'production') this.logger.error(msg);
+      else this.logger.warn(msg);
+    }
+    const taken = new ConflictException(
+      'An account with this email already exists. Sign in instead.',
+    );
+
+    let user = await this.users.findOne({ where: { email } });
+    if (user) {
+      // Verified/disabled accounts are never touched. A leftover UNVERIFIED row
+      // (registered while verification was on) is claimed by this registrant.
+      if (user.emailVerifiedAt || user.status !== EndUserStatus.ACTIVE) {
+        throw taken;
+      }
+      const res = await this.users.update(
+        { id: user.id, emailVerifiedAt: IsNull() },
+        { name: name.trim(), passwordHash, emailVerifiedAt: new Date() },
+      );
+      if (!res.affected) throw taken; // verified concurrently
+      user = await this.users.findOne({ where: { id: user.id } });
+      if (!user) throw taken;
+    } else {
+      try {
+        user = await this.users.save(
+          this.users.create({
+            email,
+            name: name.trim(),
+            passwordHash,
+            emailVerifiedAt: new Date(),
+            status: EndUserStatus.ACTIVE,
+            failedLoginCount: 0,
+            lockedUntil: null,
+          }),
+        );
+      } catch (err: any) {
+        if (err?.code === '23505') throw taken; // lost a registration race
+        throw err;
+      }
+    }
+    return this.issueTokens(user, crypto.randomUUID(), userAgent);
   }
 
   /**

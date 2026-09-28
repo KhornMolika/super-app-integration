@@ -398,7 +398,7 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
     }
   };
 
-  const handleFlutterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleFlutterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const fieldName = e.target.name;
     setFormData((prev) => {
       const nextValidationErrors = prev.validationErrors ? { ...prev.validationErrors } : undefined;

@@ -47,7 +47,7 @@ export class PubspecInjectorService {
   ) {}
 
   /**
-   * Resolves the absolute path to the Super App's dps_mobile_app directory.
+   * Resolves the absolute path to the Super App's super-app directory.
    */
   getMobileAppDir(): string {
     const configuredPath = this.configService.get<string>('MOBILE_APP_DIR');
@@ -56,14 +56,10 @@ export class PubspecInjectorService {
     }
 
     const candidatePaths = [
-      path.resolve(process.cwd(), '../superapp_mobile'),
-      path.resolve(process.cwd(), 'superapp_mobile'),
-      path.resolve(process.cwd(), '../dps_mobile_app'),
-      path.resolve(process.cwd(), 'dps_mobile_app'),
-      path.resolve(__dirname, '../../../../superapp_mobile'),
-      path.resolve(__dirname, '../../../../dps_mobile_app'),
-      path.resolve(__dirname, '../../../../../superapp_mobile'),
-      path.resolve(__dirname, '../../../../../dps_mobile_app'),
+      path.resolve(process.cwd(), '../super-app'),
+      path.resolve(process.cwd(), 'super-app'),
+      path.resolve(__dirname, '../../../../super-app'),
+      path.resolve(__dirname, '../../../../../super-app'),
     ];
 
     for (const candidate of candidatePaths) {
@@ -73,18 +69,18 @@ export class PubspecInjectorService {
     }
 
     // Fallback to standard monorepo relative location
-    return path.resolve(process.cwd(), '../superapp_mobile');
+    return path.resolve(process.cwd(), '../super-app');
   }
 
   /**
-   * Resolves the absolute path to dps_mobile_app/pubspec.yaml.
+   * Resolves the absolute path to super-app/pubspec.yaml.
    */
   getPubspecPath(): string {
     return path.join(this.getMobileAppDir(), 'pubspec.yaml');
   }
 
   /**
-   * Resolves the absolute path to dps_mobile_app/pubspec.yaml.bak.
+   * Resolves the absolute path to super-app/pubspec.yaml.bak.
    */
   getBackupPath(): string {
     return path.join(this.getMobileAppDir(), 'pubspec.yaml.bak');
@@ -144,7 +140,7 @@ export class PubspecInjectorService {
   }
 
   /**
-   * Injects or updates a dependency in dps_mobile_app/pubspec.yaml.
+   * Injects or updates a dependency in super-app/pubspec.yaml.
    */
   async injectDependency(
     dto: InjectDependencyDto,
@@ -241,8 +237,7 @@ export class PubspecInjectorService {
         for (const entry of entries) {
           if (
             entry.isDirectory() &&
-            entry.name !== 'dps_mobile_app' &&
-            entry.name !== 'superapp_mobile' &&
+            entry.name !== 'super-app' &&
             entry.name !== 'node_modules' &&
             entry.name !== '.git'
           ) {
@@ -358,7 +353,7 @@ export class PubspecInjectorService {
   }
 
   /**
-   * Removes a dependency from dps_mobile_app/pubspec.yaml.
+   * Removes a dependency from super-app/pubspec.yaml.
    */
   async removeDependency(
     packageName: string,
@@ -480,7 +475,7 @@ export class PubspecInjectorService {
   }
 
   /**
-   * Runs `flutter pub get --dry-run` or `flutter pub get` in dps_mobile_app to validate dependencies.
+   * Runs `flutter pub get --dry-run` or `flutter pub get` in super-app to validate dependencies.
    */
   async validateDependencies(
     dto: ValidateDependencyDto = { dryRun: true },

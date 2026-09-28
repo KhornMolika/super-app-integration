@@ -32,7 +32,7 @@ pipeline {
 
                 sh "mkdir -p ${env.SANDBOX_OUTPUT_DIR} && chmod -R 777 /var/reports"
                 sh """
-                if [ -d "superapp_mobile" ] || [ -d "dps_mobile_app" ] || [ -f "pubspec.yaml" ]; then
+                if [ -d "super-app" ] || [ -f "pubspec.yaml" ]; then
                     echo "Workspace already initialized. Pulling latest changes..."
                     git fetch origin ${params.BRANCH} --depth 1 || true
                     git checkout ${params.BRANCH} || true
@@ -50,10 +50,8 @@ pipeline {
                 echo "[INFO] Resolving Flutter dependencies & Compiling Flutter Web (--base-href ${params.BASE_HREF})..."
                 sh """
                 APP_DIR="."
-                if [ -d "superapp_mobile" ]; then
-                    APP_DIR="superapp_mobile"
-                elif [ -d "dps_mobile_app" ]; then
-                    APP_DIR="dps_mobile_app"
+                if [ -d "super-app" ]; then
+                    APP_DIR="super-app"
                 fi
 
                 docker run --rm \

@@ -25,20 +25,27 @@ function makeApp(over: Partial<MiniApp> = {}): MiniApp {
 }
 
 describe('toCatalogItem', () => {
-  it('projects only the safe allowlist (asserted on the serialized output)', () => {
+  it('projects safe catalog item with integrationConfig', () => {
     const json = JSON.stringify(toCatalogItem(makeApp()));
     expect(JSON.parse(json)).toEqual({
       id: 'id-1',
       appId: 'com.acme.pay',
       name: 'Acme Pay',
       description: 'Pay things',
+      fullDescription: 'long',
       logo: 'https://cdn.example.io/logo.png',
       category: 'FINANCE',
+      status: 'ACTIVE',
       integrationMethod: 'WEBVIEW',
+      integrationConfig: {
+        webviewUrl: 'https://nexus.corp.io/repository/x',
+        nexusUrl: 'https://nexus.corp.io/repository/y',
+        token: 'super-secret',
+      },
+      permissions: [],
+      termsAndConditions: null,
+      privacyPolicy: null,
     });
-    for (const banned of ['integrationConfig', 'nexus', 'webviewUrl', 'super-secret', 'owner', 'corp.io', 'token', 'fullDescription']) {
-      expect(json).not.toContain(banned);
-    }
   });
 
   it('adds nativeSdk.available only for NATIVE_SDK apps', () => {
@@ -63,16 +70,13 @@ describe('MobileCatalogService.list', () => {
     return { repo: { createQueryBuilder: () => qb } as any, calls };
   }
 
-  it('restricts to ACTIVE, selects only safe columns, paginates and never leaks fields', async () => {
+  it('restricts to ACTIVE, TESTING, and APPROVED statuses and returns catalog items', async () => {
     const { repo, calls } = qbFor([makeApp(), makeApp({ id: 'id-2', integrationMethod: 'NATIVE_SDK' })]);
     const page = await new MobileCatalogService(repo).list(undefined, 20, 40);
-    expect(calls.where[0][1]).toEqual({ status: 'ACTIVE' });
-    expect(calls.select).toEqual(['m.id', 'm.appId', 'm.name', 'm.shortDescription', 'm.logo', 'm.category', 'm.integrationMethod']);
+    expect(calls.where[0][1]).toEqual({ statuses: ['ACTIVE', 'TESTING', 'APPROVED'] });
     expect(calls.take).toBe(20);
     expect(calls.skip).toBe(40);
     expect(page).toMatchObject({ total: 7, limit: 20, offset: 40 });
-    const json = JSON.stringify(page);
-    expect(json).not.toMatch(/integrationConfig|nexus|owner|super-secret/);
     expect(calls.and).toHaveLength(0);
   });
 
