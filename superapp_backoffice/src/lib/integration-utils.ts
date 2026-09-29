@@ -115,3 +115,112 @@ export const generateClientMiniAppId = (name?: string, suffix?: string) => {
   }
   return `miniapp_${activeSuffix}`;
 };
+
+export interface DerivedNativeSdkDefaults {
+  iosModuleName: string;
+  iosTypeName: string;
+  androidMavenGroupId: string;
+  androidMavenArtifactId: string;
+  androidMavenVersion: string;
+  androidPackageName: string;
+  androidObjectName: string;
+}
+
+/**
+ * Intelligently derives standard-compliant Native SDK module names,
+ * Swift view types, Maven coordinates, package names, and Kotlin/Java entry classes
+ * from mini-app metadata (name, appId, organization).
+ */
+export const deriveNativeSdkDefaults = (
+  name?: string,
+  appId?: string,
+  organization?: string,
+  organizationCode?: string,
+): DerivedNativeSdkDefaults => {
+  // Extract word tokens from name or appId
+  let raw = (name || '').trim();
+  if (!raw && appId) {
+    raw = appId
+      .replace(/^miniapp_/i, '')
+      .replace(/_[a-f0-9]{4,8}$/i, '')
+      .replace(/_/g, ' ');
+  }
+  if (!raw) {
+    raw = 'MiniApp';
+  }
+
+  // Split into clean alphanumeric words
+  const rawWords = raw
+    .split(/[^a-zA-Z0-9]+/)
+    .filter(Boolean);
+
+  // Normalize words and detect if SDK is already a token
+  const words = rawWords.map((w) => {
+    if (w.toLowerCase() === 'sdk') return 'SDK';
+    return w.charAt(0).toUpperCase() + w.slice(1);
+  });
+
+  const lastWord = words.length > 0 ? words[words.length - 1] : '';
+  const alreadyHasSdk =
+    lastWord.toLowerCase() === 'sdk' ||
+    words.join('').toLowerCase().endsWith('sdk');
+
+  const baseWords = alreadyHasSdk
+    ? words
+    : [...words, 'SDK'];
+
+  const pascalName = baseWords.join('') || 'MiniAppSDK';
+  const kebabBase = (alreadyHasSdk ? words : [...words, 'SDK'])
+    .map((w) => w.toLowerCase())
+    .join('-');
+
+  const iosModuleName = pascalName.replace(/[^a-zA-Z0-9_]/g, '');
+  const iosTypeName = iosModuleName.endsWith('View')
+    ? iosModuleName
+    : `${iosModuleName}View`;
+
+  // Organization slug for reverse domain (e.g. "FTC" -> "ftc", "Lotus Hospitality" -> "lotus")
+  let orgSlug = '';
+  if (organizationCode && organizationCode.trim()) {
+    orgSlug = organizationCode.toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  if (!orgSlug && organization) {
+    const orgStr = organization.trim();
+    if (/ftc|fintech/i.test(orgStr)) {
+      orgSlug = 'ftc';
+    } else {
+      // Remove text in parentheses like "(which houses...)"
+      const cleanOrg = orgStr.replace(/\([^)]*\)/g, '').trim();
+      const orgTokens = cleanOrg.split(/[^a-zA-Z0-9]+/).filter(Boolean);
+      if (orgTokens.length > 0) {
+        orgSlug = orgTokens[0].toLowerCase().slice(0, 12);
+      }
+    }
+  }
+
+  if (!orgSlug || orgSlug === 'company' || orgSlug === 'myorg' || orgSlug.length > 15) {
+    orgSlug = 'fsa';
+  }
+
+  // Clean package suffix: e.g. "testsdk" or "spabooking"
+  const pkgSuffix = words.map((w) => w.toLowerCase()).join('') || 'miniapp';
+
+  const androidMavenGroupId = `com.${orgSlug}.sdk`;
+  const androidMavenArtifactId = kebabBase;
+  const androidMavenVersion = '1.0.0';
+  const androidPackageName = `com.${orgSlug}.${pkgSuffix}`;
+  const androidObjectName = iosModuleName;
+
+  return {
+    iosModuleName,
+    iosTypeName,
+    androidMavenGroupId,
+    androidMavenArtifactId,
+    androidMavenVersion,
+    androidPackageName,
+    androidObjectName,
+  };
+};
+
+

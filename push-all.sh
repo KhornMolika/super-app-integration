@@ -231,13 +231,13 @@ push_fintech_backend() {
   fi
 }
 
-# Helper to push to fintech-mobile (Mobile superapp_mobile)
+# Helper to push to fintech-mobile (Mobile super-app)
 push_fintech_mobile() {
-  echo -e "${BOLD}${BLUE}📱 [4/4] Splitting & Pushing superapp_mobile to fintech-mobile ($TARGET_BRANCH)...${RESET}"
-  echo -e "  ${CYAN}➜ Computing subtree split for superapp_mobile...${RESET}"
-  SPLIT_COMMIT=$(git subtree split --prefix=superapp_mobile "$SOURCE_BRANCH" | tr -d '\r\n ')
+  echo -e "${BOLD}${BLUE}📱 [4/4] Splitting & Pushing super-app to fintech-mobile ($TARGET_BRANCH)...${RESET}"
+  echo -e "  ${CYAN}➜ Computing subtree split for super-app...${RESET}"
+  SPLIT_COMMIT=$(git subtree split --prefix=super-app "$SOURCE_BRANCH" | tr -d '\r\n ')
   if [ -z "$SPLIT_COMMIT" ]; then
-    echo -e "${RED}❌ Subtree split failed for superapp_mobile!${RESET}\n"
+    echo -e "${RED}❌ Subtree split failed for super-app!${RESET}\n"
     return 1
   fi
   echo -e "  ${CYAN}➜ Split commit: $SPLIT_COMMIT${RESET}"

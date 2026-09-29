@@ -5,6 +5,7 @@ import { BackButton } from '@/components/ui/BackButton';
 import { Button } from '@/components/ui/inputs';
 import { IntegrationMethod } from '@/types/miniapp.types';
 import { BuildingIcon } from '@/components/ui/Icons';
+import { AppLogoAvatar } from '@/components/ui/AppLogoAvatar';
 import { getOrganizationCode, getOrganizationFullName } from '@/lib/constants/fsa-organizations';
 
 export interface MiniAppDetailHeaderProps {
@@ -51,6 +52,7 @@ export default function MiniAppDetailHeader({
     <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
       <div className="flex items-center space-x-4">
         <BackButton href="/miniapps" />
+        <AppLogoAvatar logo={formData.logo} name={formData.name} size="lg" />
         <div>
           <div className="flex items-center gap-3">
             <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
@@ -94,9 +96,11 @@ export default function MiniAppDetailHeader({
             <span className="font-mono text-slate-700 dark:text-slate-300 font-medium">{formData.appId || 'com.app'}</span>
             <span>•</span>
             <span>
-              {formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE
+              {formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE || formData.integrationMethod === 'FLUTTER_PACKAGE'
                 ? 'Flutter Package'
-                : formData.integrationMethod === IntegrationMethod.DEEP_LINK
+                : formData.integrationMethod === IntegrationMethod.NATIVE_SDK || formData.integrationMethod === 'NATIVE_SDK'
+                ? 'Native SDK'
+                : formData.integrationMethod === IntegrationMethod.DEEP_LINK || formData.integrationMethod === 'DEEP_LINK'
                 ? 'Deep Link'
                 : 'WebView'}
             </span>

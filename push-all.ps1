@@ -231,11 +231,11 @@ function Push-ToFintechBackend {
 }
 
 function Push-ToFintechMobile {
-    Write-Host "[4/4] Splitting and Pushing superapp_mobile to fintech-mobile ($TargetBranch)..." -ForegroundColor Blue
-    Write-Host "  -> Computing subtree split for superapp_mobile..." -ForegroundColor Cyan
-    $splitCommit = (git subtree split --prefix=superapp_mobile "$SourceBranch").Trim()
+    Write-Host "[4/4] Splitting and Pushing super-app to fintech-mobile ($TargetBranch)..." -ForegroundColor Blue
+    Write-Host "  -> Computing subtree split for super-app..." -ForegroundColor Cyan
+    $splitCommit = (git subtree split --prefix=super-app "$SourceBranch").Trim()
     if (-not $splitCommit) {
-        Write-Host "[ERROR] Subtree split failed for superapp_mobile!`n" -ForegroundColor Red
+        Write-Host "[ERROR] Subtree split failed for super-app!`n" -ForegroundColor Red
         return
     }
     Write-Host "  -> Split commit: $splitCommit" -ForegroundColor Cyan

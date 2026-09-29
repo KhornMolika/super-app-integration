@@ -100,10 +100,20 @@ export class SdkArtifactUploadService {
 
     // 3. Atomically persist to MiniApp entity if miniAppId is provided and exists
     if (req.miniAppId && req.miniAppId !== 'draft') {
-      const miniApp = await this.miniappRepository.findOne({
-        where: { id: req.miniAppId },
-      });
+      const miniApp = await this.findMiniApp(req.miniAppId);
       if (miniApp) {
+        const prevConfig = miniApp.integrationConfig || {};
+        const oldKey =
+          req.platform === 'IOS'
+            ? prevConfig.iosMinioKey
+            : prevConfig.androidMinioKey;
+        if (oldKey && oldKey !== minioResult.minioKey) {
+          await this.storage.deleteObject(
+            this.storage.sdkSubmissionsBucket,
+            oldKey,
+          );
+        }
+
         const patch = { ...scannedFields, ...urlFields };
         await this.miniappRepository
           .createQueryBuilder()
@@ -135,12 +145,11 @@ export class SdkArtifactUploadService {
     androidNexusMavenUrl?: string;
     iosNexusZipUrl?: string;
   }> {
-    const miniApp = await this.miniappRepository.findOne({
-      where: { id: miniAppId },
-    });
+    const miniApp = await this.findMiniApp(miniAppId);
     if (!miniApp) {
       throw new NotFoundException(`Mini app ${miniAppId} not found`);
     }
+
 
     const config = miniApp.integrationConfig || {};
     const patch: Record<string, any> = {};
@@ -241,9 +250,7 @@ export class SdkArtifactUploadService {
 
   /** Status check of SDK artifacts (quarantined in MinIO vs published in Nexus). */
   async getStatus(miniAppId: string) {
-    const miniApp = await this.miniappRepository.findOne({
-      where: { id: miniAppId },
-    });
+    const miniApp = await this.findMiniApp(miniAppId);
     if (!miniApp) {
       throw new NotFoundException(`Mini app ${miniAppId} not found`);
     }
@@ -265,6 +272,16 @@ export class SdkArtifactUploadService {
       androidNexusMavenUrl: cfg.androidNexusMavenUrl,
     };
   }
+
+  private async findMiniApp(identifier?: string): Promise<MiniApp | null> {
+    if (!identifier || identifier === 'draft') return null;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
+    if (isUuid) {
+      return this.miniappRepository.findOne({ where: { id: identifier } });
+    }
+    return this.miniappRepository.findOne({ where: { appId: identifier } });
+  }
+
 
   renderPodspec(name: string, version: string, zipUrl: string): string {
     return `Pod::Spec.new do |s|

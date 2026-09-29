@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/inputs';
 import ClickableTableRow from '@/components/ui/ClickableTableRow';
 import { RegisterMiniAppButton } from '@/components/ui/RegisterMiniAppButton';
 import { TagIcon, SettingsIcon, ArrowRightIcon, BuildingIcon } from '@/components/ui/Icons';
+import { AppLogoAvatar } from '@/components/ui/AppLogoAvatar';
 import { miniappsApi } from '@/api';
 import { useAuth } from '@/lib/auth';
 import { getOrganizationCode, getOrganizationFullName } from '@/lib/constants/fsa-organizations';
@@ -98,9 +99,11 @@ export default function MiniAppsPage() {
                     <ClickableTableRow key={app.id} href={`/miniapps/${app.id}`} className="hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200 group">
                       <td className="px-6 py-4 border-l-4 border-transparent group-hover:border-brand-500 transition-colors">
                         <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 rounded-lg bg-brand-50 dark:bg-brand-500/10 border border-brand-100 dark:border-brand-500/20 flex items-center justify-center text-brand-600 dark:text-brand-400 font-bold text-xs">
-                            {app.name?.charAt(0) || 'A'}
-                          </div>
+                          <AppLogoAvatar
+                            logo={app.logo}
+                            name={app.name}
+                            size="md"
+                          />
                           <div>
                             <span className="text-slate-800 dark:text-slate-200 font-semibold block">{app.name || '-'}</span>
                             {app.appId && (
@@ -125,10 +128,39 @@ export default function MiniAppsPage() {
                         })()}
                       </td>
                       <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600/50 font-mono">
-                          <SettingsIcon className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                          <span>{app.integrationMethod || 'WEBVIEW'}</span>
-                        </span>
+                        {(() => {
+                          const m = (app.integrationMethod || 'WEBVIEW').toUpperCase();
+                          if (m === 'NATIVE_SDK') {
+                            return (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 shadow-xs">
+                                <SettingsIcon className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                                <span>Native SDK</span>
+                              </span>
+                            );
+                          }
+                          if (m === 'FLUTTER_PACKAGE') {
+                            return (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60 shadow-xs">
+                                <SettingsIcon className="w-3.5 h-3.5 text-purple-500 shrink-0" />
+                                <span>Flutter Package</span>
+                              </span>
+                            );
+                          }
+                          if (m === 'DEEP_LINK') {
+                            return (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/60 shadow-xs">
+                                <SettingsIcon className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+                                <span>Deep Link</span>
+                              </span>
+                            );
+                          }
+                          return (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 shadow-xs">
+                              <SettingsIcon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                              <span>WebView</span>
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col gap-0.5">

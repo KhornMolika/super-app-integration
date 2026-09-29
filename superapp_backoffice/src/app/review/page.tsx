@@ -9,6 +9,7 @@ import { toast } from '@/components/ui/Toast';
 import { RevisionReviewModal } from '@/components/review/RevisionReviewModal';
 import { permissionsApi, miniappsApi, MiniApp } from '@/api';
 import { BuildingIcon } from '@/components/ui/Icons';
+import { AppLogoAvatar } from '@/components/ui/AppLogoAvatar';
 import { getOrganizationCode, getOrganizationFullName } from '@/lib/constants/fsa-organizations';
 
 type Proposal = {
@@ -301,8 +302,14 @@ export default function ReviewQueuePage() {
                     displayedMiniapps.map((app) => (
                       <tr key={app.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-700/30 transition-colors">
                         <td className="px-6 py-4 text-slate-800 dark:text-slate-200 font-medium">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-slate-900 dark:text-slate-100">{app.name || 'Unknown App'}</span>
+                          <div className="flex items-center gap-3">
+                            <AppLogoAvatar logo={app.logo} name={app.name} size="sm" />
+                            <div>
+                              <span className="font-semibold text-slate-900 dark:text-slate-100 block">{app.name || 'Unknown App'}</span>
+                              {app.appId && (
+                                <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500 block">{app.appId}</span>
+                              )}
+                            </div>
                           </div>
                         </td>
                         <td className="px-6 py-4">

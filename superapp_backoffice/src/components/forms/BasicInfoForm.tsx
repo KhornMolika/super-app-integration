@@ -1,11 +1,111 @@
-"use client";
+import { useState, useEffect } from 'react';
 import { Input, Label, Select, Textarea } from '@/components/ui/inputs';
 import { LogoUploadInput } from '@/components/ui/LogoUploadInput';
 import { LockIcon, BuildingIcon } from '@/components/ui/Icons';
 import { CreateMiniAppDto, IntegrationMethod, SourceType } from '@/types/miniapp.types';
-import { FSA_ORGANIZATIONS, FSA_ORGANIZATION_GROUPS } from '@/lib/constants/fsa-organizations';
+import { organizationsApi, Organization } from '@/api/organizations.api';
+import { FSA_ORGANIZATIONS, FSA_ORGANIZATION_GROUPS, getOrganizationDef, FsaEntityType } from '@/lib/constants/fsa-organizations';
 
 export default function BasicInfoForm({ formData, handleChange, allErrors = {}, isEditable = true }: any) {
+  const [dbOrganizations, setDbOrganizations] = useState<Organization[]>([]);
+  const [loadingOrgs, setLoadingOrgs] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadOrgs = async () => {
+      try {
+        setLoadingOrgs(true);
+        const data = await organizationsApi.getAll();
+        if (mounted && Array.isArray(data) && data.length > 0) {
+          setDbOrganizations(data);
+        }
+      } catch (err) {
+        console.warn('Could not fetch organizations from API, using default registry:', err);
+      } finally {
+        if (mounted) setLoadingOrgs(false);
+      }
+    };
+    loadOrgs();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Dynamically group live organizations from DB or fallback to predefined registry
+  const organizationGroups = dbOrganizations.length > 0
+    ? [
+        {
+          label: 'Administrative & Policy Body (FSA)',
+          type: 'ADMINISTRATIVE' as FsaEntityType,
+          organizations: dbOrganizations
+            .filter((o) => {
+              const def = getOrganizationDef(o.name) || getOrganizationDef(o.code);
+              return def?.entityType === 'ADMINISTRATIVE' || o.metadata?.entityType === 'ADMINISTRATIVE' || ['FTC', 'GAD', 'PD', 'TLAD'].includes(o.code || '');
+            })
+            .map((o) => {
+              const def = getOrganizationDef(o.name) || getOrganizationDef(o.code);
+              return {
+                id: o.id,
+                code: o.code || def?.code || 'FTC',
+                name: o.name,
+              };
+            }),
+        },
+        {
+          label: 'Sector-Specific Regulators (FSA)',
+          type: 'SECTOR_REGULATOR' as FsaEntityType,
+          organizations: dbOrganizations
+            .filter((o) => {
+              const def = getOrganizationDef(o.name) || getOrganizationDef(o.code);
+              return def?.entityType === 'SECTOR_REGULATOR' || o.metadata?.entityType === 'SECTOR_REGULATOR' || ['IRC', 'SERC', 'SSR', 'TR', 'ACAR', 'RPR'].includes(o.code || '');
+            })
+            .map((o) => {
+              const def = getOrganizationDef(o.name) || getOrganizationDef(o.code);
+              return {
+                id: o.id,
+                code: o.code || def?.code || 'REG',
+                name: o.name,
+              };
+            }),
+        },
+        {
+          label: 'Oversight & Compliance Unit (FSA)',
+          type: 'OVERSIGHT_UNIT' as FsaEntityType,
+          organizations: dbOrganizations
+            .filter((o) => {
+              const def = getOrganizationDef(o.name) || getOrganizationDef(o.code);
+              return def?.entityType === 'OVERSIGHT_UNIT' || o.metadata?.entityType === 'OVERSIGHT_UNIT' || o.code === 'IAU';
+            })
+            .map((o) => {
+              const def = getOrganizationDef(o.name) || getOrganizationDef(o.code);
+              return {
+                id: o.id,
+                code: o.code || def?.code || 'IAU',
+                name: o.name,
+              };
+            }),
+        },
+      ].filter((g) => g.organizations.length > 0)
+    : FSA_ORGANIZATION_GROUPS;
+
+  const currentOrgDef = getOrganizationDef(formData.organization || formData.organizationCode || formData.category);
+  const selectedOrgValue = currentOrgDef?.name || FSA_ORGANIZATIONS[0].name;
+
+  const handleOrgSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const chosen = e.target.value;
+    const def = getOrganizationDef(chosen);
+    const orgName = def?.name || chosen;
+
+    if (handleChange) {
+      handleChange({
+        target: {
+          name: 'organization',
+          value: orgName,
+        },
+      } as any);
+    }
+  };
+
   return (
     <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -45,24 +145,18 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
                   <BuildingIcon className="w-3.5 h-3.5 text-sky-500" />
                   <span>Organization <span className="text-rose-500">*</span></span>
                 </Label>
-                <span className="text-[11px] text-slate-400 font-medium">FSA Subordinate Entity (MEF)</span>
               </div>
               <Select 
                 name="organization" 
-                value={formData.organization || formData.category || FSA_ORGANIZATIONS[0].name} 
-                onChange={(e) => {
-                  handleChange(e);
-                  if (handleChange) {
-                    handleChange({ target: { name: 'category', value: e.target.value } } as any);
-                  }
-                }}
+                value={selectedOrgValue} 
+                onChange={handleOrgSelect}
                 disabled={!isEditable}
                 className="text-sm font-medium"
               >
-                {FSA_ORGANIZATION_GROUPS.map((group) => (
+                {organizationGroups.map((group) => (
                   <optgroup key={group.type} label={group.label} className="font-semibold text-slate-700 dark:text-slate-200">
                     {group.organizations.map((org) => (
-                      <option key={org.code} value={org.name} className="font-normal text-slate-800 dark:text-slate-300">
+                      <option key={`${group.type}-${org.code}-${org.name}`} value={org.name} className="font-normal text-slate-800 dark:text-slate-300">
                         {org.code} - {org.name}
                       </option>
                     ))}

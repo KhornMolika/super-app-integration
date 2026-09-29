@@ -16,7 +16,9 @@ export {
   generateClientVerificationToken,
   generateClientRandomSuffix,
   generateClientMiniAppId,
+  deriveNativeSdkDefaults,
 } from '@/lib/integration-utils';
+
 
 export interface IntegrationFormProps {
   formData: any;

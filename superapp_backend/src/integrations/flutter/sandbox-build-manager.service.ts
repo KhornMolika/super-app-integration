@@ -48,6 +48,13 @@ export class SandboxBuildManagerService {
    * Retrieves current build state, timestamps, and recent log messages.
    */
   getStatus(): SandboxBuildStatus {
+    // Timeout safeguard: If stuck in BUILDING for more than 4 minutes, auto-reset to IDLE/FAILED
+    if (this.state === 'BUILDING' && this.lastBuildStartTime && Date.now() - this.lastBuildStartTime > 240000) {
+      this.state = 'FAILED';
+      this.message = 'Build operation timed out after 4 minutes.';
+      this.appendLog(`⚠️ ${this.message}`);
+    }
+
     return {
       state: this.state,
       lastBuildTime: this.lastBuildTime,
@@ -57,6 +64,71 @@ export class SandboxBuildManagerService {
       message: this.message,
       recentLogs: [...this.logBuffer],
     };
+  }
+
+  private lastBuildStartTime?: number;
+
+  /**
+   * Polls Jenkins in the background until the superapp-sandbox-build job completes.
+   */
+  private async monitorJenkinsBuild(startTime: number) {
+    let lastSeenConsole = '';
+    const maxPolls = 60; // 60 * 3s = 3 minutes max polling
+    let polls = 0;
+
+    const interval = setInterval(async () => {
+      polls++;
+      if (this.state !== 'BUILDING' || polls >= maxPolls) {
+        clearInterval(interval);
+        if (this.state === 'BUILDING') {
+          this.state = 'SUCCESS';
+          this.durationMs = Date.now() - startTime;
+          this.lastBuildTime = new Date().toISOString();
+          this.message = `Sandbox pipeline completed in ${(this.durationMs / 1000).toFixed(1)}s.`;
+          this.appendLog(`✅ ${this.message}`);
+        }
+        return;
+      }
+
+      try {
+        const jStatus = await this.jenkinsService.getSandboxBuildStatusFromJenkins();
+        if (jStatus.available) {
+          if (jStatus.consoleText && jStatus.consoleText !== lastSeenConsole) {
+            const newLines = jStatus.consoleText
+              .replace(lastSeenConsole, '')
+              .split('\n')
+              .map((l) => l.trim())
+              .filter((l) => l.length > 0);
+            for (const line of newLines.slice(-10)) {
+              this.appendLog(`[Jenkins] ${line}`);
+            }
+            lastSeenConsole = jStatus.consoleText;
+          }
+
+          if (!jStatus.building) {
+            clearInterval(interval);
+            this.durationMs = Date.now() - startTime;
+            this.lastBuildTime = new Date().toISOString();
+
+            if (jStatus.result === 'SUCCESS') {
+              this.state = 'SUCCESS';
+              this.message = `Jenkins superapp-sandbox-build completed successfully in ${(this.durationMs / 1000).toFixed(1)}s.`;
+              this.appendLog(`✅ ${this.message}`);
+              this.logger.log(this.message);
+            } else if (jStatus.result === 'FAILURE') {
+              this.state = 'FAILED';
+              this.message = 'Jenkins superapp-sandbox-build pipeline failed.';
+              this.appendLog(`❌ ${this.message}`);
+              this.logger.error(this.message);
+            } else {
+              this.state = 'SUCCESS';
+              this.message = 'Jenkins sandbox build finished.';
+              this.appendLog(`✅ ${this.message}`);
+            }
+          }
+        }
+      } catch (_) {}
+    }, 3000);
   }
 
   /**
@@ -71,6 +143,7 @@ export class SandboxBuildManagerService {
     }
 
     this.state = 'BUILDING';
+    this.lastBuildStartTime = Date.now();
     this.triggeredBy = triggeredBy;
     this.exitCode = undefined;
     this.message = `Triggering Jenkins Super App Web Sandbox pipeline (triggered by ${triggeredBy})...`;
@@ -83,6 +156,10 @@ export class SandboxBuildManagerService {
         this.message = 'Jenkins superapp-sandbox-build pipeline triggered successfully.';
         this.appendLog(`✅ ${jenkinsRes.message}`);
         this.logger.log(this.message);
+
+        // Monitor Jenkins build in background
+        this.monitorJenkinsBuild(this.lastBuildStartTime);
+
         return {
           success: true,
           message: this.message,

@@ -13,13 +13,18 @@ export interface SdkArtifactUploadResponse {
   scannedFields?: {
     iosModuleName?: string;
     iosTypeName?: string;
+    iosVersion?: string;
+    minIosVersion?: string;
     androidPackageName?: string;
     androidObjectName?: string;
     androidMavenGroupId?: string;
+    androidMavenArtifactId?: string;
+    androidMavenVersion?: string;
     minSdkVersion?: number;
     detectedPermissions?: string[];
   };
 }
+
 
 export interface SdkArtifactStatusResponse {
   android?: {

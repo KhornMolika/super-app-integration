@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Query,
   UseInterceptors,
   UploadedFile,
   BadRequestException,
@@ -16,6 +17,18 @@ import { UpdateLicenseDto, UploadBase64Dto } from './dto/storage.dto';
 @Controller('storage')
 export class StorageController {
   constructor(private readonly storageService: StorageService) {}
+
+  @Get('presign')
+  async getPresignedUrl(@Query('key') key?: string) {
+    if (!key) {
+      throw new BadRequestException('Query parameter "key" is required');
+    }
+    const url = await this.storageService.resolveLogoUrl(key);
+    return {
+      success: true,
+      url,
+    };
+  }
 
   @Get('license-status')
   getLicenseStatus() {

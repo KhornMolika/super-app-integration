@@ -12,6 +12,7 @@ describe('SdkArtifactUploadService (MinIO Quarantine & Nexus Flow)', () => {
   let storage: {
     uploadSdkArchive: jest.Mock;
     getObjectBuffer: jest.Mock;
+    deleteObject: jest.Mock;
     sdkSubmissionsBucket: string;
   };
   let repo: {
@@ -43,6 +44,7 @@ describe('SdkArtifactUploadService (MinIO Quarantine & Nexus Flow)', () => {
         size: file.buffer.length,
       })),
       getObjectBuffer: jest.fn().mockResolvedValue(buffer),
+      deleteObject: jest.fn().mockResolvedValue(undefined),
       sdkSubmissionsBucket: 'sdk-submissions',
     };
     miniApp = {
@@ -147,6 +149,29 @@ describe('SdkArtifactUploadService (MinIO Quarantine & Nexus Flow)', () => {
       expect(storage.uploadSdkArchive).toHaveBeenCalled();
       expect(repo.createQueryBuilder).not.toHaveBeenCalled();
       expect(res.minioKey).toBeDefined();
+    });
+
+    it('cleans up old staged MinIO artifact when replacement file is uploaded for existing miniApp', async () => {
+      miniApp.integrationConfig = {
+        iosMinioKey: 'pending/m1/1.0.0/OldSpaBookingSDK.xcframework.zip',
+      };
+      scanner.scanXcframework.mockResolvedValue({
+        iosModuleName: 'SpaBookingSDK',
+        iosTypeName: 'SpaBookingSDKView',
+        iosArtifactFilename: 'SpaBookingSDK.xcframework.zip',
+      });
+
+      await service.upload({
+        miniAppId: 'm1',
+        platform: 'IOS',
+        buffer,
+        filename: 'SpaBookingSDK.xcframework.zip',
+      });
+
+      expect(storage.deleteObject).toHaveBeenCalledWith(
+        'sdk-submissions',
+        'pending/m1/1.0.0/OldSpaBookingSDK.xcframework.zip',
+      );
     });
   });
 

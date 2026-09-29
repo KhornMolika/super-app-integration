@@ -36,19 +36,26 @@ export class ArtifactScannerService {
       return result;
     }
 
-    const plists = entries.filter(
-      (e) =>
-        !e.isDirectory &&
-        !e.entryName.startsWith('__MACOSX/') &&
-        /\.xcframework\/.*Info\.plist$/.test(e.entryName),
-    );
+    const plists = entries.filter((e) => {
+      if (e.isDirectory) return false;
+      const normalized = e.entryName.replace(/\\/g, '/');
+      return (
+        !normalized.startsWith('__MACOSX/') &&
+        /\.xcframework\/.*Info\.plist$/i.test(normalized)
+      );
+    });
+
     // Prefer Info.plist inside a framework slice, else the top-level one.
     const plist =
       plists.find((e) =>
-        /\.framework\/(?:Versions\/[^/]+\/Resources\/)?Info\.plist$/.test(
-          e.entryName,
+        /\.framework\/(?:Versions\/[^/]+\/Resources\/)?Info\.plist$/i.test(
+          e.entryName.replace(/\\/g, '/'),
         ),
-      ) ?? plists.find((e) => /\.xcframework\/Info\.plist$/.test(e.entryName));
+      ) ??
+      plists.find((e) =>
+        /\.xcframework\/Info\.plist$/i.test(e.entryName.replace(/\\/g, '/')),
+      );
+
     if (!plist) return result;
 
     const data = this.readEntry(plist, filename);
@@ -63,9 +70,14 @@ export class ArtifactScannerService {
     const name = values.CFBundleName;
     if (name) {
       result.iosModuleName = name;
-      result.iosTypeName = values.CFBundleExecutable || `${name}View`;
+      result.iosTypeName = values.CFBundleExecutable || (name.endsWith('View') ? name : `${name}View`);
     } else if (values.CFBundleExecutable) {
+      result.iosModuleName = values.CFBundleExecutable;
       result.iosTypeName = values.CFBundleExecutable;
+    }
+
+    if (values.CFBundleShortVersionString || values.CFBundleVersion) {
+      result.iosVersion = (values.CFBundleShortVersionString || values.CFBundleVersion).trim();
     }
 
     // Detect iOS privacy permissions
@@ -119,9 +131,34 @@ export class ArtifactScannerService {
       return result;
     }
 
+    // Check for Maven POM properties in META-INF/maven
+    try {
+      const pomProps = zip.getEntries().find((e) => {
+        if (e.isDirectory) return false;
+        const normalized = e.entryName.replace(/\\/g, '/');
+        return /META-INF\/maven\/.*pom\.properties$/i.test(normalized);
+      });
+      if (pomProps) {
+        const text = this.readEntry(pomProps, filename)?.toString('utf8');
+        if (text) {
+          const g = /groupId\s*=\s*(.+)/i.exec(text)?.[1]?.trim();
+          const a = /artifactId\s*=\s*(.+)/i.exec(text)?.[1]?.trim();
+          const v = /version\s*=\s*(.+)/i.exec(text)?.[1]?.trim();
+          if (g) result.androidMavenGroupId = g;
+          if (a) result.androidMavenArtifactId = a;
+          if (v) result.androidMavenVersion = v;
+        }
+      }
+    } catch (err) {
+      this.logger.warn(`Cannot parse pom.properties in ${filename}: ${err}`);
+    }
+
     let pkg: string | undefined;
+    let activityOrClass: string | undefined;
     const detected = new Set<string>();
-    const manifest = zip.getEntry('AndroidManifest.xml');
+    const manifest = zip.getEntries().find(
+      (e) => e.entryName.replace(/\\/g, '/') === 'AndroidManifest.xml',
+    );
     if (manifest) {
       try {
         const data = this.readEntry(manifest, filename);
@@ -138,6 +175,12 @@ export class ArtifactScannerService {
           if (minSdkMatch) {
             result.minSdkVersion = parseInt(minSdkMatch[1], 10);
           }
+
+          const actMatch = manifestStr.match(/<activity[^>]*?android:name\s*=\s*["']([^"']+)["']/i);
+          if (actMatch) {
+            const rawAct = actMatch[1];
+            activityOrClass = rawAct.split('.').filter(Boolean).pop();
+          }
         }
       } catch (err) {
         this.logger.warn(
@@ -149,7 +192,9 @@ export class ArtifactScannerService {
       result.detectedPermissions = Array.from(detected);
     }
     if (!pkg) {
-      const mf = zip.getEntry('META-INF/MANIFEST.MF');
+      const mf = zip.getEntries().find(
+        (e) => e.entryName.replace(/\\/g, '/') === 'META-INF/MANIFEST.MF',
+      );
       if (mf) {
         const data = this.readEntry(mf, filename);
         if (data) {
@@ -163,17 +208,58 @@ export class ArtifactScannerService {
 
     if (pkg) {
       result.androidPackageName = pkg;
-      const last = pkg.split('.').filter(Boolean).pop();
-      if (last) {
-        result.androidObjectName = last
-          .split(/[_\-\s]+/)
-          .filter(Boolean)
-          .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-          .join('');
+
+      // Check classes.jar for direct matching entry class (e.g. SpaBooking, SpaBookingSDK)
+      try {
+        const jarEntry = zip.getEntries().find(
+          (e) => e.entryName.replace(/\\/g, '/') === 'classes.jar',
+        );
+        if (jarEntry) {
+          const jarData = this.readEntry(jarEntry, filename);
+          if (jarData) {
+            const jarZip = new AdmZip(jarData);
+            const classes = jarZip
+              .getEntries()
+              .map((e) => e.entryName.replace(/\\/g, '/'))
+              .filter((n) => n.endsWith('.class') && !n.includes('$'))
+              .map((n) => n.replace(/\.class$/, '').split('/').pop())
+              .filter(Boolean) as string[];
+
+            // Look for class matching base package or ending with SDK
+            const sdkClass = classes.find(
+              (c) =>
+                c.toLowerCase().endsWith('sdk') ||
+                (result.androidMavenArtifactId &&
+                  c.toLowerCase() ===
+                    result.androidMavenArtifactId.replace(/[^a-z0-9]/gi, '').toLowerCase()),
+            );
+            if (sdkClass) {
+              activityOrClass = sdkClass;
+            }
+          }
+        }
+      } catch (err) {
+        // Fallback to manifest/pkg derivation
+      }
+
+      if (activityOrClass) {
+        result.androidObjectName = activityOrClass;
+      } else {
+        const last = pkg.split('.').filter(Boolean).pop();
+        if (last) {
+          result.androidObjectName = last
+            .split(/[^a-zA-Z0-9]+/)
+            .filter(Boolean)
+            .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+            .join('');
+        }
       }
     }
+
     return result;
   }
+
+
 
   /** Reads an entry, refusing oversized (zip bomb) or corrupt entries. */
   private readEntry(entry: AdmZip.IZipEntry, filename: string): Buffer | null {

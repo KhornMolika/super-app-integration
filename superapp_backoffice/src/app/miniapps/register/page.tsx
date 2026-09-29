@@ -10,7 +10,7 @@ import PreviewModal from '@/components/ui/PreviewModal';
 import SubmissionModal, { SubmissionModalState } from '@/components/ui/SubmissionModal';
 import BasicInfoForm from '@/components/forms/BasicInfoForm';
 import TeamForm from '@/components/forms/TeamForm';
-import IntegrationForm, { generateClientVerificationToken, generateClientMiniAppId } from '@/components/forms/IntegrationForm';
+import IntegrationForm, { generateClientVerificationToken, generateClientMiniAppId, deriveNativeSdkDefaults } from '@/components/forms/IntegrationForm';
 import PermissionsForm, { formatCompliantPurpose, WHITELISTED_HOST_CAPABILITIES } from '@/components/forms/PermissionsForm';
 import UnsupportedPermissionsModal from '@/components/forms/UnsupportedPermissionsModal';
 import SecurityForm from '@/components/forms/SecurityForm';
@@ -19,6 +19,7 @@ import RegistrationWizardSteps from '@/components/forms/RegistrationWizardSteps'
 import { validateMiniAppStep } from '@/lib/miniapp-form.validator';
 import { validateUrlFormat } from '@/components/ui/ValidatedUrlInput';
 import { CreateMiniAppDto, FlutterPackageConfigDto, NativeSdkConfigDto, IntegrationMethod, SourceType } from '@/types/miniapp.types';
+import { getOrganizationDef, FSA_ORGANIZATIONS } from '@/lib/constants/fsa-organizations';
 import { miniappsApi, telegramApi } from '@/api';
 
 export default function RegisterMiniAppPage() {
@@ -34,9 +35,9 @@ export default function RegisterMiniAppPage() {
   const [formData, setFormData] = useState<Partial<CreateMiniAppDto>>({
     name: '',
     appId: '',
-    category: 'General Secretariat (which houses administrative units, including the FinTech Center)',
-    organization: 'General Secretariat (which houses administrative units, including the FinTech Center)',
-    organizationCode: 'FTC',
+    category: FSA_ORGANIZATIONS[0].name,
+    organization: FSA_ORGANIZATIONS[0].name,
+    organizationCode: FSA_ORGANIZATIONS[0].code,
     shortDescription: '',
     fullDescription: '',
     logo: '',
@@ -306,7 +307,7 @@ export default function RegisterMiniAppPage() {
               });
             }
           }
-        } catch (e) {}
+        } catch (e) { }
       }, 600);
       return () => clearTimeout(timeoutId);
     }
@@ -344,8 +345,21 @@ export default function RegisterMiniAppPage() {
   const hasErrors = Object.keys(allErrors).length > 0;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    if (e.target.name === 'integrationMethod') {
-      const newMethod = e.target.value;
+    const { name, value } = e.target;
+    if (name === 'organization' || name === 'category') {
+      const def = getOrganizationDef(value);
+      const orgName = def?.name || value;
+      const orgCode = def?.code || '';
+      setFormData((prev) => ({
+        ...prev,
+        organization: orgName,
+        organizationCode: orgCode,
+        category: orgName,
+      }));
+      return;
+    }
+    if (name === 'integrationMethod') {
+      const newMethod = value;
       if (newMethod !== IntegrationMethod.WEBVIEW) {
         setLocalErrors((prev) => {
           const next = { ...prev };
@@ -356,9 +370,42 @@ export default function RegisterMiniAppPage() {
           return next;
         });
       }
+      if (newMethod === IntegrationMethod.NATIVE_SDK) {
+        setFormData((prev) => {
+          const existing: Partial<NativeSdkConfigDto> = prev.integrationConfigNativeSdk || {};
+          if (!existing.iosModuleName && !existing.androidPackageName) {
+            const defaults = deriveNativeSdkDefaults(
+              prev.name,
+              prev.appId,
+              prev.organization || prev.teamName,
+              prev.organizationCode,
+            );
+            const nextSdk: Partial<NativeSdkConfigDto> = {
+
+              ...existing,
+              iosModuleName: existing.iosModuleName || defaults.iosModuleName,
+              iosTypeName: existing.iosTypeName || defaults.iosTypeName,
+              androidMavenGroupId: existing.androidMavenGroupId || defaults.androidMavenGroupId,
+              androidMavenArtifactId: existing.androidMavenArtifactId || defaults.androidMavenArtifactId,
+              androidMavenVersion: existing.androidMavenVersion || defaults.androidMavenVersion,
+              androidPackageName: existing.androidPackageName || defaults.androidPackageName,
+              androidObjectName: existing.androidObjectName || defaults.androidObjectName,
+            };
+            return {
+              ...prev,
+              integrationMethod: newMethod as IntegrationMethod,
+              integrationConfigNativeSdk: nextSdk as NativeSdkConfigDto,
+            };
+          }
+          return { ...prev, integrationMethod: newMethod as IntegrationMethod };
+        });
+        return;
+      }
+
     }
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
+
 
   const handleWebViewChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const isUrlChange = e.target.name === 'productionUrl';
@@ -451,11 +498,11 @@ export default function RegisterMiniAppPage() {
       const nextPermissions =
         extraData?.detectedPermissions && extraData.detectedPermissions.length > 0
           ? [
-              ...(prev.permissions || []).filter(
-                (p) => !extraData.detectedPermissions!.some((dp) => dp.type === p.type),
-              ),
-              ...extraData.detectedPermissions,
-            ]
+            ...(prev.permissions || []).filter(
+              (p) => !extraData.detectedPermissions!.some((dp) => dp.type === p.type),
+            ),
+            ...extraData.detectedPermissions,
+          ]
           : prev.permissions;
 
       return {
@@ -596,9 +643,8 @@ export default function RegisterMiniAppPage() {
                 if (appData.validationReport?.findings?.length > 0) {
                   appData.validationReport.findings.forEach((finding: any) => {
                     const key = finding.title || finding.id || 'Security Finding';
-                    displayErrors[key] = `${finding.description}${
-                      finding.recommendation ? ' (Remediation: ' + finding.recommendation + ')' : ''
-                    }`;
+                    displayErrors[key] = `${finding.description}${finding.recommendation ? ' (Remediation: ' + finding.recommendation + ')' : ''
+                      }`;
                   });
                 }
 
@@ -641,7 +687,7 @@ export default function RegisterMiniAppPage() {
                 setTimeout(() => router.push(`/miniapps/${appId}`), 1200);
               }
             }
-          } catch (pollErr) {}
+          } catch (pollErr) { }
           if (attempts > 500) {
             clearInterval(pollTimer);
             setModalState({ isOpen: true, status: 'error', message: 'Validation timed out.', createdId: appId });
@@ -905,7 +951,7 @@ export default function RegisterMiniAppPage() {
           setModalState({ ...modalState, isOpen: false });
           router.push('/miniapps');
         }}
-        onSuccessContinue={() => {}}
+        onSuccessContinue={() => { }}
       />
     </>
   );

@@ -21,7 +21,7 @@ export class OrganizationsService implements OnApplicationBootstrap {
   private async seedInitialOrganizations() {
     for (const org of FSA_ORGANIZATIONS) {
       const existing = await this.organizationRepository.findOne({
-        where: [{ domain: org.domain }, { name: org.name }],
+        where: [{ code: org.code }, { domain: org.domain }, { name: org.name }],
       });
       const orgData = {
         name: org.name,
@@ -44,6 +44,7 @@ export class OrganizationsService implements OnApplicationBootstrap {
       } else {
         existing.code = orgData.code;
         existing.name = orgData.name;
+        existing.domain = orgData.domain;
         existing.description = orgData.description;
         existing.contactEmail = orgData.contactEmail;
         existing.metadata = orgData.metadata;

@@ -1,18 +1,7 @@
-export type FsaEntityType = 'ADMINISTRATIVE' | 'SECTOR_REGULATOR' | 'OVERSIGHT_UNIT';
+import pg from 'pg';
+const { Client } = pg;
 
-export interface FsaOrganizationDef {
-  name: string;
-  code: string;
-  domain: string;
-  description: string;
-  contactEmail: string;
-  entityType: FsaEntityType;
-  entityTypeLabel: string;
-  parentAuthority: string;
-  parentMinistry: string;
-}
-
-export const FSA_ORGANIZATIONS: FsaOrganizationDef[] = [
+const FSA_ORGANIZATIONS = [
   // 1-4. Administrative & Policy Body (General Secretariat of FSA)
   {
     name: 'Financial Technology Center (FTC)',
@@ -139,85 +128,61 @@ export const FSA_ORGANIZATIONS: FsaOrganizationDef[] = [
   },
 ];
 
-export function resolveOrganizationDetails(input?: string): {
-  name: string;
-  code: string;
-} {
-  if (!input || !input.trim()) {
-    return {
-      name: FSA_ORGANIZATIONS[0].name,
-      code: FSA_ORGANIZATIONS[0].code,
+async function run() {
+  const client = new Client({
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || '5432', 10),
+    user: process.env.DB_USERNAME || 'admin',
+    password: process.env.DB_PASSWORD || 'admin123',
+    database: process.env.DB_DATABASE || 'dps_db',
+  });
+
+  await client.connect();
+
+  // Remove legacy duplicates if any
+  await client.query(`DELETE FROM organizations WHERE name IN ('General Secretariat of FSA', 'Insurance Authority')`);
+
+  for (const org of FSA_ORGANIZATIONS) {
+    const metadata = {
+      shortCode: org.code,
+      acronym: org.code,
+      entityType: org.entityType,
+      entityTypeLabel: org.entityTypeLabel,
+      parentAuthority: org.parentAuthority,
+      parentMinistry: org.parentMinistry,
     };
+
+    const existing = await client.query(
+      `SELECT id FROM organizations WHERE code = $1 OR name = $2 OR domain = $3 LIMIT 1`,
+      [org.code, org.name, org.domain]
+    );
+
+    if (existing.rows.length > 0) {
+      await client.query(
+        `UPDATE organizations
+         SET name = $1, code = $2, domain = $3, description = $4, status = 'ACTIVE', "contactEmail" = $5, metadata = $6, "updatedAt" = NOW()
+         WHERE id = $7`,
+        [org.name, org.code, org.domain, org.description, org.contactEmail, JSON.stringify(metadata), existing.rows[0].id]
+      );
+    } else {
+      await client.query(
+        `INSERT INTO organizations (name, code, domain, description, status, "contactEmail", metadata, "createdAt", "updatedAt")
+         VALUES ($1, $2, $3, $4, 'ACTIVE', $5, $6, NOW(), NOW())`,
+        [org.name, org.code, org.domain, org.description, org.contactEmail, JSON.stringify(metadata)]
+      );
+    }
   }
 
-  const clean = input.trim();
-  const lower = clean.toLowerCase();
+  const allRes = await client.query(`SELECT id, code, name, domain, status, metadata->>'entityType' as entity_type FROM organizations ORDER BY metadata->>'entityType' ASC, code ASC`);
+  console.log(`\n========================================================`);
+  console.log(`Successfully Seeded ${allRes.rows.length} Organizations in Database`);
+  console.log(`========================================================`);
+  console.table(allRes.rows);
 
-  // Exact match by code
-  const exactByCode = FSA_ORGANIZATIONS.find(
-    (o) => o.code.toLowerCase() === lower,
-  );
-  if (exactByCode) {
-    return { name: exactByCode.name, code: exactByCode.code };
-  }
-
-  // Exact match by name
-  const exactByName = FSA_ORGANIZATIONS.find(
-    (o) => o.name.toLowerCase() === lower,
-  );
-  if (exactByName) {
-    return { name: exactByName.name, code: exactByName.code };
-  }
-
-  const hasWord = (word: string) => new RegExp(`\\b${word}\\b`, 'i').test(clean);
-
-  if (hasWord('fintech') || hasWord('ftc') || lower.includes('financial technology') || lower.includes('general secretariat')) {
-    const org = FSA_ORGANIZATIONS.find((o) => o.code === 'FTC') || FSA_ORGANIZATIONS[0];
-    return { name: org.name, code: org.code };
-  }
-  if (hasWord('gad') || lower.includes('general affair')) {
-    const org = FSA_ORGANIZATIONS.find((o) => o.code === 'GAD') || FSA_ORGANIZATIONS[0];
-    return { name: org.name, code: org.code };
-  }
-  if (hasWord('pd') || lower.includes('policy dept') || lower.includes('policy department')) {
-    const org = FSA_ORGANIZATIONS.find((o) => o.code === 'PD') || FSA_ORGANIZATIONS[0];
-    return { name: org.name, code: org.code };
-  }
-  if (hasWord('tlad') || lower.includes('technical and legal') || lower.includes('legal affair')) {
-    const org = FSA_ORGANIZATIONS.find((o) => o.code === 'TLAD') || FSA_ORGANIZATIONS[0];
-    return { name: org.name, code: org.code };
-  }
-  if (hasWord('irc') || lower.includes('insurance')) {
-    const org = FSA_ORGANIZATIONS.find((o) => o.code === 'IRC') || FSA_ORGANIZATIONS[0];
-    return { name: org.name, code: org.code };
-  }
-  if (hasWord('serc') || lower.includes('securities') || lower.includes('exchange')) {
-    const org = FSA_ORGANIZATIONS.find((o) => o.code === 'SERC') || FSA_ORGANIZATIONS[0];
-    return { name: org.name, code: org.code };
-  }
-  if (hasWord('ssr') || lower.includes('social security')) {
-    const org = FSA_ORGANIZATIONS.find((o) => o.code === 'SSR') || FSA_ORGANIZATIONS[0];
-    return { name: org.name, code: org.code };
-  }
-  if (hasWord('tr') || lower.includes('trust regulator') || hasWord('trust')) {
-    const org = FSA_ORGANIZATIONS.find((o) => o.code === 'TR') || FSA_ORGANIZATIONS[0];
-    return { name: org.name, code: org.code };
-  }
-  if (hasWord('acar') || lower.includes('accounting') || lower.includes('auditing')) {
-    const org = FSA_ORGANIZATIONS.find((o) => o.code === 'ACAR') || FSA_ORGANIZATIONS[0];
-    return { name: org.name, code: org.code };
-  }
-  if (hasWord('rpr') || lower.includes('real estate') || lower.includes('pawnshop')) {
-    const org = FSA_ORGANIZATIONS.find((o) => o.code === 'RPR') || FSA_ORGANIZATIONS[0];
-    return { name: org.name, code: org.code };
-  }
-  if (hasWord('iau') || lower.includes('internal audit')) {
-    const org = FSA_ORGANIZATIONS.find((o) => o.code === 'IAU') || FSA_ORGANIZATIONS[0];
-    return { name: org.name, code: org.code };
-  }
-
-  return {
-    name: clean,
-    code: clean.slice(0, 4).toUpperCase(),
-  };
+  await client.end();
 }
+
+run().catch((err) => {
+  console.error('Seed script error:', err);
+  process.exit(1);
+});

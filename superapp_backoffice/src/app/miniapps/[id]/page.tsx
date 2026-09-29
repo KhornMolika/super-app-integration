@@ -22,7 +22,8 @@ import MiniAppDetailTabs, { MiniAppTabType } from '@/components/miniapp-detail/M
 import { RevisionReviewModal } from '@/components/review/RevisionReviewModal';
 import ReasonPromptModal from '@/components/ui/ReasonPromptModal';
 import BuildProgressModal, { BuildProgressModalState } from '@/components/ui/BuildProgressModal';
-import { CreateMiniAppDto, IntegrationMethod, SourceType } from '@/types/miniapp.types';
+import { CreateMiniAppDto, IntegrationMethod, NativeSdkConfigDto, SourceType } from '@/types/miniapp.types';
+import { getOrganizationDef } from '@/lib/constants/fsa-organizations';
 import { validateUrlFormat } from '@/components/ui/ValidatedUrlInput';
 import { toast } from '@/components/ui/Toast';
 import { miniappsApi, superAppApi } from '@/api';
@@ -52,6 +53,17 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
     integrationConfigWebView: { productionUrl: '' },
     integrationConfigFlutter: { sourceType: SourceType.ARTIFACT, packageName: '', versionConstraint: '' },
     integrationConfigDeepLink: { urlScheme: '', packageName: '', appStoreUrl: '' },
+    integrationConfigNativeSdk: {
+      iosModuleName: '',
+      iosTypeName: '',
+      iosArtifactFilename: '',
+      androidPackageName: '',
+      androidObjectName: '',
+      androidArtifactFilename: '',
+      androidMavenGroupId: '',
+      androidMavenArtifactId: '',
+      androidMavenVersion: '',
+    },
     permissions: [],
     securityChecks: [],
     status: 'DRAFT',
@@ -187,6 +199,12 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
     ) {
       return acc;
     }
+    if (
+      formData.integrationMethod !== IntegrationMethod.NATIVE_SDK &&
+      key.startsWith('integrationConfigNativeSdk')
+    ) {
+      return acc;
+    }
     acc[key] = val;
     return acc;
   }, {} as Record<string, string>);
@@ -242,6 +260,17 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
           } : { productionUrl: '', allowedDomains: '', stagingUrl: '' },
           integrationConfigFlutter: activeOrRev.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE ? activeOrRev.integrationConfig : { sourceType: SourceType.ARTIFACT, packageName: '', versionConstraint: '' },
           integrationConfigDeepLink: activeOrRev.integrationMethod === IntegrationMethod.DEEP_LINK ? activeOrRev.integrationConfig : { urlScheme: '', packageName: '', appStoreUrl: '' },
+          integrationConfigNativeSdk: activeOrRev.integrationMethod === IntegrationMethod.NATIVE_SDK ? (activeOrRev.integrationConfig || {}) : {
+            iosModuleName: '',
+            iosTypeName: '',
+            iosArtifactFilename: '',
+            androidPackageName: '',
+            androidObjectName: '',
+            androidArtifactFilename: '',
+            androidMavenGroupId: '',
+            androidMavenArtifactId: '',
+            androidMavenVersion: '',
+          },
         });
 
         // Fetch current active ecosystem test build version
@@ -344,6 +373,19 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const fieldName = e.target.name;
+    const fieldValue = e.target.value;
+    if (fieldName === 'organization' || fieldName === 'category') {
+      const def = getOrganizationDef(fieldValue);
+      const orgName = def?.name || fieldValue;
+      const orgCode = def?.code || '';
+      setFormData((prev) => ({
+        ...prev,
+        organization: orgName,
+        organizationCode: orgCode,
+        category: orgName,
+      }));
+      return;
+    }
     if (fieldName === 'integrationMethod') {
       const newMethod = e.target.value;
       if (newMethod !== IntegrationMethod.WEBVIEW) {
@@ -451,6 +493,68 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
         integrationConfigDeepLink: { ...prev.integrationConfigDeepLink!, [fieldName]: e.target.value } as any,
         validationErrors: nextValidationErrors,
       };
+    });
+  };
+
+  const handleNativeSdkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => {
+      const nextValidationErrors = prev.validationErrors ? { ...prev.validationErrors } : undefined;
+      if (nextValidationErrors) {
+        delete nextValidationErrors[`integrationConfigNativeSdk.${name}`];
+      }
+      return {
+        ...prev,
+        integrationConfigNativeSdk: { ...(prev.integrationConfigNativeSdk as any), [name]: value },
+        validationErrors: nextValidationErrors,
+      };
+    });
+    setLocalErrors((prev) => {
+      const next = { ...prev };
+      delete next[`integrationConfigNativeSdk.${name}`];
+      return next;
+    });
+  };
+
+  const handleUpdateNativeSdkConfig = (
+    updates: Partial<NativeSdkConfigDto>,
+    extraData?: { iosFile?: File; androidFile?: File; detectedPermissions?: any[] },
+  ) => {
+    setFormData((prev: any) => {
+      const nextValidationErrors = prev.validationErrors ? { ...prev.validationErrors } : undefined;
+      if (nextValidationErrors) {
+        Object.keys(updates).forEach((k) => {
+          delete nextValidationErrors[`integrationConfigNativeSdk.${k}`];
+        });
+      }
+      const nextSdk = {
+        ...(prev.integrationConfigNativeSdk || {}),
+        ...updates,
+      };
+      const nextPermissions =
+        extraData?.detectedPermissions && extraData.detectedPermissions.length > 0
+          ? [
+              ...(prev.permissions || []).filter(
+                (p: any) => !extraData.detectedPermissions!.some((dp) => dp.type === p.type),
+              ),
+              ...extraData.detectedPermissions,
+            ]
+          : prev.permissions;
+
+      return {
+        ...prev,
+        integrationConfigNativeSdk: nextSdk,
+        permissions: nextPermissions,
+        validationErrors: nextValidationErrors,
+      };
+    });
+
+    setLocalErrors((prev) => {
+      const next = { ...prev };
+      Object.keys(updates).forEach((key) => {
+        delete next[`integrationConfigNativeSdk.${key}`];
+      });
+      return next;
     });
   };
 
@@ -642,6 +746,8 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
       payload.integrationConfigFlutter = formData.integrationConfigFlutter;
     } else if (formData.integrationMethod === IntegrationMethod.DEEP_LINK) {
       payload.integrationConfigDeepLink = formData.integrationConfigDeepLink;
+    } else if (formData.integrationMethod === IntegrationMethod.NATIVE_SDK) {
+      payload.integrationConfigNativeSdk = formData.integrationConfigNativeSdk;
     }
 
     try {
@@ -675,6 +781,7 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
                 integrationConfigWebView: appData.integrationMethod === IntegrationMethod.WEBVIEW ? appData.integrationConfig : prev.integrationConfigWebView,
                 integrationConfigFlutter: appData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE ? appData.integrationConfig : prev.integrationConfigFlutter,
                 integrationConfigDeepLink: appData.integrationMethod === IntegrationMethod.DEEP_LINK ? appData.integrationConfig : prev.integrationConfigDeepLink,
+                integrationConfigNativeSdk: appData.integrationMethod === IntegrationMethod.NATIVE_SDK ? appData.integrationConfig : prev.integrationConfigNativeSdk,
               }));
 
               const statusUpper = (appData.status || '').toUpperCase();
@@ -1082,6 +1189,8 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
                 handleWebViewChange={handleWebViewChange}
                 handleFlutterChange={handleFlutterChange}
                 onUpdateFlutterConfig={handleUpdateFlutterConfig}
+                handleNativeSdkChange={handleNativeSdkChange}
+                onUpdateNativeSdkConfig={handleUpdateNativeSdkConfig}
                 handleDeepLinkChange={handleDeepLinkChange}
                 onDomainVerified={handleDomainVerified}
                 isEditable={isEditable}
@@ -1178,7 +1287,7 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
           }
           apkUrl={`/api/download-apk?type=test&version=${encodeURIComponent(formData.activeTestVersion || latestTestVersion || (formData as any).integrationConfig?.superAppTestVersion || 'v0.3.7')}`}
           category={formData.category}
-          appId={formData.appId}
+          appId={formData.appId || formData.id || (formData as any)._id}
           status={formData.status}
           buildCompletedAt={
             (formData as any).validationReport?.completedAt ||

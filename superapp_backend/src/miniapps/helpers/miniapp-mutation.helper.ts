@@ -598,6 +598,23 @@ export class MiniappMutationHelper {
     miniAppId?: string,
     version?: string,
   ) {
+    if (miniAppId && miniAppId !== 'draft') {
+      try {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(miniAppId);
+        const app = await this.miniappRepository.findOne(isUuid ? { where: { id: miniAppId } } : { where: { appId: miniAppId } });
+        if (app?.integrationConfig?.packageStoragePath) {
+          const oldPath = app.integrationConfig.packageStoragePath;
+          const cleanOrigName = (file.originalname || 'package.zip').replace(/[^a-zA-Z0-9.-]/g, '_');
+          const expectedNewKey = `pending/${miniAppId}/${version || '1.0.0'}/${cleanOrigName}`;
+          if (oldPath !== expectedNewKey) {
+            await this.storageService.deleteObject(this.storageService.packageSubmissionsBucket, oldPath);
+          }
+        }
+      } catch (e: any) {
+        this.logger.warn(`Could not check/clean prior package artifact: ${e.message}`);
+      }
+    }
+
     const res = await this.storageService.uploadPackageArchive(
       file,
       miniAppId,
@@ -612,5 +629,68 @@ export class MiniappMutationHelper {
       ...res,
       detectedPermissions: detected,
     };
+  }
+
+  async remove(
+    id: string,
+    actorId?: string,
+    logActivityFn?: (
+      miniAppId: string,
+      actorId: string,
+      actionType: string,
+      title: string,
+      description: string,
+      auditAction: string,
+      oldVal?: any,
+      newVal?: any,
+    ) => Promise<void>,
+  ) {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    const existing = await this.miniappRepository.findOne(
+      isUuid ? { where: { id } } : { where: { appId: id } },
+    );
+    if (existing) {
+      // 1. Delete staged Flutter package archive from MinIO quarantine if present
+      if (existing.integrationConfig?.packageStoragePath) {
+        await this.storageService.deleteObject(
+          this.storageService.packageSubmissionsBucket,
+          existing.integrationConfig.packageStoragePath,
+        );
+      }
+
+      // 2. Delete staged Native SDK archives from MinIO quarantine if present
+      if (existing.integrationConfig?.iosMinioKey) {
+        await this.storageService.deleteObject(
+          this.storageService.sdkSubmissionsBucket,
+          existing.integrationConfig.iosMinioKey,
+        );
+      }
+      if (existing.integrationConfig?.androidMinioKey) {
+        await this.storageService.deleteObject(
+          this.storageService.sdkSubmissionsBucket,
+          existing.integrationConfig.androidMinioKey,
+        );
+      }
+
+      // 3. Delete logo from MinIO assets if present
+      if (existing.logo) {
+        await this.storageService.deleteLogo(existing.logo);
+      }
+
+      if (logActivityFn) {
+        await logActivityFn(
+          existing.id,
+          actorId || 'system',
+          'DELETE',
+          `App ${existing.name || existing.appId} Deleted`,
+          'App removed and MinIO objects purged',
+          'DELETE_MINI_APP',
+          existing,
+          null,
+        );
+      }
+      return this.miniappRepository.delete(existing.id);
+    }
+    return this.miniappRepository.delete(id);
   }
 }

@@ -309,20 +309,12 @@ export class MiniappsService implements OnApplicationBootstrap {
   }
 
   async remove(id: string, actorId?: string) {
-    const existing = await this.findOne(id);
-    if (existing) {
-      await this.logActivity(
-        id,
-        actorId || 'system',
-        'DELETE',
-        `App ${existing.name || existing.appId} Deleted`,
-        'App removed',
-        'DELETE_MINI_APP',
-        existing,
-        null,
-      );
-    }
-    return this.miniappRepository.delete(id);
+    return this.miniappMutationHelper.remove(
+      id,
+      actorId,
+      (mId, aId, aType, t, d, aAction, oVal, nVal) =>
+        this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal),
+    );
   }
 
   async submitForReview(id: string, actorId: string) {

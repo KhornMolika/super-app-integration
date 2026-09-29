@@ -1,12 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Input, Label } from '@/components/ui/inputs';
 import { NativeSdkConfigDto } from '@/types/miniapp.types';
 import { sdkArtifactsApi, SdkArtifactUploadResponse } from '@/api';
+import { deriveNativeSdkDefaults } from '@/lib/integration-utils';
 import {
-  ShieldCheckIcon,
-  LockIcon,
   PackageIcon,
   CheckCircleIcon,
   AlertTriangleIcon,
@@ -59,6 +58,70 @@ export default function NativeSdkIntegrationForm({
     null,
   );
 
+  // Scanned / auto-detected notice
+  const [detectedNotice, setDetectedNotice] = useState<string | null>(null);
+
+  // Compute smart standard defaults based on MiniApp name, appId, organization & organizationCode
+  const derivedDefaults = useMemo(() => {
+    return deriveNativeSdkDefaults(
+      formData.name,
+      formData.appId,
+      formData.organization || formData.teamName,
+      formData.organizationCode,
+    );
+  }, [
+    formData.name,
+    formData.appId,
+    formData.organization,
+    formData.organizationCode,
+    formData.teamName,
+  ]);
+
+  // Seamless auto-detection and auto-fill on mount / profile updates
+  useEffect(() => {
+    if (!isEditable) return;
+    const current = formData.integrationConfigNativeSdk || {};
+    const needsAutoFill =
+      !current.iosModuleName ||
+      !current.iosTypeName ||
+      !current.androidPackageName ||
+      !current.androidObjectName;
+
+    if (needsAutoFill && (formData.name || formData.appId)) {
+      const updates: Partial<NativeSdkConfigDto> = {
+        iosModuleName: current.iosModuleName || derivedDefaults.iosModuleName,
+        iosTypeName: current.iosTypeName || derivedDefaults.iosTypeName,
+        androidMavenGroupId:
+          current.androidMavenGroupId || derivedDefaults.androidMavenGroupId,
+        androidMavenArtifactId:
+          current.androidMavenArtifactId ||
+          derivedDefaults.androidMavenArtifactId,
+        androidMavenVersion:
+          current.androidMavenVersion || derivedDefaults.androidMavenVersion,
+        androidPackageName:
+          current.androidPackageName || derivedDefaults.androidPackageName,
+        androidObjectName:
+          current.androidObjectName || derivedDefaults.androidObjectName,
+      };
+
+      if (onUpdateNativeSdkConfig) {
+        onUpdateNativeSdkConfig(updates);
+      } else if (handleNativeSdkChange) {
+        Object.entries(updates).forEach(([name, value]) => {
+          handleNativeSdkChange({ target: { name, value } } as any);
+        });
+      }
+    }
+  }, [
+    formData.name,
+    formData.appId,
+    formData.organization,
+    formData.organizationCode,
+    formData.teamName,
+    derivedDefaults,
+    isEditable,
+  ]);
+
   const handleFieldChange = (
     field: keyof NativeSdkConfigDto,
     value: string,
@@ -97,25 +160,29 @@ export default function NativeSdkIntegrationForm({
     uploadFormData.append('file', file);
 
     try {
-      const res = await sdkArtifactsApi.uploadIos(
-        formData.appId || 'draft',
-        uploadFormData,
-      );
+      const targetId = formData.id || formData.appId || 'draft';
+      const res = await sdkArtifactsApi.uploadIos(targetId, uploadFormData);
       setIosUploadSuccess(res);
 
-      // Auto-derive iOS module name from scanned metadata or filename if not already set
+      // Auto-derive iOS module name from scanned metadata or filename
+      const scannedMod = res.scannedFields?.iosModuleName;
+      const scannedType = res.scannedFields?.iosTypeName;
+      const fallbackMod = file.name
+        .replace(/\.xcframework\.zip$/i, '')
+        .replace(/\.zip$/i, '')
+        .replace(/[^A-Za-z0-9_]/g, '_');
+
       const derivedModuleName =
-        res.scannedFields?.iosModuleName ||
+        scannedMod ||
         nativeConfig.iosModuleName ||
-        file.name
-          .replace(/\.xcframework\.zip$/i, '')
-          .replace(/\.zip$/i, '')
-          .replace(/[^A-Za-z0-9_]/g, '_');
+        fallbackMod ||
+        derivedDefaults.iosModuleName;
 
       const derivedTypeName =
-        res.scannedFields?.iosTypeName ||
-        nativeConfig.iosTypeName ||
-        `${derivedModuleName}View`;
+        scannedType ||
+        (scannedMod ? `${scannedMod}View` : nativeConfig.iosTypeName) ||
+        `${derivedModuleName}View` ||
+        derivedDefaults.iosTypeName;
 
       const detected =
         res.detectedPermissions ||
@@ -144,6 +211,11 @@ export default function NativeSdkIntegrationForm({
           })),
         });
       }
+
+      setDetectedNotice(
+        `✨ Auto-detected iOS Module (${derivedModuleName}) & View (${derivedTypeName}) from archive!`,
+      );
+      setTimeout(() => setDetectedNotice(null), 4500);
     } catch (err: any) {
       setIosUploadError(
         err.message || 'Failed to stage iOS SDK archive in MinIO quarantine.',
@@ -175,21 +247,49 @@ export default function NativeSdkIntegrationForm({
     uploadFormData.append('file', file);
 
     try {
-      const res = await sdkArtifactsApi.uploadAndroid(
-        formData.appId || 'draft',
-        uploadFormData,
-      );
+      const targetId = formData.id || formData.appId || 'draft';
+      const res = await sdkArtifactsApi.uploadAndroid(targetId, uploadFormData);
       setAndroidUploadSuccess(res);
 
-      // Auto-derive Android artifact name from filename if not set
+      const scanned = res.scannedFields || {};
       const baseName = file.name
         .replace(/\.aar$/i, '')
         .replace(/[^A-Za-z0-9_.-]/g, '-');
 
       const detected =
         res.detectedPermissions ||
-        res.scannedFields?.detectedPermissions ||
+        scanned.detectedPermissions ||
         [];
+
+      const finalMavenGroupId =
+        scanned.androidMavenGroupId ||
+        nativeConfig.androidMavenGroupId ||
+        derivedDefaults.androidMavenGroupId;
+
+      const finalMavenArtifactId =
+        scanned.androidMavenArtifactId ||
+        nativeConfig.androidMavenArtifactId ||
+        baseName ||
+        derivedDefaults.androidMavenArtifactId;
+
+      const finalMavenVersion =
+        scanned.androidMavenVersion ||
+        nativeConfig.androidMavenVersion ||
+        '1.0.0';
+
+      const finalPackageName =
+        scanned.androidPackageName ||
+        nativeConfig.androidPackageName ||
+        derivedDefaults.androidPackageName;
+
+      const finalObjectName =
+        scanned.androidObjectName ||
+        nativeConfig.androidObjectName ||
+        baseName
+          .split(/[-_]/)
+          .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+          .join('') ||
+        derivedDefaults.androidObjectName;
 
       const updates: Partial<NativeSdkConfigDto> = {
         androidArtifactFilename: res.filename || file.name,
@@ -200,26 +300,13 @@ export default function NativeSdkIntegrationForm({
         androidChecksum: res.sha256,
         androidSize: res.size || file.size,
         androidMinSdkVersion:
-          res.minSdkVersion || res.scannedFields?.minSdkVersion,
+          res.minSdkVersion || scanned.minSdkVersion,
         androidDetectedPermissions: detected,
-        androidMavenGroupId:
-          res.scannedFields?.androidMavenGroupId ||
-          nativeConfig.androidMavenGroupId ||
-          'com.fsa.sdk',
-        androidMavenArtifactId:
-          nativeConfig.androidMavenArtifactId || baseName,
-        androidMavenVersion: nativeConfig.androidMavenVersion || '1.0.0',
-        androidPackageName:
-          res.scannedFields?.androidPackageName ||
-          nativeConfig.androidPackageName ||
-          '',
-        androidObjectName:
-          res.scannedFields?.androidObjectName ||
-          nativeConfig.androidObjectName ||
-          baseName
-            .split(/[-_]/)
-            .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-            .join(''),
+        androidMavenGroupId: finalMavenGroupId,
+        androidMavenArtifactId: finalMavenArtifactId,
+        androidMavenVersion: finalMavenVersion,
+        androidPackageName: finalPackageName,
+        androidObjectName: finalObjectName,
       };
 
       if (onUpdateNativeSdkConfig) {
@@ -231,6 +318,11 @@ export default function NativeSdkIntegrationForm({
           })),
         });
       }
+
+      setDetectedNotice(
+        `✨ Auto-detected Android package (${finalPackageName}) & class (${finalObjectName}) from AAR!`,
+      );
+      setTimeout(() => setDetectedNotice(null), 4500);
     } catch (err: any) {
       setAndroidUploadError(
         err.message || 'Failed to stage Android AAR in MinIO quarantine.',
@@ -242,30 +334,13 @@ export default function NativeSdkIntegrationForm({
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      {/* Zero-Bytes Quarantine Security Banner */}
-      <div className="p-4 rounded-xl bg-gradient-to-r from-indigo-50/90 via-sky-50/70 to-emerald-50/60 dark:from-indigo-950/40 dark:via-sky-950/30 dark:to-emerald-950/20 border border-indigo-200/80 dark:border-indigo-800/60 text-slate-800 dark:text-slate-200">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
-            <ShieldCheckIcon className="w-5 h-5" />
-          </div>
-          <div>
-            <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-              <span>Zero-Bytes to Nexus Quarantine Pipeline</span>
-              <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 flex items-center gap-1">
-                <LockIcon className="w-3 h-3" />
-                <span>Isolated MinIO Staging</span>
-              </span>
-            </h4>
-            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-              Native SDK binaries (.xcframework.zip and .aar) are staged directly in
-              isolated MinIO quarantine storage (<code>sdk-submissions/pending/</code>).
-              Automated in-memory security scanning inspects capabilities without disk bloat.
-              Zero bytes are published to Nexus Maven or CocoaPods repositories until
-              security verification passes and Admin approves.
-            </p>
-          </div>
+      {/* Auto-detected notification banner */}
+      {detectedNotice && (
+        <div className="p-3 rounded-xl bg-emerald-100/90 dark:bg-emerald-900/40 border border-emerald-300 dark:border-emerald-700 text-xs text-emerald-900 dark:text-emerald-200 flex items-center gap-2 animate-in fade-in slide-in-from-top-1 shadow-sm">
+          <CheckCircleIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <span className="font-semibold">{detectedNotice}</span>
         </div>
-      </div>
+      )}
 
       {/* Grid: iOS Framework & Android AAR Sections */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -303,7 +378,7 @@ export default function NativeSdkIntegrationForm({
                       'Upload .xcframework.zip'}
                   </span>
                   <span className="text-[11px] text-slate-500">
-                    Max 200MB • Staged in MinIO quarantine
+                    Max 200MB • Auto-detects module &amp; type from Info.plist
                   </span>
                 </div>
               </div>
@@ -335,7 +410,7 @@ export default function NativeSdkIntegrationForm({
                         d="M4 12a8 8 0 018-8v8H4z"
                       />
                     </svg>
-                    <span>Staging in MinIO...</span>
+                    <span>Scanning &amp; Staging...</span>
                   </>
                 ) : (
                   <>
@@ -368,10 +443,10 @@ export default function NativeSdkIntegrationForm({
               nativeConfig.iosStoragePath ||
               nativeConfig.iosMinioKey) && (
               <div className="mt-3 p-3 bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg text-xs text-emerald-900 dark:text-emerald-200 space-y-1.5">
-                <div className="flex items-center justify-between font-semibold">
+                <div className="flex items-center justify-between font-semibold flex-wrap gap-1">
                   <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
                     <CheckCircleIcon className="w-4 h-4 text-emerald-600" />
-                    <span>Quarantine Staged &amp; Inspected</span>
+                    <span>Archive Staged &amp; Auto-Scanned</span>
                   </span>
                   {(iosUploadSuccess?.sha256 || nativeConfig.iosChecksum) && (
                     <span className="font-mono text-[10px] text-slate-500 bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
@@ -461,6 +536,7 @@ export default function NativeSdkIntegrationForm({
           </div>
         </div>
 
+
         {/* ===================== Android AAR Section ===================== */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
@@ -494,7 +570,7 @@ export default function NativeSdkIntegrationForm({
                     {nativeConfig.androidArtifactFilename || 'Upload .aar Binary'}
                   </span>
                   <span className="text-[11px] text-slate-500">
-                    Max 200MB • Staged in MinIO quarantine
+                    Max 200MB • Auto-detects Package &amp; Entry Class
                   </span>
                 </div>
               </div>
@@ -526,7 +602,7 @@ export default function NativeSdkIntegrationForm({
                         d="M4 12a8 8 0 018-8v8H4z"
                       />
                     </svg>
-                    <span>Staging in MinIO...</span>
+                    <span>Scanning &amp; Staging...</span>
                   </>
                 ) : (
                   <>
@@ -559,10 +635,10 @@ export default function NativeSdkIntegrationForm({
               nativeConfig.androidStoragePath ||
               nativeConfig.androidMinioKey) && (
               <div className="mt-3 p-3 bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg text-xs text-emerald-900 dark:text-emerald-200 space-y-1.5">
-                <div className="flex items-center justify-between font-semibold">
+                <div className="flex items-center justify-between font-semibold flex-wrap gap-1">
                   <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
                     <CheckCircleIcon className="w-4 h-4 text-emerald-600" />
-                    <span>Quarantine Staged &amp; Inspected</span>
+                    <span>Quarantine Staged &amp; Auto-Scanned</span>
                   </span>
                   {(androidUploadSuccess?.sha256 ||
                     nativeConfig.androidChecksum) && (
@@ -732,3 +808,5 @@ export default function NativeSdkIntegrationForm({
     </div>
   );
 }
+
+

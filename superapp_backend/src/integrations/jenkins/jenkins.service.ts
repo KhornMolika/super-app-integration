@@ -563,4 +563,49 @@ export class JenkinsService {
       };
     }
   }
+
+  /**
+   * Fetches latest build status and console log snippet from Jenkins for superapp-sandbox-build
+   */
+  async getSandboxBuildStatusFromJenkins(): Promise<{
+    available: boolean;
+    building?: boolean;
+    result?: string | null;
+    duration?: number;
+    consoleText?: string;
+  }> {
+    const jobName = 'superapp-sandbox-build';
+    const statusUrl = `${this.jenkinsUrl}/job/${jobName}/lastBuild/api/json`;
+    const consoleUrl = `${this.jenkinsUrl}/job/${jobName}/lastBuild/consoleText`;
+
+    try {
+      const headers: Record<string, string> = {};
+      const authHeader = this.getAuthHeader();
+      if (authHeader) headers['Authorization'] = authHeader;
+
+      const res = await fetch(statusUrl, { headers });
+      if (!res.ok) {
+        return { available: false };
+      }
+      const data = await res.json();
+
+      let consoleText = '';
+      try {
+        const cRes = await fetch(consoleUrl, { headers });
+        if (cRes.ok) {
+          consoleText = await cRes.text();
+        }
+      } catch (_) {}
+
+      return {
+        available: true,
+        building: data.building ?? false,
+        result: data.result ?? null,
+        duration: data.duration ?? 0,
+        consoleText,
+      };
+    } catch (_) {
+      return { available: false };
+    }
+  }
 }
