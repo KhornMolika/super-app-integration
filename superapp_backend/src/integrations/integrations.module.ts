@@ -23,6 +23,7 @@ import { LocalSecurityScannerService } from './validation/local-security-scanner
 import { PubspecInjectorService } from './flutter/pubspec-injector.service';
 import { PubspecPrecheckService } from './flutter/pubspec-precheck.service';
 import { SandboxBuildManagerService } from './flutter/sandbox-build-manager.service';
+import { ApkBuildManagerService } from './flutter/apk-build-manager.service';
 import { PubVulnerabilityScannerService } from './validation/pub-vulnerability-scanner.service';
 import { PubspecInjectorController } from './flutter/pubspec-injector.controller';
 
@@ -53,6 +54,7 @@ import { PubspecInjectorController } from './flutter/pubspec-injector.controller
     PubspecInjectorService,
     PubspecPrecheckService,
     SandboxBuildManagerService,
+    ApkBuildManagerService,
     PubVulnerabilityScannerService,
   ],
   exports: [
@@ -67,6 +69,7 @@ import { PubspecInjectorController } from './flutter/pubspec-injector.controller
     PubspecInjectorService,
     PubspecPrecheckService,
     SandboxBuildManagerService,
+    ApkBuildManagerService,
     PubVulnerabilityScannerService,
   ],
 })

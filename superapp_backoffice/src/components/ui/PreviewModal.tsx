@@ -21,6 +21,7 @@ interface PreviewModalProps {
   appId?: string;
   apkUrl?: string;
   isFlutter?: boolean;
+  integrationMethod?: string;
   status?: string;
   buildCompletedAt?: string | Date;
 }
@@ -42,6 +43,7 @@ export default function PreviewModal({
   appId,
   apkUrl = '/api/download-apk?type=test&version=v0.0.1',
   isFlutter = false,
+  integrationMethod,
   status,
   buildCompletedAt,
 }: PreviewModalProps) {
@@ -57,16 +59,11 @@ export default function PreviewModal({
   const [autoScale, setAutoScale] = useState(1);
   const [containerSize, setContainerSize] = useState({ width: 1024, height: 768 });
 
-  // Set initial active screen whenever preview opens
-  useEffect(() => {
-    if (isOpen) {
-      setCurrentScreen(isFlutter ? 'sandbox' : 'miniapp');
-    }
-  }, [isOpen, isFlutter]);
+  const methodUpper = (integrationMethod || (isFlutter ? 'FLUTTER_PACKAGE' : 'WEBVIEW')).toUpperCase();
 
-  // Check if this is an external direct Web URL (for WebView / Web Sandbox)
+  // Check if this is an external direct Web URL (only for WebView method)
   const isDirectWebUrl = Boolean(
-    !isFlutter &&
+    methodUpper === 'WEBVIEW' &&
     url &&
     (url.startsWith('http://') || url.startsWith('https://')) &&
     !url.includes('localhost:8081') &&
@@ -74,6 +71,29 @@ export default function PreviewModal({
     !url.includes('pub-group') &&
     !url.includes('repository')
   );
+
+  // Set initial active screen whenever preview opens
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentScreen(isDirectWebUrl ? 'miniapp' : 'sandbox');
+    }
+  }, [isOpen, isDirectWebUrl]);
+
+  const getMethodBadge = () => {
+    switch (methodUpper) {
+      case 'NATIVE_SDK': return 'Native SDK';
+      case 'FLUTTER_PACKAGE':
+      case 'FLUTTER_PACKAGE_ARTIFACT':
+      case 'FLUTTER_PACKAGE_SOURCE':
+        return 'Flutter';
+      case 'DEEP_LINK': return 'Deep Link';
+      case 'WEBVIEW': return 'WebView';
+      case 'HTML5':
+      case 'WEB_SANDBOX':
+        return 'HTML5';
+      default: return methodUpper;
+    }
+  };
 
   // Extract / derive target app identifier
   const targetAppId = appId || (url.includes('packages/') ? url.split('packages/')[1] : '');
@@ -194,7 +214,7 @@ export default function PreviewModal({
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-sm text-slate-100 truncate max-w-[140px]" title={title}>{title}</h3>
                 <span className="text-[10px] bg-indigo-500/20 text-indigo-300 font-semibold px-2 py-0.5 rounded-full border border-indigo-500/30 shrink-0">
-                  {isFlutter ? 'Flutter' : 'WebView'}
+                  {getMethodBadge()}
                 </span>
               </div>
             </div>

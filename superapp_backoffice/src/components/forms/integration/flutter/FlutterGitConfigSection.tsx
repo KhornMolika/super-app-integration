@@ -13,7 +13,12 @@ import {
   EyeIcon,
   CheckIcon,
   XIcon,
+  CopyIcon,
+  RefreshIcon,
+  FingerprintIcon,
+  ExternalLinkIcon,
 } from "@/components/ui/Icons";
+import { integrationsApi } from "@/api/integrations.api";
 
 export interface FlutterGitConfigSectionProps {
   flutterConfig: any;
@@ -64,6 +69,49 @@ export default function FlutterGitConfigSection({
 }: FlutterGitConfigSectionProps) {
   const [showTokenPassword, setShowTokenPassword] = useState(false);
   const [activeGuideTab, setActiveGuideTab] = useState<"github" | "gitlab">("github");
+  const [isGeneratingKey, setIsGeneratingKey] = useState(false);
+  const [copiedKey, setCopiedKey] = useState(false);
+  const [showManualOverride, setShowManualOverride] = useState(false);
+
+  const handleGenerateDedicatedKey = async () => {
+    try {
+      setIsGeneratingKey(true);
+      const appName = flutterConfig?.packageName || flutterConfig?.appName || "miniapp";
+      const keyInfo = await integrationsApi.generateDeployKey(appName);
+      if (onUpdateFlutterConfig) {
+        onUpdateFlutterConfig({
+          deployKey: keyInfo.encryptedPrivateKey,
+          deployPublicKey: keyInfo.publicKey,
+          deployKeyFingerprint: keyInfo.fingerprint,
+          hasDeployKey: true,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to generate dedicated deploy key:", err);
+    } finally {
+      setIsGeneratingKey(false);
+    }
+  };
+
+  const handleCopyPublicKey = (keyText: string) => {
+    if (!keyText) return;
+    navigator.clipboard.writeText(keyText);
+    setCopiedKey(true);
+    setTimeout(() => setCopiedKey(false), 2000);
+  };
+
+  React.useEffect(() => {
+    if (
+      isPrivateRepo &&
+      authMethod === "deploy_key" &&
+      !flutterConfig?.deployPublicKey &&
+      !flutterConfig?.hasDeployKey &&
+      !isGeneratingKey &&
+      isEditable
+    ) {
+      handleGenerateDedicatedKey();
+    }
+  }, [isPrivateRepo, authMethod, flutterConfig?.deployPublicKey, flutterConfig?.hasDeployKey]);
 
   return (
     <div className="space-y-6">
@@ -202,143 +250,254 @@ export default function FlutterGitConfigSection({
 
           {authMethod === "deploy_key" ? (
             <div className="space-y-4 pt-1">
-              <div className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 flex items-start gap-2 bg-indigo-50/70 dark:bg-indigo-950/40 p-3.5 rounded-xl border border-indigo-100 dark:border-indigo-900/60">
-                <KeyIcon className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
-                <div className="leading-relaxed">
-                  <strong className="text-slate-800 dark:text-slate-200">Owner-Provided Deploy Key:</strong>{" "}
-                  Please generate an SSH key pair for your repository, add the public key to your repository&apos;s Deploy Keys (read-only), and input your private key below. The platform stores your key encrypted at rest (AES-256-GCM) and uses it ephemerally during package verification.
+              {/* Platform Managed Security Assurance Banner */}
+              <div className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 flex items-start gap-3 bg-gradient-to-r from-indigo-50/90 to-blue-50/70 dark:from-indigo-950/40 dark:to-slate-900/60 p-4 rounded-xl border border-indigo-200/80 dark:border-indigo-800/60 shadow-sm">
+                <ShieldCheckIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span>Super App Dedicated Deploy Key</span>
+                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700">
+                      Zero Private Key Leakage
+                    </span>
+                  </div>
+                  <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                    The Super App automatically generates an isolated, read-only SSH key pair dedicated to this Mini App. 
+                    The private key is encrypted (AES-256-GCM) and kept securely inside the platform CI runner. You only need to add the <strong>public key</strong> to your Git repository.
+                  </p>
                 </div>
               </div>
 
-              {/* If key is already configured & encrypted */}
-              {Boolean(flutterConfig?.hasDeployKey || flutterConfig?.deployKey === '********') && (
-                <div className="flex items-center gap-2.5 bg-emerald-50/90 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 px-3.5 py-2.5 rounded-xl text-xs text-emerald-800 dark:text-emerald-200">
-                  <ShieldCheckIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  <div className="flex-1 leading-relaxed">
-                    <strong>Deploy Key Configured &amp; Encrypted:</strong> A private deploy key is already saved and secured with AES-256-GCM. Leave the field below as is to keep your existing key, or paste a new private key to replace it.
+              {/* Dedicated Public Key Card */}
+              {Boolean(flutterConfig?.deployPublicKey || flutterConfig?.hasDeployKey) ? (
+                <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/70 space-y-3 shadow-sm">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-3">
+                    <div className="flex items-center gap-2">
+                      <KeyIcon className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                      <span className="text-xs font-bold text-slate-900 dark:text-white">
+                        Public Deploy Key (Add to your Git Repo)
+                      </span>
+                    </div>
+
+                    {/* Metadata Badges */}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                        <LockIcon className="w-3 h-3 text-slate-500" />
+                        <span>ED25519</span>
+                      </span>
+                      {flutterConfig?.deployKeyFingerprint && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-900">
+                          <FingerprintIcon className="w-3 h-3 text-indigo-500" />
+                          <span className="truncate max-w-[160px]" title={flutterConfig.deployKeyFingerprint}>
+                            {flutterConfig.deployKeyFingerprint}
+                          </span>
+                        </span>
+                      )}
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                        <ShieldCheckIcon className="w-3 h-3 text-emerald-600" />
+                        <span>Encrypted (AES-256)</span>
+                      </span>
+                    </div>
                   </div>
+
+                  {/* Public Key Display Area */}
+                  <div className="relative group">
+                    <pre className="w-full font-mono text-[11px] p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-indigo-200 whitespace-pre-wrap break-all leading-relaxed max-h-28 overflow-y-auto">
+                      {flutterConfig?.deployPublicKey || "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... (Platform Managed)"}
+                    </pre>
+                  </div>
+
+                  {/* Action Bar */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleCopyPublicKey(flutterConfig?.deployPublicKey)}
+                        className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition-all ${
+                          copiedKey
+                            ? "bg-emerald-600 text-white shadow-emerald-500/20"
+                            : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-500/20"
+                        }`}
+                      >
+                        {copiedKey ? (
+                          <>
+                            <CheckIcon className="w-4 h-4 text-white" />
+                            <span>Public Key Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <CopyIcon className="w-4 h-4 text-white" />
+                            <span>Copy Public Key</span>
+                          </>
+                        )}
+                      </button>
+
+                      {isEditable && (
+                        <button
+                          type="button"
+                          onClick={handleGenerateDedicatedKey}
+                          disabled={isGeneratingKey}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-all disabled:opacity-50"
+                        >
+                          <RefreshIcon className={`w-3.5 h-3.5 text-slate-500 ${isGeneratingKey ? "animate-spin" : ""}`} />
+                          <span>{isGeneratingKey ? "Generating..." : "Rotate / Regenerate Key Pair"}</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                      <CheckCircleIcon className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>Ready for GitHub &amp; GitLab deploy keys</span>
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                /* Key Not Yet Generated - Instant Generation CTA */
+                <div className="p-6 rounded-xl border border-dashed border-indigo-300 dark:border-indigo-800 bg-indigo-50/30 dark:bg-indigo-950/20 text-center space-y-3">
+                  <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 mx-auto flex items-center justify-center">
+                    <KeyIcon className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h5 className="text-sm font-bold text-slate-900 dark:text-white">
+                      Generate Dedicated SSH Key Pair
+                    </h5>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
+                      Click below to generate a unique ED25519 deploy key pair for this repository with zero private key handling.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleGenerateDedicatedKey}
+                    disabled={isGeneratingKey || !isEditable}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-all disabled:opacity-50"
+                  >
+                    <KeyIcon className={`w-4 h-4 ${isGeneratingKey ? "animate-spin" : ""}`} />
+                    <span>{isGeneratingKey ? "Generating Key Pair..." : "Generate Dedicated Deploy Key"}</span>
+                  </button>
                 </div>
               )}
 
-              {/* Direct Input for Owner's Private Key */}
-              <div className="space-y-1.5">
+              {/* Step-by-Step GitHub & GitLab Deployment Guide */}
+              <div className="bg-slate-100/80 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700/60 text-xs space-y-3">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
-                    <KeyIcon className="w-3.5 h-3.5 text-indigo-500" />
-                    <span>SSH Private Key (Deploy Key) <span className="text-rose-500">*</span></span>
-                  </Label>
-                  <span className="text-[11px] text-slate-500 font-mono">ED25519 or RSA (PEM format)</span>
-                </div>
-                <textarea
-                  name="deployKey"
-                  value={flutterConfig?.deployKey || ""}
-                  onChange={(e: any) => {
-                    if (onUpdateFlutterConfig) {
-                      onUpdateFlutterConfig({
-                        deployKey: e.target.value,
-                      });
-                    } else {
-                      handleFlutterChange(e);
-                    }
-                  }}
-                  disabled={!isEditable}
-                  rows={5}
-                  placeholder={"-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAA...\n-----END OPENSSH PRIVATE KEY-----"}
-                  className={`w-full font-mono text-xs p-3 rounded-xl border bg-slate-900 dark:bg-slate-950 text-indigo-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all ${
-                    allErrors["integrationConfigFlutter.deployKey"]
-                      ? "border-rose-500 ring-1 ring-rose-500"
-                      : "border-slate-800"
-                  }`}
-                />
-                {allErrors["integrationConfigFlutter.deployKey"] && (
-                  <p className="text-[11px] text-rose-500 font-medium">
-                    {allErrors["integrationConfigFlutter.deployKey"]}
-                  </p>
-                )}
-              </div>
-
-              {/* Step-by-Step Generation Guide */}
-              <div className="bg-slate-100/80 dark:bg-slate-800/50 rounded-xl p-3.5 border border-slate-200 dark:border-slate-700/60 text-xs">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                    <SettingsIcon className="w-3.5 h-3.5 text-slate-500" />
-                    <span>How to Generate &amp; Add Your Deploy Key:</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                    <SettingsIcon className="w-4 h-4 text-indigo-500" />
+                    <span>How to Add this Deploy Key in 3 Steps:</span>
                   </span>
                   <div className="flex items-center gap-1 bg-white dark:bg-slate-900 rounded-lg p-0.5 border border-slate-200 dark:border-slate-700 text-[11px]">
                     <button
                       type="button"
                       onClick={() => setActiveGuideTab("github")}
-                      className={`px-2 py-0.5 rounded font-medium ${
+                      className={`px-2.5 py-1 rounded-md font-semibold transition-all flex items-center gap-1.5 ${
                         activeGuideTab === "github"
-                          ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 font-bold"
-                          : "text-slate-500 hover:text-slate-800"
+                          ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 font-bold shadow-sm"
+                          : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
                       }`}
                     >
-                      GitHub
+                      <GlobeIcon className="w-3.5 h-3.5" />
+                      <span>GitHub</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setActiveGuideTab("gitlab")}
-                      className={`px-2 py-0.5 rounded font-medium ${
+                      className={`px-2.5 py-1 rounded-md font-semibold transition-all flex items-center gap-1.5 ${
                         activeGuideTab === "gitlab"
-                          ? "bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300 font-bold"
-                          : "text-slate-500 hover:text-slate-800"
+                          ? "bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300 font-bold shadow-sm"
+                          : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
                       }`}
                     >
-                      GitLab
+                      <GlobeIcon className="w-3.5 h-3.5" />
+                      <span>GitLab</span>
                     </button>
                   </div>
                 </div>
 
                 {activeGuideTab === "github" ? (
-                  <ol className="list-decimal list-inside space-y-1.5 text-slate-600 dark:text-slate-300 leading-relaxed">
+                  <ol className="list-decimal list-inside space-y-2 text-slate-600 dark:text-slate-300 leading-relaxed">
                     <li>
-                      Run on your machine:{" "}
-                      <code className="bg-black/10 dark:bg-black/40 px-1.5 py-0.5 rounded text-indigo-600 dark:text-indigo-400 font-mono text-[11px]">
-                        ssh-keygen -t ed25519 -C &quot;miniapp-deploy-key&quot; -f ./id_ed25519_miniapp
-                      </code>
+                      Click the <strong className="text-indigo-600 dark:text-indigo-400 font-semibold">Copy Public Key</strong> button above.
                     </li>
                     <li>
-                      In your GitHub repo: <strong>Settings</strong> &rarr;{" "}
+                      In your GitHub repository, navigate to: <strong>Settings</strong> &rarr;{" "}
                       <strong>Deploy keys</strong> &rarr; click{" "}
                       <strong>Add deploy key</strong>.
                     </li>
                     <li>
-                      Paste the content of <code className="font-mono text-[11px]">./id_ed25519_miniapp.pub</code> (public key). Keep <strong>&quot;Allow write access&quot; unchecked</strong> (read-only).
+                      Set Title to <code className="bg-black/10 dark:bg-black/40 px-1.5 py-0.5 rounded text-indigo-600 dark:text-indigo-400 font-mono text-[11px]">Super App CI Pipeline</code> and paste the copied public key into <strong>Key</strong>.
                     </li>
                     <li>
-                      Copy the content of <code className="font-mono text-[11px]">./id_ed25519_miniapp</code> (private key) and paste it into the input field above.
+                      Keep <strong>&quot;Allow write access&quot; UNCHECKED</strong> (read-only is strictly recommended). Click <strong>Add key</strong>.
                     </li>
                   </ol>
                 ) : (
-                  <ol className="list-decimal list-inside space-y-1.5 text-slate-600 dark:text-slate-300 leading-relaxed">
+                  <ol className="list-decimal list-inside space-y-2 text-slate-600 dark:text-slate-300 leading-relaxed">
                     <li>
-                      Run on your machine:{" "}
-                      <code className="bg-black/10 dark:bg-black/40 px-1.5 py-0.5 rounded text-orange-600 dark:text-orange-400 font-mono text-[11px]">
-                        ssh-keygen -t ed25519 -C &quot;miniapp-deploy-key&quot; -f ./id_ed25519_miniapp
-                      </code>
+                      Click the <strong className="text-orange-600 dark:text-orange-400 font-semibold">Copy Public Key</strong> button above.
                     </li>
                     <li>
-                      In your GitLab repo: <strong>Settings</strong> &rarr;{" "}
+                      In your GitLab repository, navigate to: <strong>Settings</strong> &rarr;{" "}
                       <strong>Repository</strong> &rarr; expand{" "}
                       <strong>Deploy keys</strong> &rarr; click{" "}
                       <strong>Add key</strong>.
                     </li>
                     <li>
-                      Paste <code className="font-mono text-[11px]">./id_ed25519_miniapp.pub</code> (public key) and leave &quot;Grant write permissions&quot; unchecked.
+                      Set Title to <code className="bg-black/10 dark:bg-black/40 px-1.5 py-0.5 rounded text-orange-600 dark:text-orange-400 font-mono text-[11px]">Super App CI Pipeline</code> and paste the copied public key into <strong>Key</strong>.
                     </li>
                     <li>
-                      Copy the content of <code className="font-mono text-[11px]">./id_ed25519_miniapp</code> (private key) and paste it into the input field above.
+                      Leave <strong>&quot;Grant write permissions&quot; UNCHECKED</strong>. Click <strong>Add key</strong>.
                     </li>
                   </ol>
                 )}
 
-                <div className="mt-2.5 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-[11px] text-amber-800 dark:text-amber-200 flex items-start gap-2">
-                  <AlertTriangleIcon className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-[11px] text-emerald-800 dark:text-emerald-200 flex items-start gap-2">
+                  <CheckCircleIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                   <div>
-                    <strong>Security Rule:</strong> Always keep <strong>&quot;Allow write access&quot; unchecked</strong> (read-only) in your repository settings. The platform only requires read access to verify and build your package.
+                    <strong>Verification Ready:</strong> Once the public key is saved in GitHub/GitLab, enter your repository URL below and click <strong>Verify Access</strong> to automatically confirm branch and tag discovery.
                   </div>
                 </div>
+              </div>
+
+              {/* Optional Advanced Accordion for Custom Private Key */}
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowManualOverride(!showManualOverride)}
+                  className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1.5 font-medium transition-colors"
+                >
+                  <SettingsIcon className="w-3.5 h-3.5" />
+                  <span>{showManualOverride ? "Hide Manual Override" : "Advanced: Provide Custom Private Key (Manual Override)"}</span>
+                </button>
+
+                {showManualOverride && (
+                  <div className="mt-3 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                        <KeyIcon className="w-3.5 h-3.5 text-indigo-500" />
+                        <span>Custom Private Key (Optional)</span>
+                      </Label>
+                      <span className="text-[11px] text-slate-500 font-mono">ED25519 or RSA PEM</span>
+                    </div>
+                    <textarea
+                      name="deployKey"
+                      value={flutterConfig?.deployKey || ""}
+                      onChange={(e: any) => {
+                        if (onUpdateFlutterConfig) {
+                          onUpdateFlutterConfig({
+                            deployKey: e.target.value,
+                          });
+                        } else {
+                          handleFlutterChange(e);
+                        }
+                      }}
+                      disabled={!isEditable}
+                      rows={4}
+                      placeholder={"Paste your own private key here only if your organization forbids platform-generated keys..."}
+                      className="w-full font-mono text-xs p-2.5 rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-950 text-indigo-300 focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <p className="text-[11px] text-slate-500">
+                      If left empty, the platform will use the dedicated key generated above.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           ) : (

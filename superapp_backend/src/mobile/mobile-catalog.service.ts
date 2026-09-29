@@ -28,17 +28,43 @@ export interface CatalogPage {
 }
 
 /** Explicit allowlist: nothing sensitive from the row can ever leak. */
-export function toCatalogItem(app: MiniApp): CatalogItem {
+export function toCatalogItem(app: MiniApp, clientHost?: string): CatalogItem {
+  const host = clientHost || process.env.HOST_IP || '192.168.1.4';
+
+  let config = app.integrationConfig;
+  if (config && typeof config === 'object') {
+    config = JSON.parse(JSON.stringify(config));
+    const urlKeys = ['webUrl', 'productionUrl', 'testingUrl', 'url', 'bundleUrl'];
+    for (const key of urlKeys) {
+      if (typeof config[key] === 'string') {
+        config[key] = config[key]
+          .replace(/http:\/\/localhost(?::(\d+))?/g, (_: string, port?: string) => `http://${host}${port ? `:${port}` : ''}`)
+          .replace(/http:\/\/127\.0\.0\.1(?::(\d+))?/g, (_: string, port?: string) => `http://${host}${port ? `:${port}` : ''}`);
+      }
+    }
+  }
+
+  let logo = app.logo ?? null;
+  if (logo) {
+    if (logo.startsWith('/')) {
+      logo = `http://${host}:3000${logo}`;
+    } else {
+      logo = logo
+        .replace(/http:\/\/localhost(?::(\d+))?/g, (_: string, port?: string) => `http://${host}${port ? `:${port}` : ''}`)
+        .replace(/http:\/\/127\.0\.0\.1(?::(\d+))?/g, (_: string, port?: string) => `http://${host}${port ? `:${port}` : ''}`);
+    }
+  }
+
   const item: CatalogItem = {
     id: app.id,
     appId: app.appId,
     name: app.name,
     description: app.shortDescription ?? null,
     fullDescription: app.fullDescription ?? null,
-    logo: app.logo ?? null,
+    logo,
     category: app.category ?? null,
     integrationMethod: app.integrationMethod,
-    integrationConfig: app.integrationConfig ?? null,
+    integrationConfig: config ?? null,
     permissions: app.permissions ?? [],
     termsAndConditions: app.termsDescription ?? null,
     privacyPolicy: app.privacyPolicyDescription ?? null,
@@ -56,7 +82,7 @@ export class MobileCatalogService {
     @InjectRepository(MiniApp) private readonly miniApps: Repository<MiniApp>,
   ) {}
 
-  async list(q: string | undefined, limit: number, offset: number): Promise<CatalogPage> {
+  async list(q: string | undefined, limit: number, offset: number, clientHost?: string): Promise<CatalogPage> {
     const qb = this.miniApps
       .createQueryBuilder('m')
       // Column allowlist also avoids the entity's eager `owner` join.
@@ -92,7 +118,7 @@ export class MobileCatalogService {
       .take(limit)
       .skip(offset)
       .getManyAndCount();
-    return { items: rows.map(toCatalogItem), total, limit, offset };
+    return { items: rows.map((r) => toCatalogItem(r, clientHost)), total, limit, offset };
   }
 }
 

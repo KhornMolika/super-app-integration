@@ -58,6 +58,18 @@ export const integrationsApi = {
       title: string;
     }>('/api/integrations/git/deploy-key'),
 
+  generateDeployKey: (title?: string) =>
+    apiClient<{
+      publicKey: string;
+      fingerprint: string;
+      type: string;
+      title: string;
+      encryptedPrivateKey: string;
+    }>('/api/integrations/git/deploy-key/generate', {
+      method: 'POST',
+      body: { title },
+    }),
+
   validateGit: (data: {
     url: string;
     ref?: string;

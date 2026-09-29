@@ -38,4 +38,5 @@ start.sh
 # Standalone Mobile Super App clone
 super-app/
 scratch/
-*.patch
+*.patch
+*.apk

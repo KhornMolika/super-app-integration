@@ -53,9 +53,25 @@ export default function InviteDownloadModal({
     }
   }, [isOpen, miniAppId, expiresIn]);
 
+  const [lanIp, setLanIp] = useState<string>('');
+
+  useEffect(() => {
+    if (isOpen) {
+      fetch('/api/system/network-info')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.primaryIp) setLanIp(data.primaryIp);
+        })
+        .catch(() => {});
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  let origin = typeof window !== 'undefined' ? window.location.origin : '';
+  if (lanIp && origin.includes('localhost')) {
+    origin = origin.replace('localhost', lanIp);
+  }
   const downloadPath = `/api/mini-apps/${miniAppId}/artifacts/${buildType === 'release' ? 'release-apk' : 'test-apk'}?version=${encodeURIComponent(version)}${inviteToken ? `&token=${encodeURIComponent(inviteToken)}` : ''}`;
   const fullDownloadUrl = `${origin}${downloadPath}`;
 

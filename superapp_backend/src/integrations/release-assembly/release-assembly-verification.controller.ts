@@ -1,12 +1,14 @@
 import {
   Controller,
   Post,
+  Get,
   Body,
   HttpCode,
   HttpStatus,
   UseGuards,
 } from '@nestjs/common';
 import { ReleaseAssemblyVerificationService } from './release-assembly-verification.service';
+import { ApkBuildManagerService } from '../flutter/apk-build-manager.service';
 import {
   VerifyAndAssembleReleaseDto,
   ReleaseAssemblyAuditResult,
@@ -19,6 +21,7 @@ import { CallbackTokenGuard } from './callback-token.guard';
 export class ReleaseAssemblyVerificationController {
   constructor(
     private readonly releaseService: ReleaseAssemblyVerificationService,
+    private readonly apkBuildManager: ApkBuildManagerService,
   ) {}
 
   @Post('verify')
@@ -47,5 +50,26 @@ export class ReleaseAssemblyVerificationController {
   @HttpCode(HttpStatus.OK)
   async buildCallback(@Body() dto: BuildCallbackDto) {
     return this.releaseService.handleBuildCallback(dto);
+  }
+
+  @Post('compile-apk')
+  @HttpCode(HttpStatus.OK)
+  async compileApk(@Body() body: {
+    releaseVersion?: string;
+    buildType?: string;
+    appName?: string;
+    apiBaseUrl?: string;
+  }) {
+    return this.apkBuildManager.triggerBuild({
+      releaseVersion: body.releaseVersion || 'v0.0.5',
+      buildType: body.buildType || 'debug',
+      appName: body.appName || 'superapp',
+      apiBaseUrl: body.apiBaseUrl,
+    });
+  }
+
+  @Get('apk-status')
+  getApkStatus() {
+    return this.apkBuildManager.getStatus();
   }
 }

@@ -919,13 +919,13 @@ export default function GuidelinesPage() {
                       Option A: SSH Deploy Key (Recommended)
                     </strong>
                     <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                      Generates a repository-scoped cryptographic key pair. Grants read-only clone permission strictly to this repository without personal account access.
+                      The Super App platform automatically generates an isolated ED25519 key pair dedicated to your Mini App. The private key remains encrypted at rest (AES-256-GCM) in the platform CI runner, so you never have to transmit or manage private keys.
                     </p>
                     <div className="p-3 bg-slate-900 text-slate-100 font-mono rounded-lg text-[11px] space-y-1">
-                      <p className="text-slate-400"># 1. Generate dedicated key pair:</p>
-                      <p className="text-indigo-300">ssh-keygen -t ed25519 -C &quot;miniapp-deploy-key&quot; -f ./id_ed25519_miniapp</p>
-                      <p className="text-slate-400"># 2. Add id_ed25519_miniapp.pub to GitHub/GitLab Deploy Keys</p>
-                      <p className="text-slate-400"># 3. Paste id_ed25519_miniapp (private key) into portal</p>
+                      <p className="text-slate-400"># 1. Super App generates an isolated key pair in portal</p>
+                      <p className="text-indigo-300">ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... (Click &quot;Copy Public Key&quot;)</p>
+                      <p className="text-slate-400"># 2. In GitHub/GitLab: Settings &rarr; Deploy Keys &rarr; Add Deploy Key (Read-Only)</p>
+                      <p className="text-slate-400"># 3. Enter repository URL &rarr; Click &quot;Verify Access&quot;</p>
                     </div>
                   </div>
 

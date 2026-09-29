@@ -1,5 +1,8 @@
 param(
-    [string]$ApiBaseUrl = "https://app.fintechcenterfsa.com/api"
+    [string]$ApiBaseUrl = "http://192.168.1.4:3000",
+    [string]$ReleaseVersion = "v0.0.5",
+    [string]$BuildType = "debug",
+    [string]$AppName = "superapp"
 )
 
 $ErrorActionPreference = "Stop"
@@ -24,7 +27,9 @@ if (-not $NexusPass) { $NexusPass = "admin123" }
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host " [BUILD] Compiling Optimized Official FSA Super App APK" -ForegroundColor Cyan
 Write-Host " Target Architecture : android-arm64" -ForegroundColor Cyan
-Write-Host " Compilation Mode    : Release (AOT + Tree Shaking)" -ForegroundColor Cyan
+Write-Host " App Name            : $AppName" -ForegroundColor Cyan
+Write-Host " Release Version     : $ReleaseVersion" -ForegroundColor Cyan
+Write-Host " Build Type          : $BuildType" -ForegroundColor Cyan
 Write-Host " API Base URL        : $ApiBaseUrl" -ForegroundColor Cyan
 Write-Host " Working Directory   : $MobileAppDir" -ForegroundColor Cyan
 Write-Host " Nexus URL           : $NexusUrl" -ForegroundColor Cyan
@@ -33,15 +38,20 @@ Write-Host "==========================================================" -Foregro
 Set-Location $MobileAppDir
 
 $FlutterBin = "flutter"
-if (Test-Path "C:\flutter\flutter\bin\flutter.bat") {
-    $FlutterBin = "C:\flutter\flutter\bin\flutter.bat"
-}
+try {
+    $found = Get-Command "flutter" -ErrorAction SilentlyContinue
+    if ($found) {
+        $FlutterBin = $found.Source
+    } elseif (Test-Path "C:\flutter\flutter\bin\flutter.bat") {
+        $FlutterBin = "C:\flutter\flutter\bin\flutter.bat"
+    }
+} catch {}
 
-Write-Host "Resolving Flutter dependencies..." -ForegroundColor Yellow
+Write-Host "Resolving Flutter dependencies with $FlutterBin..." -ForegroundColor Yellow
 & $FlutterBin pub get
 
 Write-Host "Building size-optimized ARM64 release APK (API: $ApiBaseUrl)..." -ForegroundColor Yellow
-& $FlutterBin build apk --release --target-platform android-arm64 --tree-shake-icons "--dart-define=API_BASE_URL=$ApiBaseUrl"
+& $FlutterBin build apk --release --target-platform android-arm64 --tree-shake-icons "--dart-define=API_BASE_URL=$ApiBaseUrl" "--dart-define=ALLOW_CLEARTEXT=true"
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Flutter APK compilation failed!"
@@ -50,11 +60,19 @@ if ($LASTEXITCODE -ne 0) {
 
 $ReleaseApk = Join-Path $MobileAppDir "build/app/outputs/flutter-apk/app-release.apk"
 $DebugApk = Join-Path $MobileAppDir "build/app/outputs/flutter-apk/app-debug.apk"
+$BackofficePublic = Join-Path $ProjectRoot "superapp_backoffice/public"
 
 if (Test-Path $ReleaseApk) {
     Copy-Item -Path $ReleaseApk -Destination $DebugApk -Force
+    if (Test-Path $BackofficePublic) {
+        Copy-Item -Path $ReleaseApk -Destination (Join-Path $BackofficePublic "superapp-test.apk") -Force
+        Copy-Item -Path $ReleaseApk -Destination (Join-Path $BackofficePublic "superapp-local.apk") -Force
+        Copy-Item -Path $ReleaseApk -Destination (Join-Path $BackofficePublic "superapp-test-$ReleaseVersion.apk") -Force
+        Copy-Item -Path $ReleaseApk -Destination (Join-Path $BackofficePublic "superapp-test-v0.0.1.apk") -Force
+        Write-Host "[OK] Copied APK to backoffice public directory (superapp-test.apk, superapp-test-$ReleaseVersion.apk)" -ForegroundColor Cyan
+    }
     $sizeMb = [math]::round((Get-Item $ReleaseApk).Length / 1MB, 2)
-    Write-Host "✅ Local APK generated successfully! Size: $sizeMb MB" -ForegroundColor Green
+    Write-Host "[OK] Local APK generated successfully! Size: $sizeMb MB" -ForegroundColor Green
 
     # Publish to Nexus if reachable
     try {
@@ -64,21 +82,24 @@ if (Test-Path $ReleaseApk) {
             "Content-Type" = "application/vnd.android.package-archive"
         }
 
+        $repoName = if ($BuildType -eq "release") { "apk-releases" } else { "apk-test-builds" }
+        $targetName = if ($BuildType -eq "release") { "app-release.apk" } else { "app-debug.apk" }
+
         $targets = @(
-            "apk-test-builds/superapp/latest/app-debug.apk",
-            "apk-test-builds/superapp/v0.0.1/app-debug.apk",
-            "apk-releases/superapp/latest/app-release.apk",
-            "apk-releases/superapp/v0.0.1/app-release.apk"
+            "apk-test-builds/$AppName/latest/app-debug.apk",
+            "apk-test-builds/$AppName/$ReleaseVersion/app-debug.apk",
+            "apk-releases/$AppName/latest/app-release.apk",
+            "apk-releases/$AppName/$ReleaseVersion/app-release.apk"
         )
 
         foreach ($target in $targets) {
             $destUrl = "$NexusUrl/repository/$target"
             Invoke-RestMethod -Uri $destUrl -Method Put -Headers $headers -InFile $ReleaseApk -ErrorAction SilentlyContinue | Out-Null
-            Write-Host "🚀 Published to Nexus: $destUrl" -ForegroundColor Cyan
+            Write-Host "[OK] Published to Nexus: $destUrl" -ForegroundColor Cyan
         }
     } catch {
-        Write-Host "⚠️ Could not publish to Nexus: $($_.Exception.Message)" -ForegroundColor Yellow
+        Write-Host "[WARN] Could not publish to Nexus: $($_.Exception.Message)" -ForegroundColor Yellow
     }
 }
 
-Write-Host "✨ Optimized Super App build completed successfully!" -ForegroundColor Green
+Write-Host "[DONE] Optimized Super App build completed successfully for $ReleaseVersion!" -ForegroundColor Green

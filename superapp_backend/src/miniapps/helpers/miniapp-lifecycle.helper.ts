@@ -16,6 +16,7 @@ import {
 } from '../../integrations/validation/local-security-scanner.service';
 import { StorageService } from '../../storage/storage.service';
 import { NexusIntegrationService } from '../../integrations/nexus/nexus-integration.service';
+import { ApkBuildManagerService } from '../../integrations/flutter/apk-build-manager.service';
 import { resolveBackofficeBaseUrl } from '../../common/utils/network.utils';
 import {
   extractDecryptedDeployKey,
@@ -45,6 +46,8 @@ export class MiniappLifecycleHelper {
     private storageService?: StorageService,
     @Optional()
     private nexusService?: NexusIntegrationService,
+    @Optional()
+    private apkBuildManager?: ApkBuildManagerService,
   ) {}
 
 
@@ -792,6 +795,9 @@ export class MiniappLifecycleHelper {
           appName: 'superapp',
           buildType: 'debug',
         });
+        if (this.apkBuildManager) {
+          this.apkBuildManager.triggerBuild({ releaseVersion, appName: 'superapp', buildType: 'debug' }).catch(() => {});
+        }
         this.jenkinsService.triggerSuperAppSandboxBuild().catch(() => {});
       } catch (err: any) {
         this.logger.error(`Error triggering Jenkins test build for revision: ${err.message}`);
@@ -879,6 +885,19 @@ export class MiniappLifecycleHelper {
         this.logger.warn(
           `Jenkins test build trigger returned: ${jenkinsResult.message}`,
         );
+      }
+
+      // Also trigger host APK compilation manager
+      if (this.apkBuildManager) {
+        this.apkBuildManager
+          .triggerBuild({
+            releaseVersion,
+            appName: 'superapp',
+            buildType: 'debug',
+          })
+          .catch((e: any) => {
+            this.logger.warn(`Failed to trigger local APK build: ${e.message}`);
+          });
       }
 
       // Also trigger Super App Web Sandbox build concurrently

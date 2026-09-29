@@ -166,8 +166,11 @@ export class PubspecPrecheckService {
       dependenciesNode.set(packageName, dependencyValue);
       fs.writeFileSync(pubspecPath, doc.toString(), 'utf-8');
 
-      // 4. Run `flutter pub get --dry-run`
-      const validation = await this.pubspecService.validateDependencies({ dryRun: true });
+      // 4. Run `flutter pub get --dry-run` with deploy key support
+      const validation = await this.pubspecService.validateDependencies({
+        dryRun: true,
+        deployKey: dto.deployKey,
+      });
 
       // 5. Parse output for transitive bumps and new packages
       const transitiveBumps: Array<{ package: string; oldVersion?: string; newVersion: string }> = [];
@@ -193,6 +196,10 @@ export class PubspecPrecheckService {
 
       const compatible = validation.success;
       const rawOut = validation.stderr || validation.stdout || '';
+      const isSshKeyDenied =
+        !compatible &&
+        (rawOut.includes('Permission denied (publickey)') ||
+          rawOut.includes('Could not read from remote repository'));
       const isUnpublishedInNexus =
         !compatible &&
         (rawOut.includes(`could not find package ${packageName}`) ||
@@ -204,7 +211,12 @@ export class PubspecPrecheckService {
 
       const conflicts = [...(validation.conflicts || [])];
 
-      if (isUnpublishedInNexus) {
+      if (isSshKeyDenied) {
+        finalMessage = `Git authentication failed for "${dto.gitUrl || packageName}". Deploy Key is not yet authorized in repository.`;
+        conflicts.unshift(
+          `🔑 SSH Deploy Key Not Authorized: Git returned "Permission denied (publickey)". Please copy the Public Deploy Key displayed in the portal above and add it to your GitHub/GitLab repository settings under Deploy Keys (Read-only), then click Pre-check Conflicts again.`
+        );
+      } else if (isUnpublishedInNexus) {
         finalMessage = `Package "${packageName}" is pending review and has not yet been published to Nexus. It will be published automatically upon approval.`;
         conflicts.unshift(
           `ℹ️ Pending Registry Publication: "${packageName}" is not yet published in Nexus (Status: PENDING Approval). Direct HTTP resolution will succeed automatically once published during review approval.`

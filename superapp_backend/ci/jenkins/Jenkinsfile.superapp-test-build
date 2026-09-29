@@ -73,20 +73,30 @@ pipeline {
                     """
 
                     sh """
-                    APP_DIR="."
-                    if [ -d "super-app" ]; then
-                        APP_DIR="super-app"
-                    fi
-
-                    docker run --rm \
-                        -v "\$(pwd)/\${APP_DIR}:/app" \
-                        -v /var/reports:/var/reports \
-                        -e PUB_HOSTED_URL="${params.NEXUS_URL}/repository/pub-group" \
-                        -w /app \
-                        ghcr.io/cirruslabs/flutter:stable \
-                        sh -c "export PUB_HOSTED_URL=${params.NEXUS_URL}/repository/pub-group && flutter pub get && flutter build apk --release --target-platform android-arm64 --tree-shake-icons && cp build/app/outputs/flutter-apk/app-release.apk /var/reports/app-debug.apk && cp build/app/outputs/flutter-apk/app-release.apk /var/reports/app-release.apk" || {
-                            echo "[WARN] Docker compilation fallback or pre-built artifact check..."
-                        }
+                    node -e '
+                        const compileUrl = "${params.CALLBACK_URL}".replace("/build-callback", "/compile-apk");
+                        console.log("Triggering Super App APK compilation via host backend:", compileUrl);
+                        fetch(compileUrl, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                appName: "${params.APP_NAME}",
+                                releaseVersion: "${params.RELEASE_VERSION}",
+                                buildType: "${params.BUILD_TYPE}"
+                            })
+                        }).then(async res => {
+                            const data = await res.json();
+                            console.log("Host builder response:", JSON.stringify(data));
+                            if (!data.success) {
+                                console.error("Host build failed:", data.message);
+                                process.exit(1);
+                            }
+                            process.exit(0);
+                        }).catch(err => {
+                            console.error("Host compilation error:", err.message);
+                            process.exit(1);
+                        });
+                    '
                     """
 
                     sh """
@@ -120,7 +130,12 @@ pipeline {
                     APK_FILE="/var/reports/app-debug.apk"
                     NEXUS_USER="\${NEXUS_USER:-admin}"
                     NEXUS_PASSWORD="\${NEXUS_PASSWORD:-admin123}"
-                    if [ -f "\$APK_FILE" ]; then
+
+                    # Sync newly compiled APK from backoffice/host into Jenkins reports volume
+                    curl -s -f "http://host.docker.internal:3002/api/download-apk?type=${params.BUILD_TYPE}&version=${params.RELEASE_VERSION}" -o "\$APK_FILE" || \
+                    curl -s -f "http://host.docker.internal:3000/public/superapp-test.apk" -o "\$APK_FILE" || true
+
+                    if [ -f "\$APK_FILE" ] && [ -s "\$APK_FILE" ]; then
                         echo "Uploading ${targetName} to Nexus repository ${repoName} at ${params.NEXUS_URL}/repository/${repoName}/${params.APP_NAME}/${params.RELEASE_VERSION}/${targetName}..."
                         curl -s -f -u "\${NEXUS_USER}:\${NEXUS_PASSWORD}" --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/${repoName}/${params.APP_NAME}/${params.RELEASE_VERSION}/${targetName}" || \
                         curl -s -f -u "\${NEXUS_USER}:\${NEXUS_PASSWORD}" --upload-file "\$APK_FILE" "http://superapp-nexus:8081/repository/${repoName}/${params.APP_NAME}/${params.RELEASE_VERSION}/${targetName}"

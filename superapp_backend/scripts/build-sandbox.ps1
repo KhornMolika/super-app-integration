@@ -26,13 +26,35 @@ if (-not (Test-Path $BackofficeDir)) {
 
 $SandboxDestDir = Join-Path $BackofficeDir "public/superapp-sandbox"
 
+$env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path', 'User')
+
+$FlutterBin = "flutter"
+try {
+    $found = Get-Command "flutter" -ErrorAction SilentlyContinue
+    if ($found) {
+        $FlutterBin = $found.Source
+    }
+} catch {}
+
 Write-Host "=========================================" -ForegroundColor Cyan
 Write-Host "[BUILD] Compiling Flutter Web Super App Sandbox" -ForegroundColor Cyan
+Write-Host " Flutter Executable : $FlutterBin" -ForegroundColor Cyan
+Write-Host " Working Directory  : $MobileAppDir" -ForegroundColor Cyan
+if ($env:GIT_SSH_COMMAND) {
+    Write-Host " Git SSH Command    : Configured (Deploy Keys Active)" -ForegroundColor Cyan
+}
 Write-Host "=========================================" -ForegroundColor Cyan
 
 Set-Location $MobileAppDir
-Write-Host "Running: flutter build web --base-href /superapp-sandbox/ --release --tree-shake-icons" -ForegroundColor Yellow
-flutter build web --base-href /superapp-sandbox/ --release --tree-shake-icons
+Write-Host "Resolving Flutter dependencies..." -ForegroundColor Yellow
+& $FlutterBin pub get
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Flutter dependencies resolution failed (exit code: $LASTEXITCODE)!"
+    exit 1
+}
+
+Write-Host "Running: flutter build web --base-href /superapp-sandbox/ --release --no-tree-shake-icons" -ForegroundColor Yellow
+& $FlutterBin build web --base-href /superapp-sandbox/ --release --no-tree-shake-icons
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Flutter web build failed!"

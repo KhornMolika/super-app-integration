@@ -1296,6 +1296,7 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
             (formData as any).updatedAt
           }
           isFlutter={formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE}
+          integrationMethod={formData.integrationMethod}
         />
       </div>
 

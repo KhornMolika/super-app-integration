@@ -394,8 +394,17 @@ export class MobileAuthService implements OnModuleInit {
       throw new UnauthorizedException(INVALID_CREDENTIALS);
     }
 
-    if (!user.emailVerifiedAt || user.status !== EndUserStatus.ACTIVE) {
+    if (this.requireEmailVerification() && !user.emailVerifiedAt) {
       throw new UnauthorizedException(INVALID_CREDENTIALS);
+    }
+
+    if (user.status !== EndUserStatus.ACTIVE) {
+      throw new UnauthorizedException(INVALID_CREDENTIALS);
+    }
+
+    if (!user.emailVerifiedAt && !this.requireEmailVerification()) {
+      user.emailVerifiedAt = new Date();
+      await this.users.save(user);
     }
 
     if (user.failedLoginCount || user.lockedUntil) {
