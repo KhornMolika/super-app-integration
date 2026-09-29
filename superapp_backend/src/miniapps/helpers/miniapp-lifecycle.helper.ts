@@ -521,6 +521,17 @@ export class MiniappLifecycleHelper {
             if (archiveBuf && archiveBuf.length > 0) {
               await this.nexusService.publishPubArchive(archiveBuf, pkgName, pkgVer);
               this.logger.log(`Auto-published package "${pkgName}" (${pkgVer}) to Nexus pub-hosted upon approval.`);
+
+              // Clean up staged package archive from MinIO quarantine now that it is published to Nexus
+              try {
+                await this.storageService.deleteObject(
+                  this.storageService.packageSubmissionsBucket,
+                  storagePath,
+                );
+                this.logger.log(`Cleaned up staged package archive from MinIO quarantine: ${storagePath}`);
+              } catch (delErr: any) {
+                this.logger.warn(`Could not delete staged package from MinIO after Nexus publish: ${delErr.message}`);
+              }
             }
           } catch (pubErr: any) {
             this.logger.warn(`Could not auto-publish archive to Nexus for ${app.name}: ${pubErr.message}`);

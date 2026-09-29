@@ -13,7 +13,7 @@ export default function Dashboard() {
     totalMiniApps: 0,
     pendingReviews: 0,
     supportedPermissions: 0,
-    superAppTestVersion: 'v0.1.0',
+    superAppTestVersion: 'v0.0.1',
     officialReleaseVersion: 'v0.0.1',
   });
   const [miniAppsList, setMiniAppsList] = useState<any[]>([]);
@@ -51,7 +51,7 @@ export default function Dashboard() {
           totalMiniApps: rawApps.length,
           pendingReviews: pendingApps.length + pendingProposals.length,
           supportedPermissions: Array.isArray(permissions) ? permissions.length : 0,
-          superAppTestVersion: ecosystem?.superAppTestVersion || ecosystem?.superAppVersion || 'v0.1.0',
+          superAppTestVersion: ecosystem?.superAppTestVersion || ecosystem?.superAppVersion || 'v0.0.1',
           officialReleaseVersion: ecosystem?.officialReleaseVersion || 'v0.0.1',
         });
 

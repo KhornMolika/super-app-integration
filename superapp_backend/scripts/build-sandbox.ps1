@@ -31,8 +31,8 @@ Write-Host "[BUILD] Compiling Flutter Web Super App Sandbox" -ForegroundColor Cy
 Write-Host "=========================================" -ForegroundColor Cyan
 
 Set-Location $MobileAppDir
-Write-Host "Running: flutter build web --base-href /superapp-sandbox/" -ForegroundColor Yellow
-flutter build web --base-href /superapp-sandbox/
+Write-Host "Running: flutter build web --base-href /superapp-sandbox/ --release --tree-shake-icons" -ForegroundColor Yellow
+flutter build web --base-href /superapp-sandbox/ --release --tree-shake-icons
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Flutter web build failed!"

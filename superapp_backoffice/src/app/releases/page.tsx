@@ -77,8 +77,8 @@ export default function ReleasesPage() {
     );
   }
 
-  const officialVer = ecosystemStatus?.officialReleaseVersion || 'v0.0.2';
-  const testVer = ecosystemStatus?.superAppVersion || releaseVersion || 'v0.0.3';
+  const officialVer = ecosystemStatus?.officialReleaseVersion || 'v0.0.1';
+  const testVer = ecosystemStatus?.superAppVersion || releaseVersion || 'v0.0.1';
 
   return (
     <div className="w-full py-6 space-y-8 animate-in fade-in duration-500">

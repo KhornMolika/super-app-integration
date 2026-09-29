@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
   const nexusBase = (process.env.NEXUS_BASE_URL || process.env.NEXUS_URL || 'http://localhost:8081').replace(/\/+$/, '');
   const adminUser = process.env.NEXUS_ADMIN_USER || 'admin';
-  const adminPass = process.env.NEXUS_ADMIN_PASSWORD || '';
+  const adminPass = process.env.NEXUS_ADMIN_PASSWORD || 'admin123';
   const b64 = Buffer.from(`${adminUser}:${adminPass}`).toString('base64');
 
   // 1. Try Direct Nexus URLs with version variants
@@ -38,6 +38,8 @@ export async function GET(request: NextRequest) {
         });
 
         if (res.ok) {
+          const arrayBuffer = await res.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
           const headers = new Headers();
           headers.set('Content-Type', 'application/vnd.android.package-archive');
           headers.set('X-Content-Type-Options', 'nosniff');
@@ -48,10 +50,9 @@ export async function GET(request: NextRequest) {
             'Content-Disposition',
             `attachment; filename="${appName}-${type}-${ver}.apk"`,
           );
-          const contentLength = res.headers.get('content-length');
-          if (contentLength) headers.set('Content-Length', contentLength);
+          headers.set('Content-Length', String(buffer.length));
 
-          return new NextResponse(res.body, { status: 200, headers });
+          return new NextResponse(buffer, { status: 200, headers });
         }
       } catch (_) {}
     }
@@ -82,6 +83,8 @@ export async function GET(request: NextRequest) {
             headers: { Authorization: `Basic ${b64}` },
           });
           if (latestRes.ok) {
+            const arrayBuffer = await latestRes.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
             const resolvedFilename =
               latestAsset.path?.split('/').pop() || `${appName}-${type}-latest.apk`;
             const headers = new Headers();
@@ -94,10 +97,9 @@ export async function GET(request: NextRequest) {
               'Content-Disposition',
               `attachment; filename="${resolvedFilename}"`,
             );
-            const contentLength = latestRes.headers.get('content-length');
-            if (contentLength) headers.set('Content-Length', contentLength);
+            headers.set('Content-Length', String(buffer.length));
 
-            return new NextResponse(latestRes.body, { status: 200, headers });
+            return new NextResponse(buffer, { status: 200, headers });
           }
         }
       }

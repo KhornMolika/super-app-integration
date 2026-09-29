@@ -103,7 +103,7 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
   const [activeTab, setActiveTab] = useState<MiniAppTabType>('overview');
   const [customPermission, setCustomPermission] = useState('');
   const [isEditingUnlocked, setIsEditingUnlocked] = useState(false);
-  const [latestTestVersion, setLatestTestVersion] = useState<string>('v0.3.7');
+  const [latestTestVersion, setLatestTestVersion] = useState<string>('v0.0.1');
   const [pendingArchiveFile, setPendingArchiveFile] = useState<File | null>(null);
   const [buildModalState, setBuildModalState] = useState<BuildProgressModalState>({
     isOpen: false,
@@ -1110,7 +1110,7 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
           status={formData.status || 'DRAFT'}
           can={can}
           role={role}
-          testVersion={formData.activeTestVersion || latestTestVersion || (formData as any).integrationConfig?.superAppTestVersion || 'v0.3.7'}
+          testVersion={formData.activeTestVersion || latestTestVersion || (formData as any).integrationConfig?.superAppTestVersion || 'v0.0.1'}
           isSubmitting={isSubmitting}
           onLifecycleAction={handleLifecycleAction}
           onOpenSandbox={openSandboxPreview}
@@ -1285,7 +1285,7 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
             (formData as any).version ||
             'v1.0.0'
           }
-          apkUrl={`/api/download-apk?type=test&version=${encodeURIComponent(formData.activeTestVersion || latestTestVersion || (formData as any).integrationConfig?.superAppTestVersion || 'v0.3.7')}`}
+          apkUrl={`/api/download-apk?type=test&version=${encodeURIComponent(formData.activeTestVersion || latestTestVersion || (formData as any).integrationConfig?.superAppTestVersion || 'v0.0.1')}`}
           category={formData.category}
           appId={formData.appId || formData.id || (formData as any)._id}
           status={formData.status}

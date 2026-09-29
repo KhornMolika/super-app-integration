@@ -193,7 +193,7 @@ export class SuperAppService implements OnApplicationBootstrap {
 
   async getEcosystemStatus(): Promise<any> {
     const latest = await this.findLatestCapability();
-    const testVersion = latest?.superAppVersion || 'v0.1.0';
+    const testVersion = latest?.superAppVersion || 'v0.0.1';
     const officialVersion = this.getOfficialReleaseVersion();
     const capabilities = latest ? latest.capabilities : [
       'camera',
@@ -279,7 +279,7 @@ export class SuperAppService implements OnApplicationBootstrap {
     );
     const officialVer = this.getOfficialReleaseVersion();
     const latestCap = await this.findLatestCapability();
-    const candidateVer = latestCap?.superAppVersion || 'v0.0.3';
+    const candidateVer = latestCap?.superAppVersion || 'v0.0.1';
     const nexusUrl =
       this.configService.get<string>('NEXUS_BASE_URL') ||
       this.configService.get<string>('NEXUS_URL') ||
@@ -308,7 +308,7 @@ export class SuperAppService implements OnApplicationBootstrap {
       description: 'Candidate test compilation including newly approved mini app updates and security patches.',
       assembledAt: new Date().toISOString(),
       releasedBy: 'Jenkins CI/CD Pipeline',
-      apkSize: '92.8 MB',
+      apkSize: '19.12 MB',
       buildMode: 'debug',
       apkUrl: `${nexusUrl}/repository/superapp-binaries/releases/superapp/${candidateVer}/superapp-${candidateVer}-debug.apk`,
       capabilities: defaultCapabilities,
@@ -320,7 +320,7 @@ export class SuperAppService implements OnApplicationBootstrap {
           (a.integrationMethod === 'FLUTTER_PACKAGE'
             ? 'ma_flutter_trust_regulator'
             : 'webview_package'),
-        version: a.version || '0.0.2',
+        version: a.version || '1.0.0',
         integrationMethod: a.integrationMethod,
         permissions: a.permissions || [{ type: 'NFC' }],
         status: a.status,
@@ -331,7 +331,7 @@ export class SuperAppService implements OnApplicationBootstrap {
 
     // 2. Live Official Production Release
     releases.push({
-      version: officialVer || 'v0.0.2',
+      version: officialVer || 'v0.0.1',
       type: 'LIVE_OFFICIAL',
       status: 'ACTIVE',
       isLive: true,
@@ -339,9 +339,9 @@ export class SuperAppService implements OnApplicationBootstrap {
       description: 'Currently published master binary distributed across end-user devices with verified Gate 2 integrity.',
       assembledAt: '2026-09-15T08:30:00.000Z',
       releasedBy: 'SA Release Master',
-      apkSize: '89.4 MB',
+      apkSize: '19.12 MB',
       buildMode: 'release',
-      apkUrl: `${nexusUrl}/repository/superapp-binaries/releases/superapp/${officialVer || 'v0.0.2'}/superapp-${officialVer || 'v0.0.2'}-release.apk`,
+      apkUrl: `${nexusUrl}/repository/superapp-binaries/releases/superapp/${officialVer || 'v0.0.1'}/superapp-${officialVer || 'v0.0.1'}-release.apk`,
       capabilities: [
         'camera',
         'location',

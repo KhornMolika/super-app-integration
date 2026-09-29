@@ -26,7 +26,7 @@ export default function MiniAppLifecycleBanners({
   status,
   can,
   role,
-  testVersion = 'v0.3.1',
+  testVersion = 'v0.0.1',
   isSubmitting,
   onLifecycleAction,
   onOpenSandbox,

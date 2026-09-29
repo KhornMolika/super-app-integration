@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -31,5 +32,25 @@ export class NexusIntegrationController {
   ) {
     const snippet = this.nexusService.generateSnippet(body);
     return { snippet };
+  }
+
+  @Get('repositories/:repo/components')
+  listComponents(@Param('repo') repo: string) {
+    return this.nexusService.listComponents(repo);
+  }
+
+  @Delete('components/:id')
+  deleteComponent(@Param('id') id: string) {
+    return this.nexusService.deleteComponent(id);
+  }
+
+  @Delete('assets/:id')
+  deleteAsset(@Param('id') id: string) {
+    return this.nexusService.deleteAsset(id);
+  }
+
+  @Delete('packages/:name')
+  deletePubPackage(@Param('name') name: string) {
+    return this.nexusService.deletePubPackage(name);
   }
 }

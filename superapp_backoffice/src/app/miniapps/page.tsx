@@ -253,7 +253,7 @@ export default function MiniAppsPage() {
                       <td className="px-6 py-4 text-right">
                         <div className="inline-flex items-center gap-2">
                           {(app.status === 'TESTING' || app.status === 'ACTIVE') && (() => {
-                            const testVersion = (app as any).activeTestVersion || app.integrationConfig?.superAppTestVersion || 'v0.3.7';
+                            const testVersion = (app as any).activeTestVersion || app.integrationConfig?.superAppTestVersion || 'v0.0.1';
                             return (
                               <a
                                 href={`/api/download-apk?type=test&version=${encodeURIComponent(testVersion)}`}

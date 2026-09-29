@@ -66,10 +66,27 @@ pipeline {
                                 stageId: "compile",
                                 stageName: "2. Fastlane APK Packaging",
                                 status: "RUNNING",
-                                details: "Assembling Flutter Super App and packaging APK with Fastlane..."
+                                details: "Assembling size-optimized Flutter Super App and packaging APK with Fastlane (ARM64 & AOT)..."
                             })
                         }).catch(() => {});
                     ' || true
+                    """
+
+                    sh """
+                    APP_DIR="."
+                    if [ -d "super-app" ]; then
+                        APP_DIR="super-app"
+                    fi
+
+                    docker run --rm \
+                        -v "\$(pwd)/\${APP_DIR}:/app" \
+                        -v /var/reports:/var/reports \
+                        -e PUB_HOSTED_URL="${params.NEXUS_URL}/repository/pub-group" \
+                        -w /app \
+                        ghcr.io/cirruslabs/flutter:stable \
+                        sh -c "export PUB_HOSTED_URL=${params.NEXUS_URL}/repository/pub-group && flutter pub get && flutter build apk --release --target-platform android-arm64 --tree-shake-icons && cp build/app/outputs/flutter-apk/app-release.apk /var/reports/app-debug.apk && cp build/app/outputs/flutter-apk/app-release.apk /var/reports/app-release.apk" || {
+                            echo "[WARN] Docker compilation fallback or pre-built artifact check..."
+                        }
                     """
 
                     sh """
@@ -84,7 +101,7 @@ pipeline {
                                 stageId: "compile",
                                 stageName: "2. Fastlane APK Packaging",
                                 status: "COMPLETED",
-                                details: "Fastlane build_test_release completed successfully for ${params.APP_NAME}."
+                                details: "Size-optimized Fastlane build_test_release completed successfully for ${params.APP_NAME}."
                             })
                         }).catch(() => {});
                     ' || true

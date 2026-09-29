@@ -181,6 +181,17 @@ export class SdkArtifactUploadService {
         );
         patch.androidNexusMavenUrl = mavenUrl;
         this.logger.log(`Published Android SDK ${miniApp.name} to Nexus: ${mavenUrl}`);
+
+        // Clean up quarantined Android AAR from MinIO after successful Nexus publish
+        try {
+          await this.storage.deleteObject(
+            this.storage.sdkSubmissionsBucket,
+            config.androidMinioKey,
+          );
+          this.logger.log(`Cleaned up Android SDK from MinIO quarantine: ${config.androidMinioKey}`);
+        } catch (delErr: any) {
+          this.logger.warn(`Could not delete Android SDK from MinIO quarantine: ${delErr.message}`);
+        }
       } catch (err: any) {
         this.logger.error(`Failed to publish Android SDK to Nexus: ${err.message}`);
         throw new BadGatewayException(`Android Nexus publish failed: ${err.message}`);
@@ -222,6 +233,17 @@ export class SdkArtifactUploadService {
 
         patch.iosNexusZipUrl = zipUrl;
         this.logger.log(`Published iOS SDK ${miniApp.name} to Nexus: ${zipUrl}`);
+
+        // Clean up quarantined iOS xcframework from MinIO after successful Nexus publish
+        try {
+          await this.storage.deleteObject(
+            this.storage.sdkSubmissionsBucket,
+            config.iosMinioKey,
+          );
+          this.logger.log(`Cleaned up iOS SDK from MinIO quarantine: ${config.iosMinioKey}`);
+        } catch (delErr: any) {
+          this.logger.warn(`Could not delete iOS SDK from MinIO quarantine: ${delErr.message}`);
+        }
       } catch (err: any) {
         this.logger.error(`Failed to publish iOS SDK to Nexus: ${err.message}`);
         throw new BadGatewayException(`iOS Nexus publish failed: ${err.message}`);

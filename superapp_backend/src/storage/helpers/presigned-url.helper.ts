@@ -110,7 +110,7 @@ export class PresignedUrlHelper {
       /[^a-zA-Z0-9.-]/g,
       '_',
     );
-    const filename = `mini-app-assets/logo-${Date.now()}-${randomUUID().slice(0, 8)}-${cleanName}`;
+    const filename = `logos/logo-${Date.now()}-${randomUUID().slice(0, 8)}-${cleanName}`;
 
     await minioClient.putObject(
       assetsBucket,
@@ -176,7 +176,7 @@ export class PresignedUrlHelper {
       const cleanPath = nameHint.replace(/\.[^/.]+$/, '');
       filename = `${cleanPath}.${ext}`;
     } else {
-      filename = `mini-app-assets/logo-${Date.now()}-${randomUUID().slice(0, 8)}.${ext}`;
+      filename = `logos/logo-${Date.now()}-${randomUUID().slice(0, 8)}.${ext}`;
     }
 
     await minioClient.putObject(

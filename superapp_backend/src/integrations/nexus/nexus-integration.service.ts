@@ -376,5 +376,67 @@ export class NexusIntegrationService {
 
     return `dependencies:\n  ${pkg}: ${ver}\n\n# Hosted on Sonatype Nexus Private Registry\n# Resolves via environment: PUB_HOSTED_URL=${groupUrl}`;
   }
+
+  /**
+   * Lists components in a specified Nexus repository.
+   */
+  async listComponents(repo: string): Promise<any[]> {
+    const url = `${this.getBaseUrl()}/service/rest/v1/components?repository=${encodeURIComponent(repo)}`;
+    const authHeader = this.getAuthHeader();
+    const res = await fetch(url, { headers: { ...authHeader, Accept: 'application/json' } });
+    if (!res.ok) {
+      throw new Error(`Failed to list components in repo "${repo}": HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    return data.items || [];
+  }
+
+  /**
+   * Deletes a component from Nexus by its component ID.
+   */
+  async deleteComponent(componentId: string): Promise<{ success: boolean; message: string }> {
+    const url = `${this.getBaseUrl()}/service/rest/v1/components/${encodeURIComponent(componentId)}`;
+    const authHeader = this.getAuthHeader();
+    const res = await fetch(url, { method: 'DELETE', headers: authHeader });
+    if (!res.ok && res.status !== 204) {
+      throw new Error(`Failed to delete Nexus component ${componentId}: HTTP ${res.status}`);
+    }
+    this.logger.log(`Deleted Nexus component: ${componentId}`);
+    return { success: true, message: `Component ${componentId} deleted successfully.` };
+  }
+
+  /**
+   * Deletes an asset from Nexus by its asset ID.
+   */
+  async deleteAsset(assetId: string): Promise<{ success: boolean; message: string }> {
+    const url = `${this.getBaseUrl()}/service/rest/v1/assets/${encodeURIComponent(assetId)}`;
+    const authHeader = this.getAuthHeader();
+    const res = await fetch(url, { method: 'DELETE', headers: authHeader });
+    if (!res.ok && res.status !== 204) {
+      throw new Error(`Failed to delete Nexus asset ${assetId}: HTTP ${res.status}`);
+    }
+    this.logger.log(`Deleted Nexus asset: ${assetId}`);
+    return { success: true, message: `Asset ${assetId} deleted successfully.` };
+  }
+
+  /**
+   * Deletes a published Flutter package and all its versions from the pub-hosted repository.
+   */
+  async deletePubPackage(packageName: string): Promise<{ success: boolean; deletedCount: number }> {
+    const cleanPkg = packageName.trim().replace(/-/g, '_').toLowerCase();
+    const components = await this.listComponents('pub-hosted');
+    const matched = components.filter((c: any) => (c.name || '').toLowerCase() === cleanPkg);
+    let deletedCount = 0;
+    for (const comp of matched) {
+      try {
+        await this.deleteComponent(comp.id);
+        deletedCount++;
+      } catch (err: any) {
+        this.logger.warn(`Could not delete component ${comp.id} for package ${cleanPkg}: ${err.message}`);
+      }
+    }
+    this.logger.log(`Deleted ${deletedCount} versions/components for package "${cleanPkg}" from Nexus pub-hosted.`);
+    return { success: true, deletedCount };
+  }
 }
 
