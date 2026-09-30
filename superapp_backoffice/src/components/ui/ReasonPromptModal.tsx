@@ -167,12 +167,12 @@ export default function ReasonPromptModal({
               onChange={(e) => setReason(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={placeholder}
-              className={`w-full px-5 py-4 text-base rounded-2xl border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 transition-all resize-y leading-relaxed ${
+              className={`w-full px-5 py-4 text-base rounded-2xl border bg-slate-100/80 hover:bg-slate-100 focus:bg-white dark:bg-slate-950/80 dark:hover:bg-slate-950 dark:focus:bg-slate-950 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 transition-all resize-y leading-relaxed ${
                 isDanger
                   ? 'border-rose-300 dark:border-rose-800/60 focus:ring-rose-500'
                   : isWarning
                   ? 'border-amber-300 dark:border-amber-800/60 focus:ring-amber-500'
-                  : 'border-slate-200 dark:border-slate-700 focus:ring-brand-500'
+                  : 'border-slate-300 dark:border-slate-700 focus:ring-brand-500'
               }`}
             />
             <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center justify-between pt-1">

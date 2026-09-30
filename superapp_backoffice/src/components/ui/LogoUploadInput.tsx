@@ -136,12 +136,12 @@ export function LogoUploadInput({
           if (!disabled) setIsDragging(true);
         }}
         onDragLeave={() => setIsDragging(false)}
-        className={`relative w-full h-[46px] px-3 bg-white dark:bg-slate-900/50 border rounded-xl flex items-center justify-between transition-all cursor-pointer select-none ${
+        className={`relative w-full h-[46px] px-3 bg-slate-100/80 hover:bg-slate-100 dark:bg-slate-900/90 dark:hover:bg-slate-900 border rounded-xl flex items-center justify-between transition-all cursor-pointer select-none ${
           displayError
             ? 'border-rose-500 ring-1 ring-rose-500 bg-rose-50/30 dark:bg-rose-950/20'
             : isDragging
             ? 'border-brand-500 ring-1 ring-brand-500 bg-brand-50/20 dark:bg-brand-950/20'
-            : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+            : 'border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600'
         } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         {isUploading ? (

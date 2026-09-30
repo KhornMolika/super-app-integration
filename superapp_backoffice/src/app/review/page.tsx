@@ -490,7 +490,7 @@ export default function ReviewQueuePage() {
                   placeholder="e.g. 2.1.0"
                   value={targetVersion}
                   onChange={(e) => setTargetVersion(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100/80 hover:bg-slate-100 focus:bg-white dark:bg-slate-900/80 dark:focus:bg-slate-950 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
                 />
               </div>
 
@@ -504,7 +504,7 @@ export default function ReviewQueuePage() {
                     placeholder="Provide a clear reason for the developer..."
                     value={rejectReason}
                     onChange={(e) => setRejectReason(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-rose-300 dark:border-rose-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-rose-300 dark:border-rose-700 bg-rose-50/60 dark:bg-slate-900/80 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-rose-500"
                   />
                 </div>
               )}
