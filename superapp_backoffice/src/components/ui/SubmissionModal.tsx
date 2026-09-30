@@ -93,40 +93,44 @@ export default function SubmissionModal({
   if (!state.isOpen) return null;
 
   const stageList = React.useMemo(() => {
-    const rawMethod = propIntegrationMethod || state.integrationMethod || 'WEBVIEW';
-    const isFlutter = rawMethod === 'FLUTTER_PACKAGE' || rawMethod === 'NATIVE_SDK';
-    const activeMethod = rawMethod;
+    const rawMethod = (propIntegrationMethod || state.integrationMethod || 'WEBVIEW').toUpperCase();
+    const METHOD_PIPELINE_STAGES: Record<string, string[]> = {
+      WEBVIEW: ['ssrf', 'domain_tls_audit', 'csp_headers_audit', 'dast_zap'],
+      FLUTTER_PACKAGE: ['ingest', 'secret_scan', 'sast', 'dependency_scan', 'capability_gate', 'sbom', 'license_compliance'],
+      NATIVE_SDK: ['ingest', 'secret_scan', 'sast', 'capability_gate', 'malware_scan', 'license_compliance'],
+      DEEP_LINK: ['scheme_audit', 'store_url_audit', 'capability_gate'],
+    };
+
+    const pipelineSequence = METHOD_PIPELINE_STAGES[rawMethod] || METHOD_PIPELINE_STAGES.WEBVIEW;
 
     const rawChecks =
       (propSecurityChecks && propSecurityChecks.length > 0)
         ? propSecurityChecks
         : (state.securityChecks && state.securityChecks.length > 0)
         ? state.securityChecks
-        : getRecommendedChecksForMethod(activeMethod);
+        : pipelineSequence;
 
-    // SSRF, TLS, CSP, DAST are strictly web-oriented and do not apply to native package archives
-    const WEB_ONLY_CHECKS = new Set(['ssrf', 'domain_tls_audit', 'csp_headers_audit', 'dast_zap']);
-    const filteredChecks = isFlutter
-      ? rawChecks.filter((k) => !WEB_ONLY_CHECKS.has(k))
-      : rawChecks;
+    const baseKey = pipelineSequence[0];
+    const userSelected = new Set([...rawChecks, baseKey]);
 
-    // Flutter baseline is strictly source ingestion & checksum verification; web is SSRF defense
-    const baselineKeys = isFlutter ? ['ingest'] : ['ssrf'];
-    const allowedKeys = Array.from(new Set([...baselineKeys, ...filteredChecks]));
+    // Allowed keys strictly follow the Jenkins pipeline execution order!
+    const allowedKeys = pipelineSequence.filter((k) => userSelected.has(k));
 
     const aliasMap: Record<string, string[]> = {
-      dast_zap: ['dast_zap', 'zap'],
+      dast_zap: ['dast_zap', 'zap', 'dast'],
       domain_tls_audit: ['domain_tls_audit', 'tls'],
       dependency_scan: ['dependency_scan', 'sca'],
       secret_scan: ['secret_scan', 'secrets'],
       sast: ['sast', 'malware_sast'],
       sbom: ['sbom'],
-      capability_gate: ['capability_gate'],
+      capability_gate: ['capability_gate', 'host_capability_gate'],
       malware_scan: ['malware_scan'],
-      license_compliance: ['license_compliance'],
-      csp_headers_audit: ['csp_headers_audit'],
-      ssrf: ['ssrf'],
+      license_compliance: ['license_compliance', 'license_audit'],
+      csp_headers_audit: ['csp_headers_audit', 'headers_audit'],
+      ssrf: ['ssrf', 'preflight'],
       ingest: ['ingest'],
+      scheme_audit: ['scheme_audit'],
+      store_url_audit: ['store_url_audit'],
     };
 
     const stagesMap = state.stages || {};

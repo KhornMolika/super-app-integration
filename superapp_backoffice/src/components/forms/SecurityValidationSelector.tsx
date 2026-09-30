@@ -77,8 +77,8 @@ export const ALL_SECURITY_CHECKS: SecurityCheckItem[] = [
     description: 'Scans third-party packages and libraries for known CVE vulnerabilities and outdated insecure dependencies.',
     tool: 'Trivy / OSV / Audit',
     category: 'vulnerability',
-    methods: ['WEBVIEW', 'FLUTTER_PACKAGE', 'NATIVE_SDK'],
-    isRecommended: (method) => ['FLUTTER_PACKAGE', 'NATIVE_SDK', 'WEBVIEW'].includes(method),
+    methods: ['FLUTTER_PACKAGE', 'NATIVE_SDK'],
+    isRecommended: (method) => ['FLUTTER_PACKAGE', 'NATIVE_SDK'].includes(method),
   },
   {
     id: 'domain_tls_audit',

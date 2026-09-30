@@ -303,9 +303,9 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
       sast: ['sast', 'malware_sast'],
       malware_scan: ['malware_scan'],
       capability_gate: ['capability_gate', 'host_capability_gate'],
-      csp_headers_audit: ['csp_headers_audit'],
+      csp_headers_audit: ['csp_headers_audit', 'headers_audit'],
       sbom: ['sbom'],
-      license_compliance: ['license_compliance'],
+      license_compliance: ['license_compliance', 'license_audit'],
       ssrf: ['ssrf', 'preflight'],
       ingest: ['ingest'],
     };
