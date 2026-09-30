@@ -1,7 +1,6 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { Button } from './inputs';
 
 type ConfirmationOptions = {
   title: string;
@@ -97,40 +96,40 @@ export const ConfirmationProvider = ({ children }: { children: ReactNode }) => {
               </div>
             </div>
             <div className="px-6 py-4 bg-slate-50 dark:bg-slate-900/60 flex items-center justify-end space-x-3 border-t border-slate-100 dark:border-slate-800">
-              <Button
+              <button
                 type="button"
                 onClick={handleCancel}
-                className="inline-flex items-center space-x-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm rounded-xl px-4 py-2"
+                className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 shadow-sm active:scale-[0.98] cursor-pointer"
               >
-                <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-4 h-4 text-slate-500 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
-                <span>{options.cancelText || 'Cancel'}</span>
-              </Button>
-              <Button
+                <span className="text-slate-700 dark:text-slate-200">{options.cancelText || 'Cancel'}</span>
+              </button>
+              <button
                 type="button"
                 onClick={handleConfirm}
-                className={
+                className={`inline-flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all text-white shadow-md active:scale-[0.98] cursor-pointer ${
                   variant === 'danger'
-                    ? 'inline-flex items-center space-x-2 bg-rose-600 hover:bg-rose-700 text-white shadow-md rounded-xl px-4 py-2'
+                    ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/20'
                     : variant === 'warning'
-                    ? 'inline-flex items-center space-x-2 bg-amber-600 hover:bg-amber-700 text-white shadow-md rounded-xl px-4 py-2'
+                    ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-500/20'
                     : variant === 'success'
-                    ? 'inline-flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md rounded-xl px-4 py-2'
-                    : 'inline-flex items-center space-x-2 bg-brand-600 hover:bg-brand-700 text-white shadow-md rounded-xl px-4 py-2'
-                }
+                    ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20'
+                    : 'bg-brand-600 hover:bg-brand-700 shadow-brand-500/20'
+                }`}
               >
                 {variant === 'danger' ? (
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                 ) : (
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                   </svg>
                 )}
                 <span>{options.confirmText || 'Confirm'}</span>
-              </Button>
+              </button>
             </div>
           </div>
         </div>
