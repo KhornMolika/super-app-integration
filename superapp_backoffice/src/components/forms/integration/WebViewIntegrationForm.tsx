@@ -42,6 +42,7 @@ export default function WebViewIntegrationForm({
   const [verifiedUrl, setVerifiedUrl] = useState<string | null>(
     formData.isDomainVerified ? (formData.integrationConfigWebView?.productionUrl || '') : null
   );
+  const [showHostingGuide, setShowHostingGuide] = useState(false);
 
   // Auto-generate token on mount if empty or placeholder
   useEffect(() => {
@@ -348,6 +349,19 @@ export default function WebViewIntegrationForm({
               <h4 className="text-base font-bold text-slate-900 dark:text-white">
                 Domain Ownership Verification
               </h4>
+              <button
+                type="button"
+                onClick={() => setShowHostingGuide((prev) => !prev)}
+                className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold transition-all shadow-xs cursor-pointer ${
+                  showHostingGuide
+                    ? 'bg-amber-500 text-white ring-2 ring-amber-300 dark:ring-amber-700 shadow-sm'
+                    : 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/60 border border-amber-300 dark:border-amber-700/60 hover:scale-105'
+                }`}
+                title={showHostingGuide ? 'Hide hosting instructions' : 'How to host domain association file (Click to view instructions)'}
+                aria-label="Toggle hosting instructions"
+              >
+                !
+              </button>
               {(() => {
                 const currentProdUrl = (formData.integrationConfigWebView?.productionUrl || '').trim();
                 const isActuallyVerified =
@@ -370,8 +384,15 @@ export default function WebViewIntegrationForm({
                 );
               })()}
             </div>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-              Prove administrative control of the target domain by hosting the public association file.
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 flex items-center gap-2 flex-wrap">
+              <span>Prove administrative control of the target domain by hosting the public association file.</span>
+              <button
+                type="button"
+                onClick={() => setShowHostingGuide((prev) => !prev)}
+                className="text-xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:underline cursor-pointer inline-flex items-center gap-1"
+              >
+                <span>{showHostingGuide ? 'Hide guide' : 'View instructions'}</span>
+              </button>
             </p>
           </div>
 
@@ -405,35 +426,49 @@ export default function WebViewIntegrationForm({
           </div>
         </div>
 
-        {/* Step-by-Step Setup Guide Callout */}
-        <div className="p-4 mb-4 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 text-sm text-slate-700 dark:text-slate-300 space-y-3">
-          <div className="font-bold text-slate-900 dark:text-white flex items-center justify-between text-base">
-            <div className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              <span>How to Host the Domain Association File</span>
+        {/* Step-by-Step Setup Guide Callout (Toggled via '!' icon) */}
+        {showHostingGuide && (
+          <div className="p-4 mb-4 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 text-sm text-slate-700 dark:text-slate-300 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="font-bold text-slate-900 dark:text-white flex items-center justify-between text-base">
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold shrink-0">!</span>
+                <span>How to Host the Domain Association File</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <a
+                  href="/guidelines?method=webview#domain-verification"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-brand-600 dark:text-brand-400 hover:underline inline-flex items-center gap-1 font-semibold text-sm"
+                >
+                  <span>Learn more in documentation</span>
+                  <ArrowRightIcon className="w-3.5 h-3.5" />
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setShowHostingGuide(false)}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg hover:bg-slate-200/60 dark:hover:bg-slate-800 transition cursor-pointer"
+                  title="Close instructions"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             </div>
-            <a
-              href="/guidelines?method=webview#domain-verification"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-brand-600 dark:text-brand-400 hover:underline inline-flex items-center gap-1 font-semibold text-sm"
-            >
-              <span>Learn more in documentation</span>
-              <ArrowRightIcon className="w-3.5 h-3.5" />
-            </a>
+            <ol className="list-decimal list-inside space-y-2.5 text-slate-600 dark:text-slate-300 text-sm leading-relaxed pl-0.5">
+              <li>
+                <strong className="text-slate-800 dark:text-slate-200">File Name & Directory:</strong> Create a JSON file named <code className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-sm text-slate-900 dark:text-slate-100 font-semibold">superapp-miniapp-association.json</code> and place it inside your web application&apos;s public root under the <code className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-sm text-slate-900 dark:text-slate-100 font-semibold">/.well-known/</code> folder.
+              </li>
+              <li>
+                <strong className="text-slate-800 dark:text-slate-200">Public HTTP/HTTPS Accessibility:</strong> Deploy the file so it is publicly accessible returning HTTP status <code className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-sm text-emerald-600 dark:text-emerald-400 font-semibold">200 OK</code> with <code className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-sm text-slate-900 dark:text-slate-100 font-semibold">Content-Type: application/json</code>.
+              </li>
+              <li>
+                <strong className="text-slate-800 dark:text-slate-200">Copy JSON & Verify:</strong> Copy the generated JSON manifest below into that file, publish your website, and click <strong>Verify Domain</strong> above.
+              </li>
+            </ol>
           </div>
-          <ol className="list-decimal list-inside space-y-2.5 text-slate-600 dark:text-slate-300 text-sm leading-relaxed pl-0.5">
-            <li>
-              <strong className="text-slate-800 dark:text-slate-200">File Name & Directory:</strong> Create a JSON file named <code className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-sm text-slate-900 dark:text-slate-100 font-semibold">superapp-miniapp-association.json</code> and place it inside your web application's public root under the <code className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-sm text-slate-900 dark:text-slate-100 font-semibold">/.well-known/</code> folder.
-            </li>
-            <li>
-              <strong className="text-slate-800 dark:text-slate-200">Public HTTP/HTTPS Accessibility:</strong> Deploy the file so it is publicly accessible returning HTTP status <code className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-sm text-emerald-600 dark:text-emerald-400 font-semibold">200 OK</code> with <code className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-sm text-slate-900 dark:text-slate-100 font-semibold">Content-Type: application/json</code>.
-            </li>
-            <li>
-              <strong className="text-slate-800 dark:text-slate-200">Copy JSON & Verify:</strong> Copy the generated JSON manifest below into that file, publish your website, and click <strong>Verify Domain</strong> above.
-            </li>
-          </ol>
-        </div>
+        )}
 
         {(() => {
           const currentProdUrl = (formData.integrationConfigWebView?.productionUrl || '').trim();
