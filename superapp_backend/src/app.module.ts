@@ -35,7 +35,12 @@ import { NativeSdkCodegenModule } from './native-sdk-codegen/native-sdk-codegen.
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_DATABASE'),
         autoLoadEntities: true,
-        synchronize: true,
+        // DB_SYNC=false in every .env template in this repo already assumed this was
+        // wired up — it wasn't; this was hardcoded true regardless of environment.
+        // Auto-sync on every boot (including production) can silently alter/drop
+        // columns based on entity diffs with no review. Real schema changes now go
+        // through src/migrations/ (see InitialSchema + the migrate step in start.sh).
+        synchronize: configService.get<string>('DB_SYNC') === 'true',
       }),
     }),
 
