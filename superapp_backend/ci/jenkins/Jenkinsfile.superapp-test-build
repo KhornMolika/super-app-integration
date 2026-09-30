@@ -149,7 +149,7 @@ pipeline {
                     fi
 
                     # Check if artifact was already published directly to Nexus by builder
-                    if curl -s -f -I $AUTH_OPT "${params.NEXUS_URL}/repository/${repoName}/${params.APP_NAME}/${params.RELEASE_VERSION}/${targetName}" > /dev/null 2>&1; then
+                    if curl -s -f -I \$AUTH_OPT "${params.NEXUS_URL}/repository/${repoName}/${params.APP_NAME}/${params.RELEASE_VERSION}/${targetName}" > /dev/null 2>&1; then
                         echo "APK artifact (${targetName}) already verified and published to Nexus repository ${repoName}."
                     else
                         # Sync newly compiled APK from backoffice/host into Jenkins reports volume
