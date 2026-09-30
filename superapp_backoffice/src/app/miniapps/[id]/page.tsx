@@ -356,7 +356,10 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
 
           setBuildModalState((prev) => {
             if (!prev.isOpen) return prev;
-            const isFailed = updated.status === 'BUILD_FAILED' || updated.buildStatus === 'FAILED';
+            const isFailed =
+              updated.status === 'BUILD_FAILED' ||
+              updated.buildStatus === 'FAILED' ||
+              Boolean(updated.buildError && updated.status !== 'TESTING');
             const isSuccess = updated.status === 'TESTING' || updated.buildStatus === 'COMPLETED';
             return {
               ...prev,
@@ -1119,6 +1122,7 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
           onOpenReviewDiff={() => setIsReviewDiffOpen(true)}
           pendingRevision={formData.pendingRevision}
           buildStages={formData.buildStages}
+          buildStatus={formData.buildStatus}
           buildError={formData.buildError}
           currentReleaseVersion={formData.currentReleaseVersion || ((formData as any).versionHistory?.find((v: any) => v.type === 'PRODUCTION' && v.status === 'ACTIVE')?.version)}
           draftVersion={formData.pendingRevision?.version || (formData as any).draftVersion || formData.version}
@@ -1126,7 +1130,11 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
           onOpenBuildModal={() =>
             setBuildModalState({
               isOpen: true,
-              status: formData.status === 'BUILD_FAILED' ? 'error' : formData.status === 'TESTING' ? 'success' : 'building',
+              status: (formData.status === 'BUILD_FAILED' || formData.buildStatus === 'FAILED' || Boolean(formData.buildError && formData.status !== 'TESTING'))
+                ? 'error'
+                : (formData.status === 'TESTING' || formData.buildStatus === 'COMPLETED')
+                ? 'success'
+                : 'building',
               stages: formData.buildStages || {},
               releaseVersion: formData.activeTestVersion || (formData.integrationConfig as any)?.superAppTestVersion || 'v1.0.0',
               errorMessage: formData.buildError,

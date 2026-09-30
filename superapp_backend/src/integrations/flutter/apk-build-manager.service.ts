@@ -35,6 +35,7 @@ export class ApkBuildManagerService {
   private readonly logBuffer: string[] = [];
   private currentProcess?: child_process.ChildProcess;
   private lastBuildStartTime?: number;
+  private activeBuildPromise?: Promise<{ success: boolean; message: string; apkUrl?: string }>;
 
   constructor(
     @InjectRepository(MiniApp)
@@ -78,17 +79,22 @@ export class ApkBuildManagerService {
     appName?: string;
     apiBaseUrl?: string;
   }): Promise<{ success: boolean; message: string; apkUrl?: string }> {
+    const releaseVersion = options.releaseVersion || 'v0.0.1';
+    const buildType = options.buildType || 'debug';
+    const appName = options.appName || 'superapp';
+    const apiBaseUrl = options.apiBaseUrl || process.env.MOBILE_API_BASE_URL || 'http://localhost:3000';
+
     if (this.state === 'BUILDING') {
+      if (this.activeBuildPromise && (!options.releaseVersion || options.releaseVersion === this.releaseVersion)) {
+        this.logger.log(`Attaching caller to in-progress APK build for version ${this.releaseVersion}...`);
+        this.appendLog(`Attaching caller to in-progress APK build for version ${this.releaseVersion}...`);
+        return this.activeBuildPromise;
+      }
       return {
         success: false,
         message: `An APK build is already in progress for version ${this.releaseVersion}.`,
       };
     }
-
-    const releaseVersion = options.releaseVersion || 'v0.0.1';
-    const buildType = options.buildType || 'debug';
-    const appName = options.appName || 'superapp';
-    const apiBaseUrl = options.apiBaseUrl || process.env.MOBILE_API_BASE_URL || 'http://localhost:3000';
 
     this.state = 'BUILDING';
     this.releaseVersion = releaseVersion;
@@ -198,7 +204,12 @@ export class ApkBuildManagerService {
         ]
       : ['-c', `sh ${resolvedScript} "${apiBaseUrl}" "${releaseVersion}" "${buildType}" "${appName}"`];
 
-    return new Promise<{ success: boolean; message: string; apkUrl?: string }>((resolve) => {
+    this.activeBuildPromise = new Promise<{ success: boolean; message: string; apkUrl?: string }>((resolve) => {
+      const finalize = (res: { success: boolean; message: string; apkUrl?: string }) => {
+        this.activeBuildPromise = undefined;
+        resolve(res);
+      };
+
       try {
         this.currentProcess = child_process.spawn(shell, shellArgs, {
           cwd: path.dirname(resolvedScript),
@@ -274,13 +285,13 @@ export class ApkBuildManagerService {
               }
             } catch (_) {}
 
-            resolve({ success: true, message: this.message, apkUrl });
+            finalize({ success: true, message: this.message, apkUrl });
           } else {
             this.state = 'FAILED';
             this.message = `Super App APK build failed with exit code ${this.exitCode}.`;
             this.appendLog(`❌ ${this.message}`);
             this.logger.error(this.message);
-            resolve({ success: false, message: this.message });
+            finalize({ success: false, message: this.message });
           }
         });
 
@@ -294,15 +305,17 @@ export class ApkBuildManagerService {
           this.message = `APK build process error: ${err.message}`;
           this.appendLog(`❌ ${this.message}`);
           this.logger.error(this.message);
-          resolve({ success: false, message: this.message });
+          finalize({ success: false, message: this.message });
         });
       } catch (err: any) {
         cleanupKeys();
         this.state = 'FAILED';
         this.message = `Failed to spawn APK build process: ${err.message}`;
         this.appendLog(`❌ ${this.message}`);
-        resolve({ success: false, message: this.message });
+        finalize({ success: false, message: this.message });
       }
     });
+
+    return this.activeBuildPromise;
   }
 }

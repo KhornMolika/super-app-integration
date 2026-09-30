@@ -143,4 +143,12 @@ export class BuildCallbackDto {
   @IsString()
   @MaxLength(256)
   filename?: string;
+
+  @IsOptional()
+  @IsString()
+  errorMessage?: string;
+
+  @IsOptional()
+  @IsString()
+  error?: string;
 }

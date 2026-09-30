@@ -267,29 +267,31 @@ describe('ReleaseAssemblyVerificationService', () => {
       expect(res).toEqual({ success: true });
     });
 
-    it('returns BUILDING apps to APPROVED on a failed build, keeping buildStages', async () => {
-      const qb = mockMiniappRepo.createQueryBuilder();
+    it('transitions BUILDING apps to BUILD_FAILED on a failed build with diagnostics', async () => {
       const res = await service.handleBuildCallback({
         appName: 'superapp',
         releaseVersion: 'v1.2.0',
         status: 'FAILED',
+        errorMessage: 'APK build error',
       });
-      expect(qb.set).toHaveBeenCalledWith({ status: 'APPROVED' });
-      expect(qb.where).toHaveBeenCalledWith("status = 'BUILDING'");
-      expect(qb.set).not.toHaveBeenCalledWith(
-        expect.objectContaining({ buildStages: expect.anything() }),
+      expect(mockMiniappRepo.update).toHaveBeenCalledWith(
+        'app-1',
+        expect.objectContaining({
+          status: 'BUILD_FAILED',
+          buildStatus: 'FAILED',
+          buildError: 'APK build error',
+        }),
       );
-      expect(execute).toHaveBeenCalled();
       expect(notificationsService.createNotification).toHaveBeenCalledWith(
         'u1',
         'Super App Build Failed',
         expect.any(String),
         'BUILD_FAILED',
         'app-1',
-        expect.objectContaining({ releaseVersion: 'v1.2.0' }),
+        expect.objectContaining({ releaseVersion: 'v1.2.0', error: 'APK build error' }),
       );
       expect(notificationsService.emitBuildCompleted).toHaveBeenCalledWith(
-        expect.objectContaining({ miniAppId: 'app-1', status: 'FAILED' }),
+        expect.objectContaining({ miniAppId: 'app-1', status: 'FAILED', error: 'APK build error' }),
       );
       expect(res).toEqual({ success: true });
     });

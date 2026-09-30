@@ -15,6 +15,7 @@ export interface MiniAppLifecycleBannersProps {
   onOpenReviewDiff?: () => void;
   pendingRevision?: any;
   buildStages?: any;
+  buildStatus?: string;
   buildError?: string;
   onOpenBuildModal?: () => void;
   currentReleaseVersion?: string;
@@ -33,6 +34,7 @@ export default function MiniAppLifecycleBanners({
   onOpenReviewDiff,
   pendingRevision,
   buildStages,
+  buildStatus,
   buildError,
   onOpenBuildModal,
   currentReleaseVersion,
@@ -373,7 +375,7 @@ export default function MiniAppLifecycleBanners({
       )}
 
       {/* 3.5 Build Failed Banner */}
-      {status === 'BUILD_FAILED' && (
+      {(status === 'BUILD_FAILED' || (buildStatus === 'FAILED' && status !== 'TESTING')) && (
         <div className="mb-6 p-5 rounded-2xl border border-rose-200 dark:border-rose-900/60 bg-rose-50/80 dark:bg-rose-950/40 shadow-sm animate-in fade-in space-y-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-start gap-3.5">

@@ -498,18 +498,46 @@ export class ReleaseAssemblyVerificationService {
    */
   private async handleFailedBuild(body: BuildCallbackDto) {
     const buildingApps = await this.miniappRepository.find({
-      where: { status: 'BUILDING' },
+      where: [{ status: 'BUILDING' }, { buildStatus: 'BUILDING' }],
       relations: { owner: true },
     });
 
-    await this.miniappRepository
-      .createQueryBuilder()
-      .update(MiniApp)
-      .set({ status: 'APPROVED' })
-      .where("status = 'BUILDING'")
-      .execute();
+    const errorMessage =
+      body.errorMessage ||
+      body.error ||
+      (body as any).details ||
+      'Super App Fastlane CI build pipeline failed. Inspect Jenkins console logs for details.';
 
     for (const app of buildingApps) {
+      const currentStages = { ...(app.buildStages || {}) };
+      let hadRunningStage = false;
+      for (const key of Object.keys(currentStages)) {
+        if (currentStages[key]?.status === 'RUNNING') {
+          currentStages[key] = {
+            ...currentStages[key],
+            status: 'FAILED',
+            details: errorMessage,
+            updatedAt: new Date().toISOString(),
+          };
+          hadRunningStage = true;
+        }
+      }
+      if (!hadRunningStage && currentStages.compile) {
+        currentStages.compile = {
+          ...currentStages.compile,
+          status: 'FAILED',
+          details: errorMessage,
+          updatedAt: new Date().toISOString(),
+        };
+      }
+
+      await this.miniappRepository.update(app.id, {
+        status: 'BUILD_FAILED',
+        buildStatus: 'FAILED',
+        buildError: errorMessage,
+        buildStages: currentStages,
+      });
+
       const effectiveVersion =
         body.releaseVersion ||
         app.integrationConfig?.superAppTestVersion ||
@@ -521,25 +549,27 @@ export class ReleaseAssemblyVerificationService {
         releaseVersion: effectiveVersion,
         buildType: body.buildType || 'debug',
         status: 'FAILED',
-      });
+        error: errorMessage,
+      } as any);
 
       if (app.ownerId) {
         await this.notificationsService.createNotification(
           app.ownerId,
           'Super App Build Failed',
-          `Super App test build (${effectiveVersion}) failed on Jenkins for Mini App "${app.name}". The app was returned to APPROVED; check the build stages for the failing step and retry the build.`,
+          `Super App test build (${effectiveVersion}) failed on Jenkins for Mini App "${app.name}": ${errorMessage}. Please review the failure diagnostics and retry the build.`,
           'BUILD_FAILED',
           app.id,
           {
             releaseVersion: effectiveVersion,
             version: effectiveVersion,
             buildType: body.buildType || 'debug',
+            error: errorMessage,
           },
         );
       }
     }
     this.logger.warn(
-      `Build ${body.releaseVersion} reported ${body.status}: ${buildingApps.length} app(s) returned from BUILDING to APPROVED`,
+      `Build ${body.releaseVersion} reported ${body.status}: ${buildingApps.length} app(s) transitioned to BUILD_FAILED (${errorMessage})`,
     );
   }
 

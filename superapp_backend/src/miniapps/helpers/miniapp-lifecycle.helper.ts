@@ -761,10 +761,10 @@ export class MiniappLifecycleHelper {
     ) => Promise<void>,
   ) {
     const id = app.id;
-    const validStatuses = ['APPROVED', 'BUILDING', 'IN_REVIEW', 'TESTING', 'ACTIVE'];
+    const validStatuses = ['APPROVED', 'BUILDING', 'IN_REVIEW', 'TESTING', 'ACTIVE', 'BUILD_FAILED'];
     if (!validStatuses.includes(app.status?.toUpperCase())) {
       throw new BadRequestException(
-        `App must be in APPROVED, BUILDING, IN_REVIEW, TESTING, or ACTIVE status before moving to TESTING (current: ${app.status})`,
+        `App must be in APPROVED, BUILDING, IN_REVIEW, TESTING, ACTIVE, or BUILD_FAILED status before moving to TESTING (current: ${app.status})`,
       );
     }
 
