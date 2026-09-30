@@ -77,15 +77,20 @@ pipeline {
                         const fs = require("fs");
                         const compileUrl = "${params.CALLBACK_URL}".replace("/build-callback", "/compile-apk");
                         console.log("Triggering Super App APK compilation via host backend:", compileUrl);
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 600000); // 10 minutes timeout
+
                         fetch(compileUrl, {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
+                            signal: controller.signal,
                             body: JSON.stringify({
                                 appName: "${params.APP_NAME}",
                                 releaseVersion: "${params.RELEASE_VERSION}",
                                 buildType: "${params.BUILD_TYPE}"
                             })
                         }).then(async res => {
+                            clearTimeout(timeoutId);
                             const data = await res.json();
                             console.log("Host builder response:", JSON.stringify(data));
                             if (!data.success) {
@@ -97,6 +102,7 @@ pipeline {
                             }
                             process.exit(0);
                         }).catch(err => {
+                            clearTimeout(timeoutId);
                             console.error("Host compilation error:", err.message);
                             try {
                                 fs.writeFileSync("/var/reports/build-error.txt", String(err.message || "Host compilation error"));
@@ -142,24 +148,29 @@ pipeline {
                         AUTH_OPT="-u \${NEXUS_USER}:\${NEXUS_PASSWORD}"
                     fi
 
-                    # Sync newly compiled APK from backoffice/host into Jenkins reports volume
-                    curl -s -f "http://host.docker.internal:3002/api/download-apk?type=${params.BUILD_TYPE}&version=${params.RELEASE_VERSION}" -o "\$APK_FILE" || \
-                    curl -s -f "http://host.docker.internal:3000/public/superapp-test.apk" -o "\$APK_FILE" || true
-
-                    if [ -f "\$APK_FILE" ] && [ -s "\$APK_FILE" ]; then
-                        echo "Uploading ${targetName} to Nexus repository ${repoName} at ${params.NEXUS_URL}/repository/${repoName}/${params.APP_NAME}/${params.RELEASE_VERSION}/${targetName}..."
-                        curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/${repoName}/${params.APP_NAME}/${params.RELEASE_VERSION}/${targetName}" || \
-                        curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "http://superapp-nexus:8081/repository/${repoName}/${params.APP_NAME}/${params.RELEASE_VERSION}/${targetName}"
-                        # Also update latest dynamic pointer
-                        curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/${repoName}/${params.APP_NAME}/latest/${targetName}" 2>/dev/null || true
-                        echo "Upload to Sonatype Nexus ${repoName} successfully completed!"
+                    # Check if artifact was already published directly to Nexus by builder
+                    if curl -s -f -I $AUTH_OPT "${params.NEXUS_URL}/repository/${repoName}/${params.APP_NAME}/${params.RELEASE_VERSION}/${targetName}" > /dev/null 2>&1; then
+                        echo "APK artifact (${targetName}) already verified and published to Nexus repository ${repoName}."
                     else
-                        echo "Warning: \$APK_FILE not found, packaging build metadata archive..."
-                        mkdir -p /var/reports
-                        echo "Super App Test Build artifact for ${params.APP_NAME} ${params.RELEASE_VERSION}" > "\$APK_FILE"
-                        curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/${repoName}/${params.APP_NAME}/${params.RELEASE_VERSION}/${targetName}" || \
-                        curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "http://superapp-nexus:8081/repository/${repoName}/${params.APP_NAME}/${params.RELEASE_VERSION}/${targetName}"
-                        echo "Artifact uploaded to Sonatype Nexus successfully!"
+                        # Sync newly compiled APK from backoffice/host into Jenkins reports volume
+                        curl -s -f "http://host.docker.internal:3002/api/download-apk?type=${params.BUILD_TYPE}&version=${params.RELEASE_VERSION}" -o "\$APK_FILE" || \
+                        curl -s -f "http://host.docker.internal:3000/public/superapp-test.apk" -o "\$APK_FILE" || true
+
+                        if [ -f "\$APK_FILE" ] && [ -s "\$APK_FILE" ]; then
+                            echo "Uploading ${targetName} to Nexus repository ${repoName} at ${params.NEXUS_URL}/repository/${repoName}/${params.APP_NAME}/${params.RELEASE_VERSION}/${targetName}..."
+                            curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/${repoName}/${params.APP_NAME}/${params.RELEASE_VERSION}/${targetName}" || \
+                            curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "http://superapp-nexus:8081/repository/${repoName}/${params.APP_NAME}/${params.RELEASE_VERSION}/${targetName}"
+                            # Also update latest dynamic pointer
+                            curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/${repoName}/${params.APP_NAME}/latest/${targetName}" 2>/dev/null || true
+                            echo "Upload to Sonatype Nexus ${repoName} successfully completed!"
+                        else
+                            echo "Warning: \$APK_FILE not found, packaging build metadata archive..."
+                            mkdir -p /var/reports
+                            echo "Super App Test Build artifact for ${params.APP_NAME} ${params.RELEASE_VERSION}" > "\$APK_FILE"
+                            curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/${repoName}/${params.APP_NAME}/${params.RELEASE_VERSION}/${targetName}" || \
+                            curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "http://superapp-nexus:8081/repository/${repoName}/${params.APP_NAME}/${params.RELEASE_VERSION}/${targetName}"
+                            echo "Artifact uploaded to Sonatype Nexus successfully!"
+                        fi
                     fi
                     """
                 }

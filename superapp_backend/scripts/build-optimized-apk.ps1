@@ -19,9 +19,8 @@ $NexusUrl = $env:NEXUS_BASE_URL
 if (-not $NexusUrl) { $NexusUrl = "http://localhost:8081" }
 $NexusUrl = $NexusUrl.TrimEnd('/')
 
-$NexusUser = $env:NEXUS_ADMIN_USER
-if (-not $NexusUser) { $NexusUser = "admin" }
-$NexusPass = $env:NEXUS_ADMIN_PASSWORD
+$NexusUser = if ($env:NEXUS_ADMIN_USER) { $env:NEXUS_ADMIN_USER } else { "admin" }
+$NexusPass = if ($env:NEXUS_ADMIN_PASSWORD) { $env:NEXUS_ADMIN_PASSWORD } elseif ($env:NEXUS_PASSWORD) { $env:NEXUS_PASSWORD } else { "admin123" }
 
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host " [BUILD] Compiling Optimized Official FSA Super App APK" -ForegroundColor Cyan
@@ -108,9 +107,19 @@ if (Test-Path $OutputApk) {
             )
         }
 
+        $curlCmd = Get-Command "curl.exe" -ErrorAction SilentlyContinue
         foreach ($target in $targets) {
             $destUrl = "$NexusUrl/repository/$target"
-            Invoke-RestMethod -Uri $destUrl -Method Put -Headers $headers -InFile $OutputApk -ErrorAction SilentlyContinue | Out-Null
+            if ($curlCmd) {
+                Write-Host "Streaming $targetName to Nexus with native curl: $destUrl..." -ForegroundColor Cyan
+                if ($NexusPass) {
+                    & $curlCmd.Source -s -S -f -u "${NexusUser}:${NexusPass}" --upload-file "$OutputApk" "$destUrl"
+                } else {
+                    & $curlCmd.Source -s -S -f --upload-file "$OutputApk" "$destUrl"
+                }
+            } else {
+                Invoke-RestMethod -Uri $destUrl -Method Put -Headers $headers -InFile $OutputApk -ErrorAction SilentlyContinue | Out-Null
+            }
             Write-Host "[OK] Published ($targetName) to Nexus: $destUrl" -ForegroundColor Cyan
         }
     } catch {
