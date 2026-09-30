@@ -231,8 +231,10 @@ export class ApkBuildManagerService {
 
           if (this.exitCode === 0) {
             this.state = 'SUCCESS';
-            const apkUrl = `http://localhost:8081/repository/apk-test-builds/${appName}/${releaseVersion}/app-debug.apk`;
-            this.message = `Super App APK (${releaseVersion}) compiled and published to Nexus successfully in ${(this.durationMs / 1000).toFixed(1)}s.`;
+            const repoName = buildType === 'release' ? 'apk-releases' : 'apk-test-builds';
+            const targetName = buildType === 'release' ? 'app-release.apk' : 'app-debug.apk';
+            const apkUrl = `http://localhost:8081/repository/${repoName}/${appName}/${releaseVersion}/${targetName}`;
+            this.message = `Super App APK (${releaseVersion}, ${buildType}) compiled and published to Nexus (${repoName}/${targetName}) successfully in ${(this.durationMs / 1000).toFixed(1)}s.`;
             this.appendLog(`✅ ${this.message}`);
             this.logger.log(this.message);
 

@@ -282,7 +282,7 @@ export class ReleaseAssemblyVerificationService {
       this.configService.get<string>('MINIO_PUBLIC_URL') ||
       'http://localhost:9000'
     ).replace(/\/+$/, '');
-    const nexusApkUrl = `${nexusBase}/repository/apk-releases/superapp/${dto.releaseVersion}/app-debug.apk`;
+    const nexusApkUrl = `${nexusBase}/repository/apk-test-builds/superapp/${dto.releaseVersion}/app-debug.apk`;
     const minioApkUrl = `${minioBase}/releases/superapp/${dto.releaseVersion}/app-debug.apk`;
 
     return {

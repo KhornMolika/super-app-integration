@@ -50,29 +50,40 @@ try {
 Write-Host "Resolving Flutter dependencies with $FlutterBin..." -ForegroundColor Yellow
 & $FlutterBin pub get
 
-Write-Host "Building size-optimized ARM64 release APK (API: $ApiBaseUrl)..." -ForegroundColor Yellow
-& $FlutterBin build apk --release --target-platform android-arm64 --tree-shake-icons "--dart-define=API_BASE_URL=$ApiBaseUrl" "--dart-define=ALLOW_CLEARTEXT=true"
+if ($BuildType -eq "release") {
+    Write-Host "Building size-optimized ARM64 release APK (API: $ApiBaseUrl)..." -ForegroundColor Yellow
+    & $FlutterBin build apk --release --target-platform android-arm64 --tree-shake-icons "--dart-define=API_BASE_URL=$ApiBaseUrl" "--dart-define=ALLOW_CLEARTEXT=true"
+    $OutputApk = Join-Path $MobileAppDir "build/app/outputs/flutter-apk/app-release.apk"
+} else {
+    Write-Host "Building ARM64 debug test APK for internal QA & testing (API: $ApiBaseUrl)..." -ForegroundColor Yellow
+    & $FlutterBin build apk --debug --target-platform android-arm64 "--dart-define=API_BASE_URL=$ApiBaseUrl" "--dart-define=ALLOW_CLEARTEXT=true"
+    $OutputApk = Join-Path $MobileAppDir "build/app/outputs/flutter-apk/app-debug.apk"
+}
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Flutter APK compilation failed!"
     exit 1
 }
 
-$ReleaseApk = Join-Path $MobileAppDir "build/app/outputs/flutter-apk/app-release.apk"
-$DebugApk = Join-Path $MobileAppDir "build/app/outputs/flutter-apk/app-debug.apk"
 $BackofficePublic = Join-Path $ProjectRoot "superapp_backoffice/public"
 
-if (Test-Path $ReleaseApk) {
-    Copy-Item -Path $ReleaseApk -Destination $DebugApk -Force
+if (Test-Path $OutputApk) {
     if (Test-Path $BackofficePublic) {
-        Copy-Item -Path $ReleaseApk -Destination (Join-Path $BackofficePublic "superapp-test.apk") -Force
-        Copy-Item -Path $ReleaseApk -Destination (Join-Path $BackofficePublic "superapp-local.apk") -Force
-        Copy-Item -Path $ReleaseApk -Destination (Join-Path $BackofficePublic "superapp-test-$ReleaseVersion.apk") -Force
-        Copy-Item -Path $ReleaseApk -Destination (Join-Path $BackofficePublic "superapp-test-v0.0.1.apk") -Force
-        Write-Host "[OK] Copied APK to backoffice public directory (superapp-test.apk, superapp-test-$ReleaseVersion.apk)" -ForegroundColor Cyan
+        if ($BuildType -eq "release") {
+            Copy-Item -Path $OutputApk -Destination (Join-Path $BackofficePublic "superapp-release.apk") -Force
+            Copy-Item -Path $OutputApk -Destination (Join-Path $BackofficePublic "superapp-release-$ReleaseVersion.apk") -Force
+            Write-Host "[OK] Copied release APK to backoffice public directory (superapp-release.apk)" -ForegroundColor Cyan
+        } else {
+            Copy-Item -Path $OutputApk -Destination (Join-Path $BackofficePublic "superapp-test.apk") -Force
+            Copy-Item -Path $OutputApk -Destination (Join-Path $BackofficePublic "superapp-debug.apk") -Force
+            Copy-Item -Path $OutputApk -Destination (Join-Path $BackofficePublic "superapp-local.apk") -Force
+            Copy-Item -Path $OutputApk -Destination (Join-Path $BackofficePublic "superapp-test-$ReleaseVersion.apk") -Force
+            Copy-Item -Path $OutputApk -Destination (Join-Path $BackofficePublic "superapp-debug-$ReleaseVersion.apk") -Force
+            Write-Host "[OK] Copied debug test APK to backoffice public directory (superapp-test.apk, superapp-debug.apk)" -ForegroundColor Cyan
+        }
     }
-    $sizeMb = [math]::round((Get-Item $ReleaseApk).Length / 1MB, 2)
-    Write-Host "[OK] Local APK generated successfully! Size: $sizeMb MB" -ForegroundColor Green
+    $sizeMb = [math]::round((Get-Item $OutputApk).Length / 1MB, 2)
+    Write-Host "[OK] Local $BuildType APK generated successfully! Size: $sizeMb MB" -ForegroundColor Green
 
     # Publish to Nexus if reachable
     try {
@@ -82,20 +93,26 @@ if (Test-Path $ReleaseApk) {
             "Content-Type" = "application/vnd.android.package-archive"
         }
 
-        $repoName = if ($BuildType -eq "release") { "apk-releases" } else { "apk-test-builds" }
-        $targetName = if ($BuildType -eq "release") { "app-release.apk" } else { "app-debug.apk" }
-
-        $targets = @(
-            "apk-test-builds/$AppName/latest/app-debug.apk",
-            "apk-test-builds/$AppName/$ReleaseVersion/app-debug.apk",
-            "apk-releases/$AppName/latest/app-release.apk",
-            "apk-releases/$AppName/$ReleaseVersion/app-release.apk"
-        )
+        if ($BuildType -eq "release") {
+            $repoName = "apk-releases"
+            $targetName = "app-release.apk"
+            $targets = @(
+                "apk-releases/$AppName/latest/app-release.apk",
+                "apk-releases/$AppName/$ReleaseVersion/app-release.apk"
+            )
+        } else {
+            $repoName = "apk-test-builds"
+            $targetName = "app-debug.apk"
+            $targets = @(
+                "apk-test-builds/$AppName/latest/app-debug.apk",
+                "apk-test-builds/$AppName/$ReleaseVersion/app-debug.apk"
+            )
+        }
 
         foreach ($target in $targets) {
             $destUrl = "$NexusUrl/repository/$target"
-            Invoke-RestMethod -Uri $destUrl -Method Put -Headers $headers -InFile $ReleaseApk -ErrorAction SilentlyContinue | Out-Null
-            Write-Host "[OK] Published to Nexus: $destUrl" -ForegroundColor Cyan
+            Invoke-RestMethod -Uri $destUrl -Method Put -Headers $headers -InFile $OutputApk -ErrorAction SilentlyContinue | Out-Null
+            Write-Host "[OK] Published ($targetName) to Nexus: $destUrl" -ForegroundColor Cyan
         }
     } catch {
         Write-Host "[WARN] Could not publish to Nexus: $($_.Exception.Message)" -ForegroundColor Yellow
