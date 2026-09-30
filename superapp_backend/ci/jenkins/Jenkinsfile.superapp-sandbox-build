@@ -75,9 +75,13 @@ pipeline {
                 echo "[INFO] Uploading superapp-sandbox.tar.gz to Sonatype Nexus..."
                 sh """
                 NEXUS_USER="\${NEXUS_USER:-admin}"
-                NEXUS_PASSWORD="\${NEXUS_PASSWORD:-admin123}"
+                NEXUS_PASSWORD="\${NEXUS_PASSWORD:-}"
+                AUTH_OPT=""
+                if [ -n "\$NEXUS_PASSWORD" ]; then
+                    AUTH_OPT="-u \${NEXUS_USER}:\${NEXUS_PASSWORD}"
+                fi
                 if [ -f "${env.ARCHIVE_FILE}" ]; then
-                    curl -s -f -u "\${NEXUS_USER}:\${NEXUS_PASSWORD}" --upload-file "${env.ARCHIVE_FILE}" "${params.NEXUS_URL}/repository/superapp-artifacts/sandbox/latest/superapp-sandbox.tar.gz"
+                    curl -s -f \$AUTH_OPT --upload-file "${env.ARCHIVE_FILE}" "${params.NEXUS_URL}/repository/superapp-artifacts/sandbox/latest/superapp-sandbox.tar.gz"
                     echo "[OK] Nexus upload completed."
                 fi
                 """

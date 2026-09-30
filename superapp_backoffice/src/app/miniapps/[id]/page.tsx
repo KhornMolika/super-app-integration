@@ -218,9 +218,10 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
       setPreviewUrl(formData.integrationConfigDeepLink?.urlScheme || (formData as any).integrationConfig?.urlScheme || 'app://open');
     } else {
       const conf = formData.integrationConfigFlutter;
+      const nexusBase = (process.env.NEXT_PUBLIC_NEXUS_URL || 'http://localhost:8081').replace(/\/+$/, '');
       const target = conf?.sourceType === SourceType.GIT
         ? conf.gitUrl || ''
-        : `http://localhost:8081/repository/pub-group/api/packages/${conf?.packageName || 'ma_flutter_trust_regulator'}`;
+        : `${nexusBase}/repository/pub-group/api/packages/${conf?.packageName || 'ma_flutter_trust_regulator'}`;
       setPreviewUrl(target);
     }
     setShowPreview(true);
@@ -301,10 +302,11 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
               );
             } else {
               const conf = activeOrRev.integrationConfig;
+              const nexusBase = (process.env.NEXT_PUBLIC_NEXUS_URL || 'http://localhost:8081').replace(/\/+$/, '');
               const target =
                 conf?.sourceType === SourceType.GIT
                   ? conf.gitUrl || ''
-                  : `http://localhost:8081/repository/pub-group/api/packages/${conf?.packageName || 'ma_flutter_trust_regulator'}`;
+                  : `${nexusBase}/repository/pub-group/api/packages/${conf?.packageName || 'ma_flutter_trust_regulator'}`;
               setPreviewUrl(target);
             }
             setShowPreview(true);

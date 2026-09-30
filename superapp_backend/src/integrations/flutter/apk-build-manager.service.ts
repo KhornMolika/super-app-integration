@@ -85,10 +85,10 @@ export class ApkBuildManagerService {
       };
     }
 
-    const releaseVersion = options.releaseVersion || 'v0.0.5';
+    const releaseVersion = options.releaseVersion || 'v0.0.1';
     const buildType = options.buildType || 'debug';
     const appName = options.appName || 'superapp';
-    const apiBaseUrl = options.apiBaseUrl || 'http://192.168.1.4:3000';
+    const apiBaseUrl = options.apiBaseUrl || process.env.MOBILE_API_BASE_URL || 'http://localhost:3000';
 
     this.state = 'BUILDING';
     this.releaseVersion = releaseVersion;
@@ -233,7 +233,8 @@ export class ApkBuildManagerService {
             this.state = 'SUCCESS';
             const repoName = buildType === 'release' ? 'apk-releases' : 'apk-test-builds';
             const targetName = buildType === 'release' ? 'app-release.apk' : 'app-debug.apk';
-            const apkUrl = `http://localhost:8081/repository/${repoName}/${appName}/${releaseVersion}/${targetName}`;
+            const nexusBase = (process.env.NEXUS_BASE_URL || 'http://localhost:8081').replace(/\/+$/, '');
+            const apkUrl = `${nexusBase}/repository/${repoName}/${appName}/${releaseVersion}/${targetName}`;
             this.message = `Super App APK (${releaseVersion}, ${buildType}) compiled and published to Nexus (${repoName}/${targetName}) successfully in ${(this.durationMs / 1000).toFixed(1)}s.`;
             this.appendLog(`✅ ${this.message}`);
             this.logger.log(this.message);

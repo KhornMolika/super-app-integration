@@ -304,7 +304,7 @@ export default function BuildProgressModal({
                 <span>Failure Reason &amp; Diagnostics</span>
               </div>
               <p className="text-xs text-rose-800 dark:text-rose-300 font-mono leading-relaxed bg-white/70 dark:bg-slate-900/70 p-3 rounded-xl border border-rose-200/80 dark:border-rose-900/40 break-words">
-                {state.errorMessage || 'Fastlane APK compilation exited with errors. Inspect Jenkins console logs at http://localhost:8085 for details.'}
+                {state.errorMessage || `Fastlane APK compilation exited with errors. Inspect Jenkins console logs at ${process.env.NEXT_PUBLIC_JENKINS_URL || 'http://localhost:8085'} for details.`}
               </p>
             </div>
 

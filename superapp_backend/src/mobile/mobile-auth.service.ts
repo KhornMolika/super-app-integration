@@ -82,11 +82,14 @@ export class MobileAuthService implements OnModuleInit {
   }
 
   private async seedDefaultEndUsers(): Promise<void> {
-    if (process.env.NODE_ENV === 'test') return;
+    if (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'production' || process.env.ENVIRONMENT === 'PROD') {
+      return;
+    }
+    const adminPass = process.env.SUPERADMIN_PASSWORD || 'Password123!';
     const defaultUsers = [
-      { email: 'superadmin@example.com', name: 'Super Admin', password: 'Password123!' },
-      { email: 'admin@example.com', name: 'Admin User', password: 'Password123!' },
-      { email: 'user@example.com', name: 'Demo User', password: 'Password123!' },
+      { email: process.env.SUPERADMIN_EMAIL || 'superadmin@example.com', name: 'Super Admin', password: adminPass },
+      { email: process.env.ADMIN_EMAIL || 'admin@example.com', name: 'Admin User', password: adminPass },
+      { email: process.env.DEV_EMAIL || 'user@example.com', name: 'Demo User', password: adminPass },
     ];
 
     for (const u of defaultUsers) {

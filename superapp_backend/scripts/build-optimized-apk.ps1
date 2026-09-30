@@ -1,6 +1,6 @@
 param(
-    [string]$ApiBaseUrl = "http://192.168.1.4:3000",
-    [string]$ReleaseVersion = "v0.0.5",
+    [string]$ApiBaseUrl = $(if ($env:MOBILE_API_BASE_URL) { $env:MOBILE_API_BASE_URL } else { "http://localhost:3000" }),
+    [string]$ReleaseVersion = "v0.0.1",
     [string]$BuildType = "debug",
     [string]$AppName = "superapp"
 )
@@ -22,7 +22,6 @@ $NexusUrl = $NexusUrl.TrimEnd('/')
 $NexusUser = $env:NEXUS_ADMIN_USER
 if (-not $NexusUser) { $NexusUser = "admin" }
 $NexusPass = $env:NEXUS_ADMIN_PASSWORD
-if (-not $NexusPass) { $NexusPass = "admin123" }
 
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host " [BUILD] Compiling Optimized Official FSA Super App APK" -ForegroundColor Cyan

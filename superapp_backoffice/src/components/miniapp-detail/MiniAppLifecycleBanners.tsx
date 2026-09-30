@@ -420,7 +420,7 @@ export default function MiniAppLifecycleBanners({
               <span>Diagnostic Failure Reason</span>
             </div>
             <p className="text-xs font-mono text-rose-700 dark:text-rose-300 leading-relaxed wrap-break-word">
-              {buildError || 'Fastlane APK compilation exited with errors. Inspect Jenkins console logs at http://localhost:8085 for details.'}
+              {buildError || `Fastlane APK compilation exited with errors. Inspect Jenkins console logs at ${process.env.NEXT_PUBLIC_JENKINS_URL || 'http://localhost:8085'} for details.`}
             </p>
           </div>
         </div>

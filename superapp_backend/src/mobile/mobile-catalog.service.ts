@@ -29,7 +29,7 @@ export interface CatalogPage {
 
 /** Explicit allowlist: nothing sensitive from the row can ever leak. */
 export function toCatalogItem(app: MiniApp, clientHost?: string): CatalogItem {
-  const host = clientHost || process.env.HOST_IP || '192.168.1.4';
+  const host = clientHost || process.env.HOST_IP || 'localhost';
 
   let config = app.integrationConfig;
   if (config && typeof config === 'object') {

@@ -107,7 +107,7 @@ export class MobileController {
   @Get('mini-apps')
   @UseGuards(EndUserAuthGuard)
   miniApps(@Query() query: CatalogQueryDto, @Req() req: Request) {
-    const rawHost = req.headers['x-forwarded-host'] || req.headers.host || '192.168.1.4:3000';
+    const rawHost = req.headers['x-forwarded-host'] || req.headers.host || req.hostname || 'localhost:3000';
     const clientHost = String(rawHost).split(':')[0];
     return this.catalog.list(query.q, query.limit, query.offset, clientHost);
   }
