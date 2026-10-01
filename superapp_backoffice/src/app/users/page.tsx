@@ -61,7 +61,7 @@ const PERMISSION_GROUPS: PermissionCategoryGroup[] = [
     category: 'Super App & Ecosystem',
     icon: 'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z',
     description: 'Host shell release pipeline orchestration, sandbox verification, and agency tenants',
-    color: 'purple',
+    color: 'amber',
     permissions: [
       { key: 'super_app:read', label: 'View Super App Status', desc: 'Inspect release assembly, health digest, and license status', level: 'STANDARD' },
       { key: 'super_app:manage', label: 'Manage Host Releases', desc: 'Trigger Jenkins sandbox builds and release bundle publishing', level: 'CRITICAL' },
@@ -534,10 +534,10 @@ export default function UsersPage() {
         };
       case 'ADMIN':
         return {
-          badge: 'bg-purple-50 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400 border-purple-200 dark:border-purple-500/30',
-          gradient: 'from-purple-500/10 via-purple-500/5 to-transparent border-purple-200/80 dark:border-purple-500/30',
-          iconBg: 'bg-purple-50 text-purple-600 dark:bg-purple-500/20 dark:text-purple-300',
-          bar: 'bg-purple-500',
+          badge: 'bg-accent-50 text-accent-800 dark:bg-accent-500/10 dark:text-accent-300 border-accent-200 dark:border-accent-500/30',
+          gradient: 'from-accent-500/10 via-accent-500/5 to-transparent border-accent-200/80 dark:border-accent-500/30',
+          iconBg: 'bg-accent-50 text-accent-600 dark:bg-accent-500/20 dark:text-accent-300',
+          bar: 'bg-accent-500',
           label: 'System Admin',
         };
       case 'MINI_APP_MANAGER':
@@ -597,8 +597,8 @@ export default function UsersPage() {
         );
       case 'SYSTEM':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400 border border-purple-200 dark:border-purple-500/20">
-            <svg className="w-2.5 h-2.5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-accent-50 text-accent-800 dark:bg-accent-500/10 dark:text-accent-300 border border-accent-200 dark:border-accent-500/20">
+            <svg className="w-2.5 h-2.5 text-accent-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
@@ -624,7 +624,7 @@ export default function UsersPage() {
         <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4">
           <div>
             <div className="flex items-center gap-2.5 mb-1">
-              <div className="p-2.5 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-brand-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/20 shadow-sm">
+              <div className="p-2.5 rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-100 dark:border-brand-500/20 shadow-sm">
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
@@ -835,7 +835,7 @@ export default function UsersPage() {
                           <tr key={user.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-indigo-600 text-white font-bold flex items-center justify-center text-sm shadow-sm ring-2 ring-white dark:ring-slate-900 shrink-0">
+                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-white font-bold flex items-center justify-center text-sm shadow-sm ring-2 ring-white dark:ring-slate-900 shrink-0">
                                   {initials}
                                 </div>
                                 <div className="min-w-0">
@@ -1450,7 +1450,7 @@ export default function UsersPage() {
             <div className="relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 max-w-2xl w-full p-6 shadow-2xl my-auto max-h-[calc(100vh-3rem)] overflow-y-auto z-10 animate-in zoom-in-95 duration-200">
               <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-5">
                 <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/20">
+                  <div className="p-2 rounded-xl bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-100 dark:border-brand-500/20">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
@@ -1904,7 +1904,7 @@ export default function UsersPage() {
                           onClick={() => applyRolePreset('MINI_APP')}
                           className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 hover:bg-brand-50 hover:text-brand-700 transition-colors inline-flex items-center gap-1"
                         >
-                          <DevicePhoneIcon className="w-3.5 h-3.5 text-purple-500" />
+                          <DevicePhoneIcon className="w-3.5 h-3.5 text-accent-500" />
                           <span>Mini App Focus</span>
                         </button>
                         <button

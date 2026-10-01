@@ -617,7 +617,7 @@ export default function WebViewIntegrationForm({
                   <div className="space-y-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-slate-400 font-semibold text-sm">Endpoint:</span>
-                      <code className="text-indigo-300 font-bold bg-slate-800/80 px-2 py-0.5 rounded text-xs sm:text-sm break-all">
+                      <code className="text-accent-300 font-bold bg-slate-800/80 px-2 py-0.5 rounded text-xs sm:text-sm break-all">
                         {fullEndpointUrl}
                       </code>
                     </div>
@@ -680,7 +680,7 @@ export default function WebViewIntegrationForm({
                       <button
                         type="button"
                         onClick={handleGenerateToken}
-                        className="text-xs sm:text-sm text-indigo-400 hover:text-indigo-300 underline font-sans font-medium"
+                        className="text-xs sm:text-sm text-accent-400 hover:text-accent-300 underline font-sans font-medium"
                       >
                         Regenerate Token
                       </button>

@@ -49,7 +49,7 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
     }
     if (lower.includes('mic') || lower.includes('audio')) {
       return (
-        <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-5 h-5 text-accent-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
         </svg>
       );
@@ -103,8 +103,8 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
       case IntegrationMethod.FLUTTER_PACKAGE:
         return {
           label: 'Flutter Pub Package',
-          color: 'bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border-purple-200 dark:border-purple-800',
-          dot: 'bg-purple-500',
+          color: 'bg-accent-50 text-accent-800 dark:bg-accent-950/50 dark:text-accent-300 border-accent-200 dark:border-accent-800',
+          dot: 'bg-accent-500',
           icon: (
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
@@ -114,8 +114,8 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
       case IntegrationMethod.NATIVE_SDK:
         return {
           label: 'Native SDK (Framework)',
-          color: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
-          dot: 'bg-indigo-500',
+          color: 'bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300 border-teal-200 dark:border-teal-800',
+          dot: 'bg-teal-500',
           icon: (
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
@@ -167,7 +167,7 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                   }}
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-white font-bold text-2xl">
+                <div className="w-full h-full bg-gradient-to-tr from-brand-600 to-brand-800 flex items-center justify-center text-white font-bold text-2xl">
                   {formData.name ? formData.name.charAt(0).toUpperCase() : 'M'}
                 </div>
               )}
@@ -309,7 +309,7 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-6 shadow-sm hover:shadow transition-shadow">
           <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100 dark:border-slate-800/80">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200/60 dark:border-indigo-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+              <div className="w-8 h-8 rounded-xl bg-sky-50 dark:bg-sky-950/50 border border-sky-200/60 dark:border-sky-800 flex items-center justify-center text-sky-600 dark:text-sky-400">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
@@ -382,7 +382,7 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
 
               {formData.supportEmail && (
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-950/60 border border-purple-200/60 dark:border-purple-800 flex items-center justify-center text-purple-600 shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-brand-50 dark:bg-brand-950/60 border border-brand-200/60 dark:border-brand-800 flex items-center justify-center text-brand-600 shrink-0">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
                     </svg>
@@ -601,12 +601,12 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
             {formData.integrationMethod === IntegrationMethod.NATIVE_SDK && (
               <div className="space-y-4">
                 {/* Quarantine Isolation Banner */}
-                <div className="p-3 bg-indigo-50/80 dark:bg-indigo-950/40 rounded-xl border border-indigo-200/80 dark:border-indigo-800 text-xs text-indigo-900 dark:text-indigo-200 flex items-center justify-between gap-2">
+                <div className="p-3 bg-teal-50/80 dark:bg-teal-950/40 rounded-xl border border-teal-200/80 dark:border-teal-800 text-xs text-teal-900 dark:text-teal-200 flex items-center justify-between gap-2">
                   <span className="flex items-center gap-1.5 font-semibold">
-                    <ShieldCheckIcon className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    <ShieldCheckIcon className="w-4 h-4 text-teal-600 dark:text-teal-400" />
                     <span>Isolated MinIO Quarantine Staging</span>
                   </span>
-                  <span className="font-mono text-[10px] bg-white/70 dark:bg-slate-900/60 px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-800">
+                  <span className="font-mono text-[10px] bg-white/70 dark:bg-slate-900/60 px-2 py-0.5 rounded border border-teal-200 dark:border-teal-800">
                     Zero-Bytes to Nexus Pre-Approval
                   </span>
                 </div>
@@ -791,7 +791,7 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
           <div>
             <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100 dark:border-slate-800/80">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-950/50 border border-purple-200/60 dark:border-purple-800 flex items-center justify-center text-purple-600 dark:text-purple-400">
+                <div className="w-8 h-8 rounded-xl bg-accent-50 dark:bg-accent-950/50 border border-accent-200/60 dark:border-accent-800 flex items-center justify-center text-accent-600 dark:text-accent-400">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" />
                   </svg>
@@ -858,7 +858,7 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-6 shadow-sm hover:shadow transition-shadow lg:col-span-2">
           <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100 dark:border-slate-800/80">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200/60 dark:border-indigo-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+              <div className="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-950/50 border border-brand-200/60 dark:border-brand-800 flex items-center justify-center text-brand-600 dark:text-brand-400">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
@@ -888,9 +888,9 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                 {formData.securityChecks.map((chk, idx) => (
                   <div
                     key={idx}
-                    className="p-2.5 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-200/60 dark:border-indigo-800/60 flex items-center gap-2 text-xs font-semibold text-indigo-900 dark:text-indigo-200"
+                    className="p-2.5 rounded-xl bg-brand-50/60 dark:bg-brand-950/30 border border-brand-200/60 dark:border-brand-800/60 flex items-center gap-2 text-xs font-semibold text-brand-900 dark:text-brand-200"
                   >
-                    <svg className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-brand-600 dark:text-brand-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                     </svg>
                     <span className="truncate">{formatSecurityCheckName(chk)}</span>
@@ -905,7 +905,7 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
       </div>
 
       {/* ─── Ready to Register Notice Card ─── */}
-      <div className="p-5 rounded-2xl bg-gradient-to-r from-brand-50/90 via-indigo-50/50 to-blue-50/90 dark:from-brand-950/40 dark:via-indigo-950/30 dark:to-blue-950/40 border border-brand-200/80 dark:border-brand-800/60 shadow-xs flex items-start gap-4">
+      <div className="p-5 rounded-2xl bg-gradient-to-r from-brand-50/90 via-emerald-50/50 to-teal-50/90 dark:from-brand-950/40 dark:via-emerald-950/30 dark:to-teal-950/40 border border-brand-200/80 dark:border-brand-800/60 shadow-xs flex items-start gap-4">
         <div className="w-10 h-10 rounded-xl bg-brand-600 text-white flex items-center justify-center shrink-0 shadow-sm">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />

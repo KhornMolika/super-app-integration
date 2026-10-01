@@ -26,7 +26,7 @@ export function UserProfileCard({
     role === 'MINI_APP_MANAGER'
       ? 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/50 dark:text-sky-300 dark:border-sky-800'
       : role === 'SUPER_ADMIN'
-      ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/50 dark:text-purple-300 dark:border-purple-800'
+      ? 'bg-accent-50 text-accent-800 border-accent-200 dark:bg-accent-950/50 dark:text-accent-300 dark:border-accent-800'
       : role === 'DEVELOPER'
       ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800'
       : 'bg-brand-50 text-brand-700 border-brand-200 dark:bg-brand-950/50 dark:text-brand-300 dark:border-brand-800';
@@ -58,7 +58,7 @@ export function UserProfileCard({
     <Card className="p-6 sm:p-8 overflow-hidden relative">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-4 sm:gap-5">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-brand-500 to-indigo-600 text-white flex items-center justify-center font-bold text-2xl sm:text-3xl shadow-sm shrink-0">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white flex items-center justify-center font-bold text-2xl sm:text-3xl shadow-sm shrink-0">
             {initials}
           </div>
           <div>

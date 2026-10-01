@@ -12,3 +12,4 @@ export * from './integrations.api';
 export * from './auth.api';
 export * from './roles.api';
 export * from './sdk-artifacts.api';
+export * from './health.api';

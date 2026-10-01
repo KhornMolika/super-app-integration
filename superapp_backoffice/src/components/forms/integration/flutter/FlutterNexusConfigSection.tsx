@@ -64,7 +64,7 @@ export default function FlutterNexusConfigSection({
               : nexusValidationResult?.exists === true
                 ? "border-emerald-500 ring-1 ring-emerald-500 focus:ring-emerald-500 bg-emerald-50/40 dark:bg-emerald-950/20"
                 : isArchiveUploaded
-                  ? "border-indigo-500 ring-1 ring-indigo-500 focus:ring-indigo-500 bg-indigo-50/20 dark:bg-indigo-950/20"
+                  ? "border-accent-500 ring-1 ring-accent-500 focus:ring-accent-500 bg-accent-50/20 dark:bg-accent-950/20"
                   : ""
           }
         />
@@ -79,7 +79,7 @@ export default function FlutterNexusConfigSection({
                 </span>
               </p>
             ) : isArchiveUploaded ? (
-              <p className="text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
+              <p className="text-accent-600 dark:text-accent-400 flex items-center gap-1.5">
                 <PackageIcon className="w-4 h-4" />
                 <span>
                   Package archive uploaded. &quot;

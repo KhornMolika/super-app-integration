@@ -45,6 +45,28 @@ export class TelegramApiHelper {
             u = resolveAppUrl(u);
           }
 
+          // If the URL contains localhost or internal Docker network hostnames, replace with
+          // the public production domain so Telegram users on mobile phones/desktops anywhere can click it
+          if (
+            u.includes('localhost') ||
+            u.includes('127.0.0.1') ||
+            u.includes('0.0.0.0') ||
+            u.includes('.internal')
+          ) {
+            const prodBase = (
+              process.env.BACKOFFICE_BASE_URL &&
+              !process.env.BACKOFFICE_BASE_URL.includes('localhost') &&
+              !process.env.BACKOFFICE_BASE_URL.includes('127.0.0.1')
+                ? process.env.BACKOFFICE_BASE_URL
+                : 'https://app.fintechcenterfsa.com'
+            ).replace(/\/+$/, '');
+
+            u = u.replace(
+              /https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0|host\.docker\.internal)(:\d+)?/gi,
+              prodBase,
+            );
+          }
+
           // Check if URL is acceptable by Telegram Bot API for inline buttons
           const isTelegramLink =
             u.startsWith('https://t.me/') || u.startsWith('tg://');
@@ -381,14 +403,22 @@ export class TelegramApiHelper {
       );
       formData.append('parse_mode', 'HTML');
 
-      // Candidate local build paths
+      // Candidate local build paths (prioritizing 19MB size-optimized release APKs to comply with Telegram 50MB limit)
       const mobileDir = process.env.MOBILE_APP_DIR;
       const candidatePaths = [
         ...(mobileDir
           ? [
               path.resolve(
                 mobileDir,
+                'build/app/outputs/flutter-apk/app-release.apk',
+              ),
+              path.resolve(
+                mobileDir,
                 'build/app/outputs/flutter-apk/app-debug.apk',
+              ),
+              path.resolve(
+                mobileDir,
+                'build/app/outputs/apk/release/app-release.apk',
               ),
               path.resolve(
                 mobileDir,
@@ -396,6 +426,22 @@ export class TelegramApiHelper {
               ),
             ]
           : []),
+        path.resolve(
+          process.cwd(),
+          'superapp_backoffice/public/superapp-test.apk',
+        ),
+        path.resolve(
+          process.cwd(),
+          '../superapp_backoffice/public/superapp-test.apk',
+        ),
+        path.resolve(
+          process.cwd(),
+          'super-app/build/app/outputs/flutter-apk/app-release.apk',
+        ),
+        path.resolve(
+          process.cwd(),
+          '../super-app/build/app/outputs/flutter-apk/app-release.apk',
+        ),
         path.resolve(
           process.cwd(),
           'super-app/build/app/outputs/flutter-apk/app-debug.apk',
@@ -406,11 +452,7 @@ export class TelegramApiHelper {
         ),
         path.resolve(
           process.cwd(),
-          'super-app/build/app/outputs/apk/debug/app-debug.apk',
-        ),
-        path.resolve(
-          process.cwd(),
-          '../super-app/build/app/outputs/apk/debug/app-debug.apk',
+          'ma_flutter_trust_regulator/example/build/app/outputs/flutter-apk/app-release.apk',
         ),
         path.resolve(
           process.cwd(),

@@ -341,7 +341,7 @@ export default function SecurityGateCard({ miniApp }: SecurityGateCardProps) {
             type="button"
             onClick={runGate2}
             disabled={isRunningGate2}
-            className="h-8 px-4 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm flex items-center gap-1.5"
+            className="h-8 px-4 text-xs font-bold bg-brand-600 hover:bg-brand-700 text-white rounded-xl shadow-sm flex items-center gap-1.5"
           >
             {isRunningGate2 ? (
               <>
@@ -400,7 +400,7 @@ export default function SecurityGateCard({ miniApp }: SecurityGateCardProps) {
 
               <div className="flex items-center justify-between text-slate-700 dark:text-slate-300">
                 <span>Consolidated Permissions:</span>
-                <span className="font-mono text-indigo-600 dark:text-indigo-400 font-bold">
+                <span className="font-mono text-accent-600 dark:text-accent-400 font-bold">
                   {gate2Report.manifest?.consolidatedPermissions?.join(', ') || 'NFC, NETWORK'}
                 </span>
               </div>

@@ -100,16 +100,16 @@ export default function BuildProgressModal({
         {/* ─── State: BUILDING / RUNNING ─── */}
         {state.status === 'building' && (
           <div className="w-full flex flex-col items-center">
-            <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center mb-4 shadow-sm">
-              <svg className="animate-spin w-8 h-8 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24">
+            <div className="w-16 h-16 rounded-2xl bg-accent-50 dark:bg-accent-950/60 border border-accent-200 dark:border-accent-800 flex items-center justify-center mb-4 shadow-sm">
+              <svg className="animate-spin w-8 h-8 text-accent-500 dark:text-accent-400" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
               </svg>
             </div>
 
             <div className="text-center mb-6">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 mb-2">
-                <span className="w-2 h-2 rounded-full bg-indigo-500 animate-ping" />
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-accent-100 dark:bg-accent-900/50 text-accent-800 dark:text-accent-300 border border-accent-200 dark:border-accent-800 mb-2">
+                <span className="w-2 h-2 rounded-full bg-accent-500 animate-ping" />
                 <span>Fastlane CI Pipeline</span>
                 {state.releaseVersion && <span className="font-mono font-extrabold">• {state.releaseVersion}</span>}
               </div>
@@ -133,7 +133,7 @@ export default function BuildProgressModal({
                     key={st.id || idx}
                     className={`flex items-start gap-3.5 p-3.5 rounded-xl border transition-all duration-200 ${
                       isRunning
-                        ? 'bg-white dark:bg-slate-900 border-indigo-300 dark:border-indigo-700 shadow-md ring-2 ring-indigo-500/10'
+                        ? 'bg-white dark:bg-slate-900 border-accent-300 dark:border-accent-700 shadow-md ring-2 ring-accent-500/10'
                         : isCompleted
                         ? 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/40'
                         : isFailed
@@ -150,7 +150,7 @@ export default function BuildProgressModal({
                         </div>
                       )}
                       {isRunning && (
-                        <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                        <div className="w-6 h-6 rounded-full bg-accent-100 dark:bg-accent-900/60 text-accent-600 dark:text-accent-400 flex items-center justify-center">
                           <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
@@ -175,7 +175,7 @@ export default function BuildProgressModal({
                       <div className="flex items-center justify-between gap-2">
                         <span className={`text-sm font-bold truncate ${
                           isRunning
-                            ? 'text-indigo-700 dark:text-indigo-300'
+                            ? 'text-accent-700 dark:text-accent-300'
                             : isCompleted
                             ? 'text-emerald-700 dark:text-emerald-300'
                             : isFailed
@@ -186,7 +186,7 @@ export default function BuildProgressModal({
                         </span>
                         <span className={`text-[11px] px-2 py-0.5 rounded-md font-mono font-bold uppercase tracking-wider ${
                           isRunning
-                            ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-200 animate-pulse'
+                            ? 'bg-accent-100 text-accent-800 dark:bg-accent-900/50 dark:text-accent-200 animate-pulse'
                             : isCompleted
                             ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200'
                             : isFailed
@@ -238,7 +238,7 @@ export default function BuildProgressModal({
               <a
                 href={`/api/download-apk?type=test&version=${encodeURIComponent(state.releaseVersion || 'v1.0.0')}`}
                 download={`superapp-test-${state.releaseVersion || 'v1.0.0'}.apk`}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold shadow-md shadow-purple-600/20 transition-all flex-1 min-w-[200px]"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-accent-600 hover:bg-accent-700 text-white text-sm font-bold shadow-md shadow-accent-600/20 transition-all flex-1 min-w-[200px]"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -251,7 +251,7 @@ export default function BuildProgressModal({
                   type="button"
                   variant="outline"
                   onClick={onOpenSandbox}
-                  className="h-12 px-5 text-sm font-semibold rounded-xl flex items-center justify-center gap-2 border-purple-300 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/40"
+                  className="h-12 px-5 text-sm font-semibold rounded-xl flex items-center justify-center gap-2 border-accent-300 dark:border-accent-800 text-accent-700 dark:text-accent-300 hover:bg-accent-50 dark:hover:bg-accent-950/40"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -321,7 +321,7 @@ export default function BuildProgressModal({
                 <Button
                   type="button"
                   onClick={onRetry}
-                  className="flex-1 h-11 text-sm font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-2 shadow-md shadow-indigo-600/20"
+                  className="flex-1 h-11 text-sm font-bold rounded-xl bg-accent-600 hover:bg-accent-700 text-white flex items-center justify-center gap-2 shadow-md shadow-accent-600/20"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />

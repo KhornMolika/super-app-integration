@@ -37,7 +37,7 @@ export function PipelineTimingCard({
       <form onSubmit={onSavePipelineTiming}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -45,7 +45,7 @@ export function PipelineTimingCard({
             <div>
               <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <span>Pipeline Automation &amp; Stage Timing</span>
-                <span className="text-xs px-2.5 py-0.5 rounded-full font-mono font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 uppercase">
+                <span className="text-xs px-2.5 py-0.5 rounded-full font-mono font-bold bg-accent-50 text-accent-800 dark:bg-accent-950/40 dark:text-accent-300 border border-accent-200 dark:border-accent-800 uppercase">
                   {pipelineTiming.preset}
                 </span>
               </h3>
@@ -59,7 +59,7 @@ export function PipelineTimingCard({
             <Button
               type="submit"
               disabled={savingTiming || loadingTiming}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm font-semibold"
+              className="bg-brand-600 hover:bg-brand-700 text-white text-sm px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm font-semibold"
             >
               {savingTiming ? (
                 <>
@@ -82,7 +82,7 @@ export function PipelineTimingCard({
         <div className="mt-6 p-4 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <span className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-              <ZapIcon className="w-4 h-4 text-indigo-500" />
+              <ZapIcon className="w-4 h-4 text-accent-500" />
               <span>Quick Duration Presets</span>
             </span>
             <span className="text-xs text-slate-500">
@@ -137,7 +137,7 @@ export function PipelineTimingCard({
                 <ClockIcon className="w-3.5 h-3.5 text-slate-500" />
                 <span>Validation Start Delay</span>
               </Label>
-              <span className="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400">
+              <span className="text-xs font-mono font-bold text-brand-600 dark:text-brand-400">
                 {pipelineTiming.validationStartDelaySec}s
               </span>
             </div>
@@ -168,7 +168,7 @@ export function PipelineTimingCard({
                 <SearchIcon className="w-3.5 h-3.5 text-slate-500" />
                 <span>Security Scan Pacing</span>
               </Label>
-              <span className="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400">
+              <span className="text-xs font-mono font-bold text-brand-600 dark:text-brand-400">
                 {pipelineTiming.securityScanPacingSec}s
               </span>
             </div>
@@ -199,7 +199,7 @@ export function PipelineTimingCard({
                 <DotBadge color="emerald" pulse />
                 <span>Validation Pass Cooldown</span>
               </Label>
-              <span className="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400">
+              <span className="text-xs font-mono font-bold text-brand-600 dark:text-brand-400">
                 {pipelineTiming.validationPassDelaySec}s
               </span>
             </div>
@@ -230,7 +230,7 @@ export function PipelineTimingCard({
                 <HammerIcon className="w-3.5 h-3.5 text-slate-500" />
                 <span>Build Trigger Delay</span>
               </Label>
-              <span className="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400">
+              <span className="text-xs font-mono font-bold text-brand-600 dark:text-brand-400">
                 {pipelineTiming.buildTriggerDelaySec}s
               </span>
             </div>
@@ -284,7 +284,7 @@ export function PipelineTimingCard({
           <div className="flex items-center justify-between p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 mt-2 sm:mt-0">
             <div>
               <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                <RadioButtonIcon className="w-3.5 h-3.5 text-indigo-500" />
+                <RadioButtonIcon className="w-3.5 h-3.5 text-brand-500" />
                 <span>Interactive Action Buttons</span>
               </span>
               <span className="text-[11px] text-slate-500 block">
@@ -300,7 +300,7 @@ export function PipelineTimingCard({
                   enableTelegramActionButtons: e.target.checked,
                 })
               }
-              className="w-5 h-5 accent-indigo-600 rounded cursor-pointer"
+              className="w-5 h-5 accent-brand-600 rounded cursor-pointer"
             />
           </div>
         </div>

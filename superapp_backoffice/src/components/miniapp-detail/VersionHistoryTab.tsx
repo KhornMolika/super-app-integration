@@ -4,8 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { toast } from '@/components/ui/Toast';
 import InviteDownloadModal from '@/components/ui/InviteDownloadModal';
 import { RevisionReviewModal } from '@/components/review/RevisionReviewModal';
-import { DotBadge } from '@/components/ui/Icons';
 import { miniappsApi } from '@/api';
+import { Select } from '@/components/ui/inputs';
 
 export interface VersionRecord {
   version: string;
@@ -373,50 +373,54 @@ export default function VersionHistoryTab({
           <div className="flex flex-wrap items-center gap-3">
             {/* Version Diff Comparator Selector */}
             <div className="flex flex-wrap items-center gap-1.5 p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 text-xs">
-              <span className="font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1 px-1">
-                <svg className="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <span className="font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1 px-1 shrink-0">
+                <svg className="w-3.5 h-3.5 text-accent-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                 </svg>
                 <span>Diff:</span>
               </span>
-              <select
-                value={compareBase || data?.currentReleaseVersion || '1.0.0'}
-                onChange={(e) => setCompareBase(e.target.value)}
-                className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none"
-              >
-                {versionsList.map((v) => {
-                  const isLive = v.type === 'PRODUCTION' && (v.status === 'ACTIVE' || v.status === 'IN_REVIEW');
-                  const isOld = v.type === 'PRODUCTION' && v.status !== 'ACTIVE' && v.status !== 'IN_REVIEW';
-                  const prefix = isLive ? '[Current] ' : isOld ? '[Prev] ' : '[Test] ';
-                  const suffix = isLive ? ' (Current Version)' : isOld ? ' (Previous Release)' : ' (Sandbox Staging)';
-                  return (
-                    <option key={`base-${v.version}`} value={v.version}>
-                      {prefix}{v.version}{suffix}
-                    </option>
-                  );
-                })}
-              </select>
-              <span className="text-slate-400 font-bold px-0.5">vs</span>
-              <select
-                value={compareTarget || (pendingRevision ? 'v1.1.0-draft' : data?.activeTestVersion || 'develop')}
-                onChange={(e) => setCompareTarget(e.target.value)}
-                className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none"
-              >
-                {pendingRevision && (
-                  <option value="v1.1.0-draft">[Draft] Proposed Revision</option>
-                )}
-                {versionsList.map((v) => {
-                  const isLive = v.type === 'PRODUCTION' && (v.status === 'ACTIVE' || v.status === 'IN_REVIEW');
-                  const isOld = v.type === 'PRODUCTION' && v.status !== 'ACTIVE' && v.status !== 'IN_REVIEW';
-                  const prefix = isLive ? '[Current] ' : isOld ? '[Prev] ' : '[Test] ';
-                  const suffix = isLive ? ' (Current Version)' : isOld ? ' (Previous Release)' : ' (Sandbox Staging)';
-                  return (
-                    <option key={`target-${v.version}`} value={v.version}>
-                      {prefix}{v.version}{suffix}
-                    </option>
-                  );
-                })}
-              </select>
+              <div className="w-44">
+                <Select
+                  value={compareBase || data?.currentReleaseVersion || '1.0.0'}
+                  onChange={(e) => setCompareBase(e.target.value)}
+                  className="!py-1.5 !px-3 text-xs"
+                >
+                  {versionsList.map((v) => {
+                    const isLive = v.type === 'PRODUCTION' && (v.status === 'ACTIVE' || v.status === 'IN_REVIEW');
+                    const isOld = v.type === 'PRODUCTION' && v.status !== 'ACTIVE' && v.status !== 'IN_REVIEW';
+                    const prefix = isLive ? '[Current] ' : isOld ? '[Prev] ' : '[Test] ';
+                    const suffix = isLive ? ' (Current Version)' : isOld ? ' (Previous Release)' : ' (Sandbox Staging)';
+                    return (
+                      <option key={`base-${v.version}`} value={v.version}>
+                        {prefix}{v.version}{suffix}
+                      </option>
+                    );
+                  })}
+                </Select>
+              </div>
+              <span className="text-slate-400 font-bold px-0.5 shrink-0">vs</span>
+              <div className="w-44">
+                <Select
+                  value={compareTarget || (pendingRevision ? 'v1.1.0-draft' : data?.activeTestVersion || 'develop')}
+                  onChange={(e) => setCompareTarget(e.target.value)}
+                  className="!py-1.5 !px-3 text-xs"
+                >
+                  {pendingRevision && (
+                    <option value="v1.1.0-draft">[Draft] Proposed Revision</option>
+                  )}
+                  {versionsList.map((v) => {
+                    const isLive = v.type === 'PRODUCTION' && (v.status === 'ACTIVE' || v.status === 'IN_REVIEW');
+                    const isOld = v.type === 'PRODUCTION' && v.status !== 'ACTIVE' && v.status !== 'IN_REVIEW';
+                    const prefix = isLive ? '[Current] ' : isOld ? '[Prev] ' : '[Test] ';
+                    const suffix = isLive ? ' (Current Version)' : isOld ? ' (Previous Release)' : ' (Sandbox Staging)';
+                    return (
+                      <option key={`target-${v.version}`} value={v.version}>
+                        {prefix}{v.version}{suffix}
+                      </option>
+                    );
+                  })}
+                </Select>
+              </div>
               <button
                 type="button"
                 onClick={() => {
@@ -426,7 +430,7 @@ export default function VersionHistoryTab({
                     targetVersion: compareTarget || (pendingRevision ? 'v1.1.0-draft' : data?.activeTestVersion || 'develop'),
                   });
                 }}
-                className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1 transition-colors shadow-xs"
+                className="px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
@@ -581,7 +585,7 @@ export default function VersionHistoryTab({
                               targetVersion: rec.version,
                             });
                           }}
-                          className="p-1.5 rounded-lg text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors"
+                          className="p-1.5 rounded-lg text-brand-600 hover:text-brand-800 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/40 transition-colors"
                           title={`Compare ${rec.version} with Current Version`}
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

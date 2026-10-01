@@ -207,13 +207,13 @@ export default function PreviewModal({
         {/* LEFT: App Brand & Build Info */}
         <div className="flex items-center gap-3 min-w-0">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-indigo-600/30 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-accent-500/20 border border-accent-500/30 flex items-center justify-center text-accent-400 shrink-0">
               <DevicePhoneIcon className="w-4 h-4" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-sm text-slate-100 truncate max-w-[140px]" title={title}>{title}</h3>
-                <span className="text-[10px] bg-indigo-500/20 text-indigo-300 font-semibold px-2 py-0.5 rounded-full border border-indigo-500/30 shrink-0">
+                <span className="text-[10px] bg-accent-500/20 text-accent-300 font-semibold px-2 py-0.5 rounded-full border border-accent-500/30 shrink-0">
                   {getMethodBadge()}
                 </span>
               </div>
@@ -224,10 +224,10 @@ export default function PreviewModal({
 
           {/* Version Badge */}
           <span 
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-mono font-bold bg-indigo-950/60 text-indigo-300 border border-indigo-800/80 shrink-0 shadow-xs"
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-mono font-bold bg-accent-950/60 text-accent-300 border border-accent-800/80 shrink-0 shadow-xs"
             title={`App Version: ${displayVersion}`}
           >
-            <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3.5 h-3.5 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
             </svg>
             <span>{displayVersion}</span>
@@ -276,7 +276,7 @@ export default function PreviewModal({
                 className="px-2 py-1 text-xs font-semibold rounded-lg text-slate-300 hover:text-white hover:bg-slate-700 transition-colors flex items-center gap-1 border-l border-slate-700/80"
                 title={`Rotate device (Current: ${orientation})`}
               >
-                <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
                 <span className="hidden xl:inline text-[11px]">{orientation}</span>

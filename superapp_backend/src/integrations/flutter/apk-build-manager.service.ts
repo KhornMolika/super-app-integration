@@ -9,6 +9,7 @@ import * as child_process from 'child_process';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 import { extractDecryptedDeployKey } from '../../miniapps/helpers/flutter-credential.helper';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { getLocalIpAddress } from '../../common/utils/network.utils';
 
 export type ApkBuildState = 'IDLE' | 'QUEUED' | 'BUILDING' | 'SUCCESS' | 'FAILED';
 
@@ -80,9 +81,16 @@ export class ApkBuildManagerService {
     apiBaseUrl?: string;
   }): Promise<{ success: boolean; message: string; apkUrl?: string }> {
     const releaseVersion = options.releaseVersion || 'v0.0.1';
-    const buildType = options.buildType || 'debug';
+    const defaultBuildType = process.env.SUPERAPP_TEST_APK_BUILD_MODE || 'release';
+    const buildType = options.buildType || defaultBuildType;
     const appName = options.appName || 'superapp';
-    const apiBaseUrl = options.apiBaseUrl || process.env.MOBILE_API_BASE_URL || 'http://localhost:3000';
+    const port = process.env.PORT || '3000';
+    const resolvedLanUrl = `http://${getLocalIpAddress()}:${port}`;
+    const apiBaseUrl =
+      options.apiBaseUrl ||
+      process.env.MOBILE_API_BASE_URL ||
+      process.env.BACKEND_API_URL ||
+      resolvedLanUrl;
 
     if (this.state === 'BUILDING') {
       if (this.activeBuildPromise && (!options.releaseVersion || options.releaseVersion === this.releaseVersion)) {

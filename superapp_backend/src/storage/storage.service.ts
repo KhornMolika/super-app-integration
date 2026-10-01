@@ -258,4 +258,15 @@ export class StorageService implements OnModuleInit {
   async getObjectBuffer(bucket: string, key: string): Promise<Buffer> {
     return this.quarantineHelper.getObjectBuffer(this.minioClient, bucket, key);
   }
+
+  /**
+   * Performs a lightweight health check against MinIO.
+   */
+  async checkHealth(): Promise<boolean> {
+    try {
+      return await this.minioClient.bucketExists(this.assetsBucket);
+    } catch {
+      return false;
+    }
+  }
 }

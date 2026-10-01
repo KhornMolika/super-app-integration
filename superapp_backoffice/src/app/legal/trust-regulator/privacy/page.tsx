@@ -26,7 +26,7 @@ export default function TrustRegulatorPrivacyPage() {
         {/* Header */}
         <div className="border-b border-slate-800 pb-6 flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-blue-600 flex items-center justify-center font-bold text-white text-lg shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-600 to-teal-600 flex items-center justify-center font-bold text-white text-lg shrink-0">
               <ShieldIcon className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -51,7 +51,7 @@ export default function TrustRegulatorPrivacyPage() {
 
         {/* Section 1 */}
         <div className="space-y-3">
-          <h2 className="text-lg sm:text-xl font-bold text-indigo-400">
+          <h2 className="text-lg sm:text-xl font-bold text-accent-400">
             1. Regulatory Data Processing
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
@@ -64,7 +64,7 @@ export default function TrustRegulatorPrivacyPage() {
 
         {/* Section 2 */}
         <div className="space-y-3">
-          <h2 className="text-lg sm:text-xl font-bold text-indigo-400">
+          <h2 className="text-lg sm:text-xl font-bold text-accent-400">
             2. Confidentiality & Non-Disclosure
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
@@ -78,7 +78,7 @@ export default function TrustRegulatorPrivacyPage() {
 
         {/* Section 3 */}
         <div className="space-y-3">
-          <h2 className="text-lg sm:text-xl font-bold text-indigo-400">
+          <h2 className="text-lg sm:text-xl font-bold text-accent-400">
             3. Cryptographic Proof & Ledger Integrity
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
@@ -90,7 +90,7 @@ export default function TrustRegulatorPrivacyPage() {
 
         {/* Section 4 */}
         <div className="space-y-3">
-          <h2 className="text-lg sm:text-xl font-bold text-indigo-400">
+          <h2 className="text-lg sm:text-xl font-bold text-accent-400">
             4. Statutory Data Retention
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
@@ -113,7 +113,7 @@ export default function TrustRegulatorPrivacyPage() {
           </button>
           <Link
             href="/legal/trust-regulator/terms"
-            className="text-sm font-semibold text-indigo-400 hover:text-indigo-300 transition underline inline-flex items-center gap-1.5"
+            className="text-sm font-semibold text-accent-400 hover:text-accent-300 transition underline inline-flex items-center gap-1.5"
           >
             <span>View Terms of Service</span>
             <ArrowRightIcon className="w-4 h-4" />

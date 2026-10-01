@@ -43,7 +43,7 @@ export const CATEGORY_DEFINITIONS: {
     title: 'Vulnerability & Code Analysis',
     description: 'Deep static analysis, dependency scanning, and dynamic probing.',
     icon: ShieldCheckIcon,
-    accentColor: 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800/60',
+    accentColor: 'text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 border-brand-200 dark:border-brand-800/60',
   },
   {
     id: 'access',
@@ -321,7 +321,7 @@ export default function SecurityValidationSelector({
       {/* Mandatory Check Banner */}
       <div className="p-3.5 rounded-xl bg-slate-100/90 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 text-xs shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/60 flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 border border-brand-200 dark:border-brand-800/60 flex items-center justify-center shrink-0">
             {normMethod === 'FLUTTER_PACKAGE' || normMethod === 'NATIVE_SDK' ? (
               <PackageIcon className="w-4 h-4" />
             ) : (

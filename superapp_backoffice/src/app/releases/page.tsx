@@ -87,7 +87,7 @@ export default function ReleasesPage() {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Super App Release Pipeline</h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-accent-50 text-accent-800 dark:bg-accent-950 dark:text-accent-300 border border-accent-200 dark:border-accent-800">
               Security Gate 2
             </span>
           </div>
@@ -103,7 +103,7 @@ export default function ReleasesPage() {
             onClick={() => setCompareModalOpen(true)}
             className="px-3.5 py-2 rounded-xl text-xs font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5 shadow-xs"
           >
-            <svg className="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 text-accent-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
             </svg>
             <span>Compare SA Releases (SA vs SA)</span>
@@ -122,7 +122,7 @@ export default function ReleasesPage() {
           <Button
             onClick={handleRunGate2}
             disabled={isAssembling}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 py-2 rounded-xl shadow-sm flex items-center space-x-2"
+            className="bg-accent-500 hover:bg-accent-600 text-slate-950 text-xs font-bold px-4 py-2 rounded-xl shadow-sm flex items-center space-x-2"
           >
             {isAssembling ? (
               <>
@@ -174,13 +174,13 @@ export default function ReleasesPage() {
         </div>
 
         {/* Card 2: Next SA Candidate Assembly */}
-        <div className="p-5 rounded-2xl border border-purple-200/80 dark:border-purple-800/60 bg-gradient-to-br from-purple-50/70 via-white to-purple-50/20 dark:from-purple-950/30 dark:via-slate-900 dark:to-slate-900 shadow-xs space-y-3">
+        <div className="p-5 rounded-2xl border border-accent-200/80 dark:border-accent-800/60 bg-gradient-to-br from-accent-50/70 via-white to-accent-50/20 dark:from-accent-950/30 dark:via-slate-900 dark:to-slate-900 shadow-xs space-y-3">
           <div className="flex items-center justify-between">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-purple-100 text-purple-800 dark:bg-purple-900/60 dark:text-purple-300">
-              <DotBadge color="bg-purple-500" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-accent-100 text-accent-800 dark:bg-accent-900/60 dark:text-accent-300">
+              <DotBadge color="bg-accent-500" />
               <span>SA NEW UPDATE BUILD</span>
             </span>
-            <span className="text-xs font-mono text-purple-700 dark:text-purple-400 font-bold">Candidate / Test</span>
+            <span className="text-xs font-mono text-accent-700 dark:text-accent-400 font-bold">Candidate / Test</span>
           </div>
           <div>
             <h3 className="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono flex items-center gap-2">
@@ -190,12 +190,12 @@ export default function ReleasesPage() {
               New release compilation queued to package {apps.length} approved Mini App updates and new bridge capabilities.
             </p>
           </div>
-          <div className="pt-3 border-t border-purple-100 dark:border-purple-900/40 flex items-center justify-between text-xs">
-            <span className="text-slate-500">Queue: <strong className="text-purple-700 dark:text-purple-400">{apps.length} MAs Eligible</strong></span>
+          <div className="pt-3 border-t border-accent-100 dark:border-accent-900/40 flex items-center justify-between text-xs">
+            <span className="text-slate-500">Queue: <strong className="text-accent-700 dark:text-accent-400">{apps.length} MAs Eligible</strong></span>
             <button
               type="button"
               onClick={() => setCompareModalOpen(true)}
-              className="text-xs font-bold text-purple-700 dark:text-purple-400 hover:underline flex items-center gap-1"
+              className="text-xs font-bold text-accent-700 dark:text-accent-400 hover:underline flex items-center gap-1 cursor-pointer"
             >
               <span>Compare Diff</span>
               <ArrowRightIcon className="w-3 h-3" />
@@ -239,8 +239,8 @@ export default function ReleasesPage() {
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm animate-fade-in space-y-4">
           <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-lg">
-                <ShieldIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+              <div className="w-10 h-10 rounded-xl bg-accent-50 dark:bg-accent-950/60 flex items-center justify-center text-accent-600 dark:text-accent-400 font-bold text-lg">
+                <ShieldIcon className="w-5 h-5 text-accent-500" />
               </div>
               <div>
                 <h3 className="font-bold text-slate-900 dark:text-slate-100">
@@ -281,7 +281,7 @@ export default function ReleasesPage() {
 
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
               <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Signed Release Manifest Digest</div>
-              <div className="font-mono text-xs text-indigo-600 dark:text-indigo-400 break-all p-2 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700">
+              <div className="font-mono text-xs text-accent-600 dark:text-accent-400 break-all p-2 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700">
                 SHA256: {gate2Result.manifest?.integrityDigest}
               </div>
               <div className="text-[10px] text-slate-500 mt-2">
@@ -292,7 +292,7 @@ export default function ReleasesPage() {
 
           {/* APK Build Status & Download Button */}
           {gate2Result.apkUrl && (
-            <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-indigo-500/10 border border-emerald-500/30 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-brand-500/10 border border-emerald-500/30 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-xl shadow-sm">
                   <DevicePhoneIcon className="w-5 h-5 text-white" />
@@ -327,7 +327,7 @@ export default function ReleasesPage() {
         <div className="p-5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
           <div>
             <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-accent-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
               </svg>
               <span>Bundled Mini App Candidates for Assembly</span>
@@ -390,10 +390,10 @@ export default function ReleasesPage() {
                       <td className="px-6 py-4 font-mono text-xs">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-bold ${
                           isUpgraded
-                            ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 border border-purple-200'
-                            : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200'
+                            ? 'bg-accent-100 text-accent-800 dark:bg-accent-950 dark:text-accent-300 border border-accent-200'
+                            : 'bg-accent-50 text-accent-800 dark:bg-accent-950/40 dark:text-accent-300 border border-accent-200'
                         }`}>
-                          <DotBadge color={isUpgraded ? "bg-amber-500" : "bg-purple-500"} />
+                          <DotBadge color="bg-accent-500" />
                           <span>{isUpgraded ? 'Update:' : 'Candidate:'} v{candidateVerStr}</span>
                         </span>
                       </td>
@@ -408,7 +408,7 @@ export default function ReleasesPage() {
                       <td className="px-6 py-4 text-right">
                         <Link
                           href={`/miniapps/${app.id}?tab=versions`}
-                          className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+                          className="inline-flex items-center gap-1 text-xs font-bold text-accent-600 dark:text-accent-400 hover:underline"
                         >
                           <span>Compare MA</span>
                           <ArrowRightIcon className="w-3 h-3" />

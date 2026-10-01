@@ -42,7 +42,7 @@ export default function MiniAppLifecycleBanners({
   hasActiveProduction,
 }: MiniAppLifecycleBannersProps) {
   const stageDefs = [
-    { id: 'preflight', name: '1. Pre-Flight & Manifest', icon: <ClipboardCheckIcon className="w-4 h-4 text-indigo-500" />, defaultDetails: 'Verifying dependency checksums and manifest integrity.' },
+    { id: 'preflight', name: '1. Pre-Flight & Manifest', icon: <ClipboardCheckIcon className="w-4 h-4 text-accent-500" />, defaultDetails: 'Verifying dependency checksums and manifest integrity.' },
     { id: 'compile', name: '2. Fastlane APK Packaging', icon: <SettingsIcon className="w-4 h-4 text-amber-500" />, defaultDetails: 'Assembling Flutter Super App container and compiling debug APK.' },
     { id: 'publish', name: '3. Publish to Nexus', icon: <PackageIcon className="w-4 h-4 text-emerald-500" />, defaultDetails: 'Uploading compiled APK artifact to Sonatype Nexus (apk-test-builds).' },
   ];
@@ -87,7 +87,7 @@ export default function MiniAppLifecycleBanners({
               <Button
                 type="button"
                 onClick={onOpenReviewDiff}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 font-semibold shadow-sm flex items-center gap-1.5"
+                className="bg-brand-600 hover:bg-brand-700 text-white text-sm px-4 py-2 font-semibold shadow-sm flex items-center gap-1.5"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
@@ -187,7 +187,7 @@ export default function MiniAppLifecycleBanners({
               <Button
                 type="button"
                 onClick={onOpenReviewDiff}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2.5 font-bold rounded-xl shadow-md shadow-indigo-600/20 flex items-center gap-2 transition-all"
+                className="bg-brand-600 hover:bg-brand-700 text-white text-sm px-4 py-2.5 font-bold rounded-xl shadow-md shadow-brand-600/20 flex items-center gap-2 transition-all"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
@@ -262,7 +262,7 @@ export default function MiniAppLifecycleBanners({
               type="button"
               onClick={() => onLifecycleAction('start-testing')}
               disabled={isSubmitting}
-              className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-4 py-2 font-semibold shadow-sm flex items-center gap-1.5"
+              className="bg-accent-600 hover:bg-accent-700 text-white text-sm px-4 py-2 font-semibold shadow-sm flex items-center gap-1.5 shadow-accent-600/20"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -280,23 +280,23 @@ export default function MiniAppLifecycleBanners({
 
       {/* 3. Building & Compiling Banner */}
       {status === 'BUILDING' && (
-        <div className="mb-6 p-5 rounded-2xl border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/80 dark:bg-indigo-950/40 shadow-sm animate-in fade-in space-y-4">
+        <div className="mb-6 p-5 rounded-2xl border border-accent-200 dark:border-accent-900/50 bg-accent-50/80 dark:bg-accent-950/40 shadow-sm animate-in fade-in space-y-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-start gap-3.5">
-              <div className="w-11 h-11 rounded-2xl bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-200 dark:border-indigo-800">
-                <svg className="animate-spin w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24">
+              <div className="w-11 h-11 rounded-2xl bg-accent-100 dark:bg-accent-900/60 text-accent-600 dark:text-accent-400 flex items-center justify-center shrink-0 border border-accent-200 dark:border-accent-800">
+                <svg className="animate-spin w-6 h-6 text-accent-600 dark:text-accent-400" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                 </svg>
               </div>
               <div>
-                <h4 className="text-base font-bold text-indigo-900 dark:text-indigo-200 flex items-center gap-2">
+                <h4 className="text-base font-bold text-accent-900 dark:text-accent-200 flex items-center gap-2">
                   <span>Super App Fastlane CI Build in Progress...</span>
-                  <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300 animate-pulse">
+                  <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-accent-100 text-accent-800 dark:bg-accent-900/50 dark:text-accent-300 animate-pulse">
                     Compiling &amp; Packaging
                   </span>
                 </h4>
-                <p className="text-sm text-indigo-800 dark:text-indigo-200 mt-1 leading-relaxed">
+                <p className="text-sm text-accent-800 dark:text-accent-200 mt-1 leading-relaxed">
                   Assembling Flutter Super App container and compiling test APK. Progress updates automatically below.
                 </p>
               </div>
@@ -307,7 +307,7 @@ export default function MiniAppLifecycleBanners({
                   type="button"
                   variant="outline"
                   onClick={onOpenBuildModal}
-                  className="h-10 px-4 text-xs font-bold rounded-xl border-indigo-300 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 flex items-center gap-1.5"
+                  className="h-10 px-4 text-xs font-bold rounded-xl border-accent-300 dark:border-accent-800 text-accent-700 dark:text-accent-300 hover:bg-accent-100 dark:hover:bg-accent-900/40 flex items-center gap-1.5"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -316,10 +316,10 @@ export default function MiniAppLifecycleBanners({
                   <span>Open Build Modal</span>
                 </Button>
               )}
-              <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-100/80 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-xs font-semibold border border-indigo-200 dark:border-indigo-800">
+              <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-accent-100/80 dark:bg-accent-900/60 text-accent-700 dark:text-accent-300 text-xs font-semibold border border-accent-200 dark:border-accent-800">
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-600 dark:bg-indigo-400"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-accent-600 dark:bg-accent-400"></span>
                 </span>
                 <span>Pipeline Active</span>
               </div>
@@ -339,7 +339,7 @@ export default function MiniAppLifecycleBanners({
                   key={st.id}
                   className={`p-3 rounded-xl border transition-all ${
                     isRunning
-                      ? 'bg-white dark:bg-slate-900 border-indigo-400 dark:border-indigo-600 shadow-sm ring-1 ring-indigo-500/20'
+                      ? 'bg-white dark:bg-slate-900 border-accent-400 dark:border-accent-600 shadow-sm ring-1 ring-accent-500/20'
                       : isCompleted
                       ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800'
                       : isFailed
@@ -354,7 +354,7 @@ export default function MiniAppLifecycleBanners({
                     </span>
                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded font-mono uppercase ${
                       isRunning
-                        ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300 animate-pulse'
+                        ? 'bg-accent-100 text-accent-700 dark:bg-accent-900/60 dark:text-accent-300 animate-pulse'
                         : isCompleted
                         ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300'
                         : isFailed
@@ -402,7 +402,7 @@ export default function MiniAppLifecycleBanners({
                   type="button"
                   onClick={() => onLifecycleAction('start-testing')}
                   disabled={isSubmitting}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 font-bold rounded-xl shadow-md shadow-indigo-600/20 flex items-center gap-1.5"
+                  className="bg-accent-600 hover:bg-accent-700 text-white text-sm px-4 py-2 font-bold rounded-xl shadow-md shadow-accent-600/20 flex items-center gap-1.5"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -430,9 +430,9 @@ export default function MiniAppLifecycleBanners({
 
       {/* 4. Manual Sandbox Testing Phase Banner */}
       {status === 'TESTING' && (
-        <div className="mb-6 p-4 rounded-2xl border border-purple-200 dark:border-purple-900/50 bg-purple-50/80 dark:bg-purple-950/40 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm animate-in fade-in">
+        <div className="mb-6 p-4 rounded-2xl border border-accent-200 dark:border-accent-900/50 bg-accent-50/80 dark:bg-accent-950/40 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm animate-in fade-in">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/60 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 border border-purple-200 dark:border-purple-800">
+            <div className="w-10 h-10 rounded-xl bg-accent-100 dark:bg-accent-900/60 text-accent-600 dark:text-accent-400 flex items-center justify-center shrink-0 border border-accent-200 dark:border-accent-800">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
@@ -443,10 +443,10 @@ export default function MiniAppLifecycleBanners({
               </svg>
             </div>
             <div>
-              <h4 className="text-base font-bold text-purple-900 dark:text-purple-200">
+              <h4 className="text-base font-bold text-accent-900 dark:text-accent-200">
                 Manual Sandbox Testing Phase
               </h4>
-              <p className="text-sm text-purple-800 dark:text-purple-200 mt-1 leading-relaxed">
+              <p className="text-sm text-accent-800 dark:text-accent-200 mt-1 leading-relaxed">
                 The test container has been compiled. Test the Mini App using the <strong>Sandbox Preview</strong> or{' '}
                 <strong>Download Test APK</strong> on Android devices. When verified, SA Admin can Activate the app.
               </p>
@@ -457,7 +457,7 @@ export default function MiniAppLifecycleBanners({
               type="button"
               variant="outline"
               onClick={onOpenSandbox}
-              className="border-purple-300 text-purple-800 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-950/50 text-sm px-3.5 py-2 font-medium flex items-center gap-1.5"
+              className="border-accent-300 text-accent-800 dark:text-accent-300 hover:bg-accent-100 dark:hover:bg-accent-950/50 text-sm px-3.5 py-2 font-medium flex items-center gap-1.5"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />

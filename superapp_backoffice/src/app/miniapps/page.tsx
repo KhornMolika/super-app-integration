@@ -132,16 +132,16 @@ export default function MiniAppsPage() {
                           const m = (app.integrationMethod || 'WEBVIEW').toUpperCase();
                           if (m === 'NATIVE_SDK') {
                             return (
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 shadow-xs">
-                                <SettingsIcon className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800/60 shadow-xs">
+                                <SettingsIcon className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
                                 <span>Native SDK</span>
                               </span>
                             );
                           }
                           if (m === 'FLUTTER_PACKAGE') {
                             return (
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60 shadow-xs">
-                                <SettingsIcon className="w-3.5 h-3.5 text-purple-500 shrink-0" />
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-accent-50 dark:bg-accent-950/40 text-accent-800 dark:text-accent-300 border border-accent-200 dark:border-accent-800/60 shadow-xs">
+                                <SettingsIcon className="w-3.5 h-3.5 text-accent-500 shrink-0" />
                                 <span>Flutter Package</span>
                               </span>
                             );
@@ -223,8 +223,8 @@ export default function MiniAppsPage() {
 
                           {/* Testing / Building */}
                           {(app.status === 'TESTING' || app.status === 'BUILDING') && (
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 border bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-500/20">
-                              <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse mr-1.5"></span>
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 border bg-accent-50 dark:bg-accent-950/40 text-accent-800 dark:text-accent-300 border-accent-200 dark:border-accent-800">
+                              <span className="w-1.5 h-1.5 rounded-full bg-accent-500 animate-pulse mr-1.5"></span>
                               <span>{app.status === 'BUILDING' ? 'Building' : 'Testing'}</span>
                             </span>
                           )}

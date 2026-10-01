@@ -17,6 +17,7 @@ import { ConfirmationProvider } from '@/components/ui/ConfirmationProvider';
 import { ToastProvider } from '@/components/ui/Toast';
 import { SidebarProvider } from '@/components/ui/SidebarContext';
 import SandboxBuildStatusIndicator from '@/components/ui/SandboxBuildStatusIndicator';
+import { SystemHealthIndicator } from '@/components/ui/SystemHealthIndicator';
 import { DownloadApkButton } from '@/components/ui/DownloadApkButton';
 
 export const metadata: Metadata = {
@@ -50,6 +51,7 @@ export default function RootLayout({
                       </div>
                       <div className="ml-auto flex items-center space-x-3 sm:space-x-4">
                         <DownloadApkButton />
+                        <SystemHealthIndicator />
                         <SandboxBuildStatusIndicator />
                         <NotificationBell />
                         <ThemeToggle />

@@ -203,13 +203,13 @@ export default function Dashboard() {
           </div>
 
           {/* Official Release Version */}
-          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-indigo-200 dark:border-indigo-800/40 hover:shadow-md transition-shadow relative overflow-hidden">
-            <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center mb-4 text-indigo-600 dark:text-indigo-400">
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-accent-200 dark:border-accent-800/40 hover:shadow-md transition-shadow relative overflow-hidden">
+            <div className="w-12 h-12 rounded-xl bg-accent-50 dark:bg-accent-500/10 flex items-center justify-center mb-4 text-accent-600 dark:text-accent-400">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>
             </div>
             <div className="flex items-center justify-between">
               <h3 className="text-slate-500 dark:text-slate-400 font-semibold text-xs uppercase tracking-wider">Official Release</h3>
-              <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-800">
+              <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-accent-50 text-accent-800 dark:bg-accent-950 dark:text-accent-300 border border-accent-300 dark:border-accent-800">
                 Production
               </span>
             </div>
@@ -491,7 +491,7 @@ export default function Dashboard() {
                 href={nexusUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-mono mt-1 block truncate"
+                className="text-xs text-accent-600 dark:text-accent-400 hover:underline font-mono mt-1 block truncate"
               >
                 {nexusUrl}
               </a>

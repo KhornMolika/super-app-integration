@@ -294,7 +294,7 @@ export default function InviteDownloadModal({
           </div>
 
           {/* 4. Telegram Team Channel Broadcast */}
-          <div className="p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-gradient-to-r from-sky-50/50 to-indigo-50/30 dark:from-sky-950/20 dark:to-indigo-950/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-gradient-to-r from-sky-50/50 to-slate-50/50 dark:from-sky-950/20 dark:to-slate-900/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-sky-500 text-white shadow-sm flex-shrink-0">
                 <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">

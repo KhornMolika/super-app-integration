@@ -141,9 +141,13 @@ export default function SubmissionModal({
 
       let recorded: any = null;
       for (const a of aliases) {
-        if (stagesMap[a]) {
-          recorded = stagesMap[a];
-          break;
+        const item = stagesMap[a];
+        if (item) {
+          if (!recorded) {
+            recorded = item;
+          } else if (recorded.status === 'PENDING' && item.status !== 'PENDING') {
+            recorded = item;
+          }
         }
       }
 

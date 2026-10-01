@@ -1,9 +1,33 @@
 param(
-    [string]$ApiBaseUrl = $(if ($env:MOBILE_API_BASE_URL) { $env:MOBILE_API_BASE_URL } else { "http://localhost:3000" }),
+    [ValidateSet("prod", "local", "usb", "custom")]
+    [string]$Target = $(if ($env:SUPERAPP_TARGET_ENV) { $env:SUPERAPP_TARGET_ENV } else { "prod" }),
+    [string]$ApiBaseUrl = "",
     [string]$ReleaseVersion = "v0.0.1",
-    [string]$BuildType = "debug",
+    [string]$BuildType = $(if ($env:SUPERAPP_TEST_APK_BUILD_MODE) { $env:SUPERAPP_TEST_APK_BUILD_MODE } else { "release" }),
     [string]$AppName = "superapp"
 )
+
+# Resolve Target Backend API dynamically
+if (-not $ApiBaseUrl) {
+    if ($env:MOBILE_API_BASE_URL) {
+        $ApiBaseUrl = $env:MOBILE_API_BASE_URL
+    } elseif ($Target -eq "usb") {
+        # ADB Reverse via USB Cable (phone connects to laptop port 3000 through USB)
+        $ApiBaseUrl = "http://127.0.0.1:3000"
+    } elseif ($Target -eq "local") {
+        # Auto-detect real local LAN or Mobile Hotspot IP (Android: 192.168.43.x, iOS: 172.20.10.x, Office: 192.168.x.x / 10.x.x.x)
+        try {
+            $lanIp = (Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+                Where-Object { $_.InterfaceAlias -notmatch "vEthernet|WSL|Loopback|Virtual|Hyper-V" -and ($_.IPAddress -like "192.168.*" -or $_.IPAddress -like "10.*" -or $_.IPAddress -like "172.20.*" -or $_.IPAddress -like "172.16.*") } |
+                Select-Object -First 1).IPAddress
+        } catch {}
+        if (-not $lanIp) { $lanIp = "192.168.10.35" }
+        $ApiBaseUrl = "http://${lanIp}:3000"
+    } else {
+        # Default to Production Cloud endpoint
+        $ApiBaseUrl = "https://app.fintechcenterfsa.com/api"
+    }
+}
 
 $ErrorActionPreference = "Stop"
 
@@ -23,7 +47,7 @@ $NexusUser = if ($env:NEXUS_ADMIN_USER) { $env:NEXUS_ADMIN_USER } else { "admin"
 $NexusPass = if ($env:NEXUS_ADMIN_PASSWORD) { $env:NEXUS_ADMIN_PASSWORD } elseif ($env:NEXUS_PASSWORD) { $env:NEXUS_PASSWORD } else { "admin123" }
 
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host " [BUILD] Compiling Optimized Official FSA Super App APK" -ForegroundColor Cyan
+Write-Host " [BUILD] Compiling Size-Optimized FSA Super App APK" -ForegroundColor Cyan
 Write-Host " Target Architecture : android-arm64" -ForegroundColor Cyan
 Write-Host " App Name            : $AppName" -ForegroundColor Cyan
 Write-Host " Release Version     : $ReleaseVersion" -ForegroundColor Cyan
@@ -49,7 +73,7 @@ Write-Host "Resolving Flutter dependencies with $FlutterBin..." -ForegroundColor
 & $FlutterBin pub get
 
 if ($BuildType -eq "release") {
-    Write-Host "Building size-optimized ARM64 release APK (API: $ApiBaseUrl)..." -ForegroundColor Yellow
+    Write-Host "Building size-optimized ARM64 release APK (AOT + Tree-Shaking, API: $ApiBaseUrl)..." -ForegroundColor Yellow
     & $FlutterBin build apk --release --target-platform android-arm64 --tree-shake-icons "--dart-define=API_BASE_URL=$ApiBaseUrl" "--dart-define=ALLOW_CLEARTEXT=true"
     $OutputApk = Join-Path $MobileAppDir "build/app/outputs/flutter-apk/app-release.apk"
 } else {
@@ -66,24 +90,15 @@ if ($LASTEXITCODE -ne 0) {
 $BackofficePublic = Join-Path $ProjectRoot "superapp_backoffice/public"
 
 if (Test-Path $OutputApk) {
+    # Keep only 1 active superapp-test.apk cache in public/ to prevent multi-gigabyte accumulation
     if (Test-Path $BackofficePublic) {
-        if ($BuildType -eq "release") {
-            Copy-Item -Path $OutputApk -Destination (Join-Path $BackofficePublic "superapp-release.apk") -Force
-            Copy-Item -Path $OutputApk -Destination (Join-Path $BackofficePublic "superapp-release-$ReleaseVersion.apk") -Force
-            Write-Host "[OK] Copied release APK to backoffice public directory (superapp-release.apk)" -ForegroundColor Cyan
-        } else {
-            Copy-Item -Path $OutputApk -Destination (Join-Path $BackofficePublic "superapp-test.apk") -Force
-            Copy-Item -Path $OutputApk -Destination (Join-Path $BackofficePublic "superapp-debug.apk") -Force
-            Copy-Item -Path $OutputApk -Destination (Join-Path $BackofficePublic "superapp-local.apk") -Force
-            Copy-Item -Path $OutputApk -Destination (Join-Path $BackofficePublic "superapp-test-$ReleaseVersion.apk") -Force
-            Copy-Item -Path $OutputApk -Destination (Join-Path $BackofficePublic "superapp-debug-$ReleaseVersion.apk") -Force
-            Write-Host "[OK] Copied debug test APK to backoffice public directory (superapp-test.apk, superapp-debug.apk)" -ForegroundColor Cyan
-        }
+        Copy-Item -Path $OutputApk -Destination (Join-Path $BackofficePublic "superapp-test.apk") -Force
+        Write-Host "[OK] Updated active superapp-test.apk in backoffice public directory." -ForegroundColor Cyan
     }
     $sizeMb = [math]::round((Get-Item $OutputApk).Length / 1MB, 2)
-    Write-Host "[OK] Local $BuildType APK generated successfully! Size: $sizeMb MB" -ForegroundColor Green
+    Write-Host "[OK] $BuildType APK generated successfully! Size: $sizeMb MB" -ForegroundColor Green
 
-    # Publish to Nexus if reachable
+    # Publish to Nexus as Single Source of Truth for all versions
     try {
         $b64 = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("${NexusUser}:${NexusPass}"))
         $headers = @{
@@ -96,7 +111,11 @@ if (Test-Path $OutputApk) {
             $targetName = "app-release.apk"
             $targets = @(
                 "apk-releases/$AppName/latest/app-release.apk",
-                "apk-releases/$AppName/$ReleaseVersion/app-release.apk"
+                "apk-releases/$AppName/$ReleaseVersion/app-release.apk",
+                "apk-test-builds/$AppName/latest/app-release.apk",
+                "apk-test-builds/$AppName/$ReleaseVersion/app-release.apk",
+                "apk-test-builds/$AppName/latest/app-debug.apk",
+                "apk-test-builds/$AppName/$ReleaseVersion/app-debug.apk"
             )
         } else {
             $repoName = "apk-test-builds"

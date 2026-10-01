@@ -22,15 +22,15 @@ export default function SecurityForm({
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Informative Intro Banner */}
-      <div className="p-4 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200/80 dark:border-indigo-800/60 flex items-start gap-3.5 shadow-xs">
-        <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-200 dark:border-indigo-800">
+      <div className="p-4 rounded-2xl bg-brand-50/70 dark:bg-brand-950/30 border border-brand-200/80 dark:border-brand-800/60 flex items-start gap-3.5 shadow-xs">
+        <div className="w-10 h-10 rounded-xl bg-brand-100 dark:bg-brand-900/50 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0 border border-brand-200 dark:border-brand-800">
           <ShieldCheckIcon className="w-5 h-5" />
         </div>
         <div>
-          <h4 className="text-base font-bold text-indigo-950 dark:text-indigo-200">
+          <h4 className="text-base font-bold text-brand-950 dark:text-brand-200">
             Automated CI/CD Security & Compliance Gates
           </h4>
-          <p className="text-sm text-indigo-800/90 dark:text-indigo-300/90 mt-0.5 leading-relaxed">
+          <p className="text-sm text-brand-800/90 dark:text-brand-300/90 mt-0.5 leading-relaxed">
             Select the active security audit profiles to be executed against this Mini App during automated verification.
             Recommended baseline profiles are pre-selected according to your chosen integration architecture.
           </p>

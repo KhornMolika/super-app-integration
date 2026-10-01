@@ -116,7 +116,7 @@ pipeline {
                 echo "=========================================================="
                 echo " [STAGE 4] Software Composition Analysis (SCA / CVE)"
                 script {
-                    notifyStage("sca", "Software Composition Analysis", "RUNNING", "Auditing dependencies against National Vulnerability Database...")
+                    notifyStage("dependency_scan", "Software Composition Analysis (SCA / CVE)", "RUNNING", "Auditing dependencies against National Vulnerability Database...")
 
                     sh """
                     node -e '
@@ -129,7 +129,7 @@ pipeline {
                     ' || true
                     """
 
-                    notifyStage("sca", "Software Composition Analysis", "COMPLETED", "SCA audit completed. Zero high/critical CVEs.")
+                    notifyStage("dependency_scan", "Software Composition Analysis (SCA / CVE)", "COMPLETED", "SCA audit completed. Zero high/critical CVEs.")
                 }
             }
         }

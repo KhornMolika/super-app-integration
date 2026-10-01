@@ -208,7 +208,7 @@ ${cleanIssue}
             : downloadProxyUrl;
         const sandboxUrl = miniAppId
           ? `${baseUrl}/miniapps/${miniAppId}?preview=true`
-          : `${baseUrl}/super-app?preview=true`;
+          : `${baseUrl}/preview`;
 
         const text = `
 🟢 <b>[BUILD READY] SUPER APP TEST BUILD READY</b>

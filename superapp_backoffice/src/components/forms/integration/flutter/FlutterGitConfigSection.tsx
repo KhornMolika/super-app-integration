@@ -163,14 +163,14 @@ export default function FlutterGitConfigSection({
             disabled={!isEditable}
             className={`flex items-start gap-3.5 p-4 rounded-xl border text-left transition-all ${
               isPrivateRepo
-                ? "border-indigo-500 bg-indigo-50/70 dark:bg-indigo-950/30 ring-2 ring-indigo-500/20 shadow-sm"
+                ? "border-accent-500 bg-accent-50/70 dark:bg-accent-950/30 ring-2 ring-accent-500/20 shadow-sm"
                 : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900/50"
             }`}
           >
             <div
               className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
                 isPrivateRepo
-                  ? "bg-indigo-600 text-white shadow-sm"
+                  ? "bg-accent-500 text-slate-950 font-bold shadow-sm"
                   : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
               }`}
             >
@@ -182,7 +182,7 @@ export default function FlutterGitConfigSection({
                   Private Repository
                 </span>
                 {isPrivateRepo && (
-                  <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-300">
+                  <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full bg-accent-100 text-accent-800 dark:bg-accent-900/60 dark:text-accent-300">
                     Active
                   </span>
                 )}
@@ -205,11 +205,11 @@ export default function FlutterGitConfigSection({
         </div>
       ) : (
         /* Private Repository Authentication Settings */
-        <div className="p-5 rounded-2xl border border-indigo-200 dark:border-indigo-800/80 bg-gradient-to-br from-indigo-50/40 via-white to-slate-50/40 dark:from-indigo-950/20 dark:via-slate-900 dark:to-slate-900 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-indigo-100 dark:border-indigo-900/60 pb-3">
+        <div className="p-5 rounded-2xl border border-accent-200 dark:border-accent-800/80 bg-gradient-to-br from-accent-50/20 via-white to-slate-50/40 dark:from-accent-950/20 dark:via-slate-900 dark:to-slate-900 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-accent-100 dark:border-accent-900/60 pb-3">
             <div>
               <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <KeyIcon className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <KeyIcon className="w-4 h-4 text-accent-600 dark:text-accent-400" />
                 <span>Private Repository Authentication</span>
               </h4>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -225,7 +225,7 @@ export default function FlutterGitConfigSection({
                 disabled={!isEditable}
                 className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
                   authMethod === "deploy_key"
-                    ? "bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                    ? "bg-white dark:bg-slate-900 text-accent-600 dark:text-accent-400 shadow-sm"
                     : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                 }`}
               >
@@ -238,7 +238,7 @@ export default function FlutterGitConfigSection({
                 disabled={!isEditable}
                 className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
                   authMethod === "token"
-                    ? "bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                    ? "bg-white dark:bg-slate-900 text-accent-600 dark:text-accent-400 shadow-sm"
                     : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                 }`}
               >
@@ -251,12 +251,12 @@ export default function FlutterGitConfigSection({
           {authMethod === "deploy_key" ? (
             <div className="space-y-4 pt-1">
               {/* Platform Managed Security Assurance Banner */}
-              <div className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 flex items-start gap-3 bg-gradient-to-r from-indigo-50/90 to-blue-50/70 dark:from-indigo-950/40 dark:to-slate-900/60 p-4 rounded-xl border border-indigo-200/80 dark:border-indigo-800/60 shadow-sm">
-                <ShieldCheckIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+              <div className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 flex items-start gap-3 bg-gradient-to-r from-accent-50/70 to-slate-50/70 dark:from-accent-950/30 dark:to-slate-900/60 p-4 rounded-xl border border-accent-200/80 dark:border-accent-800/60 shadow-sm">
+                <ShieldCheckIcon className="w-5 h-5 text-accent-600 dark:text-accent-400 shrink-0 mt-0.5" />
                 <div className="space-y-1">
                   <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                     <span>Super App Dedicated Deploy Key</span>
-                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700">
+                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-accent-100 dark:bg-accent-900/60 text-accent-800 dark:text-accent-300 border border-accent-200 dark:border-accent-700">
                       Zero Private Key Leakage
                     </span>
                   </div>
@@ -272,7 +272,7 @@ export default function FlutterGitConfigSection({
                 <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/70 space-y-3 shadow-sm">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-3">
                     <div className="flex items-center gap-2">
-                      <KeyIcon className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                      <KeyIcon className="w-4 h-4 text-accent-600 dark:text-accent-400" />
                       <span className="text-xs font-bold text-slate-900 dark:text-white">
                         Public Deploy Key (Add to your Git Repo)
                       </span>
@@ -285,8 +285,8 @@ export default function FlutterGitConfigSection({
                         <span>ED25519</span>
                       </span>
                       {flutterConfig?.deployKeyFingerprint && (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-900">
-                          <FingerprintIcon className="w-3 h-3 text-indigo-500" />
+                        <span className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                          <FingerprintIcon className="w-3 h-3 text-accent-500" />
                           <span className="truncate max-w-[160px]" title={flutterConfig.deployKeyFingerprint}>
                             {flutterConfig.deployKeyFingerprint}
                           </span>
@@ -301,7 +301,7 @@ export default function FlutterGitConfigSection({
 
                   {/* Public Key Display Area */}
                   <div className="relative group">
-                    <pre className="w-full font-mono text-[11px] p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-indigo-200 whitespace-pre-wrap break-all leading-relaxed max-h-28 overflow-y-auto">
+                    <pre className="w-full font-mono text-[11px] p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 whitespace-pre-wrap break-all leading-relaxed max-h-28 overflow-y-auto">
                       {flutterConfig?.deployPublicKey || "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... (Platform Managed)"}
                     </pre>
                   </div>
@@ -315,7 +315,7 @@ export default function FlutterGitConfigSection({
                         className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition-all ${
                           copiedKey
                             ? "bg-emerald-600 text-white shadow-emerald-500/20"
-                            : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-500/20"
+                            : "bg-accent-500 hover:bg-accent-600 text-slate-950 font-bold shadow-accent-500/20"
                         }`}
                       >
                         {copiedKey ? (
@@ -352,8 +352,8 @@ export default function FlutterGitConfigSection({
                 </div>
               ) : (
                 /* Key Not Yet Generated - Instant Generation CTA */
-                <div className="p-6 rounded-xl border border-dashed border-indigo-300 dark:border-indigo-800 bg-indigo-50/30 dark:bg-indigo-950/20 text-center space-y-3">
-                  <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 mx-auto flex items-center justify-center">
+                <div className="p-6 rounded-xl border border-dashed border-accent-300 dark:border-accent-800 bg-accent-50/30 dark:bg-accent-950/20 text-center space-y-3">
+                  <div className="w-10 h-10 rounded-full bg-accent-100 dark:bg-accent-900/60 text-accent-600 dark:text-accent-400 mx-auto flex items-center justify-center">
                     <KeyIcon className="w-5 h-5" />
                   </div>
                   <div>
@@ -368,7 +368,7 @@ export default function FlutterGitConfigSection({
                     type="button"
                     onClick={handleGenerateDedicatedKey}
                     disabled={isGeneratingKey || !isEditable}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-all disabled:opacity-50"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-accent-500 hover:bg-accent-600 text-slate-950 shadow-sm transition-all disabled:opacity-50"
                   >
                     <KeyIcon className={`w-4 h-4 ${isGeneratingKey ? "animate-spin" : ""}`} />
                     <span>{isGeneratingKey ? "Generating Key Pair..." : "Generate Dedicated Deploy Key"}</span>
@@ -380,7 +380,7 @@ export default function FlutterGitConfigSection({
               <div className="bg-slate-100/80 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700/60 text-xs space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                    <SettingsIcon className="w-4 h-4 text-indigo-500" />
+                    <SettingsIcon className="w-4 h-4 text-accent-500" />
                     <span>How to Add this Deploy Key in 3 Steps:</span>
                   </span>
                   <div className="flex items-center gap-1 bg-white dark:bg-slate-900 rounded-lg p-0.5 border border-slate-200 dark:border-slate-700 text-[11px]">
@@ -389,7 +389,7 @@ export default function FlutterGitConfigSection({
                       onClick={() => setActiveGuideTab("github")}
                       className={`px-2.5 py-1 rounded-md font-semibold transition-all flex items-center gap-1.5 ${
                         activeGuideTab === "github"
-                          ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 font-bold shadow-sm"
+                          ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-bold shadow-sm"
                           : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
                       }`}
                     >
@@ -414,7 +414,7 @@ export default function FlutterGitConfigSection({
                 {activeGuideTab === "github" ? (
                   <ol className="list-decimal list-inside space-y-2 text-slate-600 dark:text-slate-300 leading-relaxed">
                     <li>
-                      Click the <strong className="text-indigo-600 dark:text-indigo-400 font-semibold">Copy Public Key</strong> button above.
+                      Click the <strong className="text-accent-600 dark:text-accent-400 font-semibold">Copy Public Key</strong> button above.
                     </li>
                     <li>
                       In your GitHub repository, navigate to: <strong>Settings</strong> &rarr;{" "}
@@ -422,7 +422,7 @@ export default function FlutterGitConfigSection({
                       <strong>Add deploy key</strong>.
                     </li>
                     <li>
-                      Set Title to <code className="bg-black/10 dark:bg-black/40 px-1.5 py-0.5 rounded text-indigo-600 dark:text-indigo-400 font-mono text-[11px]">Super App CI Pipeline</code> and paste the copied public key into <strong>Key</strong>.
+                      Set Title to <code className="bg-black/10 dark:bg-black/40 px-1.5 py-0.5 rounded text-accent-600 dark:text-accent-400 font-mono text-[11px]">Super App CI Pipeline</code> and paste the copied public key into <strong>Key</strong>.
                     </li>
                     <li>
                       Keep <strong>&quot;Allow write access&quot; UNCHECKED</strong> (read-only is strictly recommended). Click <strong>Add key</strong>.
@@ -471,7 +471,7 @@ export default function FlutterGitConfigSection({
                   <div className="mt-3 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-2">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
-                        <KeyIcon className="w-3.5 h-3.5 text-indigo-500" />
+                        <KeyIcon className="w-3.5 h-3.5 text-accent-500" />
                         <span>Custom Private Key (Optional)</span>
                       </Label>
                       <span className="text-[11px] text-slate-500 font-mono">ED25519 or RSA PEM</span>
@@ -491,7 +491,7 @@ export default function FlutterGitConfigSection({
                       disabled={!isEditable}
                       rows={4}
                       placeholder={"Paste your own private key here only if your organization forbids platform-generated keys..."}
-                      className="w-full font-mono text-xs p-2.5 rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-950 text-indigo-300 focus:ring-2 focus:ring-indigo-500"
+                      className="w-full font-mono text-xs p-2.5 rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-200 focus:ring-2 focus:ring-accent-500"
                     />
                     <p className="text-[11px] text-slate-500">
                       If left empty, the platform will use the dedicated key generated above.
@@ -511,7 +511,7 @@ export default function FlutterGitConfigSection({
                   <button
                     type="button"
                     onClick={() => setShowTokenPassword(!showTokenPassword)}
-                    className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                    className="text-xs text-accent-600 dark:text-accent-400 hover:underline flex items-center gap-1"
                   >
                     <EyeIcon className="w-3.5 h-3.5" />
                     <span>{showTokenPassword ? "Hide Token" : "Show Token"}</span>
@@ -561,7 +561,7 @@ export default function FlutterGitConfigSection({
                 <span
                   className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                     detectedProvider === "github"
-                      ? "bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300"
+                      ? "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700"
                       : "bg-orange-100 text-orange-800 dark:bg-orange-950/60 dark:text-orange-300"
                   }`}
                 >
@@ -676,12 +676,12 @@ export default function FlutterGitConfigSection({
         {lockedCommitSha && (
           <div className="col-span-1 md:col-span-2 p-3 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 text-sm">
             <div className="flex items-center gap-2">
-              <ShieldCheckIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+              <ShieldCheckIcon className="w-5 h-5 text-brand-600 dark:text-brand-400 shrink-0" />
               <span className="text-slate-700 dark:text-slate-300 font-medium">
                 Reproducible Build Lock: Commit SHA resolved
               </span>
             </div>
-            <div className="px-3 py-1 bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-mono font-bold rounded-lg shrink-0 flex items-center gap-1.5 text-xs sm:text-sm">
+            <div className="px-3 py-1 bg-accent-100 dark:bg-accent-950/80 text-accent-700 dark:text-accent-300 font-mono font-bold rounded-lg shrink-0 flex items-center gap-1.5 text-xs sm:text-sm">
               <LockIcon className="w-3.5 h-3.5" />
               <span>SHA:</span>
               <span>{lockedCommitSha.substring(0, 8)}...</span>
@@ -695,7 +695,7 @@ export default function FlutterGitConfigSection({
         <div
           className={`p-4 rounded-xl border text-sm transition-all duration-200 ${
             gitValidationResult.isDeployKeyNotice
-              ? "bg-indigo-50/80 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800 text-indigo-900 dark:text-indigo-200"
+              ? "bg-accent-50/80 dark:bg-accent-950/30 border-accent-200 dark:border-accent-800 text-accent-900 dark:text-accent-200"
               : gitValidationResult.isValid
                 ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200"
                 : "bg-rose-50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200"
@@ -704,7 +704,7 @@ export default function FlutterGitConfigSection({
           <div className="flex items-center justify-between font-semibold">
             <span className="flex items-center gap-1.5">
               {gitValidationResult.isDeployKeyNotice ? (
-                <KeyIcon className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <KeyIcon className="w-4 h-4 text-accent-600 dark:text-accent-400" />
               ) : gitValidationResult.isValid ? (
                 <CheckIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               ) : (

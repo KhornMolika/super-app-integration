@@ -152,7 +152,7 @@ export function TelegramTeamCard({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+          <div className="w-14 h-14 rounded-2xl bg-sky-500/10 dark:bg-sky-500/20 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
             <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
@@ -170,7 +170,7 @@ export function TelegramTeamCard({
               <span
                 className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
                   hasTeamChat
-                    ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300'
+                    ? 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300'
                     : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
                 }`}
               >
@@ -197,10 +197,10 @@ export function TelegramTeamCard({
           variant="outline"
           onClick={onDetectGroups}
           disabled={detectingGroups}
-          className="text-sm h-10 px-4 shrink-0 flex items-center gap-2 rounded-xl border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
+          className="text-sm h-10 px-4 shrink-0 flex items-center gap-2 rounded-xl border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-950/40"
         >
           <svg
-            className={`w-4 h-4 text-indigo-600 ${detectingGroups ? 'animate-spin' : ''}`}
+            className={`w-4 h-4 text-sky-600 ${detectingGroups ? 'animate-spin' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -259,7 +259,7 @@ export function TelegramTeamCard({
         <div>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <Label className="flex items-center gap-2 text-sm sm:text-base">
-              <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-accent-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
               </svg>
               <span className="font-semibold">Default Team Telegram Group ID</span>
@@ -292,7 +292,7 @@ export function TelegramTeamCard({
               disabled={sendingTeamTest || (!teamChatIdInput.trim() && !telegramStatus?.user?.teamTelegramChatId)}
               className="text-sm font-medium px-5 py-2.5 rounded-xl shrink-0 flex items-center gap-2"
             >
-              <svg className={`w-4 h-4 text-indigo-500 ${sendingTeamTest ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className={`w-4 h-4 text-sky-500 ${sendingTeamTest ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
               </svg>
               <span>{sendingTeamTest ? 'Sending Test...' : 'Send Test Alert'}</span>
@@ -306,7 +306,7 @@ export function TelegramTeamCard({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h4 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-sky-600 dark:text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
               </svg>
               <span>Connected Telegram Groups &amp; Associated Mini Apps</span>
@@ -343,8 +343,8 @@ export function TelegramTeamCard({
                     !group.isLive
                       ? 'bg-rose-50/20 dark:bg-rose-950/15 border-rose-300/80 dark:border-rose-900/60 shadow-xs'
                       : isDefault
-                      ? 'bg-linear-to-r from-indigo-50/70 to-brand-50/50 dark:from-indigo-950/30 dark:to-brand-950/20 border-indigo-200 dark:border-indigo-800/80 shadow-xs'
-                      : 'bg-white dark:bg-slate-900/60 border-slate-200/90 dark:border-slate-800 hover:border-indigo-200'
+                      ? 'bg-linear-to-r from-sky-50/70 to-brand-50/50 dark:from-sky-950/30 dark:to-brand-950/20 border-sky-200 dark:border-sky-800/80 shadow-xs'
+                      : 'bg-white dark:bg-slate-900/60 border-slate-200/90 dark:border-slate-800 hover:border-sky-300'
                   }`}
                 >
                   <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
@@ -370,7 +370,7 @@ export function TelegramTeamCard({
                           </span>
                         )}
                         {isDefault && (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-300">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-100 text-sky-800 dark:bg-sky-900/60 dark:text-sky-300">
                             <StarIcon className="w-3 h-3 text-amber-500 fill-amber-500" />
                             <span>Default Channel</span>
                           </span>
@@ -393,16 +393,16 @@ export function TelegramTeamCard({
                       {(profileAssoc || isDefault || superAppAssoc) && (
                         <div className="flex flex-wrap items-center gap-2 pt-1">
                           {(profileAssoc || isDefault) && (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-                              <svg className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-sky-50 text-sky-800 dark:bg-sky-950/50 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
+                              <svg className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                               </svg>
                               <span>Default Profile Channel</span>
                             </span>
                           )}
                           {superAppAssoc && (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-purple-50 text-purple-800 dark:bg-purple-950/50 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-                              <svg className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-accent-50 text-accent-800 dark:bg-accent-950/50 dark:text-accent-300 border border-accent-200 dark:border-accent-800">
+                              <svg className="w-3.5 h-3.5 text-accent-600 dark:text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                               </svg>
                               <span>Super App Operations Channel</span>
@@ -428,7 +428,7 @@ export function TelegramTeamCard({
                               <button
                                 type="button"
                                 onClick={() => toggleExpandGroup(group.id)}
-                                className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
+                                className="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:text-sky-800 dark:hover:text-sky-300 flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded hover:bg-sky-50 dark:hover:bg-sky-950/40"
                               >
                                 {isExpanded ? (
                                   <>
@@ -462,7 +462,7 @@ export function TelegramTeamCard({
                               return (
                                 <div
                                   key={assoc.id || idx}
-                                  className="inline-flex items-center gap-2 pl-2.5 pr-1.5 py-1 rounded-xl text-xs bg-white dark:bg-slate-800/90 border border-slate-200/90 dark:border-slate-700/80 shadow-xs hover:border-indigo-200 dark:hover:border-indigo-800 transition-all group/app"
+                                  className="inline-flex items-center gap-2 pl-2.5 pr-1.5 py-1 rounded-xl text-xs bg-white dark:bg-slate-800/90 border border-slate-200/90 dark:border-slate-700/80 shadow-xs hover:border-sky-300 dark:hover:border-sky-800 transition-all group/app"
                                 >
                                   <span className="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0" />
                                   <span className="font-semibold text-slate-800 dark:text-slate-200 max-w-32.5 truncate" title={assoc.name || assoc.appId}>
@@ -483,7 +483,7 @@ export function TelegramTeamCard({
                                         currentChatId: group.id,
                                       })
                                     }
-                                    className="p-1 rounded-md text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors"
+                                    className="p-1 rounded-md text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors"
                                     title="Move / Reassign Mini App to Another Group"
                                   >
                                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -519,7 +519,7 @@ export function TelegramTeamCard({
                             className="text-xs h-9 px-3 rounded-xl flex items-center gap-1.5"
                           >
                             <svg
-                              className={`w-3.5 h-3.5 text-indigo-600 ${isTestingThis ? 'animate-spin' : ''}`}
+                              className={`w-3.5 h-3.5 text-accent-500 ${isTestingThis ? 'animate-spin' : ''}`}
                               fill="none"
                               stroke="currentColor"
                               viewBox="0 0 24 24"
@@ -563,7 +563,7 @@ export function TelegramTeamCard({
                               variant="outline"
                               onClick={() => handleMigrateGroupToDefault(group.id)}
                               disabled={isMigratingThis}
-                              className="text-xs h-9 px-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 flex items-center gap-1.5"
+                              className="text-xs h-9 px-3 rounded-xl bg-sky-50 dark:bg-sky-950/50 border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-300 hover:bg-sky-100 flex items-center gap-1.5"
                             >
                               <svg className={`w-3.5 h-3.5 ${isMigratingThis ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
@@ -630,7 +630,7 @@ export function TelegramTeamCard({
           </div>
         ) : (
           <div className="p-8 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800 text-center space-y-3">
-            <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto">
+            <div className="w-12 h-12 rounded-xl bg-sky-50 dark:bg-sky-950 text-sky-600 dark:text-sky-400 flex items-center justify-center mx-auto">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"

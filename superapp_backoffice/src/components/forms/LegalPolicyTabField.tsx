@@ -163,7 +163,7 @@ export default function LegalPolicyTabField({
             <PackageIcon className="w-3.5 h-3.5" />
             <span>Markdown / Document</span>
             {isNativeOrPackage && (
-              <span className="text-[10px] px-1 py-0.2 rounded bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-medium hidden md:inline">
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent-50 dark:bg-accent-950/60 text-accent-800 dark:text-accent-300 font-medium hidden md:inline">
                 Offline-Ready
               </span>
             )}

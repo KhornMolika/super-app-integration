@@ -99,7 +99,7 @@ export default function FlutterContainerIntegrationSection({
               <span>Super App Container Dependency Integration</span>
             </h4>
             {isSuperAdminOrAdmin && (
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 flex items-center gap-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-accent-50 dark:bg-accent-950/60 text-accent-700 dark:text-accent-300 border border-accent-200 dark:border-accent-800 flex items-center gap-1">
                 <ShieldCheckIcon className="w-3 h-3" />
                 <span>SA Admin</span>
               </span>
@@ -156,7 +156,7 @@ export default function FlutterContainerIntegrationSection({
                   variant="outline"
                   onClick={onSyncPubspec}
                   disabled={isSyncingPubspec || isTestingResolution}
-                  className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 border-purple-300 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/40"
+                  className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 border-accent-300 dark:border-accent-800 text-accent-700 dark:text-accent-300 hover:bg-accent-50 dark:hover:bg-accent-950/40"
                   title="Synchronize approved mini app packages into container pubspec.yaml"
                 >
                   <PackageIcon

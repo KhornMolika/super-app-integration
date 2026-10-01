@@ -26,7 +26,10 @@
         "setup:nexus:sdk": "bash ./scripts/setup-nexus-sdk-repositories.sh",
         "setup:callback-token": "bash ./scripts/setup-jenkins-callback-token.sh",
         "sync:jenkins": "node scripts/sync-jenkins-jobs.mjs",
-        "build:apk": "powershell -ExecutionPolicy Bypass -File ./scripts/build-optimized-apk.ps1"
+        "build:apk": "powershell -ExecutionPolicy Bypass -File ./scripts/build-optimized-apk.ps1",
+        "build:apk:hotspot": "powershell -ExecutionPolicy Bypass -File ./scripts/build-optimized-apk.ps1 -Target local",
+        "build:apk:usb": "powershell -ExecutionPolicy Bypass -File ./scripts/build-optimized-apk.ps1 -Target usb",
+        "usb:reverse": "powershell -ExecutionPolicy Bypass -File ./scripts/start-usb-reverse.ps1"
     },
     "dependencies": {
         "@nestjs/common": "^11.0.1",

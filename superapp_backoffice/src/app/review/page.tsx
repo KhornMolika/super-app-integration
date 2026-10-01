@@ -335,11 +335,11 @@ export default function ReviewQueuePage() {
                             <div className="flex flex-col items-start gap-1">
                               <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 border ${
                                 app.pendingRevision.revisionStatus === 'TESTING'
-                                  ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-500/10 dark:text-purple-300 dark:border-purple-500/20'
+                                  ? 'bg-accent-50 text-accent-800 border-accent-200 dark:bg-accent-500/10 dark:text-accent-300 dark:border-accent-500/20'
                                   : 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20'
                               }`}>
                                 {app.pendingRevision.revisionStatus === 'TESTING' ? (
-                                  <svg className="w-3 h-3 text-purple-500 animate-pulse shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <svg className="w-3 h-3 text-accent-500 animate-pulse shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
                                   </svg>
                                 ) : (
@@ -360,7 +360,7 @@ export default function ReviewQueuePage() {
                                 : app.status === 'ACTIVE'
                                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/20'
                                 : app.status === 'TESTING' || app.status === 'BUILDING'
-                                ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-500/10 dark:text-purple-300 dark:border-purple-500/20'
+                                ? 'bg-accent-50 text-accent-800 border-accent-200 dark:bg-accent-500/10 dark:text-accent-300 dark:border-accent-500/20'
                                 : app.status === 'REJECTED' || app.status === 'SUSPENDED'
                                 ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:border-rose-500/20'
                                 : 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20'
@@ -372,7 +372,7 @@ export default function ReviewQueuePage() {
                               ) : app.status === 'ACTIVE' ? (
                                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
                               ) : app.status === 'TESTING' || app.status === 'BUILDING' ? (
-                                <svg className="w-3 h-3 text-purple-500 animate-pulse shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg className="w-3 h-3 text-accent-500 animate-pulse shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
                                 </svg>
                               ) : (
@@ -393,7 +393,7 @@ export default function ReviewQueuePage() {
                                   onClick={() => setSelectedRevisionApp(app)}
                                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border shadow-xs transition-colors ${
                                     app.pendingRevision.revisionStatus === 'TESTING'
-                                      ? 'bg-purple-50 hover:bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:hover:bg-purple-900/50 dark:text-purple-300 border-purple-200 dark:border-purple-800/60'
+                                      ? 'bg-accent-50 hover:bg-accent-100 text-accent-800 dark:bg-accent-900/30 dark:hover:bg-accent-900/50 dark:text-accent-300 border-accent-200 dark:border-accent-800/60'
                                       : 'bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:hover:bg-amber-900/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60'
                                   }`}
                                 >

@@ -139,13 +139,13 @@ export default function MobilePreviewPage() {
           </Link>
           <div className="h-4 w-px bg-slate-700" />
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-brand-600 to-brand-800 flex items-center justify-center text-white shadow-md">
               <DevicePhoneIcon className="w-4 h-4" />
             </div>
             <div>
               <h1 className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
                 <span>FSA Super App</span>
-                <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-300 rounded border border-indigo-500/30">
+                <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-accent-500/20 text-accent-300 rounded border border-accent-500/30">
                   Mobile Simulator
                 </span>
               </h1>
@@ -161,7 +161,7 @@ export default function MobilePreviewPage() {
               onClick={() => setDevice(m)}
               className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
                 device === m
-                  ? 'bg-indigo-600 text-white shadow-sm'
+                  ? 'bg-accent-500 text-slate-950 font-bold shadow-sm'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
               }`}
             >
@@ -189,7 +189,7 @@ export default function MobilePreviewPage() {
             title="Rotate Device Orientation"
             className={`p-2 rounded-lg transition-colors flex items-center gap-1 text-xs font-medium ${
               isLandscape
-                ? 'bg-indigo-600 text-white'
+                ? 'bg-accent-500 text-slate-950 font-bold'
                 : 'text-slate-300 hover:text-white hover:bg-slate-800'
             }`}
           >
@@ -202,7 +202,7 @@ export default function MobilePreviewPage() {
           {/* QR Code */}
           <button
             onClick={() => setIsQrModalOpen(true)}
-            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 transition-all"
+            className="px-3 py-1.5 bg-accent-500 hover:bg-accent-600 text-slate-950 text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition-all"
           >
             <QrCodeIcon className="w-4 h-4" />
             <span>Install APK</span>
@@ -232,7 +232,7 @@ export default function MobilePreviewPage() {
                   : f === 'space-black'
                   ? 'bg-zinc-900'
                   : 'bg-blue-950'
-              } ${finish === f ? 'border-indigo-400 scale-110 shadow-sm' : 'border-transparent opacity-60 hover:opacity-100'}`}
+              } ${finish === f ? 'border-accent-400 scale-110 shadow-sm' : 'border-transparent opacity-60 hover:opacity-100'}`}
             />
           ))}
 
@@ -245,7 +245,7 @@ export default function MobilePreviewPage() {
               onClick={() => setScaleMode(m)}
               className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
                 scaleMode === m
-                  ? 'bg-indigo-600 text-white'
+                  ? 'bg-accent-500 text-slate-950 font-bold'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
             >
@@ -335,7 +335,7 @@ export default function MobilePreviewPage() {
 
         {/* Quick Tips Floating Banner */}
         <div className="absolute bottom-4 right-4 hidden md:flex items-center gap-2 bg-slate-900/80 backdrop-blur-md px-3.5 py-2 rounded-xl border border-slate-800 text-xs text-slate-400">
-          <SparklesIcon className="w-4 h-4 text-indigo-400" />
+          <SparklesIcon className="w-4 h-4 text-accent-400" />
           <span>Interactive Flutter Mini App Sandbox container loaded live.</span>
         </div>
       </div>
@@ -344,7 +344,6 @@ export default function MobilePreviewPage() {
       <DownloadApkModal
         isOpen={isQrModalOpen}
         onClose={() => setIsQrModalOpen(false)}
-        defaultVersion="v0.0.1"
       />
     </div>
   );

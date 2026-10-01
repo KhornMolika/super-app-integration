@@ -132,17 +132,17 @@ export function getPermissionVisual(type: string) {
     case 'microphone':
       return {
         icon: (
-          <svg className="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 text-accent-600 dark:text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
           </svg>
         ),
-        bg: 'bg-purple-50 dark:bg-purple-950/40 text-purple-600 border-purple-200 dark:border-purple-800/60',
+        bg: 'bg-accent-50 dark:bg-accent-950/40 text-accent-700 dark:text-accent-300 border-accent-200 dark:border-accent-800/60',
         title: 'Microphone & Audio',
       };
     case 'nfc':
       return {
-        icon: <ZapIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />,
-        bg: 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 border-indigo-200 dark:border-indigo-800/60',
+        icon: <ZapIcon className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
+        bg: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/60',
         title: 'Near Field Communication (NFC)',
       };
     case 'bluetooth':
@@ -541,7 +541,7 @@ export default function PermissionsForm({
                         <div className="mt-1.5 p-2.5 rounded-xl bg-slate-900 text-[11px] font-mono text-slate-300 space-y-1 border border-slate-800 animate-in fade-in duration-150">
                           <div>
                             <span className="text-slate-500">iOS (Info.plist): </span>
-                            <span className="text-indigo-300 font-semibold">{meta.iosKey}</span>
+                            <span className="text-accent-300 font-semibold">{meta.iosKey}</span>
                           </div>
                           <div>
                             <span className="text-slate-500">Android (Manifest): </span>

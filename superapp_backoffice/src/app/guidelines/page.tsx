@@ -245,7 +245,7 @@ const VSCodeEditor = ({
         } else if (str) {
           result += `<span class="text-amber-300 dark:text-amber-200">${escapeHtml(str)}</span>`;
         } else if (annotation) {
-          result += `<span class="text-purple-400">${escapeHtml(annotation)}</span>`;
+          result += `<span class="text-accent-400">${escapeHtml(annotation)}</span>`;
         } else if (kw) {
           result += `<span class="text-sky-400 font-medium">${escapeHtml(kw)}</span>`;
         } else if (type) {
@@ -462,7 +462,7 @@ export default function GuidelinesPage() {
             </div>
 
             <div className="p-5 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 space-y-3">
-              <div className="w-9 h-9 rounded-lg bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-lg bg-brand-100 dark:bg-brand-900/40 text-brand-600 dark:text-brand-400 flex items-center justify-center">
                 <SettingsIcon />
               </div>
               <h4 className="font-bold text-slate-900 dark:text-white text-lg">System CI (Jenkins)</h4>
@@ -768,10 +768,10 @@ export default function GuidelinesPage() {
               </div>
 
               {/* Package Archive Optimization & Size Reduction Guide */}
-              <div className="p-6 rounded-2xl border-2 border-indigo-500/40 dark:border-indigo-500/30 bg-gradient-to-br from-indigo-50/70 via-slate-50 to-white dark:from-indigo-950/30 dark:via-slate-900/60 dark:to-slate-900/40 shadow-sm space-y-6">
+              <div className="p-6 rounded-2xl border-2 border-accent-500/40 dark:border-accent-500/30 bg-gradient-to-br from-accent-50/70 via-slate-50 to-white dark:from-accent-950/30 dark:via-slate-900/60 dark:to-slate-900/40 shadow-sm space-y-6">
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                    <div className="p-2.5 rounded-xl bg-accent-500/10 text-accent-600 dark:text-accent-400">
                       <PackageIcon />
                     </div>
                     <div>
@@ -871,8 +871,8 @@ export default function GuidelinesPage() {
                 </div>
 
                 {/* Backend Quarantine Gateway Architecture */}
-                <div className="p-4 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-900/80 space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-400">
+                <div className="p-4 rounded-xl border border-accent-200 dark:border-accent-800 bg-white dark:bg-slate-900/80 space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-accent-700 dark:text-accent-400">
                     <ShieldIcon />
                     <span>Platform Ingestion Safety: Backend Quarantine Sanitizer</span>
                   </div>
@@ -897,9 +897,9 @@ export default function GuidelinesPage() {
               </div>
 
               {/* Private Repository Authentication - Owner Credentials Policy */}
-              <div className="p-6 rounded-2xl border-2 border-indigo-500/40 dark:border-indigo-500/30 bg-gradient-to-br from-indigo-50/70 via-slate-50 to-white dark:from-indigo-950/30 dark:via-slate-900/60 dark:to-slate-900/40 shadow-sm space-y-5">
+              <div className="p-6 rounded-2xl border-2 border-accent-500/40 dark:border-accent-500/30 bg-gradient-to-br from-accent-50/70 via-slate-50 to-white dark:from-accent-950/30 dark:via-slate-900/60 dark:to-slate-900/40 shadow-sm space-y-5">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                  <div className="p-2.5 rounded-xl bg-accent-500/10 text-accent-600 dark:text-accent-400">
                     <KeyIcon />
                   </div>
                   <div>
@@ -915,7 +915,7 @@ export default function GuidelinesPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                   <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 space-y-2.5">
                     <strong className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                      <KeyIcon className="w-4 h-4 text-indigo-500" />
+                      <KeyIcon className="w-4 h-4 text-accent-500" />
                       Option A: SSH Deploy Key (Recommended)
                     </strong>
                     <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
@@ -923,7 +923,7 @@ export default function GuidelinesPage() {
                     </p>
                     <div className="p-3 bg-slate-900 text-slate-100 font-mono rounded-lg text-[11px] space-y-1">
                       <p className="text-slate-400"># 1. Super App generates an isolated key pair in portal</p>
-                      <p className="text-indigo-300">ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... (Click &quot;Copy Public Key&quot;)</p>
+                      <p className="text-accent-300">ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... (Click &quot;Copy Public Key&quot;)</p>
                       <p className="text-slate-400"># 2. In GitHub/GitLab: Settings &rarr; Deploy Keys &rarr; Add Deploy Key (Read-Only)</p>
                       <p className="text-slate-400"># 3. Enter repository URL &rarr; Click &quot;Verify Access&quot;</p>
                     </div>
@@ -931,11 +931,11 @@ export default function GuidelinesPage() {
 
                   <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 space-y-2.5">
                     <strong className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                      <LockIcon className="w-4 h-4 text-indigo-500" />
+                      <LockIcon className="w-4 h-4 text-accent-500" />
                       Option B: Personal / Project Deploy Token
                     </strong>
                     <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                      Generate a fine-grained Personal Access Token (PAT) or GitLab Project Deploy Token with strictly <code className="text-indigo-600 dark:text-indigo-400 font-mono">read_repository</code> scope.
+                      Generate a fine-grained Personal Access Token (PAT) or GitLab Project Deploy Token with strictly <code className="text-accent-600 dark:text-accent-400 font-mono">read_repository</code> scope.
                     </p>
                     <ul className="space-y-1 list-disc pl-4 text-slate-600 dark:text-slate-400 leading-relaxed">
                       <li>GitHub: Developer Settings &rarr; Personal access tokens &rarr; Fine-grained (Read-only repo contents).</li>
@@ -955,11 +955,11 @@ export default function GuidelinesPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
                   <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1">
                     <strong className="text-slate-800 dark:text-slate-200 block">1. Canonical Package Name</strong>
-                    <span className="text-slate-500">Must be lowercase with underscores (e.g. <code className="text-indigo-600 dark:text-indigo-400 font-mono">my_transit_miniapp</code>).</span>
+                    <span className="text-slate-500">Must be lowercase with underscores (e.g. <code className="text-accent-600 dark:text-accent-400 font-mono">my_transit_miniapp</code>).</span>
                   </div>
                   <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1">
                     <strong className="text-slate-800 dark:text-slate-200 block">2. Root Export File</strong>
-                    <span className="text-slate-500">Must export primary screens / widgets in <code className="text-indigo-600 dark:text-indigo-400 font-mono">lib/&lt;package_name&gt;.dart</code>.</span>
+                    <span className="text-slate-500">Must export primary screens / widgets in <code className="text-accent-600 dark:text-accent-400 font-mono">lib/&lt;package_name&gt;.dart</code>.</span>
                   </div>
                   <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1">
                     <strong className="text-slate-800 dark:text-slate-200 block">3. Isolated State</strong>
@@ -1032,7 +1032,7 @@ export default function GuidelinesPage() {
                 <ShieldIcon />
                 <span>Maximizing App Store & Google Play Approval Probability</span>
               </h5>
-              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-accent-50 text-accent-800 dark:bg-accent-950 dark:text-accent-300 border border-accent-200 dark:border-accent-800">
                 Apple Guideline 4.7 & Google Play Host Policy
               </span>
             </div>
@@ -1085,9 +1085,9 @@ export default function GuidelinesPage() {
               </div>
             </div>
 
-            <div className="p-4 rounded-lg bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-900/50 text-sm space-y-1">
-              <strong className="text-indigo-950 dark:text-indigo-200 font-bold block">7. Apple Guideline 4.7 & Manifest Compliance</strong>
-              <p className="text-indigo-900 dark:text-indigo-300 leading-relaxed">
+            <div className="p-4 rounded-lg bg-brand-50/70 dark:bg-brand-950/30 border border-brand-200 dark:border-brand-900/50 text-sm space-y-1">
+              <strong className="text-brand-950 dark:text-brand-200 font-bold block">7. Apple Guideline 4.7 & Manifest Compliance</strong>
+              <p className="text-brand-900 dark:text-brand-300 leading-relaxed">
                 Implements structured Mini App manifest declarations (bundle metadata, version constraints, age rating, and sandboxed bridge scopes) aligned with Apple&apos;s Mini Apps Partner Program.
               </p>
             </div>
@@ -1136,7 +1136,7 @@ export default function GuidelinesPage() {
                 <div className="text-rose-400 pl-4">├── Yes → REJECT Mini App</div>
                 <div className="text-emerald-400 pl-4">└── No  → Continue (Optional features disabled)</div>
                 <div className="text-slate-400 pl-8">↓</div>
-                <div className="text-indigo-300 pl-8">M supported capabilities exposed</div>
+                <div className="text-sky-300 pl-8">M supported capabilities exposed</div>
                 <div className="text-slate-400 pl-8">↓</div>
                 <div className="text-emerald-300 pl-8">Runtime JIT permission prompt → Allowed</div>
               </div>

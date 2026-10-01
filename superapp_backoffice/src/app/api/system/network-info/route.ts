@@ -100,45 +100,132 @@ export async function GET(request: NextRequest) {
   const backofficePort = reqHost.includes(':') ? reqHost.split(':')[1] : '3002';
   const backendPort = process.env.BACKEND_PORT || '3000';
 
-  // Check local APK size and presence
-  const publicApkPath = path.resolve(process.cwd(), 'public/superapp-test.apk');
-  let apkSizeMb = '19.12 MB';
+  // Dynamically scan public directory for latest APK builds
+  const publicDir = path.resolve(process.cwd(), 'public');
   let apkExists = false;
+  let apkSizeMb = '19.12 MB';
+  let apkFilename = 'superapp-test.apk';
+  let apkVersion = 'v0.1.3';
+  let isRelease = false;
   let lastModified: string | null = null;
 
   try {
-    if (fs.existsSync(publicApkPath)) {
-      const stats = fs.statSync(publicApkPath);
-      apkExists = true;
-      apkSizeMb = (stats.size / (1024 * 1024)).toFixed(2) + ' MB';
-      lastModified = stats.mtime.toISOString();
+    if (fs.existsSync(publicDir)) {
+      const files = fs.readdirSync(publicDir);
+      const apkFiles = files.filter(
+        (f) => f.endsWith('.apk') && f.startsWith('superapp-'),
+      );
+
+      const apkDetails = apkFiles
+        .map((fn) => {
+          try {
+            const fullPath = path.join(publicDir, fn);
+            const stats = fs.statSync(fullPath);
+            const match = fn.match(/v(\d+\.\d+\.\d+)/);
+            const ver = match ? `v${match[1]}` : null;
+            // Releases are typically <50MB because of AOT compilation and tree-shaking
+            const isRel = fn.includes('release') || stats.size < 50 * 1024 * 1024;
+            return {
+              filename: fn,
+              version: ver,
+              sizeBytes: stats.size,
+              sizeMb: (stats.size / (1024 * 1024)).toFixed(2) + ' MB',
+              mtime: stats.mtime,
+              isRelease: isRel,
+            };
+          } catch (_) {
+            return null;
+          }
+        })
+        .filter(Boolean) as Array<{
+        filename: string;
+        version: string | null;
+        sizeBytes: number;
+        sizeMb: string;
+        mtime: Date;
+        isRelease: boolean;
+      }>;
+
+      if (apkDetails.length > 0) {
+        // Sort by version (highest first), then by modification time
+        apkDetails.sort((a, b) => {
+          if (a.version && b.version) {
+            const vA = a.version.replace(/^v/, '').split('.').map(Number);
+            const vB = b.version.replace(/^v/, '').split('.').map(Number);
+            for (let i = 0; i < 3; i++) {
+              if ((vB[i] || 0) !== (vA[i] || 0)) {
+                return (vB[i] || 0) - (vA[i] || 0);
+              }
+            }
+          }
+          return b.mtime.getTime() - a.mtime.getTime();
+        });
+
+        const latest = apkDetails[0];
+        apkExists = true;
+        apkFilename = latest.filename;
+        apkVersion = latest.version || 'v0.1.3';
+        apkSizeMb = latest.sizeMb;
+        isRelease = latest.isRelease;
+        lastModified = latest.mtime.toISOString();
+      }
     }
   } catch (_) {}
+
+  const proto = request.headers.get('x-forwarded-proto') || (reqHost.includes('fintechcenterfsa.com') ? 'https' : 'http');
+  const isDomain = reqHostname.includes('fintechcenterfsa.com');
+  const isHttps = proto === 'https' || isDomain;
+
+  const cloudBase = 'https://app.fintechcenterfsa.com';
+  const lanBase = `http://${primaryIp}:${backofficePort}`;
+  const effectiveBase = isHttps ? cloudBase : lanBase;
 
   return NextResponse.json({
     primaryIp,
     port: backofficePort,
     backendPort,
+    isProduction: isDomain || isHttps,
+    protocol: proto,
     interfaces: detectedIps.map(({ name, address, family, isPrimary }) => ({
       name,
       address,
       family,
       isPrimary,
     })),
+    environments: {
+      cloud: {
+        label: 'Production Cloud',
+        domain: 'app.fintechcenterfsa.com',
+        backendUrl: 'https://app.fintechcenterfsa.com/api',
+        directUrl: `${cloudBase}/${apkFilename}`,
+        apiDownloadUrl: `${cloudBase}/api/download-apk?version=${apkVersion}&type=${isRelease ? 'release' : 'test'}`,
+        description: 'Accessible from any phone anywhere (4G / 5G / Wi-Fi). No LAN pairing needed.',
+      },
+      localLan: {
+        label: 'Local Dev LAN',
+        host: primaryIp,
+        backendUrl: `http://${primaryIp}:${backendPort}`,
+        directUrl: `${lanBase}/${apkFilename}`,
+        apiDownloadUrl: `${lanBase}/api/download-apk?version=${apkVersion}&type=${isRelease ? 'release' : 'test'}`,
+        description: 'Physical phone must be on the same office Wi-Fi as your development machine.',
+      },
+    },
     apk: {
       exists: apkExists,
+      version: apkVersion,
       size: apkSizeMb,
-      filename: 'superapp-test.apk',
+      buildMode: isRelease ? 'release' : 'debug',
+      filename: apkFilename,
       lastModified,
-      downloadPath: '/api/download-apk',
-      staticPath: '/superapp-test.apk',
-      directUrl: `http://${primaryIp}:${backofficePort}/superapp-test.apk`,
-      apiDownloadUrl: `http://${primaryIp}:${backofficePort}/api/download-apk`,
+      downloadPath: `/api/download-apk?version=${apkVersion}&type=${isRelease ? 'release' : 'test'}`,
+      staticPath: `/${apkFilename}`,
+      directUrl: `${effectiveBase}/${apkFilename}`,
+      apiDownloadUrl: `${effectiveBase}/api/download-apk?version=${apkVersion}&type=${isRelease ? 'release' : 'test'}`,
     },
     backend: {
       port: backendPort,
-      baseUrl: `http://${primaryIp}:${backendPort}`,
-      mobileAuthUrl: `http://${primaryIp}:${backendPort}/api/mobile/auth/login`,
+      baseUrl: isHttps ? 'https://app.fintechcenterfsa.com/api' : `http://${primaryIp}:${backendPort}`,
+      mobileAuthUrl: isHttps ? 'https://app.fintechcenterfsa.com/api/mobile/auth/login' : `http://${primaryIp}:${backendPort}/api/mobile/auth/login`,
     },
     clientRequestHost: reqHost,
   });

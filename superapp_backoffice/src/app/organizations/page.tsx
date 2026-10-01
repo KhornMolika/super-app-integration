@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Button, Input, Label } from '@/components/ui/inputs';
+import { Button, Input, Label, Select } from '@/components/ui/inputs';
 import { Card } from '@/components/ui/card';
 import { organizationsApi, Organization } from '@/api';
 import { useConfirm } from '@/components/ui/ConfirmationProvider';
@@ -277,17 +277,17 @@ export default function OrganizationsPage() {
           <div className="mt-3 text-[11px] text-sky-600/80 dark:text-sky-400/80 font-mono">FTC (General Secretariat)</div>
         </Card>
 
-        <Card className="!p-4 bg-gradient-to-br from-white to-purple-50/30 dark:from-slate-900 dark:to-purple-950/20 border-slate-200 dark:border-slate-800">
+        <Card className="!p-4 bg-gradient-to-br from-white to-accent-50/30 dark:from-slate-900 dark:to-accent-950/20 border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-purple-600 dark:text-purple-400 font-semibold">Oversight & Compliance</p>
-              <p className="text-2xl font-bold text-purple-700 dark:text-purple-300 mt-1">{oversightCount || 1}</p>
+              <p className="text-xs font-medium text-accent-700 dark:text-accent-400 font-semibold">Oversight & Compliance</p>
+              <p className="text-2xl font-bold text-accent-800 dark:text-accent-300 mt-1">{oversightCount || 1}</p>
             </div>
-            <div className="p-2.5 rounded-xl bg-purple-50 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300">
+            <div className="p-2.5 rounded-xl bg-accent-50 dark:bg-accent-900/40 text-accent-700 dark:text-accent-300">
               <ShieldCheckIcon className="w-5 h-5" />
             </div>
           </div>
-          <div className="mt-3 text-[11px] text-purple-600/80 dark:text-purple-400/80 font-mono">IAU (Internal Audit Unit)</div>
+          <div className="mt-3 text-[11px] text-accent-700/80 dark:text-accent-400/80 font-mono">IAU (Internal Audit Unit)</div>
         </Card>
       </div>
 
@@ -341,13 +341,13 @@ export default function OrganizationsPage() {
           onClick={() => setCategoryFilter('OVERSIGHT_UNIT')}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
             categoryFilter === 'OVERSIGHT_UNIT'
-              ? 'bg-purple-600 text-white shadow-sm'
-              : 'text-purple-700 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/40'
+              ? 'bg-accent-600 text-white shadow-sm'
+              : 'text-accent-700 dark:text-accent-400 hover:bg-accent-50 dark:hover:bg-accent-950/40'
           }`}
         >
           <ShieldCheckIcon className="w-3.5 h-3.5" />
           <span>Oversight & Compliance</span>
-          <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-purple-700 text-purple-100">
+          <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-accent-700 text-accent-100">
             {oversightCount}
           </span>
         </button>
@@ -410,7 +410,7 @@ export default function OrganizationsPage() {
                     badgeColor = 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-400 border border-sky-200 dark:border-sky-500/20';
                     BadgeIcon = DocumentTextIcon;
                   } else if (type === 'OVERSIGHT_UNIT') {
-                    badgeColor = 'bg-purple-50 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400 border border-purple-200 dark:border-purple-500/20';
+                    badgeColor = 'bg-accent-50 text-accent-800 dark:bg-accent-500/10 dark:text-accent-300 border border-accent-200 dark:border-accent-500/20';
                     BadgeIcon = ShieldCheckIcon;
                   }
 
@@ -602,7 +602,7 @@ export default function OrganizationsPage() {
                     <ShieldCheckIcon className="w-3.5 h-3.5 text-slate-400" />
                     Legal Classification *
                   </Label>
-                  <select
+                  <Select
                     id="org-type"
                     value={formData.entityType}
                     onChange={(e) =>
@@ -611,12 +611,12 @@ export default function OrganizationsPage() {
                         entityType: e.target.value as FsaEntityType,
                       })
                     }
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    className="w-full text-sm"
                   >
                     <option value="SECTOR_REGULATOR">Sector-Specific Regulator (FSA)</option>
                     <option value="ADMINISTRATIVE">Administrative & Policy Body (FSA)</option>
                     <option value="OVERSIGHT_UNIT">Oversight & Compliance Unit (FSA)</option>
-                  </select>
+                  </Select>
                 </div>
               </div>
 
@@ -672,7 +672,7 @@ export default function OrganizationsPage() {
                   <CheckIcon className="w-3.5 h-3.5 text-slate-400" />
                   Status
                 </Label>
-                <select
+                <Select
                   id="org-status"
                   value={formData.status}
                   onChange={(e) =>
@@ -681,7 +681,7 @@ export default function OrganizationsPage() {
                       status: e.target.value as 'ACTIVE' | 'INACTIVE' | 'PENDING',
                     })
                   }
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  className="w-full text-sm"
                 >
                   <option value="ACTIVE">ACTIVE</option>
                   <option value="INACTIVE">INACTIVE</option>

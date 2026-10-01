@@ -17,6 +17,10 @@ import { SettingsModule } from './settings/settings.module';
 import { MobileModule } from './mobile/mobile.module';
 import { SdkArtifactsModule } from './sdk-artifacts/sdk-artifacts.module';
 import { NativeSdkCodegenModule } from './native-sdk-codegen/native-sdk-codegen.module';
+import { HealthModule } from './health/health.module';
+
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 
 @Module({
   imports: [
@@ -59,6 +63,9 @@ import { NativeSdkCodegenModule } from './native-sdk-codegen/native-sdk-codegen.
     MobileModule,
     SdkArtifactsModule,
     NativeSdkCodegenModule,
+    HealthModule,
   ],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}

@@ -26,7 +26,7 @@ export default function TrustRegulatorTermsPage() {
         {/* Header */}
         <div className="border-b border-slate-800 pb-6 flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center font-bold text-white text-lg shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-600 to-accent-600 flex items-center justify-center font-bold text-white text-lg shrink-0">
               TR
             </div>
             <div>
@@ -50,7 +50,7 @@ export default function TrustRegulatorTermsPage() {
 
         {/* Section 1 */}
         <div className="space-y-3">
-          <h2 className="text-lg sm:text-xl font-bold text-purple-400">
+          <h2 className="text-lg sm:text-xl font-bold text-accent-400">
             1. Scope & Regulatory Authority
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
@@ -64,7 +64,7 @@ export default function TrustRegulatorTermsPage() {
 
         {/* Section 2 */}
         <div className="space-y-3">
-          <h2 className="text-lg sm:text-xl font-bold text-purple-400">
+          <h2 className="text-lg sm:text-xl font-bold text-accent-400">
             2. Trust Certificate Authenticity & Legal Effect
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
@@ -78,7 +78,7 @@ export default function TrustRegulatorTermsPage() {
 
         {/* Section 3 */}
         <div className="space-y-3">
-          <h2 className="text-lg sm:text-xl font-bold text-purple-400">
+          <h2 className="text-lg sm:text-xl font-bold text-accent-400">
             3. Native Capabilities & Audit Trail
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
@@ -90,7 +90,7 @@ export default function TrustRegulatorTermsPage() {
 
         {/* Section 4 */}
         <div className="space-y-3">
-          <h2 className="text-lg sm:text-xl font-bold text-purple-400">
+          <h2 className="text-lg sm:text-xl font-bold text-accent-400">
             4. Limitation of Liability
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
@@ -113,7 +113,7 @@ export default function TrustRegulatorTermsPage() {
           </button>
           <Link
             href="/legal/trust-regulator/privacy"
-            className="text-sm font-semibold text-purple-400 hover:text-purple-300 transition underline inline-flex items-center gap-1.5"
+            className="text-sm font-semibold text-accent-400 hover:text-accent-300 transition underline inline-flex items-center gap-1.5"
           >
             <span>View Privacy Policy</span>
             <ArrowRightIcon className="w-4 h-4" />

@@ -57,6 +57,7 @@ const ALLOWED_ROUTES = [
   'api',
   'pubspec',
   'mobile',
+  'health',
 ];
 
 async function handleProxy(request: Request, { params }: { params: Promise<{ proxy: string[] }> }) {

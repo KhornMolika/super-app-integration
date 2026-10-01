@@ -117,7 +117,7 @@ export function AssignMiniAppModal({
         {/* Modal Header */}
         <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
               </svg>
@@ -165,7 +165,7 @@ export function AssignMiniAppModal({
               onClick={() => setMode('EXISTING')}
               className={`py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
                 mode === 'EXISTING'
-                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                  ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
               }`}
             >
@@ -180,7 +180,7 @@ export function AssignMiniAppModal({
               onClick={() => setMode('NEW')}
               className={`py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
                 mode === 'NEW'
-                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                  ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
               }`}
             >
@@ -223,8 +223,8 @@ export function AssignMiniAppModal({
                         onClick={() => setSelectedGroupId(group.id)}
                         className={`w-full p-3 rounded-2xl border text-left flex items-center justify-between gap-3 transition-all select-none ${
                           isSelected
-                            ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-500 ring-2 ring-indigo-500 shadow-xs'
-                            : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 hover:border-indigo-300'
+                            ? 'bg-sky-50/80 dark:bg-sky-950/40 border-sky-500 ring-2 ring-sky-500 shadow-xs'
+                            : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 hover:border-sky-300'
                         }`}
                       >
                         <div className="min-w-0 flex-1">
@@ -233,7 +233,7 @@ export function AssignMiniAppModal({
                               {group.title}
                             </span>
                             {group.isDefaultProfileChat && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200 font-bold flex items-center gap-1">
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200 font-bold flex items-center gap-1">
                                 <StarIcon className="w-3 h-3 text-amber-500 fill-amber-500" />
                                 <span>Default</span>
                               </span>
@@ -245,7 +245,7 @@ export function AssignMiniAppModal({
                         </div>
 
                         {isSelected && (
-                          <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                          <div className="w-6 h-6 rounded-full bg-sky-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
                             <CheckIcon className="w-3.5 h-3.5" />
                           </div>
                         )}

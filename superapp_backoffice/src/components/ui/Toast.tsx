@@ -94,7 +94,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 ? 'bg-rose-50/95 dark:bg-rose-950/90 border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-100 shadow-rose-500/10'
                 : t.type === 'warning'
                 ? 'bg-amber-50/95 dark:bg-amber-950/90 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-100 shadow-amber-500/10'
-                : 'bg-indigo-50/95 dark:bg-indigo-950/90 border-indigo-300 dark:border-indigo-800 text-indigo-900 dark:text-indigo-100 shadow-indigo-500/10'
+                : 'bg-sky-50/95 dark:bg-sky-950/90 border-sky-300 dark:border-sky-800 text-sky-900 dark:text-sky-100 shadow-sky-500/10'
             }`}
           >
             <div className="flex items-start gap-3">
@@ -107,7 +107,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                     ? 'bg-rose-200/80 dark:bg-rose-900 text-rose-700 dark:text-rose-300'
                     : t.type === 'warning'
                     ? 'bg-amber-200/80 dark:bg-amber-900 text-amber-700 dark:text-amber-300'
-                    : 'bg-indigo-200/80 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
+                    : 'bg-sky-200/80 dark:bg-sky-900 text-sky-700 dark:text-sky-300'
                 }`}
               >
                 {t.type === 'success' && (
