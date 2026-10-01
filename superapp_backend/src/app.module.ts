@@ -45,6 +45,8 @@ import { AppService } from './app.service';
         // columns based on entity diffs with no review. Real schema changes now go
         // through src/migrations/ (see InitialSchema + the migrate step in start.sh).
         synchronize: configService.get<string>('DB_SYNC') === 'true',
+        migrationsRun: true,
+        migrations: [__dirname + '/migrations/*{.ts,.js}'],
       }),
     }),
 
