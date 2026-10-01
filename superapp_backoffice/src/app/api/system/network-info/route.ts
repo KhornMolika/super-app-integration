@@ -155,9 +155,11 @@ export async function GET(request: NextRequest) {
           const isRel = mode === 'release' || sizeBytes < 50 * 1024 * 1024;
 
           if (!versionMap.has(ver) || mode === 'release') {
+            const normVer = ver.startsWith('v') ? ver : `v${ver}`;
+            const standardizedName = `superapp-test-${normVer}.apk`;
             versionMap.set(ver, {
               version: ver,
-              filename: match[2],
+              filename: standardizedName,
               size: sizeMb,
               sizeBytes,
               buildMode: isRel ? 'release' : 'debug',
@@ -193,7 +195,7 @@ export async function GET(request: NextRequest) {
           size: v.size,
           buildMode: v.buildMode,
           lastModified: v.lastModified,
-          downloadUrl: `/api/download-apk?version=${v.version}&type=${v.buildMode}`,
+          downloadUrl: `/api/download-apk?version=${v.version}&type=test&appName=superapp`,
         }));
       }
     }
@@ -217,11 +219,12 @@ export async function GET(request: NextRequest) {
               const fullPath = path.join(publicDir, fn);
               const stats = fs.statSync(fullPath);
               const match = fn.match(/v(\d+\.\d+\.\d+)/);
-              const ver = match ? `v${match[1]}` : null;
+              const ver = match ? `v${match[1]}` : 'v0.2.3';
               // Releases are typically <50MB because of AOT compilation and tree-shaking
               const isRel = fn.includes('release') || stats.size < 50 * 1024 * 1024;
+              const standardizedName = `superapp-test-${ver}.apk`;
               return {
-                filename: fn,
+                filename: standardizedName,
                 version: ver,
                 sizeBytes: stats.size,
                 sizeMb: (stats.size / (1024 * 1024)).toFixed(2) + ' MB',

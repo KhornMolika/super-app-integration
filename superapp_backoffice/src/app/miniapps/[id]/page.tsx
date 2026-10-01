@@ -26,7 +26,8 @@ import { CreateMiniAppDto, IntegrationMethod, NativeSdkConfigDto, SourceType } f
 import { getOrganizationDef } from '@/lib/constants/fsa-organizations';
 import { validateUrlFormat } from '@/components/ui/ValidatedUrlInput';
 import { toast } from '@/components/ui/Toast';
-import { miniappsApi, superAppApi } from '@/api';
+import { miniappsApi, superAppApi, isBackendUnreachableError } from '@/api';
+import { BackendServiceOfflineNotice } from '@/components/ui/BackendServiceOfflineNotice';
 
 export default function ManageMiniAppPage({ params: _params }: { params?: Promise<{ id: string }> | { id: string } }) {
   const router = useRouter();
@@ -1104,6 +1105,20 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
         </svg>
         <div className="text-slate-500 dark:text-slate-400 font-medium">Loading app configuration...</div>
       </div>
+    );
+  }
+
+  if (fetchError && isBackendUnreachableError(fetchError)) {
+    return (
+      <BackendServiceOfflineNotice
+        mode="card"
+        title="Backend Service Unreachable"
+        message={fetchError}
+        onRetry={() => fetchApp(false)}
+        autoRetrySeconds={5}
+        showDiagnosticsButton={true}
+        showTroubleshooting={true}
+      />
     );
   }
 

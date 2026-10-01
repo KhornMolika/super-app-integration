@@ -32,21 +32,26 @@ export class NotificationsService {
     miniAppId?: string,
     metadata?: any,
   ) {
-    const notification = this.notificationRepository.create({
-      userId,
-      title,
-      message,
-      type,
-      miniAppId,
-      metadata,
-    });
-    const saved = await this.notificationRepository.save(notification);
+    let saved: Notification | null = null;
+    try {
+      const notification = this.notificationRepository.create({
+        userId,
+        title,
+        message,
+        type,
+        miniAppId,
+        metadata,
+      });
+      saved = await this.notificationRepository.save(notification);
 
-    // 1. Emit live WebSocket event to Backoffice UI
-    this.notificationGateway.emitNotification({
-      type: 'notification.created',
-      data: saved,
-    });
+      // 1. Emit live WebSocket event to Backoffice UI
+      this.notificationGateway.emitNotification({
+        type: 'notification.created',
+        data: saved,
+      });
+    } catch (dbErr: any) {
+      this.logger.warn(`Could not persist notification record in DB: ${dbErr.message}`);
+    }
 
     // 2. Dispatch Telegram rich cards to MA Manager, MiniApp Team Group & SA Admins
     try {
@@ -192,6 +197,42 @@ export class NotificationsService {
     }
 
     return saved;
+  }
+
+  /**
+   * Broadcasts an administrative alert to all Super Admins & Admins
+   * (In-App DB, Live WebSockets, and Telegram Channels)
+   */
+  async notifyAdmins(
+    title: string,
+    message: string,
+    type: string,
+    miniAppId?: string,
+    metadata?: any,
+  ) {
+    try {
+      const allUsers = await this.userRepository.find({
+        relations: { roles: true },
+      });
+      const admins = allUsers.filter((u) =>
+        u.roles?.some((r) => r.name === 'SUPER_ADMIN' || r.name === 'ADMIN'),
+      );
+
+      const targets = admins.length > 0 ? admins : (allUsers.length > 0 ? [allUsers[0]] : []);
+
+      for (const target of targets) {
+        await this.createNotification(
+          target.id,
+          title,
+          message,
+          type,
+          miniAppId,
+          metadata,
+        );
+      }
+    } catch (err: any) {
+      this.logger.error(`Failed to dispatch admin notification: ${err.message}`);
+    }
   }
 
   async findByUserId(userId: string) {

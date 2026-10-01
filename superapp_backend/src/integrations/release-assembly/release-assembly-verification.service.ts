@@ -6,6 +6,7 @@ import * as path from 'path';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
+import { User } from '../../access-control/entities/user.entity';
 import { JenkinsService } from '../jenkins/jenkins.service';
 import { latestCodegenMrIid } from '../../miniapps/helpers/native-sdk-config.helper';
 import { NexusIntegrationService } from '../nexus/nexus-integration.service';
@@ -42,6 +43,8 @@ export class ReleaseAssemblyVerificationService {
     private readonly pubspecService: PubspecInjectorService,
     @InjectRepository(MiniApp)
     private readonly miniappRepository: Repository<MiniApp>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
   ) {}
 
   /**
@@ -347,6 +350,79 @@ export class ReleaseAssemblyVerificationService {
   }
 
   /**
+   * Intelligently resolves all mini-apps related to this build callback across
+   * status, buildStatus, version candidates, appName/appId, or miniAppId.
+   */
+  private async resolveBuildingApps(body: any): Promise<MiniApp[]> {
+    const rawVersion = body.releaseVersion || '';
+    const vPrefixed = rawVersion.startsWith('v') ? rawVersion : `v${rawVersion}`;
+    const unPrefixed = rawVersion.startsWith('v') ? rawVersion.slice(1) : rawVersion;
+    const candidateVersions = [rawVersion, vPrefixed, unPrefixed].filter(Boolean);
+
+    const whereConditions: any[] = [
+      { status: 'BUILDING' },
+      { buildStatus: 'BUILDING' },
+    ];
+    for (const v of candidateVersions) {
+      whereConditions.push({ activeTestVersion: v });
+    }
+
+    const apps = await this.miniappRepository.find({
+      where: whereConditions,
+      relations: { owner: true },
+    });
+
+    // Check by appName / appId / id
+    if (body.appName && body.appName !== 'superapp') {
+      const namedApps = await this.miniappRepository.find({
+        where: [
+          { appId: body.appName },
+          { name: body.appName },
+          ...(body.appName.match(/^[0-9a-f-]{36}$/i) ? [{ id: body.appName }] : []),
+        ],
+        relations: { owner: true },
+      });
+      for (const na of namedApps) {
+        if (!apps.some((a) => a.id === na.id)) {
+          apps.push(na);
+        }
+      }
+    }
+
+    // Check by miniAppId
+    if (body.miniAppId) {
+      const byId = await this.miniappRepository.findOne({
+        where: [{ id: body.miniAppId }, { appId: body.miniAppId }],
+        relations: { owner: true },
+      });
+      if (byId && !apps.some((a) => a.id === byId.id)) {
+        apps.push(byId);
+      }
+    }
+
+    // If still empty, check recent apps whose integrationConfig has superAppTestVersion
+    if (apps.length === 0 && candidateVersions.length > 0) {
+      const recentApps = await this.miniappRepository.find({
+        relations: { owner: true },
+        order: { updatedAt: 'DESC' },
+        take: 20,
+      });
+      for (const ra of recentApps) {
+        const testVer =
+          ra.integrationConfig?.superAppTestVersion || ra.activeTestVersion;
+        if (
+          candidateVersions.includes(testVer) &&
+          !apps.some((a) => a.id === ra.id)
+        ) {
+          apps.push(ra);
+        }
+      }
+    }
+
+    return apps;
+  }
+
+  /**
    * Handles build callback from Jenkins pipeline
    */
   async handleBuildCallback(body: any) {
@@ -357,18 +433,12 @@ export class ReleaseAssemblyVerificationService {
     const isSuccess = body.status === 'COMPLETED' || body.status === 'SUCCESS';
 
     if (isSuccess) {
-      const buildingApps = await this.miniappRepository.find({
-        where: [
-          { status: 'BUILDING' },
-          { activeTestVersion: body.releaseVersion },
-        ],
-        relations: { owner: true },
-      });
+      const buildingApps = await this.resolveBuildingApps(body);
 
       await this.miniappRepository
         .createQueryBuilder()
         .update(MiniApp)
-        .set({ status: 'TESTING' })
+        .set({ status: 'TESTING', buildStatus: 'COMPLETED' })
         .where("status = 'BUILDING'")
         .execute();
 
@@ -383,7 +453,10 @@ export class ReleaseAssemblyVerificationService {
           body.releaseVersion ||
           app.activeTestVersion ||
           app.integrationConfig?.superAppTestVersion ||
-          'v1.0.0';
+          'v0.2.1';
+        const normVersion = effectiveVersion.startsWith('v')
+          ? effectiveVersion
+          : `v${effectiveVersion}`;
 
         const nexusBase = (
           this.configService.get<string>('NEXUS_BASE_URL') ||
@@ -405,10 +478,8 @@ export class ReleaseAssemblyVerificationService {
           sanitizedNexusUrl = `${nexusBase}/repository/${repoName}/superapp/${effectiveVersion}/${filename}`;
         }
 
-        // Backoffice download endpoint is the most robust link for one-click downloading
-        const finalApkUrl =
-          body.apkUrl ||
-          `${backofficeBase}/api/download-apk?type=${body.buildType === 'release' ? 'release' : 'test'}&version=${encodeURIComponent(effectiveVersion)}&appName=superapp`;
+        // Standardized Backoffice download proxy URL: enforces standardized filename across all channels
+        const finalApkUrl = `${backofficeBase}/api/download-apk?type=test&version=${encodeURIComponent(normVersion)}&appName=superapp`;
 
         const currentStages = app.buildStages || {};
         const allCompletedStages: Record<string, any> = {
@@ -455,35 +526,48 @@ export class ReleaseAssemblyVerificationService {
 
         this.notificationsService.emitBuildCompleted({
           miniAppId: app.id,
-          appName: body.appName,
+          appName: body.appName || app.name,
           releaseVersion: effectiveVersion,
           buildType: body.buildType || 'debug',
           apkUrl: finalApkUrl,
           status: 'TESTING',
         });
 
-        if (app.ownerId) {
+        // Resolve App Owner and notify
+        let targetOwnerId = app.ownerId || app.owner?.id;
+        let targetEmail = app.ownerEmail || app.owner?.email;
+
+        if (!targetOwnerId && targetEmail) {
+          const ownerUser = await this.userRepository.findOne({
+            where: { email: targetEmail },
+          });
+          if (ownerUser) {
+            targetOwnerId = ownerUser.id;
+            if (!targetEmail) targetEmail = ownerUser.email;
+          }
+        }
+
+        if (targetOwnerId) {
           await this.notificationsService.createNotification(
-            app.ownerId,
+            targetOwnerId,
             'Super App Test Build Ready',
-            `Super App test build (${effectiveVersion}) is ready! Download the test APK or launch the Web Sandbox to verify ${app.name}.`,
+            `Super App test build (${effectiveVersion}) is ready! Download the test APK (superapp-test-${normVersion}.apk) or launch the Web Sandbox to verify "${app.name}".`,
             'TEST_BUILD_READY',
             app.id,
             {
+              appName: app.name || body.appName || 'superapp',
+              miniAppId: app.id,
               releaseVersion: effectiveVersion,
               version: effectiveVersion,
               apkUrl: finalApkUrl,
+              nexusApkUrl: sanitizedNexusUrl,
               buildType: body.buildType || 'debug',
+              teamTelegramChatId: app.teamTelegramChatId,
             },
           );
         }
 
-        const targetEmail = app.ownerEmail || app.owner?.email;
         if (targetEmail) {
-          const backofficeBase = resolveBackofficeBaseUrl(
-            this.configService.get<string>('BACKOFFICE_BASE_URL') ||
-              this.configService.get<string>('WEBAPP_URL'),
-          );
           const sandboxUrl = `${backofficeBase}/miniapps/${app.id}`;
           await this.mailService.sendTestBuildReadyEmail(
             targetEmail,
@@ -494,6 +578,47 @@ export class ReleaseAssemblyVerificationService {
           );
         }
       }
+
+      if (buildingApps.length === 0) {
+        const effectiveVersion = body.releaseVersion || 'v0.2.1';
+        const normVersion = effectiveVersion.startsWith('v')
+          ? effectiveVersion
+          : `v${effectiveVersion}`;
+        const backofficeBase = resolveBackofficeBaseUrl(
+          this.configService.get<string>('BACKOFFICE_BASE_URL') ||
+            this.configService.get<string>('WEBAPP_URL'),
+        );
+        const standaloneApkUrl = `${backofficeBase}/api/download-apk?type=test&version=${encodeURIComponent(normVersion)}&appName=superapp`;
+
+        const fallbackApp = await this.miniappRepository.findOne({
+          order: { updatedAt: 'DESC' },
+          relations: { owner: true },
+        });
+
+        this.notificationsService.emitBuildCompleted({
+          miniAppId: fallbackApp?.id || 'superapp',
+          appName: body.appName || fallbackApp?.name || 'superapp',
+          releaseVersion: effectiveVersion,
+          buildType: body.buildType || 'release',
+          apkUrl: standaloneApkUrl,
+          status: 'TESTING',
+        });
+        await this.notificationsService.notifyAdmins(
+          `🚀 Super App Test Build Ready (${effectiveVersion})`,
+          `Super App test build (${effectiveVersion}, ${body.buildType || 'release'}) is published to Sonatype Nexus and ready for download.`,
+          'TEST_BUILD_READY',
+          fallbackApp?.id,
+          {
+            appName: body.appName || fallbackApp?.name || 'superapp',
+            miniAppId: fallbackApp?.id,
+            releaseVersion: effectiveVersion,
+            version: effectiveVersion,
+            apkUrl: standaloneApkUrl,
+            buildType: body.buildType || 'release',
+            teamTelegramChatId: fallbackApp?.teamTelegramChatId,
+          },
+        );
+      }
     } else {
       await this.handleFailedBuild(body);
     }
@@ -503,25 +628,27 @@ export class ReleaseAssemblyVerificationService {
 
   /**
    * A non-COMPLETED/SUCCESS callback (e.g. FAILED) must not leave apps stuck in
-   * BUILDING. The pre-BUILDING status is NOT recorded anywhere, and apps enter
-   * BUILDING from APPROVED (verify()) or APPROVED/IN_REVIEW/TESTING/BUILDING
-   * (lifecycle triggerTestBuild). We move them to APPROVED: an existing status
-   * from which both "Verify release" and "Start test build"/startTesting are
-   * allowed, so the admin can simply retry. `buildStages` is left untouched so
-   * the UI still shows which stage failed. The UPDATE is atomic on
-   * `status = 'BUILDING'` so it cannot clobber a concurrent transition.
+   * BUILDING. We update apps to BUILD_FAILED and notify both admins and app owners.
    */
   private async handleFailedBuild(body: BuildCallbackDto) {
-    const buildingApps = await this.miniappRepository.find({
-      where: [{ status: 'BUILDING' }, { buildStatus: 'BUILDING' }],
-      relations: { owner: true },
-    });
+    const buildingApps = await this.resolveBuildingApps(body);
 
     const errorMessage =
       body.errorMessage ||
       body.error ||
       (body as any).details ||
       'Super App Fastlane CI build pipeline failed. Inspect Jenkins console logs for details.';
+
+    const effectiveVersion =
+      body.releaseVersion ||
+      buildingApps[0]?.integrationConfig?.superAppTestVersion ||
+      'v0.2.1';
+    const appName = body.appName || buildingApps[0]?.name || 'superapp';
+    const buildType = body.buildType || 'release';
+    const backofficeBase = resolveBackofficeBaseUrl(
+      this.configService.get<string>('BACKOFFICE_BASE_URL') ||
+        this.configService.get<string>('WEBAPP_URL'),
+    );
 
     for (const app of buildingApps) {
       const currentStages = { ...(app.buildStages || {}) };
@@ -553,38 +680,89 @@ export class ReleaseAssemblyVerificationService {
         buildStages: currentStages,
       });
 
-      const effectiveVersion =
-        body.releaseVersion ||
-        app.integrationConfig?.superAppTestVersion ||
-        'unknown';
-
       this.notificationsService.emitBuildCompleted({
         miniAppId: app.id,
-        appName: body.appName,
+        appName: app.name || body.appName,
         releaseVersion: effectiveVersion,
-        buildType: body.buildType || 'debug',
+        buildType,
         status: 'FAILED',
         error: errorMessage,
       } as any);
 
-      if (app.ownerId) {
+      // Resolve App Owner and dispatch notifications
+      let targetOwnerId = app.ownerId || app.owner?.id;
+      let targetEmail = app.ownerEmail || app.owner?.email;
+
+      if (!targetOwnerId && targetEmail) {
+        const ownerUser = await this.userRepository.findOne({
+          where: { email: targetEmail },
+        });
+        if (ownerUser) {
+          targetOwnerId = ownerUser.id;
+          if (!targetEmail) targetEmail = ownerUser.email;
+        }
+      }
+
+      if (targetOwnerId) {
         await this.notificationsService.createNotification(
-          app.ownerId,
-          'Super App Build Failed',
+          targetOwnerId,
+          `🚨 Super App Build Failed: ${app.name || app.appId}`,
           `Super App test build (${effectiveVersion}) failed on Jenkins for Mini App "${app.name}": ${errorMessage}. Please review the failure diagnostics and retry the build.`,
           'BUILD_FAILED',
           app.id,
           {
+            appName: app.name || body.appName || 'superapp',
+            miniAppId: app.id,
             releaseVersion: effectiveVersion,
             version: effectiveVersion,
-            buildType: body.buildType || 'debug',
+            buildType,
             error: errorMessage,
+            failedAt: new Date().toISOString(),
+            teamTelegramChatId: app.teamTelegramChatId,
           },
         );
       }
+
+      if (targetEmail) {
+        const detailsUrl = `${backofficeBase}/miniapps/${app.id}`;
+        await this.mailService.sendTestBuildFailedEmail(
+          targetEmail,
+          app.name || app.appId || 'Mini App',
+          effectiveVersion,
+          errorMessage,
+          detailsUrl,
+        );
+      }
     }
+
+    // Always emit WebSocket build completed failure event for active UI subscribers
+    this.notificationsService.emitBuildCompleted({
+      miniAppId: buildingApps[0]?.id || 'superapp',
+      appName,
+      releaseVersion: effectiveVersion,
+      buildType,
+      status: 'FAILED',
+      error: errorMessage,
+    } as any);
+
+    // ALWAYS broadcast failure notification to all Super Admins, Back Office Notification Bell, and Telegram Ops Groups
+    await this.notificationsService.notifyAdmins(
+      `🚨 Super App Build Failed (${effectiveVersion})`,
+      `Super App Fastlane CI build pipeline (${appName} ${effectiveVersion}, ${buildType}) failed: ${errorMessage}`,
+      'BUILD_FAILED',
+      buildingApps[0]?.id,
+      {
+        appName,
+        releaseVersion: effectiveVersion,
+        version: effectiveVersion,
+        buildType,
+        error: errorMessage,
+        failedAt: new Date().toISOString(),
+      },
+    );
+
     this.logger.warn(
-      `Build ${body.releaseVersion} reported ${body.status}: ${buildingApps.length} app(s) transitioned to BUILD_FAILED (${errorMessage})`,
+      `Build ${effectiveVersion} reported ${body.status}: notified admins, owners, and ${buildingApps.length} app(s) transitioned to BUILD_FAILED (${errorMessage})`,
     );
   }
 

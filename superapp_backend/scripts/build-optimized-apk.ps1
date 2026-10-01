@@ -36,6 +36,12 @@ if (-not $ApiBaseUrl) {
     }
 }
 
+if ($ApiBaseUrl -match "localhost|127\.0\.0\.1") {
+    $lanIp = "192.168.10.35"
+    $ApiBaseUrl = $ApiBaseUrl -replace "localhost|127\.0\.0\.1", $lanIp
+    Write-Host "[CONFIG] Replaced localhost in ApiBaseUrl with LAN IP: $ApiBaseUrl" -ForegroundColor Yellow
+}
+
 $ErrorActionPreference = "Stop"
 
 $ProjectRoot = $PSScriptRoot

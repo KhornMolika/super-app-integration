@@ -21,6 +21,7 @@ types.setTypeParser(1184, (stringValue: string) => {
   return new Date(stringValue);
 });
 
+// Trigger reload for standardized test APK filename dispatch: superapp-test-${version}.apk
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);

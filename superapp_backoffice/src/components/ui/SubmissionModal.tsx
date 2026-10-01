@@ -19,7 +19,9 @@ import {
   ZapIcon,
   VirusIcon,
   DocumentTextIcon,
+  RefreshIcon,
 } from '@/components/ui/Icons';
+import { isBackendUnreachableError } from '@/api/client';
 
 export type ValidationStageItem = {
   id: string;
@@ -394,7 +396,51 @@ export default function SubmissionModal({
 
         {/* ERROR STATE */}
         {state.status === 'error' && (() => {
-          const hasErrorEntries = !!(state.errors && Object.keys(state.errors).length > 0);
+          const isBackendDown = isBackendUnreachableError(state.message);
+          const hasErrorEntries = !isBackendDown && !!(state.errors && Object.keys(state.errors).length > 0);
+
+          if (isBackendDown) {
+            return (
+              <div className="p-7 flex flex-col items-center">
+                <div className="w-14 h-14 bg-amber-100 dark:bg-amber-950/50 rounded-2xl border border-amber-300 dark:border-amber-800 flex items-center justify-center mb-3 text-amber-600 dark:text-amber-400">
+                  <AlertTriangleIcon className="w-7 h-7" />
+                </div>
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                    HTTP 503 • BACKEND_SERVICE_DOWN
+                  </span>
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2 text-center">
+                  Backend Service Unreachable
+                </h3>
+                <p className="text-slate-600 dark:text-slate-300 text-center text-sm mb-4 max-w-md leading-relaxed">
+                  {state.message || 'The backend service at http://localhost:3000 is currently unreachable. It may be starting up, rebooting, or compiling in development.'}
+                </p>
+
+                <div className="w-full bg-amber-50 dark:bg-amber-950/30 p-3.5 rounded-xl border border-amber-200 dark:border-amber-800/50 mb-5 text-xs text-amber-900 dark:text-amber-200 space-y-1">
+                  <div className="font-semibold flex items-center gap-1.5">
+                    <ClockIcon className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    <span>Your form inputs are safely retained</span>
+                  </div>
+                  <p className="text-slate-600 dark:text-slate-400 text-[11px]">
+                    Once the backend server finishes starting up, you can submit again without re-entering your configuration.
+                  </p>
+                </div>
+
+                <div className="flex space-x-3 w-full">
+                  <Button
+                    variant="outline"
+                    className="flex-1 h-10 text-sm font-semibold inline-flex items-center justify-center gap-2"
+                    onClick={onClose}
+                  >
+                    <XIcon className="w-4 h-4" />
+                    <span>Close &amp; Keep Data</span>
+                  </Button>
+                </div>
+              </div>
+            );
+          }
+
           return (
             <div className="p-7 flex flex-col items-center">
               <div className="w-14 h-14 bg-rose-100 dark:bg-rose-900/40 rounded-full flex items-center justify-center mb-3 text-rose-600 dark:text-rose-400">

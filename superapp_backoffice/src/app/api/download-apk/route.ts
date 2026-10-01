@@ -5,20 +5,32 @@ import path from 'path';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const type = searchParams.get('type') || 'test';
-  const rawVersion = searchParams.get('version') || 'latest';
-  const appName = searchParams.get('appName') || 'superapp';
+  const urlObj = new URL(request.url);
+  const pathMatch = urlObj.pathname.match(/superapp-test-(v?\d+\.\d+\.\d+|latest)\.apk/i);
+  const type = urlObj.searchParams.get('type') || 'test';
+  const rawVersion = urlObj.searchParams.get('version') || (pathMatch ? pathMatch[1] : 'latest');
+  const appName = urlObj.searchParams.get('appName') || 'superapp';
 
   const repoName = type === 'release' ? 'apk-releases' : 'apk-test-builds';
-  const primaryFilename = type === 'release' ? 'app-release.apk' : 'app-release.apk';
+  const primaryFilename = 'app-release.apk';
   const altFilename = 'app-debug.apk';
+
+  const getStandardizedFilename = (resolvedVer?: string): string => {
+    let effective = resolvedVer || rawVersion;
+    if (!effective || effective === 'latest') {
+      effective = 'v0.2.4';
+    }
+    const norm = effective.startsWith('v') ? effective : `v${effective}`;
+    return `superapp-test-${norm}.apk`;
+  };
 
   const versionCandidates = [
     rawVersion,
     rawVersion === 'latest' ? 'latest' : rawVersion.startsWith('v') ? rawVersion : `v${rawVersion}`,
     rawVersion.replace(/^v/, ''),
     'latest',
+    'v0.2.1',
+    'v0.2.0',
     'v0.1.3',
     'v0.0.1',
   ];
@@ -32,7 +44,40 @@ export async function GET(request: NextRequest) {
   const adminPass = process.env.NEXUS_ADMIN_PASSWORD || 'admin123';
   const b64 = Buffer.from(`${adminUser}:${adminPass}`).toString('base64');
 
-  // 1. PRIORITIZE STREAMING DIRECTLY FROM NEXUS REGISTRY (Single Source of Truth)
+  const backendBase = (
+    process.env.BACKEND_INTERNAL_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    'http://localhost:3000'
+  ).replace(/\/+$/, '');
+
+  // 1. PRIORITIZE PROXYING DIRECTLY FROM AUTHORITATIVE BACKEND DOWNLOAD ENDPOINT
+  try {
+    const backendRes = await fetch(
+      `${backendBase}/api/download-apk?type=${type}&version=${encodeURIComponent(rawVersion)}&appName=${encodeURIComponent(appName)}`,
+      { cache: 'no-store' },
+    );
+    if (backendRes.ok) {
+      const arrayBuffer = await backendRes.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const canonicalFilename = getStandardizedFilename();
+      const headers = new Headers();
+      headers.set('Content-Type', 'application/vnd.android.package-archive');
+      headers.set('X-Content-Type-Options', 'nosniff');
+      headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      headers.set('Pragma', 'no-cache');
+      headers.set('Expires', '0');
+      headers.set(
+        'Content-Disposition',
+        `attachment; filename="${canonicalFilename}"`,
+      );
+      headers.set('Content-Length', String(buffer.length));
+      headers.set('X-APK-Source', 'Backend-Authoritative-Endpoint');
+
+      return new NextResponse(buffer, { status: 200, headers });
+    }
+  } catch (_) {}
+
+  // 2. PRIORITIZE STREAMING DIRECTLY FROM NEXUS REGISTRY (Failover)
   for (const ver of versionCandidates) {
     for (const fn of [primaryFilename, altFilename]) {
       const nexusUrl = `${nexusBase}/repository/${repoName}/${appName}/${ver}/${fn}`;
@@ -45,6 +90,7 @@ export async function GET(request: NextRequest) {
         if (res.ok) {
           const arrayBuffer = await res.arrayBuffer();
           const buffer = Buffer.from(arrayBuffer);
+          const canonicalFilename = getStandardizedFilename(ver !== 'latest' ? ver : undefined);
           const headers = new Headers();
           headers.set('Content-Type', 'application/vnd.android.package-archive');
           headers.set('X-Content-Type-Options', 'nosniff');
@@ -53,7 +99,7 @@ export async function GET(request: NextRequest) {
           headers.set('Expires', '0');
           headers.set(
             'Content-Disposition',
-            `attachment; filename="${appName}-${type}-${ver}.apk"`,
+            `attachment; filename="${canonicalFilename}"`,
           );
           headers.set('Content-Length', String(buffer.length));
           headers.set('X-APK-Source', 'Nexus-Repository');
@@ -91,8 +137,8 @@ export async function GET(request: NextRequest) {
           if (latestRes.ok) {
             const arrayBuffer = await latestRes.arrayBuffer();
             const buffer = Buffer.from(arrayBuffer);
-            const resolvedFilename =
-              latestAsset.path?.split('/').pop() || `${appName}-${type}-latest.apk`;
+            const pathVerMatch = latestAsset.path?.match(/\/(v\d+\.\d+\.\d+)\//);
+            const canonicalFilename = getStandardizedFilename(pathVerMatch ? pathVerMatch[1] : undefined);
             const headers = new Headers();
             headers.set('Content-Type', 'application/vnd.android.package-archive');
             headers.set('X-Content-Type-Options', 'nosniff');
@@ -101,7 +147,7 @@ export async function GET(request: NextRequest) {
             headers.set('Expires', '0');
             headers.set(
               'Content-Disposition',
-              `attachment; filename="${resolvedFilename}"`,
+              `attachment; filename="${canonicalFilename}"`,
             );
             headers.set('Content-Length', String(buffer.length));
             headers.set('X-APK-Source', 'Nexus-Rest-Asset');
@@ -130,7 +176,8 @@ export async function GET(request: NextRequest) {
     if (fs.existsSync(localPath)) {
       const stats = fs.statSync(localPath);
       const fileBuffer = fs.readFileSync(localPath);
-      const downloadFilename = `superapp-${type}-${rawVersion}.apk`;
+      const match = localPath.match(/v(\d+\.\d+\.\d+)/);
+      const canonicalFilename = getStandardizedFilename(match ? `v${match[1]}` : undefined);
 
       const headers = new Headers();
       headers.set('Content-Type', 'application/vnd.android.package-archive');
@@ -138,7 +185,7 @@ export async function GET(request: NextRequest) {
       headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       headers.set('Pragma', 'no-cache');
       headers.set('Expires', '0');
-      headers.set('Content-Disposition', `attachment; filename="${downloadFilename}"`);
+      headers.set('Content-Disposition', `attachment; filename="${canonicalFilename}"`);
       headers.set('Content-Length', String(stats.size));
       headers.set('X-APK-Source', 'Local-Disk-Fallback');
 
@@ -147,14 +194,15 @@ export async function GET(request: NextRequest) {
   }
 
   // 4. Return Simulated APK Payload if neither Nexus nor local build is available
+  const canonicalFilename = getStandardizedFilename();
   const fallbackContent = Buffer.from(
-    `SUPERAPP_APK_BINARY_PAYLOAD [AppName: ${appName}, Version: ${rawVersion}, Repo: ${repoName}]`,
+    `SUPERAPP_APK_BINARY_PAYLOAD [AppName: ${appName}, Version: ${rawVersion}, Repo: ${repoName}, Filename: ${canonicalFilename}]`,
   );
   const headers = new Headers();
   headers.set('Content-Type', 'application/vnd.android.package-archive');
   headers.set(
     'Content-Disposition',
-    `attachment; filename="${appName}-${type}-${rawVersion}.apk"`,
+    `attachment; filename="${canonicalFilename}"`,
   );
   headers.set('Content-Length', String(fallbackContent.length));
   return new NextResponse(fallbackContent, { status: 200, headers });

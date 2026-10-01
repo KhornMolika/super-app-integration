@@ -13,6 +13,7 @@ import { ReleaseAssemblyVerificationService } from './release-assembly/release-a
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MiniApp } from '../miniapps/entities/miniapp.entity';
 import { MiniAppIssue } from '../miniapps/entities/miniapp-issue.entity';
+import { User } from '../access-control/entities/user.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { AuditModule } from '../audit/audit.module';
 import { PermissionsModule } from '../permissions/permissions.module';
@@ -30,7 +31,7 @@ import { PubspecInjectorController } from './flutter/pubspec-injector.controller
 @Module({
   imports: [
     ConfigModule,
-    TypeOrmModule.forFeature([MiniApp, MiniAppIssue]),
+    TypeOrmModule.forFeature([MiniApp, MiniAppIssue, User]),
     NotificationsModule,
     AuditModule,
     PermissionsModule,

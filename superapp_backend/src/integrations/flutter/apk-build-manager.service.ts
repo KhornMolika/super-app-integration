@@ -86,11 +86,18 @@ export class ApkBuildManagerService {
     const appName = options.appName || 'superapp';
     const port = process.env.PORT || '3000';
     const resolvedLanUrl = `http://${getLocalIpAddress()}:${port}`;
-    const apiBaseUrl =
+    let apiBaseUrl =
       options.apiBaseUrl ||
       process.env.MOBILE_API_BASE_URL ||
       process.env.BACKEND_API_URL ||
       resolvedLanUrl;
+
+    if (apiBaseUrl.includes('localhost') || apiBaseUrl.includes('127.0.0.1')) {
+      const lanIp = getLocalIpAddress();
+      if (lanIp && lanIp !== '127.0.0.1') {
+        apiBaseUrl = apiBaseUrl.replace(/localhost|127\.0\.0\.1/, lanIp);
+      }
+    }
 
     if (this.state === 'BUILDING') {
       if (this.activeBuildPromise && (!options.releaseVersion || options.releaseVersion === this.releaseVersion)) {

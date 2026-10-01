@@ -189,12 +189,14 @@ export default function DownloadApkModal({
   const activeVersion = selectedVersion || activeVerObj?.version || defaultVersion;
   const isRelease = activeVerObj?.buildMode === 'release' || networkData?.apk?.buildMode === 'release';
   const activeSize = activeVerObj?.size || networkData?.apk?.size || '19.44 MB';
-  const activeFilename = `superapp-${activeVersion}.apk`;
+  const normVer = activeVersion.startsWith('v') ? activeVersion : `v${activeVersion}`;
+  // Standardized Test APK filename across all channels: modal, direct links, and Telegram
+  const activeFilename = `superapp-test-${normVer}.apk`;
 
   const isCloud = targetEnv === 'cloud';
   const effectiveDownloadUrl = isCloud
-    ? `https://app.fintechcenterfsa.com/api/download-apk?version=${encodeURIComponent(activeVersion)}&type=${isRelease ? 'release' : 'test'}`
-    : `http://${selectedIp}:${backofficePort}/api/download-apk?version=${encodeURIComponent(activeVersion)}&type=${isRelease ? 'release' : 'test'}`;
+    ? `https://app.fintechcenterfsa.com/api/download-apk?version=${encodeURIComponent(normVer)}&type=test&appName=superapp`
+    : `http://${selectedIp}:${backofficePort}/api/download-apk?version=${encodeURIComponent(normVer)}&type=test&appName=superapp`;
   const effectiveBackendUrl = isCloud
     ? 'https://app.fintechcenterfsa.com/api'
     : `http://${selectedIp}:${networkData?.backendPort || '3000'}`;

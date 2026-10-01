@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MiniappsService } from './miniapps.service';
 import { MiniappsController } from './miniapps.controller';
+import { ApkDownloadController } from './apk-download.controller';
 import { MiniApp } from './entities/miniapp.entity';
 import { MiniAppIssue } from './entities/miniapp-issue.entity';
 import { MiniAppActivity } from './entities/miniapp-activity.entity';
@@ -39,7 +40,7 @@ import { UrlProbeHelper } from './helpers/url-probe.helper';
     NativeSdkCodegenModule,
     SdkArtifactsModule,
   ],
-  controllers: [MiniappsController],
+  controllers: [MiniappsController, ApkDownloadController],
   providers: [
     MiniappsService,
     PermissionDetectorHelper,

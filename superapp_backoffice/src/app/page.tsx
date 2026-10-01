@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { useEffect, useState } from 'react';
-import { miniappsApi, permissionsApi, superAppApi, telegramApi } from '@/api';
+import { miniappsApi, permissionsApi, superAppApi, telegramApi, isBackendUnreachableError } from '@/api';
+import { BackendServiceOfflineNotice } from '@/components/ui/BackendServiceOfflineNotice';
 
 export default function Dashboard() {
   const { can, role } = useAuth();
@@ -20,48 +21,68 @@ export default function Dashboard() {
   const [storageInfo, setStorageInfo] = useState<{ configured: boolean; licenseType: string; endpoint: string } | null>(null);
   const [telegramInfo, setTelegramInfo] = useState<{ isConnected?: boolean; botUsername?: string; user?: any } | null>(null);
   const [ecosystemData, setEcosystemData] = useState<any>(null);
+  const [isBackendDown, setIsBackendDown] = useState(false);
 
-  useEffect(() => {
-    async function fetchMetrics() {
-      try {
-        const [miniApps, proposals, permissions, ecosystem, storage, telegram] = await Promise.all([
-          miniappsApi.getAll().catch(() => []),
-          permissionsApi.getProposals().catch(() => []),
-          permissionsApi.getAll().catch(() => []),
-          superAppApi.getEcosystemStatus().catch(() => null),
-          superAppApi.getStorageLicenseStatus().catch(() => null),
-          telegramApi.getStatus().catch(() => null),
-        ]);
+  async function fetchMetrics() {
+    try {
+      let isDown = false;
+      const [miniApps, proposals, permissions, ecosystem, storage, telegram] = await Promise.all([
+        miniappsApi.getAll().catch((err) => {
+          if (isBackendUnreachableError(err)) isDown = true;
+          return [];
+        }),
+        permissionsApi.getProposals().catch((err) => {
+          if (isBackendUnreachableError(err)) isDown = true;
+          return [];
+        }),
+        permissionsApi.getAll().catch((err) => {
+          if (isBackendUnreachableError(err)) isDown = true;
+          return [];
+        }),
+        superAppApi.getEcosystemStatus().catch((err) => {
+          if (isBackendUnreachableError(err)) isDown = true;
+          return null;
+        }),
+        superAppApi.getStorageLicenseStatus().catch(() => null),
+        telegramApi.getStatus().catch(() => null),
+      ]);
 
-        const rawApps = Array.isArray(miniApps) ? miniApps : [];
-        setMiniAppsList(rawApps);
+      setIsBackendDown(isDown);
 
-        // Pending Mini Apps needing review
-        const pendingApps = rawApps.filter(
-          (a: any) => a.status === 'IN_REVIEW' || a.status === 'SUBMITTED' || a.status === 'PENDING_REVIEW',
-        );
+      const rawApps = Array.isArray(miniApps) ? miniApps : [];
+      setMiniAppsList(rawApps);
 
-        // Pending Permission Proposals needing review
-        const rawProposals = Array.isArray(proposals) ? proposals : [];
-        const pendingProposals = rawProposals.filter(
-          (p: any) => p.status === 'PENDING_REVIEW' || p.status === 'Pending',
-        );
+      // Pending Mini Apps needing review
+      const pendingApps = rawApps.filter(
+        (a: any) => a.status === 'IN_REVIEW' || a.status === 'SUBMITTED' || a.status === 'PENDING_REVIEW',
+      );
 
-        setMetrics({
-          totalMiniApps: rawApps.length,
-          pendingReviews: pendingApps.length + pendingProposals.length,
-          supportedPermissions: Array.isArray(permissions) ? permissions.length : 0,
-          superAppTestVersion: ecosystem?.superAppTestVersion || ecosystem?.superAppVersion || 'v0.0.1',
-          officialReleaseVersion: ecosystem?.officialReleaseVersion || 'v0.0.1',
-        });
+      // Pending Permission Proposals needing review
+      const rawProposals = Array.isArray(proposals) ? proposals : [];
+      const pendingProposals = rawProposals.filter(
+        (p: any) => p.status === 'PENDING_REVIEW' || p.status === 'Pending',
+      );
 
-        if (ecosystem) setEcosystemData(ecosystem);
-        if (storage) setStorageInfo(storage);
-        if (telegram) setTelegramInfo(telegram);
-      } catch (e) {
-        console.error('Failed to fetch metrics', e);
+      setMetrics({
+        totalMiniApps: rawApps.length,
+        pendingReviews: pendingApps.length + pendingProposals.length,
+        supportedPermissions: Array.isArray(permissions) ? permissions.length : 0,
+        superAppTestVersion: ecosystem?.superAppTestVersion || ecosystem?.superAppVersion || 'v0.0.1',
+        officialReleaseVersion: ecosystem?.officialReleaseVersion || 'v0.0.1',
+      });
+
+      if (ecosystem) setEcosystemData(ecosystem);
+      if (storage) setStorageInfo(storage);
+      if (telegram) setTelegramInfo(telegram);
+    } catch (e) {
+      console.error('Failed to fetch metrics', e);
+      if (isBackendUnreachableError(e)) {
+        setIsBackendDown(true);
       }
     }
+  }
+
+  useEffect(() => {
     fetchMetrics();
   }, []);
 
@@ -83,6 +104,16 @@ export default function Dashboard() {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out space-y-8">
+      {isBackendDown && (
+        <BackendServiceOfflineNotice
+          mode="banner"
+          title="Backend Service Unreachable"
+          message="Live metrics and ecosystem telemetry may be delayed while the backend is starting up or restarting."
+          onRetry={fetchMetrics}
+          autoRetrySeconds={5}
+        />
+      )}
+
       {/* Header & Quick Action Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

@@ -63,10 +63,11 @@ export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttrib
           }
           React.Children.forEach((child.props as any).children, (sub) => processNode(sub, groupLabel));
         } else if (child.type === 'option') {
+          const optProps = child.props as any;
           parsedOpts.push({
-            value: String(child.props.value ?? ''),
-            label: child.props.children ?? child.props.value,
-            disabled: child.props.disabled,
+            value: String(optProps.value ?? ''),
+            label: optProps.children ?? optProps.value,
+            disabled: optProps.disabled,
             group: currentGroup,
           });
         } else if ((child.props as any)?.children) {

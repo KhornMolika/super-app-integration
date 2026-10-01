@@ -162,17 +162,18 @@ pipeline {
                     def buildType = params.BUILD_TYPE ?: 'release'
                     def filename = buildType == 'release' ? 'app-release.apk' : 'app-debug.apk'
                     sh """
-                    APK_FILE="/var/reports/\${filename}"
+                    APK_FILE="/var/reports/${filename}"
                     NEXUS_USER="${env.NEXUS_USER ?: 'admin'}"
                     NEXUS_PASSWORD="${env.NEXUS_PASSWORD ?: 'admin123'}"
                     AUTH_OPT="-u \${NEXUS_USER}:\${NEXUS_PASSWORD}"
 
-                    # Sync newly compiled APK from backoffice/host into Jenkins reports volume
-                    curl -s -f "http://host.docker.internal:3002/api/download-apk?type=\${buildType}&version=${params.RELEASE_VERSION}" -o "\$APK_FILE" || \
+                    # Sync newly compiled APK from host/backend/nexus into Jenkins reports volume
+                    curl -s -f \$AUTH_OPT "${params.NEXUS_URL}/repository/apk-releases/${params.APP_NAME}/${params.RELEASE_VERSION}/app-release.apk" -o "\$APK_FILE" || \
+                    curl -s -f "http://host.docker.internal:3002/api/download-apk?type=${buildType}&version=${params.RELEASE_VERSION}" -o "\$APK_FILE" || \
                     curl -s -f "http://host.docker.internal:3000/public/superapp-test.apk" -o "\$APK_FILE" || true
 
                     if [ -f "\$APK_FILE" ] && [ -s "\$APK_FILE" ]; then
-                        echo "Uploading \${filename} to Sonatype Nexus apk-test-builds repository..."
+                        echo "Uploading ${filename} to Sonatype Nexus apk-test-builds repository..."
                         # Publish primary artifact to apk-test-builds
                         curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-test-builds/${params.APP_NAME}/${params.RELEASE_VERSION}/app-release.apk" || \
                         curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "http://superapp-nexus:8081/repository/apk-test-builds/${params.APP_NAME}/${params.RELEASE_VERSION}/app-release.apk"
@@ -180,12 +181,14 @@ pipeline {
                         # Update latest pointer in apk-test-builds
                         curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-test-builds/${params.APP_NAME}/latest/app-release.apk" 2>/dev/null || true
 
+                        # Upload standardized test APK name to Nexus
+                        curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-test-builds/${params.APP_NAME}/${params.RELEASE_VERSION}/superapp-test-${params.RELEASE_VERSION}.apk" 2>/dev/null || true
                         # Also alias to app-debug.apk so legacy URLs retrieve the small optimized build
                         curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-test-builds/${params.APP_NAME}/${params.RELEASE_VERSION}/app-debug.apk" 2>/dev/null || true
                         curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-test-builds/${params.APP_NAME}/latest/app-debug.apk" 2>/dev/null || true
 
                         # If release build, also publish to apk-releases
-                        if [ "\${buildType}" = "release" ]; then
+                        if [ "${buildType}" = "release" ]; then
                             curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-releases/${params.APP_NAME}/${params.RELEASE_VERSION}/app-release.apk" 2>/dev/null || true
                             curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-releases/${params.APP_NAME}/latest/app-release.apk" 2>/dev/null || true
                         fi
@@ -240,8 +243,9 @@ pipeline {
                     const buildType = "${params.BUILD_TYPE}";
                     const token = "${env.CALLBACK_TOKEN ?: ''}";
                     const repoName = "apk-test-builds";
-                    const filename = buildType === "release" ? "app-release.apk" : "app-debug.apk";
-                    const apkUrl = "${params.NEXUS_URL}/repository/" + repoName + "/" + appName + "/" + releaseVersion + "/" + filename;
+                    const cleanVer = releaseVersion.startsWith("v") ? releaseVersion : "v" + releaseVersion;
+                    const standardizedFilename = "superapp-test-" + cleanVer + ".apk";
+                    const apkUrl = "${params.NEXUS_URL}/repository/" + repoName + "/" + appName + "/" + releaseVersion + "/" + standardizedFilename;
 
                     const headers = { "Content-Type": "application/json" };
                     if (token) headers["x-callback-token"] = token;
@@ -255,7 +259,7 @@ pipeline {
                             status: "COMPLETED",
                             buildType: buildType,
                             apkUrl: apkUrl,
-                            filename: filename,
+                            filename: standardizedFilename,
                             repoName: repoName
                         })
                     }).catch(err => console.error("Callback error:", err.message));

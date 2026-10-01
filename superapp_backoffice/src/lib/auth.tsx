@@ -70,6 +70,7 @@ interface AuthContextType {
   setRole: (role: Role) => void;
   can: (permission: string) => boolean;
   hasRole: (role: Role) => boolean;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -111,6 +112,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRoleState(newRole);
   };
 
+  const logout = async () => {
+    try {
+      await authApi.logout();
+    } catch (_) {}
+    setRoleState('SUPER_ADMIN');
+  };
+
   const can = (permission: string) => {
     return ROLE_PERMISSIONS[role]?.includes(permission) ?? true;
   };
@@ -128,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ role, user, setRole, can, hasRole }}>
+    <AuthContext.Provider value={{ role, user, setRole, can, hasRole, logout }}>
       {children}
     </AuthContext.Provider>
   );

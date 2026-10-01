@@ -6,6 +6,7 @@ import InviteDownloadModal from '@/components/ui/InviteDownloadModal';
 import { RevisionReviewModal } from '@/components/review/RevisionReviewModal';
 import { miniappsApi } from '@/api';
 import { Select } from '@/components/ui/inputs';
+import { DotBadge } from '@/components/ui/Icons';
 
 export interface VersionRecord {
   version: string;

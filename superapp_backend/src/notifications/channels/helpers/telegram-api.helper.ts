@@ -394,87 +394,131 @@ export class TelegramApiHelper {
     logger?: TelegramLogger,
   ): Promise<boolean> {
     try {
+      const normVer = version
+        ? version.startsWith('v')
+          ? version
+          : `v${version}`
+        : 'v0.2.5';
+      const standardizedFilename = `superapp-test-${normVer}.apk`;
+
       const url = `https://api.telegram.org/bot${botToken}/sendDocument`;
       const formData = new FormData();
       formData.append('chat_id', chatId);
       formData.append(
         'caption',
-        `📲 <b>Direct APK Download:</b> <code>${appName}</code> (<code>${version}</code>)\nTap the file above to install directly on Android.`,
+        `📲 <b>Direct APK Download:</b> <code>${standardizedFilename}</code>\nTap the file above to install directly on Android.`,
       );
       formData.append('parse_mode', 'HTML');
 
-      // Candidate local build paths (prioritizing 19MB size-optimized release APKs to comply with Telegram 50MB limit)
-      const mobileDir = process.env.MOBILE_APP_DIR;
-      const candidatePaths = [
-        ...(mobileDir
+      // 1. PRIORITIZE DOWNLOADING DIRECTLY FROM THE BACKOFFICE ENDPOINT OR SONATYPE NEXUS (Single Source of Truth)
+      const nexusBase = (
+        process.env.NEXUS_BASE_URL ||
+        process.env.NEXUS_URL ||
+        'http://localhost:8081'
+      ).replace(/\/+$/, '');
+      const nexusUser =
+        process.env.NEXUS_ADMIN_USER ||
+        process.env.NEXUS_USER ||
+        process.env.NEXUS_USERNAME ||
+        'admin';
+      const nexusPass =
+        process.env.NEXUS_ADMIN_PASSWORD ||
+        process.env.NEXUS_PASSWORD ||
+        'admin123';
+      const nexusAuthHeader = `Basic ${Buffer.from(`${nexusUser}:${nexusPass}`).toString('base64')}`;
+
+      const backofficeBase = (
+        process.env.BACKOFFICE_BASE_URL ||
+        process.env.WEBAPP_URL ||
+        'http://localhost:3002'
+      ).replace(/\/+$/, '');
+
+      // Sanitize incoming APK URL if it uses Docker internal hostnames
+      const sanitizedIncomingUrl = apkUrlOrPath?.startsWith('http')
+        ? apkUrlOrPath.replace(/https?:\/\/host\.docker\.internal:8081/, nexusBase)
+        : null;
+
+      // Ordered list of authoritative download endpoints
+      const downloadEndpoints: { url: string; headers?: Record<string, string> }[] = [
+        // 1. Direct Backend download endpoint on port 3000 (ApkDownloadController)
+        {
+          url: `http://localhost:3000/api/download-apk?type=test&version=${encodeURIComponent(normVer)}&appName=superapp`,
+        },
+        // 2. Backoffice streaming proxy endpoint (which handles Nexus auth, caching, and failover)
+        {
+          url: `${backofficeBase}/api/download-apk?type=test&version=${encodeURIComponent(normVer)}&appName=superapp`,
+        },
+        // 2. Incoming APK URL (if provided by Jenkins or callback)
+        ...(sanitizedIncomingUrl
           ? [
-              path.resolve(
-                mobileDir,
-                'build/app/outputs/flutter-apk/app-release.apk',
-              ),
-              path.resolve(
-                mobileDir,
-                'build/app/outputs/flutter-apk/app-debug.apk',
-              ),
-              path.resolve(
-                mobileDir,
-                'build/app/outputs/apk/release/app-release.apk',
-              ),
-              path.resolve(
-                mobileDir,
-                'build/app/outputs/apk/debug/app-debug.apk',
-              ),
+              {
+                url: sanitizedIncomingUrl,
+                headers: sanitizedIncomingUrl.includes(':8081') || sanitizedIncomingUrl.includes('nexus')
+                  ? { Authorization: nexusAuthHeader }
+                  : undefined,
+              },
             ]
           : []),
-        path.resolve(
-          process.cwd(),
-          'superapp_backoffice/public/superapp-test.apk',
-        ),
-        path.resolve(
-          process.cwd(),
-          '../superapp_backoffice/public/superapp-test.apk',
-        ),
-        path.resolve(
-          process.cwd(),
-          'super-app/build/app/outputs/flutter-apk/app-release.apk',
-        ),
-        path.resolve(
-          process.cwd(),
-          '../super-app/build/app/outputs/flutter-apk/app-release.apk',
-        ),
-        path.resolve(
-          process.cwd(),
-          'super-app/build/app/outputs/flutter-apk/app-debug.apk',
-        ),
-        path.resolve(
-          process.cwd(),
-          '../super-app/build/app/outputs/flutter-apk/app-debug.apk',
-        ),
-        path.resolve(
-          process.cwd(),
-          'ma_flutter_trust_regulator/example/build/app/outputs/flutter-apk/app-release.apk',
-        ),
-        path.resolve(
-          process.cwd(),
-          'ma_flutter_trust_regulator/example/build/app/outputs/flutter-apk/app-debug.apk',
-        ),
-        apkUrlOrPath,
+        // 3. Direct Sonatype Nexus test builds repository (release APK preferred, debug APK fallback)
+        {
+          url: `${nexusBase}/repository/apk-test-builds/superapp/${normVer}/app-release.apk`,
+          headers: { Authorization: nexusAuthHeader },
+        },
+        {
+          url: `${nexusBase}/repository/apk-test-builds/superapp/${normVer}/app-debug.apk`,
+          headers: { Authorization: nexusAuthHeader },
+        },
+        {
+          url: `${nexusBase}/repository/apk-test-builds/superapp/latest/app-release.apk`,
+          headers: { Authorization: nexusAuthHeader },
+        },
+        {
+          url: `${nexusBase}/repository/apk-test-builds/superapp/latest/app-debug.apk`,
+          headers: { Authorization: nexusAuthHeader },
+        },
       ];
 
       let attached = false;
-      for (const p of candidatePaths) {
-        if (p && !p.startsWith('http') && fs.existsSync(p)) {
-          const fileBuffer = fs.readFileSync(p);
+      for (const endpoint of downloadEndpoints) {
+        try {
+          const res = await fetch(endpoint.url, {
+            headers: endpoint.headers,
+            cache: 'no-store',
+          });
+
+          if (res.ok) {
+            const arrayBuf = await res.arrayBuffer();
+            if (arrayBuf.byteLength > 1000) {
+              const blob = new Blob([Buffer.from(arrayBuf)], {
+                type: 'application/vnd.android.package-archive',
+              });
+              formData.append('document', blob, standardizedFilename);
+              attached = true;
+              logger?.log?.(
+                `Successfully fetched APK (${(arrayBuf.byteLength / 1024 / 1024).toFixed(2)} MB) from ${endpoint.url} as ${standardizedFilename}`,
+              );
+              break;
+            }
+          }
+        } catch (fetchErr: unknown) {
+          const msg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+          logger?.debug?.(`Failed to fetch APK from ${endpoint.url}: ${msg}`);
+        }
+      }
+
+      // Offline dev fallback: check if local superapp-test.apk exists if all remote endpoints are unreachable
+      if (!attached) {
+        const localFallbackPath = path.resolve(
+          process.cwd(),
+          '../superapp_backoffice/public/superapp-test.apk',
+        );
+        if (fs.existsSync(localFallbackPath)) {
+          const fileBuffer = fs.readFileSync(localFallbackPath);
           const blob = new Blob([fileBuffer], {
             type: 'application/vnd.android.package-archive',
           });
-          formData.append(
-            'document',
-            blob,
-            `superapp-${version || 'test'}-debug.apk`,
-          );
+          formData.append('document', blob, standardizedFilename);
           attached = true;
-          break;
         }
       }
 
@@ -483,7 +527,12 @@ export class TelegramApiHelper {
         attached = true;
       }
 
-      if (!attached) return false;
+      if (!attached) {
+        logger?.warn?.(
+          `Could not attach APK document: all Nexus & Backoffice endpoints unreachable for ${standardizedFilename}`,
+        );
+        return false;
+      }
 
       const res = await fetch(url, {
         method: 'POST',

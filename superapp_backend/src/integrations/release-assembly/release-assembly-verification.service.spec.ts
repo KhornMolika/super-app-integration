@@ -6,6 +6,7 @@ import { JenkinsService } from '../jenkins/jenkins.service';
 import { NotificationsService, MailService } from '../../notifications';
 import { ConfigService } from '@nestjs/config';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
+import { User } from '../../users/entities/user.entity';
 import { PubspecInjectorService } from '../flutter/pubspec-injector.service';
 
 describe('ReleaseAssemblyVerificationService', () => {
@@ -16,6 +17,7 @@ describe('ReleaseAssemblyVerificationService', () => {
   let mailService: jest.Mocked<Partial<MailService>>;
   let configService: jest.Mocked<Partial<ConfigService>>;
   let mockMiniappRepo: any;
+  let mockUserRepo: any;
 
   beforeEach(async () => {
     configService = {
@@ -49,6 +51,7 @@ describe('ReleaseAssemblyVerificationService', () => {
 
     mailService = {
       sendTestBuildReadyEmail: jest.fn().mockResolvedValue(true),
+      sendTestBuildFailedEmail: jest.fn().mockResolvedValue(true),
     };
 
     mockMiniappRepo = {
@@ -57,6 +60,11 @@ describe('ReleaseAssemblyVerificationService', () => {
       find: jest.fn().mockResolvedValue([]),
       update: jest.fn().mockResolvedValue({}),
       createQueryBuilder: jest.fn(),
+    };
+
+    mockUserRepo = {
+      findOne: jest.fn().mockResolvedValue({ id: 'user-1', email: 'owner@example.com' }),
+      find: jest.fn().mockResolvedValue([]),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -75,6 +83,7 @@ describe('ReleaseAssemblyVerificationService', () => {
           },
         },
         { provide: getRepositoryToken(MiniApp), useValue: mockMiniappRepo },
+        { provide: getRepositoryToken(User), useValue: mockUserRepo },
       ],
     }).compile();
 
