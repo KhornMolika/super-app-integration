@@ -9,8 +9,8 @@ RUN pnpm install --frozen-lockfile
 FROM node:20-bullseye AS build
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
-COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+COPY --from=deps /app/node_modules ./node_modules
 # NEXT_PUBLIC_* vars are inlined into the client bundle at build time, not
 # read at runtime — must be real by the time `next build` runs, same lesson
 # learned on fintech-portal-api's Wayfinder/APP_URL build-time requirement.

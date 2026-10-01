@@ -4,7 +4,7 @@ pipeline {
     parameters {
         string(name: 'APP_NAME', defaultValue: 'superapp', description: 'Application Name / Sub-folder for Nexus repository')
         string(name: 'RELEASE_VERSION', defaultValue: 'v0.0.1', description: 'Super App Release Tag')
-        choice(name: 'BUILD_TYPE', choices: ['debug', 'release'], description: 'Target build mode: debug or release')
+        choice(name: 'BUILD_TYPE', choices: ['release', 'debug'], description: 'Target build mode: release or debug')
         string(name: 'CALLBACK_URL', defaultValue: 'http://host.docker.internal:3000/api/release-assembly/build-callback', description: 'NestJS Backend Webhook Callback URL')
         string(name: 'NEXUS_URL', defaultValue: 'http://host.docker.internal:8081', description: 'Sonatype Nexus URL')
         string(name: 'CALLBACK_TOKEN', defaultValue: '', description: 'NestJS Backend Webhook Callback Auth Token')

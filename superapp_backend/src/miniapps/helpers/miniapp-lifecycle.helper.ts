@@ -778,6 +778,8 @@ export class MiniappLifecycleHelper {
       };
       await this.miniappRepository.save(app);
 
+      const testBuildType = process.env.SUPERAPP_TEST_APK_BUILD_MODE || 'release';
+
       if (app.ownerId) {
         await this.notificationsService.createNotification(
           app.ownerId,
@@ -785,7 +787,7 @@ export class MiniappLifecycleHelper {
           `Test build compilation (${releaseVersion}) initiated for staged revision of "${app.name}". Live version remains active.`,
           'BUILD_STARTED',
           app.id,
-          { releaseVersion, version: releaseVersion, buildType: 'debug' },
+          { releaseVersion, version: releaseVersion, buildType: testBuildType },
         );
       }
 
@@ -793,10 +795,10 @@ export class MiniappLifecycleHelper {
         await this.jenkinsService.triggerSuperAppBuild({
           releaseVersion,
           appName: 'superapp',
-          buildType: 'debug',
+          buildType: testBuildType,
         });
         if (this.apkBuildManager) {
-          this.apkBuildManager.triggerBuild({ releaseVersion, appName: 'superapp', buildType: 'debug' }).catch(() => {});
+          this.apkBuildManager.triggerBuild({ releaseVersion, appName: 'superapp', buildType: testBuildType }).catch(() => {});
         }
         this.jenkinsService.triggerSuperAppSandboxBuild().catch(() => {});
       } catch (err: any) {
@@ -861,6 +863,7 @@ export class MiniappLifecycleHelper {
     await this.miniappRepository.save(app);
 
     // Dispatch explicit BUILDING status notification
+    const testBuildType = process.env.SUPERAPP_TEST_APK_BUILD_MODE || 'release';
     if (app.ownerId) {
       await this.notificationsService.createNotification(
         app.ownerId,
@@ -871,7 +874,7 @@ export class MiniappLifecycleHelper {
         {
           releaseVersion,
           version: releaseVersion,
-          buildType: 'debug',
+          buildType: testBuildType,
         },
       );
     }
@@ -884,7 +887,7 @@ export class MiniappLifecycleHelper {
       const jenkinsResult = await this.jenkinsService.triggerSuperAppBuild({
         releaseVersion,
         appName: 'superapp',
-        buildType: 'debug',
+        buildType: testBuildType,
       });
       if (!jenkinsResult.success) {
         this.logger.warn(
@@ -898,7 +901,7 @@ export class MiniappLifecycleHelper {
           .triggerBuild({
             releaseVersion,
             appName: 'superapp',
-            buildType: 'debug',
+            buildType: testBuildType,
           })
           .catch((e: any) => {
             this.logger.warn(`Failed to trigger local APK build: ${e.message}`);
