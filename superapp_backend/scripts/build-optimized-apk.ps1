@@ -15,11 +15,18 @@ if (-not $ApiBaseUrl) {
         # ADB Reverse via USB Cable (phone connects to laptop port 3000 through USB)
         $ApiBaseUrl = "http://127.0.0.1:3000"
     } elseif ($Target -eq "local") {
-        # Auto-detect real local LAN or Mobile Hotspot IP (Android: 192.168.43.x, iOS: 172.20.10.x, Office: 192.168.x.x / 10.x.x.x)
+        # Auto-detect real local Wi-Fi LAN IP or fallback to 192.168.10.35
         try {
-            $lanIp = (Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
-                Where-Object { $_.InterfaceAlias -notmatch "vEthernet|WSL|Loopback|Virtual|Hyper-V" -and ($_.IPAddress -like "192.168.*" -or $_.IPAddress -like "10.*" -or $_.IPAddress -like "172.20.*" -or $_.IPAddress -like "172.16.*") } |
-                Select-Object -First 1).IPAddress
+            $wifi = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+                Where-Object { $_.InterfaceAlias -match "Wi-Fi|Wireless|WLAN" -and $_.IPAddress -notmatch "^169\.254\." } |
+                Select-Object -First 1
+            if ($wifi) {
+                $lanIp = $wifi.IPAddress
+            } else {
+                $lanIp = (Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+                    Where-Object { $_.InterfaceAlias -notmatch "vEthernet|WSL|Loopback|Virtual|Hyper-V|VMware|VirtualBox|Ethernet" -and ($_.IPAddress -like "192.168.*" -or $_.IPAddress -like "10.*") } |
+                    Select-Object -First 1).IPAddress
+            }
         } catch {}
         if (-not $lanIp) { $lanIp = "192.168.10.35" }
         $ApiBaseUrl = "http://${lanIp}:3000"
@@ -127,8 +134,8 @@ if (Test-Path $OutputApk) {
         }
 
         $curlCmd = Get-Command "curl.exe" -ErrorAction SilentlyContinue
-        foreach ($target in $targets) {
-            $destUrl = "$NexusUrl/repository/$target"
+        foreach ($destTarget in $targets) {
+            $destUrl = "$NexusUrl/repository/$destTarget"
             if ($curlCmd) {
                 Write-Host "Streaming $targetName to Nexus with native curl: $destUrl..." -ForegroundColor Cyan
                 if ($NexusPass) {

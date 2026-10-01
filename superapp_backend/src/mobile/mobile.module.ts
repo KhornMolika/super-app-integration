@@ -3,7 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module';
 import { MiniApp } from '../miniapps/entities/miniapp.entity';
 import { AuthRateLimitGuard, AuthRateLimiter } from './auth-rate-limiter';
-import { EndUserAuthGuard } from './end-user-auth.guard';
+import { EndUserAuthGuard, OptionalEndUserAuthGuard } from './end-user-auth.guard';
 import { EmailVerificationToken } from './entities/email-verification-token.entity';
 import { EndUser } from './entities/end-user.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
@@ -29,6 +29,7 @@ import { PasswordService } from './password.service';
     AuthRateLimiter,
     AuthRateLimitGuard,
     EndUserAuthGuard,
+    OptionalEndUserAuthGuard,
     MobileAuthService,
     MobileCatalogService,
   ],

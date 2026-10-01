@@ -107,11 +107,24 @@ export class MobileAuthService implements OnModuleInit {
           });
           await this.users.save(endUser);
           this.logger.log(`Seeded default mobile EndUser account: ${email}`);
+        } else {
+          const matches = await this.passwords.verify(u.password, existing.passwordHash);
+          if (!matches) {
+            existing.passwordHash = await this.passwords.hash(u.password);
+          }
+          existing.lockedUntil = null;
+          existing.failedLoginCount = 0;
+          existing.status = EndUserStatus.ACTIVE;
+          if (!existing.emailVerifiedAt) {
+            existing.emailVerifiedAt = new Date();
+          }
+          await this.users.save(existing);
         }
       } catch (err: any) {
         this.logger.warn(`Could not seed default mobile user ${u.email}: ${err?.message}`);
       }
     }
+    this.logger.log(`Mobile accounts ready (Password: ${adminPass}): ${defaultUsers.map((u) => u.email).join(', ')}`);
   }
 
   get accessTtlSeconds(): number {
