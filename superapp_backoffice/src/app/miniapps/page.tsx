@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/inputs';
 import ClickableTableRow from '@/components/ui/ClickableTableRow';
 import { RegisterMiniAppButton } from '@/components/ui/RegisterMiniAppButton';
-import { TagIcon, SettingsIcon, ArrowRightIcon, BuildingIcon } from '@/components/ui/Icons';
+import { TagIcon, SettingsIcon, ArrowRightIcon, BuildingIcon, DevicePhoneIcon } from '@/components/ui/Icons';
+import DownloadApkModal from '@/components/ui/DownloadApkModal';
 import { AppLogoAvatar } from '@/components/ui/AppLogoAvatar';
 import { miniappsApi } from '@/api';
 import { useAuth } from '@/lib/auth';
@@ -16,6 +17,8 @@ export default function MiniAppsPage() {
   const [miniApps, setMiniApps] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [isApkModalOpen, setIsApkModalOpen] = useState(false);
+  const [apkModalVersion, setApkModalVersion] = useState<string>('v0.2.0');
 
   const fetchMiniApps = useCallback(async () => {
     try {
@@ -50,7 +53,21 @@ export default function MiniAppsPage() {
           <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Mini Apps</h2>
           <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">Manage registered applications and permissions.</p>
         </div>
-        <RegisterMiniAppButton />
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              setApkModalVersion('v0.2.0');
+              setIsApkModalOpen(true);
+            }}
+            className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 transition-all shadow-2xs cursor-pointer"
+            title="Download Latest Super App APK & QR Code"
+          >
+            <DevicePhoneIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <span>Download Super App APK</span>
+          </button>
+          <RegisterMiniAppButton />
+        </div>
       </div>
 
       <div className="bg-white dark:bg-slate-800/50 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700/50 overflow-hidden">
@@ -253,16 +270,20 @@ export default function MiniAppsPage() {
                       <td className="px-6 py-4 text-right">
                         <div className="inline-flex items-center gap-2">
                           {(app.status === 'TESTING' || app.status === 'ACTIVE') && (() => {
-                            const testVersion = (app as any).activeTestVersion || app.integrationConfig?.superAppTestVersion || 'v0.0.1';
+                            const testVersion = (app as any).activeTestVersion || app.integrationConfig?.superAppTestVersion || 'v0.2.0';
                             return (
-                              <a
-                                href={`/api/download-apk?type=test&version=${encodeURIComponent(testVersion)}`}
-                                download={`superapp-test-${testVersion}.apk`}
-                                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-300 dark:hover:border-emerald-700 shadow-sm transition-all flex items-center justify-center"
-                                title={`Download Super App Test APK (${testVersion})`}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setApkModalVersion(testVersion);
+                                  setIsApkModalOpen(true);
+                                }}
+                                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-300 dark:hover:border-emerald-700 shadow-sm transition-all flex items-center justify-center cursor-pointer"
+                                title={`Download Super App Test APK & Scan QR Code (${testVersion})`}
                               >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                              </a>
+                                <DevicePhoneIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                              </button>
                             );
                           })()}
                           <Link href={`/miniapps/${app.id}`} className="inline-flex items-center space-x-1 text-slate-500 dark:text-slate-400 hover:text-brand-700 dark:hover:text-brand-300 font-medium text-sm transition-all px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-brand-50 dark:hover:bg-brand-900/30 hover:border-brand-200 dark:hover:border-brand-800 shadow-sm group-hover:text-brand-600 dark:group-hover:text-brand-400 group-hover:border-brand-200 dark:group-hover:border-brand-800">
@@ -279,6 +300,12 @@ export default function MiniAppsPage() {
           </table>
         </div>
       </div>
+
+      <DownloadApkModal
+        isOpen={isApkModalOpen}
+        onClose={() => setIsApkModalOpen(false)}
+        defaultVersion={apkModalVersion}
+      />
     </div>
   );
 }

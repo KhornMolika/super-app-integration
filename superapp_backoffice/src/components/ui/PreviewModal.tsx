@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { Button } from './inputs';
 import IframePreviewEngine from './IframePreviewEngine';
 import { DevicePhoneIcon } from '@/components/ui/Icons';
+import DownloadApkModal from './DownloadApkModal';
 
 export type DeviceType = 
   | 'Responsive' | 'Custom' 
@@ -56,6 +57,7 @@ export default function PreviewModal({
   const [reloadKey, setReloadKey] = useState(0);
   const [mounted, setMounted] = useState(false);
   const [currentScreen, setCurrentScreen] = useState<'sandbox' | 'miniapp'>('sandbox');
+  const [showApkModal, setShowApkModal] = useState(false);
   
   const previewAreaRef = useRef<HTMLDivElement>(null);
   const [autoScale, setAutoScale] = useState(1);
@@ -335,15 +337,15 @@ export default function PreviewModal({
 
           {/* Direct APK Download Button (only available after approval and build in TESTING/ACTIVE) */}
           {(status === 'TESTING' || status === 'ACTIVE') && (
-            <a
-              href={apkUrl}
-              download="superapp-debug.apk"
-              className="h-8 px-2.5 text-xs font-semibold rounded-xl bg-emerald-600/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-600 hover:text-white transition-colors flex items-center gap-1.5 shadow-xs"
-              title="Download Super App Test Build APK (Nexus)"
+            <button
+              type="button"
+              onClick={() => setShowApkModal(true)}
+              className="h-8 px-2.5 text-xs font-semibold rounded-xl bg-emerald-600/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-600 hover:text-white transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+              title="Download Super App APK & Scan QR Code"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-              <span className="hidden sm:inline">Test APK</span>
-            </a>
+              <span className="hidden sm:inline">Download APK</span>
+            </button>
           )}
 
           {/* Reload Button */}
@@ -494,5 +496,15 @@ export default function PreviewModal({
     </div>
   );
 
-  return createPortal(modalContent, document.body);
+  return createPortal(
+    <>
+      {modalContent}
+      <DownloadApkModal
+        isOpen={showApkModal}
+        onClose={() => setShowApkModal(false)}
+        defaultVersion={version}
+      />
+    </>,
+    document.body,
+  );
 }

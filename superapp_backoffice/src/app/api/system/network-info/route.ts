@@ -100,77 +100,160 @@ export async function GET(request: NextRequest) {
   const backofficePort = reqHost.includes(':') ? reqHost.split(':')[1] : '3002';
   const backendPort = process.env.BACKEND_PORT || '3000';
 
-  // Dynamically scan public directory for latest APK builds
-  const publicDir = path.resolve(process.cwd(), 'public');
   let apkExists = false;
-  let apkSizeMb = '19.12 MB';
+  let apkSizeMb = '19.44 MB';
   let apkFilename = 'superapp-test.apk';
-  let apkVersion = 'v0.1.3';
-  let isRelease = false;
+  let apkVersion = 'v0.2.0';
+  let isRelease = true;
   let lastModified: string | null = null;
+  let availableVersions: Array<{
+    version: string;
+    size: string;
+    buildMode: 'release' | 'debug';
+    lastModified: string;
+    downloadUrl: string;
+  }> = [];
+
+  // 1. Query Sonatype Nexus directly for live, accurate APK releases
+  const nexusBase = (
+    process.env.NEXUS_BASE_URL ||
+    process.env.NEXUS_URL ||
+    'http://localhost:8081'
+  ).replace(/\/+$/, '');
+  const adminUser = process.env.NEXUS_ADMIN_USER || 'admin';
+  const adminPass = process.env.NEXUS_ADMIN_PASSWORD || 'admin123';
+  const b64 = Buffer.from(`${adminUser}:${adminPass}`).toString('base64');
 
   try {
-    if (fs.existsSync(publicDir)) {
-      const files = fs.readdirSync(publicDir);
-      const apkFiles = files.filter(
-        (f) => f.endsWith('.apk') && f.startsWith('superapp-'),
+    const nexusController = new AbortController();
+    const timeoutId = setTimeout(() => nexusController.abort(), 2000);
+    const nexusRes = await fetch(
+      `${nexusBase}/service/rest/v1/search/assets?repository=apk-test-builds`,
+      {
+        headers: { Authorization: `Basic ${b64}` },
+        signal: nexusController.signal,
+        cache: 'no-store',
+      },
+    );
+    clearTimeout(timeoutId);
+
+    if (nexusRes.ok) {
+      const nexusData = await nexusRes.json();
+      const assets = (nexusData.items || []).filter((item: any) =>
+        item.path?.endsWith('.apk'),
       );
 
-      const apkDetails = apkFiles
-        .map((fn) => {
-          try {
-            const fullPath = path.join(publicDir, fn);
-            const stats = fs.statSync(fullPath);
-            const match = fn.match(/v(\d+\.\d+\.\d+)/);
-            const ver = match ? `v${match[1]}` : null;
-            // Releases are typically <50MB because of AOT compilation and tree-shaking
-            const isRel = fn.includes('release') || stats.size < 50 * 1024 * 1024;
-            return {
-              filename: fn,
+      const versionMap = new Map<string, any>();
+      for (const asset of assets) {
+        // e.g. path: /superapp/v0.2.0/app-release.apk
+        const match = asset.path.match(/\/superapp\/(v\d+\.\d+\.\d+|latest)\/(app-(release|debug)\.apk)/);
+        if (match) {
+          const ver = match[1];
+          const mode = match[3] as 'release' | 'debug';
+          const sizeBytes = asset.fileSize || 0;
+          const sizeMb = (sizeBytes / (1024 * 1024)).toFixed(2) + ' MB';
+          const isRel = mode === 'release' || sizeBytes < 50 * 1024 * 1024;
+
+          if (!versionMap.has(ver) || mode === 'release') {
+            versionMap.set(ver, {
               version: ver,
-              sizeBytes: stats.size,
-              sizeMb: (stats.size / (1024 * 1024)).toFixed(2) + ' MB',
-              mtime: stats.mtime,
-              isRelease: isRel,
-            };
-          } catch (_) {
-            return null;
+              filename: match[2],
+              size: sizeMb,
+              sizeBytes,
+              buildMode: isRel ? 'release' : 'debug',
+              lastModified: asset.lastModified || asset.blobUpdated,
+            });
           }
-        })
-        .filter(Boolean) as Array<{
-        filename: string;
-        version: string | null;
-        sizeBytes: number;
-        sizeMb: string;
-        mtime: Date;
-        isRelease: boolean;
-      }>;
+        }
+      }
 
-      if (apkDetails.length > 0) {
-        // Sort by version (highest first), then by modification time
-        apkDetails.sort((a, b) => {
-          if (a.version && b.version) {
-            const vA = a.version.replace(/^v/, '').split('.').map(Number);
-            const vB = b.version.replace(/^v/, '').split('.').map(Number);
-            for (let i = 0; i < 3; i++) {
-              if ((vB[i] || 0) !== (vA[i] || 0)) {
-                return (vB[i] || 0) - (vA[i] || 0);
-              }
-            }
+      // Sort versions semver descending, placing real versions above 'latest'
+      const verList = Array.from(versionMap.values()).filter((v) => v.version !== 'latest');
+      verList.sort((a, b) => {
+        const vA = a.version.replace(/^v/, '').split('.').map(Number);
+        const vB = b.version.replace(/^v/, '').split('.').map(Number);
+        for (let i = 0; i < 3; i++) {
+          if ((vB[i] || 0) !== (vA[i] || 0)) {
+            return (vB[i] || 0) - (vA[i] || 0);
           }
-          return b.mtime.getTime() - a.mtime.getTime();
-        });
+        }
+        return new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime();
+      });
 
-        const latest = apkDetails[0];
+      if (verList.length > 0) {
+        const top = verList[0];
         apkExists = true;
-        apkFilename = latest.filename;
-        apkVersion = latest.version || 'v0.1.3';
-        apkSizeMb = latest.sizeMb;
-        isRelease = latest.isRelease;
-        lastModified = latest.mtime.toISOString();
+        apkVersion = top.version;
+        apkFilename = top.filename;
+        apkSizeMb = top.size;
+        isRelease = top.buildMode === 'release';
+        lastModified = top.lastModified;
+        availableVersions = verList.map((v) => ({
+          version: v.version,
+          size: v.size,
+          buildMode: v.buildMode,
+          lastModified: v.lastModified,
+          downloadUrl: `/api/download-apk?version=${v.version}&type=${v.buildMode}`,
+        }));
       }
     }
-  } catch (_) {}
+  } catch (_) {
+    // Nexus query timed out or offline, fallback to local disk scan
+  }
+
+  // 2. Fallback: Scan public directory for latest local APK build
+  if (!apkExists) {
+    const publicDir = path.resolve(process.cwd(), 'public');
+    try {
+      if (fs.existsSync(publicDir)) {
+        const files = fs.readdirSync(publicDir);
+        const apkFiles = files.filter(
+          (f) => f.endsWith('.apk') && f.startsWith('superapp-'),
+        );
+
+        const apkDetails = apkFiles
+          .map((fn) => {
+            try {
+              const fullPath = path.join(publicDir, fn);
+              const stats = fs.statSync(fullPath);
+              const match = fn.match(/v(\d+\.\d+\.\d+)/);
+              const ver = match ? `v${match[1]}` : null;
+              // Releases are typically <50MB because of AOT compilation and tree-shaking
+              const isRel = fn.includes('release') || stats.size < 50 * 1024 * 1024;
+              return {
+                filename: fn,
+                version: ver,
+                sizeBytes: stats.size,
+                sizeMb: (stats.size / (1024 * 1024)).toFixed(2) + ' MB',
+                mtime: stats.mtime,
+                isRelease: isRel,
+              };
+            } catch (_) {
+              return null;
+            }
+          })
+          .filter(Boolean) as Array<{
+          filename: string;
+          version: string | null;
+          sizeBytes: number;
+          sizeMb: string;
+          mtime: Date;
+          isRelease: boolean;
+        }>;
+
+        if (apkDetails.length > 0) {
+          apkDetails.sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
+          const latest = apkDetails[0];
+          apkExists = true;
+          apkFilename = latest.filename;
+          apkVersion = latest.version || 'v0.2.0';
+          apkSizeMb = latest.sizeMb;
+          isRelease = latest.isRelease;
+          lastModified = latest.mtime.toISOString();
+        }
+      }
+    } catch (_) {}
+  }
 
   const proto = request.headers.get('x-forwarded-proto') || (reqHost.includes('fintechcenterfsa.com') ? 'https' : 'http');
   const isDomain = reqHostname.includes('fintechcenterfsa.com');
@@ -221,7 +304,9 @@ export async function GET(request: NextRequest) {
       staticPath: `/${apkFilename}`,
       directUrl: `${effectiveBase}/${apkFilename}`,
       apiDownloadUrl: `${effectiveBase}/api/download-apk?version=${apkVersion}&type=${isRelease ? 'release' : 'test'}`,
+      availableVersions,
     },
+    availableVersions,
     backend: {
       port: backendPort,
       baseUrl: isHttps ? 'https://app.fintechcenterfsa.com/api' : `http://${primaryIp}:${backendPort}`,

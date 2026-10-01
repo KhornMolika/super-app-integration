@@ -40,7 +40,21 @@ interface NetworkInfoData {
     staticPath: string;
     directUrl: string;
     apiDownloadUrl: string;
+    availableVersions?: Array<{
+      version: string;
+      size: string;
+      buildMode: 'release' | 'debug';
+      lastModified: string;
+      downloadUrl: string;
+    }>;
   };
+  availableVersions?: Array<{
+    version: string;
+    size: string;
+    buildMode: 'release' | 'debug';
+    lastModified: string;
+    downloadUrl: string;
+  }>;
   backend: {
     port: string;
     baseUrl: string;
@@ -58,6 +72,7 @@ export default function DownloadApkModal({
   const [loading, setLoading] = useState(true);
   const [networkData, setNetworkData] = useState<NetworkInfoData | null>(null);
   const [selectedIp, setSelectedIp] = useState<string>('127.0.0.1');
+  const [selectedVersion, setSelectedVersion] = useState<string>(defaultVersion);
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCreds, setCopiedCreds] = useState<string | null>(null);
   const [backendHealthy, setBackendHealthy] = useState<boolean | null>(null);
@@ -87,6 +102,13 @@ export default function DownloadApkModal({
           setSelectedIp(window.location.hostname);
         } else {
           setSelectedIp(data.primaryIp || '127.0.0.1');
+        }
+
+        // Set latest version from live Nexus data if no explicit defaultVersion passed
+        if (data.apk?.version && (!defaultVersion || defaultVersion === 'v0.0.1')) {
+          setSelectedVersion(data.apk.version);
+        } else if (defaultVersion) {
+          setSelectedVersion(defaultVersion);
         }
       }
     } catch (err) {
@@ -162,13 +184,17 @@ export default function DownloadApkModal({
   if (!mounted || !isOpen) return null;
 
   const backofficePort = networkData?.port || (typeof window !== 'undefined' ? window.location.port || '3002' : '3002');
-  const activeVersion = networkData?.apk?.version || defaultVersion;
-  const activeFilename = networkData?.apk?.filename || 'superapp-test.apk';
+  const allVersions = networkData?.availableVersions || networkData?.apk?.availableVersions || [];
+  const activeVerObj = allVersions.find((v) => v.version === selectedVersion) || (networkData?.apk?.version === selectedVersion ? networkData?.apk : null) || allVersions[0] || networkData?.apk;
+  const activeVersion = selectedVersion || activeVerObj?.version || defaultVersion;
+  const isRelease = activeVerObj?.buildMode === 'release' || networkData?.apk?.buildMode === 'release';
+  const activeSize = activeVerObj?.size || networkData?.apk?.size || '19.44 MB';
+  const activeFilename = `superapp-${activeVersion}.apk`;
 
   const isCloud = targetEnv === 'cloud';
   const effectiveDownloadUrl = isCloud
-    ? `https://app.fintechcenterfsa.com/${activeFilename}`
-    : `http://${selectedIp}:${backofficePort}/${activeFilename}`;
+    ? `https://app.fintechcenterfsa.com/api/download-apk?version=${encodeURIComponent(activeVersion)}&type=${isRelease ? 'release' : 'test'}`
+    : `http://${selectedIp}:${backofficePort}/api/download-apk?version=${encodeURIComponent(activeVersion)}&type=${isRelease ? 'release' : 'test'}`;
   const effectiveBackendUrl = isCloud
     ? 'https://app.fintechcenterfsa.com/api'
     : `http://${selectedIp}:${networkData?.backendPort || '3000'}`;
@@ -197,7 +223,7 @@ export default function DownloadApkModal({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.info('Starting Super App APK download...', 'Download Initiated');
+    toast.info(`Starting download for ${activeFilename} (${activeSize})...`, 'Download Initiated');
   };
 
   return createPortal(
@@ -217,8 +243,12 @@ export default function DownloadApkModal({
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                   {activeVersion}
                 </span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-accent-500/20 text-accent-300 border border-accent-500/30 hidden sm:inline">
-                  {networkData?.apk?.size || '19.12 MB'} ({networkData?.apk?.buildMode === 'release' ? 'Release ARM64' : 'Debug ARM64'})
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border hidden sm:inline ${
+                  isRelease
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                    : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                }`}>
+                  {activeSize} ({isRelease ? 'Release ARM64' : 'Debug ARM64'})
                 </span>
               </div>
               <p className="text-xs text-slate-300">
@@ -457,12 +487,54 @@ export default function DownloadApkModal({
             </div>
           </div>
 
+          {/* Version Selector (if multiple builds detected in Nexus) */}
+          {allVersions.length > 1 && (
+            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60">
+              <div className="space-y-0.5">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  Target APK Release Version
+                </span>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Select any published Super App build from Sonatype Nexus registry.
+                </p>
+              </div>
+              <select
+                value={activeVersion}
+                onChange={(e) => setSelectedVersion(e.target.value)}
+                className="text-xs font-mono font-semibold px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              >
+                {allVersions.map((v) => (
+                  <option key={v.version} value={v.version}>
+                    {v.version} — {v.size} ({v.buildMode === 'release' ? 'Release' : 'Debug'})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {/* Build Mode Diagnostic Note */}
-          {networkData?.apk?.buildMode === 'debug' && (
+          {isRelease ? (
+            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-200 text-xs flex items-start gap-2.5 shadow-2xs">
+              <CheckCircleIcon className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-emerald-950 dark:text-emerald-100">
+                    Size-Optimized Release Build ({activeSize})
+                  </span>
+                  <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                    ARM64 AOT
+                  </span>
+                </div>
+                <p className="text-[11px] text-emerald-700 dark:text-emerald-300 leading-relaxed">
+                  Compiled with Flutter ahead-of-time (AOT) machine code, symbol stripping, and bytecode tree-shaking for fast installation and minimal network transfer.
+                </p>
+              </div>
+            </div>
+          ) : (
             <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-200 text-xs flex items-start gap-2.5">
               <AlertTriangleIcon className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
               <div className="space-y-0.5">
-                <span className="font-bold">Debug Test Build Active ({networkData.apk.size}):</span>
+                <span className="font-bold">Debug Test Build Active ({activeSize}):</span>
                 <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-relaxed">
                   Debug APKs include the Dart JIT engine, debugging symbols, and hot-reload hooks for testing. Building in <code className="font-mono bg-amber-500/20 px-1 py-0.2 rounded font-bold">release</code> mode shrinks the APK down to ~19.4 MB via native AOT compilation and bytecode tree-shaking.
                 </p>

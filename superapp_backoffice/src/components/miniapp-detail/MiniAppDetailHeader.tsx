@@ -4,7 +4,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { BackButton } from '@/components/ui/BackButton';
 import { Button } from '@/components/ui/inputs';
 import { IntegrationMethod } from '@/types/miniapp.types';
-import { BuildingIcon } from '@/components/ui/Icons';
+import { BuildingIcon, DevicePhoneIcon, DownloadIcon } from '@/components/ui/Icons';
+import DownloadApkModal from '@/components/ui/DownloadApkModal';
 import { AppLogoAvatar } from '@/components/ui/AppLogoAvatar';
 import { getOrganizationCode, getOrganizationFullName } from '@/lib/constants/fsa-organizations';
 
@@ -34,6 +35,7 @@ export default function MiniAppDetailHeader({
   isSubmitting,
 }: MiniAppDetailHeaderProps) {
   const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [showApkModal, setShowApkModal] = useState(false);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -47,6 +49,11 @@ export default function MiniAppDetailHeader({
   }, []);
 
   const status = formData.status || 'DRAFT';
+  const testVersion =
+    formData.activeTestVersion ||
+    formData.integrationConfig?.superAppTestVersion ||
+    latestTestVersion ||
+    'v0.2.0';
 
   return (
     <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
@@ -118,10 +125,22 @@ export default function MiniAppDetailHeader({
             )}
           </div>
         </div>
-      </div>
-
-      {/* Header Actions */}
+      </div>      {/* Header Actions */}
       <div className="flex items-center space-x-2.5">
+        {/* Quick Test APK Download & QR Code Button */}
+        {(status === 'TESTING' || status === 'ACTIVE') && (
+          <button
+            type="button"
+            onClick={() => setShowApkModal(true)}
+            className="h-10 px-3.5 rounded-xl text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer shrink-0"
+            title="Download Super App APK & Scan QR Code"
+          >
+            <DevicePhoneIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <span className="font-semibold">Test APK ({testVersion})</span>
+            <DownloadIcon className="w-3.5 h-3.5 text-emerald-500/80" />
+          </button>
+        )}
+
         {/* Edit Configuration Toggle */}
         {can('miniapp:update') && (
           <Button
@@ -176,99 +195,97 @@ export default function MiniAppDetailHeader({
             </svg>
           </button>
 
-          {showActionsMenu && (() => {
-            const testVersion =
-              formData.activeTestVersion ||
-              formData.integrationConfig?.superAppTestVersion ||
-              latestTestVersion ||
-              'v0.0.1';
+          {showActionsMenu && (
+            <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 divide-y divide-slate-100 dark:divide-slate-800/60">
+              {/* Section 1: Testing & Simulation Actions */}
+              <div className="py-1">
+                <div className="px-3.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  Testing & Simulation
+                </div>
+                {onOpenSandbox && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowActionsMenu(false);
+                      onOpenSandbox();
+                    }}
+                    className="w-full text-left px-3.5 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center space-x-2.5 font-medium transition-colors"
+                  >
+                    <svg className="w-4 h-4 text-accent-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                    <span>Launch Sandbox Preview</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowActionsMenu(false);
+                    setShowApkModal(true);
+                  }}
+                  className="w-full text-left px-3.5 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center space-x-2.5 font-medium transition-colors cursor-pointer"
+                >
+                  <DevicePhoneIcon className="w-4 h-4 text-emerald-500" />
+                  <span>Download Test APK ({testVersion})</span>
+                </button>
+              </div>
 
-            return (
-              <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 divide-y divide-slate-100 dark:divide-slate-800/60">
-                {/* Section 1: Testing & Simulation Actions */}
+              {/* Section 2: Administrative Actions */}
+              {((can('miniapp:suspend') && (status === 'APPROVED' || status === 'ACTIVE')) || can('miniapp:delete')) && (
                 <div className="py-1">
                   <div className="px-3.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                    Testing & Simulation
+                    Administration
                   </div>
-                  {onOpenSandbox && (
+                  {can('miniapp:suspend') && (status === 'APPROVED' || status === 'ACTIVE') && (
                     <button
                       type="button"
                       onClick={() => {
                         setShowActionsMenu(false);
-                        onOpenSandbox();
+                        onLifecycleAction('suspend');
                       }}
-                      className="w-full text-left px-3.5 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center space-x-2.5 font-medium transition-colors"
+                      disabled={isSubmitting}
+                      className="w-full text-left px-3.5 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 flex items-center space-x-2.5 font-medium transition-colors"
                     >
-                      <svg className="w-4 h-4 text-accent-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      <span>Launch Sandbox Preview</span>
+                      <span>Suspend Mini App</span>
                     </button>
                   )}
-                  <a
-                    href={`/api/download-apk?type=test&version=${encodeURIComponent(testVersion)}`}
-                    download={`superapp-test-${testVersion}.apk`}
-                    onClick={() => setShowActionsMenu(false)}
-                    className="w-full text-left px-3.5 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center space-x-2.5 font-medium transition-colors"
-                  >
-                    <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    <span>Download Test APK ({testVersion})</span>
-                  </a>
+
+                  {can('miniapp:delete') && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowActionsMenu(false);
+                        onDelete();
+                      }}
+                      disabled={isSubmitting}
+                      className="w-full text-left px-3.5 py-2 text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center space-x-2.5 font-medium transition-colors"
+                    >
+                      <svg className="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
+                      <span>Delete App</span>
+                    </button>
+                  )}
                 </div>
-
-                {/* Section 2: Administrative Actions */}
-                {((can('miniapp:suspend') && (status === 'APPROVED' || status === 'ACTIVE')) || can('miniapp:delete')) && (
-                  <div className="py-1">
-                    <div className="px-3.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                      Administration
-                    </div>
-                    {can('miniapp:suspend') && (status === 'APPROVED' || status === 'ACTIVE') && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowActionsMenu(false);
-                          onLifecycleAction('suspend');
-                        }}
-                        disabled={isSubmitting}
-                        className="w-full text-left px-3.5 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 flex items-center space-x-2.5 font-medium transition-colors"
-                      >
-                        <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span>Suspend App</span>
-                      </button>
-                    )}
-
-                    {can('miniapp:delete') && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowActionsMenu(false);
-                          onDelete();
-                        }}
-                        disabled={isSubmitting}
-                        className="w-full text-left px-3.5 py-2 text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center space-x-2.5 font-medium transition-colors"
-                      >
-                        <svg className="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
-                        <span>Delete App</span>
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
+              )}
+            </div>
+          )}
         </div>
       </div>
+
+      <DownloadApkModal
+        isOpen={showApkModal}
+        onClose={() => setShowApkModal(false)}
+        defaultVersion={testVersion}
+      />
     </div>
   );
 }
