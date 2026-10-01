@@ -686,7 +686,7 @@ export default function OrganizationsPage() {
                   <option value="ACTIVE">ACTIVE</option>
                   <option value="INACTIVE">INACTIVE</option>
                   <option value="PENDING">PENDING</option>
-                </select>
+                </Select>
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">

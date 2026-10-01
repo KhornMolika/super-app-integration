@@ -337,10 +337,14 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
   }, [id]);
 
   useEffect(() => {
-    const isBuilding = formData.status === 'BUILDING' || (buildModalState.isOpen && buildModalState.status === 'building');
+    const isBuilding =
+      (formData.status === 'BUILDING' && formData.buildStatus !== 'FAILED') ||
+      (buildModalState.isOpen && buildModalState.status === 'building');
     if (!isBuilding) return;
 
     const pollInterval = setInterval(async () => {
+      if (isSubmitting) return;
+
       try {
         const updated = await miniappsApi.getById(id);
         if (updated) {
@@ -356,14 +360,30 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
 
           setBuildModalState((prev) => {
             if (!prev.isOpen) return prev;
+
+            const isCurrentlyBuilding =
+              updated.status === 'BUILDING' ||
+              updated.buildStatus === 'BUILDING' ||
+              (updated.buildStages && Object.values(updated.buildStages).some((s: any) => s?.status === 'RUNNING'));
+
+            if (isCurrentlyBuilding) {
+              return {
+                ...prev,
+                status: 'building',
+                stages: updated.buildStages || prev.stages,
+                releaseVersion: updated.activeTestVersion || prev.releaseVersion,
+              };
+            }
+
+            const isSuccess = updated.status === 'TESTING' || updated.buildStatus === 'COMPLETED';
             const isFailed =
               updated.status === 'BUILD_FAILED' ||
               updated.buildStatus === 'FAILED' ||
-              Boolean(updated.buildError && updated.status !== 'TESTING');
-            const isSuccess = updated.status === 'TESTING' || updated.buildStatus === 'COMPLETED';
+              (updated.buildStages && Object.values(updated.buildStages).some((s: any) => s?.status === 'FAILED'));
+
             return {
               ...prev,
-              status: isFailed ? 'error' : isSuccess ? 'success' : 'building',
+              status: isSuccess ? 'success' : isFailed ? 'error' : prev.status,
               stages: updated.buildStages || prev.stages,
               errorMessage: updated.buildError || prev.errorMessage,
               releaseVersion: updated.activeTestVersion || prev.releaseVersion,
@@ -374,7 +394,7 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
     }, 2500);
 
     return () => clearInterval(pollInterval);
-  }, [formData.status, buildModalState.isOpen, buildModalState.status, id]);
+  }, [formData.status, formData.buildStatus, buildModalState.isOpen, buildModalState.status, isSubmitting, id]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const fieldName = e.target.name;
@@ -981,15 +1001,47 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
     setIsSubmitting(true);
     try {
       if (action === 'start-testing') {
+        const cleanStages = {
+          preflight: {
+            id: 'preflight',
+            name: '1. Pre-Flight & Manifest Verification',
+            status: 'RUNNING',
+            details: 'Verifying package checksums, dependencies, and manifest integrity...',
+            updatedAt: new Date().toISOString(),
+          },
+          compile: {
+            id: 'compile',
+            name: '2. Fastlane APK Packaging',
+            status: 'PENDING',
+            details: 'Awaiting container assembly and Fastlane APK compilation...',
+            updatedAt: new Date().toISOString(),
+          },
+          publish: {
+            id: 'publish',
+            name: '3. Publish to Nexus & Finalize',
+            status: 'PENDING',
+            details: 'Awaiting artifact upload to Sonatype Nexus...',
+            updatedAt: new Date().toISOString(),
+          },
+        };
+
         setBuildModalState({
           isOpen: true,
           status: 'building',
           releaseVersion: formData.activeTestVersion || (formData.integrationConfig as any)?.superAppTestVersion || 'v1.0.0',
-          stages: formData.buildStages || {},
+          stages: cleanStages,
           appId: formData.appId,
           appName: formData.name,
           errorMessage: undefined,
         });
+
+        setFormData((prev: any) => ({
+          ...prev,
+          status: 'BUILDING',
+          buildStatus: 'BUILDING',
+          buildError: undefined,
+          buildStages: cleanStages,
+        }));
       }
 
       const res = await miniappsApi.triggerAction(id, action, reason);
@@ -1306,6 +1358,12 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
             (formData as any).updatedAt
           }
           isFlutter={formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE}
+          packageName={
+            formData.integrationConfigFlutter?.packageName ||
+            (formData as any).integrationConfig?.packageName ||
+            (formData as any).packageName ||
+            formData.name
+          }
           integrationMethod={formData.integrationMethod}
         />
       </div>

@@ -33,6 +33,10 @@ try {
     $found = Get-Command "flutter" -ErrorAction SilentlyContinue
     if ($found) {
         $FlutterBin = $found.Source
+    } elseif (Test-Path "C:\flutter\flutter\bin\flutter.bat") {
+        $FlutterBin = "C:\flutter\flutter\bin\flutter.bat"
+    } elseif (Test-Path "C:\flutter\bin\flutter.bat") {
+        $FlutterBin = "C:\flutter\bin\flutter.bat"
     }
 } catch {}
 

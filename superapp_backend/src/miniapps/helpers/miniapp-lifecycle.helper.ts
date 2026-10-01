@@ -820,7 +820,12 @@ export class MiniappLifecycleHelper {
     // For APPROVED, IN_REVIEW, TESTING, BUILDING, BUILD_FAILED
     app.status = 'BUILDING';
     app.buildStatus = 'BUILDING';
-    app.buildError = undefined;
+    app.buildError = null as any;
+    await this.miniappRepository.update(app.id, {
+      status: 'BUILDING',
+      buildStatus: 'BUILDING',
+      buildError: null as any,
+    });
     app.buildStages = {
       preflight: {
         id: 'preflight',

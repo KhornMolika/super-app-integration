@@ -46,7 +46,24 @@ export function toCatalogItem(app: MiniApp, clientHost?: string): CatalogItem {
 
   let logo = app.logo ?? null;
   if (logo) {
-    if (logo.startsWith('/')) {
+    if (logo.startsWith('data:')) {
+      // Inline base64 image data: preserve as is
+    } else if (
+      logo.includes(':9000') ||
+      logo.includes('mini-app-assets') ||
+      logo.includes('mini-app-logos') ||
+      logo.startsWith('/logos/') ||
+      logo.startsWith('logos/')
+    ) {
+      const bucket = 'mini-app-assets';
+      const cleanKey = logo
+        .split('?')[0]
+        .replace(/^https?:\/\/[^\/]+\//, '')
+        .replace(/^\/+/, '')
+        .replace(/^(?:mini-app-assets\/|mini-app-logos\/)/, '')
+        .replace(/^\/+/, '');
+      logo = `http://${host}:3000/api/storage/asset?bucket=${bucket}&key=${encodeURIComponent(cleanKey)}`;
+    } else if (logo.startsWith('/')) {
       logo = `http://${host}:3000${logo}`;
     } else {
       logo = logo

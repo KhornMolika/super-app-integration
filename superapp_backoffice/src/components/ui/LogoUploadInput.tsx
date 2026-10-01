@@ -194,7 +194,7 @@ export function LogoUploadInput({
                 <span className="px-2 py-0.5 text-xs font-semibold bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 rounded font-mono shrink-0">
                   Local Preview
                 </span>
-              ) : (value.includes('mini-app-logos') || value.includes('9000') || value.includes('minio')) ? (
+              ) : (value.includes('mini-app-assets') || value.includes('mini-app-logos') || value.includes('9000') || value.includes('minio')) ? (
                 <span className="px-2 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 rounded font-mono shrink-0">
                   MinIO
                 </span>

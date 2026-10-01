@@ -912,6 +912,11 @@ export default function RegisterMiniAppPage() {
           appId={formData.appId}
           status={(formData as any).status || 'DRAFT'}
           isFlutter={formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE}
+          packageName={
+            formData.integrationConfigFlutter?.packageName ||
+            (formData as any).integrationConfig?.packageName ||
+            formData.name
+          }
           integrationMethod={formData.integrationMethod}
         />
       </div>

@@ -124,17 +124,17 @@ export function SystemHealthIndicator() {
         {isHealthy ? (
           <>
             <CheckCircleIcon className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
-            <span className="font-medium tracking-tight">API & DB: Online</span>
+            <span className="font-medium tracking-tight">API: Online</span>
           </>
         ) : isDegraded ? (
           <>
             <AlertTriangleIcon className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-            <span className="font-medium tracking-tight">System Degraded</span>
+            <span className="font-medium tracking-tight">Degraded</span>
           </>
         ) : (
           <>
             <XCircleIcon className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
-            <span className="font-medium tracking-tight">Backend Offline</span>
+            <span className="font-medium tracking-tight">Offline</span>
           </>
         )}
       </button>

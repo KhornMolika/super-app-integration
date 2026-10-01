@@ -279,7 +279,7 @@ export default function MiniAppLifecycleBanners({
       )}
 
       {/* 3. Building & Compiling Banner */}
-      {status === 'BUILDING' && (
+      {status === 'BUILDING' && buildStatus !== 'FAILED' && (
         <div className="mb-6 p-5 rounded-2xl border border-accent-200 dark:border-accent-900/50 bg-accent-50/80 dark:bg-accent-950/40 shadow-sm animate-in fade-in space-y-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-start gap-3.5">

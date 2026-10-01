@@ -22,6 +22,7 @@ interface PreviewModalProps {
   apkUrl?: string;
   isFlutter?: boolean;
   integrationMethod?: string;
+  packageName?: string;
   status?: string;
   buildCompletedAt?: string | Date;
 }
@@ -44,6 +45,7 @@ export default function PreviewModal({
   apkUrl = '/api/download-apk?type=test&version=v0.0.1',
   isFlutter = false,
   integrationMethod,
+  packageName,
   status,
   buildCompletedAt,
 }: PreviewModalProps) {
@@ -97,6 +99,7 @@ export default function PreviewModal({
 
   // Extract / derive target app identifier
   const targetAppId = appId || (url.includes('packages/') ? url.split('packages/')[1] : '');
+  const pkgParam = packageName || (url.includes('packages/') ? url.split('packages/')[1] : '');
 
   // Effective Super App URL (Host shell container)
   const superAppContainerUrl = `/superapp-sandbox/index.html?t=${reloadKey}`;
@@ -105,7 +108,7 @@ export default function PreviewModal({
   const miniAppHomeUrl = isDirectWebUrl
     ? url
     : (targetAppId
-        ? `/superapp-sandbox/index.html?t=${reloadKey}#/miniapp/${encodeURIComponent(targetAppId)}`
+        ? `/superapp-sandbox/index.html?t=${reloadKey}#/miniapp/${encodeURIComponent(targetAppId)}?pkg=${encodeURIComponent(pkgParam)}&name=${encodeURIComponent(title)}&method=${encodeURIComponent(methodUpper)}`
         : `/superapp-sandbox/index.html?t=${reloadKey}`);
 
   const displayMiniAppSubtitle = isDirectWebUrl

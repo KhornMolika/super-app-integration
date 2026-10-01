@@ -324,6 +324,7 @@ export class ReleaseAssemblyVerificationService {
       };
       app.buildStages = { ...currentStages };
       if (body.status === 'FAILED') {
+        app.status = 'BUILD_FAILED';
         app.buildStatus = 'FAILED';
         app.buildError = body.details || body.errorMessage || `Stage ${body.stageName || body.stageId} failed.`;
       } else if (body.stageId === 'publish' && (body.status === 'COMPLETED' || body.status === 'SUCCESS')) {
@@ -332,6 +333,14 @@ export class ReleaseAssemblyVerificationService {
         app.buildError = undefined;
       }
       await this.miniappRepository.save(app);
+
+      this.notificationsService.emitBuildStageUpdate({
+        miniAppId: app.id,
+        appName: body.appName || app.name,
+        releaseVersion: body.releaseVersion,
+        stage: currentStages[body.stageId],
+        stages: app.buildStages,
+      });
     }
 
     return { success: true };
@@ -435,7 +444,13 @@ export class ReleaseAssemblyVerificationService {
         app.status = 'TESTING';
         app.buildStatus = 'COMPLETED';
         app.buildStages = allCompletedStages;
-        app.buildError = undefined;
+        app.buildError = null as any;
+        await this.miniappRepository.update(app.id, {
+          status: 'TESTING',
+          buildStatus: 'COMPLETED',
+          buildError: null as any,
+          buildStages: allCompletedStages,
+        });
         await this.miniappRepository.save(app);
 
         this.notificationsService.emitBuildCompleted({
@@ -587,16 +602,24 @@ export class ReleaseAssemblyVerificationService {
       updatedAt: new Date().toISOString(),
     };
 
+    const isFailure = dto.status === 'FAILED';
+    const updatePayload: any = {
+      buildStages: () =>
+        `jsonb_set(COALESCE("buildStages", '{}'::jsonb), ARRAY[:stageId]::text[], CAST(:stageJson AS jsonb), true)`,
+    };
+    if (isFailure) {
+      updatePayload.status = 'BUILD_FAILED';
+      updatePayload.buildStatus = 'FAILED';
+      updatePayload.buildError = dto.details || `Stage ${dto.stageName || dto.stageId} failed.`;
+    }
+
     const result = await this.miniappRepository
       .createQueryBuilder()
       .update(MiniApp)
-      .set({
-        buildStages: () =>
-          `jsonb_set(COALESCE("buildStages", '{}'::jsonb), ARRAY[:stageId]::text[], CAST(:stageJson AS jsonb), true)`,
-      })
+      .set(updatePayload)
       .where("status = 'BUILDING'")
       .setParameters({ stageId: dto.stageId, stageJson: JSON.stringify(stage) })
-      .returning(['id', 'buildStages'])
+      .returning(['id', 'buildStages', 'status', 'buildStatus', 'buildError'])
       .execute();
 
     const rows: { id: string; buildStages: any }[] = result?.raw || [];

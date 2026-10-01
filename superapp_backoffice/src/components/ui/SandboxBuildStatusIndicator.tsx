@@ -125,7 +125,7 @@ export default function SandboxBuildStatusIndicator() {
                 d="M4 12a8 8 0 018-8v8H4z"
               />
             </svg>
-            <span className="font-medium tracking-tight">Compiling Sandbox...</span>
+            <span className="font-medium tracking-tight">Compiling...</span>
           </>
         ) : status.state === 'SUCCESS' ? (
           <>
@@ -141,7 +141,7 @@ export default function SandboxBuildStatusIndicator() {
               <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500 shadow-xs shadow-rose-500/50"></span>
             </span>
             <AlertTriangleIcon className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
-            <span className="font-medium tracking-tight">Sandbox Error</span>
+            <span className="font-medium tracking-tight">Build Failed</span>
           </>
         )}
       </button>

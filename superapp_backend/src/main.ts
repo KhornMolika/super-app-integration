@@ -40,8 +40,8 @@ async function bootstrap() {
 
   const localIp = getLocalIpAddress();
   const backofficeUrl = resolveBackofficeBaseUrl();
-  logger.log(`🚀 Backend API listening on: http://0.0.0.0:${port} (LAN: http://${localIp}:${port})`);
-  logger.log(`🔗 Auto-detected Backoffice URL for notifications: ${backofficeUrl}`);
+  logger.log(`Backend API listening on: http://0.0.0.0:${port} (LAN: http://${localIp}:${port})`);
+  logger.log(`Auto-detected Backoffice URL for notifications: ${backofficeUrl}`);
 }
 bootstrap();
 
