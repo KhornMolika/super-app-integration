@@ -15,10 +15,7 @@ import {
 } from './git-provider.interface';
 import { GitHubProvider } from './providers/github.provider';
 import { GitLabProvider } from './providers/gitlab.provider';
-import {
-  decryptCredential,
-  encryptCredential,
-} from '../../common/utils/credential-cipher.util';
+import { decryptCredential } from '../../common/utils/credential-cipher.util';
 
 export interface GitDeployKeyInfo {
   publicKey: string;
@@ -325,14 +322,6 @@ export class GitIntegrationService {
           `deploy_key_${crypto.randomBytes(6).toString('hex')}`,
         );
         fs.writeFileSync(tempKeyFile, rawKey + '\n', { mode: 0o600 });
-        if (process.platform === 'win32') {
-          try {
-            const user = process.env.USERNAME || process.env.USER;
-            if (user) {
-              execFileSync('icacls', [tempKeyFile, '/inheritance:r', '/grant:r', `${user}:R`], { stdio: 'pipe' });
-            }
-          } catch {}
-        }
         const normalizedKeyPath = tempKeyFile.replace(/\\/g, '/');
         sshCmd = `ssh -i "${normalizedKeyPath}" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null`;
       }
@@ -437,89 +426,6 @@ export class GitIntegrationService {
       fingerprint: DEFAULT_PLATFORM_DEPLOY_KEY_FINGERPRINT,
       type: 'ed25519',
       title: 'DSP Super App Integration Deploy Key',
-    };
-  }
-
-  /**
-   * Generates a unique, isolated ED25519 deploy key pair for a Mini App repository.
-   * - Private key is encrypted using AES-256-GCM.
-   * - Public key is formatted in OpenSSH standard wire format: ssh-ed25519 AAAAC3... [title]
-   * - Computes SHA256 fingerprint matching ssh-keygen format.
-   */
-  generateUniqueDeployKeyPair(title?: string): {
-    publicKey: string;
-    fingerprint: string;
-    type: string;
-    title: string;
-    encryptedPrivateKey: string;
-  } {
-    const keyTitle = title?.trim() || `superapp-deploy-key-${Date.now()}`;
-    let pubKey = '';
-    let privKey = '';
-    let fp = '';
-
-    // First attempt: native ssh-keygen utility if available (produces standard OpenSSH PEM keys)
-    try {
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'superapp-ssh-'));
-      const keyPath = path.join(tempDir, 'id_ed25519');
-      try {
-        execFileSync(
-          'ssh-keygen',
-          ['-t', 'ed25519', '-N', '', '-C', keyTitle, '-f', keyPath],
-          { stdio: 'pipe' },
-        );
-        privKey = fs.readFileSync(keyPath, 'utf8').trim();
-        pubKey = fs.readFileSync(`${keyPath}.pub`, 'utf8').trim();
-        const rawFp = execFileSync('ssh-keygen', ['-lf', `${keyPath}.pub`])
-          .toString()
-          .trim();
-        const match = rawFp.match(/SHA256:[a-zA-Z0-9+/=]+/);
-        fp = match ? match[0] : '';
-      } finally {
-        try {
-          fs.rmSync(tempDir, { recursive: true, force: true });
-        } catch {}
-      }
-    } catch (err) {
-      this.logger.debug(
-        `Native ssh-keygen unavailable, falling back to node:crypto: ${(err as Error).message}`,
-      );
-    }
-
-    // Fallback: Node.js crypto.generateKeyPairSync
-    if (!pubKey || !privKey) {
-      const { publicKey, privateKey } = crypto.generateKeyPairSync('ed25519', {
-        publicKeyEncoding: { type: 'spki', format: 'der' },
-        privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
-      });
-
-      privKey = privateKey.trim();
-      const rawPubKey = publicKey.subarray(publicKey.length - 32);
-      const keyType = Buffer.from('ssh-ed25519');
-      const wireFormat = Buffer.concat([
-        Buffer.from([0, 0, 0, keyType.length]),
-        keyType,
-        Buffer.from([0, 0, 0, rawPubKey.length]),
-        rawPubKey,
-      ]);
-      pubKey = `ssh-ed25519 ${wireFormat.toString('base64')} ${keyTitle}`;
-      fp =
-        'SHA256:' +
-        crypto
-          .createHash('sha256')
-          .update(wireFormat)
-          .digest('base64')
-          .replace(/=+$/, '');
-    }
-
-    const encryptedPrivateKey = encryptCredential(privKey);
-
-    return {
-      publicKey: pubKey,
-      fingerprint: fp,
-      type: 'ed25519',
-      title: keyTitle,
-      encryptedPrivateKey,
     };
   }
 

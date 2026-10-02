@@ -14,8 +14,8 @@ import {
 import type { Request, Response } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { AuthRateLimitGuard, AuthRateLimiter, RateLimit, RateLimitedException } from './auth-rate-limiter';
-import { EndUserAuthGuard, OptionalEndUserAuthGuard } from './end-user-auth.guard';
+import { AuthRateLimitGuard, RateLimit, RateLimitedException } from './auth-rate-limiter';
+import { EndUserAuthGuard } from './end-user-auth.guard';
 import { MobileAuthService, isTokenResponse } from './mobile-auth.service';
 import { MobileCatalogService } from './mobile-catalog.service';
 import { EndUser } from './entities/end-user.entity';
@@ -34,7 +34,6 @@ export class MobileController {
     private readonly auth: MobileAuthService,
     private readonly catalog: MobileCatalogService,
     @InjectRepository(EndUser) private readonly users: Repository<EndUser>,
-    private readonly limiter: AuthRateLimiter,
   ) {}
 
   @Post('auth/register')
@@ -106,18 +105,8 @@ export class MobileController {
   }
 
   @Get('mini-apps')
-  @UseGuards(OptionalEndUserAuthGuard)
-  miniApps(@Query() query: CatalogQueryDto, @Req() req: Request) {
-    const rawHost = req.headers['x-forwarded-host'] || req.headers.host || req.hostname || 'localhost:3000';
-    const clientHost = String(rawHost).split(':')[0];
-    return this.catalog.list(query.q, query.limit, query.offset, clientHost);
-  }
-
-  @Get('auth/dev-reset-limits')
-  @Post('auth/dev-reset-limits')
-  @HttpCode(200)
-  devResetLimits() {
-    this.limiter.reset();
-    return { ok: true, message: 'Mobile rate limits reset successfully' };
+  @UseGuards(EndUserAuthGuard)
+  miniApps(@Query() query: CatalogQueryDto) {
+    return this.catalog.list(query.q, query.limit, query.offset);
   }
 }

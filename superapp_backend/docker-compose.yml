@@ -71,10 +71,9 @@ services:
       if [ -n \"$$MINIO_SUBNET_LICENSE\" ]; then
         /usr/bin/mc license register myminio --api-key \"$$MINIO_SUBNET_LICENSE\" || true;
       fi;
-      /usr/bin/mc mb myminio/mini-app-assets --ignore-existing || true;
-      /usr/bin/mc anonymous set download myminio/mini-app-assets || true;
-      /usr/bin/mc mb myminio/package-submissions --ignore-existing || true;
-      /usr/bin/mc mb myminio/sdk-submissions --ignore-existing || true;
+      /usr/bin/mc mb myminio/mini-app-logos --ignore-existing || true;
+      /usr/bin/mc anonymous set download myminio/mini-app-logos || true;
+      /usr/bin/mc mb myminio/submissions --ignore-existing || true;
       echo 'MinIO buckets and policies configured successfully.';
       exit 0;
       "

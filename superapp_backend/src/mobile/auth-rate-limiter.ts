@@ -122,16 +122,12 @@ export class AuthRateLimitGuard implements CanActivate {
     const res = context.switchToHttp().getResponse<Response>();
     const ip = req.ip || req.socket?.remoteAddress || 'unknown';
 
-    const isDev = process.env.NODE_ENV === 'development' || process.env.ENVIRONMENT === 'DEV';
-    const effectiveIpMax = isDev ? Math.max(opts.ipMax, 200) : opts.ipMax;
-    const effectiveEmailMax = opts.emailMax && (isDev ? Math.max(opts.emailMax, 100) : opts.emailMax);
-
-    let wait = this.limiter.consume(`${opts.scope}|ip|${ip}`, effectiveIpMax);
+    let wait = this.limiter.consume(`${opts.scope}|ip|${ip}`, opts.ipMax);
     const email = (req.body as { email?: unknown } | undefined)?.email;
-    if (!wait && effectiveEmailMax && typeof email === 'string' && email) {
+    if (!wait && opts.emailMax && typeof email === 'string' && email) {
       wait = this.limiter.consume(
         `${opts.scope}|ipemail|${ip}|${email.trim().toLowerCase().slice(0, 254)}`,
-        effectiveEmailMax,
+        opts.emailMax,
       );
     }
     if (wait) {

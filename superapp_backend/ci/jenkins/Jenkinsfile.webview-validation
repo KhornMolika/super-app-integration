@@ -100,7 +100,7 @@ pipeline {
                 echo "=========================================================="
                 echo " [STAGE 3] Security Headers & Content-Security-Policy Audit"
                 script {
-                    notifyStage("csp_headers_audit", "Security Headers & CSP Audit", "RUNNING", "Auditing CSP, frame-ancestors, and transport headers...")
+                    notifyStage("headers_audit", "Security Headers & CSP Audit", "RUNNING", "Auditing CSP, frame-ancestors, and transport headers...")
 
                     sh """
                     node -e '
@@ -132,7 +132,7 @@ pipeline {
                     ' || true
                     """
 
-                    notifyStage("csp_headers_audit", "Security Headers & CSP Audit", "COMPLETED", "Security Headers & CSP audit finished.")
+                    notifyStage("headers_audit", "Security Headers & CSP Audit", "COMPLETED", "Security Headers & CSP audit finished.")
                 }
             }
         }
@@ -142,7 +142,7 @@ pipeline {
                 echo "=========================================================="
                 echo " [STAGE 4] DAST Web Vulnerability Scan (ZAP / Nuclei)"
                 script {
-                    notifyStage("dast_zap", "Dynamic Application Security Scan (DAST)", "RUNNING", "Executing dynamic baseline vulnerability scan...")
+                    notifyStage("dast", "Dynamic Application Security Scan", "RUNNING", "Executing dynamic baseline vulnerability scan...")
 
                     sh """
                     node -e '
@@ -156,7 +156,7 @@ pipeline {
                     ' || true
                     """
 
-                    notifyStage("dast_zap", "Dynamic Application Security Scan (DAST)", "COMPLETED", "DAST scan completed.")
+                    notifyStage("dast", "Dynamic Application Security Scan", "COMPLETED", "DAST scan completed.")
                 }
             }
         }
@@ -182,8 +182,8 @@ pipeline {
                         const checks = {
                             ssrf: { passed: true, details: "SSRF network boundary verified." },
                             domain_tls_audit: { passed: true, details: "TLS/HTTPS security verified." },
-                            csp_headers_audit: { passed: true, details: "Security headers and CSP verified." },
-                            dast_zap: { passed: true, details: "Dynamic application scan clean." }
+                            headers_audit: { passed: true, details: "Security headers and CSP verified." },
+                            dast: { passed: true, details: "Dynamic application scan clean." }
                         };
 
                         if (fs.existsSync(ssrfFile)) {

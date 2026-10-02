@@ -37,17 +37,13 @@ if [ -n "$MINIO_SUBNET_LICENSE" ]; then
 fi
 
 # 1. Public bucket for UI assets (logos/banners)
-echo "Ensuring public assets bucket mini-app-assets exists..."
-/usr/bin/mc mb myminio/mini-app-assets --ignore-existing || true
-/usr/bin/mc anonymous set download myminio/mini-app-assets || true
+echo "Ensuring public bucket mini-app-logos exists..."
+/usr/bin/mc mb myminio/mini-app-logos --ignore-existing || true
+/usr/bin/mc anonymous set download myminio/mini-app-logos || true
 
-# 2. Strictly PRIVATE quarantine bucket for Flutter package submissions (.zip)
-echo "Ensuring quarantine bucket package-submissions exists..."
-/usr/bin/mc mb myminio/package-submissions --ignore-existing || true
+# 2. Strictly PRIVATE quarantine bucket for untrusted uploaded packages
+echo "Ensuring quarantine bucket submissions exists..."
+/usr/bin/mc mb myminio/submissions --ignore-existing || true
 
-# 3. Strictly PRIVATE quarantine bucket for Native SDK submissions (.aar / .xcframework)
-echo "Ensuring quarantine bucket sdk-submissions exists..."
-/usr/bin/mc mb myminio/sdk-submissions --ignore-existing || true
-
-echo "MinIO AIStor initialization complete with standardized 3-bucket architecture."
+echo "MinIO AIStor initialization complete."
 exit 0

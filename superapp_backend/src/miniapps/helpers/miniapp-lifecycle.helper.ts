@@ -16,7 +16,6 @@ import {
 } from '../../integrations/validation/local-security-scanner.service';
 import { StorageService } from '../../storage/storage.service';
 import { NexusIntegrationService } from '../../integrations/nexus/nexus-integration.service';
-import { ApkBuildManagerService } from '../../integrations/flutter/apk-build-manager.service';
 import { resolveBackofficeBaseUrl } from '../../common/utils/network.utils';
 import {
   extractDecryptedDeployKey,
@@ -46,8 +45,6 @@ export class MiniappLifecycleHelper {
     private storageService?: StorageService,
     @Optional()
     private nexusService?: NexusIntegrationService,
-    @Optional()
-    private apkBuildManager?: ApkBuildManagerService,
   ) {}
 
 
@@ -761,10 +758,10 @@ export class MiniappLifecycleHelper {
     ) => Promise<void>,
   ) {
     const id = app.id;
-    const validStatuses = ['APPROVED', 'BUILDING', 'IN_REVIEW', 'TESTING', 'ACTIVE', 'BUILD_FAILED'];
+    const validStatuses = ['APPROVED', 'BUILDING', 'IN_REVIEW', 'TESTING', 'ACTIVE'];
     if (!validStatuses.includes(app.status?.toUpperCase())) {
       throw new BadRequestException(
-        `App must be in APPROVED, BUILDING, IN_REVIEW, TESTING, ACTIVE, or BUILD_FAILED status before moving to TESTING (current: ${app.status})`,
+        `App must be in APPROVED, BUILDING, IN_REVIEW, TESTING, or ACTIVE status before moving to TESTING (current: ${app.status})`,
       );
     }
 
@@ -778,8 +775,6 @@ export class MiniappLifecycleHelper {
       };
       await this.miniappRepository.save(app);
 
-      const testBuildType = process.env.SUPERAPP_TEST_APK_BUILD_MODE || 'release';
-
       if (app.ownerId) {
         await this.notificationsService.createNotification(
           app.ownerId,
@@ -787,7 +782,7 @@ export class MiniappLifecycleHelper {
           `Test build compilation (${releaseVersion}) initiated for staged revision of "${app.name}". Live version remains active.`,
           'BUILD_STARTED',
           app.id,
-          { releaseVersion, version: releaseVersion, buildType: testBuildType },
+          { releaseVersion, version: releaseVersion, buildType: 'debug' },
         );
       }
 
@@ -795,11 +790,8 @@ export class MiniappLifecycleHelper {
         await this.jenkinsService.triggerSuperAppBuild({
           releaseVersion,
           appName: 'superapp',
-          buildType: testBuildType,
+          buildType: 'debug',
         });
-        if (this.apkBuildManager) {
-          this.apkBuildManager.triggerBuild({ releaseVersion, appName: 'superapp', buildType: testBuildType }).catch(() => {});
-        }
         this.jenkinsService.triggerSuperAppSandboxBuild().catch(() => {});
       } catch (err: any) {
         this.logger.error(`Error triggering Jenkins test build for revision: ${err.message}`);
@@ -822,12 +814,7 @@ export class MiniappLifecycleHelper {
     // For APPROVED, IN_REVIEW, TESTING, BUILDING, BUILD_FAILED
     app.status = 'BUILDING';
     app.buildStatus = 'BUILDING';
-    app.buildError = null as any;
-    await this.miniappRepository.update(app.id, {
-      status: 'BUILDING',
-      buildStatus: 'BUILDING',
-      buildError: null as any,
-    });
+    app.buildError = undefined;
     app.buildStages = {
       preflight: {
         id: 'preflight',
@@ -863,7 +850,6 @@ export class MiniappLifecycleHelper {
     await this.miniappRepository.save(app);
 
     // Dispatch explicit BUILDING status notification
-    const testBuildType = process.env.SUPERAPP_TEST_APK_BUILD_MODE || 'release';
     if (app.ownerId) {
       await this.notificationsService.createNotification(
         app.ownerId,
@@ -874,7 +860,7 @@ export class MiniappLifecycleHelper {
         {
           releaseVersion,
           version: releaseVersion,
-          buildType: testBuildType,
+          buildType: 'debug',
         },
       );
     }
@@ -887,25 +873,12 @@ export class MiniappLifecycleHelper {
       const jenkinsResult = await this.jenkinsService.triggerSuperAppBuild({
         releaseVersion,
         appName: 'superapp',
-        buildType: testBuildType,
+        buildType: 'debug',
       });
       if (!jenkinsResult.success) {
         this.logger.warn(
           `Jenkins test build trigger returned: ${jenkinsResult.message}`,
         );
-      }
-
-      // Also trigger host APK compilation manager
-      if (this.apkBuildManager) {
-        this.apkBuildManager
-          .triggerBuild({
-            releaseVersion,
-            appName: 'superapp',
-            buildType: testBuildType,
-          })
-          .catch((e: any) => {
-            this.logger.warn(`Failed to trigger local APK build: ${e.message}`);
-          });
       }
 
       // Also trigger Super App Web Sandbox build concurrently

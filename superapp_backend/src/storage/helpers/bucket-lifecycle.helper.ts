@@ -28,27 +28,7 @@ export class BucketLifecycleHelper {
         const exists = await minioClient.bucketExists(bucketName);
         if (!exists) {
           await minioClient.makeBucket(bucketName, 'us-east-1');
-          this.logger.log(`Created MinIO bucket "${bucketName}"`);
-        }
-        if (bucketName === 'mini-app-assets') {
-          const policy = {
-            Version: '2012-10-17',
-            Statement: [
-              {
-                Effect: 'Allow',
-                Principal: { AWS: ['*'] },
-                Action: ['s3:GetBucketLocation', 's3:ListBucket'],
-                Resource: [`arn:aws:s3:::${bucketName}`],
-              },
-              {
-                Effect: 'Allow',
-                Principal: { AWS: ['*'] },
-                Action: ['s3:GetObject'],
-                Resource: [`arn:aws:s3:::${bucketName}/*`],
-              },
-            ],
-          };
-          await minioClient.setBucketPolicy(bucketName, JSON.stringify(policy)).catch(() => {});
+          this.logger.log(`Created private MinIO bucket "${bucketName}"`);
         }
       } catch (err: any) {
         this.logger.warn(

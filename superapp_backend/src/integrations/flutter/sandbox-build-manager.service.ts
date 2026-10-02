@@ -1,14 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
 import * as child_process from 'child_process';
 
 import { JenkinsService } from '../jenkins/jenkins.service';
-import { MiniApp } from '../../miniapps/entities/miniapp.entity';
-import { extractDecryptedDeployKey } from '../../miniapps/helpers/flutter-credential.helper';
 
 export type BuildState = 'IDLE' | 'QUEUED' | 'BUILDING' | 'SUCCESS' | 'FAILED';
 
@@ -35,11 +30,7 @@ export class SandboxBuildManagerService {
   private readonly logBuffer: string[] = [];
   private currentProcess?: child_process.ChildProcess;
 
-  constructor(
-    private readonly jenkinsService: JenkinsService,
-    @InjectRepository(MiniApp)
-    private readonly miniappRepository: Repository<MiniApp>,
-  ) {}
+  constructor(private readonly jenkinsService: JenkinsService) {}
 
   /**
    * Appends a log line to the cyclic in-memory buffer (max 200 lines).
@@ -120,19 +111,19 @@ export class SandboxBuildManagerService {
             this.lastBuildTime = new Date().toISOString();
 
             if (jStatus.result === 'SUCCESS') {
-              this.appendLog(`✅ Jenkins superapp-sandbox-build completed successfully in ${(this.durationMs / 1000).toFixed(1)}s.`);
-              if (!this.currentProcess) {
-                this.state = 'SUCCESS';
-                this.message = `Jenkins superapp-sandbox-build completed successfully in ${(this.durationMs / 1000).toFixed(1)}s.`;
-                this.appendLog(`✅ ${this.message}`);
-                this.logger.log(this.message);
-              } else {
-                this.appendLog('Local Flutter Web sandbox compilation is progressing in background...');
-              }
+              this.state = 'SUCCESS';
+              this.message = `Jenkins superapp-sandbox-build completed successfully in ${(this.durationMs / 1000).toFixed(1)}s.`;
+              this.appendLog(`✅ ${this.message}`);
+              this.logger.log(this.message);
             } else if (jStatus.result === 'FAILURE') {
-              this.appendLog('❌ Jenkins superapp-sandbox-build pipeline failed. Awaiting local fallback build...');
+              this.state = 'FAILED';
+              this.message = 'Jenkins superapp-sandbox-build pipeline failed.';
+              this.appendLog(`❌ ${this.message}`);
+              this.logger.error(this.message);
             } else {
-              this.appendLog('Jenkins sandbox build completed.');
+              this.state = 'SUCCESS';
+              this.message = 'Jenkins sandbox build finished.';
+              this.appendLog(`✅ ${this.message}`);
             }
           }
         }
@@ -162,13 +153,21 @@ export class SandboxBuildManagerService {
       this.appendLog('Connecting to Jenkins to trigger superapp-sandbox-build...');
       const jenkinsRes = await this.jenkinsService.triggerSuperAppSandboxBuild();
       if (jenkinsRes.success) {
-        this.appendLog(`✅ Jenkins pipeline triggered: ${jenkinsRes.message}`);
+        this.message = 'Jenkins superapp-sandbox-build pipeline triggered successfully.';
+        this.appendLog(`✅ ${jenkinsRes.message}`);
+        this.logger.log(this.message);
+
+        // Monitor Jenkins build in background
         this.monitorJenkinsBuild(this.lastBuildStartTime);
-      } else {
-        this.appendLog(`[WARN] Jenkins trigger returned: ${jenkinsRes.message}`);
+
+        return {
+          success: true,
+          message: this.message,
+        };
       }
+      this.appendLog(`[WARN] Jenkins trigger returned: ${jenkinsRes.message}. Attempting local fallback build...`);
     } catch (err: any) {
-      this.appendLog(`[WARN] Failed to trigger Jenkins: ${err.message}`);
+      this.appendLog(`[WARN] Failed to trigger Jenkins: ${err.message}. Attempting local fallback build...`);
     }
 
     const candidates = [
@@ -188,71 +187,6 @@ export class SandboxBuildManagerService {
 
     this.appendLog(`Local Fallback Script: ${resolvedScript}`);
 
-    // Extract all private deploy keys for packages in pubspec
-    const tempKeyFiles: string[] = [];
-    let gitSshCommand: string | undefined;
-
-    try {
-      const allMiniApps = await this.miniappRepository.find();
-      const privateKeys = new Set<string>();
-
-      for (const app of allMiniApps) {
-        const activeKey = extractDecryptedDeployKey(app.integrationConfig as any);
-        if (activeKey && activeKey.trim()) {
-          privateKeys.add(activeKey.trim());
-        }
-        const pendingKey = extractDecryptedDeployKey(app.pendingRevision?.integrationConfig as any);
-        if (pendingKey && pendingKey.trim()) {
-          privateKeys.add(pendingKey.trim());
-        }
-      }
-
-      if (privateKeys.size > 0) {
-        this.appendLog(`Configuring SSH deploy keys for ${privateKeys.size} private repository package(s)...`);
-        const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'superapp-deploy-keys-'));
-        let idx = 0;
-        for (const key of privateKeys) {
-          idx++;
-          const keyPath = path.join(tempDir, `deploy_key_${idx}.pem`);
-          fs.writeFileSync(keyPath, key.trim() + '\n', { mode: 0o600 });
-          if (process.platform === 'win32') {
-            try {
-              const user = process.env.USERNAME || process.env.USER;
-              if (user) {
-                child_process.execFileSync('icacls', [keyPath, '/inheritance:r', '/grant:r', `${user}:R`], { stdio: 'pipe' });
-              }
-            } catch (aclErr: any) {
-              this.logger.warn(`Could not set ACL on deploy key file: ${aclErr.message}`);
-            }
-          }
-          tempKeyFiles.push(keyPath);
-        }
-
-        const identityArgs = tempKeyFiles
-          .map((kp) => `-i "${kp.replace(/\\/g, '/')}"`)
-          .join(' ');
-        gitSshCommand = `ssh ${identityArgs} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null`;
-        this.appendLog(`Configured GIT_SSH_COMMAND with ${tempKeyFiles.length} identity key(s).`);
-      }
-    } catch (keyErr: any) {
-      this.logger.warn(`Failed extracting deploy keys for sandbox build: ${keyErr.message}`);
-      this.appendLog(`[WARN] Failed configuring deploy keys: ${keyErr.message}`);
-    }
-
-    const cleanupKeys = () => {
-      for (const kp of tempKeyFiles) {
-        try {
-          if (fs.existsSync(kp)) fs.unlinkSync(kp);
-        } catch (_) {}
-      }
-      if (tempKeyFiles.length > 0) {
-        try {
-          const dir = path.dirname(tempKeyFiles[0]);
-          if (fs.existsSync(dir)) fs.rmdirSync(dir);
-        } catch (_) {}
-      }
-    };
-
     const startTime = Date.now();
     const isWindows = process.platform === 'win32';
     const shell = isWindows ? 'powershell.exe' : '/bin/sh';
@@ -263,10 +197,7 @@ export class SandboxBuildManagerService {
     try {
       this.currentProcess = child_process.spawn(shell, shellArgs, {
         cwd: path.dirname(resolvedScript),
-        env: {
-          ...process.env,
-          ...(gitSshCommand ? { GIT_SSH_COMMAND: gitSshCommand } : {}),
-        },
+        env: { ...process.env },
       });
 
       this.currentProcess.stdout?.on('data', (data) => {
@@ -284,7 +215,6 @@ export class SandboxBuildManagerService {
       });
 
       this.currentProcess.on('close', (code) => {
-        cleanupKeys();
         this.durationMs = Date.now() - startTime;
         this.lastBuildTime = new Date().toISOString();
         this.exitCode = code ?? 0;
@@ -304,7 +234,6 @@ export class SandboxBuildManagerService {
       });
 
       this.currentProcess.on('error', (err) => {
-        cleanupKeys();
         this.durationMs = Date.now() - startTime;
         this.lastBuildTime = new Date().toISOString();
         this.state = 'FAILED';
@@ -320,7 +249,6 @@ export class SandboxBuildManagerService {
         message: 'Sandbox build initiated in background.',
       };
     } catch (err: any) {
-      cleanupKeys();
       this.state = 'FAILED';
       this.message = `Failed to spawn build process: ${err.message}`;
       this.appendLog(`❌ ${this.message}`);

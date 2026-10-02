@@ -75,30 +75,17 @@ export class ValidationCallbackController {
     if (!app) return { ok: false };
 
     const stages = app.validationStages || {};
-
-    const STAGE_ALIASES: Record<string, string[]> = {
-      dependency_scan: ['sca', 'dependency_scan'],
-      sca: ['dependency_scan', 'sca'],
-      license_audit: ['license_compliance', 'license_audit'],
-      license_compliance: ['license_audit', 'license_compliance'],
-      capability_gate: ['capability_gate', 'capability_analysis', 'permissions'],
-      capability_analysis: ['capability_gate', 'capability_analysis', 'permissions'],
+    const existing = stages[stageId] || {};
+    stages[stageId] = {
+      id: stageId,
+      order: existing.order !== undefined ? existing.order : undefined,
+      name: stageName || existing.name || stageId,
+      status,
+      details: details || '',
+      updatedAt: new Date().toISOString(),
+      ...(existing.tool ? { tool: existing.tool } : {}),
+      ...(existing.icon ? { icon: existing.icon } : {}),
     };
-
-    const targetKeys = Array.from(new Set([stageId, ...(STAGE_ALIASES[stageId] || [])]));
-    for (const key of targetKeys) {
-      const existing = stages[key] || {};
-      stages[key] = {
-        id: key,
-        order: existing.order !== undefined ? existing.order : undefined,
-        name: stageName || existing.name || key,
-        status,
-        details: details || existing.details || '',
-        updatedAt: new Date().toISOString(),
-        ...(existing.tool ? { tool: existing.tool } : {}),
-        ...(existing.icon ? { icon: existing.icon } : {}),
-      };
-    }
 
     app.validationStages = stages;
     await this.miniappRepository.save(app);

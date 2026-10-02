@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { StorageService } from './storage.service';
-import { StorageController, PublicAssetProxyController } from './storage.controller';
+import { StorageController } from './storage.controller';
 import {
   ArchiveSanitizerHelper,
   BucketLifecycleHelper,
@@ -9,7 +9,7 @@ import {
 } from './helpers';
 
 @Module({
-  controllers: [StorageController, PublicAssetProxyController],
+  controllers: [StorageController],
   providers: [
     StorageService,
     ArchiveSanitizerHelper,

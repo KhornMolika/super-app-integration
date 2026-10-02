@@ -196,43 +196,44 @@ ${cleanIssue}
       }
 
       case 'TEST_BUILD_READY': {
-        const rawVer =
+        const version =
           (metadata?.version as string) ||
           (metadata?.releaseVersion as string) ||
-          'v0.2.1';
-        const version = rawVer.startsWith('v') ? rawVer : `v${rawVer}`;
-        const targetFilename = `superapp-test-${version}.apk`;
-        // Always route through the Backoffice streaming proxy endpoint to enforce the standardized download filename
-        const apkUrl = `${baseUrl}/api/download-apk?type=test&version=${encodeURIComponent(version)}&appName=superapp`;
+          'v1.0.0';
+        const rawApkUrl = metadata?.apkUrl;
+        const downloadProxyUrl = `${baseUrl}/api/download-apk?type=test&version=${encodeURIComponent(version)}&appName=superapp`;
+        const apkUrl =
+          rawApkUrl && !rawApkUrl.includes('host.docker.internal')
+            ? rawApkUrl
+            : downloadProxyUrl;
         const sandboxUrl = miniAppId
           ? `${baseUrl}/miniapps/${miniAppId}?preview=true`
-          : `${baseUrl}/preview`;
+          : `${baseUrl}/super-app?preview=true`;
 
         const text = `
 🟢 <b>[BUILD READY] SUPER APP TEST BUILD READY</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📱 <b>Mini App:</b> ${appDisplayName}
 🏷️ <b>Version:</b> <code>${version}</code>
-📦 <b>Artifact:</b> <code>${targetFilename}</code>
-🚀 <b>Channels:</b> Android Test APK & Interactive Web Sandbox
+📦 <b>Artifacts:</b> Android APK & Web Sandbox Build Ready
 
 <pre><code class="language-diff">
-+ [READY] Test APK     : ${targetFilename}
-+ [READY] Web Sandbox  : Live & Interactive
-+ [READY] Release Tag  : ${version}
++ [READY] Android APK : Built & Uploaded to Nexus
++ [READY] Web Sandbox : Live & Interactive
++ [READY] Release     : ${version}
 </code></pre>
 
-<blockquote>Super App test binary packaging is complete! You can download the test APK (${targetFilename}) or launch the interactive Web Sandbox.</blockquote>
+<blockquote>Super App test binary packaging is complete! You can download the test APK or launch the interactive Web Sandbox.</blockquote>
 
 🔗 <b>Action Links:</b>
-📲 <a href="${apkUrl}"><b>Download Test APK (${targetFilename})</b></a>
+📲 <a href="${apkUrl}"><b>Download Test APK (.apk)</b></a>
 🌐 <a href="${sandboxUrl}"><b>Launch Interactive Web Sandbox</b></a>
 🔍 <a href="${detailsUrl}"><b>View Details in Backoffice Portal</b></a>
         `.trim();
 
         const actionRow: TelegramInlineButton[] = [];
         if (apkUrl) {
-          actionRow.push({ text: `📲 Download ${targetFilename}`, url: apkUrl });
+          actionRow.push({ text: '📲 Download Test APK', url: apkUrl });
         }
         actionRow.push({ text: '🌐 Launch Sandbox', url: sandboxUrl });
 

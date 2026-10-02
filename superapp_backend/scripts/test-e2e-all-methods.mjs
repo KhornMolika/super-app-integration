@@ -1,7 +1,6 @@
 import AdmZip from 'adm-zip';
 
-const BASE_URL = process.env.BASE_URL || process.env.BACKEND_URL || 'http://127.0.0.1:3000';
-const ADMIN_EMAIL = process.env.SUPERADMIN_EMAIL || 'superadmin@example.com';
+const BASE_URL = 'http://127.0.0.1:3000';
 
 async function api(path, options = {}) {
   const url = `${BASE_URL}${path}`;
@@ -28,10 +27,10 @@ async function run() {
   console.log('================================================================\n');
 
   // Step 1: Admin Login
-  console.log(`🔑 Step 1: Admin Authentication (${ADMIN_EMAIL})...`);
+  console.log('🔑 Step 1: Admin Authentication (superadmin@example.com)...');
   const loginRes = await api('/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ email: ADMIN_EMAIL }),
+    body: JSON.stringify({ email: 'superadmin@example.com' }),
   });
 
   if (!loginRes.data?.access_token) {
@@ -56,7 +55,7 @@ async function run() {
     ownerEmail: 'portal-lead@fsa.gov.kh',
     integrationMethod: 'WEBVIEW',
     integrationConfigWebView: {
-      productionUrl: 'https://fintechcenter.com/app',
+      productionUrl: 'https://fintechcenter.gov.kh/app',
       isDomainVerified: true,
     },
   };
@@ -67,7 +66,7 @@ async function run() {
     body: JSON.stringify(webViewPayload),
   });
   console.log(`   Registration Status: ${wvCreate.status} - ID: ${wvCreate.data?.id}`);
-
+  
   // Wait 1.5s for initial ingest/registration pacer
   await new Promise((r) => setTimeout(r, 1500));
 
@@ -113,7 +112,7 @@ async function run() {
     body: JSON.stringify(flutterPayload),
   });
   console.log(`   Registration Status: ${flCreate.status} - ID: ${flCreate.data?.id}`);
-
+  
   // Verify Security Masking in API Response
   const returnedKey = flCreate.data?.integrationConfig?.deployKey;
   const hasDeployKey = flCreate.data?.integrationConfig?.hasDeployKey;

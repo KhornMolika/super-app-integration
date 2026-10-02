@@ -386,57 +386,6 @@ export class MailTemplateHelper {
     };
   }
 
-  public static renderTestBuildFailedEmail(
-    appName: string,
-    version: string,
-    errorMessage: string,
-    detailsUrl: string,
-  ): { subject: string; html: string } {
-    const rawVersion = version || '1.0.0';
-    const displayVersion = rawVersion.startsWith('v')
-      ? rawVersion
-      : `v${rawVersion}`;
-    const escAppName = this.escapeHtml(appName);
-    const escDisplayVersion = this.escapeHtml(displayVersion);
-    const escError = this.escapeHtml(errorMessage);
-    const escDetailsUrl = this.escapeHtml(detailsUrl);
-
-    const contentHtml = `
-      <p style="font-size: 14px; line-height: 1.6; margin-top: 0;">Hello,</p>
-      <p style="font-size: 14px; line-height: 1.6;">
-        The Super App test build compilation for Mini App <strong>"${escAppName}"</strong> (version <code>${escDisplayVersion}</code>) has encountered an error during pipeline execution.
-      </p>
-
-      <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 20px; margin: 24px 0;">
-        <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: #b91c1c; letter-spacing: 0.5px; margin-bottom: 8px;">
-          Build Error Diagnostic
-        </div>
-        <pre style="margin: 0; padding: 12px; background: #ffffff; border: 1px solid #fca5a5; border-radius: 6px; font-family: monospace; font-size: 13px; color: #991b1b; white-space: pre-wrap; word-break: break-word;">${escError}</pre>
-        <div style="margin-top: 16px;">
-          <a href="${escDetailsUrl}" style="display: inline-block; background: #dc2626; color: #ffffff; text-decoration: none; padding: 10px 18px; border-radius: 6px; font-weight: 600; font-size: 13px;">
-            Inspect Build Diagnostics in Backoffice
-          </a>
-        </div>
-      </div>
-
-      <p style="font-size: 14px; color: #475569; line-height: 1.6;">
-        Please review the pipeline logs, verify package dependencies or manifest settings, and retry the build from the Backoffice portal.
-      </p>
-    `;
-
-    return {
-      subject: `🚨 Build Failed: Mini App "${appName}" (${displayVersion})`,
-      html: this.renderEmailLayout({
-        category: 'Fastlane CI Pipeline Alert',
-        categoryColor: '#ef4444',
-        title: 'Super App Test Build Failed',
-        borderAccentColor: '#dc2626',
-        contentHtml,
-        signatureTeam: 'Super App Engineering Operations',
-      }),
-    };
-  }
-
   public static renderMiniAppApprovedEmail(
     appName: string,
     detailsUrl: string,

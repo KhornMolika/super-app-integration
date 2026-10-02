@@ -123,12 +123,12 @@ export const SECURITY_CHECK_METADATA: Record<string, SecurityCheckMetadata> = {
 export function getDefaultChecksForMethod(method: string): string[] {
   const norm = (method || 'WEBVIEW').toUpperCase();
   if (norm === 'FLUTTER_PACKAGE' || norm === 'NATIVE_SDK') {
-    return ['secret_scan', 'sast', 'dependency_scan', 'capability_gate', 'sbom', 'license_compliance'];
+    return ['secret_scan', 'sast', 'dependency_scan', 'capability_gate', 'sbom'];
   }
   if (norm === 'DEEP_LINK') {
-    return ['scheme_audit', 'store_url_audit', 'capability_gate'];
+    return ['domain_tls_audit', 'secret_scan', 'capability_gate'];
   }
-  return ['domain_tls_audit', 'csp_headers_audit', 'dast_zap'];
+  return ['domain_tls_audit', 'csp_headers_audit', 'dast_zap', 'secret_scan', 'dependency_scan'];
 }
 
 export function buildDynamicValidationStages(
@@ -136,23 +136,37 @@ export function buildDynamicValidationStages(
   userSelectedChecks?: string[],
 ): Record<string, any> {
   const norm = (method || 'WEBVIEW').toUpperCase();
-
-  const METHOD_PIPELINE_STAGES: Record<string, string[]> = {
-    WEBVIEW: ['ssrf', 'domain_tls_audit', 'csp_headers_audit', 'dast_zap'],
-    FLUTTER_PACKAGE: ['ingest', 'secret_scan', 'sast', 'dependency_scan', 'capability_gate', 'sbom', 'license_compliance'],
-    NATIVE_SDK: ['ingest', 'secret_scan', 'sast', 'capability_gate', 'malware_scan', 'license_compliance'],
-    DEEP_LINK: ['scheme_audit', 'store_url_audit', 'capability_gate'],
-  };
-
-  const pipelineSequence = METHOD_PIPELINE_STAGES[norm] || METHOD_PIPELINE_STAGES.WEBVIEW;
   const rawChecks =
     userSelectedChecks && userSelectedChecks.length > 0
       ? userSelectedChecks
-      : pipelineSequence;
+      : getDefaultChecksForMethod(norm);
 
-  const baseKey = pipelineSequence[0];
-  const userSet = new Set([...rawChecks, baseKey]);
-  const stageKeys = pipelineSequence.filter((k) => userSet.has(k));
+  const stageKeys: string[] = [];
+
+  if (norm === 'FLUTTER_PACKAGE' || norm === 'NATIVE_SDK') {
+    // 1. Mandatory Ingestion
+    stageKeys.push('ingest');
+    // 2. User selected checks (deduped)
+    for (const c of rawChecks) {
+      if (!stageKeys.includes(c) && SECURITY_CHECK_METADATA[c]) {
+        stageKeys.push(c);
+      }
+    }
+    // 3. Ensure capability gate is included if not explicitly selected
+    if (!stageKeys.includes('capability_gate')) {
+      stageKeys.push('capability_gate');
+    }
+  } else {
+    // WEBVIEW / DEEP_LINK
+    // 1. Mandatory SSRF Defense
+    stageKeys.push('ssrf');
+    // 2. User selected checks
+    for (const c of rawChecks) {
+      if (!stageKeys.includes(c) && SECURITY_CHECK_METADATA[c]) {
+        stageKeys.push(c);
+      }
+    }
+  }
 
   const stages: Record<string, any> = {};
   stageKeys.forEach((key, idx) => {

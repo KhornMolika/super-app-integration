@@ -15,10 +15,8 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return API gateway info', () => {
-      const info = appController.getInfo();
-      expect(info.status).toBe('operational');
-      expect(info.health).toBe('/health');
+    it('should return "Hello World!"', () => {
+      expect(appController.getHello()).toBe('Hello World!');
     });
   });
 });

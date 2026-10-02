@@ -55,7 +55,7 @@ export class PresignedUrlHelper {
     key = key.replace(/^https?:\/\/[^\/]+\//, '');
 
     if (key.startsWith('mini-app-logos/')) {
-      bucket = assetsBucket;
+      bucket = 'mini-app-logos';
       key = key.replace(/^mini-app-logos\//, '');
     } else if (key.startsWith(`${assetsBucket}/`)) {
       bucket = assetsBucket;
@@ -86,7 +86,7 @@ export class PresignedUrlHelper {
     key = key.replace(/^https?:\/\/[^\/]+\//, '');
 
     if (key.startsWith('mini-app-logos/')) {
-      bucket = assetsBucket;
+      bucket = 'mini-app-logos';
       key = key.replace(/^mini-app-logos\//, '');
     } else if (key.startsWith(`${assetsBucket}/`)) {
       bucket = assetsBucket;

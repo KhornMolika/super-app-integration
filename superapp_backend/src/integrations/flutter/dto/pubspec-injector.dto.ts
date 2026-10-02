@@ -38,10 +38,6 @@ export class ValidateDependencyDto {
   @IsOptional()
   @IsBoolean()
   dryRun?: boolean = true;
-
-  @IsOptional()
-  @IsString()
-  deployKey?: string;
 }
 
 export class PrecheckConflictDto {

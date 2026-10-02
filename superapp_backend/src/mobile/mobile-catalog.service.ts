@@ -28,60 +28,17 @@ export interface CatalogPage {
 }
 
 /** Explicit allowlist: nothing sensitive from the row can ever leak. */
-export function toCatalogItem(app: MiniApp, clientHost?: string): CatalogItem {
-  const host = clientHost || process.env.HOST_IP || 'localhost';
-
-  let config = app.integrationConfig;
-  if (config && typeof config === 'object') {
-    config = JSON.parse(JSON.stringify(config));
-    const urlKeys = ['webUrl', 'productionUrl', 'testingUrl', 'url', 'bundleUrl'];
-    for (const key of urlKeys) {
-      if (typeof config[key] === 'string') {
-        config[key] = config[key]
-          .replace(/http:\/\/localhost(?::(\d+))?/g, (_: string, port?: string) => `http://${host}${port ? `:${port}` : ''}`)
-          .replace(/http:\/\/127\.0\.0\.1(?::(\d+))?/g, (_: string, port?: string) => `http://${host}${port ? `:${port}` : ''}`);
-      }
-    }
-  }
-
-  let logo = app.logo ?? null;
-  if (logo) {
-    if (logo.startsWith('data:')) {
-      // Inline base64 image data: preserve as is
-    } else if (
-      logo.includes(':9000') ||
-      logo.includes('mini-app-assets') ||
-      logo.includes('mini-app-logos') ||
-      logo.startsWith('/logos/') ||
-      logo.startsWith('logos/')
-    ) {
-      const bucket = 'mini-app-assets';
-      const cleanKey = logo
-        .split('?')[0]
-        .replace(/^https?:\/\/[^\/]+\//, '')
-        .replace(/^\/+/, '')
-        .replace(/^(?:mini-app-assets\/|mini-app-logos\/)/, '')
-        .replace(/^\/+/, '');
-      logo = `http://${host}:3000/api/storage/asset?bucket=${bucket}&key=${encodeURIComponent(cleanKey)}`;
-    } else if (logo.startsWith('/')) {
-      logo = `http://${host}:3000${logo}`;
-    } else {
-      logo = logo
-        .replace(/http:\/\/localhost(?::(\d+))?/g, (_: string, port?: string) => `http://${host}${port ? `:${port}` : ''}`)
-        .replace(/http:\/\/127\.0\.0\.1(?::(\d+))?/g, (_: string, port?: string) => `http://${host}${port ? `:${port}` : ''}`);
-    }
-  }
-
+export function toCatalogItem(app: MiniApp): CatalogItem {
   const item: CatalogItem = {
     id: app.id,
     appId: app.appId,
     name: app.name,
     description: app.shortDescription ?? null,
     fullDescription: app.fullDescription ?? null,
-    logo,
+    logo: app.logo ?? null,
     category: app.category ?? null,
     integrationMethod: app.integrationMethod,
-    integrationConfig: config ?? null,
+    integrationConfig: app.integrationConfig ?? null,
     permissions: app.permissions ?? [],
     termsAndConditions: app.termsDescription ?? null,
     privacyPolicy: app.privacyPolicyDescription ?? null,
@@ -99,7 +56,7 @@ export class MobileCatalogService {
     @InjectRepository(MiniApp) private readonly miniApps: Repository<MiniApp>,
   ) {}
 
-  async list(q: string | undefined, limit: number, offset: number, clientHost?: string): Promise<CatalogPage> {
+  async list(q: string | undefined, limit: number, offset: number): Promise<CatalogPage> {
     const qb = this.miniApps
       .createQueryBuilder('m')
       // Column allowlist also avoids the entity's eager `owner` join.
@@ -135,7 +92,7 @@ export class MobileCatalogService {
       .take(limit)
       .skip(offset)
       .getManyAndCount();
-    return { items: rows.map((r) => toCatalogItem(r, clientHost)), total, limit, offset };
+    return { items: rows.map(toCatalogItem), total, limit, offset };
   }
 }
 

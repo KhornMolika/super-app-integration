@@ -6,7 +6,6 @@ import { JenkinsService } from '../jenkins/jenkins.service';
 import { NotificationsService, MailService } from '../../notifications';
 import { ConfigService } from '@nestjs/config';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
-import { User } from '../../access-control/entities/user.entity';
 import { PubspecInjectorService } from '../flutter/pubspec-injector.service';
 
 describe('ReleaseAssemblyVerificationService', () => {
@@ -17,7 +16,6 @@ describe('ReleaseAssemblyVerificationService', () => {
   let mailService: jest.Mocked<Partial<MailService>>;
   let configService: jest.Mocked<Partial<ConfigService>>;
   let mockMiniappRepo: any;
-  let mockUserRepo: any;
 
   beforeEach(async () => {
     configService = {
@@ -51,7 +49,6 @@ describe('ReleaseAssemblyVerificationService', () => {
 
     mailService = {
       sendTestBuildReadyEmail: jest.fn().mockResolvedValue(true),
-      sendTestBuildFailedEmail: jest.fn().mockResolvedValue(true),
     };
 
     mockMiniappRepo = {
@@ -60,11 +57,6 @@ describe('ReleaseAssemblyVerificationService', () => {
       find: jest.fn().mockResolvedValue([]),
       update: jest.fn().mockResolvedValue({}),
       createQueryBuilder: jest.fn(),
-    };
-
-    mockUserRepo = {
-      findOne: jest.fn().mockResolvedValue({ id: 'user-1', email: 'owner@example.com' }),
-      find: jest.fn().mockResolvedValue([]),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -83,7 +75,6 @@ describe('ReleaseAssemblyVerificationService', () => {
           },
         },
         { provide: getRepositoryToken(MiniApp), useValue: mockMiniappRepo },
-        { provide: getRepositoryToken(User), useValue: mockUserRepo },
       ],
     }).compile();
 
@@ -276,31 +267,29 @@ describe('ReleaseAssemblyVerificationService', () => {
       expect(res).toEqual({ success: true });
     });
 
-    it('transitions BUILDING apps to BUILD_FAILED on a failed build with diagnostics', async () => {
+    it('returns BUILDING apps to APPROVED on a failed build, keeping buildStages', async () => {
+      const qb = mockMiniappRepo.createQueryBuilder();
       const res = await service.handleBuildCallback({
         appName: 'superapp',
         releaseVersion: 'v1.2.0',
         status: 'FAILED',
-        errorMessage: 'APK build error',
       });
-      expect(mockMiniappRepo.update).toHaveBeenCalledWith(
-        'app-1',
-        expect.objectContaining({
-          status: 'BUILD_FAILED',
-          buildStatus: 'FAILED',
-          buildError: 'APK build error',
-        }),
+      expect(qb.set).toHaveBeenCalledWith({ status: 'APPROVED' });
+      expect(qb.where).toHaveBeenCalledWith("status = 'BUILDING'");
+      expect(qb.set).not.toHaveBeenCalledWith(
+        expect.objectContaining({ buildStages: expect.anything() }),
       );
+      expect(execute).toHaveBeenCalled();
       expect(notificationsService.createNotification).toHaveBeenCalledWith(
         'u1',
         'Super App Build Failed',
         expect.any(String),
         'BUILD_FAILED',
         'app-1',
-        expect.objectContaining({ releaseVersion: 'v1.2.0', error: 'APK build error' }),
+        expect.objectContaining({ releaseVersion: 'v1.2.0' }),
       );
       expect(notificationsService.emitBuildCompleted).toHaveBeenCalledWith(
-        expect.objectContaining({ miniAppId: 'app-1', status: 'FAILED', error: 'APK build error' }),
+        expect.objectContaining({ miniAppId: 'app-1', status: 'FAILED' }),
       );
       expect(res).toEqual({ success: true });
     });

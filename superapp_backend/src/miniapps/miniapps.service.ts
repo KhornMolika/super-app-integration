@@ -56,19 +56,11 @@ export class MiniappsService implements OnApplicationBootstrap {
     try {
       const apps = await this.miniappRepository.find();
       for (const app of apps) {
-        let changed = false;
         if (!app.organizationCode || !app.organization) {
           const resolved = resolveOrganizationDetails(app.organization || app.category);
           app.organization = resolved.name;
           app.organizationCode = resolved.code;
           app.category = resolved.name;
-          changed = true;
-        }
-        if (!app.logo || app.logo.trim() === '') {
-          app.logo = 'https://app.fintechcenterfsa.com/fsa-logo.png';
-          changed = true;
-        }
-        if (changed) {
           await this.miniappRepository.save(app);
         }
       }

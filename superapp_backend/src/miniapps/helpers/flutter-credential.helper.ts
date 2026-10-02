@@ -11,8 +11,6 @@ export interface FlutterIntegrationConfig {
   token?: string;
   hasDeployKey?: boolean;
   hasGitAccessToken?: boolean;
-  deployPublicKey?: string;
-  deployKeyFingerprint?: string;
   [key: string]: unknown;
 }
 

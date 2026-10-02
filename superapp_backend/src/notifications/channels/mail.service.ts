@@ -219,34 +219,6 @@ export class MailService {
     });
   }
 
-  async sendTestBuildFailedEmail(
-    toEmail: string,
-    appName: string,
-    version: string,
-    errorMessage: string,
-    detailsUrl: string,
-  ): Promise<void> {
-    const rawVersion = version || '1.0.0';
-    const displayVersion = rawVersion.startsWith('v')
-      ? rawVersion
-      : `v${rawVersion}`;
-    const template = {
-      ...MailTemplateHelper.renderTestBuildFailedEmail(
-        appName,
-        version,
-        errorMessage,
-        detailsUrl,
-      ),
-      from: `Super App CI Pipeline <${this.fromEmail}>`,
-    };
-    return this.dispatchLifecycleNotification(toEmail, template, {
-      dummyLog: `[DUMMY] Would have sent Build Failed Email to ${toEmail} for ${appName} (${displayVersion})`,
-      skippedLog: `[SKIPPED] Skipped Build Failed Email to mock/test address: ${toEmail}`,
-      successLog: `Build failed email sent to ${toEmail} for app ${appName}`,
-      errorLog: `Failed to send build failed email to ${toEmail}`,
-    });
-  }
-
   async sendMiniAppApprovedEmail(
     toEmail: string,
     appName: string,

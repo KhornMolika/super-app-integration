@@ -4,20 +4,14 @@ pipeline {
     parameters {
         string(name: 'APP_NAME', defaultValue: 'superapp', description: 'Application Name / Sub-folder for Nexus repository')
         string(name: 'RELEASE_VERSION', defaultValue: 'v0.0.1', description: 'Super App Release Tag')
-        choice(name: 'BUILD_TYPE', choices: ['release', 'debug'], description: 'Target build mode: release or debug')
+        choice(name: 'BUILD_TYPE', choices: ['debug', 'release'], description: 'Target build mode: debug or release')
         string(name: 'CALLBACK_URL', defaultValue: 'http://host.docker.internal:3000/api/release-assembly/build-callback', description: 'NestJS Backend Webhook Callback URL')
         string(name: 'NEXUS_URL', defaultValue: 'http://host.docker.internal:8081', description: 'Sonatype Nexus URL')
-        string(name: 'CALLBACK_TOKEN', defaultValue: '', description: 'NestJS Backend Webhook Callback Auth Token')
-        string(name: 'NEXUS_USER', defaultValue: 'admin', description: 'Sonatype Nexus Username')
-        string(name: 'NEXUS_PASSWORD', defaultValue: 'admin123', description: 'Sonatype Nexus Password')
     }
 
     environment {
         RELEASE_DIR = "/var/reports/releases/${params.APP_NAME}/${params.RELEASE_VERSION}"
         PUB_HOSTED_URL = "${params.NEXUS_URL}/repository/pub-group"
-        CALLBACK_TOKEN = "${params.CALLBACK_TOKEN ?: ''}"
-        NEXUS_USER = "${params.NEXUS_USER ?: 'admin'}"
-        NEXUS_PASSWORD = "${params.NEXUS_PASSWORD ?: 'admin123'}"
     }
 
     stages {
@@ -32,19 +26,15 @@ pipeline {
                 echo " Nexus URL       : ${params.NEXUS_URL}"
                 echo "=========================================================="
 
-                sh 'mkdir -p ${RELEASE_DIR} && chmod -R 777 /var/reports && rm -f /var/reports/build-error.txt || true'
+                sh 'mkdir -p ${RELEASE_DIR} && chmod -R 777 /var/reports'
 
                 script {
                     sh """
                     node -e '
                         const callbackUrl = "${params.CALLBACK_URL}".replace("/build-callback", "/stage");
-                        const token = "${env.CALLBACK_TOKEN ?: ''}";
-                        const headers = { "Content-Type": "application/json" };
-                        if (token) headers["x-callback-token"] = token;
-
                         fetch(callbackUrl, {
                             method: "POST",
-                            headers: headers,
+                            headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
                                 appName: "${params.APP_NAME}",
                                 releaseVersion: "${params.RELEASE_VERSION}",
@@ -67,13 +57,9 @@ pipeline {
                     sh """
                     node -e '
                         const callbackUrl = "${params.CALLBACK_URL}".replace("/build-callback", "/stage");
-                        const token = "${env.CALLBACK_TOKEN ?: ''}";
-                        const headers = { "Content-Type": "application/json" };
-                        if (token) headers["x-callback-token"] = token;
-
                         fetch(callbackUrl, {
                             method: "POST",
-                            headers: headers,
+                            headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
                                 appName: "${params.APP_NAME}",
                                 releaseVersion: "${params.RELEASE_VERSION}",
@@ -87,59 +73,28 @@ pipeline {
                     """
 
                     sh """
-                    node -e '
-                        const fs = require("fs");
-                        const compileUrl = "${params.CALLBACK_URL}".replace("/build-callback", "/compile-apk");
-                        const token = "${env.CALLBACK_TOKEN ?: ''}";
-                        const headers = { "Content-Type": "application/json" };
-                        if (token) headers["x-callback-token"] = token;
+                    APP_DIR="."
+                    if [ -d "super-app" ]; then
+                        APP_DIR="super-app"
+                    fi
 
-                        console.log("Triggering Super App APK compilation via host backend:", compileUrl);
-                        const controller = new AbortController();
-                        const timeoutId = setTimeout(() => controller.abort(), 600000); // 10 minutes timeout
-
-                        fetch(compileUrl, {
-                            method: "POST",
-                            headers: headers,
-                            signal: controller.signal,
-                            body: JSON.stringify({
-                                appName: "${params.APP_NAME}",
-                                releaseVersion: "${params.RELEASE_VERSION}",
-                                buildType: "${params.BUILD_TYPE}"
-                            })
-                        }).then(async res => {
-                            clearTimeout(timeoutId);
-                            const data = await res.json();
-                            console.log("Host builder response:", JSON.stringify(data));
-                            if (!data.success) {
-                                console.error("Host build failed:", data.message);
-                                try {
-                                    fs.writeFileSync("/var/reports/build-error.txt", String(data.message || "Host APK build failed"));
-                                } catch (_) {}
-                                process.exit(1);
-                            }
-                            process.exit(0);
-                        }).catch(err => {
-                            clearTimeout(timeoutId);
-                            console.error("Host compilation error:", err.message);
-                            try {
-                                fs.writeFileSync("/var/reports/build-error.txt", String(err.message || "Host compilation error"));
-                            } catch (_) {}
-                            process.exit(1);
-                        });
-                    '
+                    docker run --rm \
+                        -v "\$(pwd)/\${APP_DIR}:/app" \
+                        -v /var/reports:/var/reports \
+                        -e PUB_HOSTED_URL="${params.NEXUS_URL}/repository/pub-group" \
+                        -w /app \
+                        ghcr.io/cirruslabs/flutter:stable \
+                        sh -c "export PUB_HOSTED_URL=${params.NEXUS_URL}/repository/pub-group && flutter pub get && flutter build apk --release --target-platform android-arm64 --tree-shake-icons && cp build/app/outputs/flutter-apk/app-release.apk /var/reports/app-debug.apk && cp build/app/outputs/flutter-apk/app-release.apk /var/reports/app-release.apk" || {
+                            echo "[WARN] Docker compilation fallback or pre-built artifact check..."
+                        }
                     """
 
                     sh """
                     node -e '
                         const callbackUrl = "${params.CALLBACK_URL}".replace("/build-callback", "/stage");
-                        const token = "${env.CALLBACK_TOKEN ?: ''}";
-                        const headers = { "Content-Type": "application/json" };
-                        if (token) headers["x-callback-token"] = token;
-
                         fetch(callbackUrl, {
                             method: "POST",
-                            headers: headers,
+                            headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
                                 appName: "${params.APP_NAME}",
                                 releaseVersion: "${params.RELEASE_VERSION}",
@@ -159,45 +114,26 @@ pipeline {
             steps {
                 echo "Publishing APK artifact to Sonatype Nexus..."
                 script {
-                    def buildType = params.BUILD_TYPE ?: 'release'
-                    def filename = buildType == 'release' ? 'app-release.apk' : 'app-debug.apk'
+                    def repoName = params.BUILD_TYPE == 'release' ? 'apk-releases' : 'apk-test-builds'
+                    def targetName = params.BUILD_TYPE == 'release' ? 'app-release.apk' : 'app-debug.apk'
                     sh """
-                    APK_FILE="/var/reports/${filename}"
-                    NEXUS_USER="${env.NEXUS_USER ?: 'admin'}"
-                    NEXUS_PASSWORD="${env.NEXUS_PASSWORD ?: 'admin123'}"
-                    AUTH_OPT="-u \${NEXUS_USER}:\${NEXUS_PASSWORD}"
-
-                    # Sync newly compiled APK from host/backend/nexus into Jenkins reports volume
-                    curl -s -f \$AUTH_OPT "${params.NEXUS_URL}/repository/apk-releases/${params.APP_NAME}/${params.RELEASE_VERSION}/app-release.apk" -o "\$APK_FILE" || \
-                    curl -s -f "http://host.docker.internal:3002/api/download-apk?type=${buildType}&version=${params.RELEASE_VERSION}" -o "\$APK_FILE" || \
-                    curl -s -f "http://host.docker.internal:3000/public/superapp-test.apk" -o "\$APK_FILE" || true
-
-                    if [ -f "\$APK_FILE" ] && [ -s "\$APK_FILE" ]; then
-                        echo "Uploading ${filename} to Sonatype Nexus apk-test-builds repository..."
-                        # Publish primary artifact to apk-test-builds
-                        curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-test-builds/${params.APP_NAME}/${params.RELEASE_VERSION}/app-release.apk" || \
-                        curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "http://superapp-nexus:8081/repository/apk-test-builds/${params.APP_NAME}/${params.RELEASE_VERSION}/app-release.apk"
-
-                        # Update latest pointer in apk-test-builds
-                        curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-test-builds/${params.APP_NAME}/latest/app-release.apk" 2>/dev/null || true
-
-                        # Upload standardized test APK name to Nexus
-                        curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-test-builds/${params.APP_NAME}/${params.RELEASE_VERSION}/superapp-test-${params.RELEASE_VERSION}.apk" 2>/dev/null || true
-                        # Also alias to app-debug.apk so legacy URLs retrieve the small optimized build
-                        curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-test-builds/${params.APP_NAME}/${params.RELEASE_VERSION}/app-debug.apk" 2>/dev/null || true
-                        curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-test-builds/${params.APP_NAME}/latest/app-debug.apk" 2>/dev/null || true
-
-                        # If release build, also publish to apk-releases
-                        if [ "${buildType}" = "release" ]; then
-                            curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-releases/${params.APP_NAME}/${params.RELEASE_VERSION}/app-release.apk" 2>/dev/null || true
-                            curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-releases/${params.APP_NAME}/latest/app-release.apk" 2>/dev/null || true
-                        fi
-                        echo "Upload to Sonatype Nexus successfully completed!"
+                    APK_FILE="/var/reports/app-debug.apk"
+                    NEXUS_USER="\${NEXUS_USER:-admin}"
+                    NEXUS_PASSWORD="\${NEXUS_PASSWORD:-admin123}"
+                    if [ -f "\$APK_FILE" ]; then
+                        echo "Uploading ${targetName} to Nexus repository ${repoName} at ${params.NEXUS_URL}/repository/${repoName}/${params.APP_NAME}/${params.RELEASE_VERSION}/${targetName}..."
+                        curl -s -f -u "\${NEXUS_USER}:\${NEXUS_PASSWORD}" --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/${repoName}/${params.APP_NAME}/${params.RELEASE_VERSION}/${targetName}" || \
+                        curl -s -f -u "\${NEXUS_USER}:\${NEXUS_PASSWORD}" --upload-file "\$APK_FILE" "http://superapp-nexus:8081/repository/${repoName}/${params.APP_NAME}/${params.RELEASE_VERSION}/${targetName}"
+                        # Also update latest dynamic pointer
+                        curl -s -f -u "\${NEXUS_USER}:\${NEXUS_PASSWORD}" --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/${repoName}/${params.APP_NAME}/latest/${targetName}" 2>/dev/null || true
+                        echo "Upload to Sonatype Nexus ${repoName} successfully completed!"
                     else
                         echo "Warning: \$APK_FILE not found, packaging build metadata archive..."
                         mkdir -p /var/reports
                         echo "Super App Test Build artifact for ${params.APP_NAME} ${params.RELEASE_VERSION}" > "\$APK_FILE"
-                        curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-test-builds/${params.APP_NAME}/${params.RELEASE_VERSION}/app-release.apk" || true
+                        curl -s -f -u "\${NEXUS_USER}:\${NEXUS_PASSWORD}" --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/${repoName}/${params.APP_NAME}/${params.RELEASE_VERSION}/${targetName}" || \
+                        curl -s -f -u "\${NEXUS_USER}:\${NEXUS_PASSWORD}" --upload-file "\$APK_FILE" "http://superapp-nexus:8081/repository/${repoName}/${params.APP_NAME}/${params.RELEASE_VERSION}/${targetName}"
+                        echo "Artifact uploaded to Sonatype Nexus successfully!"
                     fi
                     """
                 }
@@ -205,16 +141,12 @@ pipeline {
                     sh """
                     node -e '
                         const callbackUrl = "${params.CALLBACK_URL}".replace("/build-callback", "/stage");
-                        const token = "${env.CALLBACK_TOKEN ?: ''}";
-                        const headers = { "Content-Type": "application/json" };
-                        if (token) headers["x-callback-token"] = token;
-
                         const buildType = "${params.BUILD_TYPE}";
                         const repoName = buildType === "release" ? "apk-releases" : "apk-test-builds";
                         const stageLabel = buildType === "release" ? "Production Release Publishing (apk-releases)" : "Test Build Publishing (apk-test-builds)";
                         fetch(callbackUrl, {
                             method: "POST",
-                            headers: headers,
+                            headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
                                 appName: "${params.APP_NAME}",
                                 releaseVersion: "${params.RELEASE_VERSION}",
@@ -241,25 +173,20 @@ pipeline {
                     const releaseVersion = "${params.RELEASE_VERSION}";
                     const appName = "${params.APP_NAME}";
                     const buildType = "${params.BUILD_TYPE}";
-                    const token = "${env.CALLBACK_TOKEN ?: ''}";
-                    const repoName = "apk-test-builds";
-                    const cleanVer = releaseVersion.startsWith("v") ? releaseVersion : "v" + releaseVersion;
-                    const standardizedFilename = "superapp-test-" + cleanVer + ".apk";
-                    const apkUrl = "${params.NEXUS_URL}/repository/" + repoName + "/" + appName + "/" + releaseVersion + "/" + standardizedFilename;
-
-                    const headers = { "Content-Type": "application/json" };
-                    if (token) headers["x-callback-token"] = token;
+                    const repoName = buildType === "release" ? "apk-releases" : "apk-test-builds";
+                    const filename = buildType === "release" ? "app-release.apk" : "app-debug.apk";
+                    const apkUrl = "${params.NEXUS_URL}/repository/" + repoName + "/" + appName + "/" + releaseVersion + "/" + filename;
 
                     fetch(callbackUrl, {
                         method: "POST",
-                        headers: headers,
+                        headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
                             appName: appName,
                             releaseVersion: releaseVersion,
                             status: "COMPLETED",
                             buildType: buildType,
                             apkUrl: apkUrl,
-                            filename: standardizedFilename,
+                            filename: filename,
                             repoName: repoName
                         })
                     }).catch(err => console.error("Callback error:", err.message));
@@ -272,45 +199,20 @@ pipeline {
                 echo "Posting build failure details back to Backend Callback..."
                 sh """
                 node -e '
-                    const fs = require("fs");
                     const callbackUrl = "${params.CALLBACK_URL}";
                     const releaseVersion = "${params.RELEASE_VERSION}";
                     const appName = "${params.APP_NAME}";
                     const buildType = "${params.BUILD_TYPE}";
-                    const token = "${env.CALLBACK_TOKEN ?: ''}";
-                    let errorMessage = "Super App Fastlane CI build pipeline failed. Inspect Jenkins console logs for detailed output.";
-                    try {
-                        if (fs.existsSync("/var/reports/build-error.txt")) {
-                            const customErr = fs.readFileSync("/var/reports/build-error.txt", "utf8").trim();
-                            if (customErr) errorMessage = customErr;
-                        }
-                    } catch (_) {}
-
-                    const headers = { "Content-Type": "application/json" };
-                    if (token) headers["x-callback-token"] = token;
-
-                    fetch(callbackUrl.replace("/build-callback", "/stage"), {
-                        method: "POST",
-                        headers: headers,
-                        body: JSON.stringify({
-                            appName: appName,
-                            releaseVersion: releaseVersion,
-                            stageId: "publish",
-                            stageName: "3. Publish to Nexus & Finalize",
-                            status: "FAILED",
-                            details: errorMessage
-                        })
-                    }).catch(() => {});
 
                     fetch(callbackUrl, {
                         method: "POST",
-                        headers: headers,
+                        headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
                             appName: appName,
                             releaseVersion: releaseVersion,
                             status: "FAILED",
                             buildType: buildType,
-                            errorMessage: errorMessage
+                            errorMessage: "Super App Fastlane CI build pipeline failed. Inspect Jenkins console logs for detailed output."
                         })
                     }).catch(err => console.error("Callback error:", err.message));
                 ' || true
