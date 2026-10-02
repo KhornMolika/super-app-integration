@@ -25,7 +25,7 @@ export const notificationsApi = {
     apiClient<NotificationItem[]>('/api/mini-apps/notifications'),
 
   markAsRead: (id: string) =>
-    apiClient<{ success: boolean }>(`/api/mini-apps/${id}/mark-read`, {
+    apiClient<{ success: boolean }>(`/api/mini-apps/notifications/${id}/mark-read`, {
       method: 'POST',
     }),
 

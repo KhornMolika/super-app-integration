@@ -6,7 +6,7 @@ import { JenkinsService } from '../jenkins/jenkins.service';
 import { NotificationsService, MailService } from '../../notifications';
 import { ConfigService } from '@nestjs/config';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
-import { User } from '../../users/entities/user.entity';
+import { User } from '../../access-control/entities/user.entity';
 import { PubspecInjectorService } from '../flutter/pubspec-injector.service';
 
 describe('ReleaseAssemblyVerificationService', () => {
