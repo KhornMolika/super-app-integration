@@ -52,6 +52,12 @@ export class MiniappsController {
     return this.miniappService.findAllIssues();
   }
 
+  @Post('check-url')
+  @RequirePermissions('miniapp:read')
+  async checkUrl(@Body('url') url: string) {
+    return this.urlProbeHelper.checkUrl(url);
+  }
+
   private extractIntegrationConfig(dto: any): any {
     const dataToSave: any = { ...dto };
     if (dto.integrationMethod === 'WEBVIEW') {

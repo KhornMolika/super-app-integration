@@ -55,6 +55,25 @@ export class UrlProbeHelper {
       return { reachable: true };
     }
 
+    const envVal = (
+      process.env.ENVIRONMENT ||
+      process.env.NODE_ENV ||
+      ''
+    ).toUpperCase();
+    const isDev =
+      envVal !== 'PROD' &&
+      (envVal === 'DEV' || process.env.NODE_ENV !== 'PROD');
+    if (
+      isDev &&
+      (url.includes('localhost') ||
+        url.includes('127.0.0.1') ||
+        url.startsWith('http://localhost') ||
+        url.startsWith('https://example.com') ||
+        url.startsWith('http://example.com'))
+    ) {
+      return { reachable: true };
+    }
+
     const port = parsed.port
       ? Number(parsed.port)
       : parsed.protocol === 'https:'
@@ -62,14 +81,55 @@ export class UrlProbeHelper {
         : 80;
     const host = parsed.hostname;
 
-    const isPortOpen = await this.probeTcp(host, port, 1200);
-    if (!isPortOpen) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+      const response = await fetch(url, {
+        method: 'HEAD',
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      const isOk = response.ok || (response.status >= 300 && response.status < 400);
+      if (isOk) {
+        return { reachable: true, host, port };
+      }
+
+      // If HEAD returns 404 or 405, fallback to GET check
+      const getController = new AbortController();
+      const getTimeout = setTimeout(() => getController.abort(), 4000);
+      const getRes = await fetch(url, {
+        method: 'GET',
+        signal: getController.signal,
+      });
+      clearTimeout(getTimeout);
+
+      if (getRes.ok || (getRes.status >= 300 && getRes.status < 400)) {
+        return { reachable: true, host, port };
+      }
+
       return {
         reachable: false,
-        message: `Could not connect to ${host}:${port} (server offline or unreachable)`,
+        message: `Server returned HTTP ${getRes.status} (Page not found or forbidden)`,
+        host,
+        port,
+      };
+    } catch (err: any) {
+      const isPortOpen = await this.probeTcp(host, port, 1200);
+      if (!isPortOpen) {
+        return {
+          reachable: false,
+          message: `Could not connect to ${host}:${port} (server offline or unreachable)`,
+        };
+      }
+
+      return {
+        reachable: false,
+        message: `Endpoint unreachable or blocked: ${err.message}`,
+        host,
+        port,
       };
     }
-
-    return { reachable: true, host, port };
   }
 }

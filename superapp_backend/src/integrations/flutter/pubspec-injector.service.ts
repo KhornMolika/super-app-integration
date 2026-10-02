@@ -4,8 +4,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
+import * as crypto from 'crypto';
 import * as child_process from 'child_process';
 import * as YAML from 'yaml';
+import { decryptCredential } from '../../common/utils/credential-cipher.util';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 import {
   InjectDependencyDto,
@@ -47,29 +50,32 @@ export class PubspecInjectorService {
   ) {}
 
   /**
-   * Resolves the absolute path to the Super App's super-app directory.
+   * Resolves the absolute path to the Super App's super-app directory strictly from environment variables.
    */
   getMobileAppDir(): string {
-    const configuredPath = this.configService.get<string>('MOBILE_APP_DIR');
-    if (configuredPath && fs.existsSync(configuredPath)) {
-      return path.resolve(configuredPath);
+    const configuredPath =
+      this.configService.get<string>('MOBILE_APP_DIR') ||
+      process.env.MOBILE_APP_DIR ||
+      this.configService.get<string>('SUPERAPP_DIR') ||
+      process.env.SUPERAPP_DIR;
+
+    if (!configuredPath) {
+      throw new BadRequestException(
+        'MOBILE_APP_DIR environment variable is not defined. Please configure MOBILE_APP_DIR in your environment configuration.',
+      );
     }
 
-    const candidatePaths = [
-      path.resolve(process.cwd(), '../super-app'),
-      path.resolve(process.cwd(), 'super-app'),
-      path.resolve(__dirname, '../../../../super-app'),
-      path.resolve(__dirname, '../../../../../super-app'),
-    ];
+    const resolved = path.isAbsolute(configuredPath)
+      ? path.normalize(configuredPath)
+      : path.resolve(process.cwd(), configuredPath);
 
-    for (const candidate of candidatePaths) {
-      if (fs.existsSync(candidate) && fs.existsSync(path.join(candidate, 'pubspec.yaml'))) {
-        return candidate;
-      }
+    if (!fs.existsSync(resolved) || !fs.existsSync(path.join(resolved, 'pubspec.yaml'))) {
+      throw new BadRequestException(
+        `Directory configured in MOBILE_APP_DIR ("${configuredPath}" -> "${resolved}") is invalid or does not contain pubspec.yaml.`,
+      );
     }
 
-    // Fallback to standard monorepo relative location
-    return path.resolve(process.cwd(), '../super-app');
+    return resolved;
   }
 
   /**
@@ -463,6 +469,9 @@ export class PubspecInjectorService {
       }
     }
 
+    // Automatically generate the dynamic Dart registry linking all approved mini-apps
+    this.generateDynamicRegistry(flutterMiniApps);
+
     // Run dry-run validation to verify consistency
     const validationResult = await this.validateDependencies({ dryRun: true });
 
@@ -472,6 +481,79 @@ export class PubspecInjectorService {
       injectedPackages,
       validationResult,
     };
+  }
+
+  /**
+   * Automatically generates the dynamic Dart registry file linking all approved mini-apps to builders.
+   */
+  generateDynamicRegistry(apps: MiniApp[]): void {
+    try {
+      const mobileDir = this.getMobileAppDir();
+      const generatedPath = path.join(mobileDir, 'lib/core/miniapp/mini_app_registry.generated.dart');
+
+      const imports = new Set<string>([
+        "import 'package:flutter/material.dart';",
+        "import 'package:go_router/go_router.dart';",
+        "import 'mini_app_registry.dart';",
+      ]);
+
+      const registrations: string[] = [];
+
+      for (const app of apps) {
+        const canonicalName = this.inferCanonicalPackageName(app);
+        const nameSlug = (app.name || '').toLowerCase().replace(/\s+/g, '_');
+        const appId = app.appId || '';
+
+        let widgetExpr = '';
+        if (canonicalName === 'sc_public_miniapp' || canonicalName.includes('transit') || canonicalName.includes('public')) {
+          imports.add("import 'package:sc_public_miniapp/sc_public_miniapp.dart';");
+          widgetExpr = "PublicMiniAppEntry(onExit: () => safePop(context), passengerName: 'Super App Commuter', passTier: '30-Day Unlimited All-Access')";
+        } else if (canonicalName === 'sc_private_miniapp' || canonicalName.includes('private') || canonicalName.includes('loyalty') || canonicalName.includes('reward')) {
+          imports.add("import 'package:sc_private_miniapp/sc_private_miniapp.dart';");
+          widgetExpr = "MiniAppEntry(onExit: () => safePop(context), userName: 'Super App VIP Member', userTier: 'Gold Elite')";
+        } else if (canonicalName === 'ma_flutter_kyc' || canonicalName.includes('kyc')) {
+          imports.add("import 'package:ma_flutter_kyc/ma_flutter_kyc.dart';");
+          widgetExpr = "KycVerifierAppEntry(jwtToken: 'tok_live_superapp_session', userId: 'usr_fsa_verified', onExit: () => safePop(context))";
+        } else {
+          // Dynamic invocation for any newly registered package entry point
+          const entryPoint = (app.integrationConfig?.entryPoint || 'MiniAppEntry').trim();
+          imports.add(`import 'package:${canonicalName}/${canonicalName}.dart';`);
+          widgetExpr = `${entryPoint}(onExit: () => safePop(context))`;
+        }
+
+        if (widgetExpr) {
+          registrations.push(`  MiniAppRegistry.registerAliases([
+    '${canonicalName}',
+    '${appId}',
+    '${nameSlug}',
+    '${app.name || ''}',
+    'miniapp_${nameSlug}_${(app.id || '').substring(0, 6)}',
+    '${app.id || ''}',
+  ].where((s) => s.isNotEmpty).toList(), (context, arguments) => ${widgetExpr});`);
+        }
+      }
+
+      const content = `// AUTO-GENERATED BY PubspecInjectorService - DO NOT EDIT MANUALLY
+${Array.from(imports).join('\n')}
+
+void registerDynamicGeneratedMiniApps() {
+  void safePop(BuildContext context) {
+    if (GoRouter.maybeOf(context) != null && GoRouter.of(context).canPop()) {
+      GoRouter.of(context).pop();
+    } else if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+  }
+
+${registrations.join('\n\n')}
+}
+`;
+
+      fs.writeFileSync(generatedPath, content, 'utf-8');
+      this.logger.log(`Generated dynamic MiniApp registry at ${generatedPath}`);
+    } catch (err: any) {
+      this.logger.warn(`Failed to generate dynamic MiniApp registry: ${err.message}`);
+    }
   }
 
   /**
@@ -494,6 +576,48 @@ export class PubspecInjectorService {
 
     this.logger.log(`Executing "${command}" in ${mobileAppDir}...`);
 
+    let tempKeyFile: string | null = null;
+    const processEnv: NodeJS.ProcessEnv = {
+      ...process.env,
+      PUB_HOSTED_URL:
+        this.configService.get<string>('PUB_HOSTED_URL') ||
+        `${(this.configService.get<string>('NEXUS_BASE_URL') || 'http://localhost:8081').replace(/\/+$/, '')}/repository/pub-group`,
+    };
+
+    if (dto.deployKey) {
+      const rawKey = decryptCredential(dto.deployKey);
+      if (rawKey && rawKey.trim()) {
+        try {
+          tempKeyFile = path.join(
+            os.tmpdir(),
+            `pub_deploy_key_${crypto.randomBytes(6).toString('hex')}`,
+          );
+          fs.writeFileSync(tempKeyFile, rawKey.trim() + '\n', { mode: 0o600 });
+          if (process.platform === 'win32') {
+            try {
+              const user = process.env.USERNAME || process.env.USER;
+              if (user) {
+                child_process.execFileSync('icacls', [tempKeyFile, '/inheritance:r', '/grant:r', `${user}:R`], { stdio: 'pipe' });
+              }
+            } catch {}
+          }
+          const normalizedKeyPath = tempKeyFile.replace(/\\/g, '/');
+          processEnv['GIT_SSH_COMMAND'] = `ssh -i "${normalizedKeyPath}" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null`;
+        } catch (e: any) {
+          this.logger.warn(`Failed preparing tempKeyFile for pub get: ${e.message}`);
+        }
+      }
+    }
+
+    const cleanupKey = () => {
+      if (tempKeyFile && fs.existsSync(tempKeyFile)) {
+        try {
+          fs.unlinkSync(tempKeyFile);
+        } catch {}
+        tempKeyFile = null;
+      }
+    };
+
     return new Promise((resolve) => {
       const isWindows = process.platform === 'win32';
       const shell = isWindows ? 'powershell.exe' : '/bin/sh';
@@ -505,12 +629,7 @@ export class PubspecInjectorService {
 
       const proc = child_process.spawn(shell, shellArgs, {
         cwd: mobileAppDir,
-        env: {
-          ...process.env,
-          PUB_HOSTED_URL:
-            this.configService.get<string>('PUB_HOSTED_URL') ||
-            `${(this.configService.get<string>('NEXUS_BASE_URL') || 'http://localhost:8081').replace(/\/+$/, '')}/repository/pub-group`,
-        },
+        env: processEnv,
       });
 
       proc.stdout.on('data', (data) => {
@@ -524,6 +643,7 @@ export class PubspecInjectorService {
       const timer = setTimeout(() => {
         if (!hasFinished) {
           hasFinished = true;
+          cleanupKey();
           try {
             proc.kill();
           } catch (_) {}
@@ -543,6 +663,7 @@ export class PubspecInjectorService {
         if (hasFinished) return;
         hasFinished = true;
         clearTimeout(timer);
+        cleanupKey();
 
         const exitCode = code ?? 0;
         const success = exitCode === 0;

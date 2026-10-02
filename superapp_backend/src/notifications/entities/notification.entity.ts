@@ -41,13 +41,14 @@ export class Notification {
   userId!: string;
 
   @ManyToOne(() => MiniApp, (miniApp) => miniApp.notifications, {
+    nullable: true,
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'miniAppId' })
-  miniApp!: MiniApp;
+  miniApp?: MiniApp;
 
-  @Column()
-  miniAppId!: string;
+  @Column({ nullable: true })
+  miniAppId?: string;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;

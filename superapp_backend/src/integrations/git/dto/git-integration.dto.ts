@@ -76,3 +76,13 @@ export class GenerateGitSnippetDto {
   @IsOptional()
   path?: string;
 }
+
+export class GenerateDeployKeyDto {
+  @IsString()
+  @IsOptional()
+  title?: string;
+
+  @IsString()
+  @IsOptional()
+  appName?: string;
+}

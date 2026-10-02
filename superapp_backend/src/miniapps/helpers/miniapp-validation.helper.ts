@@ -465,13 +465,19 @@ export class MiniappValidationHelper {
       });
       await this.issueRepository.save(issues);
 
-      // Create a notification
+      // Create a notification with full issue details
+      const issuesList = Object.entries(errors)
+        .map(([field, msg]) => `• ${field}: ${msg}`)
+        .join('\n');
+      const notificationMessage = `${app.name || 'Mini App'} has ${issues.length} validation issue(s):\n${issuesList}`;
+
       await this.notificationsService.createNotification(
         app.ownerId || '',
         'Validation Failed',
-        `${app.name || 'Mini App'} has ${issues.length} validation issue(s).`,
-        'ISSUE_CREATED',
+        notificationMessage,
+        'VALIDATION_FAILED',
         app.id,
+        { errors, issueCount: issues.length, score: 0 },
       );
       if (logActivityFn) {
         await logActivityFn(

@@ -82,11 +82,14 @@ export class MobileAuthService implements OnModuleInit {
   }
 
   private async seedDefaultEndUsers(): Promise<void> {
-    if (process.env.NODE_ENV === 'test') return;
+    if (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'production' || process.env.ENVIRONMENT === 'PROD') {
+      return;
+    }
+    const adminPass = process.env.SUPERADMIN_PASSWORD || 'Password123!';
     const defaultUsers = [
-      { email: 'superadmin@example.com', name: 'Super Admin', password: 'Password123!' },
-      { email: 'admin@example.com', name: 'Admin User', password: 'Password123!' },
-      { email: 'user@example.com', name: 'Demo User', password: 'Password123!' },
+      { email: process.env.SUPERADMIN_EMAIL || 'superadmin@example.com', name: 'Super Admin', password: adminPass },
+      { email: process.env.ADMIN_EMAIL || 'admin@example.com', name: 'Admin User', password: adminPass },
+      { email: process.env.DEV_EMAIL || 'user@example.com', name: 'Demo User', password: adminPass },
     ];
 
     for (const u of defaultUsers) {
@@ -104,11 +107,24 @@ export class MobileAuthService implements OnModuleInit {
           });
           await this.users.save(endUser);
           this.logger.log(`Seeded default mobile EndUser account: ${email}`);
+        } else {
+          const matches = await this.passwords.verify(u.password, existing.passwordHash);
+          if (!matches) {
+            existing.passwordHash = await this.passwords.hash(u.password);
+          }
+          existing.lockedUntil = null;
+          existing.failedLoginCount = 0;
+          existing.status = EndUserStatus.ACTIVE;
+          if (!existing.emailVerifiedAt) {
+            existing.emailVerifiedAt = new Date();
+          }
+          await this.users.save(existing);
         }
       } catch (err: any) {
         this.logger.warn(`Could not seed default mobile user ${u.email}: ${err?.message}`);
       }
     }
+    this.logger.log(`Mobile accounts ready (Password: ${adminPass}): ${defaultUsers.map((u) => u.email).join(', ')}`);
   }
 
   get accessTtlSeconds(): number {
@@ -394,8 +410,17 @@ export class MobileAuthService implements OnModuleInit {
       throw new UnauthorizedException(INVALID_CREDENTIALS);
     }
 
-    if (!user.emailVerifiedAt || user.status !== EndUserStatus.ACTIVE) {
+    if (this.requireEmailVerification() && !user.emailVerifiedAt) {
       throw new UnauthorizedException(INVALID_CREDENTIALS);
+    }
+
+    if (user.status !== EndUserStatus.ACTIVE) {
+      throw new UnauthorizedException(INVALID_CREDENTIALS);
+    }
+
+    if (!user.emailVerifiedAt && !this.requireEmailVerification()) {
+      user.emailVerifiedAt = new Date();
+      await this.users.save(user);
     }
 
     if (user.failedLoginCount || user.lockedUntil) {

@@ -482,10 +482,14 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
 
     // When a test build is ready, deliver the APK binary directly into the Telegram chats
     if (type === 'TEST_BUILD_READY') {
-      const version = String(
-        metadata?.version || metadata?.releaseVersion || 'v1.0.0',
+      const rawVer = String(
+        metadata?.version || metadata?.releaseVersion || 'v0.2.4',
       );
-      const rawApkUrl = String(metadata?.apkUrl || '');
+      const version = rawVer.startsWith('v') ? rawVer : `v${rawVer}`;
+      const backofficeBase = this.backofficeBaseUrl.replace(/\/+$/, '');
+      const rawApkUrl =
+        String(metadata?.apkUrl || '') ||
+        `${backofficeBase}/api/download-apk/superapp-test-${version}.apk`;
       const resolvedName = miniAppName || 'Super App';
       for (const chatId of dispatchedChats) {
         void this.sendApkDocument(

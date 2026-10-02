@@ -17,6 +17,10 @@ import { SettingsModule } from './settings/settings.module';
 import { MobileModule } from './mobile/mobile.module';
 import { SdkArtifactsModule } from './sdk-artifacts/sdk-artifacts.module';
 import { NativeSdkCodegenModule } from './native-sdk-codegen/native-sdk-codegen.module';
+import { HealthModule } from './health/health.module';
+
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 
 @Module({
   imports: [
@@ -41,6 +45,8 @@ import { NativeSdkCodegenModule } from './native-sdk-codegen/native-sdk-codegen.
         // columns based on entity diffs with no review. Real schema changes now go
         // through src/migrations/ (see InitialSchema + the migrate step in start.sh).
         synchronize: configService.get<string>('DB_SYNC') === 'true',
+        migrationsRun: true,
+        migrations: [__dirname + '/migrations/*{.ts,.js}'],
       }),
     }),
 
@@ -59,6 +65,9 @@ import { NativeSdkCodegenModule } from './native-sdk-codegen/native-sdk-codegen.
     MobileModule,
     SdkArtifactsModule,
     NativeSdkCodegenModule,
+    HealthModule,
   ],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}

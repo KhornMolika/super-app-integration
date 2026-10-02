@@ -258,4 +258,29 @@ export class StorageService implements OnModuleInit {
   async getObjectBuffer(bucket: string, key: string): Promise<Buffer> {
     return this.quarantineHelper.getObjectBuffer(this.minioClient, bucket, key);
   }
+
+  /**
+   * Retrieves an object from MinIO as a readable stream.
+   */
+  async getObjectStream(bucket: string, key: string): Promise<NodeJS.ReadableStream> {
+    return this.minioClient.getObject(bucket, key);
+  }
+
+  /**
+   * Checks if an object exists and returns its stats.
+   */
+  async statObject(bucket: string, key: string): Promise<any> {
+    return this.minioClient.statObject(bucket, key);
+  }
+
+  /**
+   * Performs a lightweight health check against MinIO.
+   */
+  async checkHealth(): Promise<boolean> {
+    try {
+      return await this.minioClient.bucketExists(this.assetsBucket);
+    } catch {
+      return false;
+    }
+  }
 }

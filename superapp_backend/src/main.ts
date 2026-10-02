@@ -21,6 +21,7 @@ types.setTypeParser(1184, (stringValue: string) => {
   return new Date(stringValue);
 });
 
+// Trigger reload for standardized test APK filename dispatch: superapp-test-${version}.apk
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
@@ -40,8 +41,8 @@ async function bootstrap() {
 
   const localIp = getLocalIpAddress();
   const backofficeUrl = resolveBackofficeBaseUrl();
-  logger.log(`🚀 Backend API listening on: http://0.0.0.0:${port} (LAN: http://${localIp}:${port})`);
-  logger.log(`🔗 Auto-detected Backoffice URL for notifications: ${backofficeUrl}`);
+  logger.log(`Backend API listening on: http://0.0.0.0:${port} (LAN: http://${localIp}:${port})`);
+  logger.log(`Auto-detected Backoffice URL for notifications: ${backofficeUrl}`);
 }
 bootstrap();
 

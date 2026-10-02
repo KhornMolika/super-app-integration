@@ -286,6 +286,13 @@ export class ArtifactDistributionHelper {
     const adminPass = process.env.NEXUS_ADMIN_PASSWORD || '';
     const b64 = Buffer.from(`${adminUser}:${adminPass}`).toString('base64');
 
+    const cleanVer = (version || 'v0.2.5').trim();
+    const normVer = cleanVer.startsWith('v') ? cleanVer : `v${cleanVer}`;
+    const downloadFilename =
+      artifactType === 'release'
+        ? `superapp-release-${normVer}.apk`
+        : `superapp-test-${normVer}.apk`;
+
     try {
       const response = await fetch(nexusUrl, {
         headers: { Authorization: `Basic ${b64}` },
@@ -307,7 +314,7 @@ export class ArtifactDistributionHelper {
             res?.setHeader?.('Content-Type', 'application/vnd.android.package-archive');
             res?.setHeader?.(
               'Content-Disposition',
-              `attachment; filename="${app.appId || 'miniapp'}-${artifactType}-${version}.apk"`,
+              `attachment; filename="${downloadFilename}"`,
             );
             res?.setHeader?.('Content-Length', buf.length);
             return res?.send?.(buf);
@@ -315,7 +322,7 @@ export class ArtifactDistributionHelper {
         }
 
         const mockContent = Buffer.from(
-          `SUPERAPP_APK_BINARY_PAYLOAD [MiniApp: ${app.name}, Version: ${version}, Type: ${artifactType.toUpperCase()}]`,
+          `SUPERAPP_APK_BINARY_PAYLOAD [AppName: superapp, Version: ${normVer}, Type: ${artifactType.toUpperCase()}, Filename: ${downloadFilename}]`,
         );
         res?.setHeader?.(
           'Content-Type',
@@ -323,7 +330,7 @@ export class ArtifactDistributionHelper {
         );
         res?.setHeader?.(
           'Content-Disposition',
-          `attachment; filename="${app.appId || 'miniapp'}-${artifactType}-${version}.apk"`,
+          `attachment; filename="${downloadFilename}"`,
         );
         res?.setHeader?.('Content-Length', mockContent.length);
         return res?.send?.(mockContent);
@@ -332,7 +339,7 @@ export class ArtifactDistributionHelper {
       res?.setHeader?.('Content-Type', 'application/vnd.android.package-archive');
       res?.setHeader?.(
         'Content-Disposition',
-        `attachment; filename="${app.appId || 'miniapp'}-${artifactType}-${version}.apk"`,
+        `attachment; filename="${downloadFilename}"`,
       );
       const len = response.headers.get('content-length');
       if (len) res?.setHeader?.('Content-Length', len);
@@ -347,12 +354,12 @@ export class ArtifactDistributionHelper {
     } catch (err: any) {
       this.logger.error(`Error proxying artifact from Nexus: ${err.message}`);
       const mockContent = Buffer.from(
-        `SUPERAPP_APK_BINARY_PAYLOAD [MiniApp: ${app.name}, Version: ${version}, Type: ${artifactType.toUpperCase()}]`,
+        `SUPERAPP_APK_BINARY_PAYLOAD [AppName: superapp, Version: ${normVer}, Type: ${artifactType.toUpperCase()}, Filename: ${downloadFilename}]`,
       );
       res?.setHeader?.('Content-Type', 'application/vnd.android.package-archive');
       res?.setHeader?.(
         'Content-Disposition',
-        `attachment; filename="${app.appId || 'miniapp'}-${artifactType}-${version}.apk"`,
+        `attachment; filename="${downloadFilename}"`,
       );
       return res?.send?.(mockContent);
     }

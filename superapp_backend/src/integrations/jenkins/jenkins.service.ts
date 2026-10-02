@@ -391,12 +391,19 @@ export class JenkinsService {
     const appName = options.appName || 'superapp';
     const nexusUrl = options.nexusUrl || this.jenkinsNexusUrl;
 
+    const callbackToken = process.env.RELEASE_CALLBACK_TOKEN || '';
+    const nexusUser = process.env.NEXUS_ADMIN_USER || 'admin';
+    const nexusPassword = process.env.NEXUS_ADMIN_PASSWORD || process.env.NEXUS_PASSWORD || 'admin123';
+
     const params = new URLSearchParams({
       APP_NAME: appName,
       RELEASE_VERSION: options.releaseVersion,
       BUILD_TYPE: buildType,
       CALLBACK_URL: callbackUrl,
       NEXUS_URL: nexusUrl,
+      CALLBACK_TOKEN: callbackToken,
+      NEXUS_USER: nexusUser,
+      NEXUS_PASSWORD: nexusPassword,
     });
     // Backend URL baked into the app. Release builds must be https (the app refuses cleartext).
     const apiBaseUrl = (options.apiBaseUrl ?? this.mobileApiBaseUrl).trim();
@@ -497,6 +504,7 @@ export class JenkinsService {
     const repoUrl = options?.repoUrl || this.superAppRepoUrl;
     const nexusUrl = options?.nexusUrl || this.jenkinsNexusUrl;
 
+    const callbackToken = process.env.RELEASE_CALLBACK_TOKEN || '';
     const params = new URLSearchParams({
       REPO_URL: repoUrl,
       BRANCH: branch,
@@ -505,6 +513,7 @@ export class JenkinsService {
       CALLBACK_URL: callbackUrl,
       NEXUS_URL: nexusUrl,
       PUBLISH_TO_NEXUS: publishToNexus,
+      CALLBACK_TOKEN: callbackToken,
     });
 
     const triggerUrl = `${this.jenkinsUrl}/job/${jobName}/buildWithParameters?${params.toString()}`;
