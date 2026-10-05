@@ -636,8 +636,20 @@ ${registrations.join('\n\n')}
         stdout += data.toString();
       });
 
-      proc.stderr.on('data', (data) => {
-        stderr += data.toString();
+      proc.on('error', (err: any) => {
+        if (hasFinished) return;
+        hasFinished = true;
+        clearTimeout(timer);
+        cleanupKey();
+        resolve({
+          success: false,
+          dryRun: isDryRun,
+          exitCode: 1,
+          stdout: '',
+          stderr: err.message || 'Failed to spawn Flutter process',
+          message: 'Flutter SDK not found in environment or failed to execute.',
+          conflicts: [`Process execution failed: ${err.message}`],
+        });
       });
 
       const timer = setTimeout(() => {
@@ -652,12 +664,12 @@ ${registrations.join('\n\n')}
             dryRun: isDryRun,
             exitCode: -1,
             stdout,
-            stderr: stderr + '\nExecution timed out after 30 seconds.',
+            stderr: stderr + '\nExecution timed out after 12 seconds.',
             message: 'Dependency validation timed out.',
             conflicts: ['Dependency resolution timed out while contacting pub repositories.'],
           });
         }
-      }, 30000);
+      }, 12000);
 
       proc.on('close', (code) => {
         if (hasFinished) return;

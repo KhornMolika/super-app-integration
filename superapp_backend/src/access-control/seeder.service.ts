@@ -21,9 +21,6 @@ export class SeederService implements OnApplicationBootstrap {
   }
 
   async seed() {
-    const count = await this.userRepository.count();
-    if (count > 0) return; // Already seeded
-
     const allPerms = [
       'miniapp:create',
       'miniapp:read',
@@ -52,22 +49,24 @@ export class SeederService implements OnApplicationBootstrap {
       'settings:manage',
     ];
 
-    const savedPerms = await Promise.all(
-      allPerms.map(async (p) => {
-        const perm = this.permissionRepository.create({ name: p });
-        return this.permissionRepository.save(perm);
-      }),
-    );
+    const savedPerms: Permission[] = [];
+    for (const name of allPerms) {
+      let perm = await this.permissionRepository.findOne({ where: { name } });
+      if (!perm) {
+        perm = this.permissionRepository.create({ name });
+        perm = await this.permissionRepository.save(perm);
+      }
+      savedPerms.push(perm);
+    }
 
-    const superAdminRole = this.roleRepository.create({
-      name: 'SUPER_ADMIN',
-      permissions: savedPerms,
-    });
-
-    const adminRole = this.roleRepository.create({
-      name: 'ADMIN',
-      permissions: savedPerms.filter((p) =>
-        [
+    const rolesConfig: Array<{ name: string; perms: string[] }> = [
+      {
+        name: 'SUPER_ADMIN',
+        perms: allPerms,
+      },
+      {
+        name: 'ADMIN',
+        perms: [
           'miniapp:create',
           'miniapp:read',
           'miniapp:update',
@@ -83,14 +82,11 @@ export class SeederService implements OnApplicationBootstrap {
           'user:read',
           'permission:read',
           'organization:read',
-        ].includes(p.name),
-      ),
-    });
-
-    const managerRole = this.roleRepository.create({
-      name: 'MINI_APP_MANAGER',
-      permissions: savedPerms.filter((p) =>
-        [
+        ],
+      },
+      {
+        name: 'MINI_APP_MANAGER',
+        perms: [
           'miniapp:create',
           'miniapp:read',
           'miniapp:update',
@@ -98,57 +94,81 @@ export class SeederService implements OnApplicationBootstrap {
           'permission_proposal:read',
           'permission:read',
           'organization:read',
-        ].includes(p.name),
-      ),
-    });
+        ],
+      },
+      {
+        name: 'DEVELOPER',
+        perms: ['miniapp:read', 'permission:read', 'super_app:read'],
+      },
+    ];
 
-    const devRole = this.roleRepository.create({
-      name: 'DEVELOPER',
-      permissions: savedPerms.filter((p) =>
-        ['miniapp:read', 'permission:read', 'super_app:read'].includes(p.name),
-      ),
-    });
+    const rolesMap = new Map<string, Role>();
+    for (const rConfig of rolesConfig) {
+      let role = await this.roleRepository.findOne({
+        where: { name: rConfig.name },
+        relations: { permissions: true },
+      });
+      const matchingPerms = savedPerms.filter((p) => rConfig.perms.includes(p.name));
+      if (!role) {
+        role = this.roleRepository.create({
+          name: rConfig.name,
+          permissions: matchingPerms,
+        });
+        role = await this.roleRepository.save(role);
+      } else {
+        role.permissions = matchingPerms;
+        role = await this.roleRepository.save(role);
+      }
+      rolesMap.set(rConfig.name, role);
+    }
 
-    await this.roleRepository.save([
-      superAdminRole,
-      adminRole,
-      managerRole,
-      devRole,
-    ]);
+    const superAdminRole = rolesMap.get('SUPER_ADMIN')!;
+    const adminRole = rolesMap.get('ADMIN')!;
+    const managerRole = rolesMap.get('MINI_APP_MANAGER')!;
+    const devRole = rolesMap.get('DEVELOPER')!;
 
-    const superAdminEmail = this.configService.get<string>('SUPERADMIN_EMAIL', 'superadmin@example.com');
-    const adminEmail = this.configService.get<string>('ADMIN_EMAIL', 'admin@example.com');
-    const managerEmail = this.configService.get<string>('MANAGER_EMAIL', 'manager@example.com');
-    const devEmail = this.configService.get<string>('DEV_EMAIL', 'dev@example.com');
+    const superAdminEmail = this.configService.get<string>('SUPERADMIN_EMAIL', 'superadmin@superapp.gov.kh');
+    const adminEmail = this.configService.get<string>('ADMIN_EMAIL', 'admin@superapp.gov.kh');
+    const managerEmail = this.configService.get<string>('MANAGER_EMAIL', 'manager@superapp.gov.kh');
+    const devEmail = this.configService.get<string>('DEV_EMAIL', 'dev@superapp.gov.kh');
 
-    const superAdminUser = this.userRepository.create({
-      email: superAdminEmail,
-      name: 'Super Admin',
-      roles: [superAdminRole],
-    });
-    const adminUser = this.userRepository.create({
-      email: adminEmail,
-      name: 'Admin User',
-      roles: [adminRole],
-    });
-    const managerUser = this.userRepository.create({
-      email: managerEmail,
-      name: 'Mini App Manager',
-      roles: [managerRole],
-    });
-    const devUser = this.userRepository.create({
-      email: devEmail,
-      name: 'Developer User',
-      roles: [devRole],
-    });
+    // List of standard users to ensure exist across both production & mock domains
+    const defaultUsers = [
+      { email: superAdminEmail, name: 'Super Admin', role: superAdminRole },
+      { email: adminEmail, name: 'Admin User', role: adminRole },
+      { email: managerEmail, name: 'Mini App Manager', role: managerRole },
+      { email: devEmail, name: 'Developer User', role: devRole },
+      // Also ensure standard @superapp.gov.kh accounts exist
+      { email: 'superadmin@superapp.gov.kh', name: 'Super Admin', role: superAdminRole },
+      { email: 'admin@superapp.gov.kh', name: 'Admin User', role: adminRole },
+      { email: 'manager@superapp.gov.kh', name: 'Mini App Manager', role: managerRole },
+      { email: 'dev@superapp.gov.kh', name: 'Developer User', role: devRole },
+      // Also ensure legacy @example.com accounts exist for backwards compatibility
+      { email: 'superadmin@example.com', name: 'Super Admin', role: superAdminRole },
+      { email: 'admin@example.com', name: 'Admin User', role: adminRole },
+      { email: 'manager@example.com', name: 'Mini App Manager', role: managerRole },
+      { email: 'dev@example.com', name: 'Developer User', role: devRole },
+    ];
 
-    await this.userRepository.save([
-      superAdminUser,
-      adminUser,
-      managerUser,
-      devUser,
-    ]);
+    for (const u of defaultUsers) {
+      if (!u.email) continue;
+      const existing = await this.userRepository.findOne({
+        where: { email: u.email.toLowerCase() },
+        relations: { roles: true },
+      });
+      if (!existing) {
+        const newUser = this.userRepository.create({
+          email: u.email.toLowerCase(),
+          name: u.name,
+          roles: [u.role],
+        });
+        await this.userRepository.save(newUser);
+      } else if (!existing.roles || existing.roles.length === 0) {
+        existing.roles = [u.role];
+        await this.userRepository.save(existing);
+      }
+    }
 
-    console.log('Database seeded with new users and roles');
+    console.log('Database seeded with standard and production users and roles');
   }
 }

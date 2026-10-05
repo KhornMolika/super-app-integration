@@ -309,11 +309,13 @@ export class ReleaseAssemblyVerificationService {
       `Received build stage update for release ${body.releaseVersion}: [${body.stageId}] ${body.status} - ${body.details}`,
     );
 
+    const whereConditions: any[] = [{ status: 'BUILDING' }];
+    if (body.releaseVersion) {
+      whereConditions.push({ activeTestVersion: body.releaseVersion });
+    }
+
     const buildingApps = await this.miniappRepository.find({
-      where: [
-        { status: 'BUILDING' },
-        { activeTestVersion: body.releaseVersion },
-      ],
+      where: whereConditions,
     });
 
     for (const app of buildingApps) {

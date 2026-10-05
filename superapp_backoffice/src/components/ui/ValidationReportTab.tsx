@@ -791,9 +791,9 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
               else stageStatus = valStatus === 'PASSED' ? 'COMPLETED' : 'PENDING';
             }
 
-            const isCompleted = stageStatus === 'COMPLETED';
+            const isCompleted = stageStatus === 'COMPLETED' || stageStatus === 'PASSED' || stageStatus === 'SUCCESS';
             const isRunning = stageStatus === 'RUNNING';
-            const isFailed = stageStatus === 'FAILED';
+            const isFailed = stageStatus === 'FAILED' || stageStatus === 'ERROR';
 
             return (
               <div

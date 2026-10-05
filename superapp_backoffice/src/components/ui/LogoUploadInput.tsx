@@ -35,10 +35,18 @@ export function LogoUploadInput({
   const [fileName, setFileName] = useState<string>('');
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [inputMode, setInputMode] = useState<'upload' | 'url'>('upload');
+  const [urlInput, setUrlInput] = useState<string>(value.startsWith('data:') ? '' : value);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!value.startsWith('data:')) {
+      setUrlInput(value);
+    }
+  }, [value]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -49,6 +57,20 @@ export function LogoUploadInput({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isPreviewOpen]);
+
+  const handleApplyDefaultLogo = () => {
+    onChange('https://app.fintechcenterfsa.com/fsa-logo.png');
+    setUrlInput('https://app.fintechcenterfsa.com/fsa-logo.png');
+    setFileName('FSA Standard Logo');
+    setUploadError(null);
+  };
+
+  const handleUrlInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setUrlInput(val);
+    onChange(val);
+    setFileName('');
+  };
 
   const handleFile = (file: File) => {
     setUploadError(null);
@@ -68,7 +90,6 @@ export function LogoUploadInput({
     setFileName(file.name);
     setIsUploading(true);
 
-    // Read locally for client preview; upload to MinIO is deferred to registration submission
     const reader = new FileReader();
     reader.onload = (e) => {
       const dataUrl = e.target?.result as string;
@@ -104,6 +125,7 @@ export function LogoUploadInput({
   const handleRemove = (e: React.MouseEvent) => {
     e.stopPropagation();
     onChange('');
+    setUrlInput('');
     setFileName('');
     setUploadError(null);
     if (fileInputRef.current) {
@@ -114,10 +136,44 @@ export function LogoUploadInput({
   const displayError = error || uploadError;
 
   return (
-    <div>
-      <Label>
-        {label} {required && <span className="text-rose-500 font-bold">*</span>}
-      </Label>
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label>
+          {label} {required && <span className="text-rose-500 font-bold">*</span>}
+        </Label>
+        <div className="flex items-center gap-1.5 text-xs">
+          <button
+            type="button"
+            onClick={handleApplyDefaultLogo}
+            className="px-2 py-0.5 rounded-md font-medium text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 hover:bg-brand-100 dark:hover:bg-brand-900/50 transition-colors"
+          >
+            Use FSA Logo
+          </button>
+          <span className="text-slate-300 dark:text-slate-700">|</span>
+          <button
+            type="button"
+            onClick={() => setInputMode('upload')}
+            className={`px-2 py-0.5 rounded-md font-medium transition-colors ${
+              inputMode === 'upload'
+                ? 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100'
+                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+          >
+            Upload File
+          </button>
+          <button
+            type="button"
+            onClick={() => setInputMode('url')}
+            className={`px-2 py-0.5 rounded-md font-medium transition-colors ${
+              inputMode === 'url'
+                ? 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100'
+                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+          >
+            Paste URL
+          </button>
+        </div>
+      </div>
 
       <input
         ref={fileInputRef}
@@ -128,141 +184,163 @@ export function LogoUploadInput({
         disabled={disabled}
       />
 
-      <div
-        onClick={() => !disabled && fileInputRef.current?.click()}
-        onDrop={handleDrop}
-        onDragOver={(e) => {
-          e.preventDefault();
-          if (!disabled) setIsDragging(true);
-        }}
-        onDragLeave={() => setIsDragging(false)}
-        className={`relative w-full h-[46px] px-3 bg-slate-100/80 hover:bg-slate-100 dark:bg-slate-900/90 dark:hover:bg-slate-900 border rounded-xl flex items-center justify-between transition-all cursor-pointer select-none ${
-          displayError
-            ? 'border-rose-500 ring-1 ring-rose-500 bg-rose-50/30 dark:bg-rose-950/20'
-            : isDragging
-            ? 'border-brand-500 ring-1 ring-brand-500 bg-brand-50/20 dark:bg-brand-950/20'
-            : 'border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600'
-        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-      >
-        {isUploading ? (
-          /* Uploading state */
-          <div className="flex items-center gap-2 text-brand-600 dark:text-brand-400 min-w-0 flex-1 pr-2">
-            <svg className="animate-spin w-4 h-4 text-brand-600 dark:text-brand-400 shrink-0" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span className="text-base font-medium animate-pulse">Loading image preview...</span>
-          </div>
-        ) : value ? (
-          /* Has Image State: Clickable Thumbnail + Name */
-          <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+      {inputMode === 'url' ? (
+        <div className="flex items-center gap-2">
+          <input
+            type="url"
+            value={urlInput}
+            onChange={handleUrlInputChange}
+            disabled={disabled}
+            placeholder="https://app.fintechcenterfsa.com/fsa-logo.png"
+            className={`flex-1 h-[46px] px-3 bg-slate-100/80 dark:bg-slate-900/90 border rounded-xl text-base text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all ${
+              displayError
+                ? 'border-rose-500 ring-1 ring-rose-500 bg-rose-50/30'
+                : 'border-slate-300 dark:border-slate-700'
+            }`}
+          />
+          {value && (
             <button
               type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsPreviewOpen(true);
-              }}
-              title="Click to preview logo"
-              className="group/thumb relative w-8 h-8 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 shrink-0 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-brand-500"
+              onClick={() => setIsPreviewOpen(true)}
+              className="px-3 h-[46px] text-sm font-medium text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 hover:bg-brand-100 dark:hover:bg-brand-900/40 rounded-xl transition-colors shrink-0"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={value}
-                alt="Logo preview"
-                className="w-full h-full object-cover transition-transform group-hover/thumb:scale-110"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = '/fsa-logo.png';
-                }}
-              />
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 flex items-center justify-center transition-opacity">
-                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-              </div>
+              Preview
             </button>
-            <span
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsPreviewOpen(true);
-              }}
-              className="text-base font-medium text-slate-800 dark:text-slate-200 hover:text-brand-600 dark:hover:text-brand-400 truncate cursor-pointer flex items-center gap-1.5"
-              title="Click to preview"
-            >
-              <span className="truncate">{fileName || (value.startsWith('data:') ? 'Selected Logo' : value)}</span>
-              {value.startsWith('data:') ? (
-                <span className="px-2 py-0.5 text-xs font-semibold bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 rounded font-mono shrink-0">
-                  Local Preview
-                </span>
-              ) : (value.includes('mini-app-assets') || value.includes('mini-app-logos') || value.includes('9000') || value.includes('minio')) ? (
-                <span className="px-2 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 rounded font-mono shrink-0">
-                  MinIO
-                </span>
-              ) : null}
-            </span>
-          </div>
-        ) : (
-          /* Empty Placeholder State */
-          <div className="flex items-center gap-2 text-slate-400 min-w-0 flex-1 pr-2">
-            <svg className="w-5 h-5 shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <span className="text-base text-slate-400 truncate">
-              {placeholder}
-            </span>
-          </div>
-        )}
-
-        {/* Action buttons on right */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          {value ? (
-            <>
+          )}
+        </div>
+      ) : (
+        <div
+          onClick={() => !disabled && fileInputRef.current?.click()}
+          onDrop={handleDrop}
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (!disabled) setIsDragging(true);
+          }}
+          onDragLeave={() => setIsDragging(false)}
+          className={`relative w-full h-[46px] px-3 bg-slate-100/80 hover:bg-slate-100 dark:bg-slate-900/90 dark:hover:bg-slate-900 border rounded-xl flex items-center justify-between transition-all cursor-pointer select-none ${
+            displayError
+              ? 'border-rose-500 ring-1 ring-rose-500 bg-rose-50/30 dark:bg-rose-950/20'
+              : isDragging
+              ? 'border-brand-500 ring-1 ring-brand-500 bg-brand-50/20 dark:bg-brand-950/20'
+              : 'border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600'
+          } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          {isUploading ? (
+            <div className="flex items-center gap-2 text-brand-600 dark:text-brand-400 min-w-0 flex-1 pr-2">
+              <svg className="animate-spin w-4 h-4 text-brand-600 dark:text-brand-400 shrink-0" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span className="text-base font-medium animate-pulse">Loading image preview...</span>
+            </div>
+          ) : value ? (
+            <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   setIsPreviewOpen(true);
                 }}
-                disabled={disabled}
-                className="px-2.5 py-1 text-sm font-medium text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 hover:bg-brand-100 dark:hover:bg-brand-900/40 rounded-lg transition-colors flex items-center gap-1"
-                title="Preview logo"
+                title="Click to preview logo"
+                className="group/thumb relative w-8 h-8 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 shrink-0 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                <span>Preview</span>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={value}
+                  alt="Logo preview"
+                  className="w-full h-full object-cover transition-transform group-hover/thumb:scale-110"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/fsa-logo.png';
+                  }}
+                />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 flex items-center justify-center transition-opacity">
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </div>
               </button>
-              <button
-                type="button"
+              <span
                 onClick={(e) => {
                   e.stopPropagation();
-                  fileInputRef.current?.click();
+                  setIsPreviewOpen(true);
                 }}
-                disabled={disabled}
-                className="px-3 py-1 text-sm font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                className="text-base font-medium text-slate-800 dark:text-slate-200 hover:text-brand-600 dark:hover:text-brand-400 truncate cursor-pointer flex items-center gap-1.5"
+                title="Click to preview"
               >
-                Change
-              </button>
-              <button
-                type="button"
-                onClick={handleRemove}
-                disabled={disabled}
-                className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
-                title="Remove logo"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </>
+                <span className="truncate">{fileName || (value.startsWith('data:') ? 'Selected Logo' : value)}</span>
+                {value.startsWith('data:') ? (
+                  <span className="px-2 py-0.5 text-xs font-semibold bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 rounded font-mono shrink-0">
+                    Local Preview
+                  </span>
+                ) : (value.includes('mini-app-assets') || value.includes('mini-app-logos') || value.includes('9000') || value.includes('minio')) ? (
+                  <span className="px-2 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 rounded font-mono shrink-0">
+                    MinIO
+                  </span>
+                ) : null}
+              </span>
+            </div>
           ) : (
-            <span className="px-3 py-1 text-sm font-semibold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/50 rounded-lg border border-brand-200 dark:border-brand-800/60">
-              Browse
-            </span>
+            <div className="flex items-center gap-2 text-slate-400 min-w-0 flex-1 pr-2">
+              <svg className="w-5 h-5 shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span className="text-base text-slate-400 truncate">
+                {placeholder}
+              </span>
+            </div>
           )}
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            {value ? (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsPreviewOpen(true);
+                  }}
+                  disabled={disabled}
+                  className="px-2.5 py-1 text-sm font-medium text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 hover:bg-brand-100 dark:hover:bg-brand-900/40 rounded-lg transition-colors flex items-center gap-1"
+                  title="Preview logo"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  <span>Preview</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    fileInputRef.current?.click();
+                  }}
+                  disabled={disabled}
+                  className="px-3 py-1 text-sm font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                >
+                  Change
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRemove}
+                  disabled={disabled}
+                  className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
+                  title="Remove logo"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </>
+            ) : (
+              <span className="px-3 py-1 text-sm font-semibold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/50 rounded-lg border border-brand-200 dark:border-brand-800/60">
+                Browse
+              </span>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {displayError ? (
         <p className="mt-1.5 text-sm text-rose-600 font-medium flex items-center gap-1.5">

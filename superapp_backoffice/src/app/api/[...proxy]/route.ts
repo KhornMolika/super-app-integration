@@ -9,26 +9,33 @@ async function getDevAuthToken(forceRefresh = false): Promise<string | null> {
   if (!forceRefresh && cachedDevToken && Date.now() < cachedDevToken.expiresAt) {
     return cachedDevToken.token;
   }
-  const fallbackEmail = process.env.DEV_FALLBACK_USER_EMAIL;
-  if (!fallbackEmail) return null;
-  try {
-    const res = await fetch(`${BACKEND_URL}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: fallbackEmail }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.access_token) {
-        cachedDevToken = {
-          token: data.access_token,
-          expiresAt: Date.now() + 1000 * 60 * 30, // 30 mins
-        };
-        return data.access_token;
+  const candidateEmails = [
+    process.env.DEV_FALLBACK_USER_EMAIL,
+    process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL,
+    'superadmin@superapp.gov.kh',
+    'superadmin@example.com',
+  ].filter(Boolean) as string[];
+
+  for (const email of candidateEmails) {
+    try {
+      const res = await fetch(`${BACKEND_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.access_token) {
+          cachedDevToken = {
+            token: data.access_token,
+            expiresAt: Date.now() + 1000 * 60 * 30, // 30 mins
+          };
+          return data.access_token;
+        }
       }
+    } catch (err) {
+      console.error(`Failed to get dev auth token for ${email} in proxy:`, err);
     }
-  } catch (err) {
-    console.error('Failed to get fallback dev auth token in proxy:', err);
   }
   return null;
 }

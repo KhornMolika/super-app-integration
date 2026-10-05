@@ -125,10 +125,25 @@ export async function apiClient<T = any>(endpoint: string, options: RequestOptio
   }
 
   if (!response.ok) {
-    const errorMessage =
+    let errorMessage =
       (data && typeof data === 'object' && (data.message || data.error)) ||
       (typeof data === 'string' && data) ||
       `Request failed with status ${response.status}`;
+
+    // If the error message is an HTML page (e.g. Cloudflare / Nginx 502/504), extract a concise message
+    if (typeof errorMessage === 'string' && errorMessage.trim().startsWith('<')) {
+      const matchTitle = errorMessage.match(/<title>([^<]+)<\/title>/i);
+      if (matchTitle && matchTitle[1]) {
+        errorMessage = `Gateway Error (${response.status}): ${matchTitle[1].replace(/fintechcenterfsa\.com\s*\|\s*/i, '').trim()}`;
+      } else if (response.status === 504) {
+        errorMessage = 'Gateway Timeout (504): The server took too long to respond. Please try again.';
+      } else if (response.status === 502) {
+        errorMessage = 'Bad Gateway (502): The upstream server is unreachable or starting up.';
+      } else {
+        errorMessage = `Server Error (${response.status}): Upstream service returned an HTML error page.`;
+      }
+    }
+
     throw new ApiError(errorMessage, response.status, data);
   }
 

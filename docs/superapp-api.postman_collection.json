@@ -1,0 +1,415 @@
+{
+  "info": {
+    "_postman_id": "superapp-gateway-api-collection",
+    "name": "Super App Gateway & Backoffice API",
+    "description": "Comprehensive Postman API Collection for Super App Gateway backend services, access control, mini-apps lifecycle, integrations, and deployment verification.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://app.fintechcenterfsa.com/api",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "superadminEmail",
+      "value": "superadmin@superapp.gov.kh",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Login (Auto-sets Token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.access_token) {",
+                  "    pm.collectionVariables.set('token', jsonData.access_token);",
+                  "    pm.environment.set('token', jsonData.access_token);",
+                  "    console.log('Access token automatically saved.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{superadminEmail}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Authenticates administrative users and retrieves an RS256 JWT access token."
+          }
+        },
+        {
+          "name": "Get JWKS Public Keys",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/auth/jwks",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "jwks"]
+            },
+            "description": "Returns JSON Web Key Set (JWKS) public keys used for token verification."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Users & Access Control",
+      "item": [
+        {
+          "name": "List All Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"]
+            }
+          }
+        },
+        {
+          "name": "Create New User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Super Admin\",\n  \"email\": \"superadmin@superapp.gov.kh\",\n  \"roleNames\": [\"SUPER_ADMIN\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"]
+            }
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Super Admin\",\n  \"email\": \"superadmin@superapp.gov.kh\",\n  \"roleNames\": [\"SUPER_ADMIN\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Roles List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/roles",
+              "host": ["{{baseUrl}}"],
+              "path": ["roles"]
+            }
+          }
+        },
+        {
+          "name": "Get Permissions List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/permissions",
+              "host": ["{{baseUrl}}"],
+              "path": ["permissions"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Mini Apps Management",
+      "item": [
+        {
+          "name": "Get All Mini Apps",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mini-apps",
+              "host": ["{{baseUrl}}"],
+              "path": ["mini-apps"]
+            }
+          }
+        },
+        {
+          "name": "Get Mini App By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mini-apps/{{miniAppId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["mini-apps", "{{miniAppId}}"]
+            }
+          }
+        },
+        {
+          "name": "Check App Name / AppId Exists",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mini-apps/check-exists?appId=sc_miniapp&name=Public Mini App",
+              "host": ["{{baseUrl}}"],
+              "path": ["mini-apps", "check-exists"],
+              "query": [
+                { "key": "appId", "value": "sc_miniapp" },
+                { "key": "name", "value": "Public Mini App" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Check URL Reachability",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mini-apps/check-url?url=https://app.fintechcenterfsa.com",
+              "host": ["{{baseUrl}}"],
+              "path": ["mini-apps", "check-url"],
+              "query": [
+                { "key": "url", "value": "https://app.fintechcenterfsa.com" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Register Flutter Package Mini App",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Trust Regulator Mini App\",\n  \"appId\": \"trust_regulator_app\",\n  \"category\": \"REGULATORY\",\n  \"description\": \"Official Trust Regulator service for FSA Super App\",\n  \"ownerEmail\": \"superadmin@superapp.gov.kh\",\n  \"logo\": \"https://app.fintechcenterfsa.com/fsa-logo.png\",\n  \"integrationMethod\": \"FLUTTER_PACKAGE\",\n  \"integrationConfigFlutter\": {\n    \"packageName\": \"sc_public_miniapp\",\n    \"gitUrl\": \"https://github.com/KhornMolika/sc-public-miniapp.git\",\n    \"ref\": \"v1.0.0\",\n    \"isPrivateRepo\": false,\n    \"authMethod\": \"none\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/mini-apps",
+              "host": ["{{baseUrl}}"],
+              "path": ["mini-apps"]
+            }
+          }
+        },
+        {
+          "name": "Approve Mini App",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Approved for production deployment\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/mini-apps/{{miniAppId}}/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["mini-apps", "{{miniAppId}}", "approve"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Flutter & Pubspec Operations",
+      "item": [
+        {
+          "name": "Get Pubspec Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pubspec/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["pubspec", "status"]
+            }
+          }
+        },
+        {
+          "name": "Get Package Constraints",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pubspec/package-constraints",
+              "host": ["{{baseUrl}}"],
+              "path": ["pubspec", "package-constraints"]
+            }
+          }
+        },
+        {
+          "name": "Simulate Pre-check Conflicts",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"packageName\": \"sc_public_miniapp\",\n  \"gitUrl\": \"https://github.com/KhornMolika/sc-public-miniapp.git\",\n  \"ref\": \"v1.0.0\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pubspec/precheck-conflicts",
+              "host": ["{{baseUrl}}"],
+              "path": ["pubspec", "precheck-conflicts"]
+            }
+          }
+        },
+        {
+          "name": "Sync Approved Mini Apps",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pubspec/sync",
+              "host": ["{{baseUrl}}"],
+              "path": ["pubspec", "sync"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Health & Diagnostics",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

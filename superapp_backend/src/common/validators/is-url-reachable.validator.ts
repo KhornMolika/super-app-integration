@@ -12,11 +12,20 @@ export class IsUrlReachableConstraint implements ValidatorConstraintInterface {
     if (typeof url !== 'string') return false;
 
     // Skip git repository URLs as they often block simple HEAD/GET requests (especially private ones)
+    // Skip git repository URLs and internal MinIO storage URLs
     if (
       url.includes('github.com') ||
       url.includes('gitlab.com') ||
       url.includes('bitbucket.org') ||
-      url.endsWith('.git')
+      url.endsWith('.git') ||
+      url.includes('mini-app-assets') ||
+      url.includes('mini-app-logos') ||
+      url.includes('minio') ||
+      url.includes(':9000') ||
+      url.includes('10.200.') ||
+      url.includes('fintechcenterfsa.com') ||
+      url.startsWith('/fsa-logo') ||
+      url.startsWith('data:')
     ) {
       return true;
     }

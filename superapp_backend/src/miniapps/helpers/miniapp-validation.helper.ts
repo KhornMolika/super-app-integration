@@ -70,9 +70,15 @@ export class MiniappValidationHelper {
     if (app.logo && app.logo.trim() !== '') {
       if (
         app.logo.startsWith('data:image/') ||
-        app.logo.startsWith('/uploads/')
+        app.logo.startsWith('data:') ||
+        app.logo.startsWith('/uploads/') ||
+        app.logo.startsWith('/fsa-logo') ||
+        app.logo.includes('mini-app-assets') ||
+        app.logo.includes('mini-app-logos') ||
+        app.logo.includes('minio') ||
+        app.logo.includes(':9000')
       ) {
-        // Uploaded image format is valid
+        // Uploaded or internal storage image format is valid
       } else {
         checks.push(
           urlValidator.validate(app.logo, null as any).then((isValid) => {
