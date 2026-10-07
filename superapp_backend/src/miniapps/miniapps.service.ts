@@ -381,14 +381,20 @@ export class MiniappsService implements OnApplicationBootstrap {
         !effectiveConfig?.androidNexusMavenUrl) ||
       (effectiveConfig?.iosMinioKey && !effectiveConfig?.iosNexusZipUrl)
     ) {
-      const nexusUrls = await this.sdkArtifactUploadService.publishToNexus(
-        app.id,
-      );
-      if (app.integrationConfig) {
-        Object.assign(app.integrationConfig, nexusUrls);
-      }
-      if (app.pendingRevision?.integrationConfig) {
-        Object.assign(app.pendingRevision.integrationConfig, nexusUrls);
+      try {
+        const nexusUrls = await this.sdkArtifactUploadService.publishToNexus(
+          app.id,
+        );
+        if (app.integrationConfig && nexusUrls) {
+          Object.assign(app.integrationConfig, nexusUrls);
+        }
+        if (app.pendingRevision?.integrationConfig && nexusUrls) {
+          Object.assign(app.pendingRevision.integrationConfig, nexusUrls);
+        }
+      } catch (nexusErr: any) {
+        this.logger.warn(
+          `Could not auto-publish SDK to Nexus during approve for ${app.name}: ${nexusErr.message}. Approving anyway for runtime reflection.`,
+        );
       }
     }
   }

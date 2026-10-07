@@ -15,9 +15,9 @@ export class BucketLifecycleHelper {
 
   /**
    * Ensure standardized 3-bucket architecture exists with strictly private access policies:
-   * 1. mini-app-assets: Strictly Private Storage (logos, icons, banner images accessed via Presigned URLs)
+   * 1. mini-app-assets: Strictly Private Storage (logos, icons, banner images accessed via Presigned/Proxy URLs)
    * 2. package-submissions: Strictly Private Quarantine (Flutter .zip packages)
-   * 3. sdk-submissions: Strictly Private Quarantine (Native .aar / .xcframework)
+   * 3. sdk-submissions: Strictly Private Quarantine (Native .aar / .xcframework.zip)
    */
   async ensureBucketsAndPolicies(
     minioClient: MinioClient,
@@ -59,7 +59,7 @@ export class BucketLifecycleHelper {
   }
 
   /**
-   * Migrate objects from legacy buckets to new standardized buckets if present
+   * Migrate objects from legacy buckets to new standardized buckets, and delete the legacy buckets.
    */
   async migrateLegacyBuckets(
     minioClient: MinioClient,
@@ -67,55 +67,64 @@ export class BucketLifecycleHelper {
     packageSubmissionsBucket: string,
   ): Promise<void> {
     try {
-      // 1. Check legacy mini-app-logos
-      const hasLegacyLogos = await minioClient
-        .bucketExists('mini-app-logos')
-        .catch(() => false);
-      if (hasLegacyLogos && assetsBucket !== 'mini-app-logos') {
-        const stream = minioClient.listObjectsV2('mini-app-logos', '', true);
-        stream.on('data', async (obj) => {
-          if (obj.name) {
-            try {
-              const conds = new (require('minio').CopyConditions)();
-              await minioClient.copyObject(
-                assetsBucket,
-                obj.name,
-                `/mini-app-logos/${obj.name}`,
-                conds,
-              );
-              this.logger.log(
-                `Migrated ${obj.name} from mini-app-logos to ${assetsBucket}`,
-              );
-            } catch (_) {}
-          }
-        });
-      }
+      // 1. Migrate & delete legacy mini-app-logos
+      await this.drainAndRemoveBucket(minioClient, 'mini-app-logos', assetsBucket);
 
-      // 2. Check legacy submissions
-      const hasLegacySubmissions = await minioClient
-        .bucketExists('submissions')
-        .catch(() => false);
-      if (hasLegacySubmissions && packageSubmissionsBucket !== 'submissions') {
-        const stream = minioClient.listObjectsV2('submissions', '', true);
-        stream.on('data', async (obj) => {
-          if (obj.name) {
-            try {
-              const conds = new (require('minio').CopyConditions)();
-              await minioClient.copyObject(
-                packageSubmissionsBucket,
-                obj.name,
-                `/submissions/${obj.name}`,
-                conds,
-              );
-              this.logger.log(
-                `Migrated ${obj.name} from submissions to ${packageSubmissionsBucket}`,
-              );
-            } catch (_) {}
-          }
-        });
-      }
+      // 2. Migrate & delete legacy submissions
+      await this.drainAndRemoveBucket(minioClient, 'submissions', packageSubmissionsBucket);
     } catch (err: any) {
       this.logger.warn(`Legacy bucket migration check skipped: ${err.message}`);
+    }
+  }
+
+  private async drainAndRemoveBucket(
+    minioClient: MinioClient,
+    sourceBucket: string,
+    targetBucket: string,
+  ): Promise<void> {
+    try {
+      const exists = await minioClient.bucketExists(sourceBucket).catch(() => false);
+      if (!exists || sourceBucket === targetBucket) return;
+
+      this.logger.log(`Found legacy MinIO bucket "${sourceBucket}". Migrating to "${targetBucket}"...`);
+
+      const objects: string[] = [];
+      const stream = minioClient.listObjectsV2(sourceBucket, '', true);
+
+      await new Promise<void>((resolve) => {
+        stream.on('data', (obj) => {
+          if (obj.name) objects.push(obj.name);
+        });
+        stream.on('end', () => resolve());
+        stream.on('error', () => resolve());
+      });
+
+      const CopyConditions = (require('minio') as any).CopyConditions;
+      for (const objName of objects) {
+        try {
+          const conds = new CopyConditions();
+          await minioClient.copyObject(
+            targetBucket,
+            objName,
+            `/${sourceBucket}/${objName}`,
+            conds,
+          );
+          await minioClient.removeObject(sourceBucket, objName).catch(() => {});
+          this.logger.log(`Migrated ${objName} from ${sourceBucket} to ${targetBucket}`);
+        } catch (copyErr: any) {
+          this.logger.warn(`Could not copy ${objName} from ${sourceBucket}: ${copyErr.message}`);
+        }
+      }
+
+      // Once drained, remove the legacy bucket
+      try {
+        await minioClient.removeBucket(sourceBucket);
+        this.logger.log(`Successfully removed legacy MinIO bucket "${sourceBucket}".`);
+      } catch (rmErr: any) {
+        this.logger.warn(`Could not remove empty legacy bucket "${sourceBucket}": ${rmErr.message}`);
+      }
+    } catch (err: any) {
+      this.logger.warn(`Legacy bucket processing failed for "${sourceBucket}": ${err.message}`);
     }
   }
 

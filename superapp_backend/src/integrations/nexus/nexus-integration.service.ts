@@ -18,8 +18,118 @@ export interface NexusPackageValidation {
 @Injectable()
 export class NexusIntegrationService {
   private readonly logger = new Logger(NexusIntegrationService.name);
+  private workingBaseUrl: string | null = null;
 
   constructor(private readonly configService: ConfigService) {}
+
+  async onModuleInit(): Promise<void> {
+    this.bootstrapRepositories().catch((err) => {
+      this.logger.warn(`Nexus repository bootstrap check warning: ${err.message}`);
+    });
+  }
+
+  private getCandidateBaseUrls(): string[] {
+    const configured = this.configService.get<string>('NEXUS_BASE_URL');
+    const list = [
+      configured,
+      'http://nexus:8081',
+      'http://nexus.super-app.svc.cluster.local:8081',
+      'http://10.200.8.6:8081',
+      'http://localhost:8081',
+    ].filter(Boolean) as string[];
+    return Array.from(new Set(list.map((u) => u.replace(/\/+$/, ''))));
+  }
+
+  private async getWorkingBaseUrl(): Promise<string> {
+    if (this.workingBaseUrl) return this.workingBaseUrl;
+    const candidates = this.getCandidateBaseUrls();
+    const authHeader = this.getAuthHeader();
+
+    for (const url of candidates) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const res = await fetch(`${url}/service/rest/v1/status`, {
+          headers: authHeader,
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        if (res.ok || res.status === 200 || res.status === 401) {
+          this.workingBaseUrl = url;
+          this.logger.log(`Nexus connected via endpoint: ${url}`);
+          return url;
+        }
+      } catch (_) {}
+    }
+
+    const fallback = candidates[0] || 'http://localhost:8081';
+    this.workingBaseUrl = fallback;
+    return fallback;
+  }
+
+  private getPublicBaseUrl(): string {
+    return (
+      this.configService.get<string>('NEXUS_BASE_URL') ||
+      'https://app.fintechcenterfsa.com/nexus'
+    ).replace(/\/+$/, '');
+  }
+
+  private async bootstrapRepositories(): Promise<void> {
+    const baseUrl = await this.getWorkingBaseUrl();
+    const authHeader = this.getAuthHeader();
+
+    try {
+      const res = await fetch(`${baseUrl}/service/rest/v1/repositories`, {
+        headers: { ...authHeader, Accept: 'application/json' },
+      });
+      if (!res.ok) return;
+
+      const repos = (await res.json()) as Array<{ name: string; format: string; type: string }>;
+      const existingNames = new Set(repos.map((r) => r.name));
+
+      const requiredHostedRaw = ['raw-sdk-artifacts', 'cocoapods-specs', 'apk-releases', 'apk-test-builds', 'superapp-artifacts'];
+      for (const repoName of requiredHostedRaw) {
+        if (!existingNames.has(repoName)) {
+          await this.createHostedRawRepository(baseUrl, repoName, authHeader);
+        }
+      }
+
+      if (!existingNames.has('maven-sdk-hosted')) {
+        await this.createHostedMavenRepository(baseUrl, 'maven-sdk-hosted', authHeader);
+      }
+    } catch (_) {}
+  }
+
+  private async createHostedRawRepository(baseUrl: string, name: string, headers: Record<string, string>): Promise<void> {
+    try {
+      await fetch(`${baseUrl}/service/rest/v1/repositories/raw/hosted`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          online: true,
+          storage: { blobStoreName: 'default', strictContentTypeValidation: false, writePolicy: 'ALLOW' },
+        }),
+      });
+      this.logger.log(`Created Nexus repository "${name}" (raw/hosted).`);
+    } catch (_) {}
+  }
+
+  private async createHostedMavenRepository(baseUrl: string, name: string, headers: Record<string, string>): Promise<void> {
+    try {
+      await fetch(`${baseUrl}/service/rest/v1/repositories/maven/hosted`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          online: true,
+          storage: { blobStoreName: 'default', strictContentTypeValidation: false, writePolicy: 'ALLOW' },
+          maven: { versionPolicy: 'MIXED', layoutPolicy: 'PERMISSIVE' },
+        }),
+      });
+      this.logger.log(`Created Nexus repository "${name}" (maven2/hosted).`);
+    } catch (_) {}
+  }
 
   private getBaseUrl(): string {
     return (
@@ -51,24 +161,39 @@ export class NexusIntegrationService {
     contentType = 'application/octet-stream',
   ): Promise<string> {
     const cleanPath = path.replace(/^\/+/, '');
-    const url = `${this.getBaseUrl()}/repository/${repo}/${cleanPath}`;
     const authHeader = this.getAuthHeader();
-    let res: Response;
-    try {
-      res = await fetch(url, {
-        method: 'PUT',
-        headers: { ...authHeader, 'Content-Type': contentType },
-        body: new Uint8Array(buffer),
-      });
-    } catch (err: any) {
-      throw new Error(`Could not reach Nexus at ${url}: ${err.message}`);
+    const candidates = [await this.getWorkingBaseUrl(), ...this.getCandidateBaseUrls()];
+    const uniqueCandidates = Array.from(new Set(candidates));
+
+    let lastError: Error | null = null;
+    let uploadSucceeded = false;
+
+    for (const baseUrl of uniqueCandidates) {
+      const uploadUrl = `${baseUrl}/repository/${repo}/${cleanPath}`;
+      try {
+        const res = await fetch(uploadUrl, {
+          method: 'PUT',
+          headers: { ...authHeader, 'Content-Type': contentType },
+          body: new Uint8Array(buffer),
+        });
+
+        if (res.ok || res.status === 200 || res.status === 201 || res.status === 204) {
+          this.workingBaseUrl = baseUrl;
+          uploadSucceeded = true;
+          break;
+        } else {
+          lastError = new Error(`Nexus PUT to ${uploadUrl} failed with HTTP ${res.status}: ${res.statusText}`);
+        }
+      } catch (err: any) {
+        lastError = new Error(`Could not reach Nexus at ${uploadUrl}: ${err.message}`);
+      }
     }
-    if (!res.ok) {
-      throw new Error(
-        `Nexus upload to ${url} failed with HTTP ${res.status}: ${res.statusText}`,
-      );
+
+    if (!uploadSucceeded) {
+      throw lastError || new Error(`Failed to upload raw asset to ${repo}/${cleanPath}`);
     }
-    return url;
+
+    return `${this.getPublicBaseUrl()}/repository/${repo}/${cleanPath}`;
   }
 
   /**

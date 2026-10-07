@@ -9,6 +9,7 @@ export class PresignedUrlHelper {
 
   /**
    * Generates a presigned GET URL for an object in MinIO (default: 7 days expiry).
+   * Automatically normalizes to secure HTTPS backend proxy if MinIO endpoint is HTTP / private IP.
    */
   async getPresignedUrl(
     minioClient: MinioClient,
@@ -16,14 +17,16 @@ export class PresignedUrlHelper {
     bucket: string,
     objectKey: string,
     expirySeconds = 7 * 24 * 60 * 60,
+    apiBaseUrl?: string,
   ): Promise<string> {
     try {
-      const generated = await minioClient.presignedGetObject(
-        bucket,
-        objectKey,
-        expirySeconds,
-      );
-      if (publicUrl) {
+      // If publicUrl is an HTTPS domain (e.g. https://app.fintechcenterfsa.com/minio), use presigned URL rewritten with that host.
+      if (publicUrl && publicUrl.startsWith('https://')) {
+        const generated = await minioClient.presignedGetObject(
+          bucket,
+          objectKey,
+          expirySeconds,
+        );
         try {
           const genUrl = new URL(generated);
           const pubUrl = new URL(publicUrl);
@@ -31,19 +34,29 @@ export class PresignedUrlHelper {
           genUrl.hostname = pubUrl.hostname;
           genUrl.port = pubUrl.port;
           return genUrl.toString();
-        } catch (_) {}
+        } catch (_) {
+          return generated;
+        }
       }
-      return generated;
+
+      // If publicUrl is HTTP, raw IP (e.g. 10.200.8.6), or localhost, route through backend HTTPS proxy to prevent Mixed Content
+      const base = (apiBaseUrl || '').replace(/\/+$/, '');
+      const encodedKey = encodeURIComponent(objectKey);
+      if (base) {
+        return `${base}/storage/asset?key=${encodedKey}&bucket=${encodeURIComponent(bucket)}`;
+      }
+      return `/api/storage/asset?key=${encodedKey}&bucket=${encodeURIComponent(bucket)}`;
     } catch (err: any) {
       this.logger.warn(
         `Failed to generate presigned URL for ${bucket}/${objectKey}: ${err.message}`,
       );
-      return `${publicUrl}/${bucket}/${objectKey}`;
+      const encodedKey = encodeURIComponent(objectKey);
+      return `/api/storage/asset?key=${encodedKey}&bucket=${encodeURIComponent(bucket)}`;
     }
   }
 
   /**
-   * Resolves any stored logo key, path, or legacy URL into an active presigned URL.
+   * Resolves any stored logo key, path, or legacy URL into an active secure URL.
    */
   async resolveLogoUrl(
     minioClient: MinioClient,
@@ -51,18 +64,24 @@ export class PresignedUrlHelper {
     assetsBucket: string,
     logoUrlOrPath?: string | null,
     expirySeconds = 7 * 24 * 60 * 60,
+    apiBaseUrl?: string,
   ): Promise<string | null> {
     if (!logoUrlOrPath) return null;
     if (logoUrlOrPath.startsWith('data:')) return logoUrlOrPath;
+
+    // If already a secure backend proxy or secure HTTPS S3 presigned URL
     if (
-      logoUrlOrPath.includes('X-Amz-Signature') ||
-      logoUrlOrPath.includes('X-Amz-Credential')
+      logoUrlOrPath.startsWith('/api/storage/') ||
+      logoUrlOrPath.startsWith('/storage/') ||
+      (logoUrlOrPath.startsWith('https://') && (logoUrlOrPath.includes('X-Amz-Signature') || logoUrlOrPath.includes('X-Amz-Credential')))
     ) {
       return logoUrlOrPath;
     }
 
     let bucket = assetsBucket;
     let key = logoUrlOrPath.split('?')[0];
+
+    // Strip full domain/IP prefix if present (e.g. http://10.200.8.6:9000/mini-app-assets/logos/...)
     key = key.replace(/^https?:\/\/[^\/]+\//, '');
 
     if (key.startsWith('mini-app-logos/')) {
@@ -79,6 +98,7 @@ export class PresignedUrlHelper {
       bucket,
       key,
       expirySeconds,
+      apiBaseUrl,
     );
   }
 
@@ -115,6 +135,7 @@ export class PresignedUrlHelper {
     publicUrl: string,
     assetsBucket: string,
     file: Express.Multer.File,
+    apiBaseUrl?: string,
   ): Promise<{ url: string; filename: string; size: number }> {
     const ext = file.originalname?.split('.').pop() || 'png';
     const cleanName = (file.originalname || 'image').replace(
@@ -136,6 +157,8 @@ export class PresignedUrlHelper {
       publicUrl,
       assetsBucket,
       filename,
+      7 * 24 * 60 * 60,
+      apiBaseUrl,
     );
     this.logger.log(
       `Uploaded asset to private MinIO storage with presigned URL: ${filename}`,
@@ -157,6 +180,7 @@ export class PresignedUrlHelper {
     assetsBucket: string,
     base64Str: string,
     nameHint = 'logo.png',
+    apiBaseUrl?: string,
   ): Promise<string> {
     const matches = base64Str.match(/^data:([^;]+);base64,(.+)$/);
     let mimeType = 'image/png';
@@ -203,6 +227,8 @@ export class PresignedUrlHelper {
       publicUrl,
       assetsBucket,
       filename,
+      7 * 24 * 60 * 60,
+      apiBaseUrl,
     );
     this.logger.log(
       `Uploaded base64 image to private MinIO storage with presigned URL: ${filename}`,

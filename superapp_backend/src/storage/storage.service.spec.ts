@@ -107,7 +107,7 @@ describe('StorageService & Helpers', () => {
     });
 
     it('preserves existing presigned url with signature', async () => {
-      const existing = 'http://localhost:9000/mini-app-assets/logo.png?X-Amz-Signature=existing';
+      const existing = 'https://app.fintechcenterfsa.com/minio/mini-app-assets/logo.png?X-Amz-Signature=existing';
       const url = await service.resolveLogoUrl(existing);
       expect(url).toBe(existing);
     });

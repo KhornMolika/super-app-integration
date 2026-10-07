@@ -22,6 +22,7 @@ export class StorageService implements OnModuleInit {
   readonly packageSubmissionsBucket: string;
   readonly sdkSubmissionsBucket: string;
   private publicUrl: string;
+  private apiBaseUrl: string;
   private aistorLicenseKey: string;
 
   constructor(
@@ -133,6 +134,7 @@ export class StorageService implements OnModuleInit {
       bucket,
       objectKey,
       expirySeconds,
+      this.apiBaseUrl,
     );
   }
 
@@ -149,6 +151,7 @@ export class StorageService implements OnModuleInit {
       this.assetsBucket,
       logoUrlOrPath,
       expirySeconds,
+      this.apiBaseUrl,
     );
   }
 
@@ -175,6 +178,7 @@ export class StorageService implements OnModuleInit {
       this.publicUrl,
       this.assetsBucket,
       file,
+      this.apiBaseUrl,
     );
   }
 
@@ -191,6 +195,7 @@ export class StorageService implements OnModuleInit {
       this.assetsBucket,
       base64Str,
       nameHint,
+      this.apiBaseUrl,
     );
   }
 

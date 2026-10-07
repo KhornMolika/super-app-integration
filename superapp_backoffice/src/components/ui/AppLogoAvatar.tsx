@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { normalizeAssetUrl } from '@/lib/asset-utils';
 
 export interface AppLogoAvatarProps {
   logo?: string | null;
@@ -18,6 +19,7 @@ export function AppLogoAvatar({
   imgClassName = '',
 }: AppLogoAvatarProps) {
   const [hasError, setHasError] = useState(false);
+  const normalizedLogo = normalizeAssetUrl(logo);
 
   const initial = (name?.trim()?.charAt(0) || 'A').toUpperCase();
 
@@ -29,13 +31,13 @@ export function AppLogoAvatar({
     xl: 'w-16 h-16 text-xl rounded-2xl',
   }[size];
 
-  if (logo && !hasError) {
+  if (normalizedLogo && !hasError) {
     return (
       <div
         className={`relative ${sizeClasses} overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 shadow-2xs flex items-center justify-center shrink-0 ${className}`}
       >
         <img
-          src={logo}
+          src={normalizedLogo}
           alt={name ? `${name} logo` : 'App logo'}
           className={`w-full h-full object-cover ${imgClassName}`}
           onError={() => setHasError(true)}
