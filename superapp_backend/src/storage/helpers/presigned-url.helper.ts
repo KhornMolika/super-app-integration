@@ -18,11 +18,22 @@ export class PresignedUrlHelper {
     expirySeconds = 7 * 24 * 60 * 60,
   ): Promise<string> {
     try {
-      return await minioClient.presignedGetObject(
+      const generated = await minioClient.presignedGetObject(
         bucket,
         objectKey,
         expirySeconds,
       );
+      if (publicUrl) {
+        try {
+          const genUrl = new URL(generated);
+          const pubUrl = new URL(publicUrl);
+          genUrl.protocol = pubUrl.protocol;
+          genUrl.hostname = pubUrl.hostname;
+          genUrl.port = pubUrl.port;
+          return genUrl.toString();
+        } catch (_) {}
+      }
+      return generated;
     } catch (err: any) {
       this.logger.warn(
         `Failed to generate presigned URL for ${bucket}/${objectKey}: ${err.message}`,

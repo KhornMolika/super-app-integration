@@ -124,12 +124,25 @@ async function handleProxy(request: Request, { params }: { params: Promise<{ pro
       }
     }
 
-    // Forward the request to the backend
-    let res = await fetch(`${BACKEND_URL}/${path}${searchParams}`, {
-      method: request.method,
-      headers,
-      body,
-    });
+    // Forward the request to the backend with timeout
+    let res: Response;
+    try {
+      res = await fetch(`${BACKEND_URL}/${path}${searchParams}`, {
+        method: request.method,
+        headers,
+        body,
+        signal: AbortSignal.timeout(10000),
+      });
+    } catch (fetchErr: any) {
+      return NextResponse.json(
+        {
+          statusCode: 503,
+          code: 'BACKEND_SERVICE_DOWN',
+          message: `Backend service is currently unreachable (${fetchErr.message || 'Connection Refused'}). It may be starting up or restarting.`,
+        },
+        { status: 503 },
+      );
+    }
 
     // If unauthorized (stale cookie, token expired, or backend restarted with new RSA keys),
     // automatically attempt a refresh with dev fallback and retry once
@@ -139,11 +152,14 @@ async function handleProxy(request: Request, { params }: { params: Promise<{ pro
       if (devToken) {
         newRefreshedToken = devToken;
         headers.set('Authorization', `Bearer ${devToken}`);
-        res = await fetch(`${BACKEND_URL}/${path}${searchParams}`, {
-          method: request.method,
-          headers,
-          body,
-        });
+        try {
+          res = await fetch(`${BACKEND_URL}/${path}${searchParams}`, {
+            method: request.method,
+            headers,
+            body,
+            signal: AbortSignal.timeout(10000),
+          });
+        } catch (_) {}
       }
     }
 

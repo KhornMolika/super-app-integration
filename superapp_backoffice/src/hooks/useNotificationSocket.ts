@@ -5,12 +5,15 @@ export function useNotificationSocket(onNotification: (notification: any) => voi
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const socketUrl =
-      process.env.NEXT_PUBLIC_SOCKET_URL ||
-      process.env.NEXT_PUBLIC_API_URL ||
-      (typeof window !== 'undefined'
-        ? `${window.location.protocol}//${window.location.hostname}:3000`
-        : 'http://localhost:3000');
+    let socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      const isProduction = hostname.includes('fintechcenterfsa.com') || process.env.NEXT_PUBLIC_ENVIRONMENT === 'PROD';
+      if (!isProduction && hostname !== 'localhost' && hostname !== '127.0.0.1') {
+        socketUrl = `${window.location.protocol}//${hostname}:3000`;
+      }
+    }
 
     // socket.io-client automatically handles exponential backoff reconnection
     const socket: Socket = io(socketUrl, {

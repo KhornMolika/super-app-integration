@@ -21,6 +21,10 @@ export interface ValidationFindingDto {
   category?: string;
   title: string;
   description: string;
+  engineId?: string;
+  filePath?: string;
+  lineNumber?: number;
+  cveId?: string;
   recommendation?: string;
 }
 
@@ -32,6 +36,7 @@ export interface ValidationCallbackDto {
   commitSha?: string;
   checks?: Record<string, any>;
   findings?: ValidationFindingDto[];
+  sbom?: Record<string, any>;
   reportPath?: string;
 }
 
@@ -151,6 +156,7 @@ export class ValidationCallbackController {
       method: dto.method,
       checks: dto.checks,
       findings: dto.findings || [],
+      sbom: dto.sbom || dto.checks?.sbom?.manifest || null,
       reportPath: dto.reportPath,
       commitSha: dto.commitSha,
       completedAt: new Date().toISOString(),
@@ -269,27 +275,40 @@ export class ValidationCallbackController {
       }
       app.validationStages = stages;
 
-      // Log findings as MiniAppIssues
+      // Log findings as MiniAppIssues (handling N multiple issues from Jenkins)
       const issuesToCreate: MiniAppIssue[] = [];
-      const criticalOrHigh = (dto.findings || []).filter(
-        (f) => f.severity === 'CRITICAL' || f.severity === 'HIGH',
+      const actionableFindings = (dto.findings || []).filter(
+        (f) => f.severity === 'CRITICAL' || f.severity === 'HIGH' || f.severity === 'MEDIUM',
       );
 
-      for (const finding of criticalOrHigh) {
+      for (const finding of actionableFindings) {
         issuesToCreate.push(
           this.issueRepository.create({
             miniAppId: app.id,
             type: 'SECURITY_CHECK',
             severity: finding.severity,
-            description: `[${finding.id}] ${finding.title}: ${finding.description}. Remediation: ${finding.recommendation || 'N/A'}`,
+            description: `[${finding.id}] ${finding.title}: ${finding.description}. Remediation: ${finding.recommendation || 'Follow Super App security guidelines.'}`,
             status: 'OPEN',
-            metadata: { findingId: finding.id, category: finding.category },
+            metadata: {
+              findingId: finding.id,
+              category: finding.category,
+              engineId: (finding as any).engineId || finding.category,
+              filePath: (finding as any).filePath,
+              lineNumber: (finding as any).lineNumber,
+              cveId: (finding as any).cveId,
+              recommendation: finding.recommendation,
+            },
           }),
         );
       }
 
       if (issuesToCreate.length > 0) {
         await this.issueRepository.save(issuesToCreate);
+      }
+
+      if (dto.sbom) {
+        if (!app.validationReport) app.validationReport = {};
+        app.validationReport.sbom = dto.sbom;
       }
 
       await this.miniappRepository.save(app);
@@ -299,12 +318,13 @@ export class ValidationCallbackController {
         miniAppId: app.id,
         stages: app.validationStages,
         validationStatus: 'FAILED',
+        validationReport: app.validationReport,
       });
 
       await this.notificationsService.createNotification(
         app.ownerId || '',
         'Automated Validation Failed',
-        `${app.name || 'Mini App'} failed automated ${dto.method} security checks with ${criticalOrHigh.length} blocking issue(s). Status reset to DRAFT.`,
+        `${app.name || 'Mini App'} failed automated ${dto.method} security checks with ${actionableFindings.length} issue(s) across engines. Status reset to DRAFT.`,
         'ISSUE_CREATED',
         app.id,
       );
@@ -330,7 +350,7 @@ export class ValidationCallbackController {
         newValue: {
           status: 'DRAFT',
           validationStatus: 'FAILED',
-          issuesCount: criticalOrHigh.length,
+          issuesCount: actionableFindings.length,
         },
       });
 
@@ -338,7 +358,7 @@ export class ValidationCallbackController {
         success: true,
         newStatus: 'DRAFT',
         validationStatus: 'FAILED',
-        issuesCount: criticalOrHigh.length,
+        issuesCount: actionableFindings.length,
       };
     }
   }

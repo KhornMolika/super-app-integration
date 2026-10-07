@@ -168,31 +168,26 @@ pipeline {
                     AUTH_OPT="-u \${NEXUS_USER}:\${NEXUS_PASSWORD}"
 
                     # Sync newly compiled APK from host/backend/nexus into Jenkins reports volume
-                    curl -s -f \$AUTH_OPT "${params.NEXUS_URL}/repository/apk-releases/${params.APP_NAME}/${params.RELEASE_VERSION}/app-release.apk" -o "\$APK_FILE" || \
-                    curl -s -f "http://host.docker.internal:3002/api/download-apk?type=${buildType}&version=${params.RELEASE_VERSION}" -o "\$APK_FILE" || \
+                    curl -s -f \$AUTH_OPT "${params.NEXUS_URL}/repository/apk-test-builds/${params.APP_NAME}/${params.RELEASE_VERSION}/app-release.apk" -o "\$APK_FILE" || \
+                    curl -s -f "http://host.docker.internal:3002/api/download-apk?type=test&version=${params.RELEASE_VERSION}" -o "\$APK_FILE" || \
                     curl -s -f "http://host.docker.internal:3000/public/superapp-test.apk" -o "\$APK_FILE" || true
 
                     if [ -f "\$APK_FILE" ] && [ -s "\$APK_FILE" ]; then
                         echo "Uploading ${filename} to Sonatype Nexus apk-test-builds repository..."
-                        # Publish primary artifact to apk-test-builds
+                        # Publish primary artifact to apk-test-builds (never apk-releases during test builds)
                         curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-test-builds/${params.APP_NAME}/${params.RELEASE_VERSION}/app-release.apk" || \
                         curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "http://superapp-nexus:8081/repository/apk-test-builds/${params.APP_NAME}/${params.RELEASE_VERSION}/app-release.apk"
 
                         # Update latest pointer in apk-test-builds
                         curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-test-builds/${params.APP_NAME}/latest/app-release.apk" 2>/dev/null || true
 
-                        # Upload standardized test APK name to Nexus
+                        # Upload standardized test APK name to Nexus apk-test-builds
                         curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-test-builds/${params.APP_NAME}/${params.RELEASE_VERSION}/superapp-test-${params.RELEASE_VERSION}.apk" 2>/dev/null || true
-                        # Also alias to app-debug.apk so legacy URLs retrieve the small optimized build
+                        # Also alias to app-debug.apk so legacy URLs retrieve the build
                         curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-test-builds/${params.APP_NAME}/${params.RELEASE_VERSION}/app-debug.apk" 2>/dev/null || true
                         curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-test-builds/${params.APP_NAME}/latest/app-debug.apk" 2>/dev/null || true
 
-                        # If release build, also publish to apk-releases
-                        if [ "${buildType}" = "release" ]; then
-                            curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-releases/${params.APP_NAME}/${params.RELEASE_VERSION}/app-release.apk" 2>/dev/null || true
-                            curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-releases/${params.APP_NAME}/latest/app-release.apk" 2>/dev/null || true
-                        fi
-                        echo "Upload to Sonatype Nexus successfully completed!"
+                        echo "Upload to Sonatype Nexus apk-test-builds successfully completed!"
                     else
                         echo "Warning: \$APK_FILE not found, packaging build metadata archive..."
                         mkdir -p /var/reports
@@ -210,8 +205,6 @@ pipeline {
                         if (token) headers["x-callback-token"] = token;
 
                         const buildType = "${params.BUILD_TYPE}";
-                        const repoName = buildType === "release" ? "apk-releases" : "apk-test-builds";
-                        const stageLabel = buildType === "release" ? "Production Release Publishing (apk-releases)" : "Test Build Publishing (apk-test-builds)";
                         fetch(callbackUrl, {
                             method: "POST",
                             headers: headers,
@@ -219,9 +212,9 @@ pipeline {
                                 appName: "${params.APP_NAME}",
                                 releaseVersion: "${params.RELEASE_VERSION}",
                                 stageId: "publish",
-                                stageName: "3. " + stageLabel,
+                                stageName: "3. Test Build Publishing (apk-test-builds)",
                                 status: "COMPLETED",
-                                details: "Published " + buildType + " APK artifacts to Sonatype Nexus " + repoName + "/${params.APP_NAME}/${params.RELEASE_VERSION}/."
+                                details: "Published " + buildType + " test APK artifacts to Sonatype Nexus apk-test-builds/${params.APP_NAME}/${params.RELEASE_VERSION}/."
                             })
                         }).catch(() => {});
                     ' || true

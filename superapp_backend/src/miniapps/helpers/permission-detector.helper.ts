@@ -156,23 +156,36 @@ export class PermissionDetectorHelper {
 
           const lower = combinedCode.toLowerCase();
 
-          // Scan Super App JS Bridge (SuperAppJSBridge)
-          const hasBridge = lower.includes('superappjsbridge');
+          // Scan Super App JS Bridge (FSASuperApp / @fsasuperapp/sdk / legacy SuperAppJSBridge)
+          const hasBridge =
+            lower.includes('fsasuperapp') ||
+            lower.includes('superappjsbridge') ||
+            lower.includes('@fsasuperapp/sdk');
 
           if (
+            lower.includes('scanqrcode') ||
             lower.includes('opencamera') ||
             lower.includes('capturephoto') ||
+            lower.includes('takephoto') ||
+            lower.includes('pickimage') ||
+            lower.includes('chooseimage') ||
             lower.includes('scanqr') ||
             lower.includes('barcode') ||
             lower.includes('getusermedia')
           ) {
+            const isPhoto =
+              lower.includes('takephoto') ||
+              lower.includes('capturephoto') ||
+              lower.includes('pickimage') ||
+              lower.includes('chooseimage');
             addPerm(
               'Camera',
               'To scan QR codes and capture verification photos',
-              hasBridge &&
-                (lower.includes('opencamera') || lower.includes('capturephoto'))
-                ? 'JS Bridge: SuperAppJSBridge (openCamera)'
-                : 'Code Scan (Camera API)',
+              hasBridge
+                ? isPhoto
+                  ? 'JS Bridge: FSASuperApp.takePhoto()'
+                  : 'JS Bridge: FSASuperApp.scanQRCode()'
+                : 'Code Scan (Camera / Photo API)',
               'HIGH',
             );
           }
@@ -186,14 +199,15 @@ export class PermissionDetectorHelper {
             addPerm(
               'Location',
               'To provide location-based services and map features',
-              hasBridge && lower.includes('getlocation')
-                ? 'JS Bridge: SuperAppJSBridge (getLocation)'
+              hasBridge
+                ? 'JS Bridge: FSASuperApp.getLocation()'
                 : 'Code Scan (Geolocation API)',
               'HIGH',
             );
           }
 
           if (
+            lower.includes('authenticatebiometric') ||
             lower.includes('authenticate') ||
             lower.includes('publickeycredential') ||
             lower.includes('webauthn') ||
@@ -203,9 +217,24 @@ export class PermissionDetectorHelper {
             addPerm(
               'Biometrics',
               'To authenticate user identity and authorize transactions securely',
-              hasBridge && lower.includes('authenticate')
-                ? 'JS Bridge: SuperAppJSBridge (authenticate)'
+              hasBridge
+                ? 'JS Bridge: FSASuperApp.authenticateBiometric()'
                 : 'Code Scan (WebAuthn / Biometrics)',
+              'HIGH',
+            );
+          }
+
+          if (
+            lower.includes('requestpayment') ||
+            lower.includes('paymentrequest') ||
+            lower.includes('makepayment')
+          ) {
+            addPerm(
+              'Payment',
+              'To process secure in-app payments and transfers',
+              hasBridge
+                ? 'JS Bridge: FSASuperApp.requestPayment()'
+                : 'Code Scan (Payment API)',
               'HIGH',
             );
           }
@@ -219,10 +248,8 @@ export class PermissionDetectorHelper {
             addPerm(
               'Microphone',
               'To record voice notes and enable speech input',
-              hasBridge &&
-                (lower.includes('openmicrophone') ||
-                  lower.includes('recordaudio'))
-                ? 'JS Bridge: SuperAppJSBridge (openMicrophone)'
+              hasBridge
+                ? 'JS Bridge: FSASuperApp (openMicrophone)'
                 : 'Code Scan (Audio / Microphone)',
               'HIGH',
             );
@@ -236,7 +263,7 @@ export class PermissionDetectorHelper {
             addPerm(
               'NFC',
               'To scan contactless NFC tags and identity chips',
-              'JS Bridge: SuperAppJSBridge (nfcScan)',
+              'JS Bridge: FSASuperApp (nfcScan)',
               'HIGH',
             );
           }
@@ -245,8 +272,8 @@ export class PermissionDetectorHelper {
             addPerm(
               'Bluetooth',
               'To communicate with nearby Bluetooth devices',
-              hasBridge && lower.includes('openbluetooth')
-                ? 'JS Bridge: SuperAppJSBridge (openBluetooth)'
+              hasBridge
+                ? 'JS Bridge: FSASuperApp (openBluetooth)'
                 : 'Code Scan (Bluetooth)',
               'MEDIUM',
             );
@@ -259,7 +286,7 @@ export class PermissionDetectorHelper {
             addPerm(
               'Contacts',
               'To select recipients and contacts from the address book',
-              'JS Bridge: SuperAppJSBridge (getContacts)',
+              'JS Bridge: FSASuperApp (getContacts)',
               'MEDIUM',
             );
           }

@@ -2,7 +2,7 @@ import { TelegramInlineButton, TelegramCardMetadata } from './telegram.types';
 
 export class TelegramCardHelper {
   /**
-   * Builds distinct, beautifully formatted Telegram status cards with action buttons
+   * Builds distinct, clean, modern, and minimalist Telegram status cards with action buttons
    */
   static buildRichCard(
     title: string,
@@ -29,51 +29,44 @@ export class TelegramCardHelper {
         const teamName = (metadata?.teamName as string) || 'Engineering Team';
 
         const text = `
-🟢 <b>[REGISTERED] NEW MINI APP REGISTERED</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📱 <b>Mini App:</b> ${appDisplayName}
-🏷️ <b>Method:</b> <code>${method}</code>
-📁 <b>Category:</b> ${category}
+🟢 <b>NEW MINI APP REGISTERED</b>
+
+📱 <b>App:</b> ${appDisplayName}
+🏷️ <b>Method:</b> <code>${method}</code>  •  <b>Category:</b> ${category}
 👥 <b>Team:</b> ${teamName}
 
 <pre><code class="language-diff">
-+ [REGISTERED] Application profile created
-+ [STATUS]     Draft initialized & queued for verification
-+ [INTEGRATION] ${method}
++ Profile      : Created & Initialized
++ Integration  : ${method}
++ Security     : Pre-flight scan queued
 </code></pre>
 
-<blockquote>Mini App <b>"${appDisplayName}"</b> has been registered on the Super App Gateway and is undergoing automated pre-flight security scanning.</blockquote>
-
-🔗 <b>Action Links:</b>
-👉 <a href="${detailsUrl}"><b>Open Mini App in Backoffice</b></a>
+<blockquote>Mini App <b>"${appDisplayName}"</b> registered successfully on the Super App Gateway.</blockquote>
         `.trim();
 
-        buttons.push([{ text: '🔍 View Mini App in Portal', url: detailsUrl }]);
+        buttons.push([{ text: '🔍 View in Backoffice', url: detailsUrl }]);
         return { text, buttons };
       }
 
       case 'VALIDATION_RUNNING':
       case 'SCAN_STARTED': {
         const text = `
-🔵 <b>[IN PROGRESS] VALIDATION SCAN RUNNING</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━
-📱 <b>Mini App:</b> ${appDisplayName}
-⚙️ <b>Status:</b> Automated Security Verification Started
+🔵 <b>VALIDATION SCAN RUNNING</b>
+
+📱 <b>App:</b> ${appDisplayName}
+⚙️ <b>Status:</b> Automated Security Verification In Progress
 
 <pre><code class="language-diff">
-! Static Code SAST Scan   : In Progress...
-! Package Integrity Check : Running
-! Network Boundary (SSRF) : Probing
-! Web Sandbox Build       : Queued
+! SAST Code Scan      : Analyzing source...
+! Dependency Check    : Verifying integrity
+! SSRF Boundary       : Testing network scope
+! Sandbox Container   : Queued
 </code></pre>
 
-<blockquote>Automated security engines are verifying network SSRF boundaries, TLS certificates, and sandboxed bridge capabilities.</blockquote>
-
-🔗 <b>Action Links:</b>
-👉 <a href="${detailsUrl}"><b>View Security Scan in Backoffice</b></a>
+<blockquote>Automated security engines are verifying network boundaries, TLS integrity, and sandboxed bridge capabilities.</blockquote>
         `.trim();
 
-        buttons.push([{ text: '🔍 View in Backoffice', url: detailsUrl }]);
+        buttons.push([{ text: '🔍 View Security Scan', url: detailsUrl }]);
         return { text, buttons };
       }
 
@@ -81,23 +74,20 @@ export class TelegramCardHelper {
       case 'SECURITY_PASSED': {
         const score = metadata?.score ?? 100;
         const text = `
-🟢 <b>[PASSED] AUTOMATED VALIDATION VERIFIED</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📱 <b>Mini App:</b> ${appDisplayName}
-🏆 <b>Score:</b> <b>${score} / 100</b> (Compliance Verified)
+🟢 <b>AUTOMATED VALIDATION VERIFIED</b>
+
+📱 <b>App:</b> ${appDisplayName}
+🏆 <b>Score:</b> <b>${score} / 100</b> (Verified)
 🛡️ <b>Status:</b> All Security Checks Passed
 
 <pre><code class="language-diff">
-+ [PASS] Static Analysis (SAST) : 0 Critical Findings
-+ [PASS] Network Boundary (SSRF): Verified Secure
-+ [PASS] API Association Digest : Signature Valid
-+ [PASS] Capability Gatekeeper  : Approved
++ SAST Analysis  : Passed (0 critical)
++ SSRF Boundary  : Verified Secure
++ API Signature  : Valid
++ Gatekeeper     : Approved
 </code></pre>
 
-<blockquote>Application compliance verified. Status has advanced to <b>IN_REVIEW</b> for administrator review.</blockquote>
-
-🔗 <b>Action Links:</b>
-👉 <a href="${detailsUrl}"><b>View Full Audit Report in Backoffice</b></a>
+<blockquote>Security compliance verified. Application has advanced to <b>IN_REVIEW</b> for admin review.</blockquote>
         `.trim();
 
         buttons.push([
@@ -114,30 +104,27 @@ export class TelegramCardHelper {
           ? message
               .split('\n')
               .filter(Boolean)
-              .map((l) =>
-                l.trim().startsWith('-') || l.trim().startsWith('•')
-                  ? `- ${l.trim().replace(/^[-•]\s*/, '')}`
-                  : `- ${l.trim()}`,
-              )
+              .map((l) => {
+                const line = l.trim().replace(/^[-•!+]\s*/, '');
+                return `- Issue        : ${line}`;
+              })
               .join('\n')
-          : '- Security compliance gate requirements not satisfied';
+          : '- Issue        : Security compliance gate requirements not satisfied';
 
         const text = `
-🔴 <b>[ACTION REQUIRED] VALIDATION FAILED</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📱 <b>Mini App:</b> ${appDisplayName}
+🔴 <b>VALIDATION FAILED</b>
+
+📱 <b>App:</b> ${appDisplayName}
 ⚠️ <b>Score:</b> <b>${score} / 100</b> (Violations Detected)
 🛡️ <b>Status:</b> Compliance Gate Failed
 
 <pre><code class="language-diff">
-- [FAIL] Compliance Gate: Action Required
+- Compliance   : Policy Violations Detected
 ${cleanIssue}
+! Action       : Fix issues & re-submit
 </code></pre>
 
-<blockquote>Please address identified security policy violations in the backoffice and re-submit for validation.</blockquote>
-
-🔗 <b>Action Links:</b>
-👉 <a href="${detailsUrl}"><b>Remediate Violations in Backoffice</b></a>
+<blockquote>Please address identified security policy violations in the portal and re-submit.</blockquote>
         `.trim();
 
         buttons.push([
@@ -149,21 +136,19 @@ ${cleanIssue}
 
       case 'MINIAPP_APPROVED': {
         const text = `
-🟢 <b>[APPROVED] MINI APP APPROVED</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📱 <b>Mini App:</b> ${appDisplayName}
+🟢 <b>MINI APP APPROVED</b>
+
+📱 <b>App:</b> ${appDisplayName}
 👤 <b>Reviewer:</b> Super App Administrator
-🏢 <b>Status:</b> <b>APPROVED</b> (Scheduled for Build)
+🏢 <b>Status:</b> <b>APPROVED</b>
 
 <pre><code class="language-diff">
-+ [APPROVED] Review Decision: Mini App Approved
-+ [STATUS]   Queued for Super App assembly & test build packaging
++ Decision     : Approved for Super App
++ Pipeline     : Queued for assembly & packaging
++ Access       : Manifest capabilities enabled
 </code></pre>
 
-<blockquote>Mini App <b>"${appDisplayName}"</b> has been formally approved and queued for Super App test build assembly & sandbox packaging.</blockquote>
-
-🔗 <b>Action Links:</b>
-👉 <a href="${detailsUrl}"><b>View Mini App Details in Backoffice</b></a>
+<blockquote>Mini App <b>"${appDisplayName}"</b> has been formally approved and scheduled for test build assembly.</blockquote>
         `.trim();
 
         buttons.push([{ text: '🔍 View Mini App Details', url: detailsUrl }]);
@@ -177,22 +162,19 @@ ${cleanIssue}
           (metadata?.releaseVersion as string) ||
           'v1.0.0';
         const text = `
-🔵 <b>[BUILDING] SUPER APP BUILD IN PROGRESS</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📱 <b>Mini App:</b> ${appDisplayName}
+🔵 <b>SUPER APP BUILD IN PROGRESS</b>
+
+📱 <b>App:</b> ${appDisplayName}
 🏷️ <b>Version:</b> <code>${version}</code>
-⚙️ <b>Pipeline:</b> Jenkins Sandbox & Android APK Assembler
+⚙️ <b>Pipeline:</b> Jenkins Sandbox & APK Assembler
 
 <pre><code class="language-diff">
-! [BUILDING] Compiling Flutter Native Engine
-! [BUILDING] Resolving Package Dependencies
-! [BUILDING] Packaging Android APK & Web Sandbox
+! Flutter Engine : Compiling Native Core
+! Dependencies   : Resolving packages
+! Artifacts      : Generating Android APK & Web Sandbox
 </code></pre>
 
-<blockquote>Stand by while binary artifacts are assembled and uploaded to Sonatype Nexus repository.</blockquote>
-
-🔗 <b>Action Links:</b>
-👉 <a href="${detailsUrl}"><b>Monitor Build Progress in Backoffice</b></a>
+<blockquote>Stand by while binary artifacts are assembled and published to Sonatype Nexus.</blockquote>
         `.trim();
 
         buttons.push([{ text: '📊 View Build Progress', url: detailsUrl }]);
@@ -206,32 +188,25 @@ ${cleanIssue}
           'v0.2.1';
         const version = rawVer.startsWith('v') ? rawVer : `v${rawVer}`;
         const targetFilename = `superapp-test-${version}.apk`;
-        // Always route through the Backoffice streaming proxy endpoint to enforce the standardized download filename
         const apkUrl = `${baseUrl}/api/download-apk?type=test&version=${encodeURIComponent(version)}&appName=superapp`;
         const sandboxUrl = miniAppId
           ? `${baseUrl}/miniapps/${miniAppId}?preview=true`
           : `${baseUrl}/preview`;
 
         const text = `
-🟢 <b>[BUILD READY] SUPER APP TEST BUILD READY</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📱 <b>Mini App:</b> ${appDisplayName}
+🟢 <b>SUPER APP TEST BUILD READY</b>
+
+📱 <b>App:</b> ${appDisplayName}
 🏷️ <b>Version:</b> <code>${version}</code>
 📦 <b>Artifact:</b> <code>${targetFilename}</code>
-🚀 <b>Channels:</b> Android Test APK & Interactive Web Sandbox
 
 <pre><code class="language-diff">
-+ [READY] Test APK     : ${targetFilename}
-+ [READY] Web Sandbox  : Live & Interactive
-+ [READY] Release Tag  : ${version}
++ Test APK     : ${targetFilename}
++ Web Sandbox  : Live & Interactive
++ Release Tag  : ${version}
 </code></pre>
 
-<blockquote>Super App test binary packaging is complete! You can download the test APK (${targetFilename}) or launch the interactive Web Sandbox.</blockquote>
-
-🔗 <b>Action Links:</b>
-📲 <a href="${apkUrl}"><b>Download Test APK (${targetFilename})</b></a>
-🌐 <a href="${sandboxUrl}"><b>Launch Interactive Web Sandbox</b></a>
-🔍 <a href="${detailsUrl}"><b>View Details in Backoffice Portal</b></a>
+<blockquote>Super App test binary packaging is complete! You can download the test APK or launch the interactive Web Sandbox.</blockquote>
         `.trim();
 
         const actionRow: TelegramInlineButton[] = [];
@@ -254,26 +229,24 @@ ${cleanIssue}
           ? message
               .split('\n')
               .filter(Boolean)
-              .map((l) => `- ${l}`)
+              .map((l) => `- Error        : ${l.trim().replace(/^[-•!+]\s*/, '')}`)
               .join('\n')
-          : '- Fastlane packaging or Nexus publish failed';
+          : '- Error        : Fastlane packaging or Nexus publish failed';
 
         const text = `
-🔴 <b>[BUILD FAILED] SUPER APP BUILD ERROR</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📱 <b>Mini App:</b> ${appDisplayName}
+🔴 <b>SUPER APP BUILD ERROR</b>
+
+📱 <b>App:</b> ${appDisplayName}
 🏷️ <b>Version:</b> <code>${version}</code>
 ⚙️ <b>Pipeline:</b> Jenkins Assembler CI
 
 <pre><code class="language-diff">
-- [FAILED] Build Pipeline Failure
+- Pipeline     : Build & Assembly Failed
 ${cleanReason}
+! Action       : Check CI logs & retry
 </code></pre>
 
-<blockquote>The Super App build packaging failed. Please check the build logs in the portal to diagnose and remediate.</blockquote>
-
-🔗 <b>Action Links:</b>
-👉 <a href="${detailsUrl}"><b>View Build Logs & Diagnostics</b></a>
+<blockquote>The Super App build packaging failed. Please check the build logs in the portal to diagnose.</blockquote>
         `.trim();
 
         buttons.push([{ text: '🛠️ View Build Logs', url: detailsUrl }]);
@@ -285,26 +258,24 @@ ${cleanReason}
           ? message
               .split('\n')
               .filter(Boolean)
-              .map((l) => `! ${l}`)
+              .map((l) => `! Note         : ${l.trim().replace(/^[-•!+]\s*/, '')}`)
               .join('\n')
-          : '! Reviewer requested revisions before approval';
+          : '! Note         : Revisions requested before approval';
 
         const text = `
-🟡 <b>[CHANGES REQUESTED] REVIEW FEEDBACK</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📱 <b>Mini App:</b> ${appDisplayName}
+🟡 <b>CHANGES REQUESTED</b>
+
+📱 <b>App:</b> ${appDisplayName}
 👤 <b>Reviewer:</b> Super App Administrator
 📝 <b>Feedback:</b> ${message}
 
 <pre><code class="language-diff">
-! [ACTION REQUIRED] Reviewer Feedback:
+! Decision     : Changes Requested
 ${cleanFeedback}
+! Action       : Update & submit new revision
 </code></pre>
 
 <blockquote>Please review the requested changes in the Backoffice Portal and submit an updated revision.</blockquote>
-
-🔗 <b>Action Links:</b>
-👉 <a href="${detailsUrl}"><b>Update Mini App in Backoffice</b></a>
         `.trim();
 
         buttons.push([{ text: '✏️ Update Mini App', url: detailsUrl }]);
@@ -316,26 +287,23 @@ ${cleanFeedback}
           ? message
               .split('\n')
               .filter(Boolean)
-              .map((l) => `- ${l}`)
+              .map((l) => `- Reason       : ${l.trim().replace(/^[-•!+]\s*/, '')}`)
               .join('\n')
-          : '- Submission does not meet platform integration requirements';
+          : '- Reason       : Submission does not meet integration policies';
 
         const text = `
-🔴 <b>[REJECTED] REVIEW DECISION: MINI APP REJECTED</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📱 <b>Mini App:</b> ${appDisplayName}
+🔴 <b>MINI APP REJECTED</b>
+
+📱 <b>App:</b> ${appDisplayName}
 👤 <b>Decision:</b> Not Approved
 📝 <b>Reason:</b> ${message}
 
 <pre><code class="language-diff">
-- [REJECTED] Submission Not Approved
+- Decision     : Submission Rejected
 ${cleanReason}
 </code></pre>
 
 <blockquote>The submission for "${appDisplayName}" did not meet the required integration or compliance policies.</blockquote>
-
-🔗 <b>Action Links:</b>
-👉 <a href="${detailsUrl}"><b>View Decision in Portal</b></a>
         `.trim();
 
         buttons.push([{ text: '🔍 View Decision in Portal', url: detailsUrl }]);
@@ -344,21 +312,18 @@ ${cleanReason}
 
       case 'REVISION_SUBMITTED': {
         const text = `
-🟣 <b>[REVISION SUBMITTED] NEW REVISION INGESTED</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📱 <b>Mini App:</b> ${appDisplayName}
+🟣 <b>NEW REVISION INGESTED</b>
+
+📱 <b>App:</b> ${appDisplayName}
 📝 <b>Title:</b> ${title}
 📄 <b>Details:</b> ${message}
 
 <pre><code class="language-diff">
-! [REVISION] New Version Submitted
-! [STATUS]   Queued for Automated Security Scanning & Admin Review
+! Revision     : New Version Ingested
+! Status       : Queued for Security Scan & Review
 </code></pre>
 
 <blockquote>A new revision has been submitted for automated security scanning and administrator review.</blockquote>
-
-🔗 <b>Action Links:</b>
-👉 <a href="${detailsUrl}"><b>Review Proposed Revision in Backoffice</b></a>
         `.trim();
 
         buttons.push([{ text: '⚖️ Review Revision', url: detailsUrl }]);
@@ -376,23 +341,21 @@ ${cleanReason}
           ? message
               .split('\n')
               .filter(Boolean)
-              .map((l) => `${prefix} ${l.trim().replace(/^[-•]\s*/, '')}`)
+              .map((l) => `${prefix} Detail       : ${l.trim().replace(/^[-•!+]\s*/, '')}`)
               .join('\n')
-          : `${prefix} [DETAIL] Notification update`;
+          : `${prefix} Detail       : Notification update`;
 
         const text = `
-${badge} <b>${header}</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📱 <b>Mini App:</b> ${appDisplayName}
-<b>Title:</b> ${title}
+${badge} <b>${header.toUpperCase()}</b>
+
+📱 <b>App:</b> ${appDisplayName}
+📝 <b>Title:</b> ${title}
 
 <pre><code class="language-diff">
 ${detailLines}
 </code></pre>
 
-<i>Super App Management Gateway</i>
-
-${miniAppId ? `🔗 <b>Portal Link:</b> <a href="${detailsUrl}"><b>Open Backoffice</b></a>` : ''}
+<blockquote>${message || 'Super App Gateway notification update.'}</blockquote>
         `.trim();
 
         if (miniAppId) {

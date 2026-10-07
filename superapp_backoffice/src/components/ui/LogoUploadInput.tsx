@@ -37,6 +37,10 @@ export function LogoUploadInput({
   const [mounted, setMounted] = useState(false);
   const [inputMode, setInputMode] = useState<'upload' | 'url'>('upload');
   const [urlInput, setUrlInput] = useState<string>(value.startsWith('data:') ? '' : value);
+  const [zoomLevel, setZoomLevel] = useState<number>(1);
+  const [shapePreview, setShapePreview] = useState<'squircle' | 'circle' | 'square'>('squircle');
+  const [fitMode, setFitMode] = useState<'contain' | 'cover'>('contain');
+  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -47,6 +51,12 @@ export function LogoUploadInput({
       setUrlInput(value);
     }
   }, [value]);
+
+  useEffect(() => {
+    if (isPreviewOpen) {
+      setZoomLevel(1);
+    }
+  }, [isPreviewOpen]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -81,9 +91,10 @@ export function LogoUploadInput({
       return;
     }
 
-    // Validate size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setUploadError('Image size exceeds 5MB limit.');
+    // Validate size (max 2MB standard limit)
+    if (file.size > 2 * 1024 * 1024) {
+      setUploadError('Image size exceeds standard 2MB limit (recommended: 512×512 px square under 1MB).');
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
 
@@ -93,10 +104,59 @@ export function LogoUploadInput({
     const reader = new FileReader();
     reader.onload = (e) => {
       const dataUrl = e.target?.result as string;
-      if (dataUrl) {
-        onChange(dataUrl);
+      if (!dataUrl) {
+        setUploadError('Failed to read image data.');
+        setIsUploading(false);
+        return;
       }
-      setIsUploading(false);
+
+      // Validate dimensions & aspect ratio standard
+      const img = new Image();
+      img.onload = () => {
+        const width = img.naturalWidth || img.width;
+        const height = img.naturalHeight || img.height;
+        const ratio = width / height;
+
+        // Check 1: 1:1 Aspect Ratio Standard (tolerance 0.85 to 1.18)
+        if (ratio < 0.85 || ratio > 1.18) {
+          setUploadError(
+            `Non-standard aspect ratio (${width}×${height} px). Mini App logos must be 1:1 square (512×512 px recommended). Please crop your logo to a square and upload again.`,
+          );
+          onChange('');
+          setFileName('');
+          if (fileInputRef.current) fileInputRef.current.value = '';
+          setIsUploading(false);
+          return;
+        }
+
+        // Check 2: Minimum Resolution (128x128 px)
+        if (width < 128 || height < 128) {
+          setUploadError(
+            `Resolution too low (${width}×${height} px). Minimum required logo size is 128×128 px (512×512 px recommended). Please upload a higher resolution image.`,
+          );
+          onChange('');
+          setFileName('');
+          if (fileInputRef.current) fileInputRef.current.value = '';
+          setIsUploading(false);
+          return;
+        }
+
+        // Compliant standard logo
+        setImageDimensions({ width, height });
+        onChange(dataUrl);
+        setUploadError(null);
+        setIsUploading(false);
+      };
+
+      img.onerror = () => {
+        setUploadError('Failed to decode image. Please upload a valid PNG, JPG, WebP, or SVG file.');
+        onChange('');
+        setFileName('');
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        setIsUploading(false);
+      };
+
+      img.src = dataUrl;
     };
     reader.onerror = () => {
       setUploadError('Failed to read image file.');
@@ -343,13 +403,22 @@ export function LogoUploadInput({
       )}
 
       {displayError ? (
-        <p className="mt-1.5 text-sm text-rose-600 font-medium flex items-center gap-1.5">
-          <XCircleIcon className="w-4 h-4 text-rose-500 shrink-0" />
-          <span>{displayError}</span>
-        </p>
+        <div className="mt-2 p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 flex items-start justify-between gap-3 text-sm animate-in fade-in duration-150">
+          <div className="flex items-start gap-2 text-rose-700 dark:text-rose-300">
+            <XCircleIcon className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+            <span>{displayError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="shrink-0 px-2.5 py-1 text-xs font-semibold rounded-lg bg-rose-600 hover:bg-rose-700 text-white transition-colors shadow-xs cursor-pointer"
+          >
+            Upload Again
+          </button>
+        </div>
       ) : (
         <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
-          {helperText || 'PNG, JPG, SVG or WebP (square recommended, max 5MB)'}
+          {helperText || 'PNG, JPG, SVG or WebP • 1:1 Squircle (512×512 px recommended, max 2MB)'}
         </p>
       )}
 
@@ -392,28 +461,165 @@ export function LogoUploadInput({
               </button>
             </div>
 
-            {/* Modal Body: Checkerboard Container */}
-            <div className="p-6 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950/50">
-              <div className="relative w-48 h-48 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-lg bg-[repeating-conic-gradient(#f1f5f9_0%_25%,#ffffff_0%_50%)] dark:bg-[repeating-conic-gradient(#1e293b_0%_25%,#0f172a_0%_50%)] bg-[length:16px_16px] flex items-center justify-center p-3">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={value}
-                  alt="Full Logo Preview"
-                  className="w-full h-full object-contain drop-shadow-sm"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/fsa-logo.png';
-                  }}
-                />
+            {/* Modal Body */}
+            <div className="p-6 flex flex-col items-center bg-slate-50 dark:bg-slate-950/50 space-y-4">
+              
+              {/* Controls Bar: Shape Selector & Zoom Controls */}
+              <div className="w-full flex items-center justify-between gap-2 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm text-xs">
+                {/* Shape Selector */}
+                <div className="flex items-center gap-1">
+                  <span className="text-slate-400 font-medium px-1.5">Shape:</span>
+                  <button
+                    type="button"
+                    onClick={() => setShapePreview('squircle')}
+                    className={`px-2 py-1 rounded-lg font-medium transition-colors ${
+                      shapePreview === 'squircle'
+                        ? 'bg-brand-600 text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    Squircle
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShapePreview('circle')}
+                    className={`px-2 py-1 rounded-lg font-medium transition-colors ${
+                      shapePreview === 'circle'
+                        ? 'bg-brand-600 text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    Circle
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShapePreview('square')}
+                    className={`px-2 py-1 rounded-lg font-medium transition-colors ${
+                      shapePreview === 'square'
+                        ? 'bg-brand-600 text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    Square
+                  </button>
+                </div>
+
+                {/* Zoom In / Out Controls */}
+                <div className="flex items-center gap-1 border-l border-slate-200 dark:border-slate-800 pl-2">
+                  <button
+                    type="button"
+                    onClick={() => setZoomLevel((z) => Math.max(0.5, Number((z - 0.25).toFixed(2))))}
+                    disabled={zoomLevel <= 0.5}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 font-bold hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors"
+                    title="Zoom Out"
+                  >
+                    -
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setZoomLevel(1)}
+                    className="px-2 py-1 text-slate-700 dark:text-slate-200 font-mono font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
+                    title="Reset to 100%"
+                  >
+                    {Math.round(zoomLevel * 100)}%
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setZoomLevel((z) => Math.min(3.0, Number((z + 0.25).toFixed(2))))}
+                    disabled={zoomLevel >= 3.0}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 font-bold hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors"
+                    title="Zoom In"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              {/* Main Interactive Preview Canvas */}
+              <div className="relative w-56 h-56 flex items-center justify-center border border-slate-200 dark:border-slate-800 shadow-inner bg-[repeating-conic-gradient(#f1f5f9_0%_25%,#ffffff_0%_50%)] dark:bg-[repeating-conic-gradient(#1e293b_0%_25%,#0f172a_0%_50%)] bg-[length:16px_16px] rounded-2xl overflow-hidden p-2">
+                <div
+                  className={`w-48 h-48 overflow-hidden transition-all duration-200 border border-slate-300/80 dark:border-slate-700/80 bg-white/40 dark:bg-slate-900/40 shadow-md flex items-center justify-center ${
+                    shapePreview === 'circle'
+                      ? 'rounded-full'
+                      : shapePreview === 'squircle'
+                      ? 'rounded-3xl'
+                      : 'rounded-none'
+                  }`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={value}
+                    alt="Full Logo Preview"
+                    style={{
+                      transform: `scale(${zoomLevel})`,
+                      transition: 'transform 0.15s ease-out',
+                    }}
+                    className={`w-full h-full ${
+                      fitMode === 'cover' ? 'object-cover' : 'object-contain'
+                    } drop-shadow-xs`}
+                    onLoad={(e) => {
+                      const img = e.currentTarget;
+                      setImageDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+                    }}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/fsa-logo.png';
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Fit Mode & Aspect Ratio Diagnostics */}
+              <div className="w-full flex items-center justify-between text-xs px-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">Fit:</span>
+                  <button
+                    type="button"
+                    onClick={() => setFitMode('contain')}
+                    className={`px-2 py-0.5 rounded font-medium ${
+                      fitMode === 'contain'
+                        ? 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-100 font-semibold'
+                        : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                    }`}
+                  >
+                    Contain (Full)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFitMode('cover')}
+                    className={`px-2 py-0.5 rounded font-medium ${
+                      fitMode === 'cover'
+                        ? 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-100 font-semibold'
+                        : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                    }`}
+                  >
+                    Cover (Fill)
+                  </button>
+                </div>
+
+                {imageDimensions && (
+                  <span
+                    className={`px-2 py-0.5 rounded font-mono font-medium ${
+                      Math.abs(imageDimensions.width - imageDimensions.height) <= 2
+                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                        : 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
+                    }`}
+                  >
+                    {imageDimensions.width}x{imageDimensions.height} px{' '}
+                    {Math.abs(imageDimensions.width - imageDimensions.height) <= 2
+                      ? '(1:1 Standard)'
+                      : '(Non-Square)'}
+                  </span>
+                )}
               </div>
 
               {/* Store App Icon Simulation */}
-              <div className="mt-5 flex items-center gap-3.5 p-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl w-full shadow-sm">
-                <div className="w-12 h-12 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shrink-0 shadow-sm flex items-center justify-center">
+              <div className="flex items-center gap-3.5 p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl w-full shadow-xs">
+                <div className="w-12 h-12 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shrink-0 shadow-xs flex items-center justify-center">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={value}
                     alt="App icon simulator"
-                    className="w-full h-full object-cover"
+                    className={`w-full h-full ${fitMode === 'cover' ? 'object-cover' : 'object-contain'}`}
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = '/fsa-logo.png';
                     }}
@@ -421,10 +627,10 @@ export function LogoUploadInput({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
-                    Home Launcher Icon
+                    Launcher Icon Preview
                   </p>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    How users see this Mini App in the Super App store
+                    Rendered with 1:1 squircle mask in Super App home grid
                   </p>
                 </div>
               </div>
@@ -432,8 +638,8 @@ export function LogoUploadInput({
 
             {/* Modal Footer */}
             <div className="flex items-center justify-between px-5 py-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
-              <span className="text-sm text-slate-500 dark:text-slate-400 font-medium">
-                {value.startsWith('data:') ? 'Local Preview (Uploaded to MinIO on submit)' : 'MinIO Object Storage Asset'}
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate max-w-[180px]">
+                {value.startsWith('data:') ? 'Local file uploaded' : 'Direct URL asset'}
               </span>
               <div className="flex items-center gap-2">
                 <button
@@ -442,14 +648,14 @@ export function LogoUploadInput({
                     setIsPreviewOpen(false);
                     fileInputRef.current?.click();
                   }}
-                  className="px-3.5 py-2 text-sm font-medium rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                  className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                 >
                   Change Image
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsPreviewOpen(false)}
-                  className="px-4 py-2 text-sm font-semibold rounded-xl bg-brand-600 text-white hover:bg-brand-700 transition-colors shadow-sm"
+                  className="px-4 py-1.5 text-xs font-semibold rounded-lg bg-brand-600 text-white hover:bg-brand-700 transition-colors shadow-xs"
                 >
                   Close
                 </button>

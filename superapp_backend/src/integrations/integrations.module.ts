@@ -21,6 +21,11 @@ import { DomainVerificationService } from './webview/domain-verification.service
 import { ValidationCallbackController } from './validation/validation-callback.controller';
 import { JenkinsService } from './jenkins/jenkins.service';
 import { LocalSecurityScannerService } from './validation/local-security-scanner.service';
+import { ScanFinalizerService } from './validation/scan-finalizer.service';
+import { WebViewSecurityScanner } from './validation/scanners/webview-security.scanner';
+import { FlutterPackageSecurityScanner } from './validation/scanners/flutter-package-security.scanner';
+import { NativeSdkSecurityScanner } from './validation/scanners/native-sdk-security.scanner';
+import { DeepLinkSecurityScanner } from './validation/scanners/deep-link-security.scanner';
 import { PubspecInjectorService } from './flutter/pubspec-injector.service';
 import { PubspecPrecheckService } from './flutter/pubspec-precheck.service';
 import { SandboxBuildManagerService } from './flutter/sandbox-build-manager.service';
@@ -51,6 +56,11 @@ import { PubspecInjectorController } from './flutter/pubspec-injector.controller
     ReleaseAssemblyVerificationService,
     DomainVerificationService,
     JenkinsService,
+    ScanFinalizerService,
+    WebViewSecurityScanner,
+    FlutterPackageSecurityScanner,
+    NativeSdkSecurityScanner,
+    DeepLinkSecurityScanner,
     LocalSecurityScannerService,
     PubspecInjectorService,
     PubspecPrecheckService,
@@ -66,6 +76,11 @@ import { PubspecInjectorController } from './flutter/pubspec-injector.controller
     ReleaseAssemblyVerificationService,
     DomainVerificationService,
     JenkinsService,
+    ScanFinalizerService,
+    WebViewSecurityScanner,
+    FlutterPackageSecurityScanner,
+    NativeSdkSecurityScanner,
+    DeepLinkSecurityScanner,
     LocalSecurityScannerService,
     PubspecInjectorService,
     PubspecPrecheckService,

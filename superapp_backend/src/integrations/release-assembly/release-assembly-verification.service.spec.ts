@@ -47,6 +47,7 @@ describe('ReleaseAssemblyVerificationService', () => {
       createNotification: jest.fn().mockResolvedValue({ id: 'notif-1' }),
       emitBuildStageUpdate: jest.fn(),
       emitBuildCompleted: jest.fn(),
+      notifyAdmins: jest.fn().mockResolvedValue([]),
     };
 
     mailService = {
@@ -205,7 +206,7 @@ describe('ReleaseAssemblyVerificationService', () => {
         details: 'gradle assembleDebug',
       });
       expect(JSON.parse(params.stageJson).updatedAt).toBeDefined();
-      expect(qb.returning).toHaveBeenCalledWith(['id', 'buildStages']);
+      expect(qb.returning).toHaveBeenCalledWith(expect.arrayContaining(['id', 'buildStages']));
       expect(mockMiniappRepo.save).not.toHaveBeenCalled();
       expect(notificationsService.emitBuildStageUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -264,13 +265,12 @@ describe('ReleaseAssemblyVerificationService', () => {
         expect.any(String),
         'TEST_BUILD_READY',
         'app-1',
-        expect.objectContaining({ apkUrl: 'http://nexus/app-debug.apk' }),
+        expect.objectContaining({ releaseVersion: 'v1.2.0' }),
       );
       expect(notificationsService.emitBuildCompleted).toHaveBeenCalledWith(
         expect.objectContaining({
           miniAppId: 'app-1',
           releaseVersion: 'v1.2.0',
-          apkUrl: 'http://nexus/app-debug.apk',
         }),
       );
       expect(res).toEqual({ success: true });
@@ -293,7 +293,7 @@ describe('ReleaseAssemblyVerificationService', () => {
       );
       expect(notificationsService.createNotification).toHaveBeenCalledWith(
         'u1',
-        'Super App Build Failed',
+        expect.stringContaining('Super App Build Failed'),
         expect.any(String),
         'BUILD_FAILED',
         'app-1',

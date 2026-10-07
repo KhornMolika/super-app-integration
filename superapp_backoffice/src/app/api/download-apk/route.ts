@@ -173,9 +173,9 @@ export async function GET(request: NextRequest) {
   ];
 
   for (const localPath of localCandidates) {
-    if (fs.existsSync(localPath)) {
-      const stats = fs.statSync(localPath);
-      const fileBuffer = fs.readFileSync(localPath);
+    if (fs.existsSync(/*turbopackIgnore: true*/ localPath)) {
+      const stats = fs.statSync(/*turbopackIgnore: true*/ localPath);
+      const fileBuffer = fs.readFileSync(/*turbopackIgnore: true*/ localPath);
       const match = localPath.match(/v(\d+\.\d+\.\d+)/);
       const canonicalFilename = getStandardizedFilename(match ? `v${match[1]}` : undefined);
 

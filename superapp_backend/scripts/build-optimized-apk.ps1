@@ -1,45 +1,65 @@
-param(
-    [ValidateSet("prod", "local", "usb", "custom")]
-    [string]$Target = $(if ($env:SUPERAPP_TARGET_ENV) { $env:SUPERAPP_TARGET_ENV } else { "prod" }),
-    [string]$ApiBaseUrl = "",
-    [string]$ReleaseVersion = "v0.0.1",
-    [string]$BuildType = $(if ($env:SUPERAPP_TEST_APK_BUILD_MODE) { $env:SUPERAPP_TEST_APK_BUILD_MODE } else { "release" }),
-    [string]$AppName = "superapp"
-)
+    param(
+        [ValidateSet("prod", "local", "usb", "custom")]
+        [string]$Target = $(if ($env:SUPERAPP_TARGET_ENV) { $env:SUPERAPP_TARGET_ENV } else { "prod" }),
+        [string]$ApiBaseUrl = "",
+        [string]$ReleaseVersion = "v0.0.1",
+        [string]$BuildType = $(if ($env:SUPERAPP_TEST_APK_BUILD_MODE) { $env:SUPERAPP_TEST_APK_BUILD_MODE } else { "release" }),
+        [string]$AppName = "superapp",
+        [switch]$OfficialRelease = $false
+    )
 
-# Resolve Target Backend API dynamically
+function Get-DynamicLanIp {
+    # 1. Primary: OS routing table via dummy UDP connect (100% accurate on active network)
+    try {
+        $socket = New-Object System.Net.Sockets.Socket([System.Net.Sockets.AddressFamily]::InterNetwork, [System.Net.Sockets.SocketType]::Dgram, [System.Net.Sockets.ProtocolType]::Udp)
+        $socket.Connect("8.8.8.8", 65530)
+        $ip = $socket.LocalEndPoint.Address.IPAddressToString
+        $socket.Close()
+        if ($ip -and $ip -notmatch '^(127\.|169\.254\.|0\.)') { return $ip }
+    } catch {}
+
+    # 2. Secondary: Active Wi-Fi or Wireless adapter
+    try {
+        $wifi = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+            Where-Object { $_.InterfaceAlias -match "Wi-Fi|Wireless|WLAN" -and $_.IPAddress -notmatch '^(127\.|169\.254\.|0\.)' } |
+            Select-Object -First 1
+        if ($wifi) { return $wifi.IPAddress }
+    } catch {}
+
+    # 3. Tertiary: Physical Ethernet or LAN adapter (excluding virtual/WSL adapters)
+    try {
+        $adapter = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+            Where-Object { $_.InterfaceAlias -notmatch "vEthernet|WSL|Loopback|Virtual|Hyper-V|VMware|VirtualBox" -and $_.IPAddress -notmatch '^(127\.|169\.254\.|0\.)' } |
+            Sort-Object InterfaceIndex |
+            Select-Object -First 1
+        if ($adapter) { return $adapter.IPAddress }
+    } catch {}
+
+    return "127.0.0.1"
+}
+
+# Resolve Target Backend API dynamically based on environment mode
+$IsProd = ($Target -eq "prod") -or ($env:ENVIRONMENT -match "prod") -or ($env:NODE_ENV -eq "production")
+
 if (-not $ApiBaseUrl) {
-    if ($env:MOBILE_API_BASE_URL) {
-        $ApiBaseUrl = $env:MOBILE_API_BASE_URL
+    if ($IsProd) {
+        $ApiBaseUrl = if ($env:MOBILE_API_BASE_URL -and $env:MOBILE_API_BASE_URL -match "^https?://") { $env:MOBILE_API_BASE_URL } else { "https://app.fintechcenterfsa.com/api" }
     } elseif ($Target -eq "usb") {
         # ADB Reverse via USB Cable (phone connects to laptop port 3000 through USB)
         $ApiBaseUrl = "http://127.0.0.1:3000"
-    } elseif ($Target -eq "local") {
-        # Auto-detect real local Wi-Fi LAN IP or fallback to 192.168.10.35
-        try {
-            $wifi = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
-                Where-Object { $_.InterfaceAlias -match "Wi-Fi|Wireless|WLAN" -and $_.IPAddress -notmatch "^169\.254\." } |
-                Select-Object -First 1
-            if ($wifi) {
-                $lanIp = $wifi.IPAddress
-            } else {
-                $lanIp = (Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
-                    Where-Object { $_.InterfaceAlias -notmatch "vEthernet|WSL|Loopback|Virtual|Hyper-V|VMware|VirtualBox|Ethernet" -and ($_.IPAddress -like "192.168.*" -or $_.IPAddress -like "10.*") } |
-                    Select-Object -First 1).IPAddress
-            }
-        } catch {}
-        if (-not $lanIp) { $lanIp = "192.168.10.35" }
-        $ApiBaseUrl = "http://${lanIp}:3000"
     } else {
-        # Default to Production Cloud endpoint
-        $ApiBaseUrl = "https://app.fintechcenterfsa.com/api"
+        # Dynamically detect active local Wi-Fi / LAN IP
+        $lanIp = Get-DynamicLanIp
+        $ApiBaseUrl = "http://${lanIp}:3000"
     }
 }
 
-if ($ApiBaseUrl -match "localhost|127\.0\.0\.1") {
-    $lanIp = "192.168.10.35"
-    $ApiBaseUrl = $ApiBaseUrl -replace "localhost|127\.0\.0\.1", $lanIp
-    Write-Host "[CONFIG] Replaced localhost in ApiBaseUrl with LAN IP: $ApiBaseUrl" -ForegroundColor Yellow
+if (-not $IsProd -and $Target -ne "usb") {
+    $lanIp = Get-DynamicLanIp
+    if ($ApiBaseUrl -match "localhost|127\.0\.0\.1|0\.0\.0\.0" -or $ApiBaseUrl -match "https?://\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}") {
+        $ApiBaseUrl = $ApiBaseUrl -replace "(localhost|127\.0\.0\.1|0\.0\.0\.0|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", $lanIp
+        Write-Host "[CONFIG] Updated ApiBaseUrl with current active Wi-Fi LAN IP: $ApiBaseUrl" -ForegroundColor Green
+    }
 }
 
 $ErrorActionPreference = "Stop"
@@ -119,24 +139,30 @@ if (Test-Path $OutputApk) {
             "Content-Type" = "application/vnd.android.package-archive"
         }
 
-        if ($BuildType -eq "release") {
+        if ($OfficialRelease) {
+            # Official store release to app/play store: publish to protected apk-releases repository
             $repoName = "apk-releases"
             $targetName = "app-release.apk"
             $targets = @(
                 "apk-releases/$AppName/latest/app-release.apk",
                 "apk-releases/$AppName/$ReleaseVersion/app-release.apk",
+                "apk-releases/$AppName/$ReleaseVersion/superapp-release-$ReleaseVersion.apk"
+            )
+            Write-Host "[NEXUS] Publishing official store release to $repoName repository..." -ForegroundColor Green
+        } else {
+            # Build & Move to Testing step: ONLY publish to apk-test-builds (even with size-optimized release build mode)
+            $repoName = "apk-test-builds"
+            $targetName = if ($BuildType -eq "release") { "app-release.apk" } else { "app-debug.apk" }
+            $targets = @(
+                "apk-test-builds/$AppName/latest/$targetName",
+                "apk-test-builds/$AppName/$ReleaseVersion/$targetName",
                 "apk-test-builds/$AppName/latest/app-release.apk",
                 "apk-test-builds/$AppName/$ReleaseVersion/app-release.apk",
                 "apk-test-builds/$AppName/latest/app-debug.apk",
-                "apk-test-builds/$AppName/$ReleaseVersion/app-debug.apk"
-            )
-        } else {
-            $repoName = "apk-test-builds"
-            $targetName = "app-debug.apk"
-            $targets = @(
-                "apk-test-builds/$AppName/latest/app-debug.apk",
-                "apk-test-builds/$AppName/$ReleaseVersion/app-debug.apk"
-            )
+                "apk-test-builds/$AppName/$ReleaseVersion/app-debug.apk",
+                "apk-test-builds/$AppName/$ReleaseVersion/superapp-test-$ReleaseVersion.apk"
+            ) | Select-Object -Unique
+            Write-Host "[NEXUS] Publishing test build to $repoName repository (isolated from apk-releases)..." -ForegroundColor Cyan
         }
 
         $curlCmd = Get-Command "curl.exe" -ErrorAction SilentlyContinue

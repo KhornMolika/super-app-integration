@@ -1,4 +1,5 @@
 /doc
+/docs/slide-deck
 /fix-errors
 .env
 .env.*
@@ -42,4 +43,3 @@ scratch/
 *.apk
 cookies.txt
 ~$*
-/docs

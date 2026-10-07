@@ -111,8 +111,8 @@ describe('TelegramService & Helper Modules', () => {
       expect(text).toContain('SUPER APP TEST BUILD READY');
       expect(text).toContain('v1.2.0');
       expect(buttons).toBeDefined();
-      expect(buttons?.[0][0].text).toContain('Download Test APK');
-      expect(buttons?.[0][0].url).toBe('https://example.com/app.apk');
+      expect(buttons?.[0][0].text).toContain('superapp-test-v1.2.0.apk');
+      expect(buttons?.[0][0].url).toContain('/api/download-apk?type=test&version=v1.2.0&appName=superapp');
       expect(buttons?.[0][1].text).toContain('Launch Sandbox');
     });
 

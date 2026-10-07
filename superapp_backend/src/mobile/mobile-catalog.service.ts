@@ -30,6 +30,14 @@ export interface CatalogPage {
 /** Explicit allowlist: nothing sensitive from the row can ever leak. */
 export function toCatalogItem(app: MiniApp, clientHost?: string): CatalogItem {
   const host = clientHost || process.env.HOST_IP || 'localhost';
+  const isProduction =
+    host === 'app.fintechcenterfsa.com' ||
+    host.endsWith('.fintechcenterfsa.com') ||
+    process.env.NODE_ENV === 'production';
+
+  const baseUrl = isProduction
+    ? 'https://app.fintechcenterfsa.com'
+    : `http://${host}:3000`;
 
   let config = app.integrationConfig;
   if (config && typeof config === 'object') {
@@ -37,9 +45,15 @@ export function toCatalogItem(app: MiniApp, clientHost?: string): CatalogItem {
     const urlKeys = ['webUrl', 'productionUrl', 'testingUrl', 'url', 'bundleUrl'];
     for (const key of urlKeys) {
       if (typeof config[key] === 'string') {
-        config[key] = config[key]
-          .replace(/http:\/\/localhost(?::(\d+))?/g, (_: string, port?: string) => `http://${host}${port ? `:${port}` : ''}`)
-          .replace(/http:\/\/127\.0\.0\.1(?::(\d+))?/g, (_: string, port?: string) => `http://${host}${port ? `:${port}` : ''}`);
+        if (isProduction) {
+          config[key] = config[key]
+            .replace(/http:\/\/localhost(?::\d+)?/g, 'https://app.fintechcenterfsa.com')
+            .replace(/http:\/\/127\.0\.0\.1(?::\d+)?/g, 'https://app.fintechcenterfsa.com');
+        } else {
+          config[key] = config[key]
+            .replace(/http:\/\/localhost(?::(\d+))?/g, (_: string, port?: string) => `http://${host}${port ? `:${port}` : ''}`)
+            .replace(/http:\/\/127\.0\.0\.1(?::(\d+))?/g, (_: string, port?: string) => `http://${host}${port ? `:${port}` : ''}`);
+        }
       }
     }
   }
@@ -62,13 +76,19 @@ export function toCatalogItem(app: MiniApp, clientHost?: string): CatalogItem {
         .replace(/^\/+/, '')
         .replace(/^(?:mini-app-assets\/|mini-app-logos\/)/, '')
         .replace(/^\/+/, '');
-      logo = `http://${host}:3000/api/storage/asset?bucket=${bucket}&key=${encodeURIComponent(cleanKey)}`;
+      logo = `${baseUrl}/api/storage/asset?bucket=${bucket}&key=${encodeURIComponent(cleanKey)}`;
     } else if (logo.startsWith('/')) {
-      logo = `http://${host}:3000${logo}`;
+      logo = `${baseUrl}${logo}`;
     } else {
-      logo = logo
-        .replace(/http:\/\/localhost(?::(\d+))?/g, (_: string, port?: string) => `http://${host}${port ? `:${port}` : ''}`)
-        .replace(/http:\/\/127\.0\.0\.1(?::(\d+))?/g, (_: string, port?: string) => `http://${host}${port ? `:${port}` : ''}`);
+      if (isProduction) {
+        logo = logo
+          .replace(/http:\/\/localhost(?::\d+)?/g, 'https://app.fintechcenterfsa.com')
+          .replace(/http:\/\/127\.0\.0\.1(?::\d+)?/g, 'https://app.fintechcenterfsa.com');
+      } else {
+        logo = logo
+          .replace(/http:\/\/localhost(?::(\d+))?/g, (_: string, port?: string) => `http://${host}${port ? `:${port}` : ''}`)
+          .replace(/http:\/\/127\.0\.0\.1(?::(\d+))?/g, (_: string, port?: string) => `http://${host}${port ? `:${port}` : ''}`);
+      }
     }
   }
 

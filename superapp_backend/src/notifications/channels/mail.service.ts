@@ -99,7 +99,7 @@ export class MailService {
     );
     try {
       const result = await this.resend.emails.send({
-        from: `Super App <${this.fromEmail}>`,
+        from: `FSA Super App <${this.fromEmail}>`,
         to: toEmail,
         subject: template.subject,
         html: template.html,
@@ -355,7 +355,7 @@ export class MailService {
     }
 
     try {
-      const from = rendered.from || `Super App <${this.fromEmail}>`;
+      const from = rendered.from || `FSA Super App <${this.fromEmail}>`;
       const result = await this.resend.emails.send({
         from,
         to: toEmail,

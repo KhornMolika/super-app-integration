@@ -5,7 +5,7 @@ import { MailSendResult, SendEmailOptions } from './mail.types';
 export class MailApiHelper {
   private readonly logger: Logger;
   public resend: Resend | null = null;
-  public fromEmail = 'onboarding@resend.dev';
+  public fromEmail = 'notifications@fintechcenterfsa.com';
 
   constructor(logger?: Logger) {
     this.logger = logger || new Logger(MailApiHelper.name);
@@ -80,7 +80,7 @@ export class MailApiHelper {
     }
 
     try {
-      const from = options.from || `Super App <${fromDomain}>`;
+      const from = options.from || `FSA Super App <${fromDomain}>`;
       const result = await client.emails.send({
         from,
         to: options.to,

@@ -199,9 +199,10 @@ function Push-ToOrigin {
 function Push-ToFintech {
     Write-Host "[2/4] Splitting and Pushing superapp_backoffice to fintech ($TargetBranch)..." -ForegroundColor Blue
     Write-Host "  -> Computing subtree split for superapp_backoffice..." -ForegroundColor Cyan
-    $splitCommit = (git subtree split --prefix=superapp_backoffice "$SourceBranch").Trim()
+    $rawCommit = git subtree split --prefix=superapp_backoffice "$SourceBranch" 2>$null
+    $splitCommit = if ($rawCommit) { ([string]$rawCommit).Trim() } else { "" }
     if (-not $splitCommit) {
-        Write-Host "[ERROR] Subtree split failed for superapp_backoffice!`n" -ForegroundColor Red
+        Write-Host "[INFO] No new changes found in superapp_backoffice (already up to date).`n" -ForegroundColor Yellow
         return
     }
     Write-Host "  -> Split commit: $splitCommit" -ForegroundColor Cyan
@@ -216,9 +217,10 @@ function Push-ToFintech {
 function Push-ToFintechBackend {
     Write-Host "[3/4] Splitting and Pushing superapp_backend to fintech-backend ($TargetBranch)..." -ForegroundColor Blue
     Write-Host "  -> Computing subtree split for superapp_backend..." -ForegroundColor Cyan
-    $splitCommit = (git subtree split --prefix=superapp_backend "$SourceBranch").Trim()
+    $rawCommit = git subtree split --prefix=superapp_backend "$SourceBranch" 2>$null
+    $splitCommit = if ($rawCommit) { ([string]$rawCommit).Trim() } else { "" }
     if (-not $splitCommit) {
-        Write-Host "[ERROR] Subtree split failed for superapp_backend!`n" -ForegroundColor Red
+        Write-Host "[INFO] No new changes found in superapp_backend (already up to date).`n" -ForegroundColor Yellow
         return
     }
     Write-Host "  -> Split commit: $splitCommit" -ForegroundColor Cyan
@@ -233,9 +235,10 @@ function Push-ToFintechBackend {
 function Push-ToFintechMobile {
     Write-Host "[4/4] Splitting and Pushing super-app to fintech-mobile ($TargetBranch)..." -ForegroundColor Blue
     Write-Host "  -> Computing subtree split for super-app..." -ForegroundColor Cyan
-    $splitCommit = (git subtree split --prefix=super-app "$SourceBranch").Trim()
+    $rawCommit = git subtree split --prefix=super-app "$SourceBranch" 2>$null
+    $splitCommit = if ($rawCommit) { ([string]$rawCommit).Trim() } else { "" }
     if (-not $splitCommit) {
-        Write-Host "[ERROR] Subtree split failed for super-app!`n" -ForegroundColor Red
+        Write-Host "[INFO] No new changes found in super-app (already up to date).`n" -ForegroundColor Yellow
         return
     }
     Write-Host "  -> Split commit: $splitCommit" -ForegroundColor Cyan

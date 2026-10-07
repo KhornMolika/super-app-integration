@@ -9,7 +9,7 @@ import * as child_process from 'child_process';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 import { extractDecryptedDeployKey } from '../../miniapps/helpers/flutter-credential.helper';
 import { NotificationsService } from '../../notifications/notifications.service';
-import { getLocalIpAddress } from '../../common/utils/network.utils';
+import { getLocalIpAddress, resolveMobileApiBaseUrl } from '../../common/utils/network.utils';
 
 export type ApkBuildState = 'IDLE' | 'QUEUED' | 'BUILDING' | 'SUCCESS' | 'FAILED';
 
@@ -84,20 +84,7 @@ export class ApkBuildManagerService {
     const defaultBuildType = process.env.SUPERAPP_TEST_APK_BUILD_MODE || 'release';
     const buildType = options.buildType || defaultBuildType;
     const appName = options.appName || 'superapp';
-    const port = process.env.PORT || '3000';
-    const resolvedLanUrl = `http://${getLocalIpAddress()}:${port}`;
-    let apiBaseUrl =
-      options.apiBaseUrl ||
-      process.env.MOBILE_API_BASE_URL ||
-      process.env.BACKEND_API_URL ||
-      resolvedLanUrl;
-
-    if (apiBaseUrl.includes('localhost') || apiBaseUrl.includes('127.0.0.1')) {
-      const lanIp = getLocalIpAddress();
-      if (lanIp && lanIp !== '127.0.0.1') {
-        apiBaseUrl = apiBaseUrl.replace(/localhost|127\.0\.0\.1/, lanIp);
-      }
-    }
+    const apiBaseUrl = resolveMobileApiBaseUrl(options.apiBaseUrl);
 
     if (this.state === 'BUILDING') {
       if (this.activeBuildPromise && (!options.releaseVersion || options.releaseVersion === this.releaseVersion)) {
@@ -257,11 +244,11 @@ export class ApkBuildManagerService {
 
           if (this.exitCode === 0) {
             this.state = 'SUCCESS';
-            const repoName = buildType === 'release' ? 'apk-releases' : 'apk-test-builds';
+            const repoName = 'apk-test-builds';
             const targetName = buildType === 'release' ? 'app-release.apk' : 'app-debug.apk';
             const nexusBase = (process.env.NEXUS_BASE_URL || 'http://localhost:8081').replace(/\/+$/, '');
             const apkUrl = `${nexusBase}/repository/${repoName}/${appName}/${releaseVersion}/${targetName}`;
-            this.message = `Super App APK (${releaseVersion}, ${buildType}) compiled and published to Nexus (${repoName}/${targetName}) successfully in ${(this.durationMs / 1000).toFixed(1)}s.`;
+            this.message = `Super App test APK (${releaseVersion}, ${buildType}) compiled and published to Nexus (${repoName}/${targetName}) successfully in ${(this.durationMs / 1000).toFixed(1)}s.`;
             this.appendLog(`✅ ${this.message}`);
             this.logger.log(this.message);
 
@@ -292,7 +279,7 @@ export class ApkBuildManagerService {
                     id: 'publish',
                     name: '3. Test Build Publishing (apk-test-builds)',
                     status: 'COMPLETED',
-                    details: `Published debug APK artifacts to Sonatype Nexus apk-test-builds/${appName}/${releaseVersion}/.`,
+                    details: `Published test APK artifacts (${targetName}) to Sonatype Nexus apk-test-builds/${appName}/${releaseVersion}/.`,
                     updatedAt: new Date().toISOString(),
                   },
                   stages: app.buildStages || {},

@@ -11,8 +11,9 @@ export default function TrustRegulatorTermsPage() {
         window.parent.postMessage({ type: "CLOSE_TERMS" }, "*");
       } catch (_) {}
       try {
-        const bridge = (window as any).SuperAppJSBridge;
+        const bridge = (window as any).FSASuperApp || (window as any).SuperAppJSBridge;
         bridge?.postMessage?.(JSON.stringify({ action: "closeTerms" }));
+        bridge?.close?.();
       } catch (_) {}
       if (window.history.length > 1) {
         window.history.back();

@@ -444,8 +444,7 @@ export class ReleaseAssemblyVerificationService {
         .where("status = 'BUILDING'")
         .execute();
 
-      const repoName =
-        body.buildType === 'release' ? 'apk-releases' : 'apk-test-builds';
+      const repoName = 'apk-test-builds';
       const filename =
         body.filename ||
         (body.buildType === 'release' ? 'app-release.apk' : 'app-debug.apk');
@@ -503,7 +502,7 @@ export class ReleaseAssemblyVerificationService {
             id: 'publish',
             name: '3. Publish to Nexus & Finalize',
             status: 'COMPLETED',
-            details: `Published APK to Sonatype Nexus (${repoName}).`,
+            details: `Published test APK to Sonatype Nexus (apk-test-builds).`,
             updatedAt: new Date().toISOString(),
           },
           ...currentStages,

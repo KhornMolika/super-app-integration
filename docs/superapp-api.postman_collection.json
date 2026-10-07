@@ -1,8 +1,8 @@
 {
   "info": {
-    "_postman_id": "superapp-gateway-api-collection",
-    "name": "Super App Gateway & Backoffice API",
-    "description": "Comprehensive Postman API Collection for Super App Gateway backend services, access control, mini-apps lifecycle, integrations, and deployment verification.",
+    "_postman_id": "superapp-gateway-api-collection-v2",
+    "name": "Super App Gateway & Backoffice API (Complete)",
+    "description": "Comprehensive Postman API Collection for Super App Gateway backend services, access control, mini-apps lifecycle, automated security scans, Jenkins CI/CD callbacks, release assembly, Nexus registry, and audit logging.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -19,6 +19,16 @@
     {
       "key": "superadminEmail",
       "value": "superadmin@superapp.gov.kh",
+      "type": "string"
+    },
+    {
+      "key": "miniAppId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "callbackToken",
+      "value": "dev-jenkins-callback-token",
       "type": "string"
     }
   ],
@@ -38,6 +48,8 @@
                   "    pm.collectionVariables.set('token', jsonData.access_token);",
                   "    pm.environment.set('token', jsonData.access_token);",
                   "    console.log('Access token automatically saved.');",
+                  "} else if (jsonData.user && jsonData.user.id) {",
+                  "    pm.environment.set('userId', jsonData.user.id);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -139,7 +151,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Super Admin\",\n  \"email\": \"superadmin@superapp.gov.kh\",\n  \"roleNames\": [\"SUPER_ADMIN\"]\n}"
+              "raw": "{\n  \"name\": \"Super Admin Updated\",\n  \"email\": \"superadmin@superapp.gov.kh\",\n  \"roleNames\": [\"SUPER_ADMIN\"]\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/users/{{userId}}",
@@ -264,6 +276,22 @@
         },
         {
           "name": "Register Flutter Package Mini App",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) {",
+                  "    pm.collectionVariables.set('miniAppId', jsonData.id);",
+                  "    pm.environment.set('miniAppId', jsonData.id);",
+                  "    console.log('Registered miniAppId saved:', jsonData.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -278,12 +306,80 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Trust Regulator Mini App\",\n  \"appId\": \"trust_regulator_app\",\n  \"category\": \"REGULATORY\",\n  \"description\": \"Official Trust Regulator service for FSA Super App\",\n  \"ownerEmail\": \"superadmin@superapp.gov.kh\",\n  \"logo\": \"https://app.fintechcenterfsa.com/fsa-logo.png\",\n  \"integrationMethod\": \"FLUTTER_PACKAGE\",\n  \"integrationConfigFlutter\": {\n    \"packageName\": \"sc_public_miniapp\",\n    \"gitUrl\": \"https://github.com/KhornMolika/sc-public-miniapp.git\",\n    \"ref\": \"v1.0.0\",\n    \"isPrivateRepo\": false,\n    \"authMethod\": \"none\"\n  }\n}"
+              "raw": "{\n  \"name\": \"Trust Regulator Mini App\",\n  \"appId\": \"trust_regulator_app\",\n  \"category\": \"REGULATORY\",\n  \"description\": \"Official Trust Regulator service for FSA Super App\",\n  \"ownerEmail\": \"superadmin@superapp.gov.kh\",\n  \"logo\": \"https://app.fintechcenterfsa.com/assets/fsa_logo.png\",\n  \"integrationMethod\": \"FLUTTER_PACKAGE\",\n  \"integrationConfigFlutter\": {\n    \"packageName\": \"sc_public_miniapp\",\n    \"gitUrl\": \"https://git.fintechcenterfsa.com/frontend/super-app.git\",\n    \"ref\": \"molika\",\n    \"isPrivateRepo\": false,\n    \"authMethod\": \"none\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/mini-apps",
               "host": ["{{baseUrl}}"],
               "path": ["mini-apps"]
+            }
+          }
+        },
+        {
+          "name": "Re-Run Security Scan",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"securityChecks\": [\"ingest\", \"sast\", \"secret_scan\", \"dependency_scan\", \"capability_gate\", \"sbom\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/mini-apps/{{miniAppId}}/validate",
+              "host": ["{{baseUrl}}"],
+              "path": ["mini-apps", "{{miniAppId}}", "validate"]
+            },
+            "description": "Triggers automated security validation scan via Jenkins or fallback to Local Security Scanner."
+          }
+        },
+        {
+          "name": "Get Validation Status & Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mini-apps/{{miniAppId}}/validation-status",
+              "host": ["{{baseUrl}}"],
+              "path": ["mini-apps", "{{miniAppId}}", "validation-status"]
+            }
+          }
+        },
+        {
+          "name": "Submit Mini App for Review",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Ready for review and production rollout\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/mini-apps/{{miniAppId}}/submit",
+              "host": ["{{baseUrl}}"],
+              "path": ["mini-apps", "{{miniAppId}}", "submit"]
             }
           }
         },
@@ -315,7 +411,87 @@
       ]
     },
     {
-      "name": "4. Flutter & Pubspec Operations",
+      "name": "4. Release Assembly & Builds",
+      "item": [
+        {
+          "name": "Trigger Super App Assembly",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"appName\": \"superapp\",\n  \"releaseVersion\": \"v1.0.0\",\n  \"buildType\": \"release\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/release-assembly/trigger-build",
+              "host": ["{{baseUrl}}"],
+              "path": ["release-assembly", "trigger-build"]
+            }
+          }
+        },
+        {
+          "name": "Build Stage Update Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-callback-token",
+                "value": "{{callbackToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"appName\": \"superapp\",\n  \"releaseVersion\": \"v1.0.0\",\n  \"stageId\": \"preflight\",\n  \"stageName\": \"1. Pre-Flight Manifest Verification\",\n  \"status\": \"COMPLETED\",\n  \"details\": \"Release manifest verified.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/release-assembly/stage",
+              "host": ["{{baseUrl}}"],
+              "path": ["release-assembly", "stage"]
+            }
+          }
+        },
+        {
+          "name": "Build Completion Callback Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-callback-token",
+                "value": "{{callbackToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"appName\": \"superapp\",\n  \"releaseVersion\": \"v1.0.0\",\n  \"buildType\": \"release\",\n  \"status\": \"SUCCESS\",\n  \"apkUrl\": \"https://app.fintechcenterfsa.com/preview\",\n  \"message\": \"Super App APK compiled and signed successfully.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/release-assembly/build-callback",
+              "host": ["{{baseUrl}}"],
+              "path": ["release-assembly", "build-callback"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Flutter & Pubspec Operations",
       "item": [
         {
           "name": "Get Pubspec Status",
@@ -367,7 +543,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"packageName\": \"sc_public_miniapp\",\n  \"gitUrl\": \"https://github.com/KhornMolika/sc-public-miniapp.git\",\n  \"ref\": \"v1.0.0\"\n}"
+              "raw": "{\n  \"packageName\": \"sc_public_miniapp\",\n  \"gitUrl\": \"https://git.fintechcenterfsa.com/frontend/super-app.git\",\n  \"ref\": \"molika\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/pubspec/precheck-conflicts",
@@ -396,10 +572,72 @@
       ]
     },
     {
-      "name": "5. Health & Diagnostics",
+      "name": "6. Sonatype Nexus Operations",
       "item": [
         {
-          "name": "Health Check",
+          "name": "Check Package Exists on Nexus",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/nexus/packages/sc_public_miniapp",
+              "host": ["{{baseUrl}}"],
+              "path": ["nexus", "packages", "sc_public_miniapp"]
+            }
+          }
+        },
+        {
+          "name": "List Nexus Components",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/nexus/components?repository=pub-group",
+              "host": ["{{baseUrl}}"],
+              "path": ["nexus", "components"],
+              "query": [
+                { "key": "repository", "value": "pub-group" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Audit Logs & System Health",
+      "item": [
+        {
+          "name": "Get Audit Logs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/audit-logs?limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["audit-logs"],
+              "query": [
+                { "key": "limit", "value": "50" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "System Health Check",
           "request": {
             "method": "GET",
             "url": {
