@@ -55,7 +55,19 @@ export class JenkinsService {
     );
   }
 
-  private getAuthHeader(): string | null {
+    /**
+   * Constructs a sanitized callback URL ensuring no duplicate /api/api/ prefix,
+   * working seamlessly across local (http://host.docker.internal:3000) and
+   * production (https://app.fintechcenterfsa.com/api or https://app.fintechcenterfsa.com).
+   */
+  private getCallbackUrl(endpointPath: string): string {
+    const rawBase = this.callbackBaseUrl || 'http://host.docker.internal:3000';
+    const base = rawBase.replace(/\/api\/?$/, '').replace(/\/+$/, '');
+    const cleanEndpoint = endpointPath.replace(/^\/?(api\/)?/, '');
+    return `${base}/api/${cleanEndpoint}`;
+  }
+
+private getAuthHeader(): string | null {
     const user =
       this.configService.get<string>('JENKINS_USER') ||
       process.env.JENKINS_USER ||
@@ -134,7 +146,7 @@ export class JenkinsService {
     deployKey?: string;
     jobName?: string;
   }): Promise<{ success: boolean; message: string }> {
-    const callbackUrl = `${this.callbackBaseUrl}/api/integrations/validation/callback`;
+    const callbackUrl = this.getCallbackUrl('/integrations/validation/callback');
     const allowedDomainsStr = (options.allowedDomains || []).join(',');
     const allowedCapsStr = (options.allowedCapabilities || ['camera', 'geolocator', 'local_auth']).join(',');
     const requiredCapsStr = (options.requiredCapabilities || []).join(',');
@@ -386,8 +398,7 @@ export class JenkinsService {
     apiBaseUrl?: string;
   }): Promise<{ success: boolean; message: string }> {
     const jobName = 'superapp-test-build';
-    const sanitizedBase = this.callbackBaseUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '');
-    const callbackUrl = `${sanitizedBase}/api/release-assembly/build-callback`;
+    const callbackUrl = this.getCallbackUrl('/release-assembly/build-callback');
     const buildType = options.buildType || 'debug';
     const appName = options.appName || 'superapp';
     const nexusUrl = options.nexusUrl || this.jenkinsNexusUrl;
@@ -497,8 +508,7 @@ export class JenkinsService {
     nexusUrl?: string;
   }): Promise<{ success: boolean; message: string }> {
     const jobName = 'superapp-sandbox-build';
-    const sanitizedBase = this.callbackBaseUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '');
-    const callbackUrl = `${sanitizedBase}/api/release-assembly/build-callback`;
+    const callbackUrl = this.getCallbackUrl('/release-assembly/build-callback');
     const branch = options?.branch || this.superAppBranch;
     const baseHref = options?.baseHref || this.sandboxBaseHref;
     const buildMode = options?.buildMode || this.sandboxBuildMode;

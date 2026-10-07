@@ -37,7 +37,7 @@ pipeline {
                 script {
                     sh """
                     node -e '
-                        const callbackUrl = "${params.CALLBACK_URL}".replace("/build-callback", "/stage");
+                        const callbackUrl = "${params.CALLBACK_URL}".replace(/\/build-callback\/?$/, "/stage");
                         const token = "${env.CALLBACK_TOKEN ?: ''}";
                         const headers = { "Content-Type": "application/json" };
                         if (token) headers["x-callback-token"] = token;
@@ -66,7 +66,7 @@ pipeline {
                 script {
                     sh """
                     node -e '
-                        const callbackUrl = "${params.CALLBACK_URL}".replace("/build-callback", "/stage");
+                        const callbackUrl = "${params.CALLBACK_URL}".replace(/\/build-callback\/?$/, "/stage");
                         const token = "${env.CALLBACK_TOKEN ?: ''}";
                         const headers = { "Content-Type": "application/json" };
                         if (token) headers["x-callback-token"] = token;
@@ -132,7 +132,7 @@ pipeline {
 
                     sh """
                     node -e '
-                        const callbackUrl = "${params.CALLBACK_URL}".replace("/build-callback", "/stage");
+                        const callbackUrl = "${params.CALLBACK_URL}".replace(/\/build-callback\/?$/, "/stage");
                         const token = "${env.CALLBACK_TOKEN ?: ''}";
                         const headers = { "Content-Type": "application/json" };
                         if (token) headers["x-callback-token"] = token;
@@ -199,7 +199,7 @@ pipeline {
                 script {
                     sh """
                     node -e '
-                        const callbackUrl = "${params.CALLBACK_URL}".replace("/build-callback", "/stage");
+                        const callbackUrl = "${params.CALLBACK_URL}".replace(/\/build-callback\/?$/, "/stage");
                         const token = "${env.CALLBACK_TOKEN ?: ''}";
                         const headers = { "Content-Type": "application/json" };
                         if (token) headers["x-callback-token"] = token;
