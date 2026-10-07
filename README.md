@@ -1,4 +1,4 @@
-# DSP Super App Integration Platform (POC)
+# FSA Super App Integration Platform (POC)
 
 [![NestJS](https://img.shields.io/badge/Backend-NestJS-E0234E?style=flat&logo=nestjs&logoColor=white)](https://nestjs.com/)
 [![Next.js](https://img.shields.io/badge/Backoffice-Next.js%2016-000000?style=flat&logo=next.js&logoColor=white)](https://nextjs.org/)
@@ -7,7 +7,7 @@
 [![Nexus](https://img.shields.io/badge/Artifacts-Sonatype%20Nexus-1B1C1D?style=flat&logo=sonatype&logoColor=white)](https://www.sonatype.com/)
 [![License](https://img.shields.io/badge/License-Proprietary-blue.svg)](#)
 
-The **Digital Public Service (DSP) Super App Integration Platform** is an enterprise-grade Proof of Concept (POC) designed to govern, validate, test, assemble, and distribute third-party **Mini Apps** inside a unified national/enterprise **Super App** ecosystem.
+The **FSA Super App Integration Platform** is an enterprise-grade Proof of Concept (POC) designed to govern, validate, test, assemble, and distribute third-party **Mini Apps** inside a unified **FSA Super App** ecosystem.
 
 ---
 
@@ -22,14 +22,14 @@ flowchart TD
         FlutterPkg["Flutter In-App Package"]
     end
 
-    subgraph Backoffice["DSP Backoffice Admin Portal (Port 3002)"]
+    subgraph Backoffice["FSA Backoffice Admin Portal (Port 3002)"]
         BO_UI["Next.js 16 Webapp"]
         SandboxSim["Phone Simulator & JS Bridge Inspector"]
         WebSandbox["Embedded Flutter Web Container (/superapp-sandbox)"]
         DownloadRoute["Streaming Download Route (/api/download-apk)"]
     end
 
-    subgraph Backend["DSP Backend Gateway (Port 3000)"]
+    subgraph Backend["FSA Backend Gateway (Port 3000)"]
         API["NestJS Core API"]
         DB[(PostgreSQL)]
         AuthService["Auth & JWKS Service"]
@@ -236,6 +236,4 @@ pnpm install && pnpm run dev
 * **UI Design**: Strictly use clean SVG vector icons. Do not use emoji graphics in action buttons or headers.
 * **State Management**: In Flutter GetX controllers, avoid `late final` declarations for route arguments to allow seamless re-entry without initialization errors.
 
----
-
-_Built for the Digital Public Service Super App Ecosystem._
+_Built for the FSA Super App Ecosystem._

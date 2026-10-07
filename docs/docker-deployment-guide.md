@@ -155,7 +155,8 @@ MINIO_USE_SSL=false
 MINIO_ACCESS_KEY=admin
 MINIO_SECRET_KEY=admin123
 MINIO_BUCKET_NAME=mini-app-assets
-MINIO_PACKAGE_SUBMISSIONS_BUCKET=submissions
+MINIO_PACKAGE_SUBMISSIONS_BUCKET=package-submissions
+MINIO_SDK_SUBMISSIONS_BUCKET=sdk-submissions
 
 # Jenkins Orchestration
 JENKINS_URL=http://localhost:8085

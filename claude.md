@@ -1,12 +1,12 @@
-# DSP Super App Integration Platform (POC) - Claude Guide
+# FSA Super App Integration Platform (POC) - Claude Guide
 
-Welcome to the Digital Public Service (DSP) Super App Integration Platform codebase. This document serves as a comprehensive reference for AI assistants and developers working on this repository.
+Welcome to the FSA Super App Integration Platform codebase. This document serves as a comprehensive reference for AI assistants and developers working on this repository.
 
 ---
 
 ## 1. Project Overview & Vision
 
-The **DSP Super App Integration Platform** is an enterprise-grade Proof of Concept (POC) designed to govern, validate, test, assemble, and distribute third-party **Mini Apps** inside a unified national/enterprise **Super App** ecosystem.
+The **FSA Super App Integration Platform** is an enterprise-grade Proof of Concept (POC) designed to govern, validate, test, assemble, and distribute third-party **Mini Apps** inside a unified **FSA Super App** ecosystem.
 
 ### Core Objectives:
 * **Developer Self-Service**: Partners register and configure Mini Apps with required metadata, permissions, and URLs.
