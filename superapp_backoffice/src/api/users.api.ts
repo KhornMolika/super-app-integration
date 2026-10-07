@@ -30,7 +30,7 @@ export const usersApi = {
   }) =>
     apiClient<User>('/api/users', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: data,
     }),
 
   update: (
@@ -47,7 +47,7 @@ export const usersApi = {
   ) =>
     apiClient<User>(`/api/users/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(data),
+      body: data,
     }),
 
   delete: (id: string) =>
@@ -55,4 +55,3 @@ export const usersApi = {
       method: 'DELETE',
     }),
 };
-

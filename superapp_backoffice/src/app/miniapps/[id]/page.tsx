@@ -708,7 +708,9 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
 
   const executeSave = async (isDraftOnly = false, changelog?: string, justification?: string) => {
     setIsSubmitting(true);
-    setModalState({ isOpen: true, status: 'loading' });
+    if (!isDraftOnly) {
+      setModalState({ isOpen: true, status: 'loading' });
+    }
 
     const cleanPermissions = Array.from(
       new Map((formData.permissions || []).map((p: any) => [p.type, p])).values()

@@ -2,7 +2,7 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
-import { MiniApp } from '../entities/miniapp.entity';
+import { MiniApp, MiniAppStatus } from '../entities/miniapp.entity';
 import { StorageService } from '../../storage/storage.service';
 import { DomainAssociationHelper } from './domain-association.helper';
 import { NotificationsService, MailService } from '../../notifications';
@@ -150,38 +150,60 @@ export class MiniappMutationHelper {
     }
 
     // 1. Dispatch Notification (WebSocket + Telegram to MA Manager, MA Team Group, & SA Admins)
+    const isDraft =
+      savedApp.status === 'DRAFT' ||
+      savedApp.status === MiniAppStatus.DRAFT;
+
     const targetUserId = savedApp.ownerId || actorId || '';
     if (targetUserId) {
-      await this.notificationsService.createNotification(
-        targetUserId,
-        'Mini App Registered',
-        `Mini App "${savedApp.name || savedApp.appId}" has been registered successfully by ${savedApp.ownerName || 'Operator'} and queued for security validation.`,
-        'MINIAPP_REGISTERED',
-        savedApp.id,
-        {
-          integrationMethod: savedApp.integrationMethod,
-          category: savedApp.category,
-          teamName: savedApp.teamName,
-          teamTelegramChatId: savedApp.teamTelegramChatId,
-        },
-      );
+      if (isDraft) {
+        await this.notificationsService.createNotification(
+          targetUserId,
+          'Mini App Saved as Draft',
+          `Mini App "${savedApp.name || savedApp.appId}" has been saved as a draft by ${savedApp.ownerName || 'Operator'}.`,
+          'MINIAPP_DRAFT_SAVED',
+          savedApp.id,
+          {
+            integrationMethod: savedApp.integrationMethod,
+            category: savedApp.category,
+            teamName: savedApp.teamName,
+            teamTelegramChatId: savedApp.teamTelegramChatId,
+          },
+        );
+      } else {
+        await this.notificationsService.createNotification(
+          targetUserId,
+          'Mini App Registered',
+          `Mini App "${savedApp.name || savedApp.appId}" has been registered successfully by ${savedApp.ownerName || 'Operator'} and queued for security validation.`,
+          'MINIAPP_REGISTERED',
+          savedApp.id,
+          {
+            integrationMethod: savedApp.integrationMethod,
+            category: savedApp.category,
+            teamName: savedApp.teamName,
+            teamTelegramChatId: savedApp.teamTelegramChatId,
+          },
+        );
+      }
     }
 
-    // Kick off async validation
-    this.validationHelper
-      .validateMiniAppAsync(savedApp, logActivityFn)
-      .catch((err) => {
-        this.logger.error(
-          `Error in async validation for app ${savedApp.id}:`,
-          err,
-        );
-      });
+    // Kick off async validation only when NOT in draft mode
+    if (!isDraft) {
+      this.validationHelper
+        .validateMiniAppAsync(savedApp, logActivityFn)
+        .catch((err) => {
+          this.logger.error(
+            `Error in async validation for app ${savedApp.id}:`,
+            err,
+          );
+        });
 
-    if (savedApp.ownerEmail) {
-      await this.mailService.sendRegistrationSuccessEmail(
-        savedApp.ownerEmail,
-        savedApp.name || savedApp.appId,
-      );
+      if (savedApp.ownerEmail) {
+        await this.mailService.sendRegistrationSuccessEmail(
+          savedApp.ownerEmail,
+          savedApp.name || savedApp.appId,
+        );
+      }
     }
 
     if (logActivityFn) {
@@ -190,7 +212,7 @@ export class MiniappMutationHelper {
         actorId || 'system',
         'CREATE',
         `App ${savedApp.name} Created`,
-        'Initial draft creation',
+        isDraft ? 'Initial draft saved' : 'Initial draft creation',
         'CREATE_MINI_APP',
         null,
         savedApp,
@@ -549,15 +571,21 @@ export class MiniappMutationHelper {
 
     await this.miniappRepository.save(merged);
 
-    // Kick off async validation
-    this.validationHelper
-      .validateMiniAppAsync(merged, logActivityFn)
-      .catch((err) => {
-        this.logger.error(
-          `Error in async validation for app ${existing.id}:`,
-          err,
-        );
-      });
+    // Kick off async validation only when NOT in draft mode
+    const isDraft =
+      merged.status === 'DRAFT' ||
+      merged.status === MiniAppStatus.DRAFT;
+
+    if (!isDraft) {
+      this.validationHelper
+        .validateMiniAppAsync(merged, logActivityFn)
+        .catch((err) => {
+          this.logger.error(
+            `Error in async validation for app ${existing.id}:`,
+            err,
+          );
+        });
+    }
 
     const updated = await this.miniappRepository.findOne({
       where: { id: existing.id },

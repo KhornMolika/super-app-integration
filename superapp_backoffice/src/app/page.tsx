@@ -54,7 +54,7 @@ export default function Dashboard() {
 
       // Pending Mini Apps needing review
       const pendingApps = rawApps.filter(
-        (a: any) => a.status === 'IN_REVIEW' || a.status === 'SUBMITTED' || a.status === 'PENDING_REVIEW',
+        (a: any) => a.status === 'IN_REVIEW' || a.status === 'SUBMITTED',
       );
 
       // Pending Permission Proposals needing review
@@ -96,7 +96,7 @@ export default function Dashboard() {
 
   // MA Manager specific counts
   const myPendingAppsCount = miniAppsList.filter((a: any) =>
-    ['IN_REVIEW', 'SUBMITTED', 'PENDING_REVIEW'].includes(a.status),
+    ['IN_REVIEW', 'SUBMITTED'].includes(a.status),
   ).length;
   const myPublishedAppsCount = miniAppsList.filter((a: any) =>
     ['APPROVED', 'PUBLISHED', 'ACTIVE'].includes(a.status),
@@ -413,7 +413,7 @@ export default function Dashboard() {
                           className={`px-2.5 py-1 rounded-full font-semibold text-[10px] ${
                             app.status === 'APPROVED' || app.status === 'ACTIVE'
                               ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                              : app.status === 'IN_REVIEW' || app.status === 'SUBMITTED' || app.status === 'PENDING_REVIEW'
+                              : app.status === 'IN_REVIEW' || app.status === 'SUBMITTED'
                               ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
                               : app.status === 'REJECTED'
                               ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'

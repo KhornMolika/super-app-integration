@@ -15,7 +15,7 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
     const loadOrgs = async () => {
       try {
         setLoadingOrgs(true);
-        const data = await organizationsApi.getAll();
+        const data = await organizationsApi.getAll({ status: 'ACTIVE' });
         if (mounted && Array.isArray(data) && data.length > 0) {
           setDbOrganizations(data);
         }
@@ -31,13 +31,19 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
     };
   }, []);
 
-  // Dynamically group live organizations from DB or fallback to predefined registry
-  const organizationGroups = dbOrganizations.length > 0
+  // Filter out any INACTIVE organizations from dropdown
+  const activeDbOrgs = dbOrganizations.filter((o) => {
+    const s = (o.status || 'ACTIVE').toUpperCase();
+    return s !== 'INACTIVE';
+  });
+
+  // Dynamically group live active organizations from DB or fallback to predefined registry
+  const organizationGroups = activeDbOrgs.length > 0
     ? [
         {
           label: 'Administrative & Policy Body (FSA)',
           type: 'ADMINISTRATIVE' as FsaEntityType,
-          organizations: dbOrganizations
+          organizations: activeDbOrgs
             .filter((o) => {
               const def = getOrganizationDef(o.name) || getOrganizationDef(o.code);
               return def?.entityType === 'ADMINISTRATIVE' || o.metadata?.entityType === 'ADMINISTRATIVE' || ['FTC', 'GAD', 'PD', 'TLAD'].includes(o.code || '');
@@ -54,7 +60,7 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
         {
           label: 'Sector-Specific Regulators (FSA)',
           type: 'SECTOR_REGULATOR' as FsaEntityType,
-          organizations: dbOrganizations
+          organizations: activeDbOrgs
             .filter((o) => {
               const def = getOrganizationDef(o.name) || getOrganizationDef(o.code);
               return def?.entityType === 'SECTOR_REGULATOR' || o.metadata?.entityType === 'SECTOR_REGULATOR' || ['IRC', 'SERC', 'SSR', 'TR', 'ACAR', 'RPR'].includes(o.code || '');
@@ -71,7 +77,7 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
         {
           label: 'Oversight & Compliance Unit (FSA)',
           type: 'OVERSIGHT_UNIT' as FsaEntityType,
-          organizations: dbOrganizations
+          organizations: activeDbOrgs
             .filter((o) => {
               const def = getOrganizationDef(o.name) || getOrganizationDef(o.code);
               return def?.entityType === 'OVERSIGHT_UNIT' || o.metadata?.entityType === 'OVERSIGHT_UNIT' || o.code === 'IAU';

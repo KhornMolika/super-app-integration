@@ -895,9 +895,14 @@ export default function RegisterMiniAppPage() {
                 </Button>
               </div>
             ) : (
-              <Button type="submit" className="h-11 px-6 text-base font-semibold" disabled={isSubmitting}>
-                {isSubmitting ? 'Submitting...' : 'Register Mini App'}
-              </Button>
+              <div className="flex space-x-3">
+                <Button type="button" variant="outline" className="h-11 px-5 text-base font-medium" onClick={handleSaveDraft} disabled={isSubmitting}>
+                  Save as Draft
+                </Button>
+                <Button type="submit" className="h-11 px-6 text-base font-semibold" disabled={isSubmitting}>
+                  {isSubmitting ? 'Submitting...' : 'Register Mini App'}
+                </Button>
+              </div>
             )}
           </div>
         </form>

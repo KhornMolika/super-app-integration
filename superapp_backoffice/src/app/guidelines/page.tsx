@@ -123,15 +123,15 @@ const VSCodeEditor = ({
         .join("\n");
     }
 
-    if (lang === "dart") {
-      const dartTokenRegex =
-        /(\/\/[^\n]*)|('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*")|(@\w+)|\b(import|class|extends|final|return|void|const|new|var|async|await|if|else|true|false)\b|\b([A-Z][a-zA-Z0-9_]*)\b|(\b\d+(?:\.\d+)?\b)/g;
+    if (["dart", "kotlin", "swift", "typescript", "ts", "javascript", "js"].includes(lang)) {
+      const codeTokenRegex =
+        /(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|`[\s\S]*?`)|(@\w+)|\b(package|import|class|protocol|interface|fun|func|override|public|private|protected|internal|final|return|void|const|val|var|let|new|async|await|if|else|try|catch|true|false|super|this|self|weak|required|extends|implements)\b|\b([A-Z][a-zA-Z0-9_]*)\b|(\b\d+(?:\.\d+)?\b)/g;
 
       let lastIndex = 0;
       let result = "";
       let match;
 
-      while ((match = dartTokenRegex.exec(text)) !== null) {
+      while ((match = codeTokenRegex.exec(text)) !== null) {
         if (match.index > lastIndex) {
           result += escapeHtml(text.slice(lastIndex, match.index));
         }
@@ -142,7 +142,7 @@ const VSCodeEditor = ({
         } else if (str) {
           result += `<span class="text-amber-300 dark:text-amber-200">${escapeHtml(str)}</span>`;
         } else if (annotation) {
-          result += `<span class="text-accent-400">${escapeHtml(annotation)}</span>`;
+          result += `<span class="text-purple-400 font-medium">${escapeHtml(annotation)}</span>`;
         } else if (kw) {
           result += `<span class="text-sky-400 font-medium">${escapeHtml(kw)}</span>`;
         } else if (type) {
@@ -152,7 +152,7 @@ const VSCodeEditor = ({
         } else {
           result += escapeHtml(full);
         }
-        lastIndex = dartTokenRegex.lastIndex;
+        lastIndex = codeTokenRegex.lastIndex;
       }
       if (lastIndex < text.length) {
         result += escapeHtml(text.slice(lastIndex));
@@ -242,9 +242,7 @@ const CodeBlock = ({
 export default function GuidelinesPage() {
   const [activeSection, setActiveSection] = useState<string>("overview");
   const [searchQuery, setSearchQuery] = useState<string>("" );
-  const [activeMethodTab, setActiveMethodTab] = useState<
-    "webview" | "artifact" | "source" | "native" | "deeplink"
-  >("webview");
+  const [activeMethodTab, setActiveMethodTab] = useState<'webview' | 'flutter' | 'native' | 'deeplink'>('webview');
 
   // Hash & Query Parameter Deep Linking
   useEffect(() => {
@@ -328,7 +326,7 @@ export default function GuidelinesPage() {
               <div className="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
                 <UserIcon />
               </div>
-              <h4 className="font-bold text-slate-900 dark:text-white text-lg">MA Manager</h4>
+              <h4 className="font-bold text-slate-900 dark:text-white text-lg">Mini App Manager (MA Manager)</h4>
               <span className="inline-block px-2.5 py-0.5 text-sm font-semibold rounded bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                 External / Mini App Team
               </span>
@@ -345,7 +343,7 @@ export default function GuidelinesPage() {
               <div className="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                 <ShieldIcon />
               </div>
-              <h4 className="font-bold text-slate-900 dark:text-white text-lg">SA Admin</h4>
+              <h4 className="font-bold text-slate-900 dark:text-white text-lg">Super App Admin (SA Admin)</h4>
               <span className="inline-block px-2.5 py-0.5 text-sm font-semibold rounded bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                 Super App Platform Owner
               </span>
@@ -362,7 +360,7 @@ export default function GuidelinesPage() {
               <div className="w-9 h-9 rounded-lg bg-brand-100 dark:bg-brand-900/40 text-brand-600 dark:text-brand-400 flex items-center justify-center">
                 <SettingsIcon />
               </div>
-              <h4 className="font-bold text-slate-900 dark:text-white text-lg">System CI (Jenkins)</h4>
+              <h4 className="font-bold text-slate-900 dark:text-white text-lg">Automated CI/CD Engine (Jenkins)</h4>
               <span className="inline-block px-2.5 py-0.5 text-sm font-semibold rounded bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                 Automated Engine
               </span>
@@ -454,25 +452,171 @@ export default function GuidelinesPage() {
       content: (
         <div className="space-y-6 text-base text-slate-600 dark:text-slate-300">
           <p className="leading-relaxed">
-            Mini Apps operate within a controlled sandbox. All platform interactions (authentication, device camera, navigation, network tokens) must pass through the official <code>SuperAppSDK</code>.
+            Mini Apps operate within a strictly sandboxed runtime. All platform interactions (authentication tokens, payments, biometrics, hardware camera, and navigation) must pass through the standardized Super App Host SDK / Bridge interfaces.
           </p>
+
+          {/* Integration vs Capability Matrix Table */}
+          <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-800/60 text-slate-900 dark:text-slate-100 font-semibold">
+                  <th className="py-3 px-4">Integration Method</th>
+                  <th className="py-3 px-4">Delivery Format</th>
+                  <th className="py-3 px-4">Language / Tech Stack</th>
+                  <th className="py-3 px-4">How Capabilities Are Accessed</th>
+                  <th className="py-3 px-4">Host Context &amp; Auth</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-[11px]">
+                <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                  <td className="py-2.5 px-4 font-bold text-slate-800 dark:text-slate-200 font-sans">WebView Mini App</td>
+                  <td className="py-2.5 px-4 font-sans text-slate-600 dark:text-slate-400">Hosted HTTPS URL (Domain Verified)</td>
+                  <td className="py-2.5 px-4 text-brand-600 dark:text-brand-400 font-sans">JavaScript / TypeScript (React, Vue, etc.)</td>
+                  <td className="py-2.5 px-4 text-slate-600 dark:text-slate-400 font-sans"><code>@fsasuperapp/sdk</code> or <code>window.FSASuperApp</code> asynchronous JS-to-Native bridge</td>
+                  <td className="py-2.5 px-4 text-slate-600 dark:text-slate-400 font-sans"><code>FSASuperApp.getAuthToken()</code> and <code>FSASuperApp.close()</code></td>
+                </tr>
+                <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                  <td className="py-2.5 px-4 font-bold text-slate-800 dark:text-slate-200 font-sans">Flutter Package</td>
+                  <td className="py-2.5 px-4 font-sans text-slate-600 dark:text-slate-400">
+                    <span className="block">• <strong>Source Code</strong> (Git Repo)</span>
+                    <span className="block">• <strong>Package Artifact</strong> (.zip)</span>
+                  </td>
+                  <td className="py-2.5 px-4 text-brand-600 dark:text-brand-400 font-sans">Dart / Flutter Module (Flutter 3.x)</td>
+                  <td className="py-2.5 px-4 text-slate-600 dark:text-slate-400 font-sans"><code>package:super_app_sdk</code> injected through <code>MiniAppContext</code></td>
+                  <td className="py-2.5 px-4 text-slate-600 dark:text-slate-400 font-sans"><code>appCtx.auth.currentUser</code> and <code>appCtx.navigation.exit()</code></td>
+                </tr>
+                <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                  <td className="py-2.5 px-4 font-bold text-slate-800 dark:text-slate-200 font-sans">Native SDK</td>
+                  <td className="py-2.5 px-4 font-sans text-slate-600 dark:text-slate-400">
+                    <span className="block">• <strong>Android Binary</strong> (<code>.aar</code>)</span>
+                    <span className="block">• <strong>iOS Binary</strong> (<code>.xcframework</code> / <code>.zip</code>)</span>
+                  </td>
+                  <td className="py-2.5 px-4 text-brand-600 dark:text-brand-400 font-sans">
+                    Kotlin / Java (Android)<br />
+                    Swift / Objective-C (iOS)
+                  </td>
+                  <td className="py-2.5 px-4 text-slate-600 dark:text-slate-400 font-sans">Implement <code>SuperAppPlugin</code> / <code>SuperAppModuleProtocol</code> host delegates</td>
+                  <td className="py-2.5 px-4 text-slate-600 dark:text-slate-400 font-sans"><code>HostBridge.currentUser</code> and <code>HostBridge.terminateSession()</code></td>
+                </tr>
+                <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                  <td className="py-2.5 px-4 font-bold text-slate-800 dark:text-slate-200 font-sans">Deep Link</td>
+                  <td className="py-2.5 px-4 font-sans text-slate-600 dark:text-slate-400">URI Scheme / Universal App Links</td>
+                  <td className="py-2.5 px-4 text-brand-600 dark:text-brand-400 font-sans">External Native / Hybrid App</td>
+                  <td className="py-2.5 px-4 text-slate-600 dark:text-slate-400 font-sans">Decoupled standalone app invoked via host router</td>
+                  <td className="py-2.5 px-4 text-slate-600 dark:text-slate-400 font-sans">URL query parameters (<code>auth_token</code>) and redirect URI</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
           <VSCodeEditor
             files={[
               {
                 filename: "entrypoint.dart",
                 language: "dart",
-                code: `import 'package:flutter/material.dart';\nimport 'package:super_app_sdk/super_app_sdk.dart';\n\n// Official Mini App entrypoint contract\nclass MiniAppEntryPoint extends MiniAppWidget {\n  @override\n  Widget build(BuildContext context, MiniAppContext appCtx) {\n    final user = appCtx.auth.currentUser;\n    final token = appCtx.auth.accessToken;\n\n    return Scaffold(\n      appBar: SuperAppBar(title: 'Food Delivery', appCtx: appCtx),\n      body: MiniAppHomeView(user: user, apiToken: token),\n    );\n  }\n}`,
+                code: `import 'package:flutter/material.dart';
+import 'package:super_app_sdk/super_app_sdk.dart';
+
+// Official Flutter Mini App entrypoint
+class MiniAppEntryPoint extends MiniAppWidget {
+  @override
+  Widget build(BuildContext context, MiniAppContext appCtx) {
+    final user = appCtx.auth.currentUser;
+    final token = appCtx.auth.accessToken;
+
+    return Scaffold(
+      appBar: SuperAppBar(title: 'Food Delivery', appCtx: appCtx),
+      body: MiniAppHomeView(user: user, apiToken: token),
+    );
+  }
+}`,
+              },
+              {
+                filename: "MiniAppPlugin.kt",
+                language: "kotlin",
+                code: `package com.merchant.miniapp
+
+import com.superapp.host.sdk.SuperAppPlugin
+import com.superapp.host.sdk.MiniAppContext
+import android.content.Context
+
+class MiniAppPlugin : SuperAppPlugin {
+    override fun onAttachedToHost(context: Context, appCtx: MiniAppContext) {
+        val userSession = appCtx.auth.currentUser
+        // Initialize native service bindings
+    }
+
+    override fun onDetachedFromHost() {
+        // Clean up resources
+    }
+}`,
+              },
+              {
+                filename: "MiniAppPlugin.swift",
+                language: "swift",
+                code: `import Foundation
+import SuperAppHostSDK
+
+@objc public class MiniAppPlugin: NSObject, SuperAppModuleProtocol {
+    public func initialize(with context: MiniAppContext) {
+        let currentSession = context.auth.currentUser
+        // Configure Swift host delegate
+    }
+
+    public func terminate() {
+        // Clean up memory and observers
+    }
+}`,
+              },
+              {
+                filename: "web-bridge.ts",
+                language: "typescript",
+                code: `import FSASuperApp from '@fsasuperapp/sdk';
+
+// Consume Host authentication and profile
+export async function initMiniApp() {
+  const auth = await FSASuperApp.getAuthToken();
+  const user = await FSASuperApp.getUserProfile();
+  console.log('Logged in user:', user.displayName, 'Token:', auth.accessToken);
+}
+
+// Exit Mini App safely
+export function exitApp() {
+  FSASuperApp.close();
+}`,
               },
               {
                 filename: "pubspec.yaml",
                 language: "yaml",
-                code: `name: food_delivery_miniapp\ndescription: A Food Delivery Mini App module\nversion: 1.0.0\n\nenvironment:\n  sdk: '>=3.2.0 <4.0.0'\n  flutter: '>=3.16.0'\n\ndependencies:\n  flutter:\n    sdk: flutter\n  super_app_sdk: ^1.2.0\n  http: ^1.1.0`,
+                code: `name: food_delivery_miniapp
+description: A Food Delivery Mini App module
+version: 1.0.0
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+  flutter: '>=3.16.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  super_app_sdk: ^1.2.0
+  http: ^1.1.0`,
               },
               {
                 filename: "security-rule.yaml",
                 language: "yaml",
-                code: `rules:\n  - id: forbid-main-entrypoint\n    patterns:\n      - pattern: void main() { ... }\n    message: "Mini Apps must not define void main() or invoke runApp()."\n    severity: ERROR\n    languages: [dart]\n  - id: forbid-exit-calls\n    pattern: exit($CODE)\n    message: "Mini Apps cannot terminate the host Super App process."\n    severity: ERROR\n    languages: [dart]`,
+                code: `rules:
+  - id: forbid-main-entrypoint
+    patterns:
+      - pattern: void main() { ... }
+    message: "Mini Apps must not define void main() or invoke runApp()."
+    severity: ERROR
+    languages: [dart]
+  - id: forbid-exit-calls
+    pattern: exit($CODE)
+    message: "Mini Apps cannot terminate the host Super App process."
+    severity: ERROR
+    languages: [dart]`,
               },
             ]}
           />
@@ -483,10 +627,10 @@ export default function GuidelinesPage() {
                 <BanIcon /> Strictly Prohibited
               </strong>
               <ul className="space-y-1.5 list-disc pl-4 text-slate-700 dark:text-slate-300">
-                <li>No <code>void main()</code> or <code>runApp()</code> entrypoints</li>
-                <li>No direct <code>exit(0)</code> or <code>SystemNavigator.pop()</code></li>
-                <li>No custom unvetted <code>MethodChannel</code> calls</li>
-                <li>No direct modification of Super App theme globals</li>
+                <li>No <code>void main()</code> or <code>runApp()</code> root entrypoints</li>
+                <li>No direct <code>exit(0)</code> or <code>SystemNavigator.pop()</code> process kill calls</li>
+                <li>No unvetted, arbitrary <code>MethodChannel</code> or raw JNI calls</li>
+                <li>No direct modification of Super App global theme singletons</li>
               </ul>
             </div>
 
@@ -495,10 +639,10 @@ export default function GuidelinesPage() {
                 <CheckCircleIcon /> Required Conventions
               </strong>
               <ul className="space-y-1.5 list-disc pl-4 text-slate-700 dark:text-slate-300">
-                <li>Extend <code>MiniAppWidget</code> as the root view</li>
-                <li>Consume <code>MiniAppContext</code> for auth and tokens</li>
-                <li>Use <code>SuperAppSDK.navigation</code> for host routing</li>
-                <li>Declare required device features via Capabilities</li>
+                <li>Extend <code>MiniAppWidget</code> or implement <code>SuperAppPlugin</code> as root</li>
+                <li>Consume <code>MiniAppContext</code> or <code>FSASuperApp</code> for auth &amp; tokens</li>
+                <li>Use <code>SuperAppSDK.navigation</code> for host view routing</li>
+                <li>Declare all sensitive device features upfront in Capabilities Catalog</li>
               </ul>
             </div>
           </div>
@@ -512,22 +656,21 @@ export default function GuidelinesPage() {
       shortTitle: "Integration Methods",
       category: "METHODS",
       summary:
-        "Detailed breakdown, requirements, security checks, and specifications for all 5 integration channels.",
-      badge: "Comprehensive Matrix",
+        "Detailed breakdown, requirements, security checks, and specifications for all 4 official integration methods.",
+      badge: "4 Integration Tiers",
       content: (
         <div className="space-y-6 text-base text-slate-600 dark:text-slate-300">
           <p className="leading-relaxed">
-            The Super App platform supports 5 distinct integration tiers tailored to your deployment strategy and source confidentiality requirements:
+            The Super App platform supports 4 official integration methods tailored to your architecture, tech stack, and distribution model:
           </p>
 
           {/* Interactive Method Tabs */}
           <div className="flex border-b border-slate-200 dark:border-slate-800 overflow-x-auto no-scrollbar [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] gap-1">
             {[
-              { id: "webview", label: "WebView & Domain Verification", icon: <GlobeIcon /> },
-              { id: "artifact", label: "Package Artifact", icon: <PackageIcon /> },
-              { id: "source", label: "Source Code", icon: <FolderIcon /> },
-              { id: "native", label: "Native SDK", icon: <WrenchIcon /> },
-              { id: "deeplink", label: "Deep Link", icon: <LinkIcon /> },
+              { id: "webview", label: "WebView Mini App", icon: <GlobeIcon /> },
+              { id: "flutter", label: "Flutter Package (Git / ZIP)", icon: <PackageIcon /> },
+              { id: "native", label: "Native SDK (Kotlin / Swift)", icon: <WrenchIcon /> },
+              { id: "deeplink", label: "Deep Link Protocol", icon: <LinkIcon /> },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -548,10 +691,10 @@ export default function GuidelinesPage() {
             <div className="space-y-6 pt-2">
               <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
                 <h5 className="text-lg font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-                  <GlobeIcon /> WebView Integration
+                  <GlobeIcon /> WebView Mini App Integration
                 </h5>
                 <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                  Embeds external web applications into an isolated, secure Super App WebView container. The web application interacts with native features via the standardized JavaScript Bridge.
+                  Embeds external web applications into an isolated, secure Super App WebView container. The web application interacts with native features via the standardized JavaScript Bridge (<code>@fsasuperapp/sdk</code>).
                 </p>
               </div>
 
@@ -565,375 +708,106 @@ export default function GuidelinesPage() {
                       </div>
                       <div>
                         <h5 className="text-xl font-bold text-slate-900 dark:text-white">
-                          Domain Ownership Verification (.well-known)
+                          Mandatory Domain Ownership Verification
                         </h5>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">
-                          Host <code className="text-brand-600 dark:text-brand-400 font-semibold font-mono">superapp-miniapp-association.json</code> to prove administrative control
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
+                          Mini Apps serving web content must cryptographically prove domain ownership before staging submission.
                         </p>
                       </div>
                     </div>
-                    <span className="px-3 py-1 text-sm font-bold rounded-full bg-brand-100 text-brand-800 dark:bg-brand-950 dark:text-brand-300 border border-brand-300 dark:border-brand-800">
-                      Mandatory for WebView
+                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-brand-500/15 text-brand-600 dark:text-brand-400 border border-brand-500/30">
+                      Automated Pre-flight Gate
                     </span>
                   </div>
 
-                  <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-                    To prevent malicious framing of third-party websites or hijacking WebView sessions, the Super App requires all WebView Mini Apps to host an association manifest proving origin ownership before activation.
-                  </p>
-
-                  <div className="space-y-4">
-                    <h6 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-1.5">
-                      <TargetIcon /> 1. Expected Endpoint URL
-                    </h6>
-                    <div className="p-3.5 bg-slate-900 text-slate-100 rounded-lg font-mono text-sm overflow-x-auto">
-                      <span>https://&lt;your-domain&gt;/.well-known/superapp-miniapp-association.json</span>
-                    </div>
-
-                    <h6 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-1.5 pt-2">
-                      <ClipboardIcon /> 2. Manifest JSON Schema & Deployment Configs
-                    </h6>
-                    <VSCodeEditor
-                      files={[
-                        {
-                          filename: "superapp-miniapp-association.json",
-                          language: "json",
-                          code: `{\n  "appId": "miniapp_banking_8f32a1",\n  "verificationToken": "tok_live_7e8b91c23f4a012d987e45b6a1c2d3e4",\n  "environment": "DEV",\n  "allowedDomains": [\n    "banking.partner.com",\n    "auth.partner.com"\n  ],\n  "permissions": [\n    "Camera",\n    "Location"\n  ]\n}`,
-                        },
-                        {
-                          filename: "Next.js (App / Pages)",
-                          language: "yaml",
-                          code: `# Place the file in your public directory:\n# your-project/public/.well-known/superapp-miniapp-association.json\n# Next.js will automatically serve it statically at:\n# https://your-domain.com/.well-known/superapp-miniapp-association.json`,
-                        },
-                        {
-                          filename: "nginx.conf",
-                          language: "yaml",
-                          code: `# Nginx location block configuration\nlocation /.well-known/ {\n    root /var/www/html;\n    default_type application/json;\n    add_header Access-Control-Allow-Origin *;\n    try_files $uri =404;\n}`,
-                        },
-                        {
-                          filename: "Express (Node.js)",
-                          language: "dart",
-                          code: `// Express.js static route\napp.use('/.well-known', express.static(path.join(__dirname, 'public/.well-known'), {\n  setHeaders: (res) => {\n    res.setHeader('Content-Type', 'application/json');\n    res.setHeader('Access-Control-Allow-Origin', '*');\n  }\n}));`,
-                        },
-                      ]}
-                    />
-
-                    <h6 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-1.5 pt-2">
-                      <CheckCircleIcon /> 3. Verification HTTP Requirements
-                    </h6>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                      <div className="p-3.5 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
-                        <strong className="text-slate-900 dark:text-slate-100 block mb-1">HTTP Status: 200 OK</strong>
-                        <span className="text-slate-600 dark:text-slate-400">Must respond with 200 OK without redirects (301/302).</span>
-                      </div>
-                      <div className="p-3.5 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
-                        <strong className="text-slate-900 dark:text-slate-100 block mb-1">Content-Type Header</strong>
-                        <span className="text-slate-600 dark:text-slate-400">Must be <code className="text-brand-600 dark:text-brand-400 font-mono">application/json</code>.</span>
-                      </div>
-                      <div className="p-3.5 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
-                        <strong className="text-slate-900 dark:text-slate-100 block mb-1">Public Accessibility</strong>
-                        <span className="text-slate-600 dark:text-slate-400">Accessible without Basic Auth, VPNs, or IP firewalls.</span>
-                      </div>
-                      <div className="p-3.5 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
-                        <strong className="text-slate-900 dark:text-slate-100 block mb-1">CORS Headers</strong>
-                        <span className="text-slate-600 dark:text-slate-400">Include <code className="text-brand-600 dark:text-brand-400 font-mono">Access-Control-Allow-Origin: *</code>.</span>
-                      </div>
-                    </div>
-
-                    <h6 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-1.5 pt-2">
-                      <WrenchIcon /> 4. Testing with cURL
-                    </h6>
-                    <div className="p-3.5 bg-slate-900 text-slate-200 rounded-lg font-mono text-sm space-y-1">
-                      <p className="text-slate-400"># Verify the endpoint response in terminal:</p>
-                      <p className="text-emerald-400">curl -i https://&lt;your-domain&gt;/.well-known/superapp-miniapp-association.json</p>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              {/* FSA Super App JavaScript SDK & Bridge Reference */}
-              <section id="js-bridge-sdk" className="scroll-mt-28 space-y-5">
-                <div className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 shadow-sm space-y-5">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400">
-                      <WrenchIcon />
-                    </div>
-                    <div>
-                      <h5 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <span>JavaScript SDK (`@fsasuperapp/sdk`) &amp; `window.FSASuperApp`</span>
-                        <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300">
-                          v1.0.0
-                        </span>
-                      </h5>
-                      <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
-                        Type-safe client library and runtime bridge for invoking Super App hardware &amp; financial capabilities.
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 space-y-2.5">
+                      <strong className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                        <TagIcon className="w-4 h-4 text-brand-500" />
+                        Method A: DNS TXT Record (Recommended)
+                      </strong>
+                      <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                        Add a TXT record to your root or subdomain DNS zone. Verification is cached and automatically checked during pre-flight.
                       </p>
+                      <div className="p-3 bg-slate-900 text-slate-100 font-mono rounded-lg text-[11px] space-y-1">
+                        <p className="text-slate-400"># Host / Name:</p>
+                        <p className="text-brand-300">_superapp-challenge.yourdomain.com</p>
+                        <p className="text-slate-400 mt-2"># Value / Content:</p>
+                        <p className="text-brand-300">superapp-site-verification=&lt;token&gt;</p>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Multi-package manager install tabs */}
-                  <div className="space-y-3">
-                    <h6 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-1.5">
-                      <PackageIcon /> 1. Installation (pnpm, npm, yarn, bun, CDN)
-                    </h6>
-                    <VSCodeEditor
-                      files={[
-                        {
-                          filename: "pnpm (Recommended)",
-                          language: "yaml",
-                          code: `# Install using pnpm\npnpm add @fsasuperapp/sdk`,
-                        },
-                        {
-                          filename: "npm",
-                          language: "yaml",
-                          code: `# Install using npm\nnpm install @fsasuperapp/sdk`,
-                        },
-                        {
-                          filename: "yarn",
-                          language: "yaml",
-                          code: `# Install using yarn\nyarn add @fsasuperapp/sdk`,
-                        },
-                        {
-                          filename: "bun",
-                          language: "yaml",
-                          code: `# Install using bun\nbun add @fsasuperapp/sdk`,
-                        },
-                        {
-                          filename: "HTML (<script> CDN)",
-                          language: "yaml",
-                          code: `<!-- Direct CDN embed in vanilla HTML -->\n<script src="https://app.fintechcenterfsa.com/sdk/fsasuperapp-sdk.js"></script>\n<!-- Automatically exposes global window.FSASuperApp -->`,
-                        },
-                      ]}
-                    />
-                  </div>
-
-                  {/* Code Examples & API Signatures */}
-                  <div className="space-y-3">
-                    <h6 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-1.5">
-                      <CodeIcon /> 2. Core Capability Methods &amp; Code Examples
-                    </h6>
-                    <VSCodeEditor
-                      files={[
-                        {
-                          filename: "React / Next.js (TypeScript)",
-                          language: "dart",
-                          code: `import FSASuperApp from '@fsasuperapp/sdk';\n\n// 1. Scan QR Code via Native High-Speed Scanner\nasync function handleScan() {\n  try {\n    const qrResult = await FSASuperApp.scanQRCode({\n      title: 'Scan Merchant KHQR',\n      prompt: 'Align the QR code within the target frame',\n    });\n    console.log('Scanned payload:', qrResult.data);\n  } catch (err) {\n    console.error('Scan cancelled or rejected:', err);\n  }\n}\n\n// 2. Request KHQR In-App Payment Checkout\nasync function handlePayment(orderId: string, amount: number) {\n  const res = await FSASuperApp.requestPayment({\n    amount: amount,\n    currency: 'USD',\n    merchantId: 'MCH-FSA-88219',\n    orderId: orderId,\n    description: 'Mini App Express Checkout',\n  });\n  if (res.success) {\n    alert('Payment Confirmed! TxID: ' + res.transactionId);\n  }\n}\n\n// 3. Biometric Authorization / FaceID Signing\nasync function handleBiometricSign(docHash: string) {\n  const auth = await FSASuperApp.authenticateBiometric({\n    reason: 'Cryptographically authorize transfer of assets',\n    payload: docHash,\n  });\n  console.log('Signed Auth Token:', auth.signedToken);\n}`,
-                        },
-                        {
-                          filename: "Vanilla JavaScript (window.FSASuperApp)",
-                          language: "dart",
-                          code: `// Directly use the global window.FSASuperApp bridge without build tools\n\n// Check if running inside Super App container\nif (window.FSASuperApp) {\n  console.log('Running inside Super App runtime environment');\n\n  // 1. Get current verified user profile (SSO)\n  window.FSASuperApp.getUserProfile().then(user => {\n    console.log('Logged in user:', user.name, user.email, user.userId);\n  });\n\n  // 2. Query instant high-accuracy GPS location\n  window.FSASuperApp.getLocation({ highAccuracy: true }).then(coords => {\n    console.log('Latitude:', coords.latitude, 'Longitude:', coords.longitude);\n  });\n\n  // 3. Display native mobile toast notification\n  window.FSASuperApp.showToast({\n    message: 'Operation completed successfully!',\n    type: 'success',\n    duration: 2500,\n  });\n} else {\n  console.warn('Running outside Super App host environment');\n}`,
-                        },
-                        {
-                          filename: "TypeScript Types (@fsasuperapp/sdk)",
-                          language: "dart",
-                          code: `export interface ScanResult {\n  success: boolean;\n  data: string;\n  format: 'QR_CODE' | 'BARCODE' | 'DATA_MATRIX';\n}\n\nexport interface PaymentParams {\n  amount: number;\n  currency: 'USD' | 'KHR';\n  merchantId: string;\n  orderId: string;\n  description?: string;\n}\n\nexport interface PaymentResult {\n  success: boolean;\n  transactionId?: string;\n  hash?: string;\n  errorCode?: string;\n}\n\nexport interface UserProfile {\n  userId: string;\n  name: string;\n  email: string;\n  kycVerified: boolean;\n}`,
-                        },
-                      ]}
-                    />
-                  </div>
-
-                  {/* Security & Permissions Policy Note */}
-                  <div className="p-4 rounded-xl border border-sky-200 dark:border-sky-900/50 bg-sky-50/50 dark:bg-sky-950/20 text-xs text-slate-700 dark:text-slate-300 space-y-1.5">
-                    <strong className="text-sky-900 dark:text-sky-300 font-bold flex items-center gap-1.5">
-                      <ShieldIcon /> Dynamic Permission Sandbox Governance
-                    </strong>
-                    <p className="leading-relaxed">
-                      Every method call through <code>@fsasuperapp/sdk</code> or <code>window.FSASuperApp</code> is cryptographically verified against the permissions approved in the Back-Office registry. If a capability is not approved or not consented to by the user, the bridge immediately rejects the request with a typed <code>PERMISSION_DENIED</code> error code.
-                    </p>
+                    <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 space-y-2.5">
+                      <strong className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                        <HashIcon className="w-4 h-4 text-brand-500" />
+                        Method B: HTML Meta Tag
+                      </strong>
+                      <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                        Place a verification meta tag in the <code>&lt;head&gt;</code> section of your production URL homepage.
+                      </p>
+                      <div className="p-3 bg-slate-900 text-slate-100 font-mono rounded-lg text-[11px] space-y-1">
+                        <p className="text-slate-400">&lt;!-- Inside &lt;head&gt; of index.html --&gt;</p>
+                        <p className="text-brand-300">&lt;meta name=&quot;superapp-site-verification&quot; content=&quot;&lt;token&gt;&quot; /&gt;</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </section>
             </div>
           )}
 
-          {/* Method 2: Flutter Package Artifact */}
-          {activeMethodTab === "artifact" && (
+          {/* Method 2: Flutter Package (Source Code Git & Package Artifact ZIP) */}
+          {activeMethodTab === "flutter" && (
             <div className="space-y-6 pt-2">
-              <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
-                <h5 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <PackageIcon /> Flutter Package Artifact (.tar.gz / .zip)
+              <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
+                <h5 className="text-lg font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+                  <PackageIcon /> Flutter Package Integration (Git &amp; ZIP Archive)
                 </h5>
                 <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                  Integrates a Flutter package archive directly into the Super App registry. Packages uploaded here undergo automated quarantine sanitization, static security scanning, and dependency resolution before promotion to private Sonatype Nexus registries.
+                  Deliver your Mini App as a modular Flutter Dart package. The Super App platform supports two distribution formats: <strong>Source Code (Git Repository)</strong> or pre-packaged <strong>Package Artifact (.zip Archive)</strong>.
                 </p>
               </div>
 
-              {/* Package Archive Optimization & Size Reduction Guide */}
-              <div className="p-6 rounded-2xl border-2 border-accent-500/40 dark:border-accent-500/30 bg-gradient-to-br from-accent-50/70 via-slate-50 to-white dark:from-accent-950/30 dark:via-slate-900/60 dark:to-slate-900/40 shadow-sm space-y-6">
-                <div className="flex items-start justify-between gap-4 flex-wrap">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-accent-500/10 text-accent-600 dark:text-accent-400">
+              {/* Delivery Options Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="p-2 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold">
+                      <FolderIcon />
+                    </span>
+                    <div>
+                      <strong className="text-sm font-bold text-slate-900 dark:text-white block">Option A: Source Code (Git)</strong>
+                      <span className="text-slate-500">Continuous Integration via automated Git clone</span>
+                    </div>
+                  </div>
+                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Provide your Git repository URL and branch. The platform CI/CD engine automatically clones, runs SAST / Semgrep scans, and compiles the bundle into the host Super App.
+                  </p>
+                  <ul className="space-y-1.5 list-disc pl-4 text-slate-600 dark:text-slate-400">
+                    <li>Supports SSH Deploy Keys (ED25519) or Read-Only Personal Access Tokens</li>
+                    <li>Automatic subpath monorepo resolution (<code>gitPath</code>)</li>
+                    <li>Automated dependency vulnerability audits on commit</li>
+                  </ul>
+                </div>
+
+                <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
                       <PackageIcon />
-                    </div>
+                    </span>
                     <div>
-                      <h5 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <span>Package Archive Optimization &amp; Size Reduction</span>
-                        <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                          99.5% Size Reduction
-                        </span>
-                      </h5>
-                      <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
-                        Reduce submission archives from <strong>300+ MB down to &lt; 1 MB</strong> by excluding intermediate build caches.
-                      </p>
+                      <strong className="text-sm font-bold text-slate-900 dark:text-white block">Option B: Package Artifact (.zip)</strong>
+                      <span className="text-slate-500">Pre-packaged standalone Dart package archive</span>
                     </div>
                   </div>
-                </div>
-
-                {/* Root Cause Callout */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                  <div className="p-4 rounded-xl border border-rose-200 dark:border-rose-900/40 bg-rose-50/50 dark:bg-rose-950/20 text-rose-900 dark:text-rose-300 space-y-2">
-                    <strong className="flex items-center gap-1.5 font-bold text-rose-700 dark:text-rose-400 text-sm">
-                      <BanIcon /> What Causes 300+ MB Bloat (Exclude These)
-                    </strong>
-                    <ul className="space-y-1 list-disc pl-4 text-slate-700 dark:text-slate-300">
-                      <li><code>build/</code> (Gradle outputs, intermediate .dex/.class, C++ objects: ~200MB)</li>
-                      <li><code>.dart_tool/</code> (Dart kernel bytecode &amp; pub caches: ~80MB)</li>
-                      <li><code>android/.gradle/</code> &amp; <code>ios/Pods/</code> (Local build state &amp; daemons: ~100MB)</li>
-                      <li><code>.git/</code> (Complete local commit history &amp; packfiles)</li>
-                    </ul>
-                  </div>
-
-                  <div className="p-4 rounded-xl border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-900 dark:text-emerald-300 space-y-2">
-                    <strong className="flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-400 text-sm">
-                      <CheckCircleIcon /> Pure Source Needed (&lt; 1 MB)
-                    </strong>
-                    <ul className="space-y-1 list-disc pl-4 text-slate-700 dark:text-slate-300">
-                      <li><code>lib/</code> (All Dart widgets, business logic, and UI code)</li>
-                      <li><code>pubspec.yaml</code> (Package metadata &amp; dependency constraints)</li>
-                      <li><code>assets/</code> (Images, icons, fonts if bundled)</li>
-                      <li><code>README.md</code>, <code>CHANGELOG.md</code>, <code>LICENSE</code></li>
-                    </ul>
-                  </div>
-                </div>
-
-                {/* Option 1: Manual Clean */}
-                <div className="space-y-3">
-                  <h6 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
-                    <WrenchIcon />
-                    <span>Option 1: Quick Terminal Clean Before Zipping</span>
-                  </h6>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                    Execute <code>flutter clean</code> and purge residual tooling caches before compressing your release archive:
+                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Upload a sanitized <code>.zip</code> package containing your Flutter module source code and <code>pubspec.yaml</code> directly in the registration portal.
                   </p>
-                  <VSCodeEditor
-                    files={[
-                      {
-                        filename: "PowerShell (Windows)",
-                        language: "yaml",
-                        code: `# 1. Clean Flutter build output\nflutter clean\n\n# 2. Scrub residual cache folders\nRemove-Item -Recurse -Force build, .dart_tool, .git -ErrorAction SilentlyContinue\n\n# 3. Create minimal zip archive\nCompress-Archive -Path "lib", "pubspec.yaml", "assets", "README.md" -DestinationPath "my_miniapp-1.0.0.zip"`,
-                      },
-                      {
-                        filename: "Bash (macOS / Linux)",
-                        language: "yaml",
-                        code: `# 1. Clean Flutter build output\nflutter clean\n\n# 2. Scrub residual cache folders\nrm -rf build .dart_tool .git .gradle android/.gradle ios/Pods\n\n# 3. Create minimal zip archive\nzip -r my_miniapp-1.0.0.zip lib pubspec.yaml assets README.md -x "*.DS_Store"`,
-                      },
-                    ]}
-                  />
-                </div>
-
-                {/* Option 2: Automated Packing Scripts */}
-                <div className="space-y-3">
-                  <h6 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
-                    <PackageIcon />
-                    <span>Option 2: Automated Turnkey Pack Scripts (`pack-miniapp`)</span>
-                  </h6>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                    Use our ready-to-use packaging utilities in your repository root to automatically sanitize and produce minimal release archives:
-                  </p>
-                  <VSCodeEditor
-                    files={[
-                      {
-                        filename: "scripts/pack-miniapp.ps1",
-                        language: "yaml",
-                        code: `# Execute from your Flutter Mini App root in PowerShell:\n.\\scripts\\pack-miniapp.ps1\n\n# Or specify an output directory:\n.\\scripts\\pack-miniapp.ps1 -OutputDir "..\\dist"\n\n# Output:\n# [SUCCESS] Mini App Package Successfully Created: miniapp-1.0.0.zip (820.4 KB)`,
-                      },
-                      {
-                        filename: "scripts/pack-miniapp.sh",
-                        language: "yaml",
-                        code: `# Make executable and run in macOS / Linux terminal:\nchmod +x scripts/pack-miniapp.sh\n./scripts/pack-miniapp.sh\n\n# Output:\n# [SUCCESS] Mini App Package Successfully Created: miniapp-1.0.0.zip (820.4 KB)`,
-                      },
-                      {
-                        filename: ".pubignore",
-                        language: "yaml",
-                        code: `# Standard .pubignore for Flutter Mini Apps\nbuild/\n.dart_tool/\n.gradle/\nandroid/.gradle/\nios/Pods/\n.idea/\n.vscode/\n*.apk\n*.aar\n*.ipa\n.DS_Store`,
-                      },
-                    ]}
-                  />
-                </div>
-
-                {/* Backend Quarantine Gateway Architecture */}
-                <div className="p-4 rounded-xl border border-accent-200 dark:border-accent-800 bg-white dark:bg-slate-900/80 space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-accent-700 dark:text-accent-400">
-                    <ShieldIcon />
-                    <span>Platform Ingestion Safety: Backend Quarantine Sanitizer</span>
-                  </div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                    If an uncleaned archive (300+ MB) is accidentally uploaded, the Super App <strong>Backend Gateway Sanitizer</strong> automatically strips local build artifacts in-memory before writing to MinIO <code>package-submissions/</code>. The CI pipeline then performs static analysis on pure source code and publishes canonical <code>.tar.gz</code> packages to Sonatype Nexus <code>pub-hosted</code>.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Method 3: Flutter Source Code (Git) */}
-          {activeMethodTab === "source" && (
-            <div className="space-y-6 pt-2">
-              <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
-                <h5 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <FolderIcon /> Flutter Package Source Code (Git Integration)
-                </h5>
-                <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                  Directly links a Git repository (GitHub, GitLab, or self-hosted Git server) to the Super App container. Source code is fetched, analyzed, and injected via native Dart pub Git dependencies with Commit SHA locking for reproducible builds.
-                </p>
-              </div>
-
-              {/* Private Repository Authentication - Owner Credentials Policy */}
-              <div className="p-6 rounded-2xl border-2 border-accent-500/40 dark:border-accent-500/30 bg-gradient-to-br from-accent-50/70 via-slate-50 to-white dark:from-accent-950/30 dark:via-slate-900/60 dark:to-slate-900/40 shadow-sm space-y-5">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-accent-500/10 text-accent-600 dark:text-accent-400">
-                    <KeyIcon />
-                  </div>
-                  <div>
-                    <h5 className="text-xl font-bold text-slate-900 dark:text-white">
-                      Private Repository Authentication (Owner-Managed Keys)
-                    </h5>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
-                      Zero platform credential sharing. Developers provide their own dedicated read-only Deploy Key or Access Token.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                  <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 space-y-2.5">
-                    <strong className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                      <KeyIcon className="w-4 h-4 text-accent-500" />
-                      Option A: SSH Deploy Key (Recommended)
-                    </strong>
-                    <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                      The Super App platform automatically generates an isolated ED25519 key pair dedicated to your Mini App. The private key remains encrypted at rest (AES-256-GCM) in the platform CI runner, so you never have to transmit or manage private keys.
-                    </p>
-                    <div className="p-3 bg-slate-900 text-slate-100 font-mono rounded-lg text-[11px] space-y-1">
-                      <p className="text-slate-400"># 1. Super App generates an isolated key pair in portal</p>
-                      <p className="text-accent-300">ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... (Click &quot;Copy Public Key&quot;)</p>
-                      <p className="text-slate-400"># 2. In GitHub/GitLab: Settings &rarr; Deploy Keys &rarr; Add Deploy Key (Read-Only)</p>
-                      <p className="text-slate-400"># 3. Enter repository URL &rarr; Click &quot;Verify Access&quot;</p>
-                    </div>
-                  </div>
-
-                  <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 space-y-2.5">
-                    <strong className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                      <LockIcon className="w-4 h-4 text-accent-500" />
-                      Option B: Personal / Project Deploy Token
-                    </strong>
-                    <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                      Generate a fine-grained Personal Access Token (PAT) or GitLab Project Deploy Token with strictly <code className="text-accent-600 dark:text-accent-400 font-mono">read_repository</code> scope.
-                    </p>
-                    <ul className="space-y-1 list-disc pl-4 text-slate-600 dark:text-slate-400 leading-relaxed">
-                      <li>GitHub: Developer Settings &rarr; Personal access tokens &rarr; Fine-grained (Read-only repo contents).</li>
-                      <li>GitLab: Project Settings &rarr; Repository &rarr; Deploy Tokens (<code className="font-mono text-[11px]">read_repository</code>).</li>
-                      <li>Paste the token into the registration form.</li>
-                    </ul>
-                  </div>
+                  <ul className="space-y-1.5 list-disc pl-4 text-slate-600 dark:text-slate-400">
+                    <li>Maximum archive size: 50 MB</li>
+                    <li>Pre-upload sanitization strips unnecessary binaries, <code>.git</code>, and build folders</li>
+                    <li>SHA-256 integrity checksum calculated and signed on upload</li>
+                  </ul>
                 </div>
               </div>
 
@@ -946,11 +820,11 @@ export default function GuidelinesPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
                   <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1">
                     <strong className="text-slate-800 dark:text-slate-200 block">1. Canonical Package Name</strong>
-                    <span className="text-slate-500">Must be lowercase with underscores (e.g. <code className="text-accent-600 dark:text-accent-400 font-mono">my_transit_miniapp</code>).</span>
+                    <span className="text-slate-500">Must be lowercase with underscores (e.g. <code className="text-brand-600 dark:text-brand-400 font-mono">my_transit_miniapp</code>).</span>
                   </div>
                   <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1">
                     <strong className="text-slate-800 dark:text-slate-200 block">2. Root Export File</strong>
-                    <span className="text-slate-500">Must export primary screens / widgets in <code className="text-accent-600 dark:text-accent-400 font-mono">lib/&lt;package_name&gt;.dart</code>.</span>
+                    <span className="text-slate-500">Must export primary screens / widgets in <code className="text-brand-600 dark:text-brand-400 font-mono">lib/&lt;package_name&gt;.dart</code>.</span>
                   </div>
                   <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1">
                     <strong className="text-slate-800 dark:text-slate-200 block">3. Isolated State</strong>
@@ -961,30 +835,96 @@ export default function GuidelinesPage() {
             </div>
           )}
 
-          {/* Method 4: Native SDK */}
+          {/* Method 3: Native SDK (Kotlin / Swift) */}
           {activeMethodTab === "native" && (
-            <div className="space-y-4 pt-2">
-              <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
-                <h5 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <WrenchIcon /> Native SDK (.aar / .xcframework)
+            <div className="space-y-6 pt-2">
+              <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
+                <h5 className="text-lg font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+                  <WrenchIcon /> Native SDK Integration (Kotlin / Swift)
                 </h5>
                 <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                  Embeds platform-specific binaries for specialized hardware or legacy modules. Requires architectural manual review by the Super App administration team.
+                  Deliver native compiled binaries for high-performance graphics, hardware device drivers, or legacy codebases. Third-party developers author modules in <strong>Kotlin / Java (Android)</strong> and <strong>Swift / Objective-C (iOS)</strong> and upload compiled binaries.
                 </p>
+              </div>
+
+              {/* Native Binaries Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
+                      AAR
+                    </span>
+                    <div>
+                      <strong className="text-sm font-bold text-slate-900 dark:text-white block">Android: AAR Library (<code>.aar</code>)</strong>
+                      <span className="text-slate-500">Compiled Kotlin / Java Android Archive</span>
+                    </div>
+                  </div>
+                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Upload your compiled <code>.aar</code> binary. In the registration form, specify the Android Package Name (e.g. <code>com.merchant.miniapp</code>) and Plugin Entry Class (e.g. <code>MiniAppPlugin</code>).
+                  </p>
+                  <div className="p-3 bg-slate-900 text-slate-100 font-mono rounded-lg text-[11px] space-y-1">
+                    <p className="text-slate-400">// Kotlin Implementation</p>
+                    <p className="text-brand-300">class MiniAppPlugin : SuperAppPlugin &#123;</p>
+                    <p className="text-slate-300 pl-4">override fun onAttachedToHost(ctx: Context, appCtx: MiniAppContext) &#123; ... &#125;</p>
+                    <p className="text-brand-300">&#125;</p>
+                  </div>
+                </div>
+
+                <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="p-2 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold">
+                      ZIP
+                    </span>
+                    <div>
+                      <strong className="text-sm font-bold text-slate-900 dark:text-white block">iOS: Framework (<code>.xcframework</code> / <code>.zip</code>)</strong>
+                      <span className="text-slate-500">Compiled Swift / Objective-C Binary Framework</span>
+                    </div>
+                  </div>
+                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Upload a <code>.zip</code> archive containing your compiled <code>.xcframework</code> or <code>.framework</code>. Specify the iOS Module Name (e.g. <code>MerchantMiniApp</code>) and Entry Type (e.g. <code>MiniAppPlugin</code>).
+                  </p>
+                  <div className="p-3 bg-slate-900 text-slate-100 font-mono rounded-lg text-[11px] space-y-1">
+                    <p className="text-slate-400">// Swift Implementation</p>
+                    <p className="text-brand-300">@objc public class MiniAppPlugin: NSObject, SuperAppModuleProtocol &#123;</p>
+                    <p className="text-slate-300 pl-4">public func initialize(with context: MiniAppContext) &#123; ... &#125;</p>
+                    <p className="text-brand-300">&#125;</p>
+                  </div>
+                </div>
               </div>
             </div>
           )}
 
-          {/* Method 5: Deep Link */}
+          {/* Method 4: Deep Link */}
           {activeMethodTab === "deeplink" && (
-            <div className="space-y-4 pt-2">
+            <div className="space-y-6 pt-2">
               <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
                 <h5 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <LinkIcon /> Deep Link Router
+                  <LinkIcon /> Deep Link Integration Protocol
                 </h5>
                 <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                  Treats the Super App as a discovery launchpad, redirecting the user to a standalone mobile app installed on the device via registered App Links / Universal Links.
+                  Treats the Super App as an ecosystem discovery launchpad, seamlessly redirecting the user to your standalone mobile application installed on the device via registered Custom URL Schemes or Universal / App Links.
                 </p>
+              </div>
+
+              <div className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 space-y-4">
+                <h5 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <KeyIcon className="w-4 h-4 text-brand-500" />
+                  <span>Required Configuration Parameters</span>
+                </h5>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1">
+                    <strong className="text-slate-800 dark:text-slate-200 block">1. URL Scheme</strong>
+                    <span className="text-slate-500">Registered custom URI (e.g. <code className="text-brand-600 dark:text-brand-400 font-mono">merchantapp://checkout</code>).</span>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1">
+                    <strong className="text-slate-800 dark:text-slate-200 block">2. Android Package Name</strong>
+                    <span className="text-slate-500">Google Play Store package identifier for store fallback redirect.</span>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1">
+                    <strong className="text-slate-800 dark:text-slate-200 block">3. iOS App Store URL</strong>
+                    <span className="text-slate-500">Apple App Store URL for automatic app installation fallback.</span>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -1238,11 +1178,98 @@ export default function GuidelinesPage() {
       content: (
         <div className="space-y-6 text-base text-slate-600 dark:text-slate-300">
           <p className="leading-relaxed">
-            Mini App integrations transition through a strictly governed finite state machine ensuring complete traceability:
+            Mini App integrations transition through a strictly governed 10-state finite state machine. Every stage enforces automated security gates, role-based authorizations, and end-to-end audit logging.
           </p>
 
           <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
             <LifecycleFlow />
+          </div>
+
+          {/* State Progression Table */}
+          <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-800/60 text-slate-900 dark:text-slate-100 font-semibold">
+                  <th className="py-3 px-4">State</th>
+                  <th className="py-3 px-4">Trigger / Actor</th>
+                  <th className="py-3 px-4">Type</th>
+                  <th className="py-3 px-4">Next Available States</th>
+                  <th className="py-3 px-4">Developer Action / Remedy</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-slate-600 dark:text-slate-300">
+                <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                  <td className="py-2.5 px-4 font-mono font-bold text-slate-700 dark:text-slate-300">DRAFT</td>
+                  <td className="py-2.5 px-4">MA Manager saves registration draft</td>
+                  <td className="py-2.5 px-4"><span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">Manual</span></td>
+                  <td className="py-2.5 px-4 font-mono text-[11px] text-brand-600 dark:text-brand-400">SUBMITTED</td>
+                  <td className="py-2.5 px-4 text-xs">Fill out metadata, verify integration URL, and click &quot;Submit for Review&quot;.</td>
+                </tr>
+                <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                  <td className="py-2.5 px-4 font-mono font-bold text-blue-600 dark:text-blue-400">SUBMITTED</td>
+                  <td className="py-2.5 px-4">MA Manager submits Mini App</td>
+                  <td className="py-2.5 px-4"><span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">Automated</span></td>
+                  <td className="py-2.5 px-4 font-mono text-[11px] text-blue-600 dark:text-blue-400">IN_REVIEW</td>
+                  <td className="py-2.5 px-4 text-xs">System automatically executes pre-flight checks and queues app for admin audit.</td>
+                </tr>
+                <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                  <td className="py-2.5 px-4 font-mono font-bold text-amber-600 dark:text-amber-400">IN_REVIEW</td>
+                  <td className="py-2.5 px-4">Super App Admin initiates governance audit</td>
+                  <td className="py-2.5 px-4"><span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">Manual</span></td>
+                  <td className="py-2.5 px-4 font-mono text-[11px] text-amber-600 dark:text-amber-400">APPROVED, REJECTED</td>
+                  <td className="py-2.5 px-4 text-xs">Admin evaluates capability justifications, security scan reports, and contracts.</td>
+                </tr>
+                <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                  <td className="py-2.5 px-4 font-mono font-bold text-emerald-600 dark:text-emerald-400">APPROVED</td>
+                  <td className="py-2.5 px-4">SA Admin approves architectural contract</td>
+                  <td className="py-2.5 px-4"><span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">Manual</span></td>
+                  <td className="py-2.5 px-4 font-mono text-[11px] text-emerald-600 dark:text-emerald-400">BUILDING</td>
+                  <td className="py-2.5 px-4 text-xs">Approval triggers automated release CI/CD pipeline in Jenkins.</td>
+                </tr>
+                <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                  <td className="py-2.5 px-4 font-mono font-bold text-indigo-600 dark:text-indigo-400">BUILDING</td>
+                  <td className="py-2.5 px-4">Jenkins CI/CD compiles sandbox test bundle</td>
+                  <td className="py-2.5 px-4"><span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">Automated</span></td>
+                  <td className="py-2.5 px-4 font-mono text-[11px] text-indigo-600 dark:text-indigo-400">TESTING, REJECTED</td>
+                  <td className="py-2.5 px-4 text-xs">Builds signed test APK artifact; pushes package to internal Sonatype Nexus repository.</td>
+                </tr>
+                <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                  <td className="py-2.5 px-4 font-mono font-bold text-cyan-600 dark:text-cyan-400">TESTING</td>
+                  <td className="py-2.5 px-4">MA Manager &amp; SA Operator perform sandbox QA</td>
+                  <td className="py-2.5 px-4"><span className="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-100 dark:bg-cyan-900/40 text-cyan-700 dark:text-cyan-300">Manual</span></td>
+                  <td className="py-2.5 px-4 font-mono text-[11px] text-cyan-600 dark:text-cyan-400">ACTIVE, REJECTED</td>
+                  <td className="py-2.5 px-4 text-xs">Download test APK, verify functionality on physical device, and submit sign-off.</td>
+                </tr>
+                <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                  <td className="py-2.5 px-4 font-mono font-bold text-emerald-600 dark:text-emerald-400">ACTIVE</td>
+                  <td className="py-2.5 px-4">SA Admin publishes Mini App to live catalog</td>
+                  <td className="py-2.5 px-4"><span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">Live</span></td>
+                  <td className="py-2.5 px-4 font-mono text-[11px] text-emerald-600 dark:text-emerald-400">SUSPENDED, ARCHIVED</td>
+                  <td className="py-2.5 px-4 text-xs">Mini App is live to millions of Super App end-users in production.</td>
+                </tr>
+                <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                  <td className="py-2.5 px-4 font-mono font-bold text-rose-600 dark:text-rose-400">REJECTED</td>
+                  <td className="py-2.5 px-4">Admin or CI scanner detects security violation</td>
+                  <td className="py-2.5 px-4"><span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300">Terminal</span></td>
+                  <td className="py-2.5 px-4 font-mono text-[11px] text-rose-600 dark:text-rose-400">DRAFT (via Re-submission)</td>
+                  <td className="py-2.5 px-4 text-xs">Review rejection reason, resolve flagged vulnerabilities or contract issues, and re-submit.</td>
+                </tr>
+                <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                  <td className="py-2.5 px-4 font-mono font-bold text-orange-600 dark:text-orange-400">SUSPENDED</td>
+                  <td className="py-2.5 px-4">SA Admin revokes live access due to policy violation</td>
+                  <td className="py-2.5 px-4"><span className="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300">Revoked</span></td>
+                  <td className="py-2.5 px-4 font-mono text-[11px] text-orange-600 dark:text-orange-400">ACTIVE, ARCHIVED</td>
+                  <td className="py-2.5 px-4 text-xs">Contact Super App platform compliance team to remediate suspension triggers.</td>
+                </tr>
+                <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                  <td className="py-2.5 px-4 font-mono font-bold text-slate-500 dark:text-slate-400">ARCHIVED</td>
+                  <td className="py-2.5 px-4">Organization decommissions Mini App</td>
+                  <td className="py-2.5 px-4"><span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400">Closed</span></td>
+                  <td className="py-2.5 px-4 font-mono text-[11px] text-slate-400">None</td>
+                  <td className="py-2.5 px-4 text-xs">Read-only historical audit record. Cannot be re-activated.</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       ),
@@ -1336,151 +1363,222 @@ export default function GuidelinesPage() {
       {/* 3-Column Layout */}
       <div className="flex flex-1 overflow-hidden relative">
         {/* Left Navigation Sidebar */}
-        <aside className="w-72 border-r border-slate-200 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/60 backdrop-blur-sm overflow-y-auto no-scrollbar [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] shrink-0 flex flex-col py-6 px-4 relative z-10">
+                <aside className="w-72 border-r border-slate-200 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md overflow-y-auto no-scrollbar [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] shrink-0 flex flex-col py-5 px-3 relative z-10 select-none">
           {/* Search Bar */}
-          <div className="relative mb-6">
+          <div className="relative mb-5 px-1">
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search documentation..."
-              className="w-full pl-8 pr-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-500 transition"
+              placeholder="Search guidelines..."
+              className="w-full pl-8 pr-8 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-950 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-500 transition-all shadow-none"
             />
-            <div className="absolute left-2.5 top-2.5 text-slate-400">
+            <div className="absolute left-3.5 top-2 text-slate-400 w-3.5 h-3.5 pointer-events-none">
               <SearchIcon />
+            </div>
+            {searchQuery ? (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-2 text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                ✕
+              </button>
+            ) : (
+              <span className="absolute right-3 top-2 text-[10px] font-mono text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-800 rounded px-1">
+                /
+              </span>
+            )}
+          </div>
+
+          {/* Structured Navigation Tree */}
+          <div className="space-y-5 text-xs">
+            {/* Category 1: GETTING STARTED */}
+            <div>
+              <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-3 mb-1.5 flex items-center justify-between">
+                <span>Getting Started</span>
+                <span className="text-[9px] font-mono text-slate-400/60">01-02</span>
+              </div>
+              <nav className="space-y-0.5">
+                {[
+                  { id: "overview", num: "01", title: "Overview & Roles", icon: <UserIcon /> },
+                  { id: "general-requirements", num: "02", title: "General Requirements", icon: <CheckCircleIcon /> },
+                ].map((item) => {
+                  const isActive = activeSection === item.id;
+                  return (
+                    <a
+                      key={item.id}
+                      href={`#${item.id}`}
+                      onClick={() => setActiveSection(item.id)}
+                      className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium border-l-2 transition-all ${
+                        isActive
+                          ? "border-brand-500 bg-brand-50/70 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 font-semibold"
+                          : "border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/40 hover:text-slate-900 dark:hover:text-slate-200"
+                      }`}
+                    >
+                      <span className={`font-mono text-[10px] ${isActive ? "text-brand-500 dark:text-brand-400 font-bold" : "text-slate-400 dark:text-slate-500"}`}>
+                        {item.num}
+                      </span>
+                      <span className="truncate">{item.title}</span>
+                    </a>
+                  );
+                })}
+              </nav>
+            </div>
+
+            {/* Category 2: ARCHITECTURE & CONTRACTS */}
+            <div>
+              <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-3 mb-1.5 flex items-center justify-between">
+                <span>Architecture &amp; Rules</span>
+                <span className="text-[9px] font-mono text-slate-400/60">03-06</span>
+              </div>
+              <nav className="space-y-0.5">
+                {/* 03 SDK Contract */}
+                <a
+                  href="#sdk-contract"
+                  onClick={() => setActiveSection("sdk-contract")}
+                  className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium border-l-2 transition-all ${
+                    activeSection === "sdk-contract"
+                      ? "border-brand-500 bg-brand-50/70 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 font-semibold"
+                      : "border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/40 hover:text-slate-900 dark:hover:text-slate-200"
+                  }`}
+                >
+                  <span className={`font-mono text-[10px] ${activeSection === "sdk-contract" ? "text-brand-500 dark:text-brand-400 font-bold" : "text-slate-400 dark:text-slate-500"}`}>
+                    03
+                  </span>
+                  <span className="truncate">SDK &amp; Host Contract</span>
+                </a>
+
+                {/* 04 Supported Integration Methods */}
+                <div>
+                  <a
+                    href="#methods"
+                    onClick={() => setActiveSection("methods")}
+                    className={`flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-medium border-l-2 transition-all ${
+                      activeSection === "methods"
+                        ? "border-brand-500 bg-brand-50/70 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 font-semibold"
+                        : "border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/40 hover:text-slate-900 dark:hover:text-slate-200"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 truncate">
+                      <span className={`font-mono text-[10px] ${activeSection === "methods" ? "text-brand-500 dark:text-brand-400 font-bold" : "text-slate-400 dark:text-slate-500"}`}>
+                        04
+                      </span>
+                      <span className="truncate">Integration Methods</span>
+                    </div>
+                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-400">4</span>
+                  </a>
+
+                  {/* Nested Method Tabs */}
+                  <div className="ml-5 pl-2.5 my-1 border-l border-slate-200 dark:border-slate-800 space-y-0.5">
+                    {[
+                      { id: "webview", label: "WebView & Verify", badge: "Web" },
+                      { id: "flutter", label: "Flutter Package (Git / ZIP)", badge: "Flutter" },
+                      { id: "native", label: "Native SDK (Kotlin / Swift)", badge: "Native" },
+                      { id: "deeplink", label: "Deep Link Protocol", badge: "URI" },
+                    ].map((m) => {
+                      const isTabActive = activeSection === "methods" && activeMethodTab === m.id;
+                      return (
+                        <a
+                          key={m.id}
+                          href="#methods"
+                          onClick={() => {
+                            setActiveSection("methods");
+                            setActiveMethodTab(m.id as any);
+                          }}
+                          className={`flex items-center justify-between px-2 py-1 rounded-md text-[11px] transition-all ${
+                            isTabActive
+                              ? "bg-brand-500/10 text-brand-600 dark:text-brand-400 font-medium"
+                              : "text-slate-500 dark:text-slate-400 hover:bg-slate-100/50 dark:hover:bg-slate-800/30 hover:text-slate-800 dark:hover:text-slate-200"
+                          }`}
+                        >
+                          <span className="truncate">{m.label}</span>
+                          <span className="text-[9px] font-mono opacity-60 uppercase">{m.badge}</span>
+                        </a>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 05 Capabilities */}
+                <a
+                  href="#capabilities"
+                  onClick={() => setActiveSection("capabilities")}
+                  className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium border-l-2 transition-all ${
+                    activeSection === "capabilities"
+                      ? "border-brand-500 bg-brand-50/70 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 font-semibold"
+                      : "border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/40 hover:text-slate-900 dark:hover:text-slate-200"
+                  }`}
+                >
+                  <span className={`font-mono text-[10px] ${activeSection === "capabilities" ? "text-brand-500 dark:text-brand-400 font-bold" : "text-slate-400 dark:text-slate-500"}`}>
+                    05
+                  </span>
+                  <span className="truncate">Capabilities Catalog</span>
+                </a>
+
+                {/* 06 Security Gates */}
+                <a
+                  href="#security-checkpoints"
+                  onClick={() => setActiveSection("security-checkpoints")}
+                  className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium border-l-2 transition-all ${
+                    activeSection === "security-checkpoints"
+                      ? "border-brand-500 bg-brand-50/70 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 font-semibold"
+                      : "border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/40 hover:text-slate-900 dark:hover:text-slate-200"
+                  }`}
+                >
+                  <span className={`font-mono text-[10px] ${activeSection === "security-checkpoints" ? "text-brand-500 dark:text-brand-400 font-bold" : "text-slate-400 dark:text-slate-500"}`}>
+                    06
+                  </span>
+                  <span className="truncate">Security Gates</span>
+                </a>
+              </nav>
+            </div>
+
+            {/* Category 3: OPERATIONS & GOVERNANCE */}
+            <div>
+              <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-3 mb-1.5 flex items-center justify-between">
+                <span>Operations &amp; Support</span>
+                <span className="text-[9px] font-mono text-slate-400/60">07-08</span>
+              </div>
+              <nav className="space-y-0.5">
+                {[
+                  { id: "validation-lifecycle", num: "07", title: "Validation Lifecycle (10 States)" },
+                  { id: "troubleshooting", num: "08", title: "Troubleshooting & Remedies" },
+                ].map((item) => {
+                  const isActive = activeSection === item.id;
+                  return (
+                    <a
+                      key={item.id}
+                      href={`#${item.id}`}
+                      onClick={() => setActiveSection(item.id)}
+                      className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium border-l-2 transition-all ${
+                        isActive
+                          ? "border-brand-500 bg-brand-50/70 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 font-semibold"
+                          : "border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/40 hover:text-slate-900 dark:hover:text-slate-200"
+                      }`}
+                    >
+                      <span className={`font-mono text-[10px] ${isActive ? "text-brand-500 dark:text-brand-400 font-bold" : "text-slate-400 dark:text-slate-500"}`}>
+                        {item.num}
+                      </span>
+                      <span className="truncate">{item.title}</span>
+                    </a>
+                  );
+                })}
+              </nav>
             </div>
           </div>
 
-          {/* Navigation Tree */}
-          <div className="space-y-6 text-sm">
-            <div>
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider px-2 mb-2">Getting Started</div>
-              <nav className="space-y-0.5">
-                {sections.slice(0, 2).map((sec) => (
-                  <a
-                    key={sec.id}
-                    href={`#${sec.id}`}
-                    onClick={() => setActiveSection(sec.id)}
-                    className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg font-medium transition ${
-                      activeSection === sec.id
-                        ? "bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 font-semibold"
-                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200"
-                    }`}
-                  >
-                    <span className="w-4 h-4 opacity-70"><FolderIcon /></span>
-                    <span>{sec.shortTitle || sec.title}</span>
-                  </a>
-                ))}
-              </nav>
-            </div>
-
-            <div>
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider px-2 mb-2">Integration Methods</div>
-              <nav className="space-y-0.5">
-                <a
-                  href="#methods"
-                  onClick={() => { setActiveSection("methods"); setActiveMethodTab("webview"); }}
-                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg font-medium transition ${
-                    activeSection === "methods" && activeMethodTab === "webview"
-                      ? "bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 font-semibold"
-                      : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                  }`}
-                >
-                  <span className="w-4 h-4 opacity-70"><GlobeIcon /></span>
-                  <span>WebView & Domain Verify</span>
-                </a>
-                <a
-                  href="#methods"
-                  onClick={() => { setActiveSection("methods"); setActiveMethodTab("artifact"); }}
-                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg font-medium transition ${
-                    activeSection === "methods" && activeMethodTab === "artifact"
-                      ? "bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 font-semibold"
-                      : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                  }`}
-                >
-                  <span className="w-4 h-4 opacity-70"><PackageIcon /></span>
-                  <span>Package Artifact</span>
-                </a>
-                <a
-                  href="#methods"
-                  onClick={() => { setActiveSection("methods"); setActiveMethodTab("source"); }}
-                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg font-medium transition ${
-                    activeSection === "methods" && activeMethodTab === "source"
-                      ? "bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 font-semibold"
-                      : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                  }`}
-                >
-                  <span className="w-4 h-4 opacity-70"><FolderIcon /></span>
-                  <span>Source Code (Git)</span>
-                </a>
-                <a
-                  href="#methods"
-                  onClick={() => { setActiveSection("methods"); setActiveMethodTab("native"); }}
-                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg font-medium transition ${
-                    activeSection === "methods" && activeMethodTab === "native"
-                      ? "bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 font-semibold"
-                      : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                  }`}
-                >
-                  <span className="w-4 h-4 opacity-70"><WrenchIcon /></span>
-                  <span>Native SDK</span>
-                </a>
-                <a
-                  href="#methods"
-                  onClick={() => { setActiveSection("methods"); setActiveMethodTab("deeplink"); }}
-                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg font-medium transition ${
-                    activeSection === "methods" && activeMethodTab === "deeplink"
-                      ? "bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 font-semibold"
-                      : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                  }`}
-                >
-                  <span className="w-4 h-4 opacity-70"><LinkIcon /></span>
-                  <span>Deep Link</span>
-                </a>
-              </nav>
-            </div>
-
-            <div>
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider px-2 mb-2">Architecture & Rules</div>
-              <nav className="space-y-0.5">
-                {sections.slice(2, 3).concat(sections.slice(4, 6)).map((sec) => (
-                  <a
-                    key={sec.id}
-                    href={`#${sec.id}`}
-                    onClick={() => setActiveSection(sec.id)}
-                    className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg font-medium transition ${
-                      activeSection === sec.id
-                        ? "bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 font-semibold"
-                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200"
-                    }`}
-                  >
-                    <span className="w-4 h-4 opacity-70"><ShieldIcon /></span>
-                    <span>{sec.shortTitle || sec.title}</span>
-                  </a>
-                ))}
-              </nav>
-            </div>
-
-            <div>
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider px-2 mb-2">Operations & Support</div>
-              <nav className="space-y-0.5">
-                {sections.slice(6).map((sec) => (
-                  <a
-                    key={sec.id}
-                    href={`#${sec.id}`}
-                    onClick={() => setActiveSection(sec.id)}
-                    className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg font-medium transition ${
-                      activeSection === sec.id
-                        ? "bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 font-semibold"
-                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200"
-                    }`}
-                  >
-                    <span className="w-4 h-4 opacity-70"><SettingsIcon /></span>
-                    <span>{sec.shortTitle || sec.title}</span>
-                  </a>
-                ))}
-              </nav>
-            </div>
+          {/* Quick Footer Links */}
+          <div className="mt-auto pt-6 border-t border-slate-200/80 dark:border-slate-800/80 space-y-2">
+            <Link
+              href="/"
+              className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium bg-slate-100/80 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 hover:bg-brand-500 hover:text-white dark:hover:bg-brand-600 dark:hover:text-white transition-all group"
+            >
+              <span className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Backoffice Console</span>
+              </span>
+              <span className="text-[10px] opacity-60 group-hover:translate-x-0.5 transition-transform">→</span>
+            </Link>
           </div>
         </aside>
 
@@ -1521,27 +1619,47 @@ export default function GuidelinesPage() {
           </div>
         </main>
 
-        {/* Right "On This Page" TOC Sidebar */}
-        <aside className="w-64 border-l border-slate-200 dark:border-slate-800/80 bg-white/50 dark:bg-slate-900/40 backdrop-blur-sm overflow-y-auto no-scrollbar [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] shrink-0 hidden xl:block py-8 px-5 text-sm">
-          <div className="font-semibold text-slate-900 dark:text-white text-sm uppercase tracking-wider mb-3">
+                {/* Right "On This Page" TOC Sidebar */}
+        <aside className="w-60 border-l border-slate-200 dark:border-slate-800/80 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md overflow-y-auto no-scrollbar [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] shrink-0 hidden xl:flex flex-col py-6 px-4 text-xs select-none">
+          <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3 px-1">
             On This Page
           </div>
-          <nav className="space-y-2 text-slate-600 dark:text-slate-400">
-            {sections.map((sec) => (
-              <a
-                key={sec.id}
-                href={`#${sec.id}`}
-                onClick={() => setActiveSection(sec.id)}
-                className={`block py-1 transition ${
-                  activeSection === sec.id
-                    ? "text-brand-600 dark:text-brand-400 font-semibold translate-x-1"
-                    : "hover:text-slate-900 dark:hover:text-slate-200"
-                }`}
-              >
-                {sec.shortTitle || sec.title}
-              </a>
-            ))}
+          <nav className="space-y-1 text-slate-600 dark:text-slate-400">
+            {sections.map((sec) => {
+              const isActive = activeSection === sec.id;
+              return (
+                <a
+                  key={sec.id}
+                  href={`#${sec.id}`}
+                  onClick={() => setActiveSection(sec.id)}
+                  className={`flex items-center gap-2 py-1.5 px-2 rounded-md transition-all text-xs ${
+                    isActive
+                      ? "text-brand-600 dark:text-brand-400 font-semibold bg-brand-50/60 dark:bg-brand-500/10"
+                      : "hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100/50 dark:hover:bg-slate-800/30"
+                  }`}
+                >
+                  <span className={`font-mono text-[10px] ${isActive ? "text-brand-500 dark:text-brand-400 font-bold" : "text-slate-400 dark:text-slate-500"}`}>
+                    {sec.number}
+                  </span>
+                  <span className="truncate">{sec.shortTitle || sec.title}</span>
+                </a>
+              );
+            })}
           </nav>
+
+          <div className="mt-auto pt-6 border-t border-slate-200/60 dark:border-slate-800/60">
+            <a
+              href="#overview"
+              onClick={() => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                setActiveSection('overview');
+              }}
+              className="flex items-center justify-between text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors py-1 px-1"
+            >
+              <span>↑ Back to top</span>
+              <span className="text-[10px] font-mono">v2.4</span>
+            </a>
+          </div>
         </aside>
       </div>
     </div>

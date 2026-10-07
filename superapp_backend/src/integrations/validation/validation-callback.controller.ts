@@ -196,7 +196,7 @@ export class ValidationCallbackController {
 
     if (dto.status === 'PASSED') {
       app.validationStatus = 'PASSED';
-      const initialStatuses = ['DRAFT', 'SUBMITTED', 'PENDING_REVIEW'];
+      const initialStatuses = ['DRAFT', 'SUBMITTED'];
       if (!hasPendingRevision && initialStatuses.includes(app.status)) {
         app.status = 'IN_REVIEW';
       }
@@ -245,7 +245,7 @@ export class ValidationCallbackController {
       };
     } else {
       app.validationStatus = 'FAILED';
-      const resetToDraftStatuses = ['DRAFT', 'SUBMITTED', 'PENDING_REVIEW', 'IN_REVIEW'];
+      const resetToDraftStatuses = ['DRAFT', 'SUBMITTED', 'IN_REVIEW'];
       if (!hasPendingRevision && resetToDraftStatuses.includes(app.status)) {
         app.status = 'DRAFT'; // Auto-reset to DRAFT for remediation if in pre-approval stage
       }

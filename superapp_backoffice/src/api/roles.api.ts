@@ -37,7 +37,7 @@ export const rolesApi = {
   }) =>
     apiClient<Role>('/api/roles', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: data,
     }),
 
   update: (
@@ -52,7 +52,7 @@ export const rolesApi = {
   ) =>
     apiClient<Role>(`/api/roles/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(data),
+      body: data,
     }),
 
   delete: (id: string) =>

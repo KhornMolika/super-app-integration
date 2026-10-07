@@ -11,7 +11,7 @@ describe('All Tasks Verification - Multi-Method Mini Apps & Enterprise Plan', ()
     let mockCodegen: any;
     let mockSdkUpload: any;
 
-    const createSpaNativeApp = (configOverwrites: Record<string, any> = {}, status = 'PENDING_REVIEW') => ({
+    const createSpaNativeApp = (configOverwrites: Record<string, any> = {}, status = 'IN_REVIEW') => ({
       id: 'ma-native-spa-001',
       appId: 'kh.gov.fsa.spa',
       name: 'Lotus Spa & Wellness',

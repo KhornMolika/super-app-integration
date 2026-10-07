@@ -14,8 +14,8 @@ export interface Organization {
 }
 
 export const organizationsApi = {
-  getAll: () =>
-    apiClient<Organization[]>('/api/organizations'),
+  getAll: (params?: { status?: string }) =>
+    apiClient<Organization[]>('/api/organizations', { params }),
 
   getById: (id: string) =>
     apiClient<Organization>(`/api/organizations/${id}`),

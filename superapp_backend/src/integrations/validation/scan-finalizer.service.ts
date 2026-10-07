@@ -79,7 +79,7 @@ export class ScanFinalizerService {
     if (overallStatus === 'PASSED') {
       await this.pipelinePacerService.paceValidationPass(app.name || app.appId);
       app.validationStatus = 'PASSED';
-      const initialStatuses = ['DRAFT', 'SUBMITTED', 'PENDING_REVIEW'];
+      const initialStatuses = ['DRAFT', 'SUBMITTED'];
       if (!hasPendingRevision && initialStatuses.includes(app.status)) {
         app.status = 'IN_REVIEW';
       }
@@ -129,7 +129,7 @@ export class ScanFinalizerService {
       });
     } else {
       app.validationStatus = 'FAILED';
-      const resetToDraftStatuses = ['DRAFT', 'SUBMITTED', 'PENDING_REVIEW', 'IN_REVIEW'];
+      const resetToDraftStatuses = ['DRAFT', 'SUBMITTED', 'IN_REVIEW'];
       if (!hasPendingRevision && resetToDraftStatuses.includes(app.status)) {
         app.status = 'DRAFT';
       }

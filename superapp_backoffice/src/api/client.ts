@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Core API Client for DPS Webapp Backoffice
  * Routes all client-side requests through Next.js BFF API layer (/api/...)
  */
@@ -106,7 +106,7 @@ export async function apiClient<T = any>(endpoint: string, options: RequestOptio
   const requestInit: RequestInit = {
     ...restOptions,
     headers,
-    body: isFormData ? body : body ? JSON.stringify(body) : undefined,
+    body: isFormData ? body : typeof body === 'string' ? body : body !== undefined ? JSON.stringify(body) : undefined,
   };
 
   const response = await fetch(url, requestInit);
@@ -149,3 +149,4 @@ export async function apiClient<T = any>(endpoint: string, options: RequestOptio
 
   return data as T;
 }
+

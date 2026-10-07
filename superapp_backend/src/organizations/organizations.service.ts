@@ -53,8 +53,13 @@ export class OrganizationsService implements OnApplicationBootstrap {
     }
   }
 
-  async findAll(): Promise<Organization[]> {
+  async findAll(status?: OrganizationStatus | string): Promise<Organization[]> {
+    const where: any = {};
+    if (status) {
+      where.status = status;
+    }
     return this.organizationRepository.find({
+      where,
       order: { createdAt: 'DESC' },
     });
   }

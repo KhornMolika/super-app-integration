@@ -6,12 +6,13 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   NotFoundException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationsService } from './organizations.service';
-import { Organization } from './entities/organization.entity';
+import { Organization, OrganizationStatus } from './entities/organization.entity';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 
@@ -20,8 +21,8 @@ export class OrganizationsController {
   constructor(private readonly organizationsService: OrganizationsService) {}
 
   @Get()
-  async findAll(): Promise<Organization[]> {
-    return this.organizationsService.findAll();
+  async findAll(@Query('status') status?: OrganizationStatus): Promise<Organization[]> {
+    return this.organizationsService.findAll(status);
   }
 
   @Get(':id')
