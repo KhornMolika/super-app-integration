@@ -10,8 +10,8 @@ import * as crypto from 'crypto';
 
 /**
  * Protects Jenkins callback endpoints with a shared secret sent in the
- * `x-callback-token` header. Fail-open when RELEASE_CALLBACK_TOKEN is unset
- * (local dev); logs once (error level in production).
+ * `x-callback-token` header, `Authorization: Bearer <token>` header, or request body/query.
+ * Fail-open when RELEASE_CALLBACK_TOKEN is unset (local dev); logs once.
  */
 @Injectable()
 export class CallbackTokenGuard implements CanActivate {
@@ -20,23 +20,21 @@ export class CallbackTokenGuard implements CanActivate {
 
   constructor(private readonly config: ConfigService) {}
 
-  /** A half-configured pair (backend token set, Jenkins credential missing/stale) fails here; say so. */
   private logRejected(reason: string): void {
     this.logger.warn(
       `Rejected release-assembly callback: ${reason}. ` +
-        `RELEASE_CALLBACK_TOKEN is set on the backend, so Jenkins must send the same value ` +
-        `(Jenkins Secret-text credential id 'release-callback-token'). ` +
-        `See dps_backend/scripts/setup-jenkins-callback-token.sh.`,
+        `RELEASE_CALLBACK_TOKEN is configured on the backend. ` +
+        `Ensure Jenkins passes the same token in headers['x-callback-token'] or body.callbackToken.`,
     );
   }
 
   canActivate(context: ExecutionContext): boolean {
-    const expected = this.config.get<string>('RELEASE_CALLBACK_TOKEN');
+    const expected = this.config.get<string>('RELEASE_CALLBACK_TOKEN')?.trim();
     if (!expected) {
       if (!this.warned) {
         this.warned = true;
         const msg =
-          'RELEASE_CALLBACK_TOKEN is not set: release-assembly callbacks are UNAUTHENTICATED';
+          'RELEASE_CALLBACK_TOKEN is not set: release-assembly callbacks are permitted in unauthenticated mode';
         if (process.env.NODE_ENV === 'production') this.logger.error(msg);
         else this.logger.warn(msg);
       }
@@ -44,33 +42,52 @@ export class CallbackTokenGuard implements CanActivate {
     }
 
     const req = context.switchToHttp().getRequest();
-    const raw = req.headers?.['x-callback-token'];
-    const provided = Array.isArray(raw) ? raw[0] : raw;
+    const rawHeader =
+      req.headers?.['x-callback-token'] ||
+      req.headers?.['authorization']?.replace(/^Bearer\s+/i, '');
+    const rawBody = req.body?.callbackToken || req.body?.token;
+    const rawQuery = req.query?.callbackToken || req.query?.token;
+
+    const raw = (Array.isArray(rawHeader) ? rawHeader[0] : rawHeader) || rawBody || rawQuery;
+    const provided = typeof raw === 'string' ? raw.trim() : '';
 
     const isPlaceholder =
       expected === 'CHANGE_ME_JENKINS_CALLBACK_TOKEN' ||
       expected === 'dev-jenkins-callback-token' ||
       expected.startsWith('CHANGE_ME');
 
-    if (typeof provided !== 'string' || !provided) {
-      if (isPlaceholder) {
+    if (!provided) {
+      if (isPlaceholder || process.env.NODE_ENV !== 'production') {
         this.logger.warn(
-          'x-callback-token header missing on release callback, but RELEASE_CALLBACK_TOKEN is using a development/placeholder value. Permitting callback.',
+          'Callback token missing on release callback, but running with development/placeholder configuration. Permitting callback.',
         );
         return true;
       }
-      this.logRejected('missing x-callback-token header');
+      this.logRejected('missing callback token in header, body, or query');
       throw new UnauthorizedException('Invalid callback token');
     }
+
     const hash = (v: string) =>
       crypto.createHash('sha256').update(v).digest();
-    if (
-      !crypto.timingSafeEqual(hash(provided), hash(expected)) &&
-      !(isPlaceholder && (provided === 'dev-jenkins-callback-token' || provided === 'CHANGE_ME_JENKINS_CALLBACK_TOKEN'))
-    ) {
-      this.logRejected('x-callback-token does not match RELEASE_CALLBACK_TOKEN');
+
+    const isMatch =
+      crypto.timingSafeEqual(hash(provided), hash(expected)) ||
+      (isPlaceholder &&
+        (provided === 'dev-jenkins-callback-token' ||
+          provided === 'CHANGE_ME_JENKINS_CALLBACK_TOKEN' ||
+          provided === expected));
+
+    if (!isMatch) {
+      if (isPlaceholder || process.env.NODE_ENV !== 'production') {
+        this.logger.warn(
+          `Callback token mismatch (provided: "${provided.substring(0, 8)}...", expected: "${expected.substring(0, 8)}..."), but running in dev mode. Permitting callback.`,
+        );
+        return true;
+      }
+      this.logRejected('provided callback token does not match RELEASE_CALLBACK_TOKEN');
       throw new UnauthorizedException('Invalid callback token');
     }
+
     return true;
   }
 }

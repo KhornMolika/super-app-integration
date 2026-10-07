@@ -386,7 +386,8 @@ export class JenkinsService {
     apiBaseUrl?: string;
   }): Promise<{ success: boolean; message: string }> {
     const jobName = 'superapp-test-build';
-    const callbackUrl = `${this.callbackBaseUrl}/api/release-assembly/build-callback`;
+    const sanitizedBase = this.callbackBaseUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '');
+    const callbackUrl = `${sanitizedBase}/api/release-assembly/build-callback`;
     const buildType = options.buildType || 'debug';
     const appName = options.appName || 'superapp';
     const nexusUrl = options.nexusUrl || this.jenkinsNexusUrl;
@@ -496,7 +497,8 @@ export class JenkinsService {
     nexusUrl?: string;
   }): Promise<{ success: boolean; message: string }> {
     const jobName = 'superapp-sandbox-build';
-    const callbackUrl = `${this.callbackBaseUrl}/api/release-assembly/build-callback`;
+    const sanitizedBase = this.callbackBaseUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '');
+    const callbackUrl = `${sanitizedBase}/api/release-assembly/build-callback`;
     const branch = options?.branch || this.superAppBranch;
     const baseHref = options?.baseHref || this.sandboxBaseHref;
     const buildMode = options?.buildMode || this.sandboxBuildMode;

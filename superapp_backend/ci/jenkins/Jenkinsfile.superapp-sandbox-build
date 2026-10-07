@@ -9,6 +9,7 @@ pipeline {
         string(name: 'CALLBACK_URL', defaultValue: 'http://host.docker.internal:3000/api/release-assembly/build-callback', description: 'Backend Webhook Callback URL')
         string(name: 'NEXUS_URL', defaultValue: 'http://host.docker.internal:8081', description: 'Sonatype Nexus URL')
         booleanParam(name: 'PUBLISH_TO_NEXUS', defaultValue: false, description: 'Publish compiled sandbox archive to Sonatype Nexus')
+        string(name: 'CALLBACK_TOKEN', defaultValue: '', description: 'Secret callback auth token')
     }
 
     environment {
@@ -96,7 +97,11 @@ pipeline {
                 sh """
                 node -e '
                     const callbackUrl = "${params.CALLBACK_URL}";
+                    const token = "${params.CALLBACK_TOKEN || ''}";
+                    const headers = { "Content-Type": "application/json" };
+                    if (token) headers["x-callback-token"] = token;
                     fetch(callbackUrl, {
+                        headers: headers,
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
@@ -115,7 +120,11 @@ pipeline {
                 sh """
                 node -e '
                     const callbackUrl = "${params.CALLBACK_URL}";
+                    const token = "${params.CALLBACK_TOKEN || ''}";
+                    const headers = { "Content-Type": "application/json" };
+                    if (token) headers["x-callback-token"] = token;
                     fetch(callbackUrl, {
+                        headers: headers,
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
