@@ -399,7 +399,7 @@ private getAuthHeader(): string | null {
   }): Promise<{ success: boolean; message: string }> {
     const jobName = 'superapp-test-build';
     const callbackUrl = this.getCallbackUrl('/release-assembly/build-callback');
-    const buildType = options.buildType || 'debug';
+    const buildType = options.buildType || 'release';
     const appName = options.appName || 'superapp';
     const nexusUrl = options.nexusUrl || this.jenkinsNexusUrl;
 
