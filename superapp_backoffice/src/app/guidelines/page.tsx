@@ -372,7 +372,7 @@ export default function GuidelinesPage() {
               <div className="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
                 <UserIcon />
               </div>
-              <h4 className="font-bold text-slate-900 dark:text-white text-lg">Mini App Manager (MA Manager)</h4>
+              <h4 className="font-bold text-slate-900 dark:text-white text-lg">Mini App Developer (MA Manager)</h4>
               <span className="inline-block px-2.5 py-0.5 text-sm font-semibold rounded bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                 External / Mini App Team
               </span>

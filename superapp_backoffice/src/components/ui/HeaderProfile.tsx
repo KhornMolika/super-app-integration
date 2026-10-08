@@ -24,7 +24,7 @@ export function HeaderProfile() {
       description: 'Mini app approval & pipeline review',
     },
     {
-      id: 'MINI_APP_MANAGER',
+      id: 'MINI_APP_DEVELOPER',
       label: 'Manager',
       badgeColor: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
       description: 'Package creation & submission',

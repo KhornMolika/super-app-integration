@@ -7,7 +7,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     
-    const res = await fetch(`${BACKEND_URL}/auth/login`, {
+    const res = await fetch(`${BACKEND_URL}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -16,14 +16,13 @@ export async function POST(request: Request) {
     const data = await res.json().catch(() => null);
 
     if (!res.ok || !data?.success || !data?.access_token) {
-      const message = data?.message || 'Invalid credentials or user not found.';
-      return NextResponse.json({ error: message }, { status: res.status === 200 ? 401 : res.status });
+      const message = data?.message || 'Registration failed. Please check your inputs.';
+      return NextResponse.json({ error: message }, { status: res.status === 200 ? 400 : res.status });
     }
 
     const cookieStore = await cookies();
     const isProd = process.env.NODE_ENV === 'production';
 
-    // 1. Short-lived Access Token (15 mins)
     cookieStore.set('auth_token', data.access_token, {
       httpOnly: true,
       secure: isProd,
@@ -32,7 +31,6 @@ export async function POST(request: Request) {
       maxAge: (data.expires_in || 15 * 60),
     });
 
-    // 2. Long-lived Refresh Token (7 days)
     if (data.refresh_token) {
       cookieStore.set('refresh_token', data.refresh_token, {
         httpOnly: true,
@@ -47,7 +45,7 @@ export async function POST(request: Request) {
     return NextResponse.json(userPayload);
   } catch (error: any) {
     return NextResponse.json(
-      { error: 'Authentication service is currently unreachable. Please try again.' },
+      { error: 'Registration service is currently unreachable. Please try again.' },
       { status: 503 },
     );
   }

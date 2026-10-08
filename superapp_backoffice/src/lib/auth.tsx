@@ -1,9 +1,9 @@
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { authApi } from '@/api';
+import { authApi } from '@/api/auth.api';
 
-export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'MINI_APP_MANAGER' | 'DEVELOPER';
+export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'MINI_APP_DEVELOPER' | 'DEVELOPER';
 
 const ROLE_PERMISSIONS: Record<Role, string[]> = {
   SUPER_ADMIN: [
@@ -24,12 +24,14 @@ const ROLE_PERMISSIONS: Record<Role, string[]> = {
     'super_app:read',
     'user:read',
     'permission:read',
-    'organization:read'
+    'organization:read',
+    'audit_log:read'
   ],
-  MINI_APP_MANAGER: [
+  MINI_APP_DEVELOPER: [
     'miniapp:create', 'miniapp:read', 'miniapp:update', 'miniapp:submit',
     'permission_proposal:read',
     'permission:read',
+    'super_app:read',
     'organization:read'
   ],
   DEVELOPER: [
@@ -40,34 +42,38 @@ const ROLE_PERMISSIONS: Record<Role, string[]> = {
 };
 
 export interface AuthUser {
+  id?: string;
   name: string;
   email: string;
   role: Role;
+  permissions?: string[];
 }
 
 export const ROLE_USER_PROFILES: Record<Role, { name: string; email: string }> = {
   SUPER_ADMIN: {
     name: 'Super Admin',
-    email: process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL || 'superadmin@example.com',
+    email: 'superadmin@superapp.gov.kh',
   },
   ADMIN: {
     name: 'Admin User',
-    email: process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'admin@example.com',
+    email: 'admin@superapp.gov.kh',
   },
-  MINI_APP_MANAGER: {
-    name: 'Mini App Manager',
-    email: process.env.NEXT_PUBLIC_MANAGER_EMAIL || 'manager@example.com',
+  MINI_APP_DEVELOPER: {
+    name: 'Mini App Developer',
+    email: 'developer@superapp.gov.kh',
   },
   DEVELOPER: {
     name: 'Developer User',
-    email: process.env.NEXT_PUBLIC_DEV_EMAIL || 'dev@example.com',
+    email: 'dev@superapp.gov.kh',
   },
 };
 
 interface AuthContextType {
   role: Role;
   user: AuthUser;
-  setRole: (role: Role) => void;
+  isAuthenticated: boolean;
+  setRole: (role: Role) => Promise<void>;
+  loginWithEmail: (email: string, password?: string) => Promise<{ success: boolean; error?: string }>;
   can: (permission: string) => boolean;
   hasRole: (role: Role) => boolean;
   logout: () => Promise<void>;
@@ -77,22 +83,37 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRoleState] = useState<Role>('SUPER_ADMIN');
+  const [currentUser, setCurrentUser] = useState<AuthUser>({
+    name: 'Super Admin',
+    email: 'superadmin@superapp.gov.kh',
+    role: 'SUPER_ADMIN',
+  });
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
 
   const performLogin = async (currentRole: Role) => {
     const profile = ROLE_USER_PROFILES[currentRole] || ROLE_USER_PROFILES.SUPER_ADMIN;
-    const email = profile.email;
-
     try {
-      // Hit our Next.js BFF login route via authApi
-      await authApi.login({ email, role: currentRole });
-    } catch(e) {
-      console.error('Login failed', e);
+      const res = await authApi.login({ email: profile.email, role: currentRole });
+      if (res?.user) {
+        const userRole = (res.user.roles?.[0] as Role) || currentRole;
+        setRoleState(userRole);
+        setCurrentUser({
+          id: res.user.id,
+          name: res.user.name || profile.name,
+          email: res.user.email || profile.email,
+          role: userRole,
+          permissions: res.user.permissions,
+        });
+        setIsAuthenticated(true);
+      }
+    } catch (e) {
+      console.error('Session handshake:', e);
     }
   };
 
   useEffect(() => {
     try {
-      const saved = (localStorage.getItem('superapp_mock_role') || localStorage.getItem('dps_mock_role')) as Role;
+      const saved = localStorage.getItem('superapp_active_role') as Role;
       if (saved && ROLE_PERMISSIONS[saved]) {
         setRoleState(saved);
         performLogin(saved);
@@ -106,20 +127,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const setRole = async (newRole: Role) => {
     try {
-      localStorage.setItem('superapp_mock_role', newRole);
+      localStorage.setItem('superapp_active_role', newRole);
     } catch (_) {}
     await performLogin(newRole);
-    setRoleState(newRole);
+  };
+
+  const loginWithEmail = async (email: string, password?: string) => {
+    try {
+      const res = await authApi.login({ email, password });
+      if (res?.user) {
+        const userRole = (res.user.roles?.[0] as Role) || 'MINI_APP_DEVELOPER';
+        setRoleState(userRole);
+        setCurrentUser({
+          id: res.user.id,
+          name: res.user.name || 'Authenticated User',
+          email: res.user.email || email,
+          role: userRole,
+          permissions: res.user.permissions,
+        });
+        setIsAuthenticated(true);
+        localStorage.setItem('superapp_active_role', userRole);
+        return { success: true };
+      }
+      return { success: false, error: 'Invalid credentials' };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Login failed' };
+    }
   };
 
   const logout = async () => {
     try {
       await authApi.logout();
     } catch (_) {}
-    setRoleState('SUPER_ADMIN');
+    setIsAuthenticated(false);
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
+    }
   };
 
   const can = (permission: string) => {
+    if (role === 'SUPER_ADMIN') return true;
+    if (currentUser?.permissions && currentUser.permissions.length > 0) {
+      return currentUser.permissions.includes(permission);
+    }
     return ROLE_PERMISSIONS[role]?.includes(permission) ?? true;
   };
 
@@ -127,16 +177,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return role === r;
   };
 
-  const user: AuthUser = {
-    ...(ROLE_USER_PROFILES[role] || {
-      name: 'Super Admin',
-      email: process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL || 'superadmin@example.com',
-    }),
-    role,
-  };
-
   return (
-    <AuthContext.Provider value={{ role, user, setRole, can, hasRole, logout }}>
+    <AuthContext.Provider value={{ role, user: currentUser, isAuthenticated, setRole, loginWithEmail, can, hasRole, logout }}>
       {children}
     </AuthContext.Provider>
   );

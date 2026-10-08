@@ -30,7 +30,7 @@ export function RoleSwitcher() {
       ),
     },
     {
-      id: 'MINI_APP_MANAGER',
+      id: 'MINI_APP_DEVELOPER',
       label: 'Manager',
       badge: 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800',
       icon: (

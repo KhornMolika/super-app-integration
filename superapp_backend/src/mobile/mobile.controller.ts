@@ -120,4 +120,21 @@ export class MobileController {
     this.limiter.reset();
     return { ok: true, message: 'Mobile rate limits reset successfully' };
   }
+
+  @Get('auth/sso/providers')
+  @HttpCode(200)
+  getSsoProviders() {
+    return this.auth.getMobileSsoProviders();
+  }
+
+  @Post('auth/sso/callback')
+  @HttpCode(200)
+  @UseGuards(AuthRateLimitGuard)
+  @RateLimit({ scope: 'login', ipMax: 15 })
+  async ssoCallback(
+    @Body() body: { provider: string; email: string; name?: string; externalId?: string },
+    @Headers('user-agent') userAgent?: string,
+  ) {
+    return this.auth.handleSsoLogin(body.provider, body, userAgent);
+  }
 }

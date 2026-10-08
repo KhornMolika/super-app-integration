@@ -58,7 +58,7 @@ export class AccessControlService {
     } else if (dto.roleNames && dto.roleNames.length > 0) {
       roles = await this.roleRepository.findBy({ name: In(dto.roleNames) });
     } else {
-      const defaultRole = await this.roleRepository.findOne({ where: { name: 'DEVELOPER' } });
+      const defaultRole = await this.roleRepository.findOne({ where: { name: 'MINI_APP_DEVELOPER' } });
       if (defaultRole) roles = [defaultRole];
     }
 

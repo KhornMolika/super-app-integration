@@ -540,13 +540,13 @@ export default function UsersPage() {
           bar: 'bg-accent-500',
           label: 'System Admin',
         };
-      case 'MINI_APP_MANAGER':
+      case 'MINI_APP_DEVELOPER':
         return {
           badge: 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-400 border-sky-200 dark:border-sky-500/30',
           gradient: 'from-sky-500/10 via-sky-500/5 to-transparent border-sky-200/80 dark:border-sky-500/30',
           iconBg: 'bg-sky-50 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300',
           bar: 'bg-sky-500',
-          label: 'Mini App Manager',
+          label: 'Mini App Developer',
         };
       case 'DEVELOPER':
         return {

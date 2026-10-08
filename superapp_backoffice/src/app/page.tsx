@@ -8,7 +8,7 @@ import { BackendServiceOfflineNotice } from '@/components/ui/BackendServiceOffli
 
 export default function Dashboard() {
   const { can, role } = useAuth();
-  const isManager = role === 'MINI_APP_MANAGER' || role === 'DEVELOPER';
+  const isManager = role === 'MINI_APP_DEVELOPER' || role === 'DEVELOPER';
 
   const [metrics, setMetrics] = useState({
     totalMiniApps: 0,

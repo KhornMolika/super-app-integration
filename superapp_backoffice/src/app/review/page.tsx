@@ -52,7 +52,7 @@ export default function ReviewQueuePage() {
   const [targetVersion, setTargetVersion] = useState('');
 
   const { can, hasRole } = useAuth();
-  const isManager = hasRole('MINI_APP_MANAGER');
+  const isManager = hasRole('MINI_APP_DEVELOPER');
 
   const fetchData = async () => {
     try {

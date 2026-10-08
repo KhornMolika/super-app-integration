@@ -1,4 +1,4 @@
-import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import { Injectable, OnApplicationBootstrap, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -8,6 +8,8 @@ import { Permission } from './entities/permission.entity';
 
 @Injectable()
 export class SeederService implements OnApplicationBootstrap {
+  private readonly logger = new Logger(SeederService.name);
+
   constructor(
     @InjectRepository(User) private userRepository: Repository<User>,
     @InjectRepository(Role) private roleRepository: Repository<Role>,
@@ -21,6 +23,7 @@ export class SeederService implements OnApplicationBootstrap {
   }
 
   async seed() {
+    // Standardized 25 platform permissions
     const allPerms = [
       'miniapp:create',
       'miniapp:read',
@@ -59,13 +62,16 @@ export class SeederService implements OnApplicationBootstrap {
       savedPerms.push(perm);
     }
 
-    const rolesConfig: Array<{ name: string; perms: string[] }> = [
+    // Role definitions (Renamed MINI_APP_DEVELOPER -> MINI_APP_DEVELOPER)
+    const rolesConfig: Array<{ name: string; description: string; perms: string[] }> = [
       {
         name: 'SUPER_ADMIN',
+        description: 'Super Administrator with unrestricted platform-wide access',
         perms: allPerms,
       },
       {
         name: 'ADMIN',
+        description: 'Platform Administrator for review, approvals, and user auditing',
         perms: [
           'miniapp:create',
           'miniapp:read',
@@ -82,10 +88,12 @@ export class SeederService implements OnApplicationBootstrap {
           'user:read',
           'permission:read',
           'organization:read',
+          'audit_log:read',
         ],
       },
       {
-        name: 'MINI_APP_MANAGER',
+        name: 'MINI_APP_DEVELOPER',
+        description: 'Mini App Developer for creating, testing, and submitting Mini Apps',
         perms: [
           'miniapp:create',
           'miniapp:read',
@@ -93,11 +101,13 @@ export class SeederService implements OnApplicationBootstrap {
           'miniapp:submit',
           'permission_proposal:read',
           'permission:read',
+          'super_app:read',
           'organization:read',
         ],
       },
       {
         name: 'DEVELOPER',
+        description: 'Developer with sandbox and documentation read access',
         perms: ['miniapp:read', 'permission:read', 'super_app:read'],
       },
     ];
@@ -112,42 +122,50 @@ export class SeederService implements OnApplicationBootstrap {
       if (!role) {
         role = this.roleRepository.create({
           name: rConfig.name,
+          description: rConfig.description,
           permissions: matchingPerms,
         });
         role = await this.roleRepository.save(role);
       } else {
+        role.description = rConfig.description;
         role.permissions = matchingPerms;
         role = await this.roleRepository.save(role);
       }
       rolesMap.set(rConfig.name, role);
     }
 
+    // Migrate any legacy MINI_APP_DEVELOPER role to MINI_APP_DEVELOPER
+    const legacyManagerRole = await this.roleRepository.findOne({
+      where: { name: 'MINI_APP_DEVELOPER' },
+      relations: { users: true },
+    });
+    if (legacyManagerRole) {
+      const devRole = rolesMap.get('MINI_APP_DEVELOPER')!;
+      for (const u of legacyManagerRole.users || []) {
+        u.roles = (u.roles || []).filter((r) => r.name !== 'MINI_APP_DEVELOPER').concat(devRole);
+        await this.userRepository.save(u);
+      }
+      await this.roleRepository.remove(legacyManagerRole).catch(() => {});
+      this.logger.log('Migrated legacy MINI_APP_DEVELOPER role to MINI_APP_DEVELOPER');
+    }
+
     const superAdminRole = rolesMap.get('SUPER_ADMIN')!;
     const adminRole = rolesMap.get('ADMIN')!;
-    const managerRole = rolesMap.get('MINI_APP_MANAGER')!;
-    const devRole = rolesMap.get('DEVELOPER')!;
+    const devRole = rolesMap.get('MINI_APP_DEVELOPER')!;
 
     const superAdminEmail = this.configService.get<string>('SUPERADMIN_EMAIL', 'superadmin@superapp.gov.kh');
     const adminEmail = this.configService.get<string>('ADMIN_EMAIL', 'admin@superapp.gov.kh');
-    const managerEmail = this.configService.get<string>('MANAGER_EMAIL', 'manager@superapp.gov.kh');
-    const devEmail = this.configService.get<string>('DEV_EMAIL', 'dev@superapp.gov.kh');
+    const devEmail = this.configService.get<string>('DEV_EMAIL', 'developer@superapp.gov.kh');
 
-    // List of standard users to ensure exist across both production & mock domains
+    // Standard test accounts for QA
     const defaultUsers = [
       { email: superAdminEmail, name: 'Super Admin', role: superAdminRole },
       { email: adminEmail, name: 'Admin User', role: adminRole },
-      { email: managerEmail, name: 'Mini App Manager', role: managerRole },
-      { email: devEmail, name: 'Developer User', role: devRole },
-      // Also ensure standard @superapp.gov.kh accounts exist
+      { email: devEmail, name: 'Mini App Developer', role: devRole },
       { email: 'superadmin@superapp.gov.kh', name: 'Super Admin', role: superAdminRole },
       { email: 'admin@superapp.gov.kh', name: 'Admin User', role: adminRole },
-      { email: 'manager@superapp.gov.kh', name: 'Mini App Manager', role: managerRole },
-      { email: 'dev@superapp.gov.kh', name: 'Developer User', role: devRole },
-      // Also ensure legacy @example.com accounts exist for backwards compatibility
-      { email: 'superadmin@example.com', name: 'Super Admin', role: superAdminRole },
-      { email: 'admin@example.com', name: 'Admin User', role: adminRole },
-      { email: 'manager@example.com', name: 'Mini App Manager', role: managerRole },
-      { email: 'dev@example.com', name: 'Developer User', role: devRole },
+      { email: 'developer@superapp.gov.kh', name: 'Mini App Developer', role: devRole },
+      { email: 'dev@superapp.gov.kh', name: 'Mini App Developer', role: devRole },
     ];
 
     for (const u of defaultUsers) {
@@ -161,6 +179,7 @@ export class SeederService implements OnApplicationBootstrap {
           email: u.email.toLowerCase(),
           name: u.name,
           roles: [u.role],
+          isActive: true,
         });
         await this.userRepository.save(newUser);
       } else if (!existing.roles || existing.roles.length === 0) {
@@ -169,6 +188,6 @@ export class SeederService implements OnApplicationBootstrap {
       }
     }
 
-    console.log('Database seeded with standard and production users and roles');
+    this.logger.log('Database seeded with standard permissions and MINI_APP_DEVELOPER role');
   }
 }

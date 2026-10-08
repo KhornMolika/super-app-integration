@@ -1,6 +1,7 @@
-﻿/**
- * Core API Client for DPS Webapp Backoffice
+/**
+ * Core API Client for Super App Gateway Backoffice
  * Routes all client-side requests through Next.js BFF API layer (/api/...)
+ * with automatic 401 Silent Refresh and Session Expiry Interceptors.
  */
 
 export class ApiError extends Error {
@@ -24,60 +25,27 @@ export class ApiError extends Error {
   }
 }
 
-/**
- * Checks whether an error is caused by the backend service being offline or unreachable
- */
-export function isBackendUnreachableError(error: unknown): boolean {
-  if (!error) return false;
-  if (error instanceof ApiError && error.isBackendDown) return true;
-  
-  const status = (error as any)?.status || (error as any)?.statusCode;
-  const code = (error as any)?.code || (error as any)?.data?.code;
-  const msg = (error as any)?.message || (typeof error === 'string' ? error : '');
-  const lowerMsg = String(msg).toLowerCase();
+let isRefreshing = false;
+let refreshSubscribers: Array<(refreshed: boolean) => void> = [];
 
-  return (
-    code === 'BACKEND_SERVICE_DOWN' ||
-    status === 503 ||
-    lowerMsg.includes('backend service is currently unreachable') ||
-    lowerMsg.includes('backend unreachable') ||
-    lowerMsg.includes('econnrefused') ||
-    lowerMsg.includes('fetch failed')
-  );
+function onTokenRefreshed(refreshed: boolean) {
+  refreshSubscribers.forEach((callback) => callback(refreshed));
+  refreshSubscribers = [];
 }
 
-/**
- * Formats a clean, user-friendly error message from an unknown error
- */
-export function getErrorMessage(error: unknown, fallback = 'An unexpected error occurred'): string {
-  if (!error) return fallback;
-  if (isBackendUnreachableError(error)) {
-    return 'Backend service is currently unreachable. It may be starting up or restarting. Please try again shortly.';
-  }
-  if (error instanceof ApiError) {
-    return error.message || fallback;
-  }
-  if (error instanceof Error) {
-    return error.message || fallback;
-  }
-  if (typeof error === 'string') {
-    return error;
-  }
-  if (typeof error === 'object' && (error as any).message) {
-    return String((error as any).message);
-  }
-  return fallback;
+function addRefreshSubscriber(callback: (refreshed: boolean) => void) {
+  refreshSubscribers.push(callback);
 }
 
 export interface RequestOptions extends Omit<RequestInit, 'body'> {
   params?: Record<string, string | number | boolean | undefined | null>;
   body?: any;
+  _retry?: boolean;
 }
 
 export async function apiClient<T = any>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-  const { params, body, headers: customHeaders, ...restOptions } = options;
+  const { params, body, headers: customHeaders, _retry = false, ...restOptions } = options;
 
-  // Build URL with query params
   let url = endpoint.startsWith('/') ? endpoint : `/api/${endpoint}`;
   if (!url.startsWith('/api') && !url.startsWith('http')) {
     url = `/api/${url.replace(/^\/+/, '')}`;
@@ -115,6 +83,42 @@ export async function apiClient<T = any>(endpoint: string, options: RequestOptio
     return null as T;
   }
 
+  // 401 Unauthorized Interceptor: Attempt silent refresh with HttpOnly refresh token
+  if (response.status === 401 && !_retry && !url.includes('/api/auth/login') && !url.includes('/api/auth/refresh')) {
+    if (!isRefreshing) {
+      isRefreshing = true;
+      try {
+        const refreshRes = await fetch('/api/auth/refresh', { method: 'POST' });
+        if (refreshRes.ok) {
+          isRefreshing = false;
+          onTokenRefreshed(true);
+          return apiClient<T>(endpoint, { ...options, _retry: true });
+        } else {
+          isRefreshing = false;
+          onTokenRefreshed(false);
+          // Redirect to login if on client side
+          if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/signup')) {
+            window.location.href = '/login?expired=true';
+          }
+        }
+      } catch {
+        isRefreshing = false;
+        onTokenRefreshed(false);
+      }
+    } else {
+      // Wait for ongoing refresh to complete
+      return new Promise<T>((resolve, reject) => {
+        addRefreshSubscriber((refreshed) => {
+          if (refreshed) {
+            resolve(apiClient<T>(endpoint, { ...options, _retry: true }));
+          } else {
+            reject(new ApiError('Session expired. Please log in again.', 401));
+          }
+        });
+      });
+    }
+  }
+
   const contentType = response.headers.get('content-type');
   let data: any;
 
@@ -130,7 +134,6 @@ export async function apiClient<T = any>(endpoint: string, options: RequestOptio
       (typeof data === 'string' && data) ||
       `Request failed with status ${response.status}`;
 
-    // If the error message is an HTML page (e.g. Cloudflare / Nginx 502/504), extract a concise message
     if (typeof errorMessage === 'string' && errorMessage.trim().startsWith('<')) {
       const matchTitle = errorMessage.match(/<title>([^<]+)<\/title>/i);
       if (matchTitle && matchTitle[1]) {
@@ -140,7 +143,7 @@ export async function apiClient<T = any>(endpoint: string, options: RequestOptio
       } else if (response.status === 502) {
         errorMessage = 'Bad Gateway (502): The upstream server is unreachable or starting up.';
       } else {
-        errorMessage = `Server Error (${response.status}): Upstream service returned an HTML error page.`;
+        errorMessage = `Server Error (${response.status}): Upstream service returned an error.`;
       }
     }
 
@@ -149,4 +152,3 @@ export async function apiClient<T = any>(endpoint: string, options: RequestOptio
 
   return data as T;
 }
-

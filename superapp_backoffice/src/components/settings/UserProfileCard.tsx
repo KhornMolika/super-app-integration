@@ -23,7 +23,7 @@ export function UserProfileCard({
   const userEmail = user?.email || '';
 
   const roleBadgeStyle =
-    role === 'MINI_APP_MANAGER'
+    role === 'MINI_APP_DEVELOPER'
       ? 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/50 dark:text-sky-300 dark:border-sky-800'
       : role === 'SUPER_ADMIN'
       ? 'bg-accent-50 text-accent-800 border-accent-200 dark:bg-accent-950/50 dark:text-accent-300 dark:border-accent-800'
@@ -48,7 +48,7 @@ export function UserProfileCard({
       ? 'Super App Global Administration & Root Governance'
       : role === 'ADMIN'
       ? 'Super App Platform Administration'
-      : role === 'MINI_APP_MANAGER'
+      : role === 'MINI_APP_DEVELOPER'
       ? 'Mini App Submissions & Management'
       : 'Mini App Development & Integration';
 
