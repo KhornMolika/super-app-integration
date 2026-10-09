@@ -1,4 +1,4 @@
-﻿import {
+import {
   Controller,
   Post,
   Body,
@@ -88,6 +88,8 @@ export class ValidationCallbackController {
       license_compliance: ['license_audit', 'license_compliance'],
       capability_gate: ['capability_gate', 'capability_analysis', 'permissions'],
       capability_analysis: ['capability_gate', 'capability_analysis', 'permissions'],
+      malware: ['malware', 'malware_scan'],
+      malware_scan: ['malware', 'malware_scan'],
     };
 
     const targetKeys = Array.from(new Set([stageId, ...(STAGE_ALIASES[stageId] || [])]));

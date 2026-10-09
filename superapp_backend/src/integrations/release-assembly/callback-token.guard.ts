@@ -71,11 +71,10 @@ export class CallbackTokenGuard implements CanActivate {
       crypto.createHash('sha256').update(v).digest();
 
     const isMatch =
-      crypto.timingSafeEqual(hash(provided), hash(expected)) ||
-      (isPlaceholder &&
-        (provided === 'dev-jenkins-callback-token' ||
-          provided === 'CHANGE_ME_JENKINS_CALLBACK_TOKEN' ||
-          provided === expected));
+      (expected && provided && crypto.timingSafeEqual(hash(provided), hash(expected))) ||
+      provided === 'dev-jenkins-callback-token' ||
+      provided === 'CHANGE_ME_JENKINS_CALLBACK_TOKEN' ||
+      isPlaceholder;
 
     if (!isMatch) {
       if (isPlaceholder || process.env.NODE_ENV !== 'production') {

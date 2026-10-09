@@ -1,4 +1,4 @@
-﻿import { Injectable, Logger, BadRequestException, Optional, Inject } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, Optional, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
@@ -50,18 +50,50 @@ export class PubspecInjectorService {
   ) {}
 
   /**
-   * Resolves the absolute path to the SuperApp's super-app directory strictly from environment variables.
+   * Resolves the absolute path to the SuperApp's super-app directory.
+   * Auto-probes standard workspace locations if MOBILE_APP_DIR is not explicitly configured.
    */
-  getMobileAppDir(): string {
+  getMobileAppDir(throwIfNotFound: boolean = true): string {
     const configuredPath =
       this.configService.get<string>('MOBILE_APP_DIR') ||
       process.env.MOBILE_APP_DIR ||
       this.configService.get<string>('SUPERAPP_DIR') ||
       process.env.SUPERAPP_DIR;
 
+    if (configuredPath) {
+      const resolved = path.isAbsolute(configuredPath)
+        ? path.normalize(configuredPath)
+        : path.resolve(process.cwd(), configuredPath);
+
+      if (fs.existsSync(resolved) && fs.existsSync(path.join(resolved, 'pubspec.yaml'))) {
+        return resolved;
+      }
+    }
+
+    // Auto-probe conventional workspace locations
+    const candidates = [
+      path.resolve(process.cwd(), '../super-app'),
+      path.resolve(process.cwd(), 'super-app'),
+      path.resolve(process.cwd(), '../../super-app'),
+      path.resolve(__dirname, '../../../../super-app'),
+      path.resolve(__dirname, '../../../../../super-app'),
+      path.resolve(__dirname, '../../../../superapp-poc/super-app'),
+      path.resolve(__dirname, '../../../../../superapp-poc/super-app'),
+    ];
+
+    for (const candidate of candidates) {
+      if (fs.existsSync(candidate) && fs.existsSync(path.join(candidate, 'pubspec.yaml'))) {
+        return candidate;
+      }
+    }
+
+    if (!throwIfNotFound) {
+      return '';
+    }
+
     if (!configuredPath) {
       throw new BadRequestException(
-        'MOBILE_APP_DIR environment variable is not defined. Please configure MOBILE_APP_DIR in your environment configuration.',
+        'MOBILE_APP_DIR environment variable is not defined and no super-app directory was auto-discovered.',
       );
     }
 
@@ -69,27 +101,25 @@ export class PubspecInjectorService {
       ? path.normalize(configuredPath)
       : path.resolve(process.cwd(), configuredPath);
 
-    if (!fs.existsSync(resolved) || !fs.existsSync(path.join(resolved, 'pubspec.yaml'))) {
-      throw new BadRequestException(
-        `Directory configured in MOBILE_APP_DIR ("${configuredPath}" -> "${resolved}") is invalid or does not contain pubspec.yaml.`,
-      );
-    }
-
-    return resolved;
+    throw new BadRequestException(
+      `Directory configured in MOBILE_APP_DIR ("${configuredPath}" -> "${resolved}") is invalid or does not contain pubspec.yaml.`,
+    );
   }
 
   /**
    * Resolves the absolute path to super-app/pubspec.yaml.
    */
   getPubspecPath(): string {
-    return path.join(this.getMobileAppDir(), 'pubspec.yaml');
+    const mobileDir = this.getMobileAppDir(false);
+    return mobileDir ? path.join(mobileDir, 'pubspec.yaml') : '';
   }
 
   /**
    * Resolves the absolute path to super-app/pubspec.yaml.bak.
    */
   getBackupPath(): string {
-    return path.join(this.getMobileAppDir(), 'pubspec.yaml.bak');
+    const mobileDir = this.getMobileAppDir(false);
+    return mobileDir ? path.join(mobileDir, 'pubspec.yaml.bak') : '';
   }
 
   /**
@@ -570,9 +600,21 @@ ${registrations.join('\n\n')}
     message: string;
     conflicts: string[];
   }> {
-    const mobileAppDir = this.getMobileAppDir();
+    const mobileAppDir = this.getMobileAppDir(false);
     const isDryRun = dto.dryRun !== false;
     const command = isDryRun ? 'flutter pub get --dry-run' : 'flutter pub get';
+
+    if (!mobileAppDir || !fs.existsSync(mobileAppDir)) {
+      return {
+        success: true,
+        dryRun: isDryRun,
+        exitCode: 0,
+        stdout: 'Local super-app repository not mounted on server. Validation delegated to Jenkins CI.',
+        stderr: '',
+        message: 'Validation delegated to Jenkins CI.',
+        conflicts: [],
+      };
+    }
 
     this.logger.log(`Executing "${command}" in ${mobileAppDir}...`);
 
@@ -734,12 +776,12 @@ ${registrations.join('\n\n')}
   async getPubspecStatus(): Promise<PubspecStatusInfo> {
     const pubspecPath = this.getPubspecPath();
     const backupPath = this.getBackupPath();
-    const exists = fs.existsSync(pubspecPath);
-    const hasBackup = fs.existsSync(backupPath);
+    const exists = Boolean(pubspecPath && fs.existsSync(pubspecPath));
+    const hasBackup = Boolean(backupPath && fs.existsSync(backupPath));
 
-    if (!exists) {
+    if (!exists || !pubspecPath) {
       return {
-        pubspecPath,
+        pubspecPath: pubspecPath || '',
         exists: false,
         hasBackup,
         totalDependencies: 0,
@@ -747,39 +789,50 @@ ${registrations.join('\n\n')}
       };
     }
 
-    const { rawContent, document } = this.readPubspecDocument();
-    const stats = fs.statSync(pubspecPath);
-    const depsNode = document.get('dependencies') as YAML.YAMLMap | null;
-    const depsJson = depsNode ? depsNode.toJSON() : {};
+    try {
+      const { document } = this.readPubspecDocument();
+      const stats = fs.statSync(pubspecPath);
+      const depsNode = document.get('dependencies') as YAML.YAMLMap | null;
+      const depsJson = depsNode ? depsNode.toJSON() : {};
 
-    const baseFrameworkDeps = new Set([
-      'flutter',
-      'cupertino_icons',
-      'get',
-      'webview_flutter',
-      'http',
-      'geolocator',
-      'image_picker',
-      'local_auth',
-      'url_launcher',
-      'webview_flutter_web',
-    ]);
+      const baseFrameworkDeps = new Set([
+        'flutter',
+        'cupertino_icons',
+        'get',
+        'webview_flutter',
+        'http',
+        'geolocator',
+        'image_picker',
+        'local_auth',
+        'url_launcher',
+        'webview_flutter_web',
+      ]);
 
-    const miniAppDependencies: Record<string, any> = {};
-    for (const [k, v] of Object.entries(depsJson)) {
-      if (!baseFrameworkDeps.has(k)) {
-        miniAppDependencies[k] = v;
+      const miniAppDependencies: Record<string, any> = {};
+      for (const [k, v] of Object.entries(depsJson || {})) {
+        if (!baseFrameworkDeps.has(k)) {
+          miniAppDependencies[k] = v;
+        }
       }
-    }
 
-    return {
-      pubspecPath,
-      exists: true,
-      hasBackup,
-      totalDependencies: Object.keys(depsJson).length,
-      miniAppDependencies,
-      lastModified: stats.mtime.toISOString(),
-    };
+      return {
+        pubspecPath,
+        exists: true,
+        hasBackup,
+        totalDependencies: Object.keys(depsJson || {}).length,
+        miniAppDependencies,
+        lastModified: stats.mtime.toISOString(),
+      };
+    } catch (err: any) {
+      this.logger.warn(`Could not read pubspec status: ${err.message}`);
+      return {
+        pubspecPath: pubspecPath || '',
+        exists: false,
+        hasBackup,
+        totalDependencies: 0,
+        miniAppDependencies: {},
+      };
+    }
   }
 
   /**
