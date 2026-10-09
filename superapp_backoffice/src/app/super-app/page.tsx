@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -71,7 +71,7 @@ export default function SuperAppEcosystemPage() {
         setTelegramInfo(tgData);
       }
     } catch (err) {
-      console.error('Failed to load Super App ecosystem status:', err);
+      console.error('Failed to load SuperApp ecosystem status:', err);
     } finally {
       setLoading(false);
     }
@@ -116,7 +116,7 @@ export default function SuperAppEcosystemPage() {
         <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4">
           <div>
             <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">
-              Super App Ecosystem Architecture
+              SuperApp Ecosystem Architecture
             </h2>
             <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
               Live status, runtime sandboxes, bridge capabilities, enterprise storage engines, and integrated gateways.
@@ -188,7 +188,7 @@ export default function SuperAppEcosystemPage() {
               <svg className="w-3.5 h-3.5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
               </svg>
-              <span>Live Super App ecosystem release</span>
+              <span>Live SuperApp ecosystem release</span>
             </p>
           </div>
 
@@ -343,7 +343,7 @@ export default function SuperAppEcosystemPage() {
                   )}
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Object storage engine for immutable Mini App release bundles, quarantine security scans, and assets.
+                  Object storage engine for immutable MiniApp release bundles, quarantine security scans, and assets.
                 </p>
               </div>
             </div>
@@ -592,12 +592,12 @@ export default function SuperAppEcosystemPage() {
           </div>
         </Card>
 
-        {/* Live Super App Web Sandbox Simulator Modal */}
+        {/* Live SuperApp Web Sandbox Simulator Modal */}
         <PreviewModal
           isOpen={isSandboxOpen}
           onClose={() => setIsSandboxOpen(false)}
           url="/superapp-sandbox/index.html"
-          title="Super App Web Sandbox"
+          title="SuperApp Web Sandbox"
           version={status?.superAppTestVersion || status?.superAppVersion || 'v0.3.1'}
           isFlutter={true}
         />

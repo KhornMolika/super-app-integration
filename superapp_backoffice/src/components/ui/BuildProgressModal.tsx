@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { Button } from '@/components/ui/inputs';
@@ -40,7 +40,7 @@ const DEFAULT_STAGES: { id: string; name: string; defaultDetails: string; icon: 
   {
     id: 'compile',
     name: '2. Fastlane APK Packaging',
-    defaultDetails: 'Assembling Flutter Super App container and compiling debug APK binary with Fastlane.',
+    defaultDetails: 'Assembling Flutter SuperApp container and compiling debug APK binary with Fastlane.',
     icon: 'compile',
   },
   {
@@ -114,10 +114,10 @@ export default function BuildProgressModal({
                 {state.releaseVersion && <span className="font-mono font-extrabold">• {state.releaseVersion}</span>}
               </div>
               <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                Super App Assembly in Progress
+                SuperApp Assembly in Progress
               </h3>
               <p className="text-slate-600 dark:text-slate-400 text-sm mt-1 max-w-md mx-auto">
-                The Jenkins pipeline is packaging the Flutter Super App test container and compiling the APK artifact in real time.
+                The Jenkins pipeline is packaging the Flutter SuperApp test container and compiling the APK artifact in real time.
               </p>
             </div>
 
@@ -228,10 +228,10 @@ export default function BuildProgressModal({
               </svg>
             </div>
             <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white mb-1.5">
-              Super App Test Build Ready!
+              SuperApp Test Build Ready!
             </h3>
             <p className="text-slate-600 dark:text-slate-400 text-sm mb-6 max-w-md">
-              Fastlane has compiled the Super App container ({state.releaseVersion || 'v1.0.0'}) and published the test APK to Sonatype Nexus.
+              Fastlane has compiled the SuperApp container ({state.releaseVersion || 'v1.0.0'}) and published the test APK to Sonatype Nexus.
             </p>
 
             <div className="flex flex-wrap items-center justify-center gap-3 w-full mb-6">
@@ -288,7 +288,7 @@ export default function BuildProgressModal({
                 <span>Build Pipeline Failed</span>
               </div>
               <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                Super App Compilation Failed
+                SuperApp Compilation Failed
               </h3>
               <p className="text-slate-600 dark:text-slate-400 text-sm mt-1 max-w-md mx-auto">
                 The Fastlane build pipeline encountered an error during APK packaging.

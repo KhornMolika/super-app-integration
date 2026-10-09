@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 import {
@@ -206,7 +206,7 @@ export default function FlutterArchiveUploader({
               <div className="flex items-center gap-2">
                 <PackageIcon className="w-5 h-5 text-brand-600 dark:text-brand-400" />
                 <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">
-                  Mini App Packaging Scripts
+                  MiniApp Packaging Scripts
                 </h3>
               </div>
               <button
@@ -219,7 +219,7 @@ export default function FlutterArchiveUploader({
             </div>
 
             <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-              Run this 1-line command inside your Flutter Mini App project root to automatically clean build caches and generate an optimized <code className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-brand-600">.zip</code> archive ready for submission:
+              Run this 1-line command inside your Flutter MiniApp project root to automatically clean build caches and generate an optimized <code className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-brand-600">.zip</code> archive ready for submission:
             </p>
 
             <div className="space-y-3">

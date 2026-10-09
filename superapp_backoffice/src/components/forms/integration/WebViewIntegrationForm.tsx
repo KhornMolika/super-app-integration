@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Button, Input, Label } from '@/components/ui/inputs';
@@ -321,7 +321,7 @@ export default function WebViewIntegrationForm({
             </p>
           )}
           <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
-            Primary HTTPS endpoint loaded by the Super App WebView container.
+            Primary HTTPS endpoint loaded by the SuperApp WebView container.
           </p>
         </div>
 

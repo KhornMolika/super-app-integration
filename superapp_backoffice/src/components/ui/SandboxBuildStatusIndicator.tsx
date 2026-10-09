@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -98,7 +98,7 @@ export default function SandboxBuildStatusIndicator() {
             ? 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border-emerald-500/40 shadow-emerald-500/10'
             : 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-700 dark:text-rose-300 border-rose-500/40 shadow-rose-500/10'
         }`}
-        title="View Super App Sandbox Build Pipeline & Live Logs"
+        title="View SuperApp Sandbox Build Pipeline & Live Logs"
       >
         {status.state === 'BUILDING' ? (
           <>
@@ -176,7 +176,7 @@ export default function SandboxBuildStatusIndicator() {
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="font-bold text-white text-xs sm:text-sm tracking-tight">
-                        Super App Sandbox Build Pipeline
+                        SuperApp Sandbox Build Pipeline
                       </h3>
                       <span
                         className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border ${
@@ -315,7 +315,7 @@ export default function SandboxBuildStatusIndicator() {
                 <div className="flex items-center gap-1.5 bg-slate-900 px-2.5 py-1 rounded-md border border-slate-800">
                   <span className="text-slate-500">Triggered By:</span>
                   <span className="font-semibold text-slate-200">
-                    {status.triggeredBy || 'Super App Administrator'}
+                    {status.triggeredBy || 'SuperApp Administrator'}
                   </span>
                 </div>
 

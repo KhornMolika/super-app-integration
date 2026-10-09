@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
@@ -114,7 +114,7 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
   useEffect(() => {
     const errors: Record<string, string> = {};
     if (formData.appId && !/^[a-z0-9_.-]+$/.test(formData.appId)) {
-      errors.appId = 'Mini App ID can only contain lowercase letters, numbers, and underscores (e.g. miniapp_8f32a1)';
+      errors.appId = 'MiniApp ID can only contain lowercase letters, numbers, and underscores (e.g. miniapp_8f32a1)';
     }
     if (formData.ownerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.ownerEmail)) {
       errors.ownerEmail = 'Owner Email must be a valid email';
@@ -123,7 +123,7 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
       errors.supportEmail = 'Support Email must be a valid email';
     }
     if (formData.name && formData.name.length < 2) {
-      errors.name = 'Mini App Name must be at least 2 characters';
+      errors.name = 'MiniApp Name must be at least 2 characters';
     }
 
     if (formData.integrationMethod === IntegrationMethod.WEBVIEW && formData.integrationConfigWebView?.productionUrl) {
@@ -168,8 +168,8 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
             if (data) {
               setLocalErrors((prev) => {
                 const newErrors = { ...prev };
-                if (data.appIdExists) newErrors.appId = 'This Mini App ID is already taken.';
-                if (data.nameExists) newErrors.name = 'This Mini App Name is already taken.';
+                if (data.appIdExists) newErrors.appId = 'This MiniApp ID is already taken.';
+                if (data.nameExists) newErrors.name = 'This MiniApp Name is already taken.';
                 return newErrors;
               });
             }
@@ -318,7 +318,7 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
           setTimeout(() => fetchApp(true, isSilent), 500);
           return;
         }
-        setFetchError('Mini App not found or failed to load configuration.');
+        setFetchError('MiniApp not found or failed to load configuration.');
         toast.error('Failed to fetch mini app details.', 'Load Failed');
       }
     } catch (error: any) {
@@ -868,14 +868,14 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
         isOpen: true,
         action: 'discard-revision',
         title: 'Reject & Discard Staged Revision',
-        description: 'Are you sure you want to reject this revision? All proposed changes will be discarded while the live version remains active in the Super App catalog.',
+        description: 'Are you sure you want to reject this revision? All proposed changes will be discarded while the live version remains active in the SuperApp catalog.',
         confirmText: 'Reject Revision',
         confirmVariant: 'danger',
         placeholder: 'Explain why this revision cannot be accepted...',
         quickSuggestions: [
-          'Violates Super App platform capability and security policies',
+          'Violates SuperApp platform capability and security policies',
           'High-risk permissions requested without required partner certification',
-          'Duplicate or conflicting capability with existing Super App core features',
+          'Duplicate or conflicting capability with existing SuperApp core features',
           'Incompatible technical architecture or failed automated security baseline',
         ],
       });
@@ -888,14 +888,14 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
           isOpen: true,
           action: 'discard-revision',
           title: 'Reject & Discard Staged Revision',
-          description: 'Are you sure you want to reject this staged revision? All proposed changes will be discarded while the live version remains active in the Super App.',
+          description: 'Are you sure you want to reject this staged revision? All proposed changes will be discarded while the live version remains active in the SuperApp.',
           confirmText: 'Reject Revision',
           confirmVariant: 'danger',
           placeholder: 'Explain why this revision is being rejected...',
           quickSuggestions: [
-            'Violates Super App platform capability and security policies',
+            'Violates SuperApp platform capability and security policies',
             'High-risk permissions requested without required partner certification',
-            'Duplicate or conflicting capability with existing Super App core features',
+            'Duplicate or conflicting capability with existing SuperApp core features',
             'Security baseline checks failed on proposed endpoint or artifact',
           ],
         });
@@ -905,13 +905,13 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
       setLifecycleReasonModal({
         isOpen: true,
         action: 'reject',
-        title: 'Reject Mini App Submission',
-        description: 'Specify the reason for rejecting this Mini App. The developer will receive this feedback to remediate issues.',
-        confirmText: 'Reject Mini App',
+        title: 'Reject MiniApp Submission',
+        description: 'Specify the reason for rejecting this MiniApp. The developer will receive this feedback to remediate issues.',
+        confirmText: 'Reject MiniApp',
         confirmVariant: 'danger',
-        placeholder: 'Explain why this Mini App is being rejected...',
+        placeholder: 'Explain why this MiniApp is being rejected...',
         quickSuggestions: [
-          'App description or assets violate Super App content guidelines',
+          'App description or assets violate SuperApp content guidelines',
           'Integration endpoint is unreachable or returning invalid responses',
           'High-risk permissions requested without acceptable justification',
           'Security or domain verification requirements failed baseline',
@@ -944,7 +944,7 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
         isOpen: true,
         action: 'request-changes',
         title: 'Request Changes from Developer',
-        description: 'Provide details on what needs to be updated before this Mini App can proceed through the approval pipeline.',
+        description: 'Provide details on what needs to be updated before this MiniApp can proceed through the approval pipeline.',
         confirmText: 'Send Request',
         confirmVariant: 'warning',
         placeholder: 'Specify what updates are needed...',
@@ -979,15 +979,15 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
           : isDiscardRev
           ? 'Discard Staged Revision'
           : isTestBuild
-          ? 'Trigger Super App Test Build'
+          ? 'Trigger SuperApp Test Build'
           : `Confirm ${actionLabel}`,
         message: isPublishRev
-          ? 'Are you sure you want to publish the staged revision to production? This will update the live Mini App in the Super App catalog immediately.'
+          ? 'Are you sure you want to publish the staged revision to production? This will update the live MiniApp in the SuperApp catalog immediately.'
           : isDiscardRev
           ? 'Are you sure you want to discard this pending draft revision? Any unmerged changes will be lost.'
           : isTestBuild
-          ? 'Are you sure you want to trigger the Jenkins test build? This will compile the Super App container in debug mode and upload the test APK to Nexus for manual testing.'
-          : `Are you sure you want to ${actionLabel} this Mini App?`,
+          ? 'Are you sure you want to trigger the Jenkins test build? This will compile the SuperApp container in debug mode and upload the test APK to Nexus for manual testing.'
+          : `Are you sure you want to ${actionLabel} this MiniApp?`,
         confirmText: isPublishRev
           ? 'Publish Live'
           : isDiscardRev
@@ -1050,14 +1050,14 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
       const res = await miniappsApi.triggerAction(id, action, reason);
       const msg =
         action === 'start-testing'
-          ? 'Super App test build pipeline triggered in Jenkins! Packaging test APK for Nexus store...'
+          ? 'SuperApp test build pipeline triggered in Jenkins! Packaging test APK for Nexus store...'
           : action === 'publish-revision'
-          ? 'Staged revision published live to Super App successfully!'
+          ? 'Staged revision published live to SuperApp successfully!'
           : action === 'discard-revision'
           ? 'Pending draft revision has been discarded.'
           : action === 'approve'
-          ? 'Mini App approved successfully! Redirecting to Security & Compliance scan...'
-          : res?.message || 'Mini App status successfully updated!';
+          ? 'MiniApp approved successfully! Redirecting to Security & Compliance scan...'
+          : res?.message || 'MiniApp status successfully updated!';
       toast.success(msg, 'Lifecycle Updated');
       fetchApp();
       if (action === 'approve' || action === 'submit') {
@@ -1079,7 +1079,7 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
 
   const handleDelete = async () => {
     const isConfirmed = await confirm({
-      title: 'Delete Mini App',
+      title: 'Delete MiniApp',
       message: 'Are you sure you want to delete this mini app? This action cannot be undone.',
       confirmText: 'Delete App',
       confirmVariant: 'danger',
@@ -1090,7 +1090,7 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
     setIsSubmitting(true);
     try {
       await miniappsApi.delete(id);
-      toast.success('Mini App deleted successfully.', 'Deleted');
+      toast.success('MiniApp deleted successfully.', 'Deleted');
       router.push('/miniapps');
     } catch (error: any) {
       toast.error(error?.message || 'Error deleting mini app.', 'Connection Error');
@@ -1132,7 +1132,7 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
         </div>
-        <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Mini App Not Found</h2>
+        <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-2">MiniApp Not Found</h2>
         <p className="text-slate-500 dark:text-slate-400 mb-6 text-sm">
           {fetchError || `Unable to locate mini app with ID "${id}". It may have been deleted or the link is invalid.`}
         </p>
@@ -1145,7 +1145,7 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
-            Back to Mini Apps
+            Back to MiniApps
           </Button>
           <Button
             variant="primary"
@@ -1385,7 +1385,7 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
         />
       </div>
 
-      {/* Revision Submission Modal (What & Why for Active Mini Apps) */}
+      {/* Revision Submission Modal (What & Why for Active MiniApps) */}
       {revisionModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden space-y-5 p-6 animate-in zoom-in-95 duration-150">
@@ -1434,7 +1434,7 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
                   rows={3}
                   value={revisionJustification}
                   onChange={(e) => setRevisionJustification(e.target.value)}
-                  placeholder="e.g. Required to support quick fingerprint checkout on Super App client..."
+                  placeholder="e.g. Required to support quick fingerprint checkout on SuperApp client..."
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
                 />
               </div>

@@ -1,5 +1,5 @@
-/**
- * Core API Client for Super App Gateway Backoffice
+﻿/**
+ * Core API Client for SuperApp Gateway Backoffice
  * Routes all client-side requests through Next.js BFF API layer (/api/...)
  * with automatic 401 Silent Refresh and Session Expiry Interceptors.
  */
@@ -18,12 +18,60 @@ export class ApiError extends Error {
     this.code = typeof data === 'object' && data?.code ? data.code : undefined;
     this.isBackendDown =
       status === 503 ||
+      status === 502 ||
+      status === 504 ||
       this.code === 'BACKEND_SERVICE_DOWN' ||
       message.toLowerCase().includes('backend service is currently unreachable') ||
       message.toLowerCase().includes('fetch failed') ||
       message.toLowerCase().includes('econnrefused');
   }
 }
+
+export function isBackendUnreachableError(error: unknown): boolean {
+  if (!error) return false;
+
+  if (typeof error === 'string') {
+    const lower = error.toLowerCase();
+    return (
+      lower.includes('backend service is currently unreachable') ||
+      lower.includes('backend_service_down') ||
+      lower.includes('fetch failed') ||
+      lower.includes('failed to fetch') ||
+      lower.includes('econnrefused') ||
+      lower.includes('enotfound') ||
+      lower.includes('econnreset') ||
+      lower.includes('bad gateway') ||
+      lower.includes('gateway timeout') ||
+      lower.includes('503') ||
+      lower.includes('502') ||
+      lower.includes('504') ||
+      lower.includes('networkerror') ||
+      lower.includes('network request failed')
+    );
+  }
+
+  if (error instanceof ApiError && error.isBackendDown) {
+    return true;
+  }
+
+  if (typeof error === 'object') {
+    const err = error as any;
+    if (err.isBackendDown === true) return true;
+    if (err.status === 503 || err.status === 502 || err.status === 504) return true;
+    if (err.statusCode === 503 || err.statusCode === 502 || err.statusCode === 504) return true;
+    if (err.code === 'BACKEND_SERVICE_DOWN' || err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND') return true;
+    if (err.data && typeof err.data === 'object') {
+      if (err.data.code === 'BACKEND_SERVICE_DOWN') return true;
+      if (err.data.statusCode === 503 || err.data.statusCode === 502 || err.data.statusCode === 504) return true;
+    }
+    if (err.message && typeof err.message === 'string') {
+      return isBackendUnreachableError(err.message);
+    }
+  }
+
+  return false;
+}
+
 
 let isRefreshing = false;
 let refreshSubscribers: Array<(refreshed: boolean) => void> = [];

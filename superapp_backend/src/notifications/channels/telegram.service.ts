@@ -1,4 +1,4 @@
-import {
+﻿import {
   Injectable,
   Logger,
   Optional,
@@ -490,7 +490,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       const rawApkUrl =
         String(metadata?.apkUrl || '') ||
         `${backofficeBase}/api/download-apk/superapp-test-${version}.apk`;
-      const resolvedName = miniAppName || 'Super App';
+      const resolvedName = miniAppName || 'SuperApp';
       for (const chatId of dispatchedChats) {
         void this.sendApkDocument(
           chatId,

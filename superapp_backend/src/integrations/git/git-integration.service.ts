@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+﻿import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -403,7 +403,7 @@ export class GitIntegrationService {
         publicKey: envPublicKey.trim(),
         fingerprint: envFingerprint || DEFAULT_PLATFORM_DEPLOY_KEY_FINGERPRINT,
         type: 'ed25519',
-        title: 'DSP Super App Integration Deploy Key',
+        title: 'DSP SuperApp Integration Deploy Key',
       };
     }
 
@@ -425,7 +425,7 @@ export class GitIntegrationService {
           publicKey: pubKey,
           fingerprint: fp,
           type: 'ed25519',
-          title: 'DSP Super App Integration Deploy Key',
+          title: 'DSP SuperApp Integration Deploy Key',
         };
       } catch (err) {
         this.logger.warn(`Failed reading deploy_key.pub: ${(err as Error).message}`);
@@ -436,12 +436,12 @@ export class GitIntegrationService {
       publicKey: DEFAULT_PLATFORM_DEPLOY_KEY,
       fingerprint: DEFAULT_PLATFORM_DEPLOY_KEY_FINGERPRINT,
       type: 'ed25519',
-      title: 'DSP Super App Integration Deploy Key',
+      title: 'DSP SuperApp Integration Deploy Key',
     };
   }
 
   /**
-   * Generates a unique, isolated ED25519 deploy key pair for a Mini App repository.
+   * Generates a unique, isolated ED25519 deploy key pair for a MiniApp repository.
    * - Private key is encrypted using AES-256-GCM.
    * - Public key is formatted in OpenSSH standard wire format: ssh-ed25519 AAAAC3... [title]
    * - Computes SHA256 fingerprint matching ssh-keygen format.

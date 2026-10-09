@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { superAppApi } from '@/api';
@@ -59,7 +59,7 @@ export function SuperAppReleaseCompareModal({
         setDiffData(diffResult);
       } catch (err: any) {
         console.error('Failed to fetch release comparison:', err);
-        toast.error('Unable to compute Super App release diff', 'Comparison Error');
+        toast.error('Unable to compute SuperApp release diff', 'Comparison Error');
       } finally {
         setLoading(false);
       }
@@ -74,7 +74,7 @@ export function SuperAppReleaseCompareModal({
       const diffResult = await superAppApi.compareReleases(newBase, newTarget);
       setDiffData(diffResult);
     } catch (err: any) {
-      toast.error('Failed to compare selected Super App versions', 'Diff Error');
+      toast.error('Failed to compare selected SuperApp versions', 'Diff Error');
     } finally {
       setLoading(false);
     }
@@ -126,14 +126,14 @@ export function SuperAppReleaseCompareModal({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-xl font-extrabold text-slate-900 dark:text-slate-100">
-                  Super App Release Comparator (SA vs SA)
+                  SuperApp Release Comparator (SA vs SA)
                 </h3>
                 <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300 border border-brand-300 dark:border-brand-800">
                   Gate 2 Ecosystem Manifest
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Compare bundled Mini App updates, native platform bridges, and Nexus binary digests between Super App builds.
+                Compare bundled MiniApp updates, native platform bridges, and Nexus binary digests between SuperApp builds.
               </p>
             </div>
           </div>
@@ -211,7 +211,7 @@ export function SuperAppReleaseCompareModal({
           {/* Quick Tab Filter */}
           <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-200/80 dark:bg-slate-700/80">
             {[
-              { id: 'MINI_APPS', label: 'Bundled Mini Apps', icon: <DevicePhoneIcon className="w-3.5 h-3.5" />, count: upgradedApps.length + addedApps.length },
+              { id: 'MINI_APPS', label: 'Bundled MiniApps', icon: <DevicePhoneIcon className="w-3.5 h-3.5" />, count: upgradedApps.length + addedApps.length },
               { id: 'CAPABILITIES', label: 'Capabilities & Bridges', icon: <ZapIcon className="w-3.5 h-3.5" />, count: diffData?.capabilitiesDiff?.added?.length || 0 },
               { id: 'ARTIFACTS', label: 'Nexus APK Integrity', icon: <ShieldCheckIcon className="w-3.5 h-3.5" /> },
             ].map((tab) => (
@@ -245,7 +245,7 @@ export function SuperAppReleaseCompareModal({
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              <span className="text-sm font-semibold text-slate-500">Comparing Super App releases...</span>
+              <span className="text-sm font-semibold text-slate-500">Comparing SuperApp releases...</span>
             </div>
           ) : (
             <>
@@ -288,7 +288,7 @@ export function SuperAppReleaseCompareModal({
                 </div>
               </div>
 
-              {/* Tab 1: Bundled Mini Apps Diff */}
+              {/* Tab 1: Bundled MiniApps Diff */}
               {activeTab === 'MINI_APPS' && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -296,7 +296,7 @@ export function SuperAppReleaseCompareModal({
                       <svg className="w-4 h-4 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                       </svg>
-                      <span>Bundled Mini Apps Lifecycle Differences</span>
+                      <span>Bundled MiniApps Lifecycle Differences</span>
                     </h4>
                     <span className="text-xs text-slate-500 font-medium flex items-center gap-1.5">
                       <span>Base: {diffData?.miniAppsDiff?.totalBaseApps || 0} Apps</span>
@@ -305,14 +305,14 @@ export function SuperAppReleaseCompareModal({
                     </span>
                   </div>
 
-                  {/* 1. Upgraded Mini Apps */}
+                  {/* 1. Upgraded MiniApps */}
                   {upgradedApps.length > 0 && (
                     <div className="p-4 rounded-2xl bg-accent-50/60 dark:bg-accent-950/30 border border-accent-200/80 dark:border-accent-800/60 space-y-2">
                       <div className="text-xs font-extrabold uppercase tracking-wider text-accent-900 dark:text-accent-300 flex items-center gap-1.5">
                         <svg className="w-4 h-4 text-accent-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 11l5-5m0 0l5 5m-5-5v12" />
                         </svg>
-                        <span>Upgraded Mini Apps ({upgradedApps.length})</span>
+                        <span>Upgraded MiniApps ({upgradedApps.length})</span>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
                         {upgradedApps.map((app: any, idx: number) => (
@@ -332,12 +332,12 @@ export function SuperAppReleaseCompareModal({
                     </div>
                   )}
 
-                  {/* 2. Newly Added Mini Apps */}
+                  {/* 2. Newly Added MiniApps */}
                   {addedApps.length > 0 && (
                     <div className="p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 space-y-2">
                       <div className="text-xs font-extrabold uppercase tracking-wider text-emerald-900 dark:text-emerald-300 flex items-center gap-1.5">
                         <SparklesIcon className="w-4 h-4 text-emerald-600" />
-                        <span>Newly Added to Super App ({addedApps.length})</span>
+                        <span>Newly Added to SuperApp ({addedApps.length})</span>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
                         {addedApps.map((app: any, idx: number) => (
@@ -358,7 +358,7 @@ export function SuperAppReleaseCompareModal({
                   {/* 3. Unchanged Apps */}
                   <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-2">
                     <div className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                      Unchanged Bundled Mini Apps ({unchangedApps.length})
+                      Unchanged Bundled MiniApps ({unchangedApps.length})
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-2 pt-1">
                       {unchangedApps.map((app: any, idx: number) => (
@@ -379,7 +379,7 @@ export function SuperAppReleaseCompareModal({
                     <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
-                    <span>Super App Native Platform Capabilities</span>
+                    <span>SuperApp Native Platform Capabilities</span>
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 space-y-2">

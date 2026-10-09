@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
@@ -176,9 +176,9 @@ export const STAGE_CATALOG: Record<string, StageCatalogItem> = {
   capability_gate: {
     id: 'capability_gate',
     name: 'Host Capability Gatekeeper Audit',
-    tool: 'Super App Gatekeeper',
+    tool: 'SuperApp Gatekeeper',
     icon: 'lock',
-    defaultTitle: 'Super App Capability Boundary Verification',
+    defaultTitle: 'SuperApp Capability Boundary Verification',
     description: 'Verifies declared host capabilities against platform policies and app store guidelines.',
   },
   // Aliases for backwards compatibility
@@ -337,7 +337,7 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
           filePath: iss.metadata?.filePath,
           lineNumber: iss.metadata?.lineNumber,
           cveId: iss.metadata?.cveId,
-          recommendation: iss.metadata?.recommendation || 'Remediate this finding in accordance with Super App security policies.',
+          recommendation: iss.metadata?.recommendation || 'Remediate this finding in accordance with SuperApp security policies.',
         });
       }
     });
@@ -1447,7 +1447,7 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
                     <td className="px-4 py-4 align-top text-sm sm:text-base text-slate-600 dark:text-slate-400 bg-slate-50/40 dark:bg-slate-800/20 leading-relaxed">
                       <div className="flex items-start gap-1.5">
                         <ShieldCheckIcon className="w-4 h-4 text-brand-500 flex-shrink-0 mt-0.5" />
-                        <div>{f.recommendation || 'Follow Super App integration security checklist.'}</div>
+                        <div>{f.recommendation || 'Follow SuperApp integration security checklist.'}</div>
                       </div>
                     </td>
                   </tr>
@@ -1661,7 +1661,7 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
                     Re-Configure Security Scan Profile
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Select the automated security audits to run for this Mini App ({miniApp.integrationMethod})
+                    Select the automated security audits to run for this MiniApp ({miniApp.integrationMethod})
                   </p>
                 </div>
               </div>

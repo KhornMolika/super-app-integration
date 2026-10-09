@@ -173,26 +173,17 @@ pipeline {
                     curl -s -f "http://host.docker.internal:3000/public/superapp-test.apk" -o "\$APK_FILE" || true
 
                     if [ -f "\$APK_FILE" ] && [ -s "\$APK_FILE" ]; then
-                        echo "Uploading ${filename} to Sonatype Nexus apk-test-builds repository..."
-                        # Publish primary artifact to apk-test-builds (never apk-releases during test builds)
-                        curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-test-builds/${params.APP_NAME}/${params.RELEASE_VERSION}/app-release.apk" || \
-                        curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "http://superapp-nexus:8081/repository/apk-test-builds/${params.APP_NAME}/${params.RELEASE_VERSION}/app-release.apk"
-
-                        # Update latest pointer in apk-test-builds
-                        curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-test-builds/${params.APP_NAME}/latest/app-release.apk" 2>/dev/null || true
-
-                        # Upload standardized test APK name to Nexus apk-test-builds
-                        curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-test-builds/${params.APP_NAME}/${params.RELEASE_VERSION}/superapp-test-${params.RELEASE_VERSION}.apk" 2>/dev/null || true
-                        # Also alias to app-debug.apk so legacy URLs retrieve the build
-                        curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-test-builds/${params.APP_NAME}/${params.RELEASE_VERSION}/app-debug.apk" 2>/dev/null || true
-                        curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-test-builds/${params.APP_NAME}/latest/app-debug.apk" 2>/dev/null || true
+                        echo "Uploading superapp-test-${params.RELEASE_VERSION}.apk to Sonatype Nexus apk-test-builds repository..."
+                        # Publish single standardized test artifact to apk-test-builds
+                        curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-test-builds/${params.APP_NAME}/${params.RELEASE_VERSION}/superapp-test-${params.RELEASE_VERSION}.apk" || \
+                        curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "http://superapp-nexus:8081/repository/apk-test-builds/${params.APP_NAME}/${params.RELEASE_VERSION}/superapp-test-${params.RELEASE_VERSION}.apk"
 
                         echo "Upload to Sonatype Nexus apk-test-builds successfully completed!"
                     else
                         echo "Warning: \$APK_FILE not found, packaging build metadata archive..."
                         mkdir -p /var/reports
                         echo "Super App Test Build artifact for ${params.APP_NAME} ${params.RELEASE_VERSION}" > "\$APK_FILE"
-                        curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-test-builds/${params.APP_NAME}/${params.RELEASE_VERSION}/app-release.apk" || true
+                        curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "${params.NEXUS_URL}/repository/apk-test-builds/${params.APP_NAME}/${params.RELEASE_VERSION}/superapp-test-${params.RELEASE_VERSION}.apk" || true
                     fi
                     """
                 }

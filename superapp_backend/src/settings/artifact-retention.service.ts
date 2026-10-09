@@ -222,29 +222,43 @@ export class ArtifactRetentionService implements OnModuleInit {
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - policy.retentionDays);
 
-        const appGroups: Record<string, any[]> = {};
+        const appGroups: Record<string, Record<string, any[]>> = {};
         for (const item of items) {
           const size = (item.fileSize || 50 * 1024 * 1024) / (1024 * 1024);
           testSizeMb += size;
-          const groupKey = item.path?.split('/')[0] || 'superapp';
-          if (!appGroups[groupKey]) appGroups[groupKey] = [];
-          appGroups[groupKey].push(item);
+          const parts = (item.path || '').split('/');
+          const appName = parts[0] || 'superapp';
+          const version = parts[1] || 'default';
+
+          if (!appGroups[appName]) appGroups[appName] = {};
+          if (!appGroups[appName][version]) appGroups[appName][version] = [];
+          appGroups[appName][version].push(item);
         }
 
-        // Apply Dual-rule estimation: keep last N builds, check age or scheduled excess
-        for (const groupKey of Object.keys(appGroups)) {
-          const list = appGroups[groupKey];
-          list.sort((a, b) => {
-            if (a.path?.includes('/latest/')) return -1;
-            if (b.path?.includes('/latest/')) return 1;
-            const timeA = new Date(a.lastModified || a.blobCreated || 0).getTime();
-            const timeB = new Date(b.lastModified || b.blobCreated || 0).getTime();
-            return timeB - timeA;
+        // Apply Dual-rule estimation: keep last N build versions per app
+        for (const appName of Object.keys(appGroups)) {
+          const versionMap = appGroups[appName];
+          const versions = Object.keys(versionMap).map((ver) => {
+            const verItems = versionMap[ver];
+            const maxTime = Math.max(
+              ...verItems.map((it) => new Date(it.lastModified || it.blobCreated || 0).getTime()),
+            );
+            return { version: ver, items: verItems, time: maxTime };
           });
-          const candidates = list.slice(policy.maxTestBuildsPerApp);
-          for (const item of candidates) {
-            prunableCount++;
-            prunableSizeMb += (item.fileSize || 50 * 1024 * 1024) / (1024 * 1024);
+
+          // Sort versions: 'latest' first, then newer to older
+          versions.sort((a, b) => {
+            if (a.version === 'latest') return -1;
+            if (b.version === 'latest') return 1;
+            return b.time - a.time;
+          });
+
+          const candidates = versions.slice(policy.maxTestBuildsPerApp);
+          for (const verObj of candidates) {
+            for (const item of verObj.items) {
+              prunableCount++;
+              prunableSizeMb += (item.fileSize || 50 * 1024 * 1024) / (1024 * 1024);
+            }
           }
         }
       }
@@ -319,7 +333,7 @@ export class ArtifactRetentionService implements OnModuleInit {
     const baseUrl = this.getNexusBaseUrl();
     const authHeaders = this.getNexusAuthHeader();
 
-    this.logger.log(`Starting storage pruning job [Source: ${triggerSource}] with retention policy: keepLast=${policy.maxTestBuildsPerApp}, ageThreshold=${policy.retentionDays}d`);
+    this.logger.log(`Starting storage pruning job [Source: ${triggerSource}] with retention policy: keepLast=${policy.maxTestBuildsPerApp} build versions, ageThreshold=${policy.retentionDays}d`);
 
     let prunedCount = 0;
     let freedBytes = 0;
@@ -338,70 +352,84 @@ export class ArtifactRetentionService implements OnModuleInit {
           const data = await res.json();
           const items = data.items || [];
 
-          // Group assets by application
-          const appGroups: Record<string, any[]> = {};
+          // Group assets by application and version directory
+          const appGroups: Record<string, Record<string, any[]>> = {};
           for (const item of items) {
-            const groupKey = item.path?.split('/')[0] || 'superapp';
-            if (!appGroups[groupKey]) appGroups[groupKey] = [];
-            appGroups[groupKey].push(item);
+            const parts = (item.path || '').split('/');
+            const appName = parts[0] || 'superapp';
+            const version = parts[1] || 'default';
+
+            if (!appGroups[appName]) appGroups[appName] = {};
+            if (!appGroups[appName][version]) appGroups[appName][version] = [];
+            appGroups[appName][version].push(item);
           }
 
-          // Enforce dual-rule: protect last N builds, delete older ones
-          for (const groupKey of Object.keys(appGroups)) {
-            const list = appGroups[groupKey];
-            list.sort((a, b) => {
-              if (a.path?.includes('/latest/')) return -1;
-              if (b.path?.includes('/latest/')) return 1;
-              const timeA = new Date(a.lastModified || a.blobCreated || 0).getTime();
-              const timeB = new Date(b.lastModified || b.blobCreated || 0).getTime();
-              return timeB - timeA;
+          // Enforce dual-rule: protect last N build versions per app, delete older versions
+          for (const appName of Object.keys(appGroups)) {
+            const versionMap = appGroups[appName];
+            const versions = Object.keys(versionMap).map((ver) => {
+              const verItems = versionMap[ver];
+              const maxTime = Math.max(
+                ...verItems.map((it) => new Date(it.lastModified || it.blobCreated || 0).getTime()),
+              );
+              return { version: ver, items: verItems, time: maxTime };
             });
-            
-            // Retain top N builds unconditionally
-            const protectedItems = list.slice(0, policy.maxTestBuildsPerApp);
-            for (const item of protectedItems) {
-              details.push({
-                path: item.path || 'apk-test-builds/' + item.id,
-                size: `${Math.round(((item.fileSize || 50 * 1024 * 1024) / (1024 * 1024)) * 10) / 10} MB`,
-                status: 'RETAINED_RECENT_BUILD',
-              });
+
+            // Sort versions: 'latest' always protected first, followed by newest to oldest
+            versions.sort((a, b) => {
+              if (a.version === 'latest') return -1;
+              if (b.version === 'latest') return 1;
+              return b.time - a.time;
+            });
+
+            // Retain top N build versions unconditionally
+            const protectedVersions = versions.slice(0, policy.maxTestBuildsPerApp);
+            for (const verObj of protectedVersions) {
+              for (const item of verObj.items) {
+                details.push({
+                  path: item.path || 'apk-test-builds/' + item.id,
+                  size: `${Math.round(((item.fileSize || 50 * 1024 * 1024) / (1024 * 1024)) * 10) / 10} MB`,
+                  status: 'RETAINED_RECENT_BUILD',
+                });
+              }
             }
 
-            // Inspect remainder candidates
-            const remainder = list.slice(policy.maxTestBuildsPerApp);
-            for (const item of remainder) {
-              const itemDate = new Date(item.lastModified || item.blobCreated || 0);
-              const isOlder = itemDate < cutoffDate;
+            // Inspect remainder versions for age cutoff or manual pruning
+            const remainderVersions = versions.slice(policy.maxTestBuildsPerApp);
+            for (const verObj of remainderVersions) {
+              const isOlder = verObj.time < cutoffDate.getTime();
               const shouldPrune =
                 triggerSource === 'MANUAL' ||
                 triggerSource === 'SCHEDULED_SPECIFIC_DATETIME' ||
                 isOlder;
 
-              if (shouldPrune) {
-                try {
-                  const delRes = await fetch(
-                    `${baseUrl}/service/rest/v1/assets/${encodeURIComponent(item.id)}`,
-                    { method: 'DELETE', headers: authHeaders },
-                  );
-                  if (delRes.ok || delRes.status === 204) {
-                    prunedCount++;
-                    const size = item.fileSize || 50 * 1024 * 1024;
-                    freedBytes += size;
-                    details.push({
-                      path: item.path || item.id,
-                      size: `${Math.round((size / (1024 * 1024)) * 10) / 10} MB`,
-                      status: 'PRUNED_SUCCESS',
-                    });
+              for (const item of verObj.items) {
+                if (shouldPrune) {
+                  try {
+                    const delRes = await fetch(
+                      `${baseUrl}/service/rest/v1/assets/${encodeURIComponent(item.id)}`,
+                      { method: 'DELETE', headers: authHeaders },
+                    );
+                    if (delRes.ok || delRes.status === 204) {
+                      prunedCount++;
+                      const size = item.fileSize || 50 * 1024 * 1024;
+                      freedBytes += size;
+                      details.push({
+                        path: item.path || item.id,
+                        size: `${Math.round((size / (1024 * 1024)) * 10) / 10} MB`,
+                        status: 'PRUNED_SUCCESS',
+                      });
+                    }
+                  } catch (delErr: any) {
+                    this.logger.warn(`Failed to delete asset ${item.id}: ${delErr.message}`);
                   }
-                } catch (delErr: any) {
-                  this.logger.warn(`Failed to delete asset ${item.id}: ${delErr.message}`);
+                } else {
+                  details.push({
+                    path: item.path || item.id,
+                    size: `${Math.round(((item.fileSize || 50 * 1024 * 1024) / (1024 * 1024)) * 10) / 10} MB`,
+                    status: 'RETAINED_WITHIN_AGE_LIMIT',
+                  });
                 }
-              } else {
-                details.push({
-                  path: item.path || item.id,
-                  size: `${Math.round(((item.fileSize || 50 * 1024 * 1024) / (1024 * 1024)) * 10) / 10} MB`,
-                  status: 'RETAINED_WITHIN_AGE_LIMIT',
-                });
               }
             }
           }

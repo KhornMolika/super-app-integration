@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -39,7 +39,7 @@ export default function IssuesPage() {
           <table className="w-full text-left border-collapse">
             <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
               <tr>
-                <th className="w-[18%] px-6 py-4 text-xs font-semibold uppercase text-slate-500">Mini App</th>
+                <th className="w-[18%] px-6 py-4 text-xs font-semibold uppercase text-slate-500">MiniApp</th>
                 <th className="w-[18%] px-6 py-4 text-xs font-semibold uppercase text-slate-500">Classification</th>
                 <th className="w-[36%] px-6 py-4 text-xs font-semibold uppercase text-slate-500">Description</th>
                 <th className="w-[10%] px-6 py-4 text-xs font-semibold uppercase text-slate-500">Severity</th>

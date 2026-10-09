@@ -1,4 +1,4 @@
-import {
+﻿import {
   Injectable,
   Logger,
   NotFoundException,
@@ -16,7 +16,7 @@ export class ArtifactDistributionHelper {
   private readonly logger = new Logger(ArtifactDistributionHelper.name);
 
   getVersionHistory(app: MiniApp, user?: any) {
-    if (!app) throw new NotFoundException('Mini App not found');
+    if (!app) throw new NotFoundException('MiniApp not found');
 
     const roles: string[] = user?.roles || [];
     const isSuperAdmin =
@@ -28,7 +28,7 @@ export class ArtifactDistributionHelper {
 
     if (user && !isSuperAdmin && !isOwner) {
       throw new ForbiddenException(
-        'Access Denied: You do not have permission to view version history for this Mini App.',
+        'Access Denied: You do not have permission to view version history for this MiniApp.',
       );
     }
 
@@ -91,7 +91,7 @@ export class ArtifactDistributionHelper {
             : 'ACTIVE',
         changelog: `Official package release ${currentRelease} for ${app.name}`,
         releasedAt: (app.updatedAt || app.createdAt || new Date()).toISOString(),
-        releasedBy: app.ownerName || 'Mini App Developer',
+        releasedBy: app.ownerName || 'MiniApp Developer',
         checksum:
           app.integrationConfig?.archiveChecksum ||
           'sha256:' +
@@ -113,7 +113,7 @@ export class ArtifactDistributionHelper {
         status: 'PREVIOUS',
         changelog: `Prior stable build for ${app.name}`,
         releasedAt: new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString(),
-        releasedBy: app.ownerName || 'Mini App Developer',
+        releasedBy: app.ownerName || 'MiniApp Developer',
         checksum:
           'sha256:' +
           crypto
@@ -133,7 +133,7 @@ export class ArtifactDistributionHelper {
         status: 'TESTING',
         changelog: `Candidate build for sandbox testing on branch ${app.integrationConfig?.gitBranch || 'develop'}`,
         releasedAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(),
-        releasedBy: app.ownerName || 'Mini App Developer',
+        releasedBy: app.ownerName || 'MiniApp Developer',
         checksum:
           'sha256:' +
           crypto
@@ -227,7 +227,7 @@ export class ArtifactDistributionHelper {
     inviteToken?: string,
     res?: Response,
   ) {
-    if (!app) throw new NotFoundException('Mini App not found');
+    if (!app) throw new NotFoundException('MiniApp not found');
 
     let authorized = false;
 
@@ -262,7 +262,7 @@ export class ArtifactDistributionHelper {
 
     if (!authorized) {
       throw new ForbiddenException(
-        'Access Denied: You do not have permission or a valid invite token to download artifacts for this Mini App.',
+        'Access Denied: You do not have permission or a valid invite token to download artifacts for this MiniApp.',
       );
     }
 

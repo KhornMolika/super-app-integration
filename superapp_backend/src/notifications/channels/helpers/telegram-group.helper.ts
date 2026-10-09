@@ -1,4 +1,4 @@
-import { Repository } from 'typeorm';
+﻿import { Repository } from 'typeorm';
 import { User } from '../../../access-control/entities/user.entity';
 import { MiniApp } from '../../../miniapps/entities/miniapp.entity';
 import { SettingsService } from '../../../settings/settings.service';
@@ -87,7 +87,7 @@ export class TelegramGroupHelper {
             status: app.status,
             category: app.category,
             logo: app.logo,
-            label: `Mini App: ${app.name}`,
+            label: `MiniApp: ${app.name}`,
           };
 
           const existing = groupsMap.get(chatId);
@@ -427,7 +427,7 @@ export class TelegramGroupHelper {
   }
 
   /**
-   * Reassigns all Mini Apps (and optionally user profile) from an old group ID to a new group ID
+   * Reassigns all MiniApps (and optionally user profile) from an old group ID to a new group ID
    */
   static async reassignTelegramGroup(
     oldChatId: string,
@@ -515,12 +515,12 @@ export class TelegramGroupHelper {
     return {
       success: true,
       updatedCount,
-      message: `Successfully ${actionText} for ${updatedCount} Mini App(s).`,
+      message: `Successfully ${actionText} for ${updatedCount} MiniApp(s).`,
     };
   }
 
   /**
-   * Assigns or moves a specific Mini App to a new Telegram group ID (or clear if null)
+   * Assigns or moves a specific MiniApp to a new Telegram group ID (or clear if null)
    */
   static async assignMiniAppToGroup(
     miniAppId: string,
@@ -540,7 +540,7 @@ export class TelegramGroupHelper {
         });
 
     if (!app) {
-      return { success: false, message: `Mini App "${miniAppId}" not found.` };
+      return { success: false, message: `MiniApp "${miniAppId}" not found.` };
     }
 
     if (userId) {
@@ -554,7 +554,7 @@ export class TelegramGroupHelper {
       if (!isAdmin && app.ownerId !== userId) {
         return {
           success: false,
-          message: 'You do not have permission to modify this Mini App.',
+          message: 'You do not have permission to modify this MiniApp.',
         };
       }
     }
@@ -575,13 +575,13 @@ export class TelegramGroupHelper {
       success: true,
       miniApp: app,
       message: trimmedNew
-        ? `Mini App "${app.name}" assigned to group ${trimmedNew} successfully!`
-        : `Telegram group unlinked from Mini App "${app.name}".`,
+        ? `MiniApp "${app.name}" assigned to group ${trimmedNew} successfully!`
+        : `Telegram group unlinked from MiniApp "${app.name}".`,
     };
   }
 
   /**
-   * Batch cleans up inactive / deleted groups across user's Mini Apps
+   * Batch cleans up inactive / deleted groups across user's MiniApps
    */
   static async cleanupInactiveGroups(
     userGroups: TelegramGroupItem[],
@@ -621,8 +621,8 @@ export class TelegramGroupHelper {
       success: true,
       cleanedCount: totalCleaned,
       message: fallbackChatId
-        ? `Cleaned up ${deadGroups.length} inactive group(s). Migrated ${totalCleaned} Mini App(s) to "${liveDefault?.title || fallbackChatId}".`
-        : `Cleaned up ${deadGroups.length} inactive group(s) across ${totalCleaned} Mini App(s).`,
+        ? `Cleaned up ${deadGroups.length} inactive group(s). Migrated ${totalCleaned} MiniApp(s) to "${liveDefault?.title || fallbackChatId}".`
+        : `Cleaned up ${deadGroups.length} inactive group(s) across ${totalCleaned} MiniApp(s).`,
     };
   }
 }

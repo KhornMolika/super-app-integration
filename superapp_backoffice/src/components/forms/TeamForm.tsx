@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useEffect } from 'react';
 import { Input, Label, Button } from '@/components/ui/inputs';
 import { toast } from '@/components/ui/Toast';
@@ -170,7 +170,7 @@ export default function TeamForm({
     try {
       const data = await telegramApi.testTeamAlert(
         formData.teamTelegramChatId.trim(),
-        formData.name || 'Mini App'
+        formData.name || 'MiniApp'
       );
       if (data && data.success) {
         toast.success('Test alert sent successfully to Telegram channel / group!', 'Telegram Alert Sent');
@@ -608,7 +608,7 @@ export default function TeamForm({
                       className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 w-4 h-4 cursor-pointer"
                     />
                     <span className="font-medium">
-                      Save this group as my default team channel in profile (for future Mini Apps)
+                      Save this group as my default team channel in profile (for future MiniApps)
                     </span>
                   </label>
                   {formData.teamTelegramChatId && (
@@ -651,7 +651,7 @@ export default function TeamForm({
           )}
 
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Automated security scan reports, CI/CD test builds, and release updates for this Mini App will be broadcast directly to your team channel. (Add <code>@{telegramStatus?.botUsername || 'superapp_notification_bot'}</code> to your group/channel first).
+            Automated security scan reports, CI/CD test builds, and release updates for this MiniApp will be broadcast directly to your team channel. (Add <code>@{telegramStatus?.botUsername || 'superapp_notification_bot'}</code> to your group/channel first).
           </p>
         </div>
       </div>

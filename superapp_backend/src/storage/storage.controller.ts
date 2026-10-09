@@ -180,7 +180,7 @@ export class StorageController {
 export class PublicAssetProxyController {
   constructor(private readonly storageService: StorageService) {}
 
-  @Get('*')
+  @Get('*path')
   async serveAsset(@Req() req: Request, @Res() res: Response) {
     const rawUrl = req.originalUrl || req.url || '';
     const key = rawUrl.replace(/^\/(?:api\/)?(?:mini-app-assets|mini-app-logos|logos)\/?/, '');

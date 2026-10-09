@@ -1,4 +1,4 @@
-import { MiniappLifecycleHelper } from './miniapp-lifecycle.helper';
+﻿import { MiniappLifecycleHelper } from './miniapp-lifecycle.helper';
 import { MiniApp } from '../entities/miniapp.entity';
 
 describe('MiniappLifecycleHelper - Revision & Approval Lifecycle', () => {
@@ -89,7 +89,7 @@ describe('MiniappLifecycleHelper - Revision & Approval Lifecycle', () => {
       expect(result.pendingRevision).toBeFalsy();
       expect(mockNotificationsService.createNotification).toHaveBeenCalledWith(
         'user-1',
-        'Mini App Approved',
+        'MiniApp Approved',
         expect.any(String),
         'MINIAPP_APPROVED',
         'app-1',

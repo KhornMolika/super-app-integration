@@ -1,4 +1,4 @@
-import {
+﻿import {
   Controller,
   Get,
   Post,
@@ -79,7 +79,7 @@ export class PubspecInjectorController {
   @Post(['sandbox-build/trigger', 'trigger-sandbox-build'])
   @HttpCode(HttpStatus.OK)
   async triggerSandboxBuild(@Req() req?: any) {
-    const actor = req?.user?.email || req?.user?.name || 'Super App Administrator';
+    const actor = req?.user?.email || req?.user?.name || 'SuperApp Administrator';
     return this.sandboxBuildManager.triggerBuild(actor);
   }
 }

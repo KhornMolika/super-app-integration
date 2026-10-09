@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Input, Label, Select, Textarea } from '@/components/ui/inputs';
 import { LogoUploadInput } from '@/components/ui/LogoUploadInput';
 import { LockIcon, BuildingIcon } from '@/components/ui/Icons';
@@ -116,7 +116,7 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
     <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <Label>Mini App Name <span className="text-rose-500">*</span></Label>
+              <Label>MiniApp Name <span className="text-rose-500">*</span></Label>
               <Input 
                 required 
                 disabled={!isEditable}
@@ -129,7 +129,7 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
               {allErrors.name && <p className="mt-1.5 text-sm text-rose-600 font-medium">{allErrors.name}</p>}
             </div>
             <div>
-              <Label>Mini App ID (Auto-generated) <span className="text-rose-500">*</span></Label>
+              <Label>MiniApp ID (Auto-generated) <span className="text-rose-500">*</span></Label>
               <div className="relative flex items-center">
                 <Input 
                   disabled

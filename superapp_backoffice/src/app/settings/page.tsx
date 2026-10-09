@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -96,8 +96,10 @@ export default function SettingsPage() {
       if (data) {
         setPipelineTiming(data as any);
       }
-    } catch (err) {
-      console.error('Failed to load pipeline timing:', err);
+    } catch (err: any) {
+      if (err?.status !== 403 && err?.statusCode !== 403) {
+        console.warn('Pipeline timing unavailable:', err?.message);
+      }
     } finally {
       setLoadingTiming(false);
     }
@@ -280,13 +282,14 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSendTestEmail = async () => {
-    if (!user.email) return;
+  const handleSendTestEmail = async (targetEmail?: string) => {
+    const dest = targetEmail || user.email;
+    if (!dest) return;
     setSendingTestEmail(true);
     try {
-      const data = await telegramApi.testEmail(user.email);
+      const data = await telegramApi.testEmail(dest);
       if (data?.success) {
-        const msg = `Verified test email successfully delivered to ${user.email}! Please check your inbox and spam folder.`;
+        const msg = `Verified test email successfully delivered to ${dest}! Please check your inbox and spam folder.`;
         toast.success(msg, 'Email Delivered');
       } else {
         const msg = data?.message || data?.error || 'Failed to send test email. Verify Resend API configuration.';
@@ -312,7 +315,7 @@ export default function SettingsPage() {
     try {
       const data = await telegramApi.testTeamAlert(
         targetChat,
-        appLabel || (role === 'SUPER_ADMIN' || role === 'ADMIN' ? 'Super App Operations' : 'Mini App Team Channel')
+        appLabel || (role === 'SUPER_ADMIN' || role === 'ADMIN' ? 'SuperApp Operations' : 'MiniApp Team Channel')
       );
       if (data?.success) {
         const msg = `Team test alert sent to ${appLabel ? `"${appLabel}" (${targetChat})` : targetChat}! Please check your Telegram group.`;
@@ -368,13 +371,13 @@ export default function SettingsPage() {
     try {
       const data = await telegramApi.assignAppGroup({ miniAppId, newChatId });
       if (data?.success) {
-        toast.success(data.message || 'Mini App Telegram group updated!', 'Group Assigned');
+        toast.success(data.message || 'MiniApp Telegram group updated!', 'Group Assigned');
         await fetchTelegramStatus();
       } else {
-        toast.error(data?.message || 'Failed to update Mini App Telegram group.', 'Assignment Failed');
+        toast.error(data?.message || 'Failed to update MiniApp Telegram group.', 'Assignment Failed');
       }
     } catch (err: any) {
-      toast.error(err.message || 'Network error updating Mini App group.', 'Network Error');
+      toast.error(err.message || 'Network error updating MiniApp group.', 'Network Error');
     }
   };
 
@@ -404,110 +407,242 @@ export default function SettingsPage() {
     toast.info(`Copied "${text}" to clipboard!`, 'Copied');
   };
 
+  const [activeTab, setActiveTab] = useState<'profile' | 'telegram' | 'pipeline' | 'retention' | 'guide'>('profile');
+
+  const isSuperAdmin = role === 'SUPER_ADMIN';
+  const isAdmin = role === 'ADMIN';
+  const isDev = role === 'MINI_APP_DEVELOPER';
+  const isQA = role === 'QA_TESTER';
+
+  const eyebrowText = isDev
+    ? 'Developer Account & Notifications'
+    : isQA
+    ? 'QA Tester Account & Notifications'
+    : 'Platform Governance & Settings';
+
+  const pageTitle = isDev
+    ? 'MiniApp Developer Profile & Notification Hub'
+    : isQA
+    ? 'QA Tester Profile & Alert Hub'
+    : isSuperAdmin
+    ? 'Platform Settings & Governance'
+    : 'Admin Settings & Profile';
+
+  const pageSubtitle = isDev
+    ? 'Manage your developer identity, connect direct Telegram bot alerts for security scan reviews, and configure team channels for your MiniApps.'
+    : isQA
+    ? 'Manage your QA tester identity, receive immediate test APK release builds via Telegram, and verify test email delivery.'
+    : 'Manage system-wide pipeline automation timing, storage retention policies, admin profile, and platform notification channels.';
+
+  const isTelegramConnected = Boolean(telegramStatus?.user?.isConnected);
+
   return (
     <ProtectedRoute>
-      <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out space-y-8 w-full">
+      <div className="animate-in fade-in slide-in-from-bottom-3 duration-500 ease-out space-y-6 w-full max-w-7xl mx-auto pb-12">
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 pb-2 border-b border-slate-200/60 dark:border-slate-800/60">
           <div>
-            <div className="flex items-center gap-2 text-sm font-semibold text-brand-600 dark:text-brand-400 uppercase tracking-wider mb-1">
-              <span>Account &amp; Notifications</span>
+            <div className="flex items-center gap-2 text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-widest mb-1.5">
+              <span>{eyebrowText}</span>
             </div>
-            <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-              Settings &amp; Profile
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
+              {pageTitle}
             </h2>
-            <p className="text-slate-500 dark:text-slate-400 mt-1.5 text-base">
-              Manage your personal user profile identity, direct personal alerts, and team notification channels.
+            <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm max-w-2xl leading-relaxed">
+              {pageSubtitle}
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-sm font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <div className="flex items-center gap-2.5 shrink-0">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/80 shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               <span>Session Active</span>
             </span>
           </div>
         </div>
 
-        {/* 1. User Profile Card */}
-        <UserProfileCard
-          user={user}
-          role={role}
-          telegramStatus={telegramStatus}
-          onSendTestEmail={handleSendTestEmail}
-          sendingTestEmail={sendingTestEmail}
-        />
+        {/* Minimalist Centered Tab Navigation */}
+        <div className="flex justify-center w-full pt-1 pb-2">
+          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100/90 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800/80 shadow-xs overflow-x-auto max-w-full no-scrollbar">
+            <button
+              type="button"
+              onClick={() => setActiveTab('profile')}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all duration-150 cursor-pointer whitespace-nowrap ${
+                activeTab === 'profile'
+                  ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              <span>Profile &amp; Account</span>
+            </button>
 
-        {/* 2. Personal Direct Telegram Card */}
-        <TelegramPersonalCard
-          telegramStatus={telegramStatus}
-          fetchingTelegram={fetchingTelegram}
-          checkingSync={checkingSync}
-          sendingTest={sendingTest}
-          loading={loading}
-          showManualTelegram={showManualTelegram}
-          manualChatId={manualChatId}
-          manualUsername={manualUsername}
-          copiedChatId={copiedChatId}
-          onRefreshStatus={fetchTelegramStatus}
-          onOneClickConnect={handleOneClickConnect}
-          onCheckSync={handleCheckSync}
-          onManualConnect={handleManualConnect}
-          onSendTestMessage={handleSendTestMessage}
-          onDisconnectTelegram={handleDisconnectTelegram}
-          setShowManualTelegram={setShowManualTelegram}
-          setManualChatId={setManualChatId}
-          setManualUsername={setManualUsername}
-          onCopyChatId={(id) => copyToClipboard(id, false)}
-        />
+            <button
+              type="button"
+              onClick={() => setActiveTab('telegram')}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all duration-150 cursor-pointer whitespace-nowrap ${
+                activeTab === 'telegram'
+                  ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              <span>Telegram &amp; Alerts</span>
+              {isTelegramConnected && (
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              )}
+            </button>
 
-        {/* 3. Team & Platform Group Card */}
-        <TelegramTeamCard
-          role={role}
-          telegramStatus={telegramStatus}
-          teamChatIdInput={teamChatIdInput}
-          detectingGroups={detectingGroups}
-          detectedGroups={detectedGroups}
-          savingTeamChat={savingTeamChat}
-          sendingTeamTest={sendingTeamTest}
-          copiedTeamChatId={copiedTeamChatId}
-          setTeamChatIdInput={setTeamChatIdInput}
-          onSaveTeamChat={handleSaveTeamChat}
-          onDetectGroups={handleDetectGroups}
-          onSendTeamTestMessage={handleSendTeamTestMessage}
-          onCopyTeamChatId={(id) => copyToClipboard(id, true)}
-          onReassignGroup={handleReassignGroup}
-          onAssignAppGroup={handleAssignAppGroup}
-          onCleanupInactive={handleCleanupInactive}
-        />
+            {isSuperAdmin && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('pipeline')}
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all duration-150 cursor-pointer whitespace-nowrap ${
+                    activeTab === 'pipeline'
+                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  <span>CI/CD Timing</span>
+                </button>
 
-        {/* 4. Interactive Step-by-Step Guideline Drawer */}
-        <TelegramGuidelineCard
-          role={role}
-          telegramStatus={telegramStatus}
-          activeGuideTab={activeGuideTab}
-          setActiveGuideTab={setActiveGuideTab}
-        />
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('retention')}
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all duration-150 cursor-pointer whitespace-nowrap ${
+                    activeTab === 'retention'
+                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                  </svg>
+                  <span>Storage Retention</span>
+                </button>
+              </>
+            )}
 
-        {/* 5. Pipeline Automation & Stage Timing Card (Super Admin Only) */}
-        {role === 'SUPER_ADMIN' && (
-          <PipelineTimingCard
-            pipelineTiming={pipelineTiming}
-            setPipelineTiming={setPipelineTiming}
-            loadingTiming={loadingTiming}
-            savingTiming={savingTiming}
-            onApplyPreset={applyPreset}
-            onSavePipelineTiming={handleSavePipelineTiming}
-          />
+            <button
+              type="button"
+              onClick={() => setActiveTab('guide')}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all duration-150 cursor-pointer whitespace-nowrap ${
+                activeTab === 'guide'
+                  ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+              <span>Guide &amp; Rules</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Tab 1: Profile & Account */}
+        {activeTab === 'profile' && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            <UserProfileCard
+              user={user}
+              role={role}
+              telegramStatus={telegramStatus}
+              onSendTestEmail={handleSendTestEmail}
+              sendingTestEmail={sendingTestEmail}
+              onProfileUpdated={fetchTelegramStatus}
+            />
+            <NotificationEventsCard />
+          </div>
         )}
 
-        {/* 6. Artifact Storage Retention & Scheduled APK Deletion (Super Admin Only) */}
-        {role === 'SUPER_ADMIN' && <ArtifactRetentionCard />}
+        {/* Tab 2: Telegram & Alerts */}
+        {activeTab === 'telegram' && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            <TelegramPersonalCard
+              telegramStatus={telegramStatus}
+              fetchingTelegram={fetchingTelegram}
+              checkingSync={checkingSync}
+              sendingTest={sendingTest}
+              loading={loading}
+              showManualTelegram={showManualTelegram}
+              manualChatId={manualChatId}
+              manualUsername={manualUsername}
+              copiedChatId={copiedChatId}
+              onRefreshStatus={fetchTelegramStatus}
+              onOneClickConnect={handleOneClickConnect}
+              onCheckSync={handleCheckSync}
+              onManualConnect={handleManualConnect}
+              onSendTestMessage={handleSendTestMessage}
+              onDisconnectTelegram={handleDisconnectTelegram}
+              setShowManualTelegram={setShowManualTelegram}
+              setManualChatId={setManualChatId}
+              setManualUsername={setManualUsername}
+              onCopyChatId={(id) => copyToClipboard(id, false)}
+            />
 
-        {/* 7. Automated Notification Events Overview */}
-        <NotificationEventsCard />
+            <TelegramTeamCard
+              role={role}
+              telegramStatus={telegramStatus}
+              teamChatIdInput={teamChatIdInput}
+              detectingGroups={detectingGroups}
+              detectedGroups={detectedGroups}
+              savingTeamChat={savingTeamChat}
+              sendingTeamTest={sendingTeamTest}
+              copiedTeamChatId={copiedTeamChatId}
+              setTeamChatIdInput={setTeamChatIdInput}
+              onSaveTeamChat={handleSaveTeamChat}
+              onDetectGroups={handleDetectGroups}
+              onSendTeamTestMessage={handleSendTeamTestMessage}
+              onCopyTeamChatId={(id) => copyToClipboard(id, true)}
+              onReassignGroup={handleReassignGroup}
+              onAssignAppGroup={handleAssignAppGroup}
+              onCleanupInactive={handleCleanupInactive}
+            />
+          </div>
+        )}
+
+        {/* Tab 3: CI/CD Pipeline Automation Timing (Super Admin Only) */}
+        {activeTab === 'pipeline' && isSuperAdmin && (
+          <div className="animate-in fade-in duration-200">
+            <PipelineTimingCard
+              pipelineTiming={pipelineTiming}
+              setPipelineTiming={setPipelineTiming}
+              loadingTiming={loadingTiming}
+              savingTiming={savingTiming}
+              onApplyPreset={applyPreset}
+              onSavePipelineTiming={handleSavePipelineTiming}
+            />
+          </div>
+        )}
+
+        {/* Tab 4: Storage Retention (Super Admin Only) */}
+        {activeTab === 'retention' && isSuperAdmin && (
+          <div className="animate-in fade-in duration-200">
+            <ArtifactRetentionCard />
+          </div>
+        )}
+
+        {/* Tab 5: Guide & Event Rules */}
+        {activeTab === 'guide' && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            <TelegramGuidelineCard
+              role={role}
+              telegramStatus={telegramStatus}
+              activeGuideTab={activeGuideTab}
+              setActiveGuideTab={setActiveGuideTab}
+            />
+            <NotificationEventsCard />
+          </div>
+        )}
       </div>
     </ProtectedRoute>
   );
-
 }

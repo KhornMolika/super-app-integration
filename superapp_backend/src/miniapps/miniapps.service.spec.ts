@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadGatewayException,
   BadRequestException,
   NotFoundException,
@@ -225,13 +225,13 @@ describe('MiniappsService.rerunNativeSdkCodegen', () => {
       prUrl: null,
       changedFiles: 0,
       upToDate: true,
-      message: expect.stringContaining('Universal Native Mini App Launcher'),
+      message: expect.stringContaining('Universal Native MiniApp Launcher'),
     });
     expect(log).toHaveBeenCalledWith(
       '1',
       'admin',
       'UNIVERSAL_LAUNCHER',
-      'Universal Native Mini App Launcher verified',
+      'Universal Native MiniApp Launcher verified',
       expect.stringContaining('superapp/native_launcher'),
       'NATIVE_SDK_LAUNCHER_VERIFIED',
     );

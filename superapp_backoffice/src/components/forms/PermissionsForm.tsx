@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Input, Label, Button } from '@/components/ui/inputs';
@@ -311,7 +311,7 @@ export default function PermissionsForm({
             </span>
           </div>
           <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-            Declare hardware &amp; bridge capabilities needed by your Mini App. Disclosures are automatically sanitized for App Store &amp; Play Store compliance.
+            Declare hardware &amp; bridge capabilities needed by your MiniApp. Disclosures are automatically sanitized for App Store &amp; Play Store compliance.
           </p>
         </div>
 
@@ -513,7 +513,7 @@ export default function PermissionsForm({
                           handlePermissionFieldChange(type, 'purpose', formatted);
                         }
                       }}
-                      placeholder={`e.g. ${formData.name || 'This Mini App'} requires access to your ${type.toLowerCase()} to ${meta?.defaultAction || 'provide core services'}.`}
+                      placeholder={`e.g. ${formData.name || 'This MiniApp'} requires access to your ${type.toLowerCase()} to ${meta?.defaultAction || 'provide core services'}.`}
                       className={`h-9 text-xs sm:text-sm ${
                         purposeError ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''
                       }`}
@@ -567,7 +567,7 @@ export default function PermissionsForm({
               <span>Request Additional Host Capability</span>
             </h4>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              If your Mini App needs an unlisted hardware capability, enter its identifier below to create a proposal.
+              If your MiniApp needs an unlisted hardware capability, enter its identifier below to create a proposal.
             </p>
           </div>
 

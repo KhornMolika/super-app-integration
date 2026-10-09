@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -50,7 +50,7 @@ export default function ReleasesPage() {
         releaseVersion,
         miniApps: apps.map(a => ({
           id: a.id,
-          name: a.name || 'Mini App',
+          name: a.name || 'MiniApp',
           packageName: a.integrationConfig?.packageName || (a.integrationMethod === 'FLUTTER_PACKAGE' ? 'ma_flutter_trust_regulator' : a.integrationMethod === 'DEEP_LINK' ? (a.integrationConfig?.urlScheme || a.appId) : 'webview_package'),
           version: a.version || '0.0.2',
           declaredPermissions: a.permissions || [{ type: 'NFC' }],
@@ -86,13 +86,13 @@ export default function ReleasesPage() {
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Super App Release Pipeline</h1>
+            <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">SuperApp Release Pipeline</h1>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-accent-50 text-accent-800 dark:bg-accent-950 dark:text-accent-300 border border-accent-200 dark:border-accent-800">
               Security Gate 2
             </span>
           </div>
           <p className="text-slate-500 mt-1 text-sm">
-            Execute Security Gate 2 checksum verification, compare releases, and assemble official Super App releases.
+            Execute Security Gate 2 checksum verification, compare releases, and assemble official SuperApp releases.
           </p>
         </div>
 
@@ -134,14 +134,14 @@ export default function ReleasesPage() {
                 <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
-                <span>Run Gate 2 & Assemble Super App</span>
+                <span>Run Gate 2 & Assemble SuperApp</span>
               </>
             )}
           </Button>
         </div>
       </div>
 
-      {/* Super App Release Classification Overview Cards */}
+      {/* SuperApp Release Classification Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Card 1: Live SA Official Build */}
         <div className="p-5 rounded-2xl border border-emerald-200/80 dark:border-emerald-800/60 bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/20 dark:from-emerald-950/30 dark:via-slate-900 dark:to-slate-900 shadow-xs space-y-3">
@@ -157,7 +157,7 @@ export default function ReleasesPage() {
               {officialVer}
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Active master build serving end users with approved Mini Apps and verified security baseline.
+              Active master build serving end users with approved MiniApps and verified security baseline.
             </p>
           </div>
           <div className="pt-3 border-t border-emerald-100 dark:border-emerald-900/40 flex items-center justify-between text-xs">
@@ -187,7 +187,7 @@ export default function ReleasesPage() {
               {releaseVersion}
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              New release compilation queued to package {apps.length} approved Mini App updates and new bridge capabilities.
+              New release compilation queued to package {apps.length} approved MiniApp updates and new bridge capabilities.
             </p>
           </div>
           <div className="pt-3 border-t border-accent-100 dark:border-accent-900/40 flex items-center justify-between text-xs">
@@ -299,13 +299,13 @@ export default function ReleasesPage() {
                 </div>
                 <div>
                   <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                    Super App Android APK Ready
+                    SuperApp Android APK Ready
                     <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 rounded-full">
                       {releaseVersion} • Sonatype Nexus Trusted Registry
                     </span>
                   </h4>
                   <p className="text-xs text-slate-600 dark:text-slate-400">
-                    Compiled with approved Mini Apps and native bridges. Ready for MA Manager & SA Admin dual testing.
+                    Compiled with approved MiniApps and native bridges. Ready for MA Manager & SA Admin dual testing.
                   </p>
                 </div>
               </div>
@@ -322,7 +322,7 @@ export default function ReleasesPage() {
         </div>
       )}
 
-      {/* Approved Mini Apps List Table with Clear Version Badging */}
+      {/* Approved MiniApps List Table with Clear Version Badging */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         <div className="p-5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
           <div>
@@ -330,21 +330,21 @@ export default function ReleasesPage() {
               <svg className="w-5 h-5 text-accent-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
               </svg>
-              <span>Bundled Mini App Candidates for Assembly</span>
+              <span>Bundled MiniApp Candidates for Assembly</span>
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Approved Mini Apps eligible to be bundled into Super App candidate release {releaseVersion}.
+              Approved MiniApps eligible to be bundled into SuperApp candidate release {releaseVersion}.
             </p>
           </div>
           <span className="px-3 py-1 text-xs font-bold rounded-full bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
-            {apps.length} Mini Apps Queued
+            {apps.length} MiniApps Queued
           </span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-sm">
             <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700 text-xs font-bold uppercase text-slate-500 tracking-wider">
               <tr>
-                <th className="py-3.5 px-6">Mini App</th>
+                <th className="py-3.5 px-6">MiniApp</th>
                 <th className="py-3.5 px-6">Live MA Version</th>
                 <th className="py-3.5 px-6">Candidate Update Version</th>
                 <th className="py-3.5 px-6">Integration Method</th>
@@ -423,7 +423,7 @@ export default function ReleasesPage() {
         </div>
       </div>
 
-      {/* Super App Release Comparator Modal */}
+      {/* SuperApp Release Comparator Modal */}
       <SuperAppReleaseCompareModal
         isOpen={compareModalOpen}
         onClose={() => setCompareModalOpen(false)}

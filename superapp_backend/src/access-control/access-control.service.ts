@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { User } from './entities/user.entity';
@@ -46,11 +46,27 @@ export class AccessControlService {
     return user;
   }
 
-  async createUser(dto: CreateUserDto): Promise<User> {
+  private isRequesterSuperAdmin(requester?: any): boolean {
+    if (!requester) return true; // Internal calls (seeder / registration)
+    const roles: string[] = Array.isArray(requester.roles)
+      ? requester.roles.map((r: any) => (typeof r === 'string' ? r : r?.name)).filter(Boolean)
+      : requester.role
+      ? [requester.role]
+      : [];
+    const email = (requester.email || '').toLowerCase().trim();
+    return (
+      roles.some((r) => r.toUpperCase() === 'SUPER_ADMIN' || r.toUpperCase() === 'SUPERADMIN') ||
+      email.includes('superadmin')
+    );
+  }
+
+  async createUser(dto: CreateUserDto, requester?: any): Promise<User> {
     const existing = await this.userRepository.findOne({ where: { email: dto.email } });
     if (existing) {
       throw new BadRequestException(`User with email '${dto.email}' already exists.`);
     }
+
+    const isSuperAdmin = this.isRequesterSuperAdmin(requester);
 
     let roles: Role[] = [];
     if (dto.roleIds && dto.roleIds.length > 0) {
@@ -60,6 +76,10 @@ export class AccessControlService {
     } else {
       const defaultRole = await this.roleRepository.findOne({ where: { name: 'MINI_APP_DEVELOPER' } });
       if (defaultRole) roles = [defaultRole];
+    }
+
+    if (!isSuperAdmin && roles.some((r) => r.name === 'SUPER_ADMIN')) {
+      throw new ForbiddenException('Only Super Administrators can assign the Super Admin role');
     }
 
     const user = this.userRepository.create({
@@ -77,10 +97,23 @@ export class AccessControlService {
   async updateUser(
     id: string,
     dto: UpdateUserDto,
+    requester?: any,
   ): Promise<User> {
     const user = await this.findUserById(id);
+    const isSuperAdmin = this.isRequesterSuperAdmin(requester);
+    const isSelf =
+      requester &&
+      (requester.id === id ||
+        requester.sub === id ||
+        (requester.email && requester.email.toLowerCase() === user.email.toLowerCase()));
+
+    const isTargetSuperAdmin = (user.roles || []).some((r) => r.name === 'SUPER_ADMIN');
+    if (isTargetSuperAdmin && !isSuperAdmin && !isSelf) {
+      throw new ForbiddenException('Administrators cannot modify Super Admin accounts');
+    }
 
     if (dto.name !== undefined) user.name = dto.name;
+    if (dto.avatarUrl !== undefined) user.avatarUrl = dto.avatarUrl;
     if (dto.email !== undefined && dto.email !== user.email) {
       const existing = await this.userRepository.findOne({ where: { email: dto.email } });
       if (existing && existing.id !== id) {
@@ -90,19 +123,42 @@ export class AccessControlService {
     }
     if (dto.telegramChatId !== undefined) user.telegramChatId = dto.telegramChatId;
     if (dto.telegramUsername !== undefined) user.telegramUsername = dto.telegramUsername;
-    if (dto.isActive !== undefined) user.isActive = dto.isActive;
+    if (dto.teamTelegramChatId !== undefined) user.teamTelegramChatId = dto.teamTelegramChatId;
+    
+    // Only administrators or superadmins can modify account active status and roles
+    if (!isSelf || isSuperAdmin) {
+      if (dto.isActive !== undefined) user.isActive = dto.isActive;
+    }
 
-    if (dto.roleIds !== undefined) {
-      user.roles = dto.roleIds.length > 0 ? await this.roleRepository.findBy({ id: In(dto.roleIds) }) : [];
-    } else if (dto.roleNames !== undefined) {
-      user.roles = dto.roleNames.length > 0 ? await this.roleRepository.findBy({ name: In(dto.roleNames) }) : [];
+    if (dto.roleIds !== undefined || dto.roleNames !== undefined) {
+      if (isSelf && !isSuperAdmin) {
+        throw new ForbiddenException('Users cannot change their own roles');
+      }
+      let newRoles: Role[] = [];
+      if (dto.roleIds !== undefined) {
+        newRoles = dto.roleIds.length > 0 ? await this.roleRepository.findBy({ id: In(dto.roleIds) }) : [];
+      } else if (dto.roleNames !== undefined) {
+        newRoles = dto.roleNames.length > 0 ? await this.roleRepository.findBy({ name: In(dto.roleNames) }) : [];
+      }
+
+      if (!isSuperAdmin && newRoles.some((r) => r.name === 'SUPER_ADMIN')) {
+        throw new ForbiddenException('Only Super Administrators can assign the Super Admin role');
+      }
+      user.roles = newRoles;
     }
 
     return this.userRepository.save(user);
   }
 
-  async deleteUser(id: string): Promise<{ success: boolean; message: string }> {
+  async deleteUser(id: string, requester?: any): Promise<{ success: boolean; message: string }> {
     const user = await this.findUserById(id);
+    const isSuperAdmin = this.isRequesterSuperAdmin(requester);
+    const isTargetSuperAdmin = (user.roles || []).some((r) => r.name === 'SUPER_ADMIN');
+
+    if (isTargetSuperAdmin && !isSuperAdmin) {
+      throw new ForbiddenException('Administrators cannot delete Super Admin accounts');
+    }
+
     await this.userRepository.remove(user);
     return { success: true, message: `User ${user.name} removed successfully.` };
   }

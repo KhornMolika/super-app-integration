@@ -1,4 +1,4 @@
-import { TelegramInlineButton, TelegramCardMetadata } from './telegram.types';
+﻿import { TelegramInlineButton, TelegramCardMetadata } from './telegram.types';
 
 export class TelegramCardHelper {
   /**
@@ -12,7 +12,7 @@ export class TelegramCardHelper {
     metadata?: TelegramCardMetadata,
     backofficeBaseUrl: string = '',
   ): { text: string; buttons?: TelegramInlineButton[][] } {
-    const appDisplayName = miniAppName || 'Super App Mini App';
+    const appDisplayName = miniAppName || 'SuperApp MiniApp';
     const miniAppId = metadata?.miniAppId || metadata?.id;
     const baseUrl = backofficeBaseUrl.replace(/\/+$/, '');
     const detailsUrl = miniAppId
@@ -41,7 +41,7 @@ export class TelegramCardHelper {
 + Security     : Pre-flight scan queued
 </code></pre>
 
-<blockquote>Mini App <b>"${appDisplayName}"</b> registered successfully on the Super App Gateway.</blockquote>
+<blockquote>MiniApp <b>"${appDisplayName}"</b> registered successfully on the SuperApp Gateway.</blockquote>
         `.trim();
 
         buttons.push([{ text: '🔍 View in Backoffice', url: detailsUrl }]);
@@ -139,19 +139,19 @@ ${cleanIssue}
 🟢 <b>MINI APP APPROVED</b>
 
 📱 <b>App:</b> ${appDisplayName}
-👤 <b>Reviewer:</b> Super App Administrator
+👤 <b>Reviewer:</b> SuperApp Administrator
 🏢 <b>Status:</b> <b>APPROVED</b>
 
 <pre><code class="language-diff">
-+ Decision     : Approved for Super App
++ Decision     : Approved for SuperApp
 + Pipeline     : Queued for assembly & packaging
 + Access       : Manifest capabilities enabled
 </code></pre>
 
-<blockquote>Mini App <b>"${appDisplayName}"</b> has been formally approved and scheduled for test build assembly.</blockquote>
+<blockquote>MiniApp <b>"${appDisplayName}"</b> has been formally approved and scheduled for test build assembly.</blockquote>
         `.trim();
 
-        buttons.push([{ text: '🔍 View Mini App Details', url: detailsUrl }]);
+        buttons.push([{ text: '🔍 View MiniApp Details', url: detailsUrl }]);
         return { text, buttons };
       }
 
@@ -206,7 +206,7 @@ ${cleanIssue}
 + Release Tag  : ${version}
 </code></pre>
 
-<blockquote>Super App test binary packaging is complete! You can download the test APK or launch the interactive Web Sandbox.</blockquote>
+<blockquote>SuperApp test binary packaging is complete! You can download the test APK or launch the interactive Web Sandbox.</blockquote>
         `.trim();
 
         const actionRow: TelegramInlineButton[] = [];
@@ -246,7 +246,7 @@ ${cleanReason}
 ! Action       : Check CI logs & retry
 </code></pre>
 
-<blockquote>The Super App build packaging failed. Please check the build logs in the portal to diagnose.</blockquote>
+<blockquote>The SuperApp build packaging failed. Please check the build logs in the portal to diagnose.</blockquote>
         `.trim();
 
         buttons.push([{ text: '🛠️ View Build Logs', url: detailsUrl }]);
@@ -266,7 +266,7 @@ ${cleanReason}
 🟡 <b>CHANGES REQUESTED</b>
 
 📱 <b>App:</b> ${appDisplayName}
-👤 <b>Reviewer:</b> Super App Administrator
+👤 <b>Reviewer:</b> SuperApp Administrator
 📝 <b>Feedback:</b> ${message}
 
 <pre><code class="language-diff">
@@ -278,7 +278,7 @@ ${cleanFeedback}
 <blockquote>Please review the requested changes in the Backoffice Portal and submit an updated revision.</blockquote>
         `.trim();
 
-        buttons.push([{ text: '✏️ Update Mini App', url: detailsUrl }]);
+        buttons.push([{ text: '✏️ Update MiniApp', url: detailsUrl }]);
         return { text, buttons };
       }
 
@@ -355,7 +355,7 @@ ${badge} <b>${header.toUpperCase()}</b>
 ${detailLines}
 </code></pre>
 
-<blockquote>${message || 'Super App Gateway notification update.'}</blockquote>
+<blockquote>${message || 'SuperApp Gateway notification update.'}</blockquote>
         `.trim();
 
         if (miniAppId) {
@@ -375,7 +375,7 @@ ${detailLines}
       case 'WARNING':
         return 'Warning Notice';
       default:
-        return 'Super App Notification';
+        return 'SuperApp Notification';
     }
   }
 }

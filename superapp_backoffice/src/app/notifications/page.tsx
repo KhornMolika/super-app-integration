@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
@@ -346,7 +346,7 @@ export default function NotificationsPage() {
                       {item.message}
                     </p>
 
-                    {/* Associated Mini App pill & shortcut link */}
+                    {/* Associated MiniApp pill & shortcut link */}
                     {(item.miniApp || item.miniAppId) && (
                       <div className="mt-2.5 flex items-center gap-2 flex-wrap">
                         <Link
@@ -357,7 +357,7 @@ export default function NotificationsPage() {
                           <svg className="w-3 h-3 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                           </svg>
-                          <span>{item.miniApp?.name || 'View Mini App Details'}</span>
+                          <span>{item.miniApp?.name || 'View MiniApp Details'}</span>
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
                           </svg>

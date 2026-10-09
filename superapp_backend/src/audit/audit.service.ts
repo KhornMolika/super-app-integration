@@ -1,4 +1,4 @@
-import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
+﻿import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuditLog } from './entities/audit-log.entity';
@@ -25,7 +25,7 @@ export class AuditService implements OnApplicationBootstrap {
         resourceType: 'PLATFORM',
         resourceId: 'super-app-core',
         metadata: {
-          event: 'Super App Platform Ecosystem Initialized',
+          event: 'SuperApp Platform Ecosystem Initialized',
           version: 'v2.4.0',
           environment: 'production',
         },

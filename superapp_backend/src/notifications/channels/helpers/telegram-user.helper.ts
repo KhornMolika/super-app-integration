@@ -1,4 +1,4 @@
-import { Repository } from 'typeorm';
+﻿import { Repository } from 'typeorm';
 import { User } from '../../../access-control/entities/user.entity';
 import { TelegramApiHelper } from './telegram-api.helper';
 import { TelegramSyncUserResult, TelegramLogger } from './telegram.types';
@@ -31,14 +31,14 @@ export class TelegramUserHelper {
     const displayName = firstName || user.name || 'User';
     if (sendMessageFn) {
       await sendMessageFn(
-        `<b>⚡ Super App Gateway: Telegram Connected</b>
+        `<b>⚡ SuperApp Gateway: Telegram Connected</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 <pre><code class="language-diff">
 + [STATUS] Account Link Verified
 + [USER]   ${displayName} (${user.email})
 + [ALERTS] Real-time security, build & review notifications active
 </code></pre>
-<blockquote>Hello <b>${displayName}</b>, your Telegram account is connected to <b>${user.email}</b>. You will receive real-time alerts for your Mini Apps, security scans, review decisions, and test build artifacts.</blockquote>`,
+<blockquote>Hello <b>${displayName}</b>, your Telegram account is connected to <b>${user.email}</b>. You will receive real-time alerts for your MiniApps, security scans, review decisions, and test build artifacts.</blockquote>`,
         chatId.toString(),
       );
     }

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
@@ -62,8 +62,8 @@ export default function SignupPage() {
             </div>
           </div>
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-white">Super App Gateway</h2>
-            <p className="text-xs font-medium text-slate-400">Mini App Developer Portal Registration</p>
+            <h2 className="text-2xl font-bold tracking-tight text-white">SuperApp Gateway</h2>
+            <p className="text-xs font-medium text-slate-400">MiniApp Developer Portal Registration</p>
           </div>
         </div>
       </div>
@@ -72,7 +72,7 @@ export default function SignupPage() {
         <div className="bg-slate-900/90 backdrop-blur-xl py-8 px-6 shadow-2xl shadow-black/50 sm:rounded-2xl sm:px-10 border border-slate-800">
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-white">Create Developer Account</h3>
-            <p className="text-xs text-slate-400 mt-1">Register to build, test, and publish Mini Apps.</p>
+            <p className="text-xs text-slate-400 mt-1">Register to build, test, and publish MiniApps.</p>
           </div>
 
           {error && (
@@ -104,7 +104,7 @@ export default function SignupPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="developer@superapp.gov.kh"
+                placeholder="ma-developer@superapp.gov.kh"
                 className="w-full px-3.5 py-2.5 bg-slate-950/60 border border-slate-700/80 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all"
               />
             </div>
@@ -132,7 +132,7 @@ export default function SignupPage() {
             </div>
 
             <div className="p-3 bg-slate-950/60 border border-slate-800 rounded-xl text-[11px] text-slate-400">
-              Assigned Default Role: <strong className="text-emerald-400">Mini App Developer</strong>. You will be able to register, validate, and submit Mini Apps immediately.
+              Assigned Default Role: <strong className="text-emerald-400">MiniApp Developer</strong>. You will be able to register, validate, and submit MiniApps immediately.
             </div>
 
             <button

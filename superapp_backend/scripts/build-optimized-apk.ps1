@@ -150,19 +150,13 @@ if (Test-Path $OutputApk) {
             )
             Write-Host "[NEXUS] Publishing official store release to $repoName repository..." -ForegroundColor Green
         } else {
-            # Build & Move to Testing step: ONLY publish to apk-test-builds (even with size-optimized release build mode)
+            # Build & Move to Testing step: ONLY publish single standardized APK to apk-test-builds
             $repoName = "apk-test-builds"
-            $targetName = if ($BuildType -eq "release") { "app-release.apk" } else { "app-debug.apk" }
+            $targetName = "superapp-test-$ReleaseVersion.apk"
             $targets = @(
-                "apk-test-builds/$AppName/latest/$targetName",
-                "apk-test-builds/$AppName/$ReleaseVersion/$targetName",
-                "apk-test-builds/$AppName/latest/app-release.apk",
-                "apk-test-builds/$AppName/$ReleaseVersion/app-release.apk",
-                "apk-test-builds/$AppName/latest/app-debug.apk",
-                "apk-test-builds/$AppName/$ReleaseVersion/app-debug.apk",
                 "apk-test-builds/$AppName/$ReleaseVersion/superapp-test-$ReleaseVersion.apk"
-            ) | Select-Object -Unique
-            Write-Host "[NEXUS] Publishing test build to $repoName repository (isolated from apk-releases)..." -ForegroundColor Cyan
+            )
+            Write-Host "[NEXUS] Publishing test build ($targetName) to $repoName repository..." -ForegroundColor Cyan
         }
 
         $curlCmd = Get-Command "curl.exe" -ErrorAction SilentlyContinue

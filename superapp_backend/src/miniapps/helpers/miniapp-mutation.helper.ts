@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+﻿import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
@@ -123,7 +123,7 @@ export class MiniappMutationHelper {
           status: 'IN_REVIEW',
           changelog: (data as any).changelog || `Initial submission of version ${packageVer}`,
           releasedAt: new Date().toISOString(),
-          releasedBy: actorId || data.ownerName || 'Mini App Developer',
+          releasedBy: actorId || data.ownerName || 'MiniApp Developer',
           checksum:
             data.integrationConfig?.archiveChecksum ||
             'sha256:' +
@@ -159,8 +159,8 @@ export class MiniappMutationHelper {
       if (isDraft) {
         await this.notificationsService.createNotification(
           targetUserId,
-          'Mini App Saved as Draft',
-          `Mini App "${savedApp.name || savedApp.appId}" has been saved as a draft by ${savedApp.ownerName || 'Operator'}.`,
+          'MiniApp Saved as Draft',
+          `MiniApp "${savedApp.name || savedApp.appId}" has been saved as a draft by ${savedApp.ownerName || 'Operator'}.`,
           'MINIAPP_DRAFT_SAVED',
           savedApp.id,
           {
@@ -173,8 +173,8 @@ export class MiniappMutationHelper {
       } else {
         await this.notificationsService.createNotification(
           targetUserId,
-          'Mini App Registered',
-          `Mini App "${savedApp.name || savedApp.appId}" has been registered successfully by ${savedApp.ownerName || 'Operator'} and queued for security validation.`,
+          'MiniApp Registered',
+          `MiniApp "${savedApp.name || savedApp.appId}" has been registered successfully by ${savedApp.ownerName || 'Operator'} and queued for security validation.`,
           'MINIAPP_REGISTERED',
           savedApp.id,
           {
@@ -548,7 +548,7 @@ export class MiniappMutationHelper {
       status: (merged.status === 'ACTIVE' ? 'ACTIVE' : 'IN_REVIEW') as any,
       changelog: (data as any).changelog || `Version update to ${verToAdd}`,
       releasedAt: new Date().toISOString(),
-      releasedBy: actorId || merged.ownerName || 'Mini App Developer',
+      releasedBy: actorId || merged.ownerName || 'MiniApp Developer',
       checksum:
         merged.integrationConfig?.archiveChecksum ||
         'sha256:' +

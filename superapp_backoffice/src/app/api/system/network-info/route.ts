@@ -64,10 +64,18 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Sort by score descending so real Wi-Fi/Ethernet is first
-  detectedIps.sort((a, b) => b.score - a.score);
+  // Deduplicate by IP address and sort by score descending so real Wi-Fi/Ethernet is first
+  const seenAddrs = new Set<string>();
+  const uniqueIps: NetItem[] = [];
+  for (const item of detectedIps) {
+    if (!seenAddrs.has(item.address)) {
+      seenAddrs.add(item.address);
+      uniqueIps.push(item);
+    }
+  }
+  uniqueIps.sort((a, b) => b.score - a.score);
 
-  let primaryIp = detectedIps.length > 0 ? detectedIps[0].address : '127.0.0.1';
+  let primaryIp = uniqueIps.length > 0 ? uniqueIps[0].address : '127.0.0.1';
 
   // If request host has a custom IP (e.g. user navigated to http://192.168.1.4:3002), prioritize that!
   const reqHost = request.headers.get('host') || '';
@@ -82,13 +90,13 @@ export async function GET(request: NextRequest) {
   }
 
   // Mark primary
-  detectedIps.forEach((item) => {
+  uniqueIps.forEach((item) => {
     item.isPrimary = item.address === primaryIp;
   });
 
   // If list is empty, provide fallback
-  if (detectedIps.length === 0) {
-    detectedIps.push({
+  if (uniqueIps.length === 0) {
+    uniqueIps.push({
       name: 'Loopback',
       address: '127.0.0.1',
       family: 'IPv4',
@@ -145,16 +153,17 @@ export async function GET(request: NextRequest) {
 
       const versionMap = new Map<string, any>();
       for (const asset of assets) {
-        // e.g. path: /superapp/v0.2.0/app-release.apk
-        const match = asset.path.match(/\/superapp\/(v\d+\.\d+\.\d+|latest)\/(app-(release|debug)\.apk)/);
+        // Match e.g. /superapp/v0.2.0/superapp-test-v0.2.0.apk or /superapp/v0.2.0/app-release.apk
+        const match = (asset.path || '').match(/(?:\/|^)superapp\/(v\d+\.\d+\.\d+|latest)\/([^/]+\.apk)$/i);
         if (match) {
           const ver = match[1];
-          const mode = match[3] as 'release' | 'debug';
+          const apkName = match[2];
+          const mode: 'release' | 'debug' = apkName.includes('debug') ? 'debug' : 'release';
           const sizeBytes = asset.fileSize || 0;
           const sizeMb = (sizeBytes / (1024 * 1024)).toFixed(2) + ' MB';
           const isRel = mode === 'release' || sizeBytes < 50 * 1024 * 1024;
 
-          if (!versionMap.has(ver) || mode === 'release') {
+          if (!versionMap.has(ver) || isRel) {
             const normVer = ver.startsWith('v') ? ver : `v${ver}`;
             const standardizedName = `superapp-test-${normVer}.apk`;
             versionMap.set(ver, {

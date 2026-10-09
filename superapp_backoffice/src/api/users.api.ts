@@ -13,6 +13,21 @@ export interface User {
 }
 
 export const usersApi = {
+  getProfile: () =>
+    apiClient<User>('/api/users/me'),
+
+  updateProfile: (data: {
+    name?: string;
+    avatarUrl?: string;
+    telegramChatId?: string;
+    telegramUsername?: string;
+    teamTelegramChatId?: string;
+  }) =>
+    apiClient<User>('/api/users/me', {
+      method: 'PUT',
+      body: data,
+    }),
+
   getAll: () =>
     apiClient<User[]>('/api/users'),
 

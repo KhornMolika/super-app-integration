@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import { SettingsService } from '../settings/settings.service';
 
 @Injectable()
@@ -17,7 +17,7 @@ export class PipelinePacerService {
     if (!timing.enablePacing || timing.validationStartDelaySec <= 0) return;
 
     this.logger.log(
-      `[Pacer] Pacing validation start for "${appName || 'Mini App'}" by ${timing.validationStartDelaySec}s...`,
+      `[Pacer] Pacing validation start for "${appName || 'MiniApp'}" by ${timing.validationStartDelaySec}s...`,
     );
     await this.sleep(timing.validationStartDelaySec * 1000);
   }
@@ -37,7 +37,7 @@ export class PipelinePacerService {
     if (!timing.enablePacing || timing.validationPassDelaySec <= 0) return;
 
     this.logger.log(
-      `[Pacer] Pacing validation completion alert for "${appName || 'Mini App'}" by ${timing.validationPassDelaySec}s...`,
+      `[Pacer] Pacing validation completion alert for "${appName || 'MiniApp'}" by ${timing.validationPassDelaySec}s...`,
     );
     await this.sleep(timing.validationPassDelaySec * 1000);
   }
@@ -47,7 +47,7 @@ export class PipelinePacerService {
     if (!timing.enablePacing || timing.buildTriggerDelaySec <= 0) return;
 
     this.logger.log(
-      `[Pacer] Pacing build trigger for "${appName || 'Mini App'}" by ${timing.buildTriggerDelaySec}s...`,
+      `[Pacer] Pacing build trigger for "${appName || 'MiniApp'}" by ${timing.buildTriggerDelaySec}s...`,
     );
     await this.sleep(timing.buildTriggerDelaySec * 1000);
   }

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -39,7 +39,7 @@ export default function PreviewModal({
   isOpen,
   onClose,
   url,
-  title = 'Mini App',
+  title = 'MiniApp',
   version = '1.0.0',
   category,
   appId,
@@ -103,10 +103,10 @@ export default function PreviewModal({
   const targetAppId = appId || (url.includes('packages/') ? url.split('packages/')[1] : '');
   const pkgParam = packageName || (url.includes('packages/') ? url.split('packages/')[1] : '');
 
-  // Effective Super App URL (Host shell container)
+  // Effective SuperApp URL (Host shell container)
   const superAppContainerUrl = `/superapp-sandbox/index.html?t=${reloadKey}`;
 
-  // Effective Mini App starting URL (Loads directly into the mini app's own home screen)
+  // Effective MiniApp starting URL (Loads directly into the mini app's own home screen)
   const miniAppHomeUrl = isDirectWebUrl
     ? url
     : (targetAppId
@@ -305,7 +305,7 @@ export default function PreviewModal({
 
         {/* RIGHT: Screen Switcher & Action Tools */}
         <div className="flex items-center gap-2">
-          {/* Screen Switcher (Super App vs Mini App) */}
+          {/* Screen Switcher (SuperApp vs MiniApp) */}
           <div className="flex bg-slate-800/90 rounded-xl p-0.5 border border-slate-700/80 text-xs shadow-xs">
             <button
               type="button"
@@ -319,7 +319,7 @@ export default function PreviewModal({
               <svg className="w-3.5 h-3.5 text-sky-400" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M14.314 0L2.3 12 6 15.7 21.686 0h-7.372zm.072 10.301L8.171 16.514 14.386 22.7 21.686 22.7l-7.3-7.299 7.3-5.1z" />
               </svg>
-              <span>Super App</span>
+              <span>SuperApp</span>
             </button>
             <button
               type="button"
@@ -331,7 +331,7 @@ export default function PreviewModal({
               }`}
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-              <span>Mini App</span>
+              <span>MiniApp</span>
             </button>
           </div>
 
@@ -341,7 +341,7 @@ export default function PreviewModal({
               type="button"
               onClick={() => setShowApkModal(true)}
               className="h-8 px-2.5 text-xs font-semibold rounded-xl bg-emerald-600/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-600 hover:text-white transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
-              title="Download Super App APK & Scan QR Code"
+              title="Download SuperApp APK & Scan QR Code"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
               <span className="hidden sm:inline">Download APK</span>
@@ -397,14 +397,14 @@ export default function PreviewModal({
                 </div>
               )}
 
-              {/* Viewport Content: Flutter Web Super App Container vs Mock Home vs Direct Mini App */}
+              {/* Viewport Content: Flutter Web SuperApp Container vs Mock Home vs Direct MiniApp */}
               {currentScreen === 'sandbox' ? (
                 <div className="w-full h-full relative z-10 flex flex-col bg-slate-950 overflow-hidden">
                   {/* Top Bar for Flutter Web Container */}
                   <div className="h-10 pt-2 px-4 bg-slate-900 border-b border-slate-800 text-white flex items-center justify-between z-20 flex-shrink-0">
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                      <span className="text-[11px] font-bold text-slate-200">Super App Container (Flutter Web)</span>
+                      <span className="text-[11px] font-bold text-slate-200">SuperApp Container (Flutter Web)</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <button
@@ -424,23 +424,23 @@ export default function PreviewModal({
                       key={`sandbox-${reloadKey}`}
                       src={superAppContainerUrl}
                       className="w-full h-full border-0 bg-slate-900"
-                      title="Flutter Super App Web Container"
+                      title="Flutter SuperApp Web Container"
                       allow="geolocation; camera; microphone; clipboard-read; clipboard-write; autoplay"
                     />
                   </div>
                 </div>
               ) : (
                 <div className="w-full h-full relative z-10 flex flex-col bg-white dark:bg-slate-900">
-                  {/* Super App In-App Browser Bar */}
+                  {/* SuperApp In-App Browser Bar */}
                   <div className="h-12 bg-slate-900 border-b border-slate-800 text-white px-3 flex items-center justify-between z-20 flex-shrink-0">
                     <button
                       type="button"
                       onClick={() => setCurrentScreen('sandbox')}
                       className="flex items-center gap-1.5 text-xs text-brand-400 hover:text-brand-300 font-semibold px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors"
-                      title="Switch to Super App Shell"
+                      title="Switch to SuperApp Shell"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/></svg>
-                      <span>Super App</span>
+                      <span>SuperApp</span>
                     </button>
 
                     <div className="flex flex-col items-center text-center px-2">
@@ -458,7 +458,7 @@ export default function PreviewModal({
                         type="button"
                         onClick={handleReload}
                         className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
-                        title="Reload Mini App"
+                        title="Reload MiniApp"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                       </button>
@@ -466,14 +466,14 @@ export default function PreviewModal({
                         type="button"
                         onClick={() => setCurrentScreen('sandbox')}
                         className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-800"
-                        title="Back to Super App"
+                        title="Back to SuperApp"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
                       </button>
                     </div>
                   </div>
 
-                  {/* Sandboxed Mini App Engine: Direct Webview or Sandboxed Flutter Web Mini App Home */}
+                  {/* Sandboxed MiniApp Engine: Direct Webview or Sandboxed Flutter Web MiniApp Home */}
                   <div className="flex-1 relative bg-white">
                     {isDirectWebUrl ? (
                       <IframePreviewEngine url={miniAppHomeUrl} reloadKey={reloadKey} />
@@ -482,7 +482,7 @@ export default function PreviewModal({
                         key={`miniapp-home-${reloadKey}`}
                         src={miniAppHomeUrl}
                         className="w-full h-full border-0 bg-slate-900"
-                        title={`${title} Mini App Home`}
+                        title={`${title} MiniApp Home`}
                         allow="geolocation; camera; microphone; clipboard-read; clipboard-write; autoplay"
                       />
                     )}

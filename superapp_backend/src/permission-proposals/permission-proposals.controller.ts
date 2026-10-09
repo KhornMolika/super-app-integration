@@ -1,4 +1,4 @@
-import {
+﻿import {
   Controller,
   Get,
   Post,
@@ -54,7 +54,7 @@ export class PermissionProposalsController {
         message = `Great news! Your proposal for '${proposal.permissionKey}' has been approved and targeted for version ${targetVersion || 'a future release'}.`;
         type = 'proposal_approved';
       } else if (decision === 'IN_DEVELOPMENT') {
-        message = `Your proposal for '${proposal.permissionKey}' is now under development for Super App support. You will be notified once ready for release.`;
+        message = `Your proposal for '${proposal.permissionKey}' is now under development for SuperApp support. You will be notified once ready for release.`;
         type = 'proposal_in_development';
       } else {
         message = `Your proposal for '${proposal.permissionKey}' was rejected. Reason: ${reason || 'N/A'}`;

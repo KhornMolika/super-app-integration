@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+﻿import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ReleaseAssemblyVerificationService } from './release-assembly-verification.service';
 import { NexusIntegrationService } from '../nexus/nexus-integration.service';
@@ -56,7 +56,7 @@ describe('ReleaseAssemblyVerificationService', () => {
     };
 
     mockMiniappRepo = {
-      findOne: jest.fn().mockResolvedValue({ id: 'app-1', name: 'Banking Mini App', appId: 'miniapp_banking' }),
+      findOne: jest.fn().mockResolvedValue({ id: 'app-1', name: 'Banking MiniApp', appId: 'miniapp_banking' }),
       save: jest.fn().mockImplementation((app) => Promise.resolve(app)),
       find: jest.fn().mockResolvedValue([]),
       update: jest.fn().mockResolvedValue({}),
@@ -103,7 +103,7 @@ describe('ReleaseAssemblyVerificationService', () => {
       miniApps: [
         {
           id: 'app-1',
-          name: 'Banking Mini App',
+          name: 'Banking MiniApp',
           packageName: 'ma_flutter_banking',
           version: '1.0.0',
         },
@@ -123,7 +123,7 @@ describe('ReleaseAssemblyVerificationService', () => {
       miniApps: [
         {
           id: 'app-1',
-          name: 'Banking Mini App',
+          name: 'Banking MiniApp',
           packageName: 'ma_flutter_banking',
           version: '1.0.0',
         },
@@ -261,7 +261,7 @@ describe('ReleaseAssemblyVerificationService', () => {
       expect(execute).toHaveBeenCalled();
       expect(notificationsService.createNotification).toHaveBeenCalledWith(
         'u1',
-        'Super App Test Build Ready',
+        'SuperApp Test Build Ready',
         expect.any(String),
         'TEST_BUILD_READY',
         'app-1',
@@ -293,7 +293,7 @@ describe('ReleaseAssemblyVerificationService', () => {
       );
       expect(notificationsService.createNotification).toHaveBeenCalledWith(
         'u1',
-        expect.stringContaining('Super App Build Failed'),
+        expect.stringContaining('SuperApp Build Failed'),
         expect.any(String),
         'BUILD_FAILED',
         'app-1',

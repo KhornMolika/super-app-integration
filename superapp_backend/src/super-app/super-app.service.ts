@@ -1,4 +1,4 @@
-import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
+﻿import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -102,7 +102,7 @@ export class SuperAppService implements OnApplicationBootstrap {
   }
 
   /**
-   * Generates and persists the next incremented Super App release / test build version (starting from v0.0.1)
+   * Generates and persists the next incremented SuperApp release / test build version (starting from v0.0.1)
    */
   async getAndRegisterNextVersion(targetVersion?: string): Promise<string> {
     const latest = await this.findLatestCapability();
@@ -270,7 +270,7 @@ export class SuperAppService implements OnApplicationBootstrap {
   }
 
   /**
-   * Returns list of all Super App releases (Live Official, Candidate Test, Archived Old)
+   * Returns list of all SuperApp releases (Live Official, Candidate Test, Archived Old)
    */
   async getReleaseHistory(): Promise<any[]> {
     const allApps = await this.miniAppRepository.find();
@@ -304,7 +304,7 @@ export class SuperAppService implements OnApplicationBootstrap {
       type: 'CANDIDATE_ASSEMBLY',
       status: 'TESTING',
       isLive: false,
-      title: 'Super App Candidate Assembly',
+      title: 'SuperApp Candidate Assembly',
       description: 'Candidate test compilation including newly approved mini app updates and security patches.',
       assembledAt: new Date().toISOString(),
       releasedBy: 'Jenkins CI/CD Pipeline',
@@ -335,7 +335,7 @@ export class SuperAppService implements OnApplicationBootstrap {
       type: 'LIVE_OFFICIAL',
       status: 'ACTIVE',
       isLive: true,
-      title: 'Super App Live Official Release',
+      title: 'SuperApp Live Official Release',
       description: 'Currently published master binary distributed across end-user devices with verified Gate 2 integrity.',
       assembledAt: '2026-09-15T08:30:00.000Z',
       releasedBy: 'SA Release Master',
@@ -375,8 +375,8 @@ export class SuperAppService implements OnApplicationBootstrap {
       type: 'ARCHIVED',
       status: 'PREVIOUS',
       isLive: false,
-      title: 'Super App Baseline Release',
-      description: 'Initial Super App release baseline archived in Nexus registry.',
+      title: 'SuperApp Baseline Release',
+      description: 'Initial SuperApp release baseline archived in Nexus registry.',
       assembledAt: '2026-09-01T04:00:00.000Z',
       releasedBy: 'SA Release Master',
       apkSize: '84.2 MB',
@@ -402,7 +402,7 @@ export class SuperAppService implements OnApplicationBootstrap {
   }
 
   /**
-   * Compares two Super App releases (Base vs Target)
+   * Compares two SuperApp releases (Base vs Target)
    */
   async compareReleases(baseVersion: string, targetVersion: string): Promise<any> {
     const history = await this.getReleaseHistory();

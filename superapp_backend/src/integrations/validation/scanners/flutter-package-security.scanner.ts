@@ -1,4 +1,4 @@
-import { Injectable, Logger, Optional } from '@nestjs/common';
+﻿import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MiniApp } from '../../../miniapps/entities/miniapp.entity';
@@ -41,7 +41,7 @@ export class FlutterPackageSecurityScanner {
   }
 
   /**
-   * Performs a dynamic security scan for Flutter Package Mini Apps based strictly on selected checks
+   * Performs a dynamic security scan for Flutter Package MiniApps based strictly on selected checks
    */
   async scan(
     miniAppId: string,
@@ -313,7 +313,7 @@ export class FlutterPackageSecurityScanner {
     // --- STAGE: Host Capability Gatekeeper Audit ---
     if (stages.capability_gate) {
       stages.capability_gate.status = 'RUNNING';
-      stages.capability_gate.details = 'Auditing declared permissions against Super App capability boundary...';
+      stages.capability_gate.details = 'Auditing declared permissions against SuperApp capability boundary...';
       await emitUpdate('capability_gate');
       await this.delay(500);
 
@@ -329,7 +329,7 @@ export class FlutterPackageSecurityScanner {
             severity: 'CRITICAL',
             category: 'Capability Compliance',
             title: `Unsupported Platform Capability: ${permName}`,
-            description: `The Mini App requires capability "${permName}" which is not supported or whitelisted by the Super App host catalog.`,
+            description: `The MiniApp requires capability "${permName}" which is not supported or whitelisted by the SuperApp host catalog.`,
             recommendation: 'Either submit a capability whitelist proposal or remove the unsupported capability.',
           });
         }
@@ -355,7 +355,7 @@ export class FlutterPackageSecurityScanner {
             severity: 'CRITICAL',
             category: 'CAPABILITY_VIOLATION',
             title: `Unauthorized Platform Capability: ${r.name}`,
-            description: `Mini App package includes dependency "${r.name}" which is not whitelisted by the Super App host platform.`,
+            description: `MiniApp package includes dependency "${r.name}" which is not whitelisted by the SuperApp host platform.`,
             recommendation: `Remove requirement for unsupported capability "${r.name}" or request host capability whitelist approval.`,
           });
         }
@@ -363,7 +363,7 @@ export class FlutterPackageSecurityScanner {
 
       stages.capability_gate.status = hasUnsupportedRequired ? 'FAILED' : 'COMPLETED';
       stages.capability_gate.details = hasUnsupportedRequired
-        ? 'Blocking capability mismatch: Mini App contains unsupported host capabilities (NFC, Bluetooth, Contacts).'
+        ? 'Blocking capability mismatch: MiniApp contains unsupported host capabilities (NFC, Bluetooth, Contacts).'
         : 'All declared native plugins comply with host platform capability gate.';
       checks.capability_gate = {
         passed: !hasUnsupportedRequired,

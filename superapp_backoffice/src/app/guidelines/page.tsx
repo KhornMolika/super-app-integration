@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
@@ -359,12 +359,12 @@ export default function GuidelinesPage() {
       shortTitle: "Overview & Roles",
       category: "GENERAL",
       summary:
-        "Roles, architectural boundaries, and governance across the Mini App onboarding lifecycle.",
+        "Roles, architectural boundaries, and governance across the MiniApp onboarding lifecycle.",
       badge: "Core Governance",
       content: (
         <div className="space-y-6 text-base text-slate-600 dark:text-slate-300">
           <p className="leading-relaxed">
-            The Super App Mini App ecosystem provides a high-performance, sandboxed runtime enabling autonomous delivery of vertical services. The platform strictly isolates third-party business logic while enabling standardized access to device features and Super App APIs.
+            The SuperApp MiniApp ecosystem provides a high-performance, sandboxed runtime enabling autonomous delivery of vertical services. The platform strictly isolates third-party business logic while enabling standardized access to device features and SuperApp APIs.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -372,12 +372,12 @@ export default function GuidelinesPage() {
               <div className="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
                 <UserIcon />
               </div>
-              <h4 className="font-bold text-slate-900 dark:text-white text-lg">Mini App Developer (MA Manager)</h4>
+              <h4 className="font-bold text-slate-900 dark:text-white text-lg">MiniApp Developer (MA Manager)</h4>
               <span className="inline-block px-2.5 py-0.5 text-sm font-semibold rounded bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                External / Mini App Team
+                External / MiniApp Team
               </span>
               <ul className="text-sm space-y-2 text-slate-600 dark:text-slate-400">
-                <li>• Registers Mini App metadata & icon</li>
+                <li>• Registers MiniApp metadata & icon</li>
                 <li>• Configures integration method & source</li>
                 <li>• Reviews detected permission claims</li>
                 <li>• Resolves validation & security findings</li>
@@ -389,9 +389,9 @@ export default function GuidelinesPage() {
               <div className="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                 <ShieldIcon />
               </div>
-              <h4 className="font-bold text-slate-900 dark:text-white text-lg">Super App Admin (SA Admin)</h4>
+              <h4 className="font-bold text-slate-900 dark:text-white text-lg">SuperApp Admin (SA Admin)</h4>
               <span className="inline-block px-2.5 py-0.5 text-sm font-semibold rounded bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                Super App Platform Owner
+                SuperApp Platform Owner
               </span>
               <ul className="text-sm space-y-2 text-slate-600 dark:text-slate-400">
                 <li>• Reviews integration contracts</li>
@@ -435,10 +435,10 @@ export default function GuidelinesPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-5 bg-slate-50/50 dark:bg-slate-900/40">
               <h5 className="font-bold text-slate-900 dark:text-white text-base flex items-center gap-2 mb-2">
-                <TagIcon /> Mini App Identity
+                <TagIcon /> MiniApp Identity
               </h5>
               <p className="text-sm text-slate-600 dark:text-slate-400 mb-3 leading-relaxed">
-                Every Mini App registers an immutable unique identifier prefixed with <code className="font-mono text-brand-600 dark:text-brand-400">miniapp_</code>.
+                Every MiniApp registers an immutable unique identifier prefixed with <code className="font-mono text-brand-600 dark:text-brand-400">miniapp_</code>.
               </p>
               <div className="bg-slate-900 text-slate-200 px-3 py-2 rounded-lg font-mono text-sm">
                 miniapp_banking_8f32a1
@@ -475,11 +475,11 @@ export default function GuidelinesPage() {
               </div>
               <div className="p-3.5 rounded-lg bg-slate-100 dark:bg-slate-800/60">
                 <span className="font-bold text-slate-800 dark:text-slate-200 block mb-1">STAGING</span>
-                <p className="text-slate-600 dark:text-slate-400">Pre-production verification against real Super App test builds.</p>
+                <p className="text-slate-600 dark:text-slate-400">Pre-production verification against real SuperApp test builds.</p>
               </div>
               <div className="p-3.5 rounded-lg bg-slate-100 dark:bg-slate-800/60">
                 <span className="font-bold text-slate-800 dark:text-slate-200 block mb-1">PROD</span>
-                <p className="text-slate-600 dark:text-slate-400">Publicly active release serving live end-users inside Super App.</p>
+                <p className="text-slate-600 dark:text-slate-400">Publicly active release serving live end-users inside SuperApp.</p>
               </div>
             </div>
           </div>
@@ -489,7 +489,7 @@ export default function GuidelinesPage() {
     {
       id: "sdk-contract",
       number: "03",
-      title: "Mini App SDK / API Contract",
+      title: "MiniApp SDK / API Contract",
       shortTitle: "SDK Contract",
       category: "CONTRACT",
       summary:
@@ -498,7 +498,7 @@ export default function GuidelinesPage() {
       content: (
         <div className="space-y-6 text-base text-slate-600 dark:text-slate-300">
           <p className="leading-relaxed">
-            Mini Apps operate within a strictly sandboxed runtime. All platform interactions (authentication tokens, payments, biometrics, hardware camera, and navigation) must pass through the standardized Super App Host SDK / Bridge interfaces.
+            MiniApps operate within a strictly sandboxed runtime. All platform interactions (authentication tokens, payments, biometrics, hardware camera, and navigation) must pass through the standardized SuperApp Host SDK / Bridge interfaces.
           </p>
 
           {/* Integration vs Capability Matrix Table */}
@@ -515,7 +515,7 @@ export default function GuidelinesPage() {
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-[11px]">
                 <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                  <td className="py-2.5 px-4 font-bold text-slate-800 dark:text-slate-200 font-sans">WebView Mini App</td>
+                  <td className="py-2.5 px-4 font-bold text-slate-800 dark:text-slate-200 font-sans">WebView MiniApp</td>
                   <td className="py-2.5 px-4 font-sans text-slate-600 dark:text-slate-400">Hosted HTTPS URL (Domain Verified)</td>
                   <td className="py-2.5 px-4 text-brand-600 dark:text-brand-400 font-sans">JavaScript / TypeScript (React, Vue, etc.)</td>
                   <td className="py-2.5 px-4 text-slate-600 dark:text-slate-400 font-sans"><code>@fsasuperapp/sdk</code> or <code>window.FSASuperApp</code> asynchronous JS-to-Native bridge</td>
@@ -563,7 +563,7 @@ export default function GuidelinesPage() {
                 code: `import 'package:flutter/material.dart';
 import 'package:super_app_sdk/super_app_sdk.dart';
 
-// Official Flutter Mini App entrypoint
+// Official Flutter MiniApp entrypoint
 class MiniAppEntryPoint extends MiniAppWidget {
   @override
   Widget build(BuildContext context, MiniAppContext appCtx) {
@@ -626,7 +626,7 @@ export async function initMiniApp() {
   console.log('Logged in user:', user.displayName, 'Token:', auth.accessToken);
 }
 
-// Exit Mini App safely
+// Exit MiniApp safely
 export function exitApp() {
   FSASuperApp.close();
 }`,
@@ -635,7 +635,7 @@ export function exitApp() {
                 filename: "pubspec.yaml",
                 language: "yaml",
                 code: `name: food_delivery_miniapp
-description: A Food Delivery Mini App module
+description: A Food Delivery MiniApp module
 version: 1.0.0
 
 environment:
@@ -655,12 +655,12 @@ dependencies:
   - id: forbid-main-entrypoint
     patterns:
       - pattern: void main() { ... }
-    message: "Mini Apps must not define void main() or invoke runApp()."
+    message: "MiniApps must not define void main() or invoke runApp()."
     severity: ERROR
     languages: [dart]
   - id: forbid-exit-calls
     pattern: exit($CODE)
-    message: "Mini Apps cannot terminate the host Super App process."
+    message: "MiniApps cannot terminate the host SuperApp process."
     severity: ERROR
     languages: [dart]`,
               },
@@ -676,7 +676,7 @@ dependencies:
                 <li>No <code>void main()</code> or <code>runApp()</code> root entrypoints</li>
                 <li>No direct <code>exit(0)</code> or <code>SystemNavigator.pop()</code> process kill calls</li>
                 <li>No unvetted, arbitrary <code>MethodChannel</code> or raw JNI calls</li>
-                <li>No direct modification of Super App global theme singletons</li>
+                <li>No direct modification of SuperApp global theme singletons</li>
               </ul>
             </div>
 
@@ -707,13 +707,13 @@ dependencies:
       content: (
         <div className="space-y-6 text-base text-slate-600 dark:text-slate-300">
           <p className="leading-relaxed">
-            The Super App platform supports 4 official integration methods tailored to your architecture, tech stack, and distribution model:
+            The SuperApp platform supports 4 official integration methods tailored to your architecture, tech stack, and distribution model:
           </p>
 
           {/* Interactive Method Tabs */}
           <div className="flex border-b border-slate-200 dark:border-slate-800 overflow-x-auto no-scrollbar [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] gap-1">
             {[
-              { id: "webview", label: "WebView Mini App", icon: <GlobeIcon /> },
+              { id: "webview", label: "WebView MiniApp", icon: <GlobeIcon /> },
               { id: "flutter", label: "Flutter Package (Git / ZIP)", icon: <PackageIcon /> },
               { id: "native", label: "Native SDK (Kotlin / Swift)", icon: <WrenchIcon /> },
               { id: "deeplink", label: "Deep Link Protocol", icon: <LinkIcon /> },
@@ -737,10 +737,10 @@ dependencies:
             <div className="space-y-6 pt-2">
               <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
                 <h5 className="text-lg font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-                  <GlobeIcon /> WebView Mini App Integration
+                  <GlobeIcon /> WebView MiniApp Integration
                 </h5>
                 <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                  Embeds external web applications into an isolated, secure Super App WebView container. The web application interacts with native features via the standardized JavaScript Bridge (<code>@fsasuperapp/sdk</code>).
+                  Embeds external web applications into an isolated, secure SuperApp WebView container. The web application interacts with native features via the standardized JavaScript Bridge (<code>@fsasuperapp/sdk</code>).
                 </p>
               </div>
 
@@ -757,7 +757,7 @@ dependencies:
                           Mandatory Domain Ownership Verification
                         </h5>
                         <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
-                          Mini Apps serving web content must cryptographically prove domain ownership before staging submission.
+                          MiniApps serving web content must cryptographically prove domain ownership before staging submission.
                         </p>
                       </div>
                     </div>
@@ -810,7 +810,7 @@ dependencies:
                   <PackageIcon /> Flutter Package Integration (Git &amp; ZIP Archive)
                 </h5>
                 <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                  Deliver your Mini App as a modular Flutter Dart package. The Super App platform supports two distribution formats: <strong>Source Code (Git Repository)</strong> or pre-packaged <strong>Package Artifact (.zip Archive)</strong>.
+                  Deliver your MiniApp as a modular Flutter Dart package. The SuperApp platform supports two distribution formats: <strong>Source Code (Git Repository)</strong> or pre-packaged <strong>Package Artifact (.zip Archive)</strong>.
                 </p>
               </div>
 
@@ -827,7 +827,7 @@ dependencies:
                     </div>
                   </div>
                   <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                    Provide your Git repository URL and branch. The platform CI/CD engine automatically clones, runs SAST / Semgrep scans, and compiles the bundle into the host Super App.
+                    Provide your Git repository URL and branch. The platform CI/CD engine automatically clones, runs SAST / Semgrep scans, and compiles the bundle into the host SuperApp.
                   </p>
                   <ul className="space-y-1.5 list-disc pl-4 text-slate-600 dark:text-slate-400">
                     <li>Supports SSH Deploy Keys (ED25519) or Read-Only Personal Access Tokens</li>
@@ -948,7 +948,7 @@ dependencies:
                   <LinkIcon /> Deep Link Integration Protocol
                 </h5>
                 <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                  Treats the Super App as an ecosystem discovery launchpad, seamlessly redirecting the user to your standalone mobile application installed on the device via registered Custom URL Schemes or Universal / App Links.
+                  Treats the SuperApp as an ecosystem discovery launchpad, seamlessly redirecting the user to your standalone mobile application installed on the device via registered Custom URL Schemes or Universal / App Links.
                 </p>
               </div>
 
@@ -989,7 +989,7 @@ dependencies:
       content: (
         <div className="space-y-6 text-base text-slate-600 dark:text-slate-300">
           <p className="leading-relaxed">
-            The Super App acts as the <strong>central authority for all Mini App capabilities and permissions</strong>. To maintain zero security drift and strict platform governance, permissions follow a zero-trust runtime access model.
+            The SuperApp acts as the <strong>central authority for all MiniApp capabilities and permissions</strong>. To maintain zero security drift and strict platform governance, permissions follow a zero-trust runtime access model.
           </p>
 
           {/* Core Gatekeeper Banner */}
@@ -998,7 +998,7 @@ dependencies:
               Core Platform Principle: Capability Gatekeeper
             </span>
             <p className="italic font-medium leading-relaxed">
-              &ldquo;The Super App is the single central gatekeeper for all Mini App capabilities. A Mini App may request any capability, but it can only use capabilities exposed and supported by the Super App. Unsupported capabilities must be genuinely inaccessible.&rdquo;
+              &ldquo;The SuperApp is the single central gatekeeper for all MiniApp capabilities. A MiniApp may request any capability, but it can only use capabilities exposed and supported by the SuperApp. Unsupported capabilities must be genuinely inaccessible.&rdquo;
             </p>
           </div>
 
@@ -1015,21 +1015,21 @@ dependencies:
             </div>
             
             <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-              Apple and Google review the host application, metadata, third-party code, permissions, and runtime behavior. To maximize approval probability and prevent platform rejection, the Super App implements seven mandatory architectural pillars:
+              Apple and Google review the host application, metadata, third-party code, permissions, and runtime behavior. To maximize approval probability and prevent platform rejection, the SuperApp implements seven mandatory architectural pillars:
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
               <div className="p-4 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-1">
-                <strong className="text-slate-900 dark:text-white font-bold block">1. Super App as Central Gatekeeper</strong>
+                <strong className="text-slate-900 dark:text-white font-bold block">1. SuperApp as Central Gatekeeper</strong>
                 <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                  If a Mini App declares 5 capabilities and the Super App exposes 3, the remaining 2 are <strong>genuinely unavailable</strong>—not secretly accessible through raw native APIs or hidden bridge hooks.
+                  If a MiniApp declares 5 capabilities and the SuperApp exposes 3, the remaining 2 are <strong>genuinely unavailable</strong>—not secretly accessible through raw native APIs or hidden bridge hooks.
                 </p>
               </div>
 
               <div className="p-4 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-1">
                 <strong className="text-slate-900 dark:text-white font-bold block">2. Separate Required vs. Optional Capabilities</strong>
                 <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                  If a Mini App requires an unsupported capability for its <strong>core function</strong> → <strong>Reject the Mini App</strong>. If it is <strong>optional</strong> → Integrate it, but disable that specific feature cleanly.
+                  If a MiniApp requires an unsupported capability for its <strong>core function</strong> → <strong>Reject the MiniApp</strong>. If it is <strong>optional</strong> → Integrate it, but disable that specific feature cleanly.
                 </p>
               </div>
 
@@ -1050,7 +1050,7 @@ dependencies:
               <div className="p-4 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-1">
                 <strong className="text-slate-900 dark:text-white font-bold block">5. Pre-Publish Automated Validation</strong>
                 <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                  Validate every Mini App before publishing (capabilities, privacy/data use, URLs, TLS, prohibited content, and actual behavior) to protect host app integrity.
+                  Validate every MiniApp before publishing (capabilities, privacy/data use, URLs, TLS, prohibited content, and actual behavior) to protect host app integrity.
                 </p>
               </div>
 
@@ -1065,7 +1065,7 @@ dependencies:
             <div className="p-4 rounded-lg bg-brand-50/70 dark:bg-brand-950/30 border border-brand-200 dark:border-brand-900/50 text-sm space-y-1">
               <strong className="text-brand-950 dark:text-brand-200 font-bold block">7. Apple Guideline 4.7 & Manifest Compliance</strong>
               <p className="text-brand-900 dark:text-brand-300 leading-relaxed">
-                Implements structured Mini App manifest declarations (bundle metadata, version constraints, age rating, and sandboxed bridge scopes) aligned with Apple&apos;s Mini Apps Partner Program.
+                Implements structured MiniApp manifest declarations (bundle metadata, version constraints, age rating, and sandboxed bridge scopes) aligned with Apple&apos;s MiniApps Partner Program.
               </p>
             </div>
           </div>
@@ -1078,17 +1078,17 @@ dependencies:
                 Capability Matching Example
               </h5>
               <p className="text-sm text-slate-600 dark:text-slate-400">
-                Evaluating declared capabilities against Super App platform support:
+                Evaluating declared capabilities against SuperApp platform support:
               </p>
               <div className="grid grid-cols-2 gap-2 text-sm font-mono">
                 <div className="p-3 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
-                  <span className="text-xs text-slate-400 font-sans block mb-1 font-semibold uppercase">Super App Supports:</span>
+                  <span className="text-xs text-slate-400 font-sans block mb-1 font-semibold uppercase">SuperApp Supports:</span>
                   <div className="text-emerald-600 dark:text-emerald-400">• Camera [OK]</div>
                   <div className="text-emerald-600 dark:text-emerald-400">• Location [OK]</div>
                   <div className="text-emerald-600 dark:text-emerald-400">• Notification [OK]</div>
                 </div>
                 <div className="p-3 rounded-lg bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
-                  <span className="text-xs text-slate-400 font-sans block mb-1 font-semibold uppercase">Mini App Requests (5):</span>
+                  <span className="text-xs text-slate-400 font-sans block mb-1 font-semibold uppercase">MiniApp Requests (5):</span>
                   <div className="text-emerald-600 dark:text-emerald-400">• Camera (Req) [OK]</div>
                   <div className="text-emerald-600 dark:text-emerald-400">• Location (Req) [OK]</div>
                   <div className="text-emerald-600 dark:text-emerald-400">• Notification (Opt) [OK]</div>
@@ -1097,7 +1097,7 @@ dependencies:
                 </div>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                Outcome: If Microphone is <strong>Required</strong>, the Mini App is <strong>REJECTED</strong>. If marked <strong>Optional</strong>, the Mini App is approved with Camera/Location/Notification active and Contacts/Microphone safely disabled.
+                Outcome: If Microphone is <strong>Required</strong>, the MiniApp is <strong>REJECTED</strong>. If marked <strong>Optional</strong>, the MiniApp is approved with Camera/Location/Notification active and Contacts/Microphone safely disabled.
               </p>
             </div>
 
@@ -1107,10 +1107,10 @@ dependencies:
                 The Final Decision Rule Flow
               </h5>
               <div className="p-3.5 bg-slate-900 text-slate-200 rounded-lg font-mono text-xs leading-relaxed">
-                <div className="text-slate-400">Mini App requests N capabilities</div>
-                <div className="text-slate-500 pl-4">↓ Compare with Super App catalog (M supported)</div>
+                <div className="text-slate-400">MiniApp requests N capabilities</div>
+                <div className="text-slate-500 pl-4">↓ Compare with SuperApp catalog (M supported)</div>
                 <div className="text-amber-400">Required capability unsupported?</div>
-                <div className="text-rose-400 pl-4">├── Yes → REJECT Mini App</div>
+                <div className="text-rose-400 pl-4">├── Yes → REJECT MiniApp</div>
                 <div className="text-emerald-400 pl-4">└── No  → Continue (Optional features disabled)</div>
                 <div className="text-slate-400 pl-8">↓</div>
                 <div className="text-sky-300 pl-8">M supported capabilities exposed</div>
@@ -1127,7 +1127,7 @@ dependencies:
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
               <h5 className="font-bold text-slate-900 dark:text-white text-sm uppercase tracking-wider mb-3">
-                Supported Super App Capabilities (JS Bridge &amp; Native)
+                Supported SuperApp Capabilities (JS Bridge &amp; Native)
               </h5>
               <div className="space-y-2.5">
                 {[
@@ -1167,7 +1167,7 @@ dependencies:
                 </p>
                 <div className="p-3.5 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg text-sm space-y-1">
                   <strong className="text-slate-900 dark:text-white block">App Store & Play Store Publishing Note:</strong>
-                  <span className="text-slate-600 dark:text-slate-400">Having a Mini App request capabilities does not prevent the Super App from being published. Compliance is determined by proper implementation, purpose disclosure strings, and store guidelines.</span>
+                  <span className="text-slate-600 dark:text-slate-400">Having a MiniApp request capabilities does not prevent the SuperApp from being published. Compliance is determined by proper implementation, purpose disclosure strings, and store guidelines.</span>
                 </div>
               </div>
               <div className="p-3 bg-brand-50/60 dark:bg-brand-950/30 border border-brand-200 dark:border-brand-900/50 rounded-lg text-xs text-brand-800 dark:text-brand-300 font-medium">
@@ -1224,7 +1224,7 @@ dependencies:
       content: (
         <div className="space-y-6 text-base text-slate-600 dark:text-slate-300">
           <p className="leading-relaxed">
-            Mini App integrations transition through a strictly governed 10-state finite state machine. Every stage enforces automated security gates, role-based authorizations, and end-to-end audit logging.
+            MiniApp integrations transition through a strictly governed 10-state finite state machine. Every stage enforces automated security gates, role-based authorizations, and end-to-end audit logging.
           </p>
 
           <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
@@ -1253,14 +1253,14 @@ dependencies:
                 </tr>
                 <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                   <td className="py-2.5 px-4 font-mono font-bold text-blue-600 dark:text-blue-400">SUBMITTED</td>
-                  <td className="py-2.5 px-4">MA Manager submits Mini App</td>
+                  <td className="py-2.5 px-4">MA Manager submits MiniApp</td>
                   <td className="py-2.5 px-4"><span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">Automated</span></td>
                   <td className="py-2.5 px-4 font-mono text-[11px] text-blue-600 dark:text-blue-400">IN_REVIEW</td>
                   <td className="py-2.5 px-4 text-xs">System automatically executes pre-flight checks and queues app for admin audit.</td>
                 </tr>
                 <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                   <td className="py-2.5 px-4 font-mono font-bold text-amber-600 dark:text-amber-400">IN_REVIEW</td>
-                  <td className="py-2.5 px-4">Super App Admin initiates governance audit</td>
+                  <td className="py-2.5 px-4">SuperApp Admin initiates governance audit</td>
                   <td className="py-2.5 px-4"><span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">Manual</span></td>
                   <td className="py-2.5 px-4 font-mono text-[11px] text-amber-600 dark:text-amber-400">APPROVED, REJECTED</td>
                   <td className="py-2.5 px-4 text-xs">Admin evaluates capability justifications, security scan reports, and contracts.</td>
@@ -1288,10 +1288,10 @@ dependencies:
                 </tr>
                 <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                   <td className="py-2.5 px-4 font-mono font-bold text-emerald-600 dark:text-emerald-400">ACTIVE</td>
-                  <td className="py-2.5 px-4">SA Admin publishes Mini App to live catalog</td>
+                  <td className="py-2.5 px-4">SA Admin publishes MiniApp to live catalog</td>
                   <td className="py-2.5 px-4"><span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">Live</span></td>
                   <td className="py-2.5 px-4 font-mono text-[11px] text-emerald-600 dark:text-emerald-400">SUSPENDED, ARCHIVED</td>
-                  <td className="py-2.5 px-4 text-xs">Mini App is live to millions of Super App end-users in production.</td>
+                  <td className="py-2.5 px-4 text-xs">MiniApp is live to millions of SuperApp end-users in production.</td>
                 </tr>
                 <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                   <td className="py-2.5 px-4 font-mono font-bold text-rose-600 dark:text-rose-400">REJECTED</td>
@@ -1305,11 +1305,11 @@ dependencies:
                   <td className="py-2.5 px-4">SA Admin revokes live access due to policy violation</td>
                   <td className="py-2.5 px-4"><span className="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300">Revoked</span></td>
                   <td className="py-2.5 px-4 font-mono text-[11px] text-orange-600 dark:text-orange-400">ACTIVE, ARCHIVED</td>
-                  <td className="py-2.5 px-4 text-xs">Contact Super App platform compliance team to remediate suspension triggers.</td>
+                  <td className="py-2.5 px-4 text-xs">Contact SuperApp platform compliance team to remediate suspension triggers.</td>
                 </tr>
                 <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                   <td className="py-2.5 px-4 font-mono font-bold text-slate-500 dark:text-slate-400">ARCHIVED</td>
-                  <td className="py-2.5 px-4">Organization decommissions Mini App</td>
+                  <td className="py-2.5 px-4">Organization decommissions MiniApp</td>
                   <td className="py-2.5 px-4"><span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400">Closed</span></td>
                   <td className="py-2.5 px-4 font-mono text-[11px] text-slate-400">None</td>
                   <td className="py-2.5 px-4 text-xs">Read-only historical audit record. Cannot be re-activated.</td>
@@ -1333,8 +1333,8 @@ dependencies:
           {[
             {
               issue: "BUILD_FAILED: Multiple conflicting versions of Flutter SDK",
-              cause: "Mini App pubspec.yaml specifies an incompatible SDK range.",
-              fix: 'Align environment constraint to match Super App runtime (e.g. sdk: ">=3.2.0 <4.0.0").',
+              cause: "MiniApp pubspec.yaml specifies an incompatible SDK range.",
+              fix: 'Align environment constraint to match SuperApp runtime (e.g. sdk: ">=3.2.0 <4.0.0").',
             },
             {
               issue: "SECURITY_CHECK_FAILED: Gitleaks detected sensitive key in assets",
@@ -1378,7 +1378,7 @@ dependencies:
               className="w-7 h-7 object-cover rounded-full shadow-sm"
             />
             <span className="text-base tracking-tight font-extrabold text-slate-900 dark:text-white">
-              Super App <span className="text-brand-600 dark:text-brand-400 font-medium">Docs</span>
+              SuperApp <span className="text-brand-600 dark:text-brand-400 font-medium">Docs</span>
             </span>
           </Link>
           <span className="text-sm px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono font-medium border border-slate-200 dark:border-slate-700">
@@ -1392,7 +1392,7 @@ dependencies:
             href="/miniapps/register"
             className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-semibold transition shadow-sm text-sm"
           >
-            Register Mini App
+            Register MiniApp
           </Link>
           <div className="h-4 w-px bg-slate-200 dark:bg-slate-800 hidden sm:block"></div>
           <ThemeToggle />

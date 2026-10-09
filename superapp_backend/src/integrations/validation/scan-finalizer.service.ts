@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
@@ -145,7 +145,7 @@ export class ScanFinalizerService {
             miniAppId: app.id,
             type: 'SECURITY_CHECK',
             severity: finding.severity,
-            description: `[${finding.id}] ${finding.title}: ${finding.description}. Remediation: ${finding.recommendation || 'Follow Super App security guide.'}`,
+            description: `[${finding.id}] ${finding.title}: ${finding.description}. Remediation: ${finding.recommendation || 'Follow SuperApp security guide.'}`,
             status: 'OPEN',
             metadata: {
               findingId: finding.id,
@@ -176,7 +176,7 @@ export class ScanFinalizerService {
       await this.notificationsService.createNotification(
         app.ownerId || '',
         'Automated Validation Failed',
-        `${app.name || 'Mini App'} failed automated ${method} security checks with ${actionableFindings.length} issue(s) across security engines. Status reset to DRAFT.`,
+        `${app.name || 'MiniApp'} failed automated ${method} security checks with ${actionableFindings.length} issue(s) across security engines. Status reset to DRAFT.`,
         'ISSUE_CREATED',
         app.id,
       );

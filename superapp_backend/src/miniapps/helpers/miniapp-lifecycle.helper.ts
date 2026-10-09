@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException, Optional } from '@nestjs/common';
+﻿import { Injectable, Logger, BadRequestException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
@@ -93,7 +93,7 @@ export class MiniappLifecycleHelper {
       : [];
     const requiredPerms = declaredPerms;
 
-    // Super App Host Supported Capabilities whitelist
+    // SuperApp Host Supported Capabilities whitelist
     const allowedCaps = ['camera', 'geolocator', 'location', 'local_auth', 'biometrics'];
     const requiredCaps = requiredPerms;
 
@@ -117,7 +117,7 @@ export class MiniappLifecycleHelper {
     const packageVersion = cfg.packageVersion || cfg.version || '1.0.0';
 
     this.logger.log(
-      `Triggering universal Jenkins validation pipeline for ${method} Mini App ${id}...`,
+      `Triggering universal Jenkins validation pipeline for ${method} MiniApp ${id}...`,
     );
 
     this.jenkinsService
@@ -232,7 +232,7 @@ export class MiniappLifecycleHelper {
       : [];
     const requiredPerms = declaredPerms;
 
-    // Super App Host Supported Capabilities whitelist
+    // SuperApp Host Supported Capabilities whitelist
     const allowedCaps = ['camera', 'geolocator', 'location', 'local_auth', 'biometrics'];
     const requiredCaps = requiredPerms;
 
@@ -256,7 +256,7 @@ export class MiniappLifecycleHelper {
     const packageVersion = cfg.packageVersion || cfg.version || '1.0.0';
 
     this.logger.log(
-      `Re-triggering universal Jenkins validation pipeline for ${method} Mini App ${id}...`,
+      `Re-triggering universal Jenkins validation pipeline for ${method} MiniApp ${id}...`,
     );
 
     const jenkinsRes = await this.jenkinsService
@@ -334,7 +334,7 @@ export class MiniappLifecycleHelper {
     await this.notificationsService.createNotification(
       app.ownerId || '',
       'Scan Re-run',
-      `Automated security scan re-initiated for "${app.name || 'Mini App'}" on Jenkins (${method}).`,
+      `Automated security scan re-initiated for "${app.name || 'MiniApp'}" on Jenkins (${method}).`,
       'SCAN_STARTED',
       app.id,
     );
@@ -361,7 +361,7 @@ export class MiniappLifecycleHelper {
     await this.notificationsService.createNotification(
       app.ownerId || '',
       'Scan Re-run',
-      `${app.name || 'Mini App'} automated security scan re-initiated on Jenkins.`,
+      `${app.name || 'MiniApp'} automated security scan re-initiated on Jenkins.`,
       'SCAN_STARTED',
       app.id,
     );
@@ -506,7 +506,7 @@ export class MiniappLifecycleHelper {
     app.status = 'APPROVED';
     await this.miniappRepository.save(app);
 
-    // Auto-inject Flutter package dependency into Super App pubspec.yaml if applicable
+    // Auto-inject Flutter package dependency into SuperApp pubspec.yaml if applicable
     if ((app.integrationMethod || '').toUpperCase() === 'FLUTTER_PACKAGE') {
       try {
         const pkgName = app.integrationConfig?.packageName || (app.name || '').toLowerCase().replace(/[^a-z0-9_]/g, '_');
@@ -545,7 +545,7 @@ export class MiniappLifecycleHelper {
         await this.pubspecService.injectMiniApp(app);
         await this.pubspecService.validateDependencies({ dryRun: true });
         this.pubspecService.triggerSandboxRebuild(`Approval of ${app.name}`).catch(() => {});
-        this.logger.log(`Auto-injected and validated Flutter package ${app.name} into Super App pubspec.yaml`);
+        this.logger.log(`Auto-injected and validated Flutter package ${app.name} into SuperApp pubspec.yaml`);
       } catch (err: any) {
         this.logger.warn(`Pubspec auto-injection warning on approve for ${app.name}: ${err.message}`);
       }
@@ -556,14 +556,14 @@ export class MiniappLifecycleHelper {
     if (app.ownerId) {
       await this.notificationsService.createNotification(
         app.ownerId,
-        'Mini App Approved',
-        `Mini App "${app.name}" has been approved by the Super App Administrator and is ready for test build verification.`,
+        'MiniApp Approved',
+        `MiniApp "${app.name}" has been approved by the SuperApp Administrator and is ready for test build verification.`,
         'MINIAPP_APPROVED',
         app.id,
       );
     }
 
-    // 2. Dispatch Email to Mini App Owner
+    // 2. Dispatch Email to MiniApp Owner
     const targetEmail = app.ownerEmail || app.owner?.email;
     if (targetEmail) {
       await this.mailService.sendMiniAppApprovedEmail(
@@ -577,7 +577,7 @@ export class MiniappLifecycleHelper {
       app.id,
       actorId,
       'STATUS_CHANGE',
-      'Mini App Approved',
+      'MiniApp Approved',
       'App approved by SA Admin',
       'APPROVE_MINI_APP',
       null,
@@ -618,14 +618,14 @@ export class MiniappLifecycleHelper {
     if (app.ownerId) {
       await this.notificationsService.createNotification(
         app.ownerId,
-        'Mini App Rejected',
-        `Mini App "${app.name}" was rejected by Super App Administrator. Reason: ${reason || 'Administrative review decision.'}`,
+        'MiniApp Rejected',
+        `MiniApp "${app.name}" was rejected by SuperApp Administrator. Reason: ${reason || 'Administrative review decision.'}`,
         'MINIAPP_REJECTED',
         app.id,
       );
     }
 
-    // 2. Dispatch Email to Mini App Owner
+    // 2. Dispatch Email to MiniApp Owner
     const targetEmail = app.ownerEmail || app.owner?.email;
     if (targetEmail) {
       await this.mailService.sendMiniAppRejectedEmail(
@@ -640,7 +640,7 @@ export class MiniappLifecycleHelper {
       app.id,
       actorId,
       'STATUS_CHANGE',
-      'Mini App Rejected',
+      'MiniApp Rejected',
       reason || 'App rejected by SA Admin',
       'REJECT_MINI_APP',
       null,
@@ -678,7 +678,7 @@ export class MiniappLifecycleHelper {
         await this.notificationsService.createNotification(
           app.ownerId,
           'Changes Requested on Staged Revision',
-          `Super App Administrator requested changes for staged revision of "${app.name}". Reason: ${reason || 'Please update the configuration and resubmit.'} (Live version remains active in Super App)`,
+          `SuperApp Administrator requested changes for staged revision of "${app.name}". Reason: ${reason || 'Please update the configuration and resubmit.'} (Live version remains active in SuperApp)`,
           'CHANGES_REQUESTED',
           app.id,
         );
@@ -716,13 +716,13 @@ export class MiniappLifecycleHelper {
       await this.notificationsService.createNotification(
         app.ownerId,
         'Changes Requested',
-        `Super App Administrator requested changes for "${app.name}". Reason: ${reason || 'Please update the configuration and resubmit.'}`,
+        `SuperApp Administrator requested changes for "${app.name}". Reason: ${reason || 'Please update the configuration and resubmit.'}`,
         'CHANGES_REQUESTED',
         app.id,
       );
     }
 
-    // 2. Dispatch Email to Mini App Owner
+    // 2. Dispatch Email to MiniApp Owner
     const targetEmail = app.ownerEmail || app.owner?.email;
     if (targetEmail) {
       await this.mailService.sendChangesRequestedEmail(
@@ -810,7 +810,7 @@ export class MiniappLifecycleHelper {
         actorId,
         'STATUS_CHANGE',
         'Staged Revision Test Build Triggered',
-        `Triggered Jenkins compilation of Super App test build (${releaseVersion}, debug) for staged revision. Live app remains active.`,
+        `Triggered Jenkins compilation of SuperApp test build (${releaseVersion}, debug) for staged revision. Live app remains active.`,
         'TRIGGER_TEST_BUILD',
         null,
         app,
@@ -852,7 +852,7 @@ export class MiniappLifecycleHelper {
       },
     };
 
-    // Auto-increment dynamic Super App test version (e.g. v1.1.1, v1.1.2, etc.)
+    // Auto-increment dynamic SuperApp test version (e.g. v1.1.1, v1.1.2, etc.)
     const releaseVersion = await this.superAppService.getAndRegisterNextVersion();
     app.activeTestVersion = releaseVersion;
     app.integrationConfig = {
@@ -867,8 +867,8 @@ export class MiniappLifecycleHelper {
     if (app.ownerId) {
       await this.notificationsService.createNotification(
         app.ownerId,
-        'Super App Test Build Started',
-        `Super App test build (${releaseVersion}) compilation initiated on Jenkins for Mini App "${app.name}". Artifacts will be published to Nexus upon completion.`,
+        'SuperApp Test Build Started',
+        `SuperApp test build (${releaseVersion}) compilation initiated on Jenkins for MiniApp "${app.name}". Artifacts will be published to Nexus upon completion.`,
         'BUILD_STARTED',
         app.id,
         {
@@ -882,7 +882,7 @@ export class MiniappLifecycleHelper {
     try {
       await this.pipelinePacerService.paceBuildTrigger(app.name || app.appId);
       this.logger.log(
-        `Triggering Jenkins Super App test build for Mini App ${app.name} (${app.id}) with dynamic version ${releaseVersion}...`,
+        `Triggering Jenkins SuperApp test build for MiniApp ${app.name} (${app.id}) with dynamic version ${releaseVersion}...`,
       );
       const jenkinsResult = await this.jenkinsService.triggerSuperAppBuild({
         releaseVersion,
@@ -908,7 +908,7 @@ export class MiniappLifecycleHelper {
           });
       }
 
-      // Also trigger Super App Web Sandbox build concurrently
+      // Also trigger SuperApp Web Sandbox build concurrently
       this.jenkinsService
         .triggerSuperAppSandboxBuild()
         .catch((e: any) => {
@@ -926,8 +926,8 @@ export class MiniappLifecycleHelper {
       id,
       actorId,
       'STATUS_CHANGE',
-      'Super App Test Build Triggered',
-      `Triggered Jenkins compilation of Super App test build (${releaseVersion}, debug). Artifact will be stored in Nexus for testing.`,
+      'SuperApp Test Build Triggered',
+      `Triggered Jenkins compilation of SuperApp test build (${releaseVersion}, debug). Artifact will be stored in Nexus for testing.`,
       'TRIGGER_TEST_BUILD',
       null,
       app,
@@ -967,7 +967,7 @@ export class MiniappLifecycleHelper {
 
     try {
       this.logger.log(
-        `Triggering Jenkins Production Release build for Mini App ${app.name} (${app.id}) with version ${releaseVersion}...`,
+        `Triggering Jenkins Production Release build for MiniApp ${app.name} (${app.id}) with version ${releaseVersion}...`,
       );
       await this.jenkinsService.triggerSuperAppBuild({
         releaseVersion,
@@ -986,8 +986,8 @@ export class MiniappLifecycleHelper {
     if (app.ownerId) {
       await this.notificationsService.createNotification(
         app.ownerId,
-        'Mini App Live & Activated',
-        `Mini App "${app.name}" has been granted final approval and production release build is live in the Super App catalog.`,
+        'MiniApp Live & Activated',
+        `MiniApp "${app.name}" has been granted final approval and production release build is live in the SuperApp catalog.`,
         'MINIAPP_ACTIVATED',
         app.id,
       );
@@ -1007,8 +1007,8 @@ export class MiniappLifecycleHelper {
       id,
       actorId,
       'STATUS_CHANGE',
-      'Mini App Activated (Production Release)',
-      `Final approval granted. Production release build (${releaseVersion}, release) triggered in Jenkins and app is ACTIVE in Super App catalog.`,
+      'MiniApp Activated (Production Release)',
+      `Final approval granted. Production release build (${releaseVersion}, release) triggered in Jenkins and app is ACTIVE in SuperApp catalog.`,
       'ACTIVATE_MINI_APP',
       null,
       app,
@@ -1037,7 +1037,7 @@ export class MiniappLifecycleHelper {
       app.id,
       actorId,
       'STATUS_CHANGE',
-      'Mini App Suspended',
+      'MiniApp Suspended',
       'App suspended',
       'SUSPEND_MINI_APP',
       null,
@@ -1123,7 +1123,7 @@ export class MiniappLifecycleHelper {
       status: 'ACTIVE',
       changelog:
         rev.changelog ||
-        `Release ${nextVersion} published live to Super App catalog`,
+        `Release ${nextVersion} published live to SuperApp catalog`,
       apkSize: '52.4 MB',
       checksum:
         'sha256:' +
@@ -1133,7 +1133,7 @@ export class MiniappLifecycleHelper {
           .digest('hex')
           .substring(0, 16),
       releasedAt: new Date().toISOString(),
-      releasedBy: actorId || app.ownerName || 'Mini App Manager',
+      releasedBy: actorId || app.ownerName || 'MiniApp Manager',
     });
     app.versionHistory = history;
 
@@ -1142,13 +1142,13 @@ export class MiniappLifecycleHelper {
 
     await this.miniappRepository.save(app);
 
-    // Auto-update Flutter package dependency in Super App pubspec.yaml if applicable
+    // Auto-update Flutter package dependency in SuperApp pubspec.yaml if applicable
     if ((app.integrationMethod || '').toUpperCase() === 'FLUTTER_PACKAGE') {
       try {
         await this.pubspecService.injectMiniApp(app);
         await this.pubspecService.validateDependencies({ dryRun: true });
         this.pubspecService.triggerSandboxRebuild(`Publish revision ${nextVersion} for ${app.name}`).catch(() => {});
-        this.logger.log(`Auto-updated and validated Flutter package ${app.name} (${nextVersion}) in Super App pubspec.yaml`);
+        this.logger.log(`Auto-updated and validated Flutter package ${app.name} (${nextVersion}) in SuperApp pubspec.yaml`);
       } catch (err: any) {
         this.logger.warn(`Pubspec auto-update warning on revision publish for ${app.name}: ${err.message}`);
       }
@@ -1157,7 +1157,7 @@ export class MiniappLifecycleHelper {
     await this.notificationsService.createNotification(
       app.ownerId || '',
       'Revision Published',
-      `Revision for Mini App "${app.name}" (${nextVersion}) has been published live to the Super App catalog.`,
+      `Revision for MiniApp "${app.name}" (${nextVersion}) has been published live to the SuperApp catalog.`,
       'REVISION_PUBLISHED',
       app.id,
     );
@@ -1167,7 +1167,7 @@ export class MiniappLifecycleHelper {
       actorId || 'system',
       'STATUS_CHANGE',
       `Revision Published for ${app.name}`,
-      'Staged revision merged into live active Mini App configuration',
+      'Staged revision merged into live active MiniApp configuration',
       'PUBLISH_REVISION',
       oldVal,
       app,
@@ -1204,7 +1204,7 @@ export class MiniappLifecycleHelper {
       await this.notificationsService.createNotification(
         app.ownerId,
         'Revision Rejected & Discarded',
-        `Staged revision for Mini App "${app.name}" was rejected. Live version remains active in Super App.${reason ? ` Reason: ${reason}` : ''}`,
+        `Staged revision for MiniApp "${app.name}" was rejected. Live version remains active in SuperApp.${reason ? ` Reason: ${reason}` : ''}`,
         'REVISION_DISCARDED',
         app.id,
       );
@@ -1217,7 +1217,7 @@ export class MiniappLifecycleHelper {
         targetEmail,
         app.name || app.appId,
         reason ||
-          'Proposed revision was discarded by administrator. Live version remains active in the Super App catalog.',
+          'Proposed revision was discarded by administrator. Live version remains active in the SuperApp catalog.',
         `${this.backofficeBaseUrl}/miniapps/${app.id}`,
       );
     }
@@ -1319,8 +1319,8 @@ export class MiniappLifecycleHelper {
     if (app.ownerId) {
       await this.notificationsService.createNotification(
         app.ownerId,
-        'Mini App Rolled Back',
-        `Mini App "${app.name}" was rolled back from ${prevVersion} to ${targetVersion}.${
+        'MiniApp Rolled Back',
+        `MiniApp "${app.name}" was rolled back from ${prevVersion} to ${targetVersion}.${
           reason ? ` Reason: ${reason}` : ''
         }`,
         'MINIAPP_ROLLED_BACK',

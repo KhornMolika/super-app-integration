@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadGatewayException,
   BadRequestException,
   HttpException,
@@ -139,7 +139,7 @@ export class SdkArtifactUploadService {
 
   /**
    * STAGE 3: Promotes & publishes the verified artifact from MinIO quarantine to Nexus.
-   * Executed ONLY when the Mini App passes security review and is APPROVED by SA Admin.
+   * Executed ONLY when the MiniApp passes security review and is APPROVED by SA Admin.
    */
   async publishToNexus(miniAppId: string): Promise<{
     androidNexusMavenUrl?: string;

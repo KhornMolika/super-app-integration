@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -121,7 +121,7 @@ export function LogoUploadInput({
         // Check 1: 1:1 Aspect Ratio Standard (tolerance 0.85 to 1.18)
         if (ratio < 0.85 || ratio > 1.18) {
           setUploadError(
-            `Non-standard aspect ratio (${width}×${height} px). Mini App logos must be 1:1 square (512×512 px recommended). Please crop your logo to a square and upload again.`,
+            `Non-standard aspect ratio (${width}×${height} px). MiniApp logos must be 1:1 square (512×512 px recommended). Please crop your logo to a square and upload again.`,
           );
           onChange('');
           setFileName('');
@@ -445,7 +445,7 @@ export function LogoUploadInput({
                     Logo Preview
                   </h3>
                   <p className="text-xs text-slate-400 truncate max-w-[240px]">
-                    {fileName || 'Mini App Icon Preview'}
+                    {fileName || 'MiniApp Icon Preview'}
                   </p>
                 </div>
               </div>
@@ -628,7 +628,7 @@ export function LogoUploadInput({
                     Launcher Icon Preview
                   </p>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Rendered with 1:1 squircle mask in Super App home grid
+                    Rendered with 1:1 squircle mask in SuperApp home grid
                   </p>
                 </div>
               </div>

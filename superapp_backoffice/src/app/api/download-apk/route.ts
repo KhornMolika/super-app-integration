@@ -79,7 +79,15 @@ export async function GET(request: NextRequest) {
 
   // 2. PRIORITIZE STREAMING DIRECTLY FROM NEXUS REGISTRY (Failover)
   for (const ver of versionCandidates) {
-    for (const fn of [primaryFilename, altFilename]) {
+    const norm = ver.startsWith('v') ? ver : `v${ver}`;
+    const fileCandidates = [
+      `superapp-test-${norm}.apk`,
+      `superapp-test-${ver}.apk`,
+      `superapp-release-${norm}.apk`,
+      primaryFilename,
+      altFilename,
+    ];
+    for (const fn of fileCandidates) {
       const nexusUrl = `${nexusBase}/repository/${repoName}/${appName}/${ver}/${fn}`;
       try {
         const res = await fetch(nexusUrl, {

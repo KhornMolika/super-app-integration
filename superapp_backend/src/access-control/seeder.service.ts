@@ -1,4 +1,4 @@
-import { Injectable, OnApplicationBootstrap, Logger } from '@nestjs/common';
+﻿import { Injectable, OnApplicationBootstrap, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -80,20 +80,41 @@ export class SeederService implements OnApplicationBootstrap {
           'miniapp:approve',
           'miniapp:reject',
           'miniapp:suspend',
+          'miniapp:submit',
           'miniapp_permission:approve',
           'issue:resolve',
           'permission_proposal:read',
           'permission_proposal:review',
+          'permission_proposal:approve',
           'super_app:read',
+          'super_app:manage',
           'user:read',
+          'user:manage',
+          'role:read',
           'permission:read',
           'organization:read',
+          'organization:manage',
           'audit_log:read',
+          'settings:manage',
         ],
       },
       {
         name: 'MINI_APP_DEVELOPER',
-        description: 'Mini App Developer for creating, testing, and submitting Mini Apps',
+        description: 'MiniApp Developer for creating, testing, and submitting MiniApps',
+        perms: [
+          'miniapp:create',
+          'miniapp:read',
+          'miniapp:update',
+          'miniapp:submit',
+          'permission_proposal:read',
+          'permission:read',
+          'super_app:read',
+          'organization:read',
+        ],
+      },
+      {
+        name: 'QA_TESTER',
+        description: 'QA Test Engineer for end-to-end MiniApp testing, sandbox verification, and submissions',
         perms: [
           'miniapp:create',
           'miniapp:read',
@@ -108,7 +129,16 @@ export class SeederService implements OnApplicationBootstrap {
       {
         name: 'DEVELOPER',
         description: 'Developer with sandbox and documentation read access',
-        perms: ['miniapp:read', 'permission:read', 'super_app:read'],
+        perms: [
+          'miniapp:create',
+          'miniapp:read',
+          'miniapp:update',
+          'miniapp:submit',
+          'permission_proposal:read',
+          'permission:read',
+          'super_app:read',
+          'organization:read',
+        ],
       },
     ];
 
@@ -152,20 +182,32 @@ export class SeederService implements OnApplicationBootstrap {
     const superAdminRole = rolesMap.get('SUPER_ADMIN')!;
     const adminRole = rolesMap.get('ADMIN')!;
     const devRole = rolesMap.get('MINI_APP_DEVELOPER')!;
+    const qaRole = rolesMap.get('QA_TESTER') || devRole;
 
     const superAdminEmail = this.configService.get<string>('SUPERADMIN_EMAIL', 'superadmin@superapp.gov.kh');
     const adminEmail = this.configService.get<string>('ADMIN_EMAIL', 'admin@superapp.gov.kh');
-    const devEmail = this.configService.get<string>('DEV_EMAIL', 'developer@superapp.gov.kh');
+    const devEmail = this.configService.get<string>('DEV_EMAIL', 'ma-developer@superapp.gov.kh');
+
+    // Migrate any legacy developer@superapp.gov.kh user account to ma-developer@superapp.gov.kh
+    try {
+      const legacyDev = await this.userRepository.findOne({ where: { email: 'developer@superapp.gov.kh' } });
+      if (legacyDev) {
+        legacyDev.email = 'ma-developer@superapp.gov.kh';
+        await this.userRepository.save(legacyDev);
+        this.logger.log('Migrated legacy developer@superapp.gov.kh account to ma-developer@superapp.gov.kh');
+      }
+    } catch (_) {}
 
     // Standard test accounts for QA
     const defaultUsers = [
       { email: superAdminEmail, name: 'Super Admin', role: superAdminRole },
       { email: adminEmail, name: 'Admin User', role: adminRole },
-      { email: devEmail, name: 'Mini App Developer', role: devRole },
+      { email: devEmail, name: 'MiniApp Developer', role: devRole },
       { email: 'superadmin@superapp.gov.kh', name: 'Super Admin', role: superAdminRole },
       { email: 'admin@superapp.gov.kh', name: 'Admin User', role: adminRole },
-      { email: 'developer@superapp.gov.kh', name: 'Mini App Developer', role: devRole },
-      { email: 'dev@superapp.gov.kh', name: 'Mini App Developer', role: devRole },
+      { email: 'ma-developer@superapp.gov.kh', name: 'MiniApp Developer', role: devRole },
+      { email: 'qa@superapp.gov.kh', name: 'QA Test Engineer', role: qaRole },
+      { email: 'dev@superapp.gov.kh', name: 'MiniApp Developer', role: devRole },
     ];
 
     for (const u of defaultUsers) {
@@ -188,6 +230,42 @@ export class SeederService implements OnApplicationBootstrap {
       }
     }
 
-    this.logger.log('Database seeded with standard permissions and MINI_APP_DEVELOPER role');
+    // Purge any legacy accounts with @example.com
+    try {
+      const exampleUsers = await this.userRepository
+        .createQueryBuilder('user')
+        .where('user.email LIKE :pattern', { pattern: '%@example.com' })
+        .getMany();
+
+      if (exampleUsers.length > 0) {
+        const exampleUserIds = exampleUsers.map((u) => u.id);
+        const officialDev = await this.userRepository.findOne({
+          where: { email: 'ma-developer@superapp.gov.kh' },
+        });
+
+        if (officialDev && exampleUserIds.length > 0) {
+          // Reassign any foreign key dependencies to official developer account
+          await this.userRepository.query(
+            `UPDATE "mini_apps" SET "ownerId" = $1 WHERE "ownerId" = ANY($2)`,
+            [officialDev.id, exampleUserIds],
+          );
+          await this.userRepository.query(
+            `UPDATE "permission_proposals" SET "requestedById" = $1 WHERE "requestedById" = ANY($2)`,
+            [officialDev.id, exampleUserIds],
+          ).catch(() => {});
+          await this.userRepository.query(
+            `UPDATE "notification" SET "userId" = $1 WHERE "userId" = ANY($2)`,
+            [officialDev.id, exampleUserIds],
+          ).catch(() => {});
+        }
+
+        await this.userRepository.remove(exampleUsers);
+        this.logger.log(`Purged ${exampleUsers.length} legacy @example.com user account(s) from database`);
+      }
+    } catch (err: any) {
+      this.logger.warn(`Could not purge @example.com users: ${err?.message}`);
+    }
+
+    this.logger.log('Database seeded with standard permissions, roles, and official accounts');
   }
 }

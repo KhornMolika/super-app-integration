@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { toast } from '@/components/ui/Toast';
@@ -92,13 +92,13 @@ export default function InviteDownloadModal({
 
   const handleSendTelegramBroadcast = async () => {
     if (!teamTelegramChatId) {
-      toast.warning('No Team Telegram Group is connected for this Mini App. Please configure it in Settings or Mini App details.', 'No Channel Configured');
+      toast.warning('No Team Telegram Group is connected for this MiniApp. Please configure it in Settings or MiniApp details.', 'No Channel Configured');
       return;
     }
 
     setSendingTelegram(true);
     try {
-      const msg = `[BUILD NOTIFICATION] <b>New Build Ready for Testing</b>\n\n<b>Mini App:</b> ${miniAppName}\n<b>Version:</b> ${version} (${buildType.toUpperCase()})\n<b>Invite Link Validity:</b> ${expiresIn.toUpperCase()}\n\n<b>Download Link:</b> <a href="${fullDownloadUrl}">Tap to Download APK</a>\n\n<i>Scan QR or click link above to install directly on physical test devices.</i>`;
+      const msg = `[BUILD NOTIFICATION] <b>New Build Ready for Testing</b>\n\n<b>MiniApp:</b> ${miniAppName}\n<b>Version:</b> ${version} (${buildType.toUpperCase()})\n<b>Invite Link Validity:</b> ${expiresIn.toUpperCase()}\n\n<b>Download Link:</b> <a href="${fullDownloadUrl}">Tap to Download APK</a>\n\n<i>Scan QR or click link above to install directly on physical test devices.</i>`;
       const data = await telegramApi.testTeamAlert(teamTelegramChatId, `${miniAppName} (${version})`, msg);
       if (data?.success) {
         toast.success(`Tester invite broadcast delivered to Telegram group (${teamTelegramChatId})!`, 'Invite Broadcast Sent');

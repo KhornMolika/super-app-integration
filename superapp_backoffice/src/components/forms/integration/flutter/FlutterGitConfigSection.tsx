@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 import { Input, Label, Select } from "@/components/ui/inputs";
@@ -255,13 +255,13 @@ export default function FlutterGitConfigSection({
                 <ShieldCheckIcon className="w-5 h-5 text-accent-600 dark:text-accent-400 shrink-0 mt-0.5" />
                 <div className="space-y-1">
                   <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                    <span>Super App Dedicated Deploy Key</span>
+                    <span>SuperApp Dedicated Deploy Key</span>
                     <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-accent-100 dark:bg-accent-900/60 text-accent-800 dark:text-accent-300 border border-accent-200 dark:border-accent-700">
                       Zero Private Key Leakage
                     </span>
                   </div>
                   <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
-                    The Super App automatically generates an isolated, read-only SSH key pair dedicated to this Mini App. 
+                    The SuperApp automatically generates an isolated, read-only SSH key pair dedicated to this MiniApp. 
                     The private key is encrypted (AES-256-GCM) and kept securely inside the platform CI runner. You only need to add the <strong>public key</strong> to your Git repository.
                   </p>
                 </div>
@@ -422,7 +422,7 @@ export default function FlutterGitConfigSection({
                       <strong>Add deploy key</strong>.
                     </li>
                     <li>
-                      Set Title to <code className="bg-black/10 dark:bg-black/40 px-1.5 py-0.5 rounded text-accent-600 dark:text-accent-400 font-mono text-[11px]">Super App CI Pipeline</code> and paste the copied public key into <strong>Key</strong>.
+                      Set Title to <code className="bg-black/10 dark:bg-black/40 px-1.5 py-0.5 rounded text-accent-600 dark:text-accent-400 font-mono text-[11px]">SuperApp CI Pipeline</code> and paste the copied public key into <strong>Key</strong>.
                     </li>
                     <li>
                       Keep <strong>&quot;Allow write access&quot; UNCHECKED</strong> (read-only is strictly recommended). Click <strong>Add key</strong>.
@@ -440,7 +440,7 @@ export default function FlutterGitConfigSection({
                       <strong>Add key</strong>.
                     </li>
                     <li>
-                      Set Title to <code className="bg-black/10 dark:bg-black/40 px-1.5 py-0.5 rounded text-orange-600 dark:text-orange-400 font-mono text-[11px]">Super App CI Pipeline</code> and paste the copied public key into <strong>Key</strong>.
+                      Set Title to <code className="bg-black/10 dark:bg-black/40 px-1.5 py-0.5 rounded text-orange-600 dark:text-orange-400 font-mono text-[11px]">SuperApp CI Pipeline</code> and paste the copied public key into <strong>Key</strong>.
                     </li>
                     <li>
                       Leave <strong>&quot;Grant write permissions&quot; UNCHECKED</strong>. Click <strong>Add key</strong>.

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -68,7 +68,7 @@ const navGroups: NavGroup[] = [
         ),
       },
       {
-        name: 'Mini Apps',
+        name: 'MiniApps',
         href: '/miniapps',
         requiredPermission: 'miniapp:read',
         icon: (
@@ -84,7 +84,7 @@ const navGroups: NavGroup[] = [
         ),
       },
       {
-        name: 'Super App',
+        name: 'SuperApp',
         href: '/super-app',
         requiredPermission: 'super_app:read',
         icon: (

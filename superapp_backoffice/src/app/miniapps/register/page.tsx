@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -234,7 +234,7 @@ export default function RegisterMiniAppPage() {
   useEffect(() => {
     const errors: Record<string, string> = {};
     if (formData.appId && !/^[a-z0-9_.-]+$/.test(formData.appId)) {
-      errors.appId = 'Mini App ID can only contain lowercase letters, numbers, and underscores (e.g. miniapp_8f32a1)';
+      errors.appId = 'MiniApp ID can only contain lowercase letters, numbers, and underscores (e.g. miniapp_8f32a1)';
     }
     if (formData.ownerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.ownerEmail)) {
       errors.ownerEmail = 'Owner Email must be a valid email';
@@ -243,7 +243,7 @@ export default function RegisterMiniAppPage() {
       errors.supportEmail = 'Support Email must be a valid email';
     }
     if (formData.name && formData.name.length < 2) {
-      errors.name = 'Mini App Name must be at least 2 characters';
+      errors.name = 'MiniApp Name must be at least 2 characters';
     }
 
     if (formData.integrationMethod === IntegrationMethod.WEBVIEW && formData.integrationConfigWebView?.productionUrl) {
@@ -301,8 +301,8 @@ export default function RegisterMiniAppPage() {
             if (data) {
               setLocalErrors((prev) => {
                 const newErrors = { ...prev };
-                if (data.appIdExists) newErrors.appId = 'This Mini App ID is already taken.';
-                if (data.nameExists) newErrors.name = 'This Mini App Name is already taken.';
+                if (data.appIdExists) newErrors.appId = 'This MiniApp ID is already taken.';
+                if (data.nameExists) newErrors.name = 'This MiniApp Name is already taken.';
                 return newErrors;
               });
             }
@@ -728,8 +728,8 @@ export default function RegisterMiniAppPage() {
             </svg>
           </Link>
           <div>
-            <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Register Mini App</h2>
-            <p className="text-slate-500 dark:text-slate-400 mt-1 text-base">Deploy a new service to the Super App gateway</p>
+            <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Register MiniApp</h2>
+            <p className="text-slate-500 dark:text-slate-400 mt-1 text-base">Deploy a new service to the SuperApp gateway</p>
           </div>
         </div>
 
@@ -900,7 +900,7 @@ export default function RegisterMiniAppPage() {
                   Save as Draft
                 </Button>
                 <Button type="submit" className="h-11 px-6 text-base font-semibold" disabled={isSubmitting}>
-                  {isSubmitting ? 'Submitting...' : 'Register Mini App'}
+                  {isSubmitting ? 'Submitting...' : 'Register MiniApp'}
                 </Button>
               </div>
             )}

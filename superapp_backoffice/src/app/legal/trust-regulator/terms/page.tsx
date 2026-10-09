@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import Link from "next/link";
@@ -55,7 +55,7 @@ export default function TrustRegulatorTermsPage() {
             1. Scope & Regulatory Authority
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            The Trust Regulator Mini App operates under the statutory oversight
+            The Trust Regulator MiniApp operates under the statutory oversight
             of the Non-Bank Financial Services Authority (FSA). It provides
             verified public and institutional users with official digital
             certification, trust registration auditing, and compliance
@@ -83,7 +83,7 @@ export default function TrustRegulatorTermsPage() {
             3. Native Capabilities & Audit Trail
           </h2>
           <p className="text-sm text-slate-300 leading-relaxed">
-            This Mini App utilizes native platform capabilities (Camera barcode
+            This MiniApp utilizes native platform capabilities (Camera barcode
             scanner and secure biometric verification) to validate physical
             certificates and verify authorized administrative signatories.
           </p>
@@ -110,7 +110,7 @@ export default function TrustRegulatorTermsPage() {
             className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-semibold text-slate-200 hover:text-white transition flex items-center justify-center gap-2 cursor-pointer"
           >
             <ArrowRightIcon className="w-4 h-4 rotate-180" />
-            <span>Back to Super App Consent</span>
+            <span>Back to SuperApp Consent</span>
           </button>
           <Link
             href="/legal/trust-regulator/privacy"

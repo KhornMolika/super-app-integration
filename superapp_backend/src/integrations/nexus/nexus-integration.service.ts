@@ -1,4 +1,4 @@
-import {
+﻿import {
   Injectable,
   Logger,
   ServiceUnavailableException,
@@ -401,7 +401,7 @@ export class NexusIntegrationService {
     if (!hasReadme) {
       filesToPack.push({
         name: 'README.md',
-        data: Buffer.from(`# ${cleanPkg}\n\nAutomated package distribution for Super App.\n`, 'utf8'),
+        data: Buffer.from(`# ${cleanPkg}\n\nAutomated package distribution for SuperApp.\n`, 'utf8'),
       });
     }
 

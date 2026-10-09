@@ -33,23 +33,23 @@ export function PipelineTimingCard({
   onSavePipelineTiming,
 }: PipelineTimingCardProps) {
   return (
-    <Card className="p-6 sm:p-8">
-      <form onSubmit={onSavePipelineTiming}>
+    <Card className="p-6 sm:p-7 border-slate-200/80 dark:border-slate-800/80 shadow-xs rounded-2xl">
+      <form onSubmit={onSavePipelineTiming} className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-xl bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+            <div className="w-12 h-12 rounded-xl bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 flex items-center justify-center border border-brand-200/60 dark:border-brand-800/60 shrink-0">
+              <ClockIcon className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <span>Pipeline Automation &amp; Stage Timing</span>
-                <span className="text-xs px-2.5 py-0.5 rounded-full font-mono font-bold bg-accent-50 text-accent-800 dark:bg-accent-950/40 dark:text-accent-300 border border-accent-200 dark:border-accent-800 uppercase">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h3 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                  Pipeline Automation &amp; Stage Timing
+                </h3>
+                <span className="text-[11px] px-2.5 py-0.5 rounded-full font-mono font-bold bg-accent-50 text-accent-800 dark:bg-accent-950/40 dark:text-accent-300 border border-accent-200/80 dark:border-accent-800 uppercase">
                   {pipelineTiming.preset}
                 </span>
-              </h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+              </div>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                 Configure pacing durations (in seconds) between registration, validation progress, and build compilation.
               </p>
             </div>
@@ -59,16 +59,16 @@ export function PipelineTimingCard({
             <Button
               type="submit"
               disabled={savingTiming || loadingTiming}
-              className="bg-brand-600 hover:bg-brand-700 text-white text-sm px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm font-semibold"
+              className="bg-brand-600 hover:bg-brand-700 text-white text-xs px-4 py-2 rounded-xl flex items-center gap-2 shadow-xs font-semibold"
             >
               {savingTiming ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   <span>Saving...</span>
                 </>
               ) : (
                 <>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                   </svg>
                   <span>Save Timing Settings</span>
@@ -79,27 +79,27 @@ export function PipelineTimingCard({
         </div>
 
         {/* Presets Bar */}
-        <div className="mt-6 p-4 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="p-4 rounded-xl bg-slate-50/70 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <span className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-              <ZapIcon className="w-4 h-4 text-accent-500" />
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+              <ZapIcon className="w-3.5 h-3.5 text-accent-500" />
               <span>Quick Duration Presets</span>
             </span>
-            <span className="text-xs text-slate-500">
+            <span className="text-[11px] text-slate-500 block mt-0.5">
               Select a pre-configured timing template or customize individual stage seconds below.
             </span>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
             <button
               type="button"
               onClick={() => onApplyPreset('instant')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center gap-1.5 ${
                 pipelineTiming.preset === 'instant'
-                  ? 'bg-brand-600 text-white border-brand-600 shadow-sm'
+                  ? 'bg-brand-600 text-white border-brand-600 shadow-xs'
                   : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-brand-300'
               }`}
             >
-              <ZapIcon className="w-3.5 h-3.5" />
+              <ZapIcon className="w-3 h-3" />
               <span>Instant (0s)</span>
             </button>
             <button
@@ -107,11 +107,11 @@ export function PipelineTimingCard({
               onClick={() => onApplyPreset('realistic')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center gap-1.5 ${
                 pipelineTiming.preset === 'realistic'
-                  ? 'bg-brand-600 text-white border-brand-600 shadow-sm'
+                  ? 'bg-brand-600 text-white border-brand-600 shadow-xs'
                   : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-brand-300'
               }`}
             >
-              <ClockIcon className="w-3.5 h-3.5" />
+              <ClockIcon className="w-3 h-3" />
               <span>Realistic (2s)</span>
             </button>
             <button
@@ -119,25 +119,25 @@ export function PipelineTimingCard({
               onClick={() => onApplyPreset('demo')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center gap-1.5 ${
                 pipelineTiming.preset === 'demo'
-                  ? 'bg-brand-600 text-white border-brand-600 shadow-sm'
+                  ? 'bg-brand-600 text-white border-brand-600 shadow-xs'
                   : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-brand-300'
               }`}
             >
-              <FilmIcon className="w-3.5 h-3.5" />
+              <FilmIcon className="w-3 h-3" />
               <span>Demo Mode (5s)</span>
             </button>
           </div>
         </div>
 
         {/* Duration Input Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 space-y-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/60 space-y-2 shadow-xs">
             <div className="flex items-center justify-between">
               <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                 <ClockIcon className="w-3.5 h-3.5 text-slate-500" />
                 <span>Validation Start Delay</span>
               </Label>
-              <span className="text-xs font-mono font-bold text-brand-600 dark:text-brand-400">
+              <span className="text-xs font-mono font-bold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/50 px-1.5 py-0.5 rounded">
                 {pipelineTiming.validationStartDelaySec}s
               </span>
             </div>
@@ -155,20 +155,20 @@ export function PipelineTimingCard({
                   preset: 'custom',
                 });
               }}
-              className="font-mono text-sm"
+              className="font-mono text-xs sm:text-sm rounded-lg"
             />
             <p className="text-[11px] text-slate-500 leading-tight">
               Delay before scanning begins after registration.
             </p>
           </div>
 
-          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 space-y-2">
+          <div className="p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/60 space-y-2 shadow-xs">
             <div className="flex items-center justify-between">
               <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                 <SearchIcon className="w-3.5 h-3.5 text-slate-500" />
                 <span>Security Scan Pacing</span>
               </Label>
-              <span className="text-xs font-mono font-bold text-brand-600 dark:text-brand-400">
+              <span className="text-xs font-mono font-bold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/50 px-1.5 py-0.5 rounded">
                 {pipelineTiming.securityScanPacingSec}s
               </span>
             </div>
@@ -186,20 +186,20 @@ export function PipelineTimingCard({
                   preset: 'custom',
                 });
               }}
-              className="font-mono text-sm"
+              className="font-mono text-xs sm:text-sm rounded-lg"
             />
             <p className="text-[11px] text-slate-500 leading-tight">
               Pacing between AST, SAST, and digest checks.
             </p>
           </div>
 
-          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 space-y-2">
+          <div className="p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/60 space-y-2 shadow-xs">
             <div className="flex items-center justify-between">
               <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                 <DotBadge color="emerald" pulse />
                 <span>Validation Pass Cooldown</span>
               </Label>
-              <span className="text-xs font-mono font-bold text-brand-600 dark:text-brand-400">
+              <span className="text-xs font-mono font-bold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/50 px-1.5 py-0.5 rounded">
                 {pipelineTiming.validationPassDelaySec}s
               </span>
             </div>
@@ -217,20 +217,20 @@ export function PipelineTimingCard({
                   preset: 'custom',
                 });
               }}
-              className="font-mono text-sm"
+              className="font-mono text-xs sm:text-sm rounded-lg"
             />
             <p className="text-[11px] text-slate-500 leading-tight">
               Delay before emitting &quot;Validation Passed&quot; card.
             </p>
           </div>
 
-          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 space-y-2">
+          <div className="p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/60 space-y-2 shadow-xs">
             <div className="flex items-center justify-between">
               <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                 <HammerIcon className="w-3.5 h-3.5 text-slate-500" />
                 <span>Build Trigger Delay</span>
               </Label>
-              <span className="text-xs font-mono font-bold text-brand-600 dark:text-brand-400">
+              <span className="text-xs font-mono font-bold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/50 px-1.5 py-0.5 rounded">
                 {pipelineTiming.buildTriggerDelaySec}s
               </span>
             </div>
@@ -248,7 +248,7 @@ export function PipelineTimingCard({
                   preset: 'custom',
                 });
               }}
-              className="font-mono text-sm"
+              className="font-mono text-xs sm:text-sm rounded-lg"
             />
             <p className="text-[11px] text-slate-500 leading-tight">
               Delay before queuing Jenkins compilation.
@@ -257,8 +257,8 @@ export function PipelineTimingCard({
         </div>
 
         {/* Telegram UI Style & Buttons Options */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 p-4 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800">
-          <div className="space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50/70 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800">
+          <div className="space-y-1.5">
             <Label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
               <DevicePhoneIcon className="w-3.5 h-3.5 text-slate-500" />
               <span>Telegram Notification Style</span>
@@ -271,7 +271,7 @@ export function PipelineTimingCard({
                   telegramStyle: e.target.value as 'rich_cards' | 'compact',
                 })
               }
-              className="w-full text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-3 py-2"
+              className="w-full text-xs sm:text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-3 py-2 shadow-xs"
             >
               <option value="rich_cards">Rich Cards with Formatted Badges (Recommended)</option>
               <option value="compact">Compact Plain Summary</option>
@@ -281,13 +281,13 @@ export function PipelineTimingCard({
             </p>
           </div>
 
-          <div className="flex items-center justify-between p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 mt-2 sm:mt-0">
+          <div className="flex items-center justify-between p-3.5 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 shadow-xs">
             <div>
               <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                 <RadioButtonIcon className="w-3.5 h-3.5 text-brand-500" />
                 <span>Interactive Action Buttons</span>
               </span>
-              <span className="text-[11px] text-slate-500 block">
+              <span className="text-[11px] text-slate-500 block mt-0.5">
                 Attach <code>[View Backoffice]</code>, <code>[Download APK]</code> buttons.
               </span>
             </div>
@@ -300,7 +300,7 @@ export function PipelineTimingCard({
                   enableTelegramActionButtons: e.target.checked,
                 })
               }
-              className="w-5 h-5 accent-brand-600 rounded cursor-pointer"
+              className="w-4.5 h-4.5 accent-brand-600 rounded cursor-pointer"
             />
           </div>
         </div>

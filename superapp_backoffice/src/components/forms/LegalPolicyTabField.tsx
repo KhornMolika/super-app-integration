@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Label, Textarea, Button } from '@/components/ui/inputs';
@@ -29,7 +29,7 @@ export interface LegalPolicyTabFieldProps {
 
 const DEFAULT_TERMS_TEMPLATE = `# Terms of Service
 
-1. **Acceptance of Terms**: By accessing or using this mini application within the Super App container, you agree to be bound by these Terms of Service.
+1. **Acceptance of Terms**: By accessing or using this mini application within the SuperApp container, you agree to be bound by these Terms of Service.
 2. **Authorized Use**: This service is provided for legitimate personal or business financial operations authorized under regulatory guidelines.
 3. **Data Security**: All transactions are authenticated using end-to-end cryptographic signatures and biometric authorization.
 4. **Modifications & Termination**: The provider reserves the right to modify features or suspend access in accordance with regulatory compliance directives.`;
@@ -39,7 +39,7 @@ const DEFAULT_PRIVACY_TEMPLATE = `# Privacy Policy
 1. **Information Collection**: We only collect necessary operational information required to provide mini-app services (such as account verification and transaction records).
 2. **Device Capabilities**: Hardware access (e.g., Biometrics, Camera) is only requested with explicit user consent and processed locally.
 3. **Data Protection**: Personal and financial data is encrypted at rest (AES-256) and in transit (TLS 1.3). We never sell user data to third parties.
-4. **User Rights**: You may review, export, or request deletion of your session history through the Super App privacy center.`;
+4. **User Rights**: You may review, export, or request deletion of your session history through the SuperApp privacy center.`;
 
 export default function LegalPolicyTabField({
   title,
@@ -287,7 +287,7 @@ export default function LegalPolicyTabField({
                   <EyeIcon className="w-3.5 h-3.5 text-brand-600" />
                   <span>Rendered Policy Preview</span>
                 </span>
-                <span className="text-[10px] font-mono text-slate-400 uppercase bg-slate-200/60 dark:bg-slate-700 px-1.5 py-0.5 rounded">Super App Native View</span>
+                <span className="text-[10px] font-mono text-slate-400 uppercase bg-slate-200/60 dark:bg-slate-700 px-1.5 py-0.5 rounded">SuperApp Native View</span>
               </div>
               <MarkdownRenderer content={descValue} />
             </div>

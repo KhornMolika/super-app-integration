@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
@@ -119,7 +119,7 @@ private getAuthHeader(): string | null {
   }
 
   /**
-   * Universal parameterized pipeline trigger for all Mini App integration methods
+   * Universal parameterized pipeline trigger for all MiniApp integration methods
    * (WEBVIEW, FLUTTER_PACKAGE, NATIVE_SDK, DEEP_LINK)
    */
   async triggerMiniAppValidation(options: {
@@ -217,7 +217,7 @@ private getAuthHeader(): string | null {
 
       if (response.status === 201 || response.status === 200) {
         this.logger.log(
-          `Jenkins job "${job}" triggered successfully for ${options.integrationMethod} Mini App ${options.miniAppId}`,
+          `Jenkins job "${job}" triggered successfully for ${options.integrationMethod} MiniApp ${options.miniAppId}`,
         );
         return {
           success: true,
@@ -443,7 +443,7 @@ private getAuthHeader(): string | null {
 
     const triggerUrl = `${this.jenkinsUrl}/job/${jobName}/buildWithParameters?${params.toString()}`;
     this.logger.log(
-      `Triggering Jenkins Super App build pipeline: ${triggerUrl}`,
+      `Triggering Jenkins SuperApp build pipeline: ${triggerUrl}`,
     );
 
     try {
@@ -475,7 +475,7 @@ private getAuthHeader(): string | null {
         );
         return {
           success: true,
-          message: 'Super App build pipeline triggered successfully',
+          message: 'SuperApp build pipeline triggered successfully',
         };
       }
 
@@ -530,7 +530,7 @@ private getAuthHeader(): string | null {
 
     const triggerUrl = `${this.jenkinsUrl}/job/${jobName}/buildWithParameters?${params.toString()}`;
     this.logger.log(
-      `Triggering Jenkins Super App Web Sandbox pipeline: ${triggerUrl}`,
+      `Triggering Jenkins SuperApp Web Sandbox pipeline: ${triggerUrl}`,
     );
 
     try {
@@ -562,7 +562,7 @@ private getAuthHeader(): string | null {
         );
         return {
           success: true,
-          message: 'Super App Web Sandbox pipeline triggered successfully',
+          message: 'SuperApp Web Sandbox pipeline triggered successfully',
         };
       }
 

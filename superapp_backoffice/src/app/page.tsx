@@ -8,7 +8,7 @@ import { BackendServiceOfflineNotice } from '@/components/ui/BackendServiceOffli
 
 export default function Dashboard() {
   const { can, role } = useAuth();
-  const isManager = role === 'MINI_APP_DEVELOPER' || role === 'DEVELOPER';
+  const isManager = role === 'MINI_APP_DEVELOPER';
 
   const [metrics, setMetrics] = useState({
     totalMiniApps: 0,
@@ -52,7 +52,7 @@ export default function Dashboard() {
       const rawApps = Array.isArray(miniApps) ? miniApps : [];
       setMiniAppsList(rawApps);
 
-      // Pending Mini Apps needing review
+      // Pending MiniApps needing review
       const pendingApps = rawApps.filter(
         (a: any) => a.status === 'IN_REVIEW' || a.status === 'SUBMITTED',
       );
@@ -118,11 +118,11 @@ export default function Dashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">
-            {isManager ? 'Mini App Workspace' : 'Super App Administration'}
+            {isManager ? 'MiniApp Workspace' : 'SuperApp Administration'}
           </h2>
           <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
             {isManager
-              ? 'Monitor your registered Mini Apps, review statuses, security verification, and direct notifications.'
+              ? 'Monitor your registered MiniApps, review statuses, security verification, and direct notifications.'
               : 'Global ecosystem metrics, pending submissions, release versions, and platform infrastructure.'}
           </p>
         </div>
@@ -137,7 +137,7 @@ export default function Dashboard() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
               </svg>
-              <span>Register Mini App</span>
+              <span>Register MiniApp</span>
             </Link>
           )}
 
@@ -184,12 +184,12 @@ export default function Dashboard() {
       {/* ------------------------------------------------------------- */}
       {!isManager ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-          {/* Total Mini Apps */}
+          {/* Total MiniApps */}
           <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow relative overflow-hidden">
             <div className="w-12 h-12 rounded-xl bg-brand-50 dark:bg-brand-500/10 flex items-center justify-center mb-4 text-brand-600 dark:text-brand-400">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" /></svg>
             </div>
-            <h3 className="text-slate-500 dark:text-slate-400 font-semibold text-xs uppercase tracking-wider">Total Mini Apps</h3>
+            <h3 className="text-slate-500 dark:text-slate-400 font-semibold text-xs uppercase tracking-wider">Total MiniApps</h3>
             <div className="mt-2 flex items-baseline space-x-2">
               <p className="text-3xl font-extrabold text-slate-800 dark:text-slate-100">{metrics.totalMiniApps}</p>
             </div>
@@ -217,7 +217,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Super App Test Build Version */}
+          {/* SuperApp Test Build Version */}
           <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-amber-200 dark:border-amber-800/40 hover:shadow-md transition-shadow relative overflow-hidden">
             <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center mb-4 text-amber-600 dark:text-amber-400">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
@@ -254,14 +254,14 @@ export default function Dashboard() {
         /* MA MANAGER DASHBOARD METRICS */
         /* ------------------------------------------------------------- */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* My Total Mini Apps */}
+          {/* My Total MiniApps */}
           <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow">
             <div className="w-12 h-12 rounded-xl bg-brand-50 dark:bg-brand-500/10 flex items-center justify-center mb-4 text-brand-600 dark:text-brand-400">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
               </svg>
             </div>
-            <h3 className="text-slate-500 dark:text-slate-400 font-semibold text-xs uppercase tracking-wider">My Mini Apps</h3>
+            <h3 className="text-slate-500 dark:text-slate-400 font-semibold text-xs uppercase tracking-wider">My MiniApps</h3>
             <div className="mt-2 flex items-baseline space-x-2">
               <p className="text-3xl font-extrabold text-slate-800 dark:text-slate-100">{miniAppsList.length}</p>
             </div>
@@ -300,7 +300,7 @@ export default function Dashboard() {
             <div className="mt-2 flex items-baseline space-x-2">
               <p className="text-3xl font-extrabold text-slate-800 dark:text-slate-100">{myPublishedAppsCount}</p>
             </div>
-            <p className="text-xs text-slate-400 mt-1">Live in Super App ecosystem</p>
+            <p className="text-xs text-slate-400 mt-1">Live in SuperApp ecosystem</p>
           </div>
 
           {/* Direct Telegram Alerts */}
@@ -333,14 +333,14 @@ export default function Dashboard() {
       )}
 
       {/* ------------------------------------------------------------- */}
-      {/* MA MANAGER VIEW: Mini Apps Overview Table & Status */}
+      {/* MA MANAGER VIEW: MiniApps Overview Table & Status */}
       {/* ------------------------------------------------------------- */}
       {isManager && (
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100 dark:border-slate-700/60">
             <div>
               <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                My Mini Apps Lifecycle
+                My MiniApps Lifecycle
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Status of your submitted packages, automated security scans, and build revisions.
@@ -350,7 +350,7 @@ export default function Dashboard() {
               href="/miniapps"
               className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-700 inline-flex items-center gap-1.5"
             >
-              <span>View All Mini Apps</span>
+              <span>View All MiniApps</span>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
               </svg>
@@ -364,15 +364,15 @@ export default function Dashboard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
               </div>
-              <h4 className="text-base font-bold text-slate-800 dark:text-slate-200">No Mini Apps Registered Yet</h4>
+              <h4 className="text-base font-bold text-slate-800 dark:text-slate-200">No MiniApps Registered Yet</h4>
               <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                Get started by registering your Flutter or Web Mini App into the Super App ecosystem.
+                Get started by registering your Flutter or Web MiniApp into the SuperApp ecosystem.
               </p>
               <Link
                 href="/miniapps/register"
                 className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-xl shadow-sm"
               >
-                Register Mini App
+                Register MiniApp
               </Link>
             </div>
           ) : (
@@ -380,7 +380,7 @@ export default function Dashboard() {
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 uppercase font-semibold text-[10px] tracking-wider">
-                    <th className="py-3 px-4">Mini App</th>
+                    <th className="py-3 px-4">MiniApp</th>
                     <th className="py-3 px-4">App ID</th>
                     <th className="py-3 px-4">Type</th>
                     <th className="py-3 px-4">Version</th>

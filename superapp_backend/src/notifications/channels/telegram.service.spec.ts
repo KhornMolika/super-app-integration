@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+﻿import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TelegramService } from './telegram.service';
@@ -142,7 +142,7 @@ describe('TelegramService & Helper Modules', () => {
       );
       expect(TelegramCardHelper.formatHeader('WARNING')).toBe('Warning Notice');
       expect(TelegramCardHelper.formatHeader('UNKNOWN')).toBe(
-        'Super App Notification',
+        'SuperApp Notification',
       );
     });
   });

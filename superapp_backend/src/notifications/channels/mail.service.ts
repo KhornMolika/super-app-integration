@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import type { Resend } from 'resend';
 import { MailApiHelper } from './helpers/mail-api.helper';
 import { MailTemplateHelper } from './helpers/mail-template.helper';
@@ -47,6 +47,12 @@ export class MailService {
    */
   public isDeliverableEmail(email?: string): boolean {
     return this.apiHelper.isDeliverableEmail(email);
+  }
+
+  public async validateDeliverability(
+    email?: string,
+  ): Promise<{ valid: boolean; reason?: string }> {
+    return this.apiHelper.validateDeliverability(email);
   }
 
   /**
@@ -99,7 +105,7 @@ export class MailService {
     );
     try {
       const result = await this.resend.emails.send({
-        from: `FSA Super App <${this.fromEmail}>`,
+        from: `FSA SuperApp <${this.fromEmail}>`,
         to: toEmail,
         subject: template.subject,
         html: template.html,
@@ -140,7 +146,7 @@ export class MailService {
         score,
         detailsUrl,
       ),
-      from: `Super App Security Governance <${this.fromEmail}>`,
+      from: `SuperApp Security Governance <${this.fromEmail}>`,
     };
     return this.dispatchLifecycleNotification(toEmail, template, {
       dummyLog: `[DUMMY] Would have sent Security Passed Email to ${toEmail} for ${appName} (Score: ${score}/100)`,
@@ -164,7 +170,7 @@ export class MailService {
         findings,
         detailsUrl,
       ),
-      from: `Super App Security Governance <${this.fromEmail}>`,
+      from: `SuperApp Security Governance <${this.fromEmail}>`,
     };
     return this.dispatchLifecycleNotification(toEmail, template, {
       dummyLog: `[DUMMY] Would have sent Security Failed Email to ${toEmail} for ${appName} (Score: ${score}, Findings: ${findings.length})`,
@@ -209,7 +215,7 @@ export class MailService {
         apkUrl,
         sandboxUrl,
       ),
-      from: `Super App Platform <${this.fromEmail}>`,
+      from: `SuperApp Platform <${this.fromEmail}>`,
     };
     return this.dispatchLifecycleNotification(toEmail, template, {
       dummyLog: `[DUMMY] Would have sent Test Build Email to ${toEmail} for ${appName} (APK: ${apkUrl}, Version: ${displayVersion})`,
@@ -237,7 +243,7 @@ export class MailService {
         errorMessage,
         detailsUrl,
       ),
-      from: `Super App CI Pipeline <${this.fromEmail}>`,
+      from: `SuperApp CI Pipeline <${this.fromEmail}>`,
     };
     return this.dispatchLifecycleNotification(toEmail, template, {
       dummyLog: `[DUMMY] Would have sent Build Failed Email to ${toEmail} for ${appName} (${displayVersion})`,
@@ -254,7 +260,7 @@ export class MailService {
   ): Promise<void> {
     const template = {
       ...MailTemplateHelper.renderMiniAppApprovedEmail(appName, detailsUrl),
-      from: `Super App Governance <${this.fromEmail}>`,
+      from: `SuperApp Governance <${this.fromEmail}>`,
     };
     return this.dispatchLifecycleNotification(toEmail, template, {
       dummyLog: `[DUMMY] Would have sent Approval Email to ${toEmail} for ${appName}`,
@@ -276,7 +282,7 @@ export class MailService {
         reason,
         detailsUrl,
       ),
-      from: `Super App Governance <${this.fromEmail}>`,
+      from: `SuperApp Governance <${this.fromEmail}>`,
     };
     return this.dispatchLifecycleNotification(toEmail, template, {
       dummyLog: `[DUMMY] Would have sent Rejection Email to ${toEmail} for ${appName}`,
@@ -298,7 +304,7 @@ export class MailService {
         reason,
         detailsUrl,
       ),
-      from: `Super App Governance <${this.fromEmail}>`,
+      from: `SuperApp Governance <${this.fromEmail}>`,
     };
     return this.dispatchLifecycleNotification(toEmail, template, {
       dummyLog: `[DUMMY] Would have sent Changes Requested Email to ${toEmail} for ${appName}`,
@@ -324,7 +330,7 @@ export class MailService {
         version,
         detailsUrl,
       ),
-      from: `Super App Governance <${this.fromEmail}>`,
+      from: `SuperApp Governance <${this.fromEmail}>`,
     };
     return this.dispatchLifecycleNotification(toEmail, template, {
       dummyLog: `[DUMMY] Would have sent Activated Email to ${toEmail} for ${appName} (${displayVersion})`,
@@ -355,7 +361,7 @@ export class MailService {
     }
 
     try {
-      const from = rendered.from || `FSA Super App <${this.fromEmail}>`;
+      const from = rendered.from || `FSA SuperApp <${this.fromEmail}>`;
       const result = await this.resend.emails.send({
         from,
         to: toEmail,

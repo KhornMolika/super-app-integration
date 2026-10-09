@@ -1,4 +1,4 @@
-export interface SecurityCheckMetadata {
+﻿export interface SecurityCheckMetadata {
   id: string;
   name: string;
   tool: string;
@@ -92,7 +92,7 @@ export const SECURITY_CHECK_METADATA: Record<string, SecurityCheckMetadata> = {
   capability_gate: {
     id: 'capability_gate',
     name: 'Host Capability Gatekeeper Audit',
-    tool: 'Super App Gatekeeper',
+    tool: 'SuperApp Gatekeeper',
     icon: 'shield-check',
     description: 'Verifies declared host capabilities against platform policies and app store guidelines.',
     methods: ['FLUTTER_PACKAGE', 'NATIVE_SDK', 'DEEP_LINK'],
@@ -207,9 +207,9 @@ export const STAGE_CATALOG: Record<string, StageCatalogItem> = {
   capability_gate: {
     id: 'capability_gate',
     name: 'Host Capability Gatekeeper Audit',
-    tool: 'Super App Gatekeeper',
+    tool: 'SuperApp Gatekeeper',
     icon: 'shield-check',
-    defaultTitle: 'Super App Capability Boundary Verification',
+    defaultTitle: 'SuperApp Capability Boundary Verification',
     description: 'Verifies declared host capabilities against platform policies and app store guidelines.',
   },
   // Aliases for backwards compatibility

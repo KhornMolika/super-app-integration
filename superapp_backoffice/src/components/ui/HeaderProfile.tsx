@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
@@ -25,15 +25,15 @@ export function HeaderProfile() {
     },
     {
       id: 'MINI_APP_DEVELOPER',
-      label: 'Manager',
+      label: 'MiniApp Developer',
       badgeColor: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
-      description: 'Package creation & submission',
+      description: 'Package creation, integration & submission',
     },
     {
-      id: 'DEVELOPER',
-      label: 'Developer',
-      badgeColor: 'bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/30',
-      description: 'Read-only catalog & sandbox test',
+      id: 'QA_TESTER',
+      label: 'QA Tester',
+      badgeColor: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30',
+      description: 'E2E testing, registration & sandbox verification',
     },
   ];
 

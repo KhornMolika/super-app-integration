@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
@@ -198,7 +198,7 @@ export default function PermissionDetailPage({ params }: { params: Promise<{ id:
               </div>
               
               <div>
-                <Label>Min Super App Version</Label>
+                <Label>Min SuperApp Version</Label>
                 <Input 
                   value={permission.minSuperAppVersion || ''} 
                   onChange={e => setPermission({...permission, minSuperAppVersion: e.target.value})} 
@@ -207,7 +207,7 @@ export default function PermissionDetailPage({ params }: { params: Promise<{ id:
               </div>
               
               <div>
-                <Label>Max Super App Version</Label>
+                <Label>Max SuperApp Version</Label>
                 <Input 
                   value={permission.maxSuperAppVersion || ''} 
                   onChange={e => setPermission({...permission, maxSuperAppVersion: e.target.value})} 

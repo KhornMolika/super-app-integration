@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { Label, Select } from '@/components/ui/inputs';
@@ -64,7 +64,7 @@ export default function IntegrationForm({
           disabled={!isEditable}
         >
           <option value={IntegrationMethod.WEBVIEW}>WebView (Web App)</option>
-          <option value={IntegrationMethod.FLUTTER_PACKAGE}>Flutter Package (Super App)</option>
+          <option value={IntegrationMethod.FLUTTER_PACKAGE}>Flutter Package (SuperApp)</option>
           <option value={IntegrationMethod.NATIVE_SDK}>Native SDK (iOS / Android Framework)</option>
           <option value={IntegrationMethod.DEEP_LINK}>Deep Link (External App / App Links)</option>
         </Select>

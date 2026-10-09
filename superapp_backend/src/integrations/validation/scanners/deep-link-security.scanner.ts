@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MiniApp } from '../../../miniapps/entities/miniapp.entity';
@@ -32,7 +32,7 @@ export class DeepLinkSecurityScanner {
   }
 
   /**
-   * Performs dynamic security scan for Deep Link Mini Apps
+   * Performs dynamic security scan for Deep Link MiniApps
    */
   async scan(
     miniAppId: string,

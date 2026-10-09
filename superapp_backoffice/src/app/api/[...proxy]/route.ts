@@ -13,7 +13,6 @@ async function getDevAuthToken(forceRefresh = false): Promise<string | null> {
     process.env.DEV_FALLBACK_USER_EMAIL,
     process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL,
     'superadmin@superapp.gov.kh',
-    'superadmin@example.com',
   ].filter(Boolean) as string[];
 
   for (const email of candidateEmails) {

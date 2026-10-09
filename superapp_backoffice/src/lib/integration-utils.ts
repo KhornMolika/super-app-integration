@@ -1,5 +1,5 @@
-/**
- * Validation and utility functions for Mini App Technical Integrations
+﻿/**
+ * Validation and utility functions for MiniApp Technical Integrations
  */
 
 export const validateProductionUrlFormat = (url: string) => {

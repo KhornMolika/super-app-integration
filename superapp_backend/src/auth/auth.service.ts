@@ -140,7 +140,81 @@ export class AuthService implements OnModuleInit {
       role.permissions?.forEach((p: any) => permissions.add(p.name));
     });
 
-    const roles = (user.roles || []).map((r: any) => r.name);
+    const roles: string[] = (user.roles || [])
+      .map((r: any) => (typeof r === 'string' ? r : r?.name))
+      .filter(Boolean);
+
+    // If permissions not explicitly loaded from DB relations, supply standard defaults
+    if (permissions.size === 0) {
+      if (roles.includes('SUPER_ADMIN')) {
+        [
+          'miniapp:create',
+          'miniapp:read',
+          'miniapp:update',
+          'miniapp:delete',
+          'miniapp:approve',
+          'miniapp:reject',
+          'miniapp:suspend',
+          'miniapp:submit',
+          'miniapp_permission:approve',
+          'issue:resolve',
+          'permission_proposal:read',
+          'permission_proposal:review',
+          'permission_proposal:approve',
+          'super_app:read',
+          'super_app:manage',
+          'user:read',
+          'user:manage',
+          'role:read',
+          'role:manage',
+          'permission:read',
+          'permission:manage',
+          'organization:read',
+          'organization:manage',
+          'audit_log:read',
+          'settings:manage',
+        ].forEach((p) => permissions.add(p));
+      }
+      if (roles.includes('ADMIN')) {
+        [
+          'miniapp:create',
+          'miniapp:read',
+          'miniapp:update',
+          'miniapp:delete',
+          'miniapp:approve',
+          'miniapp:reject',
+          'miniapp:suspend',
+          'miniapp:submit',
+          'miniapp_permission:approve',
+          'issue:resolve',
+          'permission_proposal:read',
+          'permission_proposal:review',
+          'permission_proposal:approve',
+          'super_app:read',
+          'super_app:manage',
+          'user:read',
+          'user:manage',
+          'role:read',
+          'permission:read',
+          'organization:read',
+          'organization:manage',
+          'audit_log:read',
+          'settings:manage',
+        ].forEach((p) => permissions.add(p));
+      }
+      if (roles.includes('MINI_APP_DEVELOPER') || roles.includes('QA_TESTER') || roles.includes('DEVELOPER')) {
+        [
+          'miniapp:create',
+          'miniapp:read',
+          'miniapp:update',
+          'miniapp:submit',
+          'permission_proposal:read',
+          'permission:read',
+          'super_app:read',
+          'organization:read',
+        ].forEach((p) => permissions.add(p));
+      }
+    }
 
     const accessPayload = {
       sub: user.id,
@@ -210,12 +284,12 @@ export class AuthService implements OnModuleInit {
     }
 
     if (!user) {
-      return { success: false, message: 'Invalid credentials or user not found' };
+      return { success: false as const, message: 'Invalid credentials or user not found' };
     }
 
     const tokens = this.generateAuthTokens(user);
     return {
-      success: true,
+      success: true as const,
       message: 'Logged in successfully',
       ...tokens,
     };

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
@@ -144,7 +144,7 @@ export default function MobilePreviewPage() {
             </div>
             <div>
               <h1 className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
-                <span>FSA Super App</span>
+                <span>FSA SuperApp</span>
                 <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-accent-500/20 text-accent-300 rounded border border-accent-500/30">
                   Mobile Simulator
                 </span>
@@ -317,10 +317,10 @@ export default function MobilePreviewPage() {
                 </div>
               )}
 
-              {/* Flutter Super App Web Iframe */}
+              {/* Flutter SuperApp Web Iframe */}
               <iframe
                 src={sandboxUrl}
-                title="Super App Mobile View"
+                title="SuperApp Mobile View"
                 className="w-full h-full border-none bg-white"
                 allow="geolocation; camera; microphone; accelerometer; gyroscope"
               />
@@ -336,7 +336,7 @@ export default function MobilePreviewPage() {
         {/* Quick Tips Floating Banner */}
         <div className="absolute bottom-4 right-4 hidden md:flex items-center gap-2 bg-slate-900/80 backdrop-blur-md px-3.5 py-2 rounded-xl border border-slate-800 text-xs text-slate-400">
           <SparklesIcon className="w-4 h-4 text-accent-400" />
-          <span>Interactive Flutter Mini App Sandbox container loaded live.</span>
+          <span>Interactive Flutter MiniApp Sandbox container loaded live.</span>
         </div>
       </div>
 

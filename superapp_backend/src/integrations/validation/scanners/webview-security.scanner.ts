@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as dns from 'dns';
@@ -47,7 +47,7 @@ export class WebViewSecurityScanner {
   }
 
   /**
-   * Performs a dynamic, real-time security scan for WebView Mini Apps based strictly on selected checks
+   * Performs a dynamic, real-time security scan for WebView MiniApps based strictly on selected checks
    */
   async scan(
     miniAppId: string,
@@ -58,7 +58,7 @@ export class WebViewSecurityScanner {
       relations: { owner: true },
     });
     if (!app) {
-      this.logger.error(`Scan failed: Mini App ${miniAppId} not found`);
+      this.logger.error(`Scan failed: MiniApp ${miniAppId} not found`);
       return;
     }
 
@@ -164,8 +164,8 @@ export class WebViewSecurityScanner {
           severity: 'CRITICAL',
           category: 'SSRF',
           title: 'Server-Side Request Forgery (SSRF) Risk',
-          description: `Target domain ${parsedUrl.hostname} resolves to internal IP ${resolvedIp}. Super App prohibits routing to intranet subnets in PROD.`,
-          recommendation: 'Ensure your Mini App is hosted on a public fully qualified domain name (FQDN).',
+          description: `Target domain ${parsedUrl.hostname} resolves to internal IP ${resolvedIp}. SuperApp prohibits routing to intranet subnets in PROD.`,
+          recommendation: 'Ensure your MiniApp is hosted on a public fully qualified domain name (FQDN).',
         });
       } else {
         stages.ssrf.status = 'COMPLETED';
@@ -194,7 +194,7 @@ export class WebViewSecurityScanner {
           severity: 'CRITICAL',
           category: 'Transport Security',
           title: 'Insecure Cleartext HTTP Protocol',
-          description: 'Target endpoint uses plain HTTP. All Super App Mini Apps must enforce HTTPS with TLS 1.2+ encryption.',
+          description: 'Target endpoint uses plain HTTP. All SuperApp MiniApps must enforce HTTPS with TLS 1.2+ encryption.',
           recommendation: 'Obtain an SSL/TLS certificate and enforce HTTPS on your server.',
         });
       } else {

@@ -18,7 +18,7 @@ export class AuthController {
   @Post('login')
   async login(@Body() body: LoginDto, @Res({ passthrough: true }) res: Response) {
     const result = await this.authService.login(body);
-    if (result.success && result.access_token) {
+    if (result.success && 'access_token' in result && result.access_token) {
       const isProd = process.env.NODE_ENV === 'production';
       res.cookie('auth_token', result.access_token, {
         httpOnly: true,
@@ -46,7 +46,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await this.authService.register(body);
-    if (result.success && result.access_token) {
+    if (result.success && 'access_token' in result && result.access_token) {
       const isProd = process.env.NODE_ENV === 'production';
       res.cookie('auth_token', result.access_token, {
         httpOnly: true,
@@ -84,7 +84,7 @@ export class AuthController {
     }
 
     const result = await this.authService.refreshToken(refreshToken);
-    if (result.success && result.access_token) {
+    if (result.success && 'access_token' in result && result.access_token) {
       const isProd = process.env.NODE_ENV === 'production';
       res.cookie('auth_token', result.access_token, {
         httpOnly: true,

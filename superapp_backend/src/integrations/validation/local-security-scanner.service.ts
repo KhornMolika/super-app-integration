@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import {
   type SecurityCheckMetadata,
   SECURITY_CHECK_METADATA,
@@ -32,7 +32,7 @@ export class LocalSecurityScannerService {
   ) {}
 
   /**
-   * Performs a dynamic, real-time security scan for WebView Mini Apps
+   * Performs a dynamic, real-time security scan for WebView MiniApps
    */
   async scanWebView(
     miniAppId: string,
@@ -42,7 +42,7 @@ export class LocalSecurityScannerService {
   }
 
   /**
-   * Performs a dynamic security scan for Flutter Package Mini Apps
+   * Performs a dynamic security scan for Flutter Package MiniApps
    */
   async scanFlutterPackage(
     miniAppId: string,
@@ -52,7 +52,7 @@ export class LocalSecurityScannerService {
   }
 
   /**
-   * Performs dynamic security scan for Native SDK Mini Apps
+   * Performs dynamic security scan for Native SDK MiniApps
    */
   async scanNativeSdk(
     miniAppId: string,
@@ -62,7 +62,7 @@ export class LocalSecurityScannerService {
   }
 
   /**
-   * Performs dynamic security scan for Deep Link Mini Apps
+   * Performs dynamic security scan for Deep Link MiniApps
    */
   async scanDeepLink(
     miniAppId: string,

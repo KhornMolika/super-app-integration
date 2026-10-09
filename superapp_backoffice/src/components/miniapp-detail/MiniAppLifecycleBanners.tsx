@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { Button } from '@/components/ui/inputs';
@@ -43,7 +43,7 @@ export default function MiniAppLifecycleBanners({
 }: MiniAppLifecycleBannersProps) {
   const stageDefs = [
     { id: 'preflight', name: '1. Pre-Flight & Manifest', icon: <ClipboardCheckIcon className="w-4 h-4 text-accent-500" />, defaultDetails: 'Verifying dependency checksums and manifest integrity.' },
-    { id: 'compile', name: '2. Fastlane APK Packaging', icon: <SettingsIcon className="w-4 h-4 text-amber-500" />, defaultDetails: 'Assembling Flutter Super App container and compiling debug APK.' },
+    { id: 'compile', name: '2. Fastlane APK Packaging', icon: <SettingsIcon className="w-4 h-4 text-amber-500" />, defaultDetails: 'Assembling Flutter SuperApp container and compiling debug APK.' },
     { id: 'publish', name: '3. Publish to Nexus', icon: <PackageIcon className="w-4 h-4 text-emerald-500" />, defaultDetails: 'Uploading compiled APK artifact to Sonatype Nexus (apk-test-builds).' },
   ];
 
@@ -71,14 +71,14 @@ export default function MiniAppLifecycleBanners({
                   Pending Staged Revision
                 </h4>
                 <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
-                  Live Version Active in Super App
+                  Live Version Active in SuperApp
                 </span>
                 <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
                   Revision {pendingRevision.revisionStatus || 'IN_REVIEW'}
                 </span>
               </div>
               <p className="text-sm text-amber-800 dark:text-amber-200 mt-1 leading-relaxed">
-                You have staged updates pending publication. The current live version remains active for users in the Super App until this revision is published.
+                You have staged updates pending publication. The current live version remains active for users in the SuperApp until this revision is published.
               </p>
             </div>
           </div>
@@ -157,8 +157,8 @@ export default function MiniAppLifecycleBanners({
                   isUpdateProposal ? 'text-amber-900 dark:text-amber-200' : 'text-blue-900 dark:text-blue-200'
                 }`}>
                   {isUpdateProposal
-                    ? `Mini App Update Proposal${draftVersion ? ` (${draftVersion})` : ''}`
-                    : 'New Mini App Initial Submission'}
+                    ? `MiniApp Update Proposal${draftVersion ? ` (${draftVersion})` : ''}`
+                    : 'New MiniApp Initial Submission'}
                 </h4>
                 {isUpdateProposal && currentReleaseVersion && (
                   <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
@@ -206,7 +206,7 @@ export default function MiniAppLifecycleBanners({
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                   </svg>
-                  <span>{isUpdateProposal ? 'Approve Update' : 'Approve Mini App'}</span>
+                  <span>{isUpdateProposal ? 'Approve Update' : 'Approve MiniApp'}</span>
                 </Button>
                 <Button
                   type="button"
@@ -249,10 +249,10 @@ export default function MiniAppLifecycleBanners({
             </div>
             <div>
               <h4 className="text-base font-bold text-teal-900 dark:text-teal-200">
-                Mini App Approved — Build & Assembly Required
+                MiniApp Approved — Build & Assembly Required
               </h4>
               <p className="text-sm text-teal-800 dark:text-teal-200 mt-1 leading-relaxed">
-                Integration review approved by SA Admin. Build and validate the Super App test container before moving
+                Integration review approved by SA Admin. Build and validate the SuperApp test container before moving
                 to the TESTING phase for APK download.
               </p>
             </div>
@@ -291,13 +291,13 @@ export default function MiniAppLifecycleBanners({
               </div>
               <div>
                 <h4 className="text-base font-bold text-accent-900 dark:text-accent-200 flex items-center gap-2">
-                  <span>Super App Fastlane CI Build in Progress...</span>
+                  <span>SuperApp Fastlane CI Build in Progress...</span>
                   <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-accent-100 text-accent-800 dark:bg-accent-900/50 dark:text-accent-300 animate-pulse">
                     Compiling &amp; Packaging
                   </span>
                 </h4>
                 <p className="text-sm text-accent-800 dark:text-accent-200 mt-1 leading-relaxed">
-                  Assembling Flutter Super App container and compiling test APK. Progress updates automatically below.
+                  Assembling Flutter SuperApp container and compiling test APK. Progress updates automatically below.
                 </p>
               </div>
             </div>
@@ -386,7 +386,7 @@ export default function MiniAppLifecycleBanners({
               </div>
               <div>
                 <h4 className="text-base font-bold text-rose-900 dark:text-rose-200 flex items-center gap-2">
-                  <span>Super App Fastlane Build Failed</span>
+                  <span>SuperApp Fastlane Build Failed</span>
                   <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-300">
                     Packaging Error
                   </span>
@@ -447,7 +447,7 @@ export default function MiniAppLifecycleBanners({
                 Manual Sandbox Testing Phase
               </h4>
               <p className="text-sm text-accent-800 dark:text-accent-200 mt-1 leading-relaxed">
-                The test container has been compiled. Test the Mini App using the <strong>Sandbox Preview</strong> or{' '}
+                The test container has been compiled. Test the MiniApp using the <strong>Sandbox Preview</strong> or{' '}
                 <strong>Download Test APK</strong> on Android devices. When verified, SA Admin can Activate the app.
               </p>
             </div>
@@ -475,7 +475,7 @@ export default function MiniAppLifecycleBanners({
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                 </svg>
-                <span>Activate Mini App</span>
+                <span>Activate MiniApp</span>
               </Button>
             )}
           </div>

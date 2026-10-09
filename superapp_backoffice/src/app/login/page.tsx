@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth, ROLE_USER_PROFILES, Role } from '@/lib/auth';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isExpired = searchParams?.get('expired') === 'true';
@@ -62,8 +62,8 @@ export default function LoginPage() {
             </div>
           </div>
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-white">Super App Gateway</h2>
-            <p className="text-xs font-medium text-slate-400">Government Mini App Orchestration Platform</p>
+            <h2 className="text-2xl font-bold tracking-tight text-white">SuperApp Gateway</h2>
+            <p className="text-xs font-medium text-slate-400">Government MiniApp Orchestration Platform</p>
           </div>
         </div>
       </div>
@@ -120,40 +120,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* SSO Provider Placeholder */}
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-800" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-slate-900 px-3 text-slate-500 font-medium tracking-wider">
-                  Or continue with
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => alert('CamDX Single Sign-On integration configured. Direct SSO gateway handshake ready for deployment.')}
-                className="flex items-center justify-center gap-2 py-2 px-3 bg-slate-950/60 border border-slate-800 hover:border-slate-700 text-xs font-medium text-slate-300 rounded-xl transition-all hover:bg-slate-800/50"
-              >
-                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                CamDX SSO
-              </button>
-
-              <button
-                type="button"
-                onClick={() => alert('Government Keycloak / OpenID Connect provider ready for activation.')}
-                className="flex items-center justify-center gap-2 py-2 px-3 bg-slate-950/60 border border-slate-800 hover:border-slate-700 text-xs font-medium text-slate-300 rounded-xl transition-all hover:bg-slate-800/50"
-              >
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                Gov Keycloak
-              </button>
-            </div>
-          </div>
-
           {/* Quick Persona Switcher for QA / Local Testing */}
           <div className="mt-6 pt-5 border-t border-slate-800/80">
             <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2.5">
@@ -183,17 +149,17 @@ export default function LoginPage() {
                 onClick={() => handleQuickLogin('MINI_APP_DEVELOPER')}
                 className="p-2 text-left bg-slate-950/80 hover:bg-slate-800/80 border border-slate-800 rounded-lg text-slate-300 transition-colors"
               >
-                <div className="font-semibold text-emerald-400">Mini App Developer</div>
-                <div className="text-[10px] text-slate-500 truncate">developer@superapp.gov.kh</div>
+                <div className="font-semibold text-emerald-400">MiniApp Developer</div>
+                <div className="text-[10px] text-slate-500 truncate">ma-developer@superapp.gov.kh</div>
               </button>
 
               <button
                 type="button"
-                onClick={() => handleQuickLogin('DEVELOPER')}
+                onClick={() => handleQuickLogin('QA_TESTER')}
                 className="p-2 text-left bg-slate-950/80 hover:bg-slate-800/80 border border-slate-800 rounded-lg text-slate-300 transition-colors"
               >
-                <div className="font-semibold text-purple-400">Sandbox Tester</div>
-                <div className="text-[10px] text-slate-500 truncate">dev@superapp.gov.kh</div>
+                <div className="font-semibold text-indigo-400">QA Tester</div>
+                <div className="text-[10px] text-slate-500 truncate">qa@superapp.gov.kh</div>
               </button>
             </div>
           </div>
@@ -201,7 +167,7 @@ export default function LoginPage() {
           <div className="mt-6 text-center text-xs text-slate-400">
             Need a developer account?{' '}
             <Link href="/signup" className="font-semibold text-brand-400 hover:text-brand-300 transition-colors">
-              Sign up as Mini App Developer
+              Sign up as MiniApp Developer
             </Link>
           </div>
         </div>
@@ -209,3 +175,16 @@ export default function LoginPage() {
     </div>
   );
 }
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400 text-xs">
+        Loading SuperApp Gateway...
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
+  );
+}
+

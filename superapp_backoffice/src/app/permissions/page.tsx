@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -33,7 +33,7 @@ export default function PermissionsPage() {
         <div className="flex justify-between items-end mb-8">
           <div>
             <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Permissions Registry</h2>
-            <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">Manage standard permissions available for Mini Apps.</p>
+            <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">Manage standard permissions available for MiniApps.</p>
           </div>
           {can('permission:manage') && <Button>+ New Permission</Button>}
         </div>

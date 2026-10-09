@@ -7,6 +7,7 @@ import { EndUserAuthGuard, OptionalEndUserAuthGuard } from './end-user-auth.guar
 import { EmailVerificationToken } from './entities/email-verification-token.entity';
 import { EndUser } from './entities/end-user.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
+import { User } from '../access-control/entities/user.entity';
 import { MobileAuthService } from './mobile-auth.service';
 import { MobileCatalogService } from './mobile-catalog.service';
 import { MobileController } from './mobile.controller';
@@ -21,6 +22,7 @@ import { PasswordService } from './password.service';
       EmailVerificationToken,
       RefreshToken,
       MiniApp,
+      User,
     ]),
   ],
   controllers: [MobileController],

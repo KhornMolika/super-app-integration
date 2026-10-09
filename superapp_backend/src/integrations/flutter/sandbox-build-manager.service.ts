@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as fs from 'fs';
@@ -143,7 +143,7 @@ export class SandboxBuildManagerService {
   /**
    * Triggers compilation of Flutter Web Sandbox via Jenkins pipeline, with local PowerShell fallback.
    */
-  async triggerBuild(triggeredBy: string = 'Super App Admin'): Promise<{ success: boolean; message: string }> {
+  async triggerBuild(triggeredBy: string = 'SuperApp Admin'): Promise<{ success: boolean; message: string }> {
     if (this.state === 'BUILDING') {
       return {
         success: false,
@@ -155,7 +155,7 @@ export class SandboxBuildManagerService {
     this.lastBuildStartTime = Date.now();
     this.triggeredBy = triggeredBy;
     this.exitCode = undefined;
-    this.message = `Triggering Jenkins Super App Web Sandbox pipeline (triggered by ${triggeredBy})...`;
+    this.message = `Triggering Jenkins SuperApp Web Sandbox pipeline (triggered by ${triggeredBy})...`;
     this.appendLog(`=== Sandbox Build Started by ${triggeredBy} ===`);
 
     try {

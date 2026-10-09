@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { useAuth } from '@/lib/auth';
 import { toast } from '@/components/ui/Toast';
 import { Select } from '@/components/ui/inputs';
+import { QrCodeSvg } from '@/components/ui/QrCodeSvg';
 import {
   DevicePhoneIcon,
   DownloadIcon,
@@ -81,13 +82,22 @@ export default function DownloadApkModal({
 
   const [targetEnv, setTargetEnv] = useState<'cloud' | 'lan'>('cloud');
 
+  // Check if running in production cloud environment
+  const isProduction =
+    process.env.NEXT_PUBLIC_ENVIRONMENT === 'PROD' ||
+    (typeof window !== 'undefined' &&
+      (window.location.hostname.includes('fintechcenterfsa.com') ||
+        (!['localhost', '127.0.0.1'].includes(window.location.hostname) &&
+          !window.location.hostname.startsWith('192.168.') &&
+          !window.location.hostname.startsWith('10.') &&
+          !window.location.hostname.startsWith('172.'))));
+
   useEffect(() => {
     setMounted(true);
     if (typeof window !== 'undefined') {
-      const isCloud = window.location.hostname.includes('fintechcenterfsa.com');
-      setTargetEnv(isCloud ? 'cloud' : 'lan');
+      setTargetEnv(isProduction ? 'cloud' : 'lan');
     }
-  }, []);
+  }, [isProduction]);
 
   // Fetch auto-detected IP and APK metadata
   const fetchNetworkInfo = async () => {
@@ -135,25 +145,23 @@ export default function DownloadApkModal({
     const port = networkData?.backendPort || '3000';
     const checkUrl = targetEnv === 'cloud'
       ? '/api/health'
-      : `http://${selectedIp}:${port}/api/mobile/auth/login`;
+      : `http://${selectedIp}:${port}/health`;
 
     const testConnection = async () => {
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 2500);
 
-        const res = targetEnv === 'cloud'
-          ? await fetch('/api/health', { signal: controller.signal })
-          : await fetch(checkUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: 'ping@test.com', password: 'ping' }),
-              signal: controller.signal,
-            });
+        const res = await fetch(checkUrl, {
+          method: 'GET',
+          signal: controller.signal,
+        }).catch(async () => {
+          return await fetch('/api/health', { signal: controller.signal });
+        });
         clearTimeout(timeoutId);
 
         if (isMounted) {
-          setBackendHealthy(res.status < 500);
+          setBackendHealthy(Boolean(res && res.status < 500));
           setCheckingBackend(false);
         }
       } catch (_) {
@@ -197,7 +205,7 @@ export default function DownloadApkModal({
   // Standardized Test APK filename across all channels: modal, direct links, and Telegram
   const activeFilename = `superapp-test-${normVer}.apk`;
 
-  const isCloud = targetEnv === 'cloud';
+  const isCloud = isProduction || targetEnv === 'cloud';
   const effectiveDownloadUrl = isCloud
     ? `https://app.fintechcenterfsa.com/api/download-apk?version=${encodeURIComponent(normVer)}&type=test&appName=superapp`
     : `http://${selectedIp}:${backofficePort}/api/download-apk?version=${encodeURIComponent(normVer)}&type=test&appName=superapp`;
@@ -241,7 +249,7 @@ export default function DownloadApkModal({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-white tracking-tight">
-                  Super App Mobile APK Download
+                  SuperApp Mobile APK Download
                 </h3>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                   {activeVersion}
@@ -255,7 +263,7 @@ export default function DownloadApkModal({
                 </span>
               </div>
               <p className="text-xs text-slate-300">
-                Install and test the unified Super App container on physical Android devices.
+                Install and test the unified SuperApp container on physical Android devices.
               </p>
             </div>
           </div>
@@ -272,26 +280,11 @@ export default function DownloadApkModal({
 
         {/* Modal Content Body */}
         <div className="p-6 space-y-5 overflow-y-auto">
-          {/* Admin-Only Environment Diagnostics */}
-          {isAdmin && (
+          {/* Local Development Only: Environment Diagnostics & LAN IP Selection */}
+          {isAdmin && !isProduction && (
             <>
               {/* Target Environment Switcher Tabs */}
               <div className="flex p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl gap-1 border border-slate-200 dark:border-slate-700">
-                <button
-                  type="button"
-                  onClick={() => setTargetEnv('cloud')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                    isCloud
-                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-300 shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                  }`}
-                >
-                  <GlobeIcon className="w-3.5 h-3.5 text-accent-500" />
-                  <span>Cloud Production</span>
-                  <span className="px-1.5 py-0.2 rounded text-[9px] bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-800">
-                    Live Cloud
-                  </span>
-                </button>
                 <button
                   type="button"
                   onClick={() => setTargetEnv('lan')}
@@ -307,9 +300,24 @@ export default function DownloadApkModal({
                     Wi-Fi / Hotspot
                   </span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setTargetEnv('cloud')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    isCloud
+                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-300 shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <GlobeIcon className="w-3.5 h-3.5 text-accent-500" />
+                  <span>Cloud Production</span>
+                  <span className="px-1.5 py-0.2 rounded text-[9px] bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-800">
+                    Live Cloud
+                  </span>
+                </button>
               </div>
 
-              {/* Environment Target Card (Admin Only) */}
+              {/* Environment Target Card (Local Dev Only) */}
               {!isCloud && (
                 <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-3">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -327,20 +335,22 @@ export default function DownloadApkModal({
                       </div>
                     </div>
 
-                    {/* IP Selector Dropdown */}
+                    {/* IP Selector Dropdown with deduplication */}
                     <div className="flex items-center gap-2 min-w-[200px]">
                       <Select
                         value={selectedIp}
                         onChange={(e) => setSelectedIp(e.target.value)}
                         className="!py-1.5 !px-3 text-xs font-mono font-bold"
                       >
-                        {networkData?.interfaces?.map((iface, idx) => (
+                        {Array.from(
+                          new Map(
+                            (networkData?.interfaces || []).map((iface) => [iface.address, iface])
+                          ).values()
+                        ).map((iface, idx) => (
                           <option key={idx} value={iface.address}>
                             {iface.address} ({iface.name}) {iface.isPrimary ? '★' : ''}
                           </option>
-                        )) || (
-                          <option value={selectedIp}>{selectedIp}</option>
-                        )}
+                        ))}
                       </Select>
                     </div>
                   </div>
@@ -352,11 +362,13 @@ export default function DownloadApkModal({
           {/* QR Code & Direct Scan Card */}
           <div className="flex flex-col sm:flex-row items-center gap-6 p-5 rounded-2xl bg-gradient-to-br from-accent-50/30 via-slate-50 to-white dark:from-accent-950/20 dark:via-slate-800/40 dark:to-slate-900 border border-accent-200/60 dark:border-accent-800/40 shadow-xs">
             {/* QR Code */}
-            <div className="relative p-3 bg-white rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 flex-shrink-0">
-              <img
-                src={qrCodeUrl}
-                alt="Scan to Download Super App APK"
-                className="w-40 h-40 object-contain rounded-xl"
+            <div className="relative p-3 bg-white rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 flex-shrink-0 flex items-center justify-center">
+              <QrCodeSvg
+                value={effectiveDownloadUrl}
+                size={160}
+                fgColor="#0f172a"
+                bgColor="#ffffff"
+                className="w-40 h-40"
               />
               <div className="absolute -bottom-2 -right-2 p-1.5 rounded-full bg-accent-500 text-slate-950 font-bold shadow-md">
                 <QrCodeIcon className="w-4 h-4" />
@@ -388,21 +400,21 @@ export default function DownloadApkModal({
                 <button
                   type="button"
                   onClick={() => handleCopy(effectiveDownloadUrl, 'link')}
-                  className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer ${
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer shadow-2xs ${
                     copiedLink
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
-                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750'
+                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                      : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 hover:text-slate-950 dark:text-slate-100 dark:hover:text-white border-slate-300 dark:border-slate-600'
                   }`}
                 >
                   {copiedLink ? (
                     <>
-                      <CheckIcon className="w-3.5 h-3.5 text-emerald-500" />
-                      <span>Copied URL!</span>
+                      <CheckIcon className="w-3.5 h-3.5 text-white" />
+                      <span className="font-bold text-white">Copied URL!</span>
                     </>
                   ) : (
                     <>
-                      <CopyIcon className="w-3.5 h-3.5 text-slate-500" />
-                      <span>Copy Link</span>
+                      <CopyIcon className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />
+                      <span className="font-semibold text-slate-800 dark:text-slate-100">Copy Link</span>
                     </>
                   )}
                 </button>
@@ -430,9 +442,9 @@ export default function DownloadApkModal({
                 </p>
               </div>
               <div className="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
-                <span className="font-bold text-brand-600 dark:text-brand-400">3. Test Mini App</span>
+                <span className="font-bold text-brand-600 dark:text-brand-400">3. Test MiniApp</span>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal">
-                  Open your registered Mini App from the Super App grid to test features in real-time.
+                  Open your registered MiniApp from the SuperApp grid to test features in real-time.
                 </p>
               </div>
             </div>
@@ -449,7 +461,7 @@ export default function DownloadApkModal({
                       Target APK Release Version
                     </span>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Select published Super App build version from repository.
+                      Select published SuperApp build version from repository.
                     </p>
                   </div>
                   <select

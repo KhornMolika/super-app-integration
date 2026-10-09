@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { authApi } from '@/api/auth.api';
 
-export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'MINI_APP_DEVELOPER' | 'DEVELOPER';
+export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'MINI_APP_DEVELOPER' | 'QA_TESTER';
 
 const ROLE_PERMISSIONS: Record<Role, string[]> = {
   SUPER_ADMIN: [
@@ -20,12 +20,13 @@ const ROLE_PERMISSIONS: Record<Role, string[]> = {
   ADMIN: [
     'miniapp:create', 'miniapp:read', 'miniapp:update', 'miniapp:submit', 'miniapp:delete', 'miniapp:approve', 'miniapp:reject', 'miniapp:suspend',
     'miniapp_permission:approve', 'issue:resolve',
-    'permission_proposal:read', 'permission_proposal:review',
-    'super_app:read',
-    'user:read',
+    'permission_proposal:read', 'permission_proposal:review', 'permission_proposal:approve',
+    'super_app:read', 'super_app:manage',
+    'user:read', 'user:manage',
+    'role:read',
     'permission:read',
-    'organization:read',
-    'audit_log:read'
+    'organization:read', 'organization:manage',
+    'audit_log:read', 'settings:manage'
   ],
   MINI_APP_DEVELOPER: [
     'miniapp:create', 'miniapp:read', 'miniapp:update', 'miniapp:submit',
@@ -34,10 +35,12 @@ const ROLE_PERMISSIONS: Record<Role, string[]> = {
     'super_app:read',
     'organization:read'
   ],
-  DEVELOPER: [
-    'miniapp:read',
+  QA_TESTER: [
+    'miniapp:create', 'miniapp:read', 'miniapp:update', 'miniapp:submit',
+    'permission_proposal:read',
     'permission:read',
-    'super_app:read'
+    'super_app:read',
+    'organization:read'
   ]
 };
 
@@ -59,12 +62,12 @@ export const ROLE_USER_PROFILES: Record<Role, { name: string; email: string }> =
     email: 'admin@superapp.gov.kh',
   },
   MINI_APP_DEVELOPER: {
-    name: 'Mini App Developer',
-    email: 'developer@superapp.gov.kh',
+    name: 'MiniApp Developer',
+    email: 'ma-developer@superapp.gov.kh',
   },
-  DEVELOPER: {
-    name: 'Developer User',
-    email: 'dev@superapp.gov.kh',
+  QA_TESTER: {
+    name: 'QA Test Engineer',
+    email: 'qa@superapp.gov.kh',
   },
 };
 
@@ -167,10 +170,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const can = (permission: string) => {
     if (role === 'SUPER_ADMIN') return true;
-    if (currentUser?.permissions && currentUser.permissions.length > 0) {
-      return currentUser.permissions.includes(permission);
-    }
-    return ROLE_PERMISSIONS[role]?.includes(permission) ?? true;
+    const defaultPerms = ROLE_PERMISSIONS[role] || [];
+    const userPerms = currentUser?.permissions || [];
+    return defaultPerms.includes(permission) || userPerms.includes(permission);
   };
 
   const hasRole = (r: Role) => {

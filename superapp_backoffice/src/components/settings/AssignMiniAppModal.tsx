@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { Button, Input, Label } from '@/components/ui/inputs';
@@ -127,7 +127,7 @@ export function AssignMiniAppModal({
                 Assign Telegram Group
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Target Mini App: <strong className="text-slate-800 dark:text-slate-200">{miniApp.name || miniApp.appId}</strong>
+                Target MiniApp: <strong className="text-slate-800 dark:text-slate-200">{miniApp.name || miniApp.appId}</strong>
               </p>
             </div>
           </div>
@@ -335,7 +335,7 @@ export function AssignMiniAppModal({
                 <span>Remove Group Association</span>
               </div>
               <p>
-                Mini App <strong>{miniApp.name || miniApp.appId}</strong> will no longer dispatch broadcast alerts to any Telegram group until a new group is configured.
+                MiniApp <strong>{miniApp.name || miniApp.appId}</strong> will no longer dispatch broadcast alerts to any Telegram group until a new group is configured.
               </p>
             </div>
           )}

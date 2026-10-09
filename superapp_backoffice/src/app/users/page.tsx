@@ -1,10 +1,11 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Button, Input, Label } from '@/components/ui/inputs';
 import { Card } from '@/components/ui/card';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { useAuth } from '@/lib/auth';
 import { usersApi, rolesApi, telegramApi, User, Role, TelegramBotChat } from '@/api';
 import { useToast } from '@/components/ui/Toast';
 import { CheckIcon, AlertTriangleIcon, ZapIcon, EyeIcon, DevicePhoneIcon } from '@/components/ui/Icons';
@@ -27,19 +28,19 @@ export interface PermissionCategoryGroup {
 
 const PERMISSION_GROUPS: PermissionCategoryGroup[] = [
   {
-    category: 'Mini App Management',
+    category: 'MiniApp Management',
     icon: 'M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z',
-    description: 'Manage registration, builds, lifecycle states, and security actions for Mini Apps',
+    description: 'Manage registration, builds, lifecycle states, and security actions for MiniApps',
     color: 'brand',
     permissions: [
-      { key: 'miniapp:create', label: 'Create Mini App', desc: 'Register new applications, drafts, and initial metadata', level: 'STANDARD' },
-      { key: 'miniapp:read', label: 'View Mini Apps', desc: 'Browse catalog, inspect details, artifacts, and build versions', level: 'STANDARD' },
-      { key: 'miniapp:update', label: 'Update Mini App', desc: 'Modify configurations, branding, and team assignments', level: 'STANDARD' },
+      { key: 'miniapp:create', label: 'Create MiniApp', desc: 'Register new applications, drafts, and initial metadata', level: 'STANDARD' },
+      { key: 'miniapp:read', label: 'View MiniApps', desc: 'Browse catalog, inspect details, artifacts, and build versions', level: 'STANDARD' },
+      { key: 'miniapp:update', label: 'Update MiniApp', desc: 'Modify configurations, branding, and team assignments', level: 'STANDARD' },
       { key: 'miniapp:submit', label: 'Submit for Review', desc: 'Submit mini apps and new versions to the review queue', level: 'STANDARD' },
-      { key: 'miniapp:approve', label: 'Approve Mini App', desc: 'Authorize mini apps for staging and production rollout', level: 'CRITICAL' },
+      { key: 'miniapp:approve', label: 'Approve MiniApp', desc: 'Authorize mini apps for staging and production rollout', level: 'CRITICAL' },
       { key: 'miniapp:reject', label: 'Reject / Request Revisions', desc: 'Issue rejection feedback and change requests', level: 'ELEVATED' },
-      { key: 'miniapp:suspend', label: 'Suspend Mini App', desc: 'Emergency take-down or suspension of running mini apps', level: 'CRITICAL' },
-      { key: 'miniapp:delete', label: 'Delete Mini App', desc: 'Permanently remove applications and associated artifacts', level: 'CRITICAL' },
+      { key: 'miniapp:suspend', label: 'Suspend MiniApp', desc: 'Emergency take-down or suspension of running mini apps', level: 'CRITICAL' },
+      { key: 'miniapp:delete', label: 'Delete MiniApp', desc: 'Permanently remove applications and associated artifacts', level: 'CRITICAL' },
     ],
   },
   {
@@ -58,12 +59,12 @@ const PERMISSION_GROUPS: PermissionCategoryGroup[] = [
     ],
   },
   {
-    category: 'Super App & Ecosystem',
+    category: 'SuperApp & Ecosystem',
     icon: 'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z',
     description: 'Host shell release pipeline orchestration, sandbox verification, and agency tenants',
     color: 'amber',
     permissions: [
-      { key: 'super_app:read', label: 'View Super App Status', desc: 'Inspect release assembly, health digest, and license status', level: 'STANDARD' },
+      { key: 'super_app:read', label: 'View SuperApp Status', desc: 'Inspect release assembly, health digest, and license status', level: 'STANDARD' },
       { key: 'super_app:manage', label: 'Manage Host Releases', desc: 'Trigger Jenkins sandbox builds and release bundle publishing', level: 'CRITICAL' },
       { key: 'organization:read', label: 'View Organizations', desc: 'Browse registered partner agencies and tenant directory', level: 'STANDARD' },
       { key: 'organization:manage', label: 'Manage Organizations', desc: 'Create, onboard, and verify partner agencies', level: 'ELEVATED' },
@@ -90,6 +91,9 @@ const TOTAL_PERMISSIONS_COUNT = ALL_FLAT_PERMISSIONS.length;
 
 export default function UsersPage() {
   const { toast } = useToast();
+  const { can, role } = useAuth();
+  const hasUserRead = can('user:read');
+
   const [activeTab, setActiveTab] = useState<'users' | 'roles'>('users');
   const [mounted, setMounted] = useState(false);
 
@@ -114,7 +118,7 @@ export default function UsersPage() {
   const [userFormData, setUserFormData] = useState({
     name: '',
     email: '',
-    roleNames: ['DEVELOPER'] as string[],
+    roleNames: ['MINI_APP_DEVELOPER'] as string[],
     telegramChatId: '',
     telegramUsername: '',
     isActive: true,
@@ -149,44 +153,53 @@ export default function UsersPage() {
   }, []);
 
   const fetchUsers = useCallback(async () => {
+    if (!can('user:read')) return;
     try {
       setLoadingUsers(true);
       const data = await usersApi.getAll();
       setUsers(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error('Failed to fetch users', err);
-      toast.error('Failed to load users list');
+    } catch (err: any) {
+      if (err?.status !== 403 && err?.statusCode !== 403) {
+        console.error('Failed to fetch users', err);
+        toast.error('Failed to load users list');
+      }
     } finally {
       setLoadingUsers(false);
     }
-  }, [toast]);
+  }, [can, toast]);
 
   const fetchRoles = useCallback(async () => {
+    if (!can('role:read') && !can('user:read')) return;
     try {
       setLoadingRoles(true);
       const data = await rolesApi.getAll();
       setRoles(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error('Failed to fetch roles', err);
+    } catch (err: any) {
+      if (err?.status !== 403 && err?.statusCode !== 403) {
+        console.error('Failed to fetch roles', err);
+      }
     } finally {
       setLoadingRoles(false);
     }
-  }, []);
+  }, [can]);
 
   // Preload Bot Info on mount
   useEffect(() => {
+    if (!hasUserRead) return;
     telegramApi
       .getStatus()
       .then((res) => {
         if (res?.botUsername) setBotUsername(res.botUsername);
       })
       .catch(() => {});
-  }, []);
+  }, [hasUserRead]);
 
   useEffect(() => {
-    fetchUsers();
-    fetchRoles();
-  }, [fetchUsers, fetchRoles]);
+    if (hasUserRead) {
+      fetchUsers();
+      fetchRoles();
+    }
+  }, [hasUserRead, fetchUsers, fetchRoles]);
 
   // User Handlers
   const handleOpenCreateUser = () => {
@@ -197,7 +210,7 @@ export default function UsersPage() {
     setUserFormData({
       name: '',
       email: '',
-      roleNames: ['DEVELOPER'],
+      roleNames: ['MINI_APP_DEVELOPER'],
       telegramChatId: '',
       telegramUsername: '',
       isActive: true,
@@ -213,7 +226,7 @@ export default function UsersPage() {
     setUserFormData({
       name: user.name,
       email: user.email,
-      roleNames: user.roles?.map((r) => r.name) || ['DEVELOPER'],
+      roleNames: user.roles?.map((r) => r.name) || ['MINI_APP_DEVELOPER'],
       telegramChatId: user.telegramChatId || '',
       telegramUsername: user.telegramUsername || '',
       isActive: user.isActive !== undefined ? user.isActive : true,
@@ -475,7 +488,7 @@ export default function UsersPage() {
         permissions: ALL_FLAT_PERMISSIONS.filter((p) => p.key.endsWith(':read')).map((p) => p.key),
       }));
     } else if (preset === 'MINI_APP') {
-      const miniAppGroup = PERMISSION_GROUPS.find((g) => g.category === 'Mini App Management');
+      const miniAppGroup = PERMISSION_GROUPS.find((g) => g.category === 'MiniApp Management');
       const keys = miniAppGroup?.permissions.map((p) => p.key) || [];
       setRoleFormData((prev) => ({ ...prev, permissions: keys }));
     } else if (preset === 'CLEAR') {
@@ -546,7 +559,7 @@ export default function UsersPage() {
           gradient: 'from-sky-500/10 via-sky-500/5 to-transparent border-sky-200/80 dark:border-sky-500/30',
           iconBg: 'bg-sky-50 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300',
           bar: 'bg-sky-500',
-          label: 'Mini App Developer',
+          label: 'MiniApp Developer',
         };
       case 'DEVELOPER':
         return {
@@ -1905,7 +1918,7 @@ export default function UsersPage() {
                           className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 hover:bg-brand-50 hover:text-brand-700 transition-colors inline-flex items-center gap-1"
                         >
                           <DevicePhoneIcon className="w-3.5 h-3.5 text-accent-500" />
-                          <span>Mini App Focus</span>
+                          <span>MiniApp Focus</span>
                         </button>
                         <button
                           type="button"

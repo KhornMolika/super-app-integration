@@ -1,4 +1,4 @@
-import {
+﻿import {
   Controller,
   Get,
   Post,
@@ -212,7 +212,7 @@ export class TelegramController {
 + [USER]   ${name} (${email})
 + [SCOPE]  Personal alerts, reviews & security scans
 </code></pre>
-<blockquote>Hello <b>${name}</b>, this is a verified test notification from the Super App Backoffice. Your account is connected and ready to receive real-time updates.</blockquote>`,
+<blockquote>Hello <b>${name}</b>, this is a verified test notification from the SuperApp Backoffice. Your account is connected and ready to receive real-time updates.</blockquote>`,
       chatId,
     );
 
@@ -243,7 +243,7 @@ export class TelegramController {
 + [TARGET]  ${appName}
 + [STATUS]  Automated alerts & build artifacts connected
 </code></pre>
-<blockquote>This group channel is connected to receive automated security scan results, review status updates, and CI/CD test build APK alerts from the Super App Gateway.</blockquote>`;
+<blockquote>This group channel is connected to receive automated security scan results, review status updates, and CI/CD test build APK alerts from the SuperApp Gateway.</blockquote>`;
 
     const result = await this.telegramService.sendMessageWithDetails(
       msgText,

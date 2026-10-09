@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/inputs';
 import { STAGE_CATALOG } from '@/components/ui/ValidationReportTab';
@@ -237,7 +237,7 @@ export default function SubmissionModal({
                 Automated Security Validation
               </h3>
               <p className="text-slate-500 dark:text-slate-400 text-center text-sm mt-0.5 max-w-md">
-                Jenkins automated pipeline is auditing your Mini App package in real time.
+                Jenkins automated pipeline is auditing your MiniApp package in real time.
               </p>
 
               {/* Progress Bar & Status Pill */}

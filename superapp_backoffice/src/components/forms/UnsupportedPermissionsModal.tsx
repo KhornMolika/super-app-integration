@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { Button } from '@/components/ui/inputs';
@@ -60,7 +60,7 @@ export default function UnsupportedPermissionsModal({
         {/* Body */}
         <div className="p-6 space-y-4">
           <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-            The Super App host container does not currently whitelist the following declared capabilities:
+            The SuperApp host container does not currently whitelist the following declared capabilities:
           </p>
 
           {/* List of Unsupported Capabilities */}
@@ -110,7 +110,7 @@ export default function UnsupportedPermissionsModal({
                 <span>Graceful Degradation Required</span>
               </div>
               <p className="leading-relaxed">
-                These capabilities are unwhitelisted and will be blocked by the Super App sandbox. Because they are marked as <strong>Optional</strong>, ensure your Mini App gracefully handles missing bridge calls without crashing.
+                These capabilities are unwhitelisted and will be blocked by the SuperApp sandbox. Because they are marked as <strong>Optional</strong>, ensure your MiniApp gracefully handles missing bridge calls without crashing.
               </p>
             </div>
           )}

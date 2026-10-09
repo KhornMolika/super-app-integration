@@ -5,10 +5,14 @@ import { createPortal } from 'react-dom';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/inputs';
+import { useAuth } from '@/lib/auth';
 import { auditLogsApi, AuditLog } from '@/api';
 import { DocumentTextIcon } from '@/components/ui/Icons';
 
 export default function AuditLogsPage() {
+  const { can } = useAuth();
+  const hasAuditRead = can('audit_log:read');
+
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -21,20 +25,25 @@ export default function AuditLogsPage() {
   }, []);
 
   const fetchLogs = useCallback(async () => {
+    if (!can('audit_log:read')) return;
     try {
       setLoading(true);
       const data = await auditLogsApi.getAll();
       setLogs(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error('Failed to load audit logs:', err);
+    } catch (err: any) {
+      if (err?.status !== 403 && err?.statusCode !== 403) {
+        console.error('Failed to load audit logs:', err);
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [can]);
 
   useEffect(() => {
-    fetchLogs();
-  }, [fetchLogs]);
+    if (hasAuditRead) {
+      fetchLogs();
+    }
+  }, [hasAuditRead, fetchLogs]);
 
   const uniqueActions = Array.from(new Set(logs.map((l) => l.action).filter(Boolean)));
 

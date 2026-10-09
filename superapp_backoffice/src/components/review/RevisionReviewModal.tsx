@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { toast } from '@/components/ui/Toast';
 import ReasonPromptModal from '@/components/ui/ReasonPromptModal';
 import { DotBadge, ZapIcon } from '@/components/ui/Icons';
@@ -92,9 +92,9 @@ export function RevisionReviewModal({
         confirmVariant: 'danger',
         placeholder: 'Explain why this revision cannot be accepted...',
         quickSuggestions: [
-          'Violates Super App platform capability and security policies',
+          'Violates SuperApp platform capability and security policies',
           'High-risk permissions requested without required partner certification',
-          'Duplicate or conflicting capability with existing Super App core features',
+          'Duplicate or conflicting capability with existing SuperApp core features',
           'Incompatible technical architecture or failed automated security baseline',
         ],
       });
@@ -107,9 +107,9 @@ export function RevisionReviewModal({
       await miniappsApi.executeAction(miniAppId, action, reason);
 
       const actionLabels: Record<string, string> = {
-        'publish-revision': 'Revision published live to Super App catalog!',
+        'publish-revision': 'Revision published live to SuperApp catalog!',
         'start-testing': 'Test build triggered and advanced to sandbox testing!',
-        'request-changes': 'Change request sent to Mini App developer.',
+        'request-changes': 'Change request sent to MiniApp developer.',
         'discard-revision': 'Revision has been rejected and discarded.',
       };
       toast.success(actionLabels[action] || 'Action completed successfully!', 'Revision Updated');
@@ -319,7 +319,7 @@ export function RevisionReviewModal({
                                 </span>
                               </div>
                               <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
-                                {p.purpose || 'Required for Mini App runtime integration'}
+                                {p.purpose || 'Required for MiniApp runtime integration'}
                               </p>
                             </div>
                           </div>

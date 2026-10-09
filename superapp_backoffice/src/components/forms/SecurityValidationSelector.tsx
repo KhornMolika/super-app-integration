@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/inputs';
@@ -119,8 +119,8 @@ export const ALL_SECURITY_CHECKS: SecurityCheckItem[] = [
   {
     id: 'capability_gate',
     name: 'Host Capability Gatekeeper Audit',
-    description: 'Verifies requested native capabilities and permissions against Super App security policies.',
-    tool: 'Super App Gatekeeper',
+    description: 'Verifies requested native capabilities and permissions against SuperApp security policies.',
+    tool: 'SuperApp Gatekeeper',
     category: 'access',
     methods: ['FLUTTER_PACKAGE', 'NATIVE_SDK', 'DEEP_LINK'],
     isRecommended: (method) => ['FLUTTER_PACKAGE', 'NATIVE_SDK', 'DEEP_LINK'].includes(method),
@@ -272,7 +272,7 @@ export default function SecurityValidationSelector({
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
-            Configure automated CI/CD security audits and compliance gates for this Mini App.
+            Configure automated CI/CD security audits and compliance gates for this MiniApp.
           </p>
         </div>
 

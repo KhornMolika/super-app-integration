@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from 'react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -123,7 +123,7 @@ export default function ReviewQueuePage() {
               </svg>
               <span>Review Queue</span>
             </h2>
-            <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">Track and manage pending Mini Apps, Staged Revisions, and Permission Proposals.</p>
+            <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">Track and manage pending MiniApps, Staged Revisions, and Permission Proposals.</p>
           </div>
         </div>
 
@@ -136,7 +136,7 @@ export default function ReviewQueuePage() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
               </svg>
-              <span>Mini Apps &amp; Revisions ({pendingMiniapps.length})</span>
+              <span>MiniApps &amp; Revisions ({pendingMiniapps.length})</span>
             </button>
             <button 
               onClick={() => setActiveTab('PROPOSALS')}
@@ -186,7 +186,7 @@ export default function ReviewQueuePage() {
               <table className="w-full text-left border-collapse">
                 <thead className="bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/50">
                   <tr>
-                    <th className="w-[25%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Mini App</th>
+                    <th className="w-[25%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">MiniApp</th>
                     <th className="w-[25%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Permission</th>
                     <th className="w-[20%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Date Submitted</th>
                     <th className="w-[18%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Status</th>
@@ -278,7 +278,7 @@ export default function ReviewQueuePage() {
               <table className="w-full text-left border-collapse">
                 <thead className="bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/50">
                   <tr>
-                    <th className="w-[26%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Mini App</th>
+                    <th className="w-[26%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">MiniApp</th>
                     <th className="w-[18%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Organization</th>
                     <th className="w-[18%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Date Submitted</th>
                     <th className="w-[22%] px-6 py-4 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Status</th>
@@ -468,7 +468,7 @@ export default function ReviewQueuePage() {
             {/* Proposal Info */}
             <div className="space-y-3.5">
               <div>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">Mini App</span>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">MiniApp</span>
                 <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{selectedProposal.miniApp?.name || 'Unknown'}</span>
               </div>
               <div>
@@ -483,7 +483,7 @@ export default function ReviewQueuePage() {
               </div>
               <div>
                 <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
-                  Target Super App Version (Optional)
+                  Target SuperApp Version (Optional)
                 </label>
                 <input
                   type="text"

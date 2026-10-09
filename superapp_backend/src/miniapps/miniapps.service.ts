@@ -1,4 +1,4 @@
-import {
+﻿import {
   Injectable,
   Logger,
   BadRequestException,
@@ -150,7 +150,7 @@ export class MiniappsService implements OnApplicationBootstrap {
     });
 
     return issues.map((issue) => {
-      let miniAppName = issue.miniApp?.name || 'Unknown Mini App';
+      let miniAppName = issue.miniApp?.name || 'Unknown MiniApp';
       let miniAppId = issue.miniApp?.appId || issue.miniAppId;
 
       if (!issue.miniApp) {
@@ -230,8 +230,8 @@ export class MiniappsService implements OnApplicationBootstrap {
 
     // 2. Solution 1: Live Ecosystem + Developer's Staging App (Realistic Simulation)
     // Non-super-admins see:
-    // - ALL ACTIVE / PUBLISHED apps (so the Super App home screen looks 100% full, real, and authentic)
-    // - PLUS their own Mini Apps in ANY status (TESTING, IN_REVIEW, DRAFT, APPROVED)
+    // - ALL ACTIVE / PUBLISHED apps (so the SuperApp home screen looks 100% full, real, and authentic)
+    // - PLUS their own MiniApps in ANY status (TESTING, IN_REVIEW, DRAFT, APPROVED)
     const ownerId =
       user?.sub ||
       (typeof queryOrOwnerId === 'string' ? queryOrOwnerId : undefined);
@@ -478,7 +478,7 @@ export class MiniappsService implements OnApplicationBootstrap {
       app.id,
       actorId,
       'UNIVERSAL_LAUNCHER',
-      'Universal Native Mini App Launcher verified',
+      'Universal Native MiniApp Launcher verified',
       'Mini app is configured for dynamic invocation via superapp/native_launcher platform channel.',
       'NATIVE_SDK_LAUNCHER_VERIFIED',
     );
@@ -488,7 +488,7 @@ export class MiniappsService implements OnApplicationBootstrap {
       changedFiles: 0,
       upToDate: true,
       message:
-        'Universal Native Mini App Launcher is active. Dynamic reflection dispatch enabled via superapp/native_launcher.',
+        'Universal Native MiniApp Launcher is active. Dynamic reflection dispatch enabled via superapp/native_launcher.',
     };
   }
 
@@ -623,7 +623,7 @@ export class MiniappsService implements OnApplicationBootstrap {
 
   async getVersionHistory(id: string, user?: any) {
     const app = await this.findOne(id);
-    if (!app) throw new NotFoundException('Mini App not found');
+    if (!app) throw new NotFoundException('MiniApp not found');
     return this.artifactDistributionHelper.getVersionHistory(app, user);
   }
 
@@ -648,7 +648,7 @@ export class MiniappsService implements OnApplicationBootstrap {
     res?: any,
   ) {
     const app = await this.findOne(miniAppId);
-    if (!app) throw new NotFoundException('Mini App not found');
+    if (!app) throw new NotFoundException('MiniApp not found');
     return this.artifactDistributionHelper.streamArtifact(
       app,
       artifactType,
@@ -661,7 +661,7 @@ export class MiniappsService implements OnApplicationBootstrap {
 
   async getDiff(id: string, baseVer?: string, targetVer?: string) {
     const app = await this.findOne(id);
-    if (!app) throw new NotFoundException('Mini App not found');
+    if (!app) throw new NotFoundException('MiniApp not found');
 
     if (!baseVer && !targetVer) {
       if (app.pendingRevision) {
@@ -681,7 +681,7 @@ export class MiniappsService implements OnApplicationBootstrap {
 
   async rollback(id: string, targetVersion: string, actorId: string, reason?: string) {
     const app = await this.findOne(id);
-    if (!app) throw new NotFoundException('Mini App not found');
+    if (!app) throw new NotFoundException('MiniApp not found');
     return this.lifecycleHelper.rollbackToVersion(
       app,
       targetVersion,

@@ -1,4 +1,4 @@
-import { EmailLayoutOptions, SecurityValidationFinding } from './mail.types';
+﻿import { EmailLayoutOptions, SecurityValidationFinding } from './mail.types';
 
 export class MailTemplateHelper {
   /**
@@ -24,7 +24,7 @@ export class MailTemplateHelper {
       title,
       borderAccentColor = '#0284c7',
       contentHtml,
-      signatureTeam = 'Super App Governance Team',
+      signatureTeam = 'SuperApp Governance Team',
     } = options;
 
     return `
@@ -52,7 +52,7 @@ export class MailTemplateHelper {
     const contentHtml = `
       <p style="font-size: 14px; line-height: 1.6; margin-top: 0;">Hello <strong>${this.escapeHtml(name)}</strong>,</p>
       <p style="font-size: 14px; line-height: 1.6;">
-        This is a verified test email sent directly from the Super App Backoffice notification engine.
+        This is a verified test email sent directly from the SuperApp Backoffice notification engine.
       </p>
       
       <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 18px; margin: 24px 0;">
@@ -67,14 +67,14 @@ export class MailTemplateHelper {
     `;
 
     return {
-      subject: 'Test Notification: Super App Email Gateway',
+      subject: 'Test Notification: SuperApp Email Gateway',
       html: this.renderEmailLayout({
-        category: 'Super App Gateway',
+        category: 'SuperApp Gateway',
         categoryColor: '#38bdf8',
         title: 'Email Notification Test',
         borderAccentColor: '#0284c7',
         contentHtml,
-        signatureTeam: 'Super App Governance',
+        signatureTeam: 'SuperApp Governance',
       }),
     };
   }
@@ -98,7 +98,7 @@ export class MailTemplateHelper {
     const contentHtml = `
       <p style="font-size: 14px; line-height: 1.6; margin-top: 0;">Hello <strong>${escName}</strong>,</p>
       <p style="font-size: 14px; line-height: 1.6;">
-        Use the verification code below or paste the link into your Super App to complete your registration. This code expires in 24 hours.
+        Use the verification code below or paste the link into your SuperApp to complete your registration. This code expires in 24 hours.
       </p>
 
       <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; margin: 20px 0; text-align: center;">
@@ -109,7 +109,7 @@ export class MailTemplateHelper {
       </div>
 
       <p style="margin: 20px 0;">
-        <a href="${escUrl}" style="display: inline-block; background: #0284c7; color: #ffffff; text-decoration: none; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 700;">Open in Super App</a>
+        <a href="${escUrl}" style="display: inline-block; background: #0284c7; color: #ffffff; text-decoration: none; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 700;">Open in SuperApp</a>
       </p>
 
       <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
@@ -121,11 +121,11 @@ export class MailTemplateHelper {
     `;
 
     return {
-      subject: 'Verify your Super App email address',
+      subject: 'Verify your SuperApp email address',
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
           <div style="background: #0f172a; padding: 32px 24px; text-align: left; color: #ffffff; border-bottom: 3px solid #0284c7;">
-            <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #38bdf8; font-weight: 700;">Super App</span>
+            <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #38bdf8; font-weight: 700;">SuperApp</span>
             <h1 style="margin: 8px 0 0 0; font-size: 22px; font-weight: 700; color: #ffffff;">Verify your email</h1>
           </div>
           <div style="padding: 32px 24px;">
@@ -158,19 +158,19 @@ export class MailTemplateHelper {
       </div>
 
       <p style="font-size: 14px; color: #475569; line-height: 1.6;">
-        You can manage credentials, webhooks, and revisions directly from the Super App Portal.
+        You can manage credentials, webhooks, and revisions directly from the SuperApp Portal.
       </p>
     `;
 
     return {
-      subject: `Mini App Registration Successful: ${appName}`,
+      subject: `MiniApp Registration Successful: ${appName}`,
       html: this.renderEmailLayout({
-        category: 'Super App Gateway',
+        category: 'SuperApp Gateway',
         categoryColor: '#38bdf8',
-        title: 'Mini App Registration Successful',
+        title: 'MiniApp Registration Successful',
         borderAccentColor: '#0284c7',
         contentHtml,
-        signatureTeam: 'Super App Administration Team',
+        signatureTeam: 'SuperApp Administration Team',
       }),
     };
   }
@@ -185,7 +185,7 @@ export class MailTemplateHelper {
     const contentHtml = `
       <p style="font-size: 14px; line-height: 1.6; margin-top: 0;">Hello,</p>
       <p style="font-size: 14px; line-height: 1.6;">
-        The automated security validation pipeline for Mini App <strong>"${escAppName}"</strong> has completed successfully with all compliance criteria verified.
+        The automated security validation pipeline for MiniApp <strong>"${escAppName}"</strong> has completed successfully with all compliance criteria verified.
       </p>
 
       <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin: 24px 0; text-align: center;">
@@ -195,7 +195,7 @@ export class MailTemplateHelper {
       </div>
 
       <p style="font-size: 14px; color: #475569; line-height: 1.6;">
-        The application status has progressed to <strong>IN_REVIEW</strong> and has been queued for Super App Administrator review.
+        The application status has progressed to <strong>IN_REVIEW</strong> and has been queued for SuperApp Administrator review.
       </p>
 
       <div style="text-align: left; margin: 28px 0;">
@@ -206,14 +206,14 @@ export class MailTemplateHelper {
     `;
 
     return {
-      subject: `Security Validation Passed: Mini App "${appName}" (${score}/100)`,
+      subject: `Security Validation Passed: MiniApp "${appName}" (${score}/100)`,
       html: this.renderEmailLayout({
         category: 'Security & Compliance Gate',
         categoryColor: '#34d399',
         title: 'Security Validation Passed',
         borderAccentColor: '#059669',
         contentHtml,
-        signatureTeam: 'Super App Security Governance',
+        signatureTeam: 'SuperApp Security Governance',
       }),
     };
   }
@@ -245,7 +245,7 @@ export class MailTemplateHelper {
     const contentHtml = `
       <p style="font-size: 14px; line-height: 1.6; margin-top: 0;">Hello,</p>
       <p style="font-size: 14px; line-height: 1.6;">
-        The automated security validation pipeline for Mini App <strong>"${escAppName}"</strong> identified security findings that require remediation before the application can proceed to review.
+        The automated security validation pipeline for MiniApp <strong>"${escAppName}"</strong> identified security findings that require remediation before the application can proceed to review.
       </p>
 
       <div style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; padding: 20px; margin: 24px 0;">
@@ -269,14 +269,14 @@ export class MailTemplateHelper {
     `;
 
     return {
-      subject: `Security Validation Action Required: Mini App "${appName}" (${findings.length} findings)`,
+      subject: `Security Validation Action Required: MiniApp "${appName}" (${findings.length} findings)`,
       html: this.renderEmailLayout({
         category: 'Security & Compliance Gate',
         categoryColor: '#fb7185',
         title: 'Security Validation Action Required',
         borderAccentColor: '#e11d48',
         contentHtml,
-        signatureTeam: 'Super App Security Governance',
+        signatureTeam: 'SuperApp Security Governance',
       }),
     };
   }
@@ -300,7 +300,7 @@ export class MailTemplateHelper {
     const contentHtml = `
       <p style="font-size: 14px; line-height: 1.6; margin-top: 0;">Hello,</p>
       <p style="font-size: 14px; line-height: 1.6;">
-        Validation issues were encountered during the registration process for Mini App <strong>"${escAppName}"</strong>.
+        Validation issues were encountered during the registration process for MiniApp <strong>"${escAppName}"</strong>.
       </p>
 
       <div style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; padding: 18px; margin: 24px 0;">
@@ -313,19 +313,19 @@ export class MailTemplateHelper {
       </div>
 
       <p style="font-size: 14px; color: #475569; line-height: 1.6;">
-        Please resolve these errors in the Super App Portal before resubmitting the application.
+        Please resolve these errors in the SuperApp Portal before resubmitting the application.
       </p>
     `;
 
     return {
-      subject: `Action Required: Mini App Registration Issues (${appName})`,
+      subject: `Action Required: MiniApp Registration Issues (${appName})`,
       html: this.renderEmailLayout({
-        category: 'Super App Gateway',
+        category: 'SuperApp Gateway',
         categoryColor: '#fb7185',
         title: 'Registration Issues Detected',
         borderAccentColor: '#e11d48',
         contentHtml,
-        signatureTeam: 'Super App Administration Team',
+        signatureTeam: 'SuperApp Administration Team',
       }),
     };
   }
@@ -348,7 +348,7 @@ export class MailTemplateHelper {
     const contentHtml = `
       <p style="font-size: 14px; line-height: 1.6; margin-top: 0;">Hello,</p>
       <p style="font-size: 14px; line-height: 1.6;">
-        Mini App <strong>"${escAppName}"</strong> (version <code>${escDisplayVersion}</code>) has been approved for integration verification in the Super App sandbox environment.
+        MiniApp <strong>"${escAppName}"</strong> (version <code>${escDisplayVersion}</code>) has been approved for integration verification in the SuperApp sandbox environment.
       </p>
 
       <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 24px 0;">
@@ -360,7 +360,7 @@ export class MailTemplateHelper {
             Download Test APK
           </a>
           <a href="${escSandboxUrl}" style="display: inline-block; background: #4f46e5; color: #ffffff; text-decoration: none; padding: 10px 18px; border-radius: 6px; font-weight: 600; font-size: 13px; margin-bottom: 8px;">
-            Launch Super App Sandbox
+            Launch SuperApp Sandbox
           </a>
         </div>
         <p style="margin: 12px 0 0 0; font-size: 12px; color: #64748b; line-height: 1.4;">
@@ -369,19 +369,19 @@ export class MailTemplateHelper {
       </div>
 
       <p style="font-size: 14px; color: #475569; line-height: 1.6;">
-        Please perform end-to-end user journey verification. Once testing criteria are satisfied, the Super App Administrator will perform final authorization for production rollout.
+        Please perform end-to-end user journey verification. Once testing criteria are satisfied, the SuperApp Administrator will perform final authorization for production rollout.
       </p>
     `;
 
     return {
-      subject: `Test Build Available: Mini App "${appName}" (${displayVersion})`,
+      subject: `Test Build Available: MiniApp "${appName}" (${displayVersion})`,
       html: this.renderEmailLayout({
         category: 'Integration & Verification Environment',
         categoryColor: '#818cf8',
-        title: 'Super App Test Build Available',
+        title: 'SuperApp Test Build Available',
         borderAccentColor: '#6366f1',
         contentHtml,
-        signatureTeam: 'Super App Integration Operations',
+        signatureTeam: 'SuperApp Integration Operations',
       }),
     };
   }
@@ -404,7 +404,7 @@ export class MailTemplateHelper {
     const contentHtml = `
       <p style="font-size: 14px; line-height: 1.6; margin-top: 0;">Hello,</p>
       <p style="font-size: 14px; line-height: 1.6;">
-        The Super App test build compilation for Mini App <strong>"${escAppName}"</strong> (version <code>${escDisplayVersion}</code>) has encountered an error during pipeline execution.
+        The SuperApp test build compilation for MiniApp <strong>"${escAppName}"</strong> (version <code>${escDisplayVersion}</code>) has encountered an error during pipeline execution.
       </p>
 
       <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 20px; margin: 24px 0;">
@@ -425,14 +425,14 @@ export class MailTemplateHelper {
     `;
 
     return {
-      subject: `🚨 Build Failed: Mini App "${appName}" (${displayVersion})`,
+      subject: `🚨 Build Failed: MiniApp "${appName}" (${displayVersion})`,
       html: this.renderEmailLayout({
         category: 'Fastlane CI Pipeline Alert',
         categoryColor: '#ef4444',
-        title: 'Super App Test Build Failed',
+        title: 'SuperApp Test Build Failed',
         borderAccentColor: '#dc2626',
         contentHtml,
-        signatureTeam: 'Super App Engineering Operations',
+        signatureTeam: 'SuperApp Engineering Operations',
       }),
     };
   }
@@ -447,7 +447,7 @@ export class MailTemplateHelper {
     const contentHtml = `
       <p style="font-size: 14px; line-height: 1.6; margin-top: 0;">Hello,</p>
       <p style="font-size: 14px; line-height: 1.6;">
-        Great news! Your Mini App <strong>"${escAppName}"</strong> has been formally approved by the Super App Administrator after security compliance validation and review.
+        Great news! Your MiniApp <strong>"${escAppName}"</strong> has been formally approved by the SuperApp Administrator after security compliance validation and review.
       </p>
       
       <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 18px; margin: 24px 0;">
@@ -456,26 +456,26 @@ export class MailTemplateHelper {
           APPROVED
         </div>
         <p style="margin: 12px 0 0 0; font-size: 13px; color: #15803d; line-height: 1.5;">
-          Your application is now scheduled for integration verification and testing build packaging in the Super App sandbox.
+          Your application is now scheduled for integration verification and testing build packaging in the SuperApp sandbox.
         </p>
       </div>
 
       <div style="text-align: left; margin: 28px 0;">
         <a href="${escUrl}" style="display: inline-block; background: #059669; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px;">
-          View Mini App in Portal
+          View MiniApp in Portal
         </a>
       </div>
     `;
 
     return {
-      subject: `Mini App Approved: "${appName}"`,
+      subject: `MiniApp Approved: "${appName}"`,
       html: this.renderEmailLayout({
-        category: 'Super App Platform Governance',
+        category: 'SuperApp Platform Governance',
         categoryColor: '#34d399',
-        title: 'Mini App Approved',
+        title: 'MiniApp Approved',
         borderAccentColor: '#10b981',
         contentHtml,
-        signatureTeam: 'Super App Governance Team',
+        signatureTeam: 'SuperApp Governance Team',
       }),
     };
   }
@@ -494,7 +494,7 @@ export class MailTemplateHelper {
     const contentHtml = `
       <p style="font-size: 14px; line-height: 1.6; margin-top: 0;">Hello,</p>
       <p style="font-size: 14px; line-height: 1.6;">
-        Your Mini App <strong>"${escAppName}"</strong> was reviewed by the Super App Administrator and was not approved at this time.
+        Your MiniApp <strong>"${escAppName}"</strong> was reviewed by the SuperApp Administrator and was not approved at this time.
       </p>
       
       <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 18px; margin: 24px 0;">
@@ -512,14 +512,14 @@ export class MailTemplateHelper {
     `;
 
     return {
-      subject: `Mini App Review Decision: "${appName}" (Rejected)`,
+      subject: `MiniApp Review Decision: "${appName}" (Rejected)`,
       html: this.renderEmailLayout({
-        category: 'Super App Platform Governance',
+        category: 'SuperApp Platform Governance',
         categoryColor: '#f87171',
-        title: 'Mini App Review Decision',
+        title: 'MiniApp Review Decision',
         borderAccentColor: '#ef4444',
         contentHtml,
-        signatureTeam: 'Super App Governance Team',
+        signatureTeam: 'SuperApp Governance Team',
       }),
     };
   }
@@ -539,7 +539,7 @@ export class MailTemplateHelper {
     const contentHtml = `
       <p style="font-size: 14px; line-height: 1.6; margin-top: 0;">Hello,</p>
       <p style="font-size: 14px; line-height: 1.6;">
-        The Super App Administrator has reviewed Mini App <strong>"${escAppName}"</strong> and requested revisions before approval.
+        The SuperApp Administrator has reviewed MiniApp <strong>"${escAppName}"</strong> and requested revisions before approval.
       </p>
       
       <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 18px; margin: 24px 0;">
@@ -551,20 +551,20 @@ export class MailTemplateHelper {
 
       <div style="text-align: left; margin: 28px 0;">
         <a href="${escUrl}" style="display: inline-block; background: #d97706; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px;">
-          Update Mini App Configuration
+          Update MiniApp Configuration
         </a>
       </div>
     `;
 
     return {
-      subject: `Changes Requested: Mini App "${appName}"`,
+      subject: `Changes Requested: MiniApp "${appName}"`,
       html: this.renderEmailLayout({
-        category: 'Super App Platform Governance',
+        category: 'SuperApp Platform Governance',
         categoryColor: '#fbbf24',
         title: 'Changes Requested',
         borderAccentColor: '#f59e0b',
         contentHtml,
-        signatureTeam: 'Super App Governance Team',
+        signatureTeam: 'SuperApp Governance Team',
       }),
     };
   }
@@ -585,7 +585,7 @@ export class MailTemplateHelper {
     const contentHtml = `
       <p style="font-size: 14px; line-height: 1.6; margin-top: 0;">Hello,</p>
       <p style="font-size: 14px; line-height: 1.6;">
-        Mini App <strong>"${escAppName}"</strong> (version <code>${escDisplayVersion}</code>) is now officially <strong>LIVE and ACTIVE</strong> in the Super App store catalog.
+        MiniApp <strong>"${escAppName}"</strong> (version <code>${escDisplayVersion}</code>) is now officially <strong>LIVE and ACTIVE</strong> in the SuperApp store catalog.
       </p>
       
       <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 18px; margin: 24px 0;">
@@ -594,26 +594,26 @@ export class MailTemplateHelper {
           ACTIVE &bull; PRODUCTION
         </div>
         <p style="margin: 12px 0 0 0; font-size: 13px; color: #15803d; line-height: 1.5;">
-          Production binaries have been deployed to the Super App distribution network. End-users can now access your mini app seamlessly.
+          Production binaries have been deployed to the SuperApp distribution network. End-users can now access your mini app seamlessly.
         </p>
       </div>
 
       <div style="text-align: left; margin: 28px 0;">
         <a href="${escUrl}" style="display: inline-block; background: #059669; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px;">
-          View Live Mini App
+          View Live MiniApp
         </a>
       </div>
     `;
 
     return {
-      subject: `Mini App Live in Catalog: "${appName}" (${displayVersion})`,
+      subject: `MiniApp Live in Catalog: "${appName}" (${displayVersion})`,
       html: this.renderEmailLayout({
-        category: 'Super App Production Catalog',
+        category: 'SuperApp Production Catalog',
         categoryColor: '#34d399',
-        title: 'Mini App Live & Activated',
+        title: 'MiniApp Live & Activated',
         borderAccentColor: '#10b981',
         contentHtml,
-        signatureTeam: 'Super App Governance Team',
+        signatureTeam: 'SuperApp Governance Team',
       }),
     };
   }

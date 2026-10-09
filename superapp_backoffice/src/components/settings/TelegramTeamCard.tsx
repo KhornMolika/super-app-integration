@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
@@ -122,8 +122,8 @@ export function TelegramTeamCard({
   const handleUnlinkAllFromGroup = async (oldChatId: string) => {
     if (!onReassignGroup) return;
     const isConfirmed = await confirm({
-      title: 'Unlink All Mini Apps',
-      message: `Are you sure you want to unlink all Mini Apps from deleted group "${oldChatId}"?`,
+      title: 'Unlink All MiniApps',
+      message: `Are you sure you want to unlink all MiniApps from deleted group "${oldChatId}"?`,
       confirmText: 'Unlink',
       confirmVariant: 'danger',
     });
@@ -148,12 +148,12 @@ export function TelegramTeamCard({
   );
 
   return (
-    <Card className="p-6 sm:p-8 space-y-8">
+    <Card className="p-6 sm:p-7 space-y-7 border-slate-200/80 dark:border-slate-800/80 shadow-xs rounded-2xl">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100 dark:border-slate-800">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-sky-500/10 dark:bg-sky-500/20 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
-            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-xl bg-sky-500/10 dark:bg-sky-500/20 text-sky-600 dark:text-sky-400 flex items-center justify-center border border-sky-500/20 shrink-0">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -163,31 +163,25 @@ export function TelegramTeamCard({
             </svg>
           </div>
           <div>
-            <div className="flex items-center gap-3">
-              <h3 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <span>Team &amp; Platform Group Notifications</span>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h3 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                Team &amp; Platform Group Notifications
               </h3>
               <span
-                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
+                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
                   hasTeamChat
-                    ? 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300'
-                    : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                    ? 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300 border-sky-200/80 dark:border-sky-800'
+                    : 'bg-slate-50 text-slate-600 dark:bg-slate-800/60 dark:text-slate-400 border-slate-200 dark:border-slate-700'
                 }`}
               >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  {hasTeamChat ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  )}
-                </svg>
+                <span className={`w-1.5 h-1.5 rounded-full ${hasTeamChat ? 'bg-sky-500' : 'bg-slate-400'}`}></span>
                 <span>{hasTeamChat ? 'Group Configured' : 'No Group Set'}</span>
               </span>
             </div>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
               {role === 'SUPER_ADMIN' || role === 'ADMIN'
-                ? 'Default broadcast Telegram group for Super App Operations, review alerts, and system issues.'
-                : 'Manage team Telegram notification channels associated with your user profile and registered Mini Apps.'}
+                ? 'Default broadcast Telegram group for SuperApp Operations, review alerts, and system issues.'
+                : 'Manage team Telegram notification channels associated with your user profile and registered MiniApps.'}
             </p>
           </div>
         </div>
@@ -197,10 +191,10 @@ export function TelegramTeamCard({
           variant="outline"
           onClick={onDetectGroups}
           disabled={detectingGroups}
-          className="text-sm h-10 px-4 shrink-0 flex items-center gap-2 rounded-xl border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-950/40"
+          className="text-xs font-semibold h-9 px-3.5 shrink-0 flex items-center gap-2 rounded-xl border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
         >
           <svg
-            className={`w-4 h-4 text-sky-600 ${detectingGroups ? 'animate-spin' : ''}`}
+            className={`w-3.5 h-3.5 text-sky-600 ${detectingGroups ? 'animate-spin' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -212,7 +206,7 @@ export function TelegramTeamCard({
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
             />
           </svg>
-          <span>{detectingGroups ? 'Scanning Channels...' : 'Auto-Detect & Refresh Groups'}</span>
+          <span>{detectingGroups ? 'Scanning...' : 'Auto-Detect Groups'}</span>
         </Button>
       </div>
 
@@ -230,7 +224,7 @@ export function TelegramTeamCard({
                 <span>Action Required: {inactiveGroups.length} Inactive Telegram Group(s) Detected</span>
               </div>
               <p className="text-xs text-rose-700/90 dark:text-rose-300/80 mt-0.5 max-w-2xl leading-relaxed">
-                One or more Telegram groups were deleted or the bot was removed. Mini Apps pointing to these groups cannot receive broadcast notifications until migrated.
+                One or more Telegram groups were deleted or the bot was removed. MiniApps pointing to these groups cannot receive broadcast notifications until migrated.
               </p>
             </div>
           </div>
@@ -258,29 +252,27 @@ export function TelegramTeamCard({
       <form onSubmit={onSaveTeamChat} className="space-y-4">
         <div>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <Label className="flex items-center gap-2 text-sm sm:text-base">
-              <svg className="w-4 h-4 text-accent-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-              </svg>
-              <span className="font-semibold">Default Team Telegram Group ID</span>
-              <span className="text-sm text-slate-400 font-normal">(starts with -100...)</span>
+            <Label className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
+              <StarIcon className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+              <span>Default Team Telegram Group ID</span>
+              <span className="text-xs text-slate-400 font-mono font-normal">(-100...)</span>
             </Label>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 mt-2">
+          <div className="flex flex-col sm:flex-row gap-2.5 mt-2">
             <Input
               type="text"
               value={teamChatIdInput}
               onChange={(e) => setTeamChatIdInput(e.target.value)}
               placeholder="e.g. -5542396469 or -1002345678901"
-              className="font-mono text-base flex-1"
+              className="font-mono text-xs sm:text-sm flex-1 rounded-xl"
             />
             <Button
               type="submit"
               disabled={savingTeamChat}
-              className="text-sm font-semibold px-5 py-2.5 rounded-xl shrink-0 flex items-center gap-2"
+              className="text-xs font-semibold px-4 py-2 rounded-xl shrink-0 flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white"
             >
-              <svg className={`w-4 h-4 ${savingTeamChat ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className={`w-3.5 h-3.5 ${savingTeamChat ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
               </svg>
               <span>{savingTeamChat ? 'Saving...' : 'Save Default Group'}</span>
@@ -290,9 +282,9 @@ export function TelegramTeamCard({
               variant="outline"
               onClick={() => onSendTeamTestMessage()}
               disabled={sendingTeamTest || (!teamChatIdInput.trim() && !telegramStatus?.user?.teamTelegramChatId)}
-              className="text-sm font-medium px-5 py-2.5 rounded-xl shrink-0 flex items-center gap-2"
+              className="text-xs font-medium px-4 py-2 rounded-xl shrink-0 flex items-center gap-2 border-slate-200 dark:border-slate-700"
             >
-              <svg className={`w-4 h-4 text-sky-500 ${sendingTeamTest ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className={`w-3.5 h-3.5 text-sky-500 ${sendingTeamTest ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
               </svg>
               <span>{sendingTeamTest ? 'Sending Test...' : 'Send Test Alert'}</span>
@@ -301,27 +293,27 @@ export function TelegramTeamCard({
         </div>
       </form>
 
-      {/* SECTION 2: List of All Groups Associated with User & Mini Apps */}
-      <div className="space-y-4 pt-2">
+      {/* SECTION 2: List of All Groups Associated with User & MiniApps */}
+      <div className="space-y-3.5 pt-2">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <h4 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <svg className="w-5 h-5 text-sky-600 dark:text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <svg className="w-4 h-4 text-sky-600 dark:text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
               </svg>
-              <span>Connected Telegram Groups &amp; Associated Mini Apps</span>
-              <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+              <span>Connected Telegram Groups &amp; Associated MiniApps</span>
+              <span className="text-[11px] px-2 py-0.2 rounded-full font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                 {detectedGroups.length} {detectedGroups.length === 1 ? 'Channel' : 'Channels'}
               </span>
             </h4>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-              Detailed mapping of every Telegram group connected to your account and Mini Apps.
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Detailed mapping of every Telegram group connected to your account and MiniApps.
             </p>
           </div>
         </div>
 
         {detectedGroups.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 gap-3.5">
             {detectedGroups.map((group) => {
               const isDefault =
                 group.isDefaultProfileChat ||
@@ -339,12 +331,12 @@ export function TelegramTeamCard({
               return (
                 <div
                   key={group.id}
-                  className={`p-5 rounded-2xl border transition-all ${
+                  className={`p-4 sm:p-5 rounded-2xl border transition-all ${
                     !group.isLive
-                      ? 'bg-rose-50/20 dark:bg-rose-950/15 border-rose-300/80 dark:border-rose-900/60 shadow-xs'
+                      ? 'bg-rose-50/20 dark:bg-rose-950/15 border-rose-200 dark:border-rose-900/60 shadow-xs'
                       : isDefault
-                      ? 'bg-linear-to-r from-sky-50/70 to-brand-50/50 dark:from-sky-950/30 dark:to-brand-950/20 border-sky-200 dark:border-sky-800/80 shadow-xs'
-                      : 'bg-white dark:bg-slate-900/60 border-slate-200/90 dark:border-slate-800 hover:border-sky-300'
+                      ? 'bg-linear-to-r from-sky-50/50 to-brand-50/40 dark:from-sky-950/20 dark:to-brand-950/20 border-sky-200/80 dark:border-sky-800/80 shadow-xs'
+                      : 'bg-white dark:bg-slate-900/60 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-xs'
                   }`}
                 >
                   <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
@@ -384,7 +376,7 @@ export function TelegramTeamCard({
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                           <span>
-                            This group was deleted on Telegram or the bot was removed. Please migrate the associated Mini Apps below to an active group or enter a new Group ID.
+                            This group was deleted on Telegram or the bot was removed. Please migrate the associated MiniApps below to an active group or enter a new Group ID.
                           </span>
                         </div>
                       )}
@@ -405,13 +397,13 @@ export function TelegramTeamCard({
                               <svg className="w-3.5 h-3.5 text-accent-600 dark:text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                               </svg>
-                              <span>Super App Operations Channel</span>
+                              <span>SuperApp Operations Channel</span>
                             </span>
                           )}
                         </div>
                       )}
 
-                      {/* Associated Mini Apps Section */}
+                      {/* Associated MiniApps Section */}
                       {miniAppAssocs.length > 0 ? (
                         <div className="pt-2">
                           <div className="flex items-center gap-2 mb-2">
@@ -419,7 +411,7 @@ export function TelegramTeamCard({
                               <svg className="w-3.5 h-3.5 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                               </svg>
-                              <span>Connected Mini Apps</span>
+                              <span>Connected MiniApps</span>
                               <span className="px-1.5 py-0.2 text-[11px] font-bold rounded-full bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300">
                                 {miniAppAssocs.length}
                               </span>
@@ -484,7 +476,7 @@ export function TelegramTeamCard({
                                       })
                                     }
                                     className="p-1 rounded-md text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors"
-                                    title="Move / Reassign Mini App to Another Group"
+                                    title="Move / Reassign MiniApp to Another Group"
                                   >
                                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
@@ -652,7 +644,7 @@ export function TelegramTeamCard({
         )}
       </div>
 
-      {/* Assign Mini App to Group Modal */}
+      {/* Assign MiniApp to Group Modal */}
       <AssignMiniAppModal
         isOpen={Boolean(selectedMiniAppForModal)}
         onClose={() => setSelectedMiniAppForModal(null)}

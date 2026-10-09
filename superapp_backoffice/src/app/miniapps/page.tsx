@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
@@ -44,7 +44,7 @@ export default function MiniAppsPage() {
       
       <div className="flex justify-between items-end mb-8">
         <div>
-          <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Mini Apps</h2>
+          <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">MiniApps</h2>
           <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">Manage registered applications and permissions.</p>
         </div>
         <div className="flex items-center gap-3">
@@ -65,7 +65,7 @@ export default function MiniAppsPage() {
       ) : fetchError ? (
         <div className="mb-8 p-6 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 rounded-2xl text-rose-800 dark:text-rose-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h3 className="font-bold text-base text-rose-900 dark:text-rose-100">Failed to load Mini Apps catalog</h3>
+            <h3 className="font-bold text-base text-rose-900 dark:text-rose-100">Failed to load MiniApps catalog</h3>
             <p className="text-xs text-rose-700 dark:text-rose-300 mt-1">{fetchError}</p>
           </div>
           <button
@@ -101,7 +101,7 @@ export default function MiniAppsPage() {
                         <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
                           <svg className="w-8 h-8 text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
                         </div>
-                        <h3 className="text-lg font-medium text-slate-700 dark:text-slate-300">No Mini Apps Found</h3>
+                        <h3 className="text-lg font-medium text-slate-700 dark:text-slate-300">No MiniApps Found</h3>
                         <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm w-full max-w-sm mx-auto">Get started by registering a new mini app to join the ecosystem.</p>
                         <Link href="/miniapps/register" className="mt-4 text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 font-medium text-sm underline underline-offset-2">Register your first app</Link>
                       </div>
@@ -289,7 +289,7 @@ export default function MiniAppsPage() {
                                   setIsApkModalOpen(true);
                                 }}
                                 className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-300 dark:hover:border-emerald-700 shadow-sm transition-all flex items-center justify-center cursor-pointer"
-                                title={`Download Super App Test APK & Scan QR Code (${testVersion})`}
+                                title={`Download SuperApp Test APK & Scan QR Code (${testVersion})`}
                               >
                                 <DevicePhoneIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                               </button>

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import SecurityValidationSelector from './SecurityValidationSelector';
@@ -31,7 +31,7 @@ export default function SecurityForm({
             Automated CI/CD Security & Compliance Gates
           </h4>
           <p className="text-sm text-brand-800/90 dark:text-brand-300/90 mt-0.5 leading-relaxed">
-            Select the active security audit profiles to be executed against this Mini App during automated verification.
+            Select the active security audit profiles to be executed against this MiniApp during automated verification.
             Recommended baseline profiles are pre-selected according to your chosen integration architecture.
           </p>
         </div>

@@ -1,10 +1,10 @@
-import { BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
+﻿import { BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
 import { MiniappsService } from './miniapps.service';
 import { AllExceptionsFilter } from '../common/filters/all-exceptions.filter';
 import { PubspecPrecheckService } from '../integrations/flutter/pubspec-precheck.service';
 
-describe('All Tasks Verification - Multi-Method Mini Apps & Enterprise Plan', () => {
-  describe('1. ma_nativesdk_spa: Universal Native Mini App Launcher & Codegen Retirement', () => {
+describe('All Tasks Verification - Multi-Method MiniApps & Enterprise Plan', () => {
+  describe('1. ma_nativesdk_spa: Universal Native MiniApp Launcher & Codegen Retirement', () => {
     let service: MiniappsService;
     let mockRepo: any;
     let mockLifecycle: any;
@@ -108,7 +108,7 @@ describe('All Tasks Verification - Multi-Method Mini Apps & Enterprise Plan', ()
       expect(result.upToDate).toBe(true);
       expect(result.changedFiles).toBe(0);
       expect(result.prUrl).toBeNull();
-      expect(result.message).toContain('Universal Native Mini App Launcher is active');
+      expect(result.message).toContain('Universal Native MiniApp Launcher is active');
     });
   });
 
@@ -171,7 +171,7 @@ describe('All Tasks Verification - Multi-Method Mini Apps & Enterprise Plan', ()
         version: '1.0.0',
       });
       expect(coreResult.compatible).toBe(false);
-      expect(coreResult.directConflicts[0]).toContain('conflicts directly with a reserved Super App core framework package');
+      expect(coreResult.directConflicts[0]).toContain('conflicts directly with a reserved SuperApp core framework package');
 
       const legacyCoreResult = await pubspecPrecheck.simulateCandidate({
         packageName: 'dps_core_package',

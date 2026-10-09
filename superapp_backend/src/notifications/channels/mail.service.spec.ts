@@ -1,4 +1,4 @@
-import { MailService } from './mail.service';
+﻿import { MailService } from './mail.service';
 import { MailApiHelper } from './helpers/mail-api.helper';
 import { MailTemplateHelper } from './helpers/mail-template.helper';
 
@@ -19,12 +19,22 @@ describe('MailService & Helper Modules', () => {
       expect(helper.isDeliverableEmail('user@')).toBe(false);
     });
 
-    it('filters out mock and sandbox domains', () => {
+    it('filters out mock, sandbox, and disposable domains', () => {
       expect(helper.isDeliverableEmail('demo@example.com')).toBe(false);
       expect(helper.isDeliverableEmail('sub@demo.example.org')).toBe(false);
       expect(helper.isDeliverableEmail('test@test.com')).toBe(false);
       expect(helper.isDeliverableEmail('admin@localhost')).toBe(false);
       expect(helper.isDeliverableEmail('dummy@sample.com')).toBe(false);
+      expect(helper.isDeliverableEmail('trash@mailinator.com')).toBe(false);
+      expect(helper.isDeliverableEmail('temp@tempmail.com')).toBe(false);
+    });
+
+    it('validates syntax and mock domains asynchronously in validateDeliverability', async () => {
+      const invalidSyntax = await helper.validateDeliverability('bad-email');
+      expect(invalidSyntax.valid).toBe(false);
+
+      const mockDomain = await helper.validateDeliverability('user@example.com');
+      expect(mockDomain.valid).toBe(false);
     });
   });
 
@@ -98,7 +108,7 @@ describe('MailService & Helper Modules', () => {
       expect(mockSend).toHaveBeenCalledWith(
         expect.objectContaining({
           to: 'dev@company.com',
-          subject: 'Test Notification: Super App Email Gateway',
+          subject: 'Test Notification: SuperApp Email Gateway',
         }),
       );
     });
@@ -121,7 +131,7 @@ describe('MailService & Helper Modules', () => {
       expect(mockSend).toHaveBeenCalledWith(
         expect.objectContaining({
           to: 'dev@company.com',
-          subject: 'Mini App Registration Successful: WalletMiniApp',
+          subject: 'MiniApp Registration Successful: WalletMiniApp',
         }),
       );
     });
@@ -137,7 +147,7 @@ describe('MailService & Helper Modules', () => {
       expect(mockSend).toHaveBeenCalledWith(
         expect.objectContaining({
           to: 'qa@company.com',
-          subject: 'Test Build Available: Mini App "FinApp" (v2.1.0)',
+          subject: 'Test Build Available: MiniApp "FinApp" (v2.1.0)',
         }),
       );
     });

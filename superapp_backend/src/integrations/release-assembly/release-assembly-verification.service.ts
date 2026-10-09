@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
@@ -48,13 +48,13 @@ export class ReleaseAssemblyVerificationService {
   ) {}
 
   /**
-   * Performs Release Assembly Checksum Verification & Super App Release Assembly
+   * Performs Release Assembly Checksum Verification & SuperApp Release Assembly
    */
   async verifyAndAssembleRelease(
     dto: VerifyAndAssembleReleaseDto,
   ): Promise<ReleaseAssemblyAuditResult> {
     this.logger.log(
-      `Executing Release Assembly Verification for Super App release ${dto.releaseVersion}...`,
+      `Executing Release Assembly Verification for SuperApp release ${dto.releaseVersion}...`,
     );
 
     const timestamp = new Date().toISOString();
@@ -217,10 +217,10 @@ export class ReleaseAssemblyVerificationService {
         this.logger.warn(`Could not write manifest to disk: ${err.message}`);
       }
 
-      // Automatically sync and inject all verified Mini App package dependencies into pubspec.yaml
+      // Automatically sync and inject all verified MiniApp package dependencies into pubspec.yaml
       try {
         await this.pubspecService.syncAllApprovedMiniApps();
-        this.logger.log('Synchronized Super App pubspec.yaml dependencies for release assembly.');
+        this.logger.log('Synchronized SuperApp pubspec.yaml dependencies for release assembly.');
       } catch (err: any) {
         this.logger.warn(`Pubspec synchronization warning during release assembly: ${err.message}`);
       }
@@ -245,8 +245,8 @@ export class ReleaseAssemblyVerificationService {
           if (appRecord?.ownerId) {
             await this.notificationsService.createNotification(
               appRecord.ownerId,
-              'Super App Build in Progress',
-              `Super App test build (${dto.releaseVersion}) has been triggered on Jenkins for Mini App "${appRecord.name}". Artifacts will be available upon assembly completion.`,
+              'SuperApp Build in Progress',
+              `SuperApp test build (${dto.releaseVersion}) has been triggered on Jenkins for MiniApp "${appRecord.name}". Artifacts will be available upon assembly completion.`,
               'BUILD_STARTED',
               appRecord.id,
               {
@@ -259,7 +259,7 @@ export class ReleaseAssemblyVerificationService {
         } catch (_) {}
       }
 
-      // Trigger Jenkins Super App build pipeline
+      // Trigger Jenkins SuperApp build pipeline
       await this.jenkinsService.triggerSuperAppBuild({
         appName: 'superapp',
         releaseVersion: dto.releaseVersion,
@@ -267,7 +267,7 @@ export class ReleaseAssemblyVerificationService {
         codegenMrIid: latestCodegenMrIid(releaseConfigs),
       });
 
-      // Trigger Jenkins Super App Web Sandbox build pipeline
+      // Trigger Jenkins SuperApp Web Sandbox build pipeline
       this.jenkinsService
         .triggerSuperAppSandboxBuild()
         .catch((e: any) => {
@@ -551,8 +551,8 @@ export class ReleaseAssemblyVerificationService {
         if (targetOwnerId) {
           await this.notificationsService.createNotification(
             targetOwnerId,
-            'Super App Test Build Ready',
-            `Super App test build (${effectiveVersion}) is ready! Download the test APK (superapp-test-${normVersion}.apk) or launch the Web Sandbox to verify "${app.name}".`,
+            'SuperApp Test Build Ready',
+            `SuperApp test build (${effectiveVersion}) is ready! Download the test APK (superapp-test-${normVersion}.apk) or launch the Web Sandbox to verify "${app.name}".`,
             'TEST_BUILD_READY',
             app.id,
             {
@@ -572,7 +572,7 @@ export class ReleaseAssemblyVerificationService {
           const sandboxUrl = `${backofficeBase}/miniapps/${app.id}`;
           await this.mailService.sendTestBuildReadyEmail(
             targetEmail,
-            app.name || app.appId || 'Mini App',
+            app.name || app.appId || 'MiniApp',
             effectiveVersion,
             finalApkUrl,
             sandboxUrl,
@@ -605,8 +605,8 @@ export class ReleaseAssemblyVerificationService {
           status: 'TESTING',
         });
         await this.notificationsService.notifyAdmins(
-          `🚀 Super App Test Build Ready (${effectiveVersion})`,
-          `Super App test build (${effectiveVersion}, ${body.buildType || 'release'}) is published to Sonatype Nexus and ready for download.`,
+          `🚀 SuperApp Test Build Ready (${effectiveVersion})`,
+          `SuperApp test build (${effectiveVersion}, ${body.buildType || 'release'}) is published to Sonatype Nexus and ready for download.`,
           'TEST_BUILD_READY',
           fallbackApp?.id,
           {
@@ -638,7 +638,7 @@ export class ReleaseAssemblyVerificationService {
       body.errorMessage ||
       body.error ||
       (body as any).details ||
-      'Super App Fastlane CI build pipeline failed. Inspect Jenkins console logs for details.';
+      'SuperApp Fastlane CI build pipeline failed. Inspect Jenkins console logs for details.';
 
     const effectiveVersion =
       body.releaseVersion ||
@@ -707,8 +707,8 @@ export class ReleaseAssemblyVerificationService {
       if (targetOwnerId) {
         await this.notificationsService.createNotification(
           targetOwnerId,
-          `🚨 Super App Build Failed: ${app.name || app.appId}`,
-          `Super App test build (${effectiveVersion}) failed on Jenkins for Mini App "${app.name}": ${errorMessage}. Please review the failure diagnostics and retry the build.`,
+          `🚨 SuperApp Build Failed: ${app.name || app.appId}`,
+          `SuperApp test build (${effectiveVersion}) failed on Jenkins for MiniApp "${app.name}": ${errorMessage}. Please review the failure diagnostics and retry the build.`,
           'BUILD_FAILED',
           app.id,
           {
@@ -728,7 +728,7 @@ export class ReleaseAssemblyVerificationService {
         const detailsUrl = `${backofficeBase}/miniapps/${app.id}`;
         await this.mailService.sendTestBuildFailedEmail(
           targetEmail,
-          app.name || app.appId || 'Mini App',
+          app.name || app.appId || 'MiniApp',
           effectiveVersion,
           errorMessage,
           detailsUrl,
@@ -748,8 +748,8 @@ export class ReleaseAssemblyVerificationService {
 
     // ALWAYS broadcast failure notification to all Super Admins, Back Office Notification Bell, and Telegram Ops Groups
     await this.notificationsService.notifyAdmins(
-      `🚨 Super App Build Failed (${effectiveVersion})`,
-      `Super App Fastlane CI build pipeline (${appName} ${effectiveVersion}, ${buildType}) failed: ${errorMessage}`,
+      `🚨 SuperApp Build Failed (${effectiveVersion})`,
+      `SuperApp Fastlane CI build pipeline (${appName} ${effectiveVersion}, ${buildType}) failed: ${errorMessage}`,
       'BUILD_FAILED',
       buildingApps[0]?.id,
       {

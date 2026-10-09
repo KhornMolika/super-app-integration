@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+﻿import type { Metadata } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import Link from 'next/link';
@@ -20,8 +20,8 @@ import { SystemHealthIndicator } from '@/components/ui/SystemHealthIndicator';
 import { DownloadApkButton } from '@/components/ui/DownloadApkButton';
 
 export const metadata: Metadata = {
-  title: 'Super App Back Office',
-  description: 'Super App Administration & Mini App Ecosystem Platform',
+  title: 'SuperApp Back Office',
+  description: 'SuperApp Administration & MiniApp Ecosystem Platform',
 };
 
 export default function RootLayout({

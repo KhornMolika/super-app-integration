@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException, Optional, Inject } from '@nestjs/common';
+﻿import { Injectable, Logger, BadRequestException, Optional, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
@@ -50,7 +50,7 @@ export class PubspecInjectorService {
   ) {}
 
   /**
-   * Resolves the absolute path to the Super App's super-app directory strictly from environment variables.
+   * Resolves the absolute path to the SuperApp's super-app directory strictly from environment variables.
    */
   getMobileAppDir(): string {
     const configuredPath =
@@ -224,7 +224,7 @@ export class PubspecInjectorService {
       success: true,
       packageName,
       injectedConfig: dependencyValue,
-      message: `Dependency "${packageName}" successfully injected into Super App pubspec.yaml.`,
+      message: `Dependency "${packageName}" successfully injected into SuperApp pubspec.yaml.`,
     };
   }
 
@@ -398,7 +398,7 @@ export class PubspecInjectorService {
     injectedPackages: string[];
     validationResult: any;
   }> {
-    this.logger.log('Synchronizing all approved Flutter Package Mini Apps into pubspec.yaml...');
+    this.logger.log('Synchronizing all approved Flutter Package MiniApps into pubspec.yaml...');
 
     const approvedMiniApps = await this.miniappRepository.find({
       where: {
@@ -507,10 +507,10 @@ export class PubspecInjectorService {
         let widgetExpr = '';
         if (canonicalName === 'sc_public_miniapp' || canonicalName.includes('transit') || canonicalName.includes('public')) {
           imports.add("import 'package:sc_public_miniapp/sc_public_miniapp.dart';");
-          widgetExpr = "PublicMiniAppEntry(onExit: () => safePop(context), passengerName: 'Super App Commuter', passTier: '30-Day Unlimited All-Access')";
+          widgetExpr = "PublicMiniAppEntry(onExit: () => safePop(context), passengerName: 'SuperApp Commuter', passTier: '30-Day Unlimited All-Access')";
         } else if (canonicalName === 'sc_private_miniapp' || canonicalName.includes('private') || canonicalName.includes('loyalty') || canonicalName.includes('reward')) {
           imports.add("import 'package:sc_private_miniapp/sc_private_miniapp.dart';");
-          widgetExpr = "MiniAppEntry(onExit: () => safePop(context), userName: 'Super App VIP Member', userTier: 'Gold Elite')";
+          widgetExpr = "MiniAppEntry(onExit: () => safePop(context), userName: 'SuperApp VIP Member', userTier: 'Gold Elite')";
         } else if (canonicalName === 'ma_flutter_kyc' || canonicalName.includes('kyc')) {
           imports.add("import 'package:ma_flutter_kyc/ma_flutter_kyc.dart';");
           widgetExpr = "KycVerifierAppEntry(jwtToken: 'tok_live_superapp_session', userId: 'usr_fsa_verified', onExit: () => safePop(context))";
@@ -729,7 +729,7 @@ ${registrations.join('\n\n')}
   }
 
   /**
-   * Retrieves current pubspec.yaml status, dependencies count, and list of registered Mini App packages.
+   * Retrieves current pubspec.yaml status, dependencies count, and list of registered MiniApp packages.
    */
   async getPubspecStatus(): Promise<PubspecStatusInfo> {
     const pubspecPath = this.getPubspecPath();
@@ -785,7 +785,7 @@ ${registrations.join('\n\n')}
   /**
    * Triggers the Web Sandbox build script to recompile Flutter Web preview with newly injected packages.
    */
-  async triggerSandboxRebuild(triggeredBy: string = 'Super App System'): Promise<{ success: boolean; message: string }> {
+  async triggerSandboxRebuild(triggeredBy: string = 'SuperApp System'): Promise<{ success: boolean; message: string }> {
     if (this.sandboxBuildManager) {
       return this.sandboxBuildManager.triggerBuild(triggeredBy);
     }
@@ -819,7 +819,7 @@ ${registrations.join('\n\n')}
 
     return {
       success: true,
-      message: 'Flutter Web Super App Sandbox compilation triggered in background.',
+      message: 'Flutter Web SuperApp Sandbox compilation triggered in background.',
     };
   }
 }

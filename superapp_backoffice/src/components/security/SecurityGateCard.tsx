@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/inputs';
@@ -41,7 +41,7 @@ export default function SecurityGateCard({ miniApp }: SecurityGateCardProps) {
             id: 'GATE1-DEEPLINK-NOSCHEME',
             title: 'Missing Custom URL Scheme',
             severity: 'HIGH',
-            description: 'The Deep Link Mini App does not have a declared URL scheme.',
+            description: 'The Deep Link MiniApp does not have a declared URL scheme.',
             recommendation: 'Specify a valid URL scheme in the Technical Integration tab (e.g. trustregulator://open).'
           });
         }
@@ -66,7 +66,7 @@ export default function SecurityGateCard({ miniApp }: SecurityGateCardProps) {
             id: 'GATE1-WEBVIEW-INSECURE',
             title: 'Insecure or Missing Production URL',
             severity: 'HIGH',
-            description: 'WebView Mini Apps require a secure HTTPS production endpoint.',
+            description: 'WebView MiniApps require a secure HTTPS production endpoint.',
             recommendation: 'Update your production URL to use HTTPS.'
           });
         }
@@ -136,7 +136,7 @@ export default function SecurityGateCard({ miniApp }: SecurityGateCardProps) {
         miniApps: [
           {
             id: miniApp?.id || 'miniapp-1',
-            name: miniApp?.name || 'Mini App',
+            name: miniApp?.name || 'MiniApp',
             packageName: pkgName,
             version: miniApp?.version || '0.0.2',
             declaredPermissions: miniApp?.permissions || [],
@@ -432,11 +432,11 @@ export default function SecurityGateCard({ miniApp }: SecurityGateCardProps) {
           </span>
           <div>
             <span className="font-bold text-slate-800 dark:text-slate-200">
-              Governance Status: {gate1Passed ? 'Ready for Super App Release' : 'Action Required'}
+              Governance Status: {gate1Passed ? 'Ready for SuperApp Release' : 'Action Required'}
             </span>
             <p className="text-slate-500 dark:text-slate-400 mt-0.5">
               {gate1Passed
-                ? 'All security gates satisfied. Use the Actions (...) menu in the top header to Approve or Reject this Mini App.'
+                ? 'All security gates satisfied. Use the Actions (...) menu in the top header to Approve or Reject this MiniApp.'
                 : 'Resolve Gate 1 audit findings (e.g. declare permissions in the Permissions tab) before approving.'}
             </p>
           </div>

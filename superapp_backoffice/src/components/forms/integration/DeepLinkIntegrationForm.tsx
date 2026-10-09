@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { Input, Label } from '@/components/ui/inputs';
@@ -45,7 +45,7 @@ export default function DeepLinkIntegrationForm({
           </p>
         )}
         <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
-          The custom URI scheme or universal app link invoked by the Super App to launch this Mini App externally.
+          The custom URI scheme or universal app link invoked by the SuperApp to launch this MiniApp externally.
         </p>
       </div>
 

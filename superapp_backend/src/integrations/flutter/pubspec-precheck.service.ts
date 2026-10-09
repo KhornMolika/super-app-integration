@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+﻿import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -29,7 +29,7 @@ export class PubspecPrecheckService {
   ) {}
 
   /**
-   * Returns current root dependencies and version constraints pinned by the Super App container.
+   * Returns current root dependencies and version constraints pinned by the SuperApp container.
    */
   getPackageConstraints(): Record<string, string> {
     const { document } = this.pubspecService.readPubspecDocument();
@@ -87,11 +87,11 @@ export class PubspecPrecheckService {
         compatible: false,
         packageName,
         directConflicts: [
-          `Package name "${packageName}" conflicts directly with a reserved Super App core framework package.`,
+          `Package name "${packageName}" conflicts directly with a reserved SuperApp core framework package.`,
         ],
         transitiveBumps: [],
         newPackages: [],
-        message: `Package name "${packageName}" conflicts directly with Super App core container.`,
+        message: `Package name "${packageName}" conflicts directly with SuperApp core container.`,
         rawOutput: `Reserved core framework package conflict: ${packageName}`,
       };
     }
@@ -206,7 +206,7 @@ export class PubspecPrecheckService {
           rawOut.includes(`which doesn't exist (could not find package ${packageName}`));
 
       let finalMessage = compatible
-        ? `Package "${packageName}" is fully compatible with Super App container (0 version conflicts).`
+        ? `Package "${packageName}" is fully compatible with SuperApp container (0 version conflicts).`
         : `Dependency conflict detected for "${packageName}".`;
 
       const conflicts = [...(validation.conflicts || [])];

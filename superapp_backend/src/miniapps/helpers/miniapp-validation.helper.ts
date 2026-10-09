@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { isEmail } from 'class-validator';
@@ -392,7 +392,7 @@ export class MiniappValidationHelper {
 
         if (!perm.purpose || perm.purpose.trim() === '') {
           errors[`permissions.${index}.purpose`] =
-            `Please describe why your Mini App requires ${permKey} access.`;
+            `Please describe why your MiniApp requires ${permKey} access.`;
         }
 
         // Permission Catalog & Compatibility Check
@@ -406,7 +406,7 @@ export class MiniappValidationHelper {
               `The requested permission "${permKey}" is not currently supported in the platform catalog. A proposal has been created for review.`;
           }
         } else {
-          // Known permission, check Super App Runtime Compatibility
+          // Known permission, check SuperApp Runtime Compatibility
           const latestCapability =
             await this.superAppService.findLatestCapability();
           const supportedCaps = latestCapability
@@ -428,7 +428,7 @@ export class MiniappValidationHelper {
             );
             if (perm.required) {
               errors[`permissions.${index}.unsupported`] =
-                `The requested permission "${permissionDef.key}" is not supported by the current Super App runtime. A proposal has been created for review.`;
+                `The requested permission "${permissionDef.key}" is not supported by the current SuperApp runtime. A proposal has been created for review.`;
             }
           }
         }
@@ -475,7 +475,7 @@ export class MiniappValidationHelper {
       const issuesList = Object.entries(errors)
         .map(([field, msg]) => `• ${field}: ${msg}`)
         .join('\n');
-      const notificationMessage = `${app.name || 'Mini App'} has ${issues.length} validation issue(s):\n${issuesList}`;
+      const notificationMessage = `${app.name || 'MiniApp'} has ${issues.length} validation issue(s):\n${issuesList}`;
 
       await this.notificationsService.createNotification(
         app.ownerId || '',
@@ -539,7 +539,7 @@ export class MiniappValidationHelper {
         : [];
       const requiredPerms = declaredPerms;
 
-      // Super App Host Supported Capabilities whitelist
+      // SuperApp Host Supported Capabilities whitelist
       const allowedCaps = ['camera', 'geolocator', 'location', 'local_auth', 'biometrics'];
       const requiredCaps = requiredPerms;
 
@@ -563,7 +563,7 @@ export class MiniappValidationHelper {
       const packageVersion = cfg.packageVersion || cfg.version || '1.0.0';
 
       this.logger.log(
-        `Triggering universal Jenkins security scan for ${method} Mini App ${id}...`,
+        `Triggering universal Jenkins security scan for ${method} MiniApp ${id}...`,
       );
 
       this.jenkinsService
@@ -620,7 +620,7 @@ export class MiniappValidationHelper {
       await this.notificationsService.createNotification(
         app.ownerId || '',
         'Validation Running',
-        `${app.name || 'Mini App'} automated security scans initiated on Jenkins (${method}).`,
+        `${app.name || 'MiniApp'} automated security scans initiated on Jenkins (${method}).`,
         'SCAN_STARTED',
         app.id,
       );
@@ -653,14 +653,14 @@ export class MiniappValidationHelper {
     const proposal = await this.permissionProposalsService.create({
       permissionKey,
       permissionName: permissionName || permissionKey,
-      description: `Mini App "${app.name || app.appId}" requested permission "${permissionKey}", which is not defined in the platform catalog.`,
+      description: `MiniApp "${app.name || app.appId}" requested permission "${permissionKey}", which is not defined in the platform catalog.`,
       miniApp: app,
     });
 
     await this.notificationsService.createNotification(
       app.ownerId || 'system',
       'New Permission Proposed',
-      `Mini App "${app.name || app.appId}" proposed a new capability: "${permissionKey}".`,
+      `MiniApp "${app.name || app.appId}" proposed a new capability: "${permissionKey}".`,
       'PROPOSAL_CREATED',
       app.id,
     );

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { toast } from '@/components/ui/Toast';
@@ -171,7 +171,7 @@ export default function VersionHistoryTab({
     <div className="space-y-6">
       {/* 1. Header Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {/* Card A: Current Active Mini App Version */}
+        {/* Card A: Current Active MiniApp Version */}
         <div className="relative overflow-hidden rounded-2xl border border-emerald-200/80 dark:border-emerald-800/60 bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/20 dark:from-emerald-950/30 dark:via-slate-900 dark:to-slate-900 p-5 shadow-sm">
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-2.5">
@@ -183,7 +183,7 @@ export default function VersionHistoryTab({
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-                    Mini App Current Version
+                    MiniApp Current Version
                   </span>
                   {data?.packageName && (
                     <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300">
@@ -270,7 +270,7 @@ export default function VersionHistoryTab({
           </div>
 
           <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-4">
-            {activeTestRecord?.changelog || 'Candidate branch/tag compiled for Super App sandbox integration validation.'}
+            {activeTestRecord?.changelog || 'Candidate branch/tag compiled for SuperApp sandbox integration validation.'}
           </p>
 
           <div className="pt-3 border-t border-brand-100 dark:border-brand-900/40 flex items-center justify-between gap-2">
@@ -364,7 +364,7 @@ export default function VersionHistoryTab({
               <svg className="w-5 h-5 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span>Mini App Version History &amp; Release Timeline</span>
+              <span>MiniApp Version History &amp; Release Timeline</span>
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Historical record of package versions, Git release tags, commit SHAs, and sandbox revisions for {miniAppName}.
@@ -546,7 +546,7 @@ export default function VersionHistoryTab({
                       })}
                     </td>
                     <td className="py-3.5 px-4 text-xs font-medium text-slate-700 dark:text-slate-300">
-                      {rec.releasedBy || 'Mini App Developer'}
+                      {rec.releasedBy || 'MiniApp Developer'}
                     </td>
                     <td className="py-3.5 px-4">
                       {rec.checksum ? (
@@ -614,7 +614,7 @@ export default function VersionHistoryTab({
                               })
                             }
                             className="p-1.5 rounded-lg text-rose-600 hover:text-rose-800 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
-                            title={`Rollback Super App to ${rec.version}`}
+                            title={`Rollback SuperApp to ${rec.version}`}
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />

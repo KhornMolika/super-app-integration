@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import Image from 'next/image';
@@ -25,9 +25,9 @@ export function AppSidebar() {
             </div>
             {!isCollapsed && (
               <div className="overflow-hidden transition-all duration-300">
-                <h1 className="text-2xl font-extrabold text-white tracking-tight whitespace-nowrap">Super App</h1>
+                <h1 className="text-2xl font-extrabold text-white tracking-tight whitespace-nowrap">SuperApp</h1>
                 <p className="text-[10px] font-semibold text-brand-300 uppercase tracking-widest whitespace-nowrap">
-                  Super App Gateway
+                  SuperApp Gateway
                 </p>
               </div>
             )}

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+﻿import { Injectable } from '@nestjs/common';
 
 export interface DetectedPermissionResult {
   type: string;
@@ -10,7 +10,7 @@ export interface DetectedPermissionResult {
 @Injectable()
 export class PermissionDetectorHelper {
   /**
-   * Automatically discovers required native permissions from Mini App endpoint,
+   * Automatically discovers required native permissions from MiniApp endpoint,
    * association file (.well-known), script ASTs, and category intelligence.
    */
   async detect(body: {
@@ -96,7 +96,7 @@ export class PermissionDetectorHelper {
               const pPurpose =
                 typeof p === 'object' && p.purpose
                   ? p.purpose
-                  : `Required by Mini App association configuration`;
+                  : `Required by MiniApp association configuration`;
               if (pType) {
                 addPerm(
                   pType,
@@ -112,7 +112,7 @@ export class PermissionDetectorHelper {
         // Association file might not be reachable or not contain perms
       }
 
-      // 2. Scan remote HTML & JS scripts for Super App JS Bridge invocations
+      // 2. Scan remote HTML & JS scripts for SuperApp JS Bridge invocations
       try {
         const parsed = new URL(body.productionUrl.trim());
         const ctrl = new AbortController();
@@ -156,7 +156,7 @@ export class PermissionDetectorHelper {
 
           const lower = combinedCode.toLowerCase();
 
-          // Scan Super App JS Bridge (FSASuperApp / @fsasuperapp/sdk / legacy SuperAppJSBridge)
+          // Scan SuperApp JS Bridge (FSASuperApp / @fsasuperapp/sdk / legacy SuperAppJSBridge)
           const hasBridge =
             lower.includes('fsasuperapp') ||
             lower.includes('superappjsbridge') ||

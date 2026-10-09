@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import { ShieldCheckIcon, BuildingIcon, DevicePhoneIcon, PackageIcon } from '@/components/ui/Icons';
@@ -177,7 +177,7 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
             <div>
               <div className="flex flex-wrap items-center gap-2 mb-1">
                 <h3 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                  {formData.name || 'Untitled Mini App'}
+                  {formData.name || 'Untitled MiniApp'}
                 </h3>
                 {(formData.organization || formData.category) && (
                   <span 
@@ -839,7 +839,7 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                         </div>
                         <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                           <strong className="text-slate-700 dark:text-slate-300 font-medium">Purpose: </strong>
-                          {p.purpose || 'Declared for Mini App functionality.'}
+                          {p.purpose || 'Declared for MiniApp functionality.'}
                         </p>
                       </div>
                     </div>
@@ -916,7 +916,7 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
             Ready to Complete Registration
           </h5>
           <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-            Please review the configuration above. Clicking <strong className="text-slate-900 dark:text-slate-100 font-semibold">"Register Mini App"</strong> will save your configuration, create the official record, and automatically schedule CI/CD compliance validation scans.
+            Please review the configuration above. Clicking <strong className="text-slate-900 dark:text-slate-100 font-semibold">"Register MiniApp"</strong> will save your configuration, create the official record, and automatically schedule CI/CD compliance validation scans.
           </p>
         </div>
       </div>

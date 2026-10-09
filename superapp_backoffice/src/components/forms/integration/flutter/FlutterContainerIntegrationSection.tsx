@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import { Button } from "@/components/ui/inputs";
@@ -96,7 +96,7 @@ export default function FlutterContainerIntegrationSection({
           <div className="flex items-center gap-2">
             <h4 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <PackageIcon className="w-5 h-5 text-brand-600 dark:text-brand-400" />
-              <span>Super App Container Dependency Integration</span>
+              <span>SuperApp Container Dependency Integration</span>
             </h4>
             {isSuperAdminOrAdmin && (
               <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-accent-50 dark:bg-accent-950/60 text-accent-700 dark:text-accent-300 border border-accent-200 dark:border-accent-800 flex items-center gap-1">
@@ -186,7 +186,7 @@ export default function FlutterContainerIntegrationSection({
         </div>
       </div>
 
-      {/* Status Card - Focused Exclusively on this Mini App */}
+      {/* Status Card - Focused Exclusively on this MiniApp */}
       <div className="p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 shadow-sm">
           <div className="space-y-1.5 min-w-0">
@@ -240,7 +240,7 @@ export default function FlutterContainerIntegrationSection({
             <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
               <GlobeIcon className="w-4 h-4 text-sky-500 flex-shrink-0" />
               <span>
-                Need to compile and sync changes immediately to the live Super App Web Sandbox preview?
+                Need to compile and sync changes immediately to the live SuperApp Web Sandbox preview?
               </span>
             </div>
             <Button
@@ -290,7 +290,7 @@ export default function FlutterContainerIntegrationSection({
                 )}
                 <span>
                   {precheckResult.compatible
-                    ? "Pre-check Passed: 100% Compatible with Super App Container"
+                    ? "Pre-check Passed: 100% Compatible with SuperApp Container"
                     : precheckResult.isPendingPublication
                     ? "Pending Publication Notice (Expected for Draft Packages)"
                     : "Pre-check Conflict Detected"}

@@ -1,4 +1,4 @@
-import {
+﻿import {
   Controller,
   Post,
   Body,
@@ -124,7 +124,7 @@ export class ValidationCallbackController {
   @HttpCode(HttpStatus.OK)
   async handleValidationCallback(@Body() dto: ValidationCallbackDto) {
     this.logger.log(
-      `Received validation callback for Mini App ${dto.miniAppId}: status = ${dto.status}, score = ${dto.score}`,
+      `Received validation callback for MiniApp ${dto.miniAppId}: status = ${dto.status}, score = ${dto.score}`,
     );
 
     const app = await this.miniappRepository.findOne({
@@ -133,9 +133,9 @@ export class ValidationCallbackController {
     });
     if (!app) {
       this.logger.error(
-        `Validation callback failed: Mini App ${dto.miniAppId} not found`,
+        `Validation callback failed: MiniApp ${dto.miniAppId} not found`,
       );
-      throw new NotFoundException(`Mini App ${dto.miniAppId} not found`);
+      throw new NotFoundException(`MiniApp ${dto.miniAppId} not found`);
     }
 
     // Clear old validation issues
@@ -208,10 +208,10 @@ export class ValidationCallbackController {
         app.ownerId || '',
         hasPendingRevision ? 'Revision Validation Passed' : 'Automated Validation Passed',
         hasPendingRevision
-          ? `${app.name || 'Mini App'} revision passed automated ${dto.method} validation (Score: ${dto.score}/100). Live version remains active.`
+          ? `${app.name || 'MiniApp'} revision passed automated ${dto.method} validation (Score: ${dto.score}/100). Live version remains active.`
           : initialStatuses.includes(app.status)
-          ? `${app.name || 'Mini App'} passed automated ${dto.method} security validation (Score: ${dto.score}/100) and is now In Review.`
-          : `${app.name || 'Mini App'} security re-scan passed (${dto.score}/100). Status remains ${app.status}.`,
+          ? `${app.name || 'MiniApp'} passed automated ${dto.method} security validation (Score: ${dto.score}/100) and is now In Review.`
+          : `${app.name || 'MiniApp'} security re-scan passed (${dto.score}/100). Status remains ${app.status}.`,
         'REVIEW_STARTED',
         app.id,
       );
@@ -220,7 +220,7 @@ export class ValidationCallbackController {
       if (targetEmail) {
         await this.mailService.sendValidationPassedEmail(
           targetEmail,
-          app.name || app.appId || 'Mini App',
+          app.name || app.appId || 'MiniApp',
           dto.score ?? 100,
           `${this.backofficeBaseUrl}/miniapps/${app.id}`,
         );
@@ -287,7 +287,7 @@ export class ValidationCallbackController {
             miniAppId: app.id,
             type: 'SECURITY_CHECK',
             severity: finding.severity,
-            description: `[${finding.id}] ${finding.title}: ${finding.description}. Remediation: ${finding.recommendation || 'Follow Super App security guidelines.'}`,
+            description: `[${finding.id}] ${finding.title}: ${finding.description}. Remediation: ${finding.recommendation || 'Follow SuperApp security guidelines.'}`,
             status: 'OPEN',
             metadata: {
               findingId: finding.id,
@@ -324,7 +324,7 @@ export class ValidationCallbackController {
       await this.notificationsService.createNotification(
         app.ownerId || '',
         'Automated Validation Failed',
-        `${app.name || 'Mini App'} failed automated ${dto.method} security checks with ${actionableFindings.length} issue(s) across engines. Status reset to DRAFT.`,
+        `${app.name || 'MiniApp'} failed automated ${dto.method} security checks with ${actionableFindings.length} issue(s) across engines. Status reset to DRAFT.`,
         'ISSUE_CREATED',
         app.id,
       );
@@ -333,7 +333,7 @@ export class ValidationCallbackController {
       if (targetEmail) {
         await this.mailService.sendValidationFailedEmail(
           targetEmail,
-          app.name || app.appId || 'Mini App',
+          app.name || app.appId || 'MiniApp',
           dto.score ?? 0,
           (dto.findings || []).filter(
             (f) => f.severity === 'CRITICAL' || f.severity === 'HIGH',

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useMemo } from 'react';
 import {
@@ -36,7 +36,7 @@ const initialNodes = [
   { id: '5', position: { x: 740, y: 170 }, data: { label: '4. APPROVED', sublabel: 'Administrative Sign-off', colorClass: 'bg-indigo-50 text-indigo-700 border-indigo-300 dark:bg-indigo-950/40 dark:border-indigo-700 dark:text-indigo-300', targetHandle: Position.Top, sourceHandle: Position.Left }, type: 'stateNode' },
   { id: '6', position: { x: 490, y: 170 }, data: { label: '5. BUILDING', sublabel: 'Jenkins compiling test APK', colorClass: 'bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-950/40 dark:border-purple-700 dark:text-purple-300', targetHandle: Position.Right, sourceHandle: Position.Left }, type: 'stateNode' },
   { id: '7', position: { x: 260, y: 170 }, data: { label: '6. TESTING', sublabel: 'Sandbox device verification', colorClass: 'bg-teal-50 text-teal-700 border-teal-300 dark:bg-teal-950/40 dark:border-teal-700 dark:text-teal-300', targetHandle: Position.Right, sourceHandle: Position.Left }, type: 'stateNode' },
-  { id: '8', position: { x: 30, y: 170 }, data: { label: '7. ACTIVE', sublabel: 'Live in Super App Store', colorClass: 'bg-emerald-100 text-emerald-800 border-emerald-500 dark:bg-emerald-950/60 dark:border-emerald-500 dark:text-emerald-300', targetHandle: Position.Right }, type: 'stateNode' },
+  { id: '8', position: { x: 30, y: 170 }, data: { label: '7. ACTIVE', sublabel: 'Live in SuperApp Store', colorClass: 'bg-emerald-100 text-emerald-800 border-emerald-500 dark:bg-emerald-950/60 dark:border-emerald-500 dark:text-emerald-300', targetHandle: Position.Right }, type: 'stateNode' },
 
   // Exceptions / Remediation Row
   { id: '9', position: { x: 615, y: 280 }, data: { label: 'REJECTED', sublabel: 'Returned to DRAFT for fixes', colorClass: 'bg-rose-100 text-rose-800 border-rose-400 dark:bg-rose-950/60 dark:border-rose-600 dark:text-rose-300', targetHandle: Position.Top }, type: 'stateNode' },

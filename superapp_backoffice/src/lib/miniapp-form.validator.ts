@@ -1,4 +1,4 @@
-import { miniappsApi, integrationsApi } from '@/api';
+﻿import { miniappsApi, integrationsApi } from '@/api';
 import { CreateMiniAppDto, IntegrationMethod, PermissionDto, SourceType } from '@/types/miniapp.types';
 import { validateUrlFormat } from '@/components/ui/ValidatedUrlInput';
 
@@ -44,7 +44,7 @@ export function inferPackageNameFromGitUrl(
 }
 
 /**
- * Validates form step data for Mini App registration and editing
+ * Validates form step data for MiniApp registration and editing
  */
 export async function validateMiniAppStep(
   currentStep: number,
@@ -56,14 +56,14 @@ export async function validateMiniAppStep(
 
   if (currentStep === 1) {
     if (!formData.name || formData.name.trim().length < 2) {
-      errors.name = 'Mini App Name must be at least 2 characters';
+      errors.name = 'MiniApp Name must be at least 2 characters';
       isValid = false;
     }
     if (!formData.appId) {
-      errors.appId = 'Mini App ID is required';
+      errors.appId = 'MiniApp ID is required';
       isValid = false;
     } else if (!/^[a-z0-9_.-]+$/.test(formData.appId)) {
-      errors.appId = 'Mini App ID can only contain lowercase letters, numbers, and underscores (e.g. miniapp_8f32a1)';
+      errors.appId = 'MiniApp ID can only contain lowercase letters, numbers, and underscores (e.g. miniapp_8f32a1)';
       isValid = false;
     }
     if (!formData.logo || !formData.logo.trim()) {

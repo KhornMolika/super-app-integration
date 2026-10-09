@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import Link from "next/link";
@@ -72,7 +72,7 @@ export default function TrustRegulatorPrivacyPage() {
             All private trust records, beneficiary schedules, and asset
             declarations are classified as confidential regulatory records.
             Access is strictly restricted to authorized FSA inspection officers
-            and authenticated trust administrators via Super App cryptographic
+            and authenticated trust administrators via SuperApp cryptographic
             RBAC policies.
           </p>
         </div>
@@ -110,7 +110,7 @@ export default function TrustRegulatorPrivacyPage() {
             className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-semibold text-slate-200 hover:text-white transition flex items-center justify-center gap-2 cursor-pointer"
           >
             <ArrowRightIcon className="w-4 h-4 rotate-180" />
-            <span>Back to Super App Consent</span>
+            <span>Back to SuperApp Consent</span>
           </button>
           <Link
             href="/legal/trust-regulator/terms"

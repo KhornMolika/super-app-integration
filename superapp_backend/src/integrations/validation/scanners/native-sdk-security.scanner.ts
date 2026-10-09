@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MiniApp } from '../../../miniapps/entities/miniapp.entity';
@@ -32,7 +32,7 @@ export class NativeSdkSecurityScanner {
   }
 
   /**
-   * Performs dynamic security scan for Native SDK Mini Apps
+   * Performs dynamic security scan for Native SDK MiniApps
    */
   async scan(
     miniAppId: string,
@@ -121,7 +121,7 @@ export class NativeSdkSecurityScanner {
 
     if (stages.capability_gate) {
       stages.capability_gate.status = 'RUNNING';
-      stages.capability_gate.details = 'Verifying native bridge capabilities against Super App host catalog...';
+      stages.capability_gate.details = 'Verifying native bridge capabilities against SuperApp host catalog...';
       await emitUpdate('capability_gate');
       await this.delay(400);
       stages.capability_gate.status = 'COMPLETED';

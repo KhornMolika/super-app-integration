@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as fs from 'fs';
@@ -72,7 +72,7 @@ export class ApkBuildManagerService {
   }
 
   /**
-   * Compiles the size-optimized Super App Android APK locally and uploads it to Nexus repository.
+   * Compiles the size-optimized SuperApp Android APK locally and uploads it to Nexus repository.
    */
   async triggerBuild(options: {
     releaseVersion: string;
@@ -102,8 +102,8 @@ export class ApkBuildManagerService {
     this.releaseVersion = releaseVersion;
     this.lastBuildStartTime = Date.now();
     this.exitCode = undefined;
-    this.message = `Compiling Super App APK (${releaseVersion}, ${buildType})...`;
-    this.appendLog(`=== Super App APK Build Started for ${releaseVersion} (${buildType}) ===`);
+    this.message = `Compiling SuperApp APK (${releaseVersion}, ${buildType})...`;
+    this.appendLog(`=== SuperApp APK Build Started for ${releaseVersion} (${buildType}) ===`);
 
     const candidates = [
       path.resolve(process.cwd(), 'scripts/build-optimized-apk.ps1'),
@@ -248,7 +248,7 @@ export class ApkBuildManagerService {
             const targetName = buildType === 'release' ? 'app-release.apk' : 'app-debug.apk';
             const nexusBase = (process.env.NEXUS_BASE_URL || 'http://localhost:8081').replace(/\/+$/, '');
             const apkUrl = `${nexusBase}/repository/${repoName}/${appName}/${releaseVersion}/${targetName}`;
-            this.message = `Super App test APK (${releaseVersion}, ${buildType}) compiled and published to Nexus (${repoName}/${targetName}) successfully in ${(this.durationMs / 1000).toFixed(1)}s.`;
+            this.message = `SuperApp test APK (${releaseVersion}, ${buildType}) compiled and published to Nexus (${repoName}/${targetName}) successfully in ${(this.durationMs / 1000).toFixed(1)}s.`;
             this.appendLog(`✅ ${this.message}`);
             this.logger.log(this.message);
 
@@ -290,7 +290,7 @@ export class ApkBuildManagerService {
             finalize({ success: true, message: this.message, apkUrl });
           } else {
             this.state = 'FAILED';
-            this.message = `Super App APK build failed with exit code ${this.exitCode}.`;
+            this.message = `SuperApp APK build failed with exit code ${this.exitCode}.`;
             this.appendLog(`❌ ${this.message}`);
             this.logger.error(this.message);
             finalize({ success: false, message: this.message });
