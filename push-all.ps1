@@ -147,11 +147,11 @@ Write-Host "[OK] Target branch on remotes: $TargetBranch`n" -ForegroundColor Gre
 # ==============================================================================
 if (-not $RemoteOption) {
     Write-Host "Select destination remote(s):" -ForegroundColor White
-    Write-Host "  [1] All Remotes (origin + fintech + fintech-backend + fintech-mobile) [Recommended]" -ForegroundColor Cyan
-    Write-Host "  [2] GitLab All (fintech Backoffice + fintech-backend Backend + fintech-mobile Mobile)"
-    Write-Host "  [3] GitLab Mobile only (fintech-mobile -> super-app.git)"
-    Write-Host "  [4] GitLab Backoffice only (fintech -> super-app-manager.git)"
-    Write-Host "  [5] GitLab Backend only (fintech-backend -> super-app.git)"
+    Write-Host "  [1] All Remotes (origin + superapp-manager + superapp-backend + superapp-mobile) [Recommended]" -ForegroundColor Cyan
+    Write-Host "  [2] GitLab All (superapp-manager Backoffice + superapp-backend Backend + superapp-mobile Mobile)"
+    Write-Host "  [3] GitLab Mobile only (superapp-mobile -> super-app.git)"
+    Write-Host "  [4] GitLab Backoffice only (superapp-manager -> super-app-manager.git)"
+    Write-Host "  [5] GitLab Backend only (superapp-backend -> super-app.git)"
     Write-Host "  [6] GitHub Monorepo only (origin -> super-app-integration.git)"
     
     $userRemote = Read-Host "Enter choice [Default: 1]"
@@ -168,11 +168,11 @@ Write-Host " Push Summary:" -ForegroundColor Yellow
 Write-Host "  - Source Branch:   $SourceBranch" -ForegroundColor Cyan
 Write-Host "  - Target Branch:   $TargetBranch" -ForegroundColor Cyan
 switch ($RemoteOption) {
-    "1" { Write-Host "  - Destinations:    origin (Monorepo), fintech (Backoffice), fintech-backend (Backend), fintech-mobile (Mobile)" -ForegroundColor Green }
-    "2" { Write-Host "  - Destinations:    fintech (Backoffice), fintech-backend (Backend), fintech-mobile (Mobile)" -ForegroundColor Green }
-    "3" { Write-Host "  - Destinations:    fintech-mobile (Mobile)" -ForegroundColor Green }
-    "4" { Write-Host "  - Destinations:    fintech (Backoffice)" -ForegroundColor Green }
-    "5" { Write-Host "  - Destinations:    fintech-backend (Backend)" -ForegroundColor Green }
+    "1" { Write-Host "  - Destinations:    origin (Monorepo), superapp-manager (Backoffice), superapp-backend (Backend), superapp-mobile (Mobile)" -ForegroundColor Green }
+    "2" { Write-Host "  - Destinations:    superapp-manager (Backoffice), superapp-backend (Backend), superapp-mobile (Mobile)" -ForegroundColor Green }
+    "3" { Write-Host "  - Destinations:    superapp-mobile (Mobile)" -ForegroundColor Green }
+    "4" { Write-Host "  - Destinations:    superapp-manager (Backoffice)" -ForegroundColor Green }
+    "5" { Write-Host "  - Destinations:    superapp-backend (Backend)" -ForegroundColor Green }
     "6" { Write-Host "  - Destinations:    origin (Monorepo)" -ForegroundColor Green }
     Default { Write-Host "[ERROR] Invalid remote choice!" -ForegroundColor Red; exit 1 }
 }
@@ -196,8 +196,8 @@ function Push-ToOrigin {
     }
 }
 
-function Push-ToFintech {
-    Write-Host "[2/4] Splitting and Pushing superapp_backoffice to fintech ($TargetBranch)..." -ForegroundColor Blue
+function Push-ToSuperAppManager {
+    Write-Host "[2/4] Splitting and Pushing superapp_backoffice to superapp-manager ($TargetBranch)..." -ForegroundColor Blue
     Write-Host "  -> Computing subtree split for superapp_backoffice..." -ForegroundColor Cyan
     $rawCommit = git subtree split --prefix=superapp_backoffice "$SourceBranch" 2>$null
     $splitCommit = if ($rawCommit) { ([string]$rawCommit).Trim() } else { "" }
@@ -206,16 +206,16 @@ function Push-ToFintech {
         return
     }
     Write-Host "  -> Split commit: $splitCommit" -ForegroundColor Cyan
-    git push fintech ("{0}:{1}" -f $splitCommit, $TargetBranch)
+    git push superapp-manager ("{0}:{1}" -f $splitCommit, $TargetBranch) --force
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "[OK] Backoffice successfully pushed to fintech/$TargetBranch!`n" -ForegroundColor Green
+        Write-Host "[OK] Backoffice successfully pushed to superapp-manager/$TargetBranch!`n" -ForegroundColor Green
     } else {
-        Write-Host "[ERROR] Failed to push to fintech/$TargetBranch.`n" -ForegroundColor Red
+        Write-Host "[ERROR] Failed to push to superapp-manager/$TargetBranch.`n" -ForegroundColor Red
     }
 }
 
-function Push-ToFintechBackend {
-    Write-Host "[3/4] Splitting and Pushing superapp_backend to fintech-backend ($TargetBranch)..." -ForegroundColor Blue
+function Push-ToSuperAppBackend {
+    Write-Host "[3/4] Splitting and Pushing superapp_backend to superapp-backend ($TargetBranch)..." -ForegroundColor Blue
     Write-Host "  -> Computing subtree split for superapp_backend..." -ForegroundColor Cyan
     $rawCommit = git subtree split --prefix=superapp_backend "$SourceBranch" 2>$null
     $splitCommit = if ($rawCommit) { ([string]$rawCommit).Trim() } else { "" }
@@ -224,52 +224,52 @@ function Push-ToFintechBackend {
         return
     }
     Write-Host "  -> Split commit: $splitCommit" -ForegroundColor Cyan
-    git push fintech-backend ("{0}:{1}" -f $splitCommit, $TargetBranch)
+    git push superapp-backend ("{0}:{1}" -f $splitCommit, $TargetBranch) --force
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "[OK] Backend successfully pushed to fintech-backend/$TargetBranch!`n" -ForegroundColor Green
+        Write-Host "[OK] Backend successfully pushed to superapp-backend/$TargetBranch!`n" -ForegroundColor Green
     } else {
-        Write-Host "[ERROR] Failed to push to fintech-backend/$TargetBranch.`n" -ForegroundColor Red
+        Write-Host "[ERROR] Failed to push to superapp-backend/$TargetBranch.`n" -ForegroundColor Red
     }
 }
 
-function Push-ToFintechMobile {
-    Write-Host "[4/4] Splitting and Pushing super-app to fintech-mobile ($TargetBranch)..." -ForegroundColor Blue
+function Push-ToSuperAppMobile {
+    Write-Host "[4/4] Splitting and Pushing super-app to superapp-mobile ($TargetBranch)..." -ForegroundColor Blue
     Write-Host "  -> Computing subtree split for super-app..." -ForegroundColor Cyan
     $rawCommit = git subtree split --prefix=super-app "$SourceBranch" 2>$null
     $splitCommit = if ($rawCommit) { ([string]$rawCommit).Trim() } else { "" }
     if (-not $splitCommit) {
-        Write-Host "[INFO] No new changes found in super-app (already up to date).`n" -ForegroundColor Yellow
+        Write-Host "[INFO] No separate subtree changes found in super-app.`n" -ForegroundColor Yellow
         return
     }
     Write-Host "  -> Split commit: $splitCommit" -ForegroundColor Cyan
-    git push fintech-mobile ("{0}:{1}" -f $splitCommit, $TargetBranch)
+    git push superapp-mobile ("{0}:{1}" -f $splitCommit, $TargetBranch) --force
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "[OK] Mobile Super App successfully pushed to fintech-mobile/$TargetBranch!`n" -ForegroundColor Green
+        Write-Host "[OK] Mobile SuperApp successfully pushed to superapp-mobile/$TargetBranch!`n" -ForegroundColor Green
     } else {
-        Write-Host "[ERROR] Failed to push to fintech-mobile/$TargetBranch.`n" -ForegroundColor Red
+        Write-Host "[ERROR] Failed to push to superapp-mobile/$TargetBranch.`n" -ForegroundColor Red
     }
 }
 
 switch ($RemoteOption) {
     "1" {
         Push-ToOrigin
-        Push-ToFintech
-        Push-ToFintechBackend
-        Push-ToFintechMobile
+        Push-ToSuperAppManager
+        Push-ToSuperAppBackend
+        Push-ToSuperAppMobile
     }
     "2" {
-        Push-ToFintech
-        Push-ToFintechBackend
-        Push-ToFintechMobile
+        Push-ToSuperAppManager
+        Push-ToSuperAppBackend
+        Push-ToSuperAppMobile
     }
     "3" {
-        Push-ToFintechMobile
+        Push-ToSuperAppMobile
     }
     "4" {
-        Push-ToFintech
+        Push-ToSuperAppManager
     }
     "5" {
-        Push-ToFintechBackend
+        Push-ToSuperAppBackend
     }
     "6" {
         Push-ToOrigin
