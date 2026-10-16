@@ -31,6 +31,7 @@ export class NotificationsService {
     type: string,
     miniAppId?: string,
     metadata?: any,
+    skipTelegram = false,
   ) {
     let saved: Notification | null = null;
     try {
@@ -54,8 +55,9 @@ export class NotificationsService {
     }
 
     // 2. Dispatch Telegram rich cards to MA Manager, MiniApp Team Group & SA Admins
-    try {
-      const targetChatIds: string[] = [];
+    if (!skipTelegram) {
+      try {
+        const targetChatIds: string[] = [];
 
       // Check target user's personal Telegram & team chat
       if (userId) {
@@ -195,6 +197,7 @@ export class NotificationsService {
     } catch (err: any) {
       this.logger.warn(`Failed to deliver Telegram alert: ${err.message}`);
     }
+  }
 
     return saved;
   }
@@ -220,14 +223,15 @@ export class NotificationsService {
 
       const targets = admins.length > 0 ? admins : (allUsers.length > 0 ? [allUsers[0]] : []);
 
-      for (const target of targets) {
+      for (let i = 0; i < targets.length; i++) {
         await this.createNotification(
-          target.id,
+          targets[i].id,
           title,
           message,
           type,
           miniAppId,
           metadata,
+          i > 0,
         );
       }
     } catch (err: any) {

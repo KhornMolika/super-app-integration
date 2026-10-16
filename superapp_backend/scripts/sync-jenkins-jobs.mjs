@@ -45,6 +45,7 @@ const jenkinsUrl = (process.env.JENKINS_URL || 'http://localhost:8085').replace(
 const jenkinsUser = process.env.JENKINS_USER || 'admin';
 const jenkinsToken = process.env.JENKINS_API_TOKEN || process.env.JENKINS_TOKEN || '';
 const auth = Buffer.from(`${jenkinsUser}:${jenkinsToken}`).toString('base64');
+const releaseCallbackToken = (process.env.RELEASE_CALLBACK_TOKEN || 'CHANGE_ME_JENKINS_CALLBACK_TOKEN').trim();
 
 let cookieJar = new Map();
 
@@ -187,7 +188,7 @@ set -e
 MINIAPP_ID="\${MINIAPP_ID:-}"
 INTEGRATION_METHOD="\${INTEGRATION_METHOD:-${method}}"
 CALLBACK_URL="\${CALLBACK_URL:-https://app.fintechcenterfsa.com/api/integrations/validation/callback}"
-REPORT_DIR="/var/reports"
+REPORT_DIR="/var/reports/validations/\${MINIAPP_ID:-default}"
 WORKSPACE_DIR="/var/workspace/app-\${MINIAPP_ID:-default}"
 
 mkdir -p "$REPORT_DIR" "$WORKSPACE_DIR" || true
@@ -261,33 +262,44 @@ set -e
 
 echo "=== Starting SuperApp Test Build for \${APP_NAME} (\${RELEASE_VERSION}) ==="
 
+BUILD_DIR="/var/reports/builds/\${APP_NAME}/\${RELEASE_VERSION}"
+mkdir -p "$BUILD_DIR"
+
 FILENAME="superapp-test-\${RELEASE_VERSION}.apk"
-APK_FILE="/var/reports/\${FILENAME}"
+APK_FILE="\${BUILD_DIR}/\${FILENAME}"
 NEXUS_AUTH_USER="\${NEXUS_USER:-admin}"
 NEXUS_AUTH_PASS="\${NEXUS_PASSWORD:-ctKGr4x447yCsljwmy8pXopVpYVVt2}"
 AUTH_OPT="-u \${NEXUS_AUTH_USER}:\${NEXUS_AUTH_PASS}"
 NEXUS_TARGET_URL="\${NEXUS_URL:-https://app.fintechcenterfsa.com/nexus}/repository/apk-test-builds/\${APP_NAME}/\${RELEASE_VERSION}/\${FILENAME}"
 
-if [ ! -f "\$APK_FILE" ] || [ ! -s "\$APK_FILE" ]; then
-    mkdir -p /var/reports
-    curl -s -f "http://superapp-backend:3000/public/superapp-test.apk" -o "\$APK_FILE" || \
-    curl -s -f "https://app.fintechcenterfsa.com/api/download-apk?type=test&version=\${RELEASE_VERSION}" -o "\$APK_FILE" || \
-    echo "SuperApp Test Build for \${APP_NAME} \${RELEASE_VERSION}" > "\$APK_FILE"
+# 1. Check if an APK was produced by workspace Flutter build
+if [ -f "super-app/build/app/outputs/flutter-apk/app-release.apk" ]; then
+    cp "super-app/build/app/outputs/flutter-apk/app-release.apk" "$APK_FILE"
+elif [ -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
+    cp "build/app/outputs/flutter-apk/app-release.apk" "$APK_FILE"
+elif [ ! -f "$APK_FILE" ] || [ ! -s "$APK_FILE" ]; then
+    # 2. Fetch canonical build from release service
+    curl -s -f "https://app.fintechcenterfsa.com/api/download-apk?type=test&version=\${RELEASE_VERSION}&appName=\${APP_NAME}" -o "$APK_FILE" || true
 fi
 
-if [ -f "\$APK_FILE" ] && [ -s "\$APK_FILE" ]; then
+# 3. Publish to Nexus repository
+if [ -f "$APK_FILE" ] && [ -s "$APK_FILE" ]; then
     echo "Uploading \${FILENAME} to Sonatype Nexus apk-test-builds repository..."
-    curl -s -f \$AUTH_OPT --upload-file "\$APK_FILE" "\$NEXUS_TARGET_URL" || true
+    curl -s -f \$AUTH_OPT --upload-file "$APK_FILE" "$NEXUS_TARGET_URL" || true
     echo "Upload to Sonatype Nexus apk-test-builds successfully completed!"
 fi
 
+# 4. Notify Backend of build completion
 if [ -n "\${CALLBACK_URL}" ]; then
     echo "Sending completion callback to \${CALLBACK_URL}..."
-    TOKEN="\${CALLBACK_TOKEN:-CHANGE_ME_JENKINS_CALLBACK_TOKEN}"
+    TOKEN="\${CALLBACK_TOKEN}"
+    if [ -z "\$TOKEN" ] || [ "\$TOKEN" = "CHANGE_ME_JENKINS_CALLBACK_TOKEN" ]; then
+        TOKEN="${releaseCallbackToken}"
+    fi
     RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST "\${CALLBACK_URL}" \
       -H "Content-Type: application/json" \
       -H "x-callback-token: \$TOKEN" \
-      -d "{\\"status\\":\\"PASSED\\",\\"appName\\":\\"\${APP_NAME}\\",\\"releaseVersion\\":\\"\${RELEASE_VERSION}\\",\\"filename\\":\\"\${FILENAME}\\",\\"callbackToken\\":\\"\$TOKEN\\"}")
+      -d "{\\"status\\":\\"SUCCESS\\",\\"appName\\":\\"\${APP_NAME}\\",\\"releaseVersion\\":\\"\${RELEASE_VERSION}\\",\\"filename\\":\\"\${FILENAME}\\",\\"callbackToken\\":\\"\$TOKEN\\"}")
 
     HTTP_STATUS=$(echo "\$RESPONSE" | grep "HTTP_STATUS" | cut -d':' -f2 | tr -d ' \r\n')
     BODY=$(echo "\$RESPONSE" | grep -v "HTTP_STATUS")
@@ -308,12 +320,19 @@ echo "=== SuperApp Test Build Completed Successfully ==="`;
     return `#!/bin/bash
 set -e
 echo "=== SuperApp Sandbox Build Triggered ==="
+
+SANDBOX_DIR="/var/reports/sandbox"
+mkdir -p "$SANDBOX_DIR"
+
 if [ -n "\${CALLBACK_URL}" ]; then
-    TOKEN="\${CALLBACK_TOKEN:-CHANGE_ME_JENKINS_CALLBACK_TOKEN}"
+    TOKEN="\${CALLBACK_TOKEN}"
+    if [ -z "\$TOKEN" ] || [ "\$TOKEN" = "CHANGE_ME_JENKINS_CALLBACK_TOKEN" ]; then
+        TOKEN="${releaseCallbackToken}"
+    fi
     RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST "\${CALLBACK_URL}" \
       -H "Content-Type: application/json" \
       -H "x-callback-token: \$TOKEN" \
-      -d "{\\"status\\":\\"PASSED\\",\\"version\\":\\"\${RELEASE_VERSION:-1.0.0}\\",\\"appName\\":\\"\${APP_NAME:-superapp}\\",\\"releaseVersion\\":\\"\${RELEASE_VERSION:-1.0.0}\\",\\"callbackToken\\":\\"\$TOKEN\\"}")
+      -d "{\\"status\\":\\"SUCCESS\\",\\"version\\":\\"\${RELEASE_VERSION:-1.0.0}\\",\\"appName\\":\\"\${APP_NAME:-superapp}\\",\\"releaseVersion\\":\\"\${RELEASE_VERSION:-1.0.0}\\",\\"callbackToken\\":\\"\$TOKEN\\"}")
 
     HTTP_STATUS=$(echo "\$RESPONSE" | grep "HTTP_STATUS" | cut -d':' -f2 | tr -d ' \r\n')
     BODY=$(echo "\$RESPONSE" | grep -v "HTTP_STATUS")
@@ -423,7 +442,7 @@ function buildFreestyleJobXml(jobName, shellCommand) {
         </hudson.model.StringParameterDefinition>
         <hudson.model.StringParameterDefinition>
           <name>CALLBACK_TOKEN</name>
-          <defaultValue>CHANGE_ME_JENKINS_CALLBACK_TOKEN</defaultValue>
+          <defaultValue>${escapeXmlScript(releaseCallbackToken)}</defaultValue>
           <trim>true</trim>
         </hudson.model.StringParameterDefinition>
         <hudson.model.StringParameterDefinition>
@@ -506,6 +525,12 @@ async function syncJob(jobName, scriptFile) {
         configXml = configXml.replace(/<command>[\s\S]*?<\/command>/, () => `<command>${escapedCmd}</command>`);
       } else {
         configXml = buildFreestyleJobXml(jobName, shellScript);
+      }
+      if (configXml.includes('<name>CALLBACK_TOKEN</name>')) {
+        configXml = configXml.replace(
+          /(<hudson\.model\.StringParameterDefinition>[\s\S]*?<name>CALLBACK_TOKEN<\/name>[\s\S]*?<defaultValue>)[\s\S]*?(<\/defaultValue>)/,
+          `$1${escapeXmlScript(releaseCallbackToken)}$2`
+        );
       }
     } else {
       configXml = configXml.replace(/<script>[\s\S]*?<\/script>/, () => `<script>${escapedScript}</script>`);

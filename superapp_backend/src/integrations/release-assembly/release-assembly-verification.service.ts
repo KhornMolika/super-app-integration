@@ -1,4 +1,4 @@
-﻿import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
@@ -591,10 +591,12 @@ export class ReleaseAssemblyVerificationService {
         );
         const standaloneApkUrl = `${backofficeBase}/api/download-apk?type=test&version=${encodeURIComponent(normVersion)}&appName=superapp`;
 
-        const fallbackApp = await this.miniappRepository.findOne({
+        const fallbackApps = await this.miniappRepository.find({
           order: { updatedAt: 'DESC' },
           relations: { owner: true },
+          take: 1,
         });
+        const fallbackApp = fallbackApps[0];
 
         this.notificationsService.emitBuildCompleted({
           miniAppId: fallbackApp?.id || 'superapp',
