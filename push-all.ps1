@@ -27,12 +27,15 @@ Write-Host "======================================================" -ForegroundC
 Write-Host " Super App - Multi-Remote Push Automation" -ForegroundColor Cyan
 Write-Host "======================================================`n" -ForegroundColor Cyan
 
-# Check if inside git root
+# Check if inside git root and switch to toplevel
 $null = git rev-parse --is-inside-work-tree 2>$null
 if ($LASTEXITCODE -ne 0) {
     Write-Host "[ERROR] Not inside a Git repository!" -ForegroundColor Red
     exit 1
 }
+
+$gitRoot = (git rev-parse --show-toplevel).Trim()
+Set-Location $gitRoot
 
 $currentBranch = (git rev-parse --abbrev-ref HEAD).Trim()
 

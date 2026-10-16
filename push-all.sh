@@ -21,11 +21,14 @@ echo -e "${BOLD}${CYAN}======================================================${R
 echo -e "${BOLD}${CYAN} 🚀 Super App - Multi-Remote Push Automation ${RESET}"
 echo -e "${BOLD}${CYAN}======================================================${RESET}\n"
 
-# Verify in Git root
+# Verify in Git root and switch to toplevel
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   echo -e "${RED}❌ Error: Not inside a Git repository!${RESET}"
   exit 1
 fi
+
+GIT_ROOT=$(git rev-parse --show-toplevel)
+cd "$GIT_ROOT"
 
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD | tr -d '\r\n ')
 
@@ -178,8 +181,12 @@ case "$REMOTE_CHOICE" in
 esac
 echo -e "${BOLD}${YELLOW}------------------------------------------------------${RESET}\n"
 
-read -r -p "Proceed with push? [Y/n]: " CONFIRM
-CONFIRM=$(echo "$CONFIRM" | tr -d '\r\n ')
+if [ -n "$4" ] && [[ "$4" =~ ^(-y|y|yes)$ ]]; then
+  CONFIRM="y"
+else
+  read -r -p "Proceed with push? [Y/n]: " CONFIRM
+  CONFIRM=$(echo "$CONFIRM" | tr -d '\r\n ')
+fi
 if [[ "$CONFIRM" =~ ^[nN] ]]; then
   echo -e "${YELLOW}Push cancelled.${RESET}"
   exit 0
