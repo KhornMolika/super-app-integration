@@ -40,33 +40,45 @@ export class PermissionsService implements OnApplicationBootstrap {
     const defaultPermissions = [
       {
         key: 'camera',
-        name: 'Camera',
+        name: 'Camera & Document Capture',
         category: 'MEDIA_HARDWARE',
-        description: 'Access device camera to take photos or scan QR codes',
+        description:
+          'Photo capture and image selection from camera for KYC verification and document uploads.',
       },
       {
         key: 'location',
-        name: 'Location',
+        name: 'Geolocation Services',
         category: 'LOCATION',
-        description: 'Access device GPS location for map and geolocation features',
+        description:
+          'Real-time GPS coordinates for branch discovery, nearby regulatory offices, and geo-fencing.',
       },
       {
         key: 'biometrics',
-        name: 'Biometrics',
+        name: 'Biometric Authentication',
         category: 'SECURITY',
-        description: 'Access biometric authentication (FaceID, TouchID, Fingerprint)',
+        description:
+          'Hardware FaceID, TouchID, and Android BiometricPrompt identity verification.',
       },
       {
         key: 'microphone',
         name: 'Microphone',
         category: 'MEDIA_HARDWARE',
-        description: 'Access device microphone to record audio notes or voice features',
+        description:
+          'Access device microphone to record audio notes or voice features',
       },
       {
         key: 'storage',
-        name: 'Storage',
+        name: 'Secure Vault Storage',
         category: 'SECURITY',
-        description: 'Read and write local files or device storage',
+        description:
+          'Hardware-backed encrypted key-value storage (Android KeyStore & iOS Keychain).',
+      },
+      {
+        key: 'webview_runtime',
+        name: 'Sandboxed WebView Runtime',
+        category: 'PLATFORM',
+        description:
+          'Isolated web application host container with security boundary and JS bridge.',
       },
     ];
 

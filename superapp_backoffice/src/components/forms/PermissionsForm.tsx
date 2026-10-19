@@ -18,6 +18,17 @@ import {
 } from '@/components/ui/Icons';
 import { PlusCircle } from 'lucide-react';
 
+export function normalizeCapabilityKey(raw: string): string {
+  const lower = (raw || '').toLowerCase().trim();
+  if (lower === 'take_photo' || lower === 'camera' || lower === 'photo' || lower === 'camera & document capture') return 'camera';
+  if (lower === 'get_location' || lower === 'location' || lower === 'gps' || lower === 'geolocation services' || lower === 'location services') return 'location';
+  if (lower === 'biometric_auth' || lower === 'biometrics' || lower === 'biometric' || lower === 'biometric authentication') return 'biometrics';
+  if (lower === 'record' || lower === 'microphone' || lower === 'audio' || lower === 'microphone & audio') return 'microphone';
+  if (lower === 'secure_storage' || lower === 'storage' || lower === 'secure vault storage') return 'storage';
+  if (lower === 'webview_runtime' || lower === 'webview' || lower === 'internet' || lower === 'sandboxed webview runtime') return 'webview_runtime';
+  return lower;
+}
+
 export const PERMISSION_STORE_MAP: Record<
   string,
   { iosKey: string; androidPermission: string; defaultAction: string; description: string }
@@ -38,13 +49,37 @@ export const PERMISSION_STORE_MAP: Record<
     iosKey: 'NSFaceIDUsageDescription',
     androidPermission: 'android.permission.USE_BIOMETRIC',
     defaultAction: 'securely authenticate your identity and authorize sensitive transactions',
-    description: 'Authenticate transactions and login securely with Fingerprint or Face ID.',
+    description: 'Hardware FaceID, TouchID, and Android BiometricPrompt identity verification.',
   },
   microphone: {
     iosKey: 'NSMicrophoneUsageDescription',
     androidPermission: 'android.permission.RECORD_AUDIO',
     defaultAction: 'record audio notes and enable voice-guided features',
-    description: 'Voice recognition and audio recording capabilities.',
+    description: 'Access device microphone to record audio notes or voice features.',
+  },
+  storage: {
+    iosKey: 'Keychain & NSPhotoLibraryUsageDescription',
+    androidPermission: 'android.security.keystore & WRITE_EXTERNAL_STORAGE',
+    defaultAction: 'securely store encrypted tokens, offline cache, and user vault data',
+    description: 'Hardware-backed encrypted key-value storage (Android KeyStore & iOS Keychain).',
+  },
+  secure_storage: {
+    iosKey: 'Keychain & NSPhotoLibraryUsageDescription',
+    androidPermission: 'android.security.keystore & WRITE_EXTERNAL_STORAGE',
+    defaultAction: 'securely store encrypted tokens, offline cache, and user vault data',
+    description: 'Hardware-backed encrypted key-value storage (Android KeyStore & iOS Keychain).',
+  },
+  webview_runtime: {
+    iosKey: 'NSAppTransportSecurity',
+    androidPermission: 'android.permission.INTERNET',
+    defaultAction: 'host isolated web application runtime and process secure JS bridge communications',
+    description: 'Isolated web application host container with security boundary and JS bridge.',
+  },
+  internet: {
+    iosKey: 'NSAppTransportSecurity',
+    androidPermission: 'android.permission.INTERNET',
+    defaultAction: 'connect to authorized secure API endpoints and process real-time network requests',
+    description: 'Network connectivity and outbound API access.',
   },
   nfc: {
     iosKey: 'NFCReaderUsageDescription',
@@ -66,16 +101,35 @@ export const PERMISSION_STORE_MAP: Record<
   },
 };
 
-export const WHITELISTED_HOST_CAPABILITIES = ['camera', 'location', 'biometrics', 'microphone'];
+export const WHITELISTED_HOST_CAPABILITIES = [
+  'camera',
+  'location',
+  'biometrics',
+  'microphone',
+  'storage',
+  'secure_storage',
+  'webview_runtime',
+  'internet',
+];
+
+export const CANONICAL_SHELL_CAPABILITIES = [
+  'Microphone',
+  'Webview_runtime',
+  'Camera',
+  'Location',
+  'Biometrics',
+  'Storage',
+];
 
 export function formatCompliantPurpose(type: string, rawPurpose: string, appName?: string): string {
   const appLabel = appName?.trim() || '$(PRODUCT_NAME)';
   const trimmed = (rawPurpose || '').trim();
-  const meta = PERMISSION_STORE_MAP[type.toLowerCase()];
+  const canonKey = normalizeCapabilityKey(type);
+  const meta = PERMISSION_STORE_MAP[canonKey] || PERMISSION_STORE_MAP[type.toLowerCase()];
   const fallbackAction = meta?.defaultAction || `access ${type.toLowerCase()} features`;
 
   if (!trimmed) {
-    return `${appLabel} requires access to your ${type.toLowerCase()} to ${fallbackAction}.`;
+    return `${appLabel} requires access to your ${canonKey} to ${fallbackAction}.`;
   }
 
   // Extract the underlying action/reason from any existing "requires" sentence
@@ -104,7 +158,7 @@ export function formatCompliantPurpose(type: string, rawPurpose: string, appName
   // Lowercase the first letter of the reason
   reason = reason.charAt(0).toLowerCase() + reason.slice(1);
 
-  return `${appLabel} requires access to your ${type.toLowerCase()} to ${reason}.`;
+  return `${appLabel} requires access to your ${canonKey} to ${reason}.`;
 }
 
 export function isStoreCompliant(purpose: string, appName?: string): boolean {
@@ -126,25 +180,25 @@ export function isStoreCompliant(purpose: string, appName?: string): boolean {
 }
 
 export function getPermissionVisual(type: string) {
-  const key = type.toLowerCase();
+  const key = normalizeCapabilityKey(type);
   switch (key) {
     case 'camera':
       return {
         icon: <CameraIcon className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
         bg: 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 border-amber-200 dark:border-amber-800/60',
-        title: 'Camera',
+        title: 'Camera & Document Capture',
       };
     case 'location':
       return {
         icon: <GlobeIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />,
         bg: 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 border-blue-200 dark:border-blue-800/60',
-        title: 'Location Services',
+        title: 'Geolocation Services',
       };
     case 'biometrics':
       return {
         icon: <ShieldCheckIcon className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />,
         bg: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 border-emerald-200 dark:border-emerald-800/60',
-        title: 'Biometrics (FaceID / Fingerprint)',
+        title: 'Biometric Authentication',
       };
     case 'microphone':
       return {
@@ -154,7 +208,27 @@ export function getPermissionVisual(type: string) {
           </svg>
         ),
         bg: 'bg-accent-50 dark:bg-accent-950/40 text-accent-700 dark:text-accent-300 border-accent-200 dark:border-accent-800/60',
-        title: 'Microphone & Audio',
+        title: 'Microphone',
+      };
+    case 'storage':
+      return {
+        icon: (
+          <svg className="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+        ),
+        bg: 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800/60',
+        title: 'Secure Vault Storage',
+      };
+    case 'webview_runtime':
+      return {
+        icon: (
+          <svg className="w-5 h-5 text-cyan-600 dark:text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+        ),
+        bg: 'bg-cyan-50 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800/60',
+        title: 'Sandboxed WebView Runtime',
       };
     case 'nfc':
       return {
@@ -260,12 +334,13 @@ export default function PermissionsForm({
   const handleAddCustomCapability = () => {
     if (!customKey.trim()) return;
     const cleanType = customKey.trim();
+    const canon = normalizeCapabilityKey(cleanType);
     const purpose =
       customPurpose.trim() ||
       formatCompliantPurpose(cleanType, '', formData.name);
 
     const exists = (formData.permissions || []).some(
-      (p: any) => p.type.toLowerCase() === cleanType.toLowerCase(),
+      (p: any) => normalizeCapabilityKey(p.type) === canon,
     );
 
     if (!exists) {
@@ -287,10 +362,15 @@ export default function PermissionsForm({
   };
 
   const getPermError = (type: string, field: string) => {
+    const canon = normalizeCapabilityKey(type);
     if (allErrors[`permission_${type}_${field}`]) return allErrors[`permission_${type}_${field}`];
+    if (allErrors[`permission_${canon}_${field}`]) return allErrors[`permission_${canon}_${field}`];
     if (allErrors[`permissionRequests.${type}.${field}`]) return allErrors[`permissionRequests.${type}.${field}`];
+    if (allErrors[`permissionRequests.${canon}.${field}`]) return allErrors[`permissionRequests.${canon}.${field}`];
 
-    const idx = (formData.permissions || []).findIndex((p: any) => p.type.toLowerCase() === type.toLowerCase());
+    const idx = (formData.permissions || []).findIndex(
+      (p: any) => normalizeCapabilityKey(p.type) === canon
+    );
     if (idx !== -1) {
       if (allErrors[`permissions.${idx}.${field}`]) return allErrors[`permissions.${idx}.${field}`];
       if (allErrors[`permissionRequests.${idx}.${field}`]) return allErrors[`permissionRequests.${idx}.${field}`];
@@ -418,21 +498,32 @@ export default function PermissionsForm({
     // 1. From real SuperApp capabilities scanner (super-app/pubspec.yaml & AndroidManifest)
     hostCapabilities.forEach((cap) => {
       if (cap.status === 'Active' || cap.status === 'Beta') {
-        (cap.requiredPermissions || []).forEach((p) => set.add(p.toLowerCase()));
+        (cap.requiredPermissions || []).forEach((p) => {
+          set.add(p.toLowerCase());
+          set.add(normalizeCapabilityKey(p));
+        });
         set.add(cap.key.toLowerCase());
+        set.add(normalizeCapabilityKey(cap.key));
       }
     });
 
     // 2. From real database permissions
     hostPermissions.forEach((perm) => {
       if (perm.isActive !== false) {
-        if (perm.key) set.add(perm.key.toLowerCase());
+        if (perm.key) {
+          set.add(perm.key.toLowerCase());
+          set.add(normalizeCapabilityKey(perm.key));
+        }
         set.add(perm.name.toLowerCase());
+        set.add(normalizeCapabilityKey(perm.name));
       }
     });
 
     // 3. Fallback baseline if offline
-    WHITELISTED_HOST_CAPABILITIES.forEach((p) => set.add(p.toLowerCase()));
+    WHITELISTED_HOST_CAPABILITIES.forEach((p) => {
+      set.add(p.toLowerCase());
+      set.add(normalizeCapabilityKey(p));
+    });
 
     return set;
   }, [hostCapabilities, hostPermissions]);
@@ -443,32 +534,31 @@ export default function PermissionsForm({
 
     const addType = (raw: string) => {
       if (!raw) return;
-      const norm = raw.trim();
-      const lower = norm.toLowerCase();
-      if (!seen.has(lower)) {
-        seen.add(lower);
-        const display = norm.charAt(0).toUpperCase() + norm.slice(1);
+      const canon = normalizeCapabilityKey(raw);
+      if (!seen.has(canon)) {
+        seen.add(canon);
+        // Canonical display name matching Shell & Capabilities page
+        const display = canon.charAt(0).toUpperCase() + canon.slice(1);
         list.push(display);
       }
     };
 
-    // 1. Real permissions defined in database (synced with SuperApp)
-    hostPermissions.forEach((p) => {
-      addType(p.name || p.key || '');
-    });
+    // 1. All 6 Core Shell Capabilities (ensures all 6 live in shell capabilities from /capabilities are always present)
+    CANONICAL_SHELL_CAPABILITIES.forEach((c) => addType(c));
 
-    // 2. Real SuperApp capabilities detected from shell
+    // 2. Real SuperApp capabilities detected from shell (from /api/permissions/capabilities)
     hostCapabilities.forEach((c) => {
+      addType(c.key);
       (c.requiredPermissions || []).forEach((p) => addType(p));
     });
 
-    // 3. Any permission currently requested by the MiniApp
-    (formData.permissions || []).forEach((p: any) => addType(p.type));
+    // 3. Real permissions defined in database
+    hostPermissions.forEach((p) => {
+      addType(p.key || p.name || '');
+    });
 
-    // 4. Fallback baseline if loading
-    if (list.length === 0) {
-      ['Camera', 'Location', 'Biometrics', 'Microphone'].forEach((p) => addType(p));
-    }
+    // 4. Any permission currently requested by the MiniApp
+    (formData.permissions || []).forEach((p: any) => addType(p.type));
 
     return list;
   }, [hostPermissions, hostCapabilities, formData.permissions]);
@@ -547,25 +637,28 @@ export default function PermissionsForm({
       {/* Permissions List */}
       <div className="space-y-2.5">
         {allAvailableTypes.map((type) => {
-          const activePerm = formData.permissions?.find((p: any) => p.type.toLowerCase() === type.toLowerCase());
+          const canon = normalizeCapabilityKey(type);
+          const activePerm = formData.permissions?.find((p: any) => normalizeCapabilityKey(p.type) === canon);
           const isActive = Boolean(activePerm);
-          const isWhitelisted = liveWhitelistedSet.has(type.toLowerCase());
+          const isWhitelisted = liveWhitelistedSet.has(canon) || liveWhitelistedSet.has(type.toLowerCase());
           const isRequired = activePerm ? activePerm.required !== false : true;
           const purposeError = getPermError(type, 'purpose');
           const visual = getPermissionVisual(type);
-          const meta = PERMISSION_STORE_MAP[type.toLowerCase()];
+          const meta = PERMISSION_STORE_MAP[canon] || PERMISSION_STORE_MAP[type.toLowerCase()];
           const compliant = activePerm ? isStoreCompliant(activePerm.purpose, formData.name) : false;
 
           // Resolve dynamic description from real backend definitions
           const backendPermDef = hostPermissions.find(
-            (p) => (p.key && p.key.toLowerCase() === type.toLowerCase()) || p.name.toLowerCase() === type.toLowerCase()
+            (p) => normalizeCapabilityKey(p.key || '') === canon || normalizeCapabilityKey(p.name || '') === canon
           );
           const backendCapDef = hostCapabilities.find(
-            (c) => (c.key && c.key.toLowerCase() === type.toLowerCase()) || (c.requiredPermissions || []).some((rp) => rp.toLowerCase() === type.toLowerCase())
+            (c) =>
+              normalizeCapabilityKey(c.key || '') === canon ||
+              (c.requiredPermissions || []).some((rp) => normalizeCapabilityKey(rp) === canon)
           );
           const displayDescription =
-            backendPermDef?.description ||
             backendCapDef?.description ||
+            backendPermDef?.description ||
             meta?.description ||
             `Native bridge access for ${type.toLowerCase()} operations.`;
 

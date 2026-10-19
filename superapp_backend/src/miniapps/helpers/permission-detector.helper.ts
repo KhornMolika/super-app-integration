@@ -507,6 +507,28 @@ export class PermissionDetectorHelper {
       ) {
         add('Bluetooth', 'to communicate with nearby peripheral devices', dep);
       }
+      if (
+        dep === 'flutter_secure_storage' ||
+        dep.includes('secure_storage') ||
+        dep === 'storage'
+      ) {
+        add(
+          'Storage',
+          'to securely store encrypted session data, tokens, and local cache',
+          dep,
+        );
+      }
+      if (
+        dep === 'webview_flutter' ||
+        dep.includes('webview') ||
+        dep === 'flutter_inappwebview'
+      ) {
+        add(
+          'Webview_runtime',
+          'to host sandboxed web application views and JS bridge communications',
+          dep,
+        );
+      }
       if (dep === 'contacts_service' || dep === 'flutter_contacts') {
         add(
           'Contacts',

@@ -253,6 +253,8 @@ export async function validateMiniAppStep(
                   local_auth: { type: 'Biometrics', reason: 'to securely authenticate the user and authorize operations' },
                   record: { type: 'Microphone', reason: 'to capture audio recordings and voice input' },
                   audioplayers: { type: 'Microphone', reason: 'to capture audio recordings and voice input' },
+                  flutter_secure_storage: { type: 'Storage', reason: 'to securely persist encrypted keys, credentials, and offline data' },
+                  webview_flutter: { type: 'Webview_runtime', reason: 'to host sandboxed web content and interactive hybrid experiences' },
                   flutter_blue_plus: { type: 'Bluetooth', reason: 'to communicate with nearby peripheral devices' },
                   contacts_service: { type: 'Contacts', reason: 'to access address book contacts for recipient selection' },
                   flutter_contacts: { type: 'Contacts', reason: 'to access address book contacts for recipient selection' },

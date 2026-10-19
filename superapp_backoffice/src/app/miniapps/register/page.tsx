@@ -11,7 +11,7 @@ import SubmissionModal, { SubmissionModalState } from '@/components/ui/Submissio
 import BasicInfoForm from '@/components/forms/BasicInfoForm';
 import TeamForm from '@/components/forms/TeamForm';
 import IntegrationForm, { generateClientVerificationToken, generateClientMiniAppId, deriveNativeSdkDefaults } from '@/components/forms/IntegrationForm';
-import PermissionsForm, { formatCompliantPurpose, WHITELISTED_HOST_CAPABILITIES } from '@/components/forms/PermissionsForm';
+import PermissionsForm, { formatCompliantPurpose, WHITELISTED_HOST_CAPABILITIES, normalizeCapabilityKey } from '@/components/forms/PermissionsForm';
 import UnsupportedPermissionsModal from '@/components/forms/UnsupportedPermissionsModal';
 import SecurityForm from '@/components/forms/SecurityForm';
 import ReviewSummaryStep from '@/components/forms/ReviewSummaryStep';
@@ -540,14 +540,15 @@ export default function RegisterMiniAppPage() {
   };
 
   const togglePermission = (type: string) => {
+    const canon = normalizeCapabilityKey(type);
     const exists = formData.permissions?.find(
-      (p) => p.type.toLowerCase() === type.toLowerCase()
+      (p) => normalizeCapabilityKey(p.type) === canon
     );
     if (exists) {
       setFormData({
         ...formData,
         permissions: formData.permissions?.filter(
-          (p) => p.type.toLowerCase() !== type.toLowerCase()
+          (p) => normalizeCapabilityKey(p.type) !== canon
         ),
       });
     } else {
@@ -563,9 +564,12 @@ export default function RegisterMiniAppPage() {
   };
 
   const handlePermissionFieldChange = (type: string, field: string, value: string) => {
+    const canon = normalizeCapabilityKey(type);
     setFormData({
       ...formData,
-      permissions: formData.permissions?.map((p) => (p.type === type ? { ...p, [field]: value } : p)),
+      permissions: formData.permissions?.map((p) =>
+        normalizeCapabilityKey(p.type) === canon ? { ...p, [field]: value } : p
+      ),
     });
   };
 
@@ -950,11 +954,11 @@ export default function RegisterMiniAppPage() {
       <UnsupportedPermissionsModal
         isOpen={showUnsupportedModal}
         unsupportedPermissions={(formData.permissions || []).filter(
-          (p: any) => !WHITELISTED_HOST_CAPABILITIES.includes((p.type || '').toLowerCase())
+          (p: any) => !WHITELISTED_HOST_CAPABILITIES.includes(normalizeCapabilityKey(p.type || ''))
         )}
         onConfirm={async () => {
           const unsupported = (formData.permissions || []).filter(
-            (p: any) => !WHITELISTED_HOST_CAPABILITIES.includes((p.type || '').toLowerCase())
+            (p: any) => !WHITELISTED_HOST_CAPABILITIES.includes(normalizeCapabilityKey(p.type || ''))
           );
           for (const perm of unsupported) {
             try {
