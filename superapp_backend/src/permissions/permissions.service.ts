@@ -173,6 +173,19 @@ export class PermissionsService implements OnApplicationBootstrap {
       );
     }
 
+    let infoPlistContent = '';
+    try {
+      infoPlistContent = await this.gitlabProvider.getFileContent(
+        superAppRepoUrl,
+        'ios/Runner/Info.plist',
+        targetBranch,
+      );
+    } catch (plistErr: any) {
+      this.logger.debug(
+        `Could not fetch Info.plist from GitLab '${targetBranch}': ${plistErr.message}`,
+      );
+    }
+
     let commitSha: string | undefined;
     try {
       commitSha = await this.gitlabProvider.resolveCommitSha(
@@ -186,6 +199,7 @@ export class PermissionsService implements OnApplicationBootstrap {
     const detectedCaps = this.buildCapabilitiesList(
       deps,
       manifestContent,
+      infoPlistContent,
       'gitlab:main',
     );
 
@@ -304,22 +318,32 @@ export class PermissionsService implements OnApplicationBootstrap {
   private buildCapabilitiesList(
     deps: Record<string, any>,
     manifestContent: string,
-    detectionSource: string,
+    infoPlistContent: string = '',
+    detectionSource: string = 'gitlab:main',
   ) {
     const capabilities: any[] = [];
+
+    // Helper to extract umbrella description from Info.plist
+    const extractPlistString = (key: string): string => {
+      const regex = new RegExp(`<key>${key}</key>\\s*<string>([^<]+)</string>`, 'i');
+      const match = infoPlistContent.match(regex);
+      return match ? match[1].trim() : '';
+    };
 
     // 1. Scan QR Code capability
     if (
       deps['image_picker'] ||
       deps['mobile_scanner'] ||
       deps['qr_code_scanner'] ||
-      manifestContent.includes('CAMERA')
+      manifestContent.includes('CAMERA') ||
+      infoPlistContent.includes('NSCameraUsageDescription')
     ) {
       capabilities.push({
         id: 'cap-scan-qr',
         key: 'scan_qr_code',
         name: 'Scan QR Code',
         description:
+          extractPlistString('NSCameraUsageDescription') ||
           'Native QR code scanning bridge for merchant codes, payment tokens, and digital ID verification.',
         category: 'MEDIA_HARDWARE',
         requiredPermissions: ['camera'],
@@ -335,12 +359,18 @@ export class PermissionsService implements OnApplicationBootstrap {
     }
 
     // 2. Camera & Photo Capture
-    if (deps['image_picker'] || manifestContent.includes('CAMERA')) {
+    if (
+      deps['image_picker'] ||
+      manifestContent.includes('CAMERA') ||
+      infoPlistContent.includes('NSCameraUsageDescription') ||
+      infoPlistContent.includes('NSPhotoLibraryUsageDescription')
+    ) {
       capabilities.push({
         id: 'cap-photo-capture',
         key: 'take_photo',
         name: 'Camera & Document Capture',
         description:
+          extractPlistString('NSCameraUsageDescription') ||
           'Photo capture and image selection from camera for KYC verification and document uploads.',
         category: 'MEDIA_HARDWARE',
         requiredPermissions: ['camera'],
@@ -356,12 +386,19 @@ export class PermissionsService implements OnApplicationBootstrap {
     }
 
     // 3. Geolocation Services
-    if (deps['geolocator'] || deps['location'] || manifestContent.includes('LOCATION')) {
+    if (
+      deps['geolocator'] ||
+      deps['location'] ||
+      manifestContent.includes('LOCATION') ||
+      infoPlistContent.includes('NSLocation')
+    ) {
       capabilities.push({
         id: 'cap-location',
         key: 'get_location',
         name: 'Geolocation Services',
         description:
+          extractPlistString('NSLocationWhenInUseUsageDescription') ||
+          extractPlistString('NSLocationAlwaysUsageDescription') ||
           'Real-time GPS coordinates for branch discovery, nearby regulatory offices, and geo-fencing.',
         category: 'LOCATION',
         requiredPermissions: ['location'],
@@ -377,12 +414,17 @@ export class PermissionsService implements OnApplicationBootstrap {
     }
 
     // 4. Biometric Authentication
-    if (deps['local_auth'] || manifestContent.includes('BIOMETRIC')) {
+    if (
+      deps['local_auth'] ||
+      manifestContent.includes('BIOMETRIC') ||
+      infoPlistContent.includes('NSFaceIDUsageDescription')
+    ) {
       capabilities.push({
         id: 'cap-biometric',
         key: 'biometric_auth',
         name: 'Biometric Authentication',
         description:
+          extractPlistString('NSFaceIDUsageDescription') ||
           'Hardware FaceID, TouchID, and Android BiometricPrompt identity verification.',
         category: 'SECURITY',
         requiredPermissions: ['biometrics'],
@@ -398,7 +440,10 @@ export class PermissionsService implements OnApplicationBootstrap {
     }
 
     // 5. Secure Vault Storage
-    if (deps['flutter_secure_storage']) {
+    if (
+      deps['flutter_secure_storage'] ||
+      infoPlistContent.includes('NSPhotoLibrary')
+    ) {
       capabilities.push({
         id: 'cap-secure-storage',
         key: 'secure_storage',
