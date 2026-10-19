@@ -1382,7 +1382,7 @@ dependencies:
             </span>
           </Link>
           <span className="text-sm px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono font-medium border border-slate-200 dark:border-slate-700">
-            v2.4
+            v1.0
           </span>
         </div>
 

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Input, Label, Select, Textarea } from '@/components/ui/inputs';
 import { LogoUploadInput } from '@/components/ui/LogoUploadInput';
 import { LockIcon, BuildingIcon } from '@/components/ui/Icons';
@@ -183,7 +183,7 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
                 <Label>Short Description</Label>
                 <span className="text-xs text-slate-400 font-medium">Optional</span>
               </div>
-              <Input name="shortDescription" value={formData.shortDescription || ''} onChange={handleChange} placeholder="One sentence summary" />
+              <Input name="shortDescription" value={formData.shortDescription || ''} onChange={handleChange} placeholder="e.g. Instant payments and digital wallet for retail users" />
             </div>
             <div className="col-span-1 md:col-span-2">
               <div className="flex items-center justify-between mb-1">
@@ -195,7 +195,7 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
                 rows={3}
                 value={formData.fullDescription || ''}
                 onChange={handleChange}
-                placeholder="Comprehensive details regarding the purpose and functionality..."
+                placeholder="e.g. Comprehensive details explaining the features, user flows, and core functionality of this MiniApp..."
                 className={allErrors.fullDescription ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
               />
               {allErrors.fullDescription && <p className="mt-1.5 text-sm text-rose-600 font-medium">{allErrors.fullDescription}</p>}

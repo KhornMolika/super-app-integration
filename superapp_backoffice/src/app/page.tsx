@@ -143,7 +143,7 @@ export default function Dashboard() {
 
           {!isManager && can('permission_proposal:read') && (
             <Link
-              href="/review"
+              href="/capabilities?tab=proposals"
               className="inline-flex items-center gap-2 px-4 py-2 border border-slate-200 dark:border-slate-700 text-sm font-medium rounded-xl text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
             >
               <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">

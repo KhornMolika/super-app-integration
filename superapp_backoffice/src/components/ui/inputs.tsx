@@ -343,19 +343,40 @@ export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttrib
 );
 Select.displayName = 'Select';
 
-export const Button = React.forwardRef<any, React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'outline', as?: any, href?: string, target?: string }>(
-  ({ className = '', variant = 'primary', as: Component = 'button', children, ...props }, ref) => {
-    const baseStyles = "px-6 py-3 rounded-xl transition-all font-semibold flex items-center justify-center disabled:opacity-50";
-    const variants = {
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'outline' | 'secondary' | 'danger' | 'ghost';
+  size?: 'sm' | 'md' | 'lg';
+  as?: any;
+  href?: string;
+  target?: string;
+}
+
+export const Button = React.forwardRef<any, ButtonProps>(
+  ({ className = '', variant = 'primary', size = 'md', as: Component = 'button', children, ...props }, ref) => {
+    const sizeStyles: Record<string, string> = {
+      sm: "px-3.5 py-1.5 text-xs rounded-lg",
+      md: "px-6 py-3 text-sm rounded-xl",
+      lg: "px-8 py-4 text-base rounded-2xl",
+    };
+    const baseStyles = "transition-all font-semibold flex items-center justify-center disabled:opacity-50 cursor-pointer";
+    const variants: Record<string, string> = {
       primary: "bg-brand-600 text-white shadow-md hover:shadow-lg hover:bg-brand-700 active:bg-brand-800",
-      outline: "border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 bg-transparent"
+      outline: "border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 bg-transparent",
+      secondary: "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700",
+      danger: "bg-rose-600 text-white hover:bg-rose-700 active:bg-rose-800 shadow-sm",
+      ghost: "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100",
     };
 
     return (
-      <Component ref={ref} className={`${baseStyles} ${variants[variant]} ${className}`} {...props}>
+      <Component
+        ref={ref}
+        className={`${baseStyles} ${sizeStyles[size] || sizeStyles.md} ${variants[variant] || variants.primary} ${className}`}
+        {...props}
+      >
         {children}
       </Component>
     );
   }
 );
 Button.displayName = 'Button';
+

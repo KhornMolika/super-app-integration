@@ -54,7 +54,11 @@ export class GitlabMrService {
   }
 
   private baseBranch(): string {
-    return this.configService.get<string>('CODEGEN_BASE_BRANCH') || 'main';
+    return (
+      this.configService.get<string>('CODEGEN_TARGET_BRANCH') ||
+      this.configService.get<string>('CODEGEN_BASE_BRANCH') ||
+      'development'
+    );
   }
 
   private token(): string {

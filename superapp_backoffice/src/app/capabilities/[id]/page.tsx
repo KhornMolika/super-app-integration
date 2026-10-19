@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
@@ -11,7 +11,7 @@ import { useAuth } from '@/lib/auth';
 import { toast } from '@/components/ui/Toast';
 import { permissionsApi, Permission } from '@/api';
 
-export default function PermissionDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function CapabilityDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const router = useRouter();
   const { can } = useAuth();
@@ -32,7 +32,7 @@ export default function PermissionDetailPage({ params }: { params: Promise<{ id:
       setMetadataText(JSON.stringify(data.metadata || {}, null, 2));
     } catch (err) {
       console.error(err);
-      toast.error('Failed to load permission details.', 'Load Error');
+      toast.error('Failed to load capability details.', 'Load Error');
     } finally {
       setLoading(false);
     }
@@ -68,10 +68,10 @@ export default function PermissionDetailPage({ params }: { params: Promise<{ id:
         metadata: parsedMetadata,
       });
       
-      toast.success('Permission configuration updated successfully!', 'Saved');
+      toast.success('Capability configuration updated successfully!', 'Saved');
     } catch (err: any) {
       console.error(err);
-      toast.error(err.message || 'Network error updating permission.', 'Error');
+      toast.error(err.message || 'Network error updating capability.', 'Error');
     } finally {
       setSaving(false);
     }
@@ -80,7 +80,7 @@ export default function PermissionDetailPage({ params }: { params: Promise<{ id:
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <p className="text-slate-500">Loading permission details...</p>
+        <p className="text-slate-500">Loading capability details...</p>
       </div>
     );
   }
@@ -88,9 +88,9 @@ export default function PermissionDetailPage({ params }: { params: Promise<{ id:
   if (!permission) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
-        <h2 className="text-2xl font-bold text-slate-800">Permission not found</h2>
-        <Link href="/permissions" className="text-brand-600 hover:underline mt-4">
-          Back to Permissions Registry
+        <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200">Capability not found</h2>
+        <Link href="/capabilities" className="text-brand-600 hover:underline mt-4">
+          Back to Capabilities Registry
         </Link>
       </div>
     );
@@ -101,9 +101,9 @@ export default function PermissionDetailPage({ params }: { params: Promise<{ id:
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out w-full mx-auto pb-12">
         <div className="mb-8 flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <BackButton href="/permissions" />
+            <BackButton href="/capabilities" />
             <div>
-              <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Manage Permission: {permission.key}</h2>
+              <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Manage Capability: {permission.key}</h2>
               <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">View or update standard capability definitions.</p>
             </div>
           </div>
@@ -122,7 +122,7 @@ export default function PermissionDetailPage({ params }: { params: Promise<{ id:
           <form onSubmit={handleSave} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <Label>Permission Key</Label>
+                <Label>Capability Key</Label>
                 <Input value={permission.key || ''} disabled className="bg-slate-50 dark:bg-slate-800/50" />
                 <p className="text-xs text-slate-500 mt-1">Unique identifier used by apps (read-only).</p>
               </div>

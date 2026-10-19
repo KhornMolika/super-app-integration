@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import { Button } from '@/components/ui/inputs';
@@ -35,15 +35,15 @@ export default function UnsupportedPermissionsModal({
         <div className="p-6 pb-4 border-b border-slate-100 dark:border-slate-800/80">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-3.5">
-              <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-200 dark:border-amber-800 shadow-inner">
-                <AlertTriangleIcon className="w-6 h-6" />
+              <div className="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-200 dark:border-indigo-800 shadow-inner">
+                <ShieldIcon className="w-6 h-6" />
               </div>
               <div>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                  Unsupported Capability Warning
+                  Capability Extension Request
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Host Gatekeeper policy review required
+                  SuperApp Host Container Integration
                 </p>
               </div>
             </div>
@@ -60,7 +60,7 @@ export default function UnsupportedPermissionsModal({
         {/* Body */}
         <div className="p-6 space-y-4">
           <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-            The SuperApp host container does not currently whitelist the following declared capabilities:
+            The following declared capabilities are requested for this MiniApp and require host container runtime support:
           </p>
 
           {/* List of Unsupported Capabilities */}
@@ -73,7 +73,7 @@ export default function UnsupportedPermissionsModal({
                   className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 flex items-center justify-between gap-3"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                    <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
                     <span className="font-bold text-sm text-slate-900 dark:text-slate-100 capitalize truncate">
                       {perm.type}
                     </span>
@@ -81,7 +81,7 @@ export default function UnsupportedPermissionsModal({
                   <span
                     className={`text-xs px-2.5 py-0.5 rounded-full font-semibold shrink-0 uppercase tracking-wider ${
                       isReq
-                        ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-200 dark:border-rose-900'
+                        ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-900'
                         : 'bg-slate-200/80 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
                     }`}
                   >
@@ -93,27 +93,15 @@ export default function UnsupportedPermissionsModal({
           </div>
 
           {/* Policy Alert Notice */}
-          {hasRequired ? (
-            <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-xs text-rose-800 dark:text-rose-200 space-y-1">
-              <div className="font-bold flex items-center gap-1.5 text-rose-700 dark:text-rose-300">
-                <AlertTriangleIcon className="w-4 h-4 shrink-0" />
-                <span>Automated Gatekeeper Rejection Notice</span>
-              </div>
-              <p className="leading-relaxed">
-                Because unwhitelisted capabilities are marked as <strong>Required</strong>, the automated Gatekeeper CI security scan will flag this as a blocking violation (verdict: <strong>FAILED</strong>) during verification.
-              </p>
+          <div className="p-3.5 rounded-xl bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-xs text-indigo-900 dark:text-indigo-200 space-y-1.5">
+            <div className="font-bold flex items-center gap-1.5 text-indigo-700 dark:text-indigo-300">
+              <ShieldIcon className="w-4 h-4 shrink-0 text-brand-600 dark:text-brand-400" />
+              <span>Automated Capability Proposal</span>
             </div>
-          ) : (
-            <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-200 space-y-1">
-              <div className="font-bold flex items-center gap-1.5 text-amber-700 dark:text-amber-300">
-                <ShieldIcon className="w-4 h-4 shrink-0" />
-                <span>Graceful Degradation Required</span>
-              </div>
-              <p className="leading-relaxed">
-                These capabilities are unwhitelisted and will be blocked by the SuperApp sandbox. Because they are marked as <strong>Optional</strong>, ensure your MiniApp gracefully handles missing bridge calls without crashing.
-              </p>
-            </div>
-          )}
+            <p className="leading-relaxed">
+              Clicking <strong>Submit Proposal &amp; Proceed</strong> will automatically submit a Capability Proposal to SuperApp platform administrators. Once approved, the automated code generator will create a branch and Merge Request to inject support into the host shell.
+            </p>
+          </div>
         </div>
 
         {/* Footer Actions */}
@@ -124,18 +112,14 @@ export default function UnsupportedPermissionsModal({
             onClick={onCancel}
             className="w-full sm:w-auto text-sm font-semibold h-10 px-4"
           >
-            Go Back &amp; Review
+            Back to Edit
           </Button>
           <Button
             type="button"
             onClick={onConfirm}
-            className={`w-full sm:w-auto text-sm font-semibold h-10 px-5 shadow-sm inline-flex items-center justify-center gap-1.5 ${
-              hasRequired
-                ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/20'
-                : 'bg-amber-600 hover:bg-amber-700 text-white shadow-amber-600/20'
-            }`}
+            className="w-full sm:w-auto text-sm font-semibold h-10 px-5 shadow-sm inline-flex items-center justify-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white shadow-brand-600/20"
           >
-            <span>Acknowledge &amp; Proceed</span>
+            <span>Submit Proposal &amp; Proceed</span>
             <ArrowRightIcon className="w-4 h-4" />
           </Button>
         </div>

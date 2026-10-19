@@ -1,8 +1,9 @@
-﻿"use client";
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Input, Label, Button } from '@/components/ui/inputs';
 import { miniappsApi } from '@/api';
+import { permissionsApi, Permission, CapabilityItem } from '@/api/permissions.api';
 import {
   CheckIcon,
   ShieldIcon,
@@ -15,6 +16,7 @@ import {
   PackageIcon,
   XIcon,
 } from '@/components/ui/Icons';
+import { PlusCircle } from 'lucide-react';
 
 export const PERMISSION_STORE_MAP: Record<
   string,
@@ -76,29 +78,44 @@ export function formatCompliantPurpose(type: string, rawPurpose: string, appName
     return `${appLabel} requires access to your ${type.toLowerCase()} to ${fallbackAction}.`;
   }
 
-  if (
-    trimmed.toLowerCase().includes('requires') &&
-    (trimmed.toLowerCase().startsWith(appLabel.toLowerCase()) || trimmed.startsWith('$('))
-  ) {
-    return trimmed.endsWith('.') ? trimmed : `${trimmed}.`;
+  // Extract the underlying action/reason from any existing "requires" sentence
+  let reason = trimmed;
+  if (/requires/i.test(trimmed)) {
+    const match = trimmed.match(
+      /(?:.*requires\s+.*?access\s+(?:to|for)\s+|.*requires\s+.*?\s+(?:to|for)\s+|.*requires\s+(?:to|for)\s+)(.+)$/i
+    );
+    if (match && match[1]) {
+      reason = match[1].trim();
+    } else {
+      reason = trimmed.replace(/^.*?requires\s+/i, '').trim();
+    }
   }
 
-  let cleaned = trimmed;
-  if (/^(to|for)\s+/i.test(cleaned)) {
-    cleaned = cleaned.replace(/^(to|for)\s+/i, '');
-  }
-  cleaned = cleaned.charAt(0).toLowerCase() + cleaned.slice(1);
-  if (cleaned.endsWith('.')) {
-    cleaned = cleaned.slice(0, -1);
+  // Clean leading "to " or "for "
+  reason = reason.replace(/^(to|for)\s+/i, '').trim();
+
+  // Clean trailing punctuation
+  reason = reason.replace(/\.+$/, '').trim();
+
+  if (!reason) {
+    reason = fallbackAction;
   }
 
-  return `${appLabel} requires access to your ${type.toLowerCase()} to ${cleaned}.`;
+  // Lowercase the first letter of the reason
+  reason = reason.charAt(0).toLowerCase() + reason.slice(1);
+
+  return `${appLabel} requires access to your ${type.toLowerCase()} to ${reason}.`;
 }
 
 export function isStoreCompliant(purpose: string, appName?: string): boolean {
   const trimmed = (purpose || '').trim();
   const appLabel = appName?.trim() || '';
   if (!trimmed || trimmed.length < 15) return false;
+
+  // Corrupted strings with multiple "requires" are NOT compliant
+  const requiresCount = (trimmed.match(/\brequires\b/gi) || []).length;
+  if (requiresCount !== 1) return false;
+
   const hasRequires =
     trimmed.toLowerCase().includes('requires access to') || trimmed.toLowerCase().includes('requires');
   const hasSubject =
@@ -199,7 +216,75 @@ export default function PermissionsForm({
   const [isDetecting, setIsDetecting] = useState(false);
   const [detectedMeta, setDetectedMeta] = useState<{ count: number; sources: Record<string, string> } | null>(null);
   const [detectionNotice, setDetectionNotice] = useState<string | null>(null);
-  const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({});
+
+  // Live capabilities & permissions fetched directly from SuperApp container & backend
+  const [hostCapabilities, setHostCapabilities] = useState<CapabilityItem[]>([]);
+  const [hostPermissions, setHostPermissions] = useState<Permission[]>([]);
+  const [isLoadingHostCapas, setIsLoadingHostCapas] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchRealSuperAppCapabilities = async () => {
+      try {
+        setIsLoadingHostCapas(true);
+        const [capsRes, permsRes] = await Promise.allSettled([
+          permissionsApi.getCapabilities(),
+          permissionsApi.getAll(),
+        ]);
+
+        if (isMounted) {
+          if (capsRes.status === 'fulfilled' && Array.isArray(capsRes.value)) {
+            setHostCapabilities(capsRes.value);
+          }
+          if (permsRes.status === 'fulfilled' && Array.isArray(permsRes.value)) {
+            setHostPermissions(permsRes.value);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch real SuperApp capabilities from backend:', err);
+      } finally {
+        if (isMounted) setIsLoadingHostCapas(false);
+      }
+    };
+
+    fetchRealSuperAppCapabilities();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const [customKey, setCustomKey] = useState(customPermission || '');
+  const [customRequired, setCustomRequired] = useState(true);
+  const [customPurpose, setCustomPurpose] = useState('');
+
+  const handleAddCustomCapability = () => {
+    if (!customKey.trim()) return;
+    const cleanType = customKey.trim();
+    const purpose =
+      customPurpose.trim() ||
+      formatCompliantPurpose(cleanType, '', formData.name);
+
+    const exists = (formData.permissions || []).some(
+      (p: any) => p.type.toLowerCase() === cleanType.toLowerCase(),
+    );
+
+    if (!exists) {
+      const newPerm = {
+        type: cleanType,
+        purpose,
+        required: customRequired,
+        termsUrl: '',
+      };
+      setFormData((prev: any) => ({
+        ...prev,
+        permissions: [...(prev.permissions || []), newPerm],
+      }));
+    }
+    setCustomKey('');
+    setCustomPurpose('');
+    setCustomRequired(true);
+    setCustomPermission?.('');
+  };
 
   const getPermError = (type: string, field: string) => {
     if (allErrors[`permission_${type}_${field}`]) return allErrors[`permission_${type}_${field}`];
@@ -222,8 +307,31 @@ export default function PermissionsForm({
         formData.integrationConfig?.productionUrl ||
         '';
 
+      const gitUrl =
+        formData.integrationConfigFlutter?.gitUrl ||
+        formData.integrationConfigFlutter?.repoUrl ||
+        formData.integrationConfig?.gitUrl ||
+        formData.integrationConfig?.repoUrl ||
+        '';
+
+      const gitBranch =
+        formData.integrationConfigFlutter?.gitBranch ||
+        formData.integrationConfig?.gitBranch ||
+        formData.integrationConfigFlutter?.ref ||
+        'main';
+
+      const gitPath =
+        formData.integrationConfigFlutter?.gitPath ||
+        formData.integrationConfigFlutter?.packagePath ||
+        formData.integrationConfig?.gitPath ||
+        formData.integrationConfig?.packagePath ||
+        '';
+
       const data = await miniappsApi.detectPermissions({
         productionUrl: prodUrl,
+        gitUrl,
+        gitBranch,
+        gitPath,
         category: formData.category,
         name: formData.name,
         appId: formData.appId,
@@ -235,21 +343,21 @@ export default function PermissionsForm({
 
         data.detected.forEach((item: { type: string; purpose: string; source: string }) => {
           sourcesMap[item.type] = item.source;
+          const formattedPurpose = formatCompliantPurpose(item.type, item.purpose, formData.name);
           const existingIdx = currentPermissions.findIndex(
             (p) => p.type.toLowerCase() === item.type.toLowerCase()
           );
 
           if (existingIdx !== -1) {
-            if (!currentPermissions[existingIdx].purpose && item.purpose) {
-              currentPermissions[existingIdx] = {
-                ...currentPermissions[existingIdx],
-                purpose: item.purpose,
-              };
+            // Keep user's existing purpose if valid; if empty or corrupted with duplicate requires, heal it
+            const existingP = currentPermissions[existingIdx].purpose;
+            if (!existingP || (existingP.match(/\brequires\b/gi) || []).length > 1) {
+              currentPermissions[existingIdx].purpose = formattedPurpose;
             }
           } else {
             currentPermissions.push({
               type: item.type,
-              purpose: item.purpose,
+              purpose: formattedPurpose,
               termsUrl: '',
             });
           }
@@ -266,7 +374,10 @@ export default function PermissionsForm({
           count: data.detected.length,
           sources: sourcesMap,
         });
-        setDetectionNotice(`Auto-detected ${data.detected.length} required capability requirement(s).`);
+        const sourceLabel = gitUrl ? `GitLab (branch: ${gitBranch})` : 'package analysis';
+        setDetectionNotice(
+          `Auto-detected ${data.detected.length} capability requirement(s) from ${sourceLabel}. Purpose descriptions have been pre-filled from your package and can be customized below.`
+        );
       } else {
         setDetectionNotice('Scan complete: No additional native capabilities required.');
       }
@@ -275,7 +386,23 @@ export default function PermissionsForm({
     } finally {
       setIsDetecting(false);
     }
-  }, [formData.integrationConfigWebView?.productionUrl, formData.integrationConfig?.productionUrl, formData.category, formData.name, formData.appId, formData.permissions, setFormData]);
+  }, [
+    formData.integrationConfigWebView?.productionUrl,
+    formData.integrationConfig?.productionUrl,
+    formData.integrationConfigFlutter?.gitUrl,
+    formData.integrationConfigFlutter?.repoUrl,
+    formData.integrationConfigFlutter?.gitBranch,
+    formData.integrationConfigFlutter?.ref,
+    formData.integrationConfigFlutter?.gitPath,
+    formData.integrationConfigFlutter?.packagePath,
+    formData.integrationConfig?.gitUrl,
+    formData.integrationConfig?.repoUrl,
+    formData.category,
+    formData.name,
+    formData.appId,
+    formData.permissions,
+    setFormData,
+  ]);
 
   // Auto-run once on initial visit if empty
   useEffect(() => {
@@ -284,34 +411,96 @@ export default function PermissionsForm({
     }
   }, []);
 
-  const allAvailableTypes = Array.from(
-    new Set([
-      'Camera',
-      'Location',
-      'Biometrics',
-      'Microphone',
-      ...(formData.permissions?.map((p: any) => p.type) || []),
-    ])
-  );
+  // Dynamically compute host-supported whitelisted capabilities synced directly with SuperApp container
+  const liveWhitelistedSet = useMemo(() => {
+    const set = new Set<string>();
+
+    // 1. From real SuperApp capabilities scanner (super-app/pubspec.yaml & AndroidManifest)
+    hostCapabilities.forEach((cap) => {
+      if (cap.status === 'Active' || cap.status === 'Beta') {
+        (cap.requiredPermissions || []).forEach((p) => set.add(p.toLowerCase()));
+        set.add(cap.key.toLowerCase());
+      }
+    });
+
+    // 2. From real database permissions
+    hostPermissions.forEach((perm) => {
+      if (perm.isActive !== false) {
+        if (perm.key) set.add(perm.key.toLowerCase());
+        set.add(perm.name.toLowerCase());
+      }
+    });
+
+    // 3. Fallback baseline if offline
+    WHITELISTED_HOST_CAPABILITIES.forEach((p) => set.add(p.toLowerCase()));
+
+    return set;
+  }, [hostCapabilities, hostPermissions]);
+
+  const allAvailableTypes = useMemo(() => {
+    const list: string[] = [];
+    const seen = new Set<string>();
+
+    const addType = (raw: string) => {
+      if (!raw) return;
+      const norm = raw.trim();
+      const lower = norm.toLowerCase();
+      if (!seen.has(lower)) {
+        seen.add(lower);
+        const display = norm.charAt(0).toUpperCase() + norm.slice(1);
+        list.push(display);
+      }
+    };
+
+    // 1. Real permissions defined in database (synced with SuperApp)
+    hostPermissions.forEach((p) => {
+      addType(p.name || p.key || '');
+    });
+
+    // 2. Real SuperApp capabilities detected from shell
+    hostCapabilities.forEach((c) => {
+      (c.requiredPermissions || []).forEach((p) => addType(p));
+    });
+
+    // 3. Any permission currently requested by the MiniApp
+    (formData.permissions || []).forEach((p: any) => addType(p.type));
+
+    // 4. Fallback baseline if loading
+    if (list.length === 0) {
+      ['Camera', 'Location', 'Biometrics', 'Microphone'].forEach((p) => addType(p));
+    }
+
+    return list;
+  }, [hostPermissions, hostCapabilities, formData.permissions]);
 
   const activeCount = formData.permissions?.length || 0;
 
   return (
     <div className="space-y-5 animate-in fade-in duration-300">
-      {/* Sleek, Minimalist Discovery Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800">
+      {/* Discovery Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800">
         <div>
           <div className="flex items-center gap-2">
-            <h4 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <ShieldCheckIcon className="w-5 h-5 text-brand-600 dark:text-brand-400" />
-              <span>Native Host Bridge Capabilities</span>
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <ShieldCheckIcon className="w-4 h-4 text-brand-600 dark:text-brand-400" />
+              <span>Capabilities &amp; Permissions</span>
             </h4>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand-100 text-brand-800 dark:bg-brand-950/60 dark:text-brand-300 border border-brand-200 dark:border-brand-800">
-              {activeCount} Requested
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-brand-100 text-brand-800 dark:bg-brand-950/60 dark:text-brand-300 border border-brand-200 dark:border-brand-800 inline-flex items-center gap-1">
+              {isLoadingHostCapas ? (
+                <>
+                  <svg className="animate-spin w-2.5 h-2.5 text-brand-500" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  <span>Syncing Shell...</span>
+                </>
+              ) : (
+                <span>{activeCount} Requested</span>
+              )}
             </span>
           </div>
-          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-            Declare hardware &amp; bridge capabilities needed by your MiniApp. Disclosures are automatically sanitized for App Store &amp; Play Store compliance.
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Select native device and bridge features needed by your MiniApp.
           </p>
         </div>
 
@@ -320,20 +509,20 @@ export default function PermissionsForm({
           variant="outline"
           onClick={handleAutoDetect}
           disabled={isDetecting}
-          className="shrink-0 text-xs sm:text-sm h-9 px-3.5 font-semibold inline-flex items-center gap-1.5 border-brand-500/50 hover:bg-brand-50 text-brand-700 dark:text-brand-300 dark:hover:bg-brand-950/40 shadow-xs transition-all self-start sm:self-auto"
+          className="shrink-0 text-xs h-8 px-3 font-semibold inline-flex items-center gap-1.5 border-brand-500/40 hover:bg-brand-50 text-brand-700 dark:text-brand-300 dark:hover:bg-brand-950/40 shadow-xs transition-all self-start sm:self-auto"
         >
           {isDetecting ? (
             <>
-              <svg className="animate-spin w-3.5 h-3.5 text-brand-500" fill="none" viewBox="0 0 24 24">
+              <svg className="animate-spin w-3 h-3 text-brand-500" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
               </svg>
-              <span>Auto-Scanning...</span>
+              <span>Scanning...</span>
             </>
           ) : (
             <>
-              <ZapIcon className="w-3.5 h-3.5 text-amber-500" />
-              <span>Auto-Detect from Code</span>
+              <ZapIcon className="w-3 h-3 text-amber-500" />
+              <span>Auto-Detect</span>
             </>
           )}
         </Button>
@@ -356,17 +545,29 @@ export default function PermissionsForm({
       )}
 
       {/* Permissions List */}
-      <div className="space-y-3">
+      <div className="space-y-2.5">
         {allAvailableTypes.map((type) => {
           const activePerm = formData.permissions?.find((p: any) => p.type.toLowerCase() === type.toLowerCase());
           const isActive = Boolean(activePerm);
-          const isWhitelisted = WHITELISTED_HOST_CAPABILITIES.includes(type.toLowerCase());
+          const isWhitelisted = liveWhitelistedSet.has(type.toLowerCase());
           const isRequired = activePerm ? activePerm.required !== false : true;
           const purposeError = getPermError(type, 'purpose');
           const visual = getPermissionVisual(type);
           const meta = PERMISSION_STORE_MAP[type.toLowerCase()];
           const compliant = activePerm ? isStoreCompliant(activePerm.purpose, formData.name) : false;
-          const showKeys = Boolean(expandedKeys[type.toLowerCase()]);
+
+          // Resolve dynamic description from real backend definitions
+          const backendPermDef = hostPermissions.find(
+            (p) => (p.key && p.key.toLowerCase() === type.toLowerCase()) || p.name.toLowerCase() === type.toLowerCase()
+          );
+          const backendCapDef = hostCapabilities.find(
+            (c) => (c.key && c.key.toLowerCase() === type.toLowerCase()) || (c.requiredPermissions || []).some((rp) => rp.toLowerCase() === type.toLowerCase())
+          );
+          const displayDescription =
+            backendPermDef?.description ||
+            backendCapDef?.description ||
+            meta?.description ||
+            `Native bridge access for ${type.toLowerCase()} operations.`;
 
           return (
             <div
@@ -382,12 +583,12 @@ export default function PermissionsForm({
                 onClick={() => {
                   if (isEditable) togglePermission(type);
                 }}
-                className={`p-4 flex items-center justify-between gap-3.5 select-none ${
+                className={`p-3.5 flex items-center justify-between gap-3.5 select-none ${
                   isEditable ? 'cursor-pointer' : 'cursor-default'
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border shadow-2xs ${visual.bg}`}>
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border shadow-2xs ${visual.bg}`}>
                     {visual.icon}
                   </div>
                   <div className="min-w-0">
@@ -402,27 +603,59 @@ export default function PermissionsForm({
                           <span>Host Supported</span>
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                          <AlertTriangleIcon className="w-2.5 h-2.5 text-amber-500" />
-                          <span>Unwhitelisted Capability</span>
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                          <SparklesIcon className="w-2.5 h-2.5 text-indigo-500" />
+                          <span>Proposal Requested</span>
                         </span>
                       )}
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">
-                      {meta?.description || `Native bridge access for ${type.toLowerCase()} operations.`}
+                      {displayDescription}
                     </p>
                   </div>
                 </div>
 
-                {/* Minimalist Switch */}
-                <div className="shrink-0 flex items-center gap-2">
+                {/* Right controls: Required/Optional segmented pill + Switch */}
+                <div className="shrink-0 flex items-center gap-2.5">
+                  {isActive && (
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex rounded-lg p-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
+                    >
+                      <button
+                        type="button"
+                        disabled={!isEditable}
+                        onClick={() => handlePermissionFieldChange(type, 'required', true)}
+                        className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition ${
+                          isRequired
+                            ? 'bg-white dark:bg-slate-900 text-rose-700 dark:text-rose-400 shadow-2xs'
+                            : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+                        }`}
+                      >
+                        Required
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!isEditable}
+                        onClick={() => handlePermissionFieldChange(type, 'required', false)}
+                        className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition ${
+                          !isRequired
+                            ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-2xs'
+                            : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+                        }`}
+                      >
+                        Optional
+                      </button>
+                    </div>
+                  )}
+
                   <div
-                    className={`w-11 h-6 rounded-full p-0.5 transition-colors ease-in-out duration-200 ${
+                    className={`w-10 h-5 rounded-full p-0.5 transition-colors ease-in-out duration-200 ${
                       isActive ? 'bg-brand-600' : 'bg-slate-200 dark:bg-slate-700'
                     }`}
                   >
                     <div
-                      className={`w-5 h-5 rounded-full bg-white shadow-sm transform transition-transform duration-200 ${
+                      className={`w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform duration-200 ${
                         isActive ? 'translate-x-5' : 'translate-x-0'
                       }`}
                     />
@@ -430,126 +663,72 @@ export default function PermissionsForm({
                 </div>
               </div>
 
-              {/* Active Expanded Drawer (Clean & Minimalist) */}
+              {/* Active Purpose Drawer */}
               {isActive && (
-                <div className="px-4 pb-4 pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-3 bg-slate-50/50 dark:bg-slate-800/20 animate-in fade-in duration-150">
-                  {/* Requirement Level + Unwhitelisted warning */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Requirement Level:</span>
-                      <div className="inline-flex rounded-lg p-0.5 bg-slate-200/70 dark:bg-slate-800 border border-slate-300/60 dark:border-slate-700 text-xs">
-                        <button
-                          type="button"
-                          disabled={!isEditable}
-                          onClick={() => handlePermissionFieldChange(type, 'required', true)}
-                          className={`px-2.5 py-1 rounded-md font-semibold transition ${
-                            isRequired
-                              ? 'bg-white dark:bg-slate-900 text-rose-700 dark:text-rose-400 shadow-2xs'
-                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                          } ${!isEditable ? 'cursor-not-allowed opacity-75' : ''}`}
-                        >
-                          ● Required
-                        </button>
-                        <button
-                          type="button"
-                          disabled={!isEditable}
-                          onClick={() => handlePermissionFieldChange(type, 'required', false)}
-                          className={`px-2.5 py-1 rounded-md font-semibold transition ${
-                            !isRequired
-                              ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-2xs'
-                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                          } ${!isEditable ? 'cursor-not-allowed opacity-75' : ''}`}
-                        >
-                          ○ Optional
-                        </button>
-                      </div>
-                    </div>
-
-                    {!isWhitelisted && isRequired && (
-                      <span className="text-[11px] font-semibold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50 px-2 py-0.5 rounded border border-rose-200 dark:border-rose-900 flex items-center gap-1">
-                        <AlertTriangleIcon className="w-3 h-3 text-rose-500 shrink-0" />
-                        <span>May be rejected by Gatekeeper if Required</span>
+                <div className="px-3.5 pb-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/20 space-y-2">
+                  {!isWhitelisted && (
+                    <div className="p-2.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50 text-[11px] text-indigo-900 dark:text-indigo-200 flex items-start gap-2">
+                      <SparklesIcon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+                      <span>
+                        <strong>Host Extension Request:</strong> This capability is not yet in the host shell. Submitting this MiniApp will automatically log a Capability Proposal for SuperApp administrators to review and inject support.
                       </span>
-                    )}
-                  </div>
-
-                  {/* Purpose Input & Compliance Action */}
-                  <div>
-                    <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
-                      <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                        <span>User-Facing Purpose Disclosure</span>
-                        <span className="text-rose-500 font-bold">*</span>
-                      </Label>
-
-                      {compliant ? (
-                        <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800/60 inline-flex items-center gap-1">
-                          <CheckIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                          <span>Store Compliant</span>
-                        </span>
-                      ) : isEditable ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const formatted = formatCompliantPurpose(type, activePerm.purpose, formData.name);
-                            handlePermissionFieldChange(type, 'purpose', formatted);
-                          }}
-                          className="text-[11px] font-semibold text-brand-700 dark:text-brand-300 bg-brand-50 hover:bg-brand-100 dark:bg-brand-950/60 dark:hover:bg-brand-900/60 px-2 py-0.5 rounded border border-brand-200 dark:border-brand-800 inline-flex items-center gap-1 transition"
-                        >
-                          <SparklesIcon className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
-                          <span>Auto-Format for App Stores</span>
-                        </button>
-                      ) : null}
                     </div>
+                  )}
 
-                    <Input
-                      required
-                      disabled={!isEditable}
-                      value={activePerm.purpose || ''}
-                      name={`permission_${type}_purpose`}
-                      onChange={(e) => handlePermissionFieldChange(type, 'purpose', e.target.value)}
-                      onBlur={() => {
-                        if (activePerm.purpose && !compliant) {
-                          const formatted = formatCompliantPurpose(type, activePerm.purpose, formData.name);
-                          handlePermissionFieldChange(type, 'purpose', formatted);
-                        }
-                      }}
-                      placeholder={`e.g. ${formData.name || 'This MiniApp'} requires access to your ${type.toLowerCase()} to ${meta?.defaultAction || 'provide core services'}.`}
-                      className={`h-9 text-xs sm:text-sm ${
-                        purposeError ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''
-                      }`}
-                    />
+                  {(!activePerm.purpose || !activePerm.purpose.trim()) && (
+                    <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-300 flex items-center gap-1.5 font-medium">
+                      <AlertTriangleIcon className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                      <span>
+                        <strong>Action Required:</strong> Please enter the specific reason why {formData.name || 'your MiniApp'} requires {visual.title || type} access.
+                      </span>
+                    </div>
+                  )}
 
-                    {purposeError && (
-                      <p className="mt-1 text-xs text-rose-600 font-medium">{purposeError}</p>
-                    )}
-                  </div>
-
-                  {/* Optional Collapsible Technical Keys (Info.plist / AndroidManifest) */}
-                  {meta && (
-                    <div className="pt-1">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                      <span>Purpose Description</span>
+                      <span className="text-rose-500 font-bold">*</span>
+                    </Label>
+                    {compliant ? (
+                      <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
+                        <CheckIcon className="w-2.5 h-2.5" />
+                        <span>Compliant</span>
+                      </span>
+                    ) : isEditable && activePerm.purpose ? (
                       <button
                         type="button"
-                        onClick={() =>
-                          setExpandedKeys((prev) => ({ ...prev, [type.toLowerCase()]: !prev[type.toLowerCase()] }))
-                        }
-                        className="text-[11px] font-mono text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 inline-flex items-center gap-1 transition"
+                        title="Auto-format for store compliance"
+                        onClick={() => {
+                          const formatted = formatCompliantPurpose(type, activePerm.purpose, formData.name);
+                          handlePermissionFieldChange(type, 'purpose', formatted);
+                        }}
+                        className="text-[11px] font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-brand-50 dark:hover:bg-brand-950/40 transition"
                       >
-                        <span>{showKeys ? '▾ Hide Technical Manifest Keys' : '▸ View Info.plist & Manifest Keys'}</span>
+                        <SparklesIcon className="w-3 h-3 text-brand-500" />
+                        <span>Auto-Format</span>
                       </button>
+                    ) : null}
+                  </div>
 
-                      {showKeys && (
-                        <div className="mt-1.5 p-2.5 rounded-xl bg-slate-900 text-[11px] font-mono text-slate-300 space-y-1 border border-slate-800 animate-in fade-in duration-150">
-                          <div>
-                            <span className="text-slate-500">iOS (Info.plist): </span>
-                            <span className="text-accent-300 font-semibold">{meta.iosKey}</span>
-                          </div>
-                          <div>
-                            <span className="text-slate-500">Android (Manifest): </span>
-                            <span className="text-emerald-400 font-semibold">{meta.androidPermission}</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                  <Input
+                    required
+                    disabled={!isEditable}
+                    value={activePerm.purpose || ''}
+                    name={`permission_${type}_purpose`}
+                    onChange={(e) => handlePermissionFieldChange(type, 'purpose', e.target.value)}
+                    onBlur={() => {
+                      if (activePerm.purpose && !compliant) {
+                        const formatted = formatCompliantPurpose(type, activePerm.purpose, formData.name);
+                        handlePermissionFieldChange(type, 'purpose', formatted);
+                      }
+                    }}
+                    placeholder={`e.g. ${formData.name || 'This MiniApp'} requires ${type.toLowerCase()} access to ${meta?.defaultAction || 'provide core application features'}.`}
+                    className={`h-8 text-xs ${
+                      purposeError ? 'border-rose-500 bg-rose-50/50' : 'bg-white dark:bg-slate-900'
+                    }`}
+                  />
+                  {purposeError && (
+                    <p className="text-[11px] text-rose-600 font-medium">{purposeError}</p>
                   )}
                 </div>
               )}
@@ -558,57 +737,101 @@ export default function PermissionsForm({
         })}
       </div>
 
-      {/* Clean Request Custom Capability Section (if editable) */}
+      {/* Request Custom Capability Section (Clean, Compact, Minimal) */}
       {isEditable && (
-        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 space-y-2.5">
-          <div>
-            <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-              <PackageIcon className="w-4 h-4 text-slate-500" />
-              <span>Request Additional Host Capability</span>
+        <div className="p-4 rounded-2xl bg-slate-50/60 dark:bg-slate-900/40 border border-dashed border-slate-300 dark:border-slate-800 space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+              <PackageIcon className="w-3.5 h-3.5 text-slate-400" />
+              <span>Request Custom Capability</span>
             </h4>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              If your MiniApp needs an unlisted hardware capability, enter its identifier below to create a proposal.
-            </p>
+            <span className="text-[11px] text-slate-400">Propose an unlisted device feature</span>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Input
-              value={customPermission}
-              onChange={(e) => setCustomPermission?.(e.target.value)}
-              placeholder="e.g. Sensors, HealthKit, USB, ARKit..."
-              className="h-9 text-xs sm:text-sm"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  if (
-                    customPermission &&
-                    !formData.permissions?.find(
-                      (p: any) => p.type.toLowerCase() === customPermission.toLowerCase()
-                    )
-                  ) {
-                    togglePermission(customPermission);
-                    setCustomPermission?.('');
-                  }
-                }
-              }}
-            />
-            <Button
-              type="button"
-              className="h-9 px-4 text-xs font-semibold shrink-0"
-              onClick={() => {
-                if (
-                  customPermission &&
-                  !formData.permissions?.find(
-                    (p: any) => p.type.toLowerCase() === customPermission.toLowerCase()
-                  )
-                ) {
-                  togglePermission(customPermission);
-                  setCustomPermission?.('');
-                }
-              }}
-            >
-              Add Capability
-            </Button>
+          <div className="space-y-1">
+            <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+              Capability Name <span className="text-rose-500 font-bold">*</span>
+            </Label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="sm:col-span-2">
+                <Input
+                  value={customKey}
+                  onChange={(e) => {
+                    setCustomKey(e.target.value);
+                    setCustomPermission?.(e.target.value);
+                  }}
+                  placeholder="e.g. NFC, Bluetooth, HealthKit"
+                  className="h-8 text-xs bg-white dark:bg-slate-900"
+                />
+              </div>
+
+              <div className="flex rounded-lg p-0.5 bg-slate-200/70 dark:bg-slate-800 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setCustomRequired(true)}
+                  className={`flex-1 py-1 rounded-md text-[11px] font-semibold transition ${
+                    customRequired
+                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-2xs'
+                      : 'text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  Required
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCustomRequired(false)}
+                  className={`flex-1 py-1 rounded-md text-[11px] font-semibold transition ${
+                    !customRequired
+                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-2xs'
+                      : 'text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  Optional
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Purpose Description <span className="text-rose-500 font-bold">*</span>
+              </Label>
+              {customKey && (
+                <button
+                  type="button"
+                  title="Auto-format disclosure"
+                  onClick={() => {
+                    const formatted = formatCompliantPurpose(customKey, customPurpose, formData.name);
+                    setCustomPurpose(formatted);
+                  }}
+                  className="text-[11px] font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-brand-50 dark:hover:bg-brand-950/40 transition"
+                >
+                  <SparklesIcon className="w-3 h-3 text-brand-500" />
+                  <span>Auto-Format</span>
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Input
+                value={customPurpose}
+                onChange={(e) => setCustomPurpose(e.target.value)}
+                placeholder="e.g. Tap contactless smart cards to verify identity tokens."
+                className="h-8 text-xs bg-white dark:bg-slate-900 flex-1"
+              />
+
+              <Button
+                type="button"
+                disabled={!customKey.trim()}
+                onClick={handleAddCustomCapability}
+                size="sm"
+                className="h-8 px-3 text-xs shrink-0 inline-flex items-center gap-1 font-semibold"
+              >
+                <PlusCircle className="w-3 h-3" />
+                <span>Add</span>
+              </Button>
+            </div>
           </div>
         </div>
       )}

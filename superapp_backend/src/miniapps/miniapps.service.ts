@@ -1,4 +1,4 @@
-﻿import {
+import {
   Injectable,
   Logger,
   BadRequestException,
@@ -205,7 +205,7 @@ export class MiniappsService implements OnApplicationBootstrap {
   }
 
   async findAll(
-    queryOrOwnerId?: { status?: string } | string,
+    queryOrOwnerId?: { status?: string; mine?: boolean | string } | string,
     roles?: string[],
     user?: any,
   ) {
@@ -215,8 +215,12 @@ export class MiniappsService implements OnApplicationBootstrap {
       roles?.includes('SECURITY_ADMIN') ||
       roles?.includes('COMPLIANCE_OFFICER');
 
-    // 1. Super Admin / Admin / Compliance Officer: Full platform visibility
-    if (isElevated) {
+    const isMineRequested =
+      typeof queryOrOwnerId === 'object' &&
+      (queryOrOwnerId?.mine === true || queryOrOwnerId?.mine === 'true');
+
+    // 1. Super Admin / Admin / Compliance Officer: Full platform visibility unless mine=true is specified
+    if (isElevated && !isMineRequested) {
       const where: any = {};
       if (typeof queryOrOwnerId === 'object' && queryOrOwnerId?.status) {
         where.status = queryOrOwnerId.status;
@@ -228,12 +232,10 @@ export class MiniappsService implements OnApplicationBootstrap {
       });
     }
 
-    // 2. Solution 1: Live Ecosystem + Developer's Staging App (Realistic Simulation)
-    // Non-super-admins see:
-    // - ALL ACTIVE / PUBLISHED apps (so the SuperApp home screen looks 100% full, real, and authentic)
-    // - PLUS their own MiniApps in ANY status (TESTING, IN_REVIEW, DRAFT, APPROVED)
+    // 2. Fetch MiniApps based on logged-in user
     const ownerId =
       user?.sub ||
+      user?.id ||
       (typeof queryOrOwnerId === 'string' ? queryOrOwnerId : undefined);
     const ownerEmail = user?.email;
 
@@ -244,19 +246,14 @@ export class MiniappsService implements OnApplicationBootstrap {
 
     if (ownerId || ownerEmail) {
       qb.where(
-        '(app.status = :activeStatus OR app.status = :publishedStatus OR app.ownerId = :ownerId OR app.ownerEmail = :ownerEmail)',
+        '(app.ownerId = :ownerId OR (app.ownerEmail IS NOT NULL AND LOWER(app.ownerEmail) = LOWER(:ownerEmail)))',
         {
-          activeStatus: 'ACTIVE',
-          publishedStatus: 'PUBLISHED',
           ownerId: ownerId || '',
           ownerEmail: ownerEmail || '',
         },
       );
     } else {
-      qb.where('app.status = :activeStatus OR app.status = :publishedStatus', {
-        activeStatus: 'ACTIVE',
-        publishedStatus: 'PUBLISHED',
-      });
+      return [];
     }
 
     if (typeof queryOrOwnerId === 'object' && queryOrOwnerId?.status) {
@@ -601,7 +598,23 @@ export class MiniappsService implements OnApplicationBootstrap {
     category?: string;
     name?: string;
     appId?: string;
+    gitUrl?: string;
+    gitBranch?: string;
+    gitPath?: string;
   }) {
+    if (!body.gitUrl && body.appId && body.appId !== 'draft') {
+      try {
+        const app = await this.findOne(body.appId);
+        if (app?.integrationConfig) {
+          const cfg = app.integrationConfig as any;
+          body.gitUrl = cfg.gitUrl || cfg.repoUrl;
+          body.gitBranch = cfg.gitBranch || cfg.ref || 'main';
+          body.gitPath = cfg.gitPath || cfg.packagePath;
+        }
+      } catch {
+        // App might not exist yet during initial draft creation
+      }
+    }
     return this.permissionDetectorHelper.detect(body);
   }
 

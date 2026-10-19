@@ -20,4 +20,14 @@ export class ReviewProposalDto {
   @IsString()
   @IsOptional()
   targetVersion?: string;
+
+  @IsString()
+  @IsOptional()
+  targetBranch?: string;
+
+  @IsOptional()
+  createMr?: boolean;
+
+  @IsOptional()
+  metadata?: any;
 }

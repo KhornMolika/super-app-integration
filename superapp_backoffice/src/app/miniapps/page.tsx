@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
@@ -14,7 +14,10 @@ import { useAuth } from '@/lib/auth';
 import { getOrganizationCode, getOrganizationFullName } from '@/lib/constants/fsa-organizations';
 
 export default function MiniAppsPage() {
-  const { role } = useAuth();
+  const { role, user, hasRole } = useAuth();
+  const isSuper = hasRole('SUPER_ADMIN') || hasRole('ADMIN');
+  const [scope, setScope] = useState<'all' | 'mine'>(isSuper ? 'all' : 'mine');
+
   const [miniApps, setMiniApps] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -25,7 +28,9 @@ export default function MiniAppsPage() {
     try {
       setIsLoading(true);
       setFetchError(null);
-      const data = await miniappsApi.getAll();
+      const data = await miniappsApi.getAll({
+        mine: scope === 'mine' || !isSuper,
+      });
       setMiniApps(Array.isArray(data) ? data : []);
     } catch (error: any) {
       console.error('Failed to fetch mini apps', error);
@@ -33,7 +38,7 @@ export default function MiniAppsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [scope, isSuper]);
 
   useEffect(() => {
     fetchMiniApps();
@@ -42,12 +47,42 @@ export default function MiniAppsPage() {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
       
-      <div className="flex justify-between items-end mb-8">
+      <div className="flex justify-between items-end mb-8 flex-wrap gap-4">
         <div>
           <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">MiniApps</h2>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">Manage registered applications and permissions.</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
+            {isSuper && scope === 'all'
+              ? 'Manage all platform registered applications and permissions.'
+              : `Manage your registered applications (${user?.email || 'Logged-in User'}).`}
+          </p>
         </div>
         <div className="flex items-center gap-3">
+          {isSuper && (
+            <div className="inline-flex rounded-xl p-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
+              <button
+                type="button"
+                onClick={() => setScope('all')}
+                className={`px-3 py-1.5 rounded-lg font-semibold transition ${
+                  scope === 'all'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-2xs'
+                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'
+                }`}
+              >
+                All Applications
+              </button>
+              <button
+                type="button"
+                onClick={() => setScope('mine')}
+                className={`px-3 py-1.5 rounded-lg font-semibold transition ${
+                  scope === 'mine'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-2xs'
+                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'
+                }`}
+              >
+                My MiniApps
+              </button>
+            </div>
+          )}
           <RegisterMiniAppButton />
         </div>
       </div>

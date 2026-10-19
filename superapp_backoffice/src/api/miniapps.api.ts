@@ -26,8 +26,18 @@ export interface MiniApp {
 }
 
 export const miniappsApi = {
-  getAll: (status?: string) =>
-    apiClient<MiniApp[]>('/api/mini-apps', { params: { status } }),
+  getAll: (filterOrStatus?: string | { status?: string; mine?: boolean }) => {
+    let params: Record<string, any> = {};
+    if (typeof filterOrStatus === 'string') {
+      params.status = filterOrStatus;
+    } else if (filterOrStatus && typeof filterOrStatus === 'object') {
+      params = { ...filterOrStatus };
+    }
+    return apiClient<MiniApp[]>('/api/mini-apps', { params });
+  },
+
+  getMyMiniApps: (status?: string) =>
+    apiClient<MiniApp[]>('/api/mini-apps', { params: { status, mine: true } }),
 
   getById: (id: string) =>
     apiClient<MiniApp>(`/api/mini-apps/${id}`),
@@ -150,7 +160,15 @@ export const miniappsApi = {
   getAllIssues: () =>
     apiClient<any[]>('/api/mini-apps/issues/all'),
 
-  detectPermissions: (data: { productionUrl?: string; category?: string; name?: string; appId?: string }) =>
+  detectPermissions: (data: {
+    productionUrl?: string;
+    gitUrl?: string;
+    gitBranch?: string;
+    gitPath?: string;
+    category?: string;
+    name?: string;
+    appId?: string;
+  }) =>
     apiClient<{ detected: Array<{ type: string; purpose: string; source: string }> }>('/api/mini-apps/detect-permissions', {
       method: 'POST',
       body: data,

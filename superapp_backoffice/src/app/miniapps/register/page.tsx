@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -21,10 +21,12 @@ import { validateUrlFormat } from '@/components/ui/ValidatedUrlInput';
 import { CreateMiniAppDto, FlutterPackageConfigDto, NativeSdkConfigDto, IntegrationMethod, SourceType } from '@/types/miniapp.types';
 import { getOrganizationDef, FSA_ORGANIZATIONS } from '@/lib/constants/fsa-organizations';
 import { miniappsApi, telegramApi } from '@/api';
+import { permissionsApi } from '@/api/permissions.api';
+import { toast } from '@/components/ui/Toast';
 
 export default function RegisterMiniAppPage() {
   const router = useRouter();
-  const { can } = useAuth();
+  const { can, user } = useAuth();
 
   useEffect(() => {
     if (!can('miniapp:create')) {
@@ -98,6 +100,17 @@ export default function RegisterMiniAppPage() {
 
     loadUserProfile();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      setFormData((prev) => ({
+        ...prev,
+        ownerName: prev.ownerName || user.name || '',
+        ownerEmail: prev.ownerEmail || user.email || '',
+        supportEmail: prev.supportEmail || user.email || '',
+      }));
+    }
+  }, [user]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalState, setModalState] = useState<SubmissionModalState>({ isOpen: false, status: 'loading' });
@@ -176,15 +189,6 @@ export default function RegisterMiniAppPage() {
     const valid = await validateStep(step);
     setIsSubmitting(false);
     if (valid) {
-      if (step === 4) {
-        const unsupported = (formData.permissions || []).filter(
-          (p: any) => !WHITELISTED_HOST_CAPABILITIES.includes((p.type || '').toLowerCase())
-        );
-        if (unsupported.length > 0) {
-          setShowUnsupportedModal(true);
-          return;
-        }
-      }
       setStep((prev) => prev + 1);
     }
   };
@@ -451,7 +455,10 @@ export default function RegisterMiniAppPage() {
       };
       const nextPermissions =
         extraData?.detectedPermissions && extraData.detectedPermissions.length > 0
-          ? extraData.detectedPermissions
+          ? extraData.detectedPermissions.map((p: any) => ({
+              ...p,
+              purpose: formatCompliantPurpose(p.type, p.purpose, prev.name),
+            }))
           : prev.permissions;
 
       return {
@@ -495,13 +502,17 @@ export default function RegisterMiniAppPage() {
         ...(prev.integrationConfigNativeSdk as NativeSdkConfigDto),
         ...updates,
       };
+      const mappedIncoming = (extraData?.detectedPermissions || []).map((p: any) => ({
+        ...p,
+        purpose: formatCompliantPurpose(p.type, p.purpose, prev.name),
+      }));
       const nextPermissions =
-        extraData?.detectedPermissions && extraData.detectedPermissions.length > 0
+        mappedIncoming.length > 0
           ? [
             ...(prev.permissions || []).filter(
-              (p) => !extraData.detectedPermissions!.some((dp) => dp.type === p.type),
+              (p) => !mappedIncoming.some((dp) => dp.type === p.type),
             ),
-            ...extraData.detectedPermissions,
+            ...mappedIncoming,
           ]
           : prev.permissions;
 
@@ -529,14 +540,24 @@ export default function RegisterMiniAppPage() {
   };
 
   const togglePermission = (type: string) => {
-    const exists = formData.permissions?.find((p) => p.type === type);
+    const exists = formData.permissions?.find(
+      (p) => p.type.toLowerCase() === type.toLowerCase()
+    );
     if (exists) {
-      setFormData({ ...formData, permissions: formData.permissions?.filter((p) => p.type !== type) });
+      setFormData({
+        ...formData,
+        permissions: formData.permissions?.filter(
+          (p) => p.type.toLowerCase() !== type.toLowerCase()
+        ),
+      });
     } else {
       const defaultPurpose = formatCompliantPurpose(type, '', formData.name);
       setFormData({
         ...formData,
-        permissions: [...(formData.permissions || []), { type, purpose: defaultPurpose, termsUrl: '' }],
+        permissions: [
+          ...(formData.permissions || []),
+          { type, purpose: defaultPurpose, termsUrl: '' },
+        ],
       });
     }
   };
@@ -729,7 +750,7 @@ export default function RegisterMiniAppPage() {
           </Link>
           <div>
             <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Register MiniApp</h2>
-            <p className="text-slate-500 dark:text-slate-400 mt-1 text-base">Deploy a new service to the SuperApp gateway</p>
+            <p className="text-slate-500 dark:text-slate-400 mt-1 text-base">Deploy a new service to the FSA SuperApp Platform</p>
           </div>
         </div>
 
@@ -931,7 +952,28 @@ export default function RegisterMiniAppPage() {
         unsupportedPermissions={(formData.permissions || []).filter(
           (p: any) => !WHITELISTED_HOST_CAPABILITIES.includes((p.type || '').toLowerCase())
         )}
-        onConfirm={() => {
+        onConfirm={async () => {
+          const unsupported = (formData.permissions || []).filter(
+            (p: any) => !WHITELISTED_HOST_CAPABILITIES.includes((p.type || '').toLowerCase())
+          );
+          for (const perm of unsupported) {
+            try {
+              await permissionsApi.createProposal({
+                permissionKey: perm.type,
+                permissionName: perm.type,
+                description: perm.purpose || `Capability requested for MiniApp "${formData.name || 'Draft MiniApp'}"`,
+                metadata: {
+                  miniAppName: formData.name,
+                  miniAppId: formData.appId,
+                  purpose: perm.purpose,
+                  requestedSource: 'MINIAPP_REGISTRATION_WIZARD',
+                },
+              });
+            } catch (e) {
+              console.warn('Failed to auto-create permission proposal on proceed:', e);
+            }
+          }
+          toast.success('Capability proposal submitted! Admins can now review and inject code.');
           setShowUnsupportedModal(false);
           setStep(5);
         }}

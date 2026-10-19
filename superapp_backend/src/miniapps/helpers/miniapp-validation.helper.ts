@@ -1,4 +1,4 @@
-﻿import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { isEmail } from 'class-validator';
@@ -401,10 +401,6 @@ export class MiniappValidationHelper {
         if (!permissionDef) {
           // UNKNOWN PERMISSION -> create proposal in permission_proposals
           await this.createPermissionProposal(app, permKey);
-          if (perm.required) {
-            errors[`permissions.${index}.unsupported`] =
-              `The requested permission "${permKey}" is not currently supported in the platform catalog. A proposal has been created for review.`;
-          }
         } else {
           // Known permission, check SuperApp Runtime Compatibility
           const latestCapability =
@@ -426,10 +422,6 @@ export class MiniappValidationHelper {
               permissionDef.key,
               permissionDef.name,
             );
-            if (perm.required) {
-              errors[`permissions.${index}.unsupported`] =
-                `The requested permission "${permissionDef.key}" is not supported by the current SuperApp runtime. A proposal has been created for review.`;
-            }
           }
         }
       }
@@ -644,23 +636,30 @@ export class MiniappValidationHelper {
     permissionKey: string,
     permissionName?: string,
   ) {
+    const cleanKey = permissionKey.toLowerCase().trim().replace(/[^a-z0-9_]/g, '_');
     const [existing] =
-      await this.permissionProposalsService.findPendingByKey(permissionKey);
+      await this.permissionProposalsService.findPendingByKey(cleanKey);
     if (existing) {
       return existing;
     }
 
     const proposal = await this.permissionProposalsService.create({
-      permissionKey,
-      permissionName: permissionName || permissionKey,
-      description: `MiniApp "${app.name || app.appId}" requested permission "${permissionKey}", which is not defined in the platform catalog.`,
+      permissionKey: cleanKey,
+      permissionName: permissionName || cleanKey,
+      description: `Capability proposal for "${cleanKey}" requested by MiniApp "${app.name || app.appId}".`,
       miniApp: app,
+      metadata: {
+        miniAppName: app.name,
+        miniAppId: app.appId || app.id,
+        category: app.category,
+        requestedSource: 'MINIAPP_REGISTRATION',
+      },
     });
 
     await this.notificationsService.createNotification(
       app.ownerId || 'system',
-      'New Permission Proposed',
-      `MiniApp "${app.name || app.appId}" proposed a new capability: "${permissionKey}".`,
+      'New Capability Proposed',
+      `MiniApp "${app.name || app.appId}" proposed a new capability: "${cleanKey}". Ready for review & injection.`,
       'PROPOSAL_CREATED',
       app.id,
     );

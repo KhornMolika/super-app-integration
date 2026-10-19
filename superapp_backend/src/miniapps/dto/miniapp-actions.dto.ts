@@ -43,4 +43,16 @@ export class DetectPermissionsDto {
   @IsString()
   @IsOptional()
   appId?: string;
+
+  @IsString()
+  @IsOptional()
+  gitUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  gitBranch?: string;
+
+  @IsString()
+  @IsOptional()
+  gitPath?: string;
 }

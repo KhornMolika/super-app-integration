@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useState, useEffect } from 'react';
 import { Input, Label, Button } from '@/components/ui/inputs';
 import { toast } from '@/components/ui/Toast';
@@ -238,7 +238,7 @@ export default function TeamForm({
             name="ownerName"
             value={formData.ownerName || ''}
             onChange={handleChange}
-            placeholder="John Doe"
+            placeholder="e.g. John Doe"
             disabled={!isEditable}
           />
         </div>
@@ -266,7 +266,7 @@ export default function TeamForm({
             value={formData.ownerEmail || ''} 
             onChange={handleChange} 
             type="email" 
-            placeholder="john.doe@fsa.gov" 
+            placeholder="e.g. john.doe@fsa.gov" 
             disabled={!isEditable}
             className={allErrors.ownerEmail ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
           />
@@ -283,7 +283,7 @@ export default function TeamForm({
             value={formData.supportEmail || ''} 
             onChange={handleChange} 
             type="email" 
-            placeholder="support@fsa.gov" 
+            placeholder="e.g. support@fsa.gov" 
             disabled={!isEditable}
             className={allErrors.supportEmail ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
           />

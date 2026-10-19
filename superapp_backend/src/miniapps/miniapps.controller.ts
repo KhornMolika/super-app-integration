@@ -107,7 +107,9 @@ export class MiniappsController {
   async createDraft(@Body() createData: any, @Req() req: any) {
     const dataToSave = this.extractIntegrationConfig(createData);
     dataToSave.status = MiniAppStatus.DRAFT;
-    dataToSave.ownerId = req.user.sub;
+    dataToSave.ownerId = req.user.sub || req.user.id;
+    dataToSave.ownerEmail = dataToSave.ownerEmail || req.user.email;
+    dataToSave.ownerName = dataToSave.ownerName || req.user.name;
     const created = await this.miniappService.create(dataToSave, req.user.sub);
     return maskMiniAppCredentials(created);
   }
@@ -117,15 +119,24 @@ export class MiniappsController {
   async create(@Body() createData: CreateMiniAppDto, @Req() req: any) {
     const dataToSave = this.extractIntegrationConfig(createData);
     dataToSave.status = MiniAppStatus.IN_REVIEW;
-    dataToSave.ownerId = req.user.sub;
+    dataToSave.ownerId = req.user.sub || req.user.id;
+    dataToSave.ownerEmail = dataToSave.ownerEmail || req.user.email;
+    dataToSave.ownerName = dataToSave.ownerName || req.user.name;
     const created = await this.miniappService.create(dataToSave, req.user.sub);
     return maskMiniAppCredentials(created);
   }
 
   @Get()
   @RequirePermissions('miniapp:read')
-  async findAll(@Query('status') status?: string, @Req() req?: any) {
-    const query = status ? { status } : {};
+  async findAll(
+    @Query('status') status?: string,
+    @Query('mine') mine?: string,
+    @Req() req?: any,
+  ) {
+    const query: any = status ? { status } : {};
+    if (mine === 'true' || mine === '1') {
+      query.mine = true;
+    }
     const user = req?.user;
     const roles = user?.roles || [];
     try {

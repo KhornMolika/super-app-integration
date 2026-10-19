@@ -1,4 +1,4 @@
-﻿import { miniappsApi, integrationsApi } from '@/api';
+import { miniappsApi, integrationsApi } from '@/api';
 import { CreateMiniAppDto, IntegrationMethod, PermissionDto, SourceType } from '@/types/miniapp.types';
 import { validateUrlFormat } from '@/components/ui/ValidatedUrlInput';
 
@@ -242,30 +242,43 @@ export async function validateMiniAppStep(
                 // Auto-detect required native permissions from dependencies
                 const deps = data.validation.dependencies || {};
                 const currentPerms = [...(formData.permissions || [])];
-                const pluginMap: Record<string, string> = {
-                  nfc_manager: 'NFC',
-                  camera: 'CAMERA',
-                  geolocator: 'LOCATION',
-                  location: 'LOCATION',
-                  local_auth: 'BIOMETRICS',
-                  image_picker: 'PHOTO_LIBRARY',
-                  file_picker: 'STORAGE',
-                  contacts_service: 'CONTACTS',
+                const pluginMap: Record<string, { type: string; reason: string }> = {
+                  nfc_manager: { type: 'NFC', reason: 'to read NFC smart cards and contactless security tokens' },
+                  camera: { type: 'Camera', reason: 'to scan codes and capture verification photos' },
+                  qr_code_scanner: { type: 'Camera', reason: 'to scan QR codes and barcodes' },
+                  mobile_scanner: { type: 'Camera', reason: 'to scan QR codes and barcodes' },
+                  image_picker: { type: 'Camera', reason: 'to select and upload verification photos' },
+                  geolocator: { type: 'Location', reason: 'to verify geographic location and provide localized services' },
+                  location: { type: 'Location', reason: 'to verify geographic location and provide localized services' },
+                  local_auth: { type: 'Biometrics', reason: 'to securely authenticate the user and authorize operations' },
+                  record: { type: 'Microphone', reason: 'to capture audio recordings and voice input' },
+                  audioplayers: { type: 'Microphone', reason: 'to capture audio recordings and voice input' },
+                  flutter_blue_plus: { type: 'Bluetooth', reason: 'to communicate with nearby peripheral devices' },
+                  contacts_service: { type: 'Contacts', reason: 'to access address book contacts for recipient selection' },
+                  flutter_contacts: { type: 'Contacts', reason: 'to access address book contacts for recipient selection' },
                 };
 
                 let added = false;
+                const appLabel = formData.name?.trim() || '$(PRODUCT_NAME)';
                 Object.keys(deps).forEach((dep) => {
-                  const permType = pluginMap[dep];
-                  if (
-                    permType &&
-                    !currentPerms.some((p) => p.type === permType)
-                  ) {
-                    currentPerms.push({
-                      type: permType,
-                      purpose: `Required for ${dep} platform capability`,
-                      termsUrl: 'https://privacy.example.com',
-                    });
-                    added = true;
+                  const mapped = pluginMap[dep.toLowerCase()];
+                  if (mapped) {
+                    const permType = mapped.type;
+                    const existingIdx = currentPerms.findIndex(
+                      (p) => p.type.toLowerCase() === permType.toLowerCase()
+                    );
+                    const defaultPurpose = `${appLabel} requires ${permType.toLowerCase()} access ${mapped.reason}.`;
+                    if (existingIdx === -1) {
+                      currentPerms.push({
+                        type: permType,
+                        purpose: defaultPurpose,
+                        termsUrl: '',
+                      });
+                      added = true;
+                    } else if (!currentPerms[existingIdx].purpose) {
+                      currentPerms[existingIdx].purpose = defaultPurpose;
+                      added = true;
+                    }
                   }
                 });
 
