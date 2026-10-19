@@ -89,7 +89,7 @@ export default function AuditLogsPage() {
               Audit Logs & Security Events
             </h2>
             <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
-              Immutable ledger of platform actions, permission approvals, pipeline runs, and security events.
+              Immutable ledger of platform actions, capability approvals, pipeline runs, and security events.
             </p>
           </div>
           <div className="flex items-center gap-3">

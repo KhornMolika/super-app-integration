@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
@@ -11,7 +11,7 @@ import SubmissionModal, { SubmissionModalState } from '@/components/ui/Submissio
 import BasicInfoForm from '@/components/forms/BasicInfoForm';
 import TeamForm from '@/components/forms/TeamForm';
 import IntegrationForm from '@/components/forms/IntegrationForm';
-import PermissionsForm, { formatCompliantPurpose } from '@/components/forms/PermissionsForm';
+import CapabilitiesForm, { formatCompliantPurpose } from '@/components/forms/CapabilitiesForm';
 import ActivityTab from '@/components/ui/ActivityTab';
 import ValidationReportTab from '@/components/ui/ValidationReportTab';
 import VersionHistoryTab from '@/components/miniapp-detail/VersionHistoryTab';
@@ -874,7 +874,7 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
         placeholder: 'Explain why this revision cannot be accepted...',
         quickSuggestions: [
           'Violates SuperApp platform capability and security policies',
-          'High-risk permissions requested without required partner certification',
+          'High-risk capabilities requested without required partner certification',
           'Duplicate or conflicting capability with existing SuperApp core features',
           'Incompatible technical architecture or failed automated security baseline',
         ],
@@ -894,7 +894,7 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
           placeholder: 'Explain why this revision is being rejected...',
           quickSuggestions: [
             'Violates SuperApp platform capability and security policies',
-            'High-risk permissions requested without required partner certification',
+            'High-risk capabilities requested without required partner certification',
             'Duplicate or conflicting capability with existing SuperApp core features',
             'Security baseline checks failed on proposed endpoint or artifact',
           ],
@@ -913,7 +913,7 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
         quickSuggestions: [
           'App description or assets violate SuperApp content guidelines',
           'Integration endpoint is unreachable or returning invalid responses',
-          'High-risk permissions requested without acceptable justification',
+          'High-risk capabilities requested without acceptable justification',
           'Security or domain verification requirements failed baseline',
         ],
       });
@@ -931,7 +931,7 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
           confirmVariant: 'warning',
           placeholder: 'Specify what updates are needed in this revision...',
           quickSuggestions: [
-            'Permission purpose is too vague; provide explicit business context',
+            'Capability purpose is too vague; provide explicit business context',
             'Domain whitelist includes unverified external domains',
             'Terms of Service / Privacy Policy URL is inaccessible or invalid',
             'Security scan flagged potential SSRF risk on target endpoint',
@@ -949,7 +949,7 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
         confirmVariant: 'warning',
         placeholder: 'Specify what updates are needed...',
         quickSuggestions: [
-          'Please clarify and provide detailed purpose for requested permissions',
+          'Please clarify and provide detailed purpose for requested capabilities',
           'Domain verification TXT / association record is missing or expired',
           'Update Terms of Service and Privacy Policy URLs to valid live documents',
           'Resolve reported security scan vulnerabilities before resubmission',
@@ -1280,14 +1280,14 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
           {activeTab === 'permissions' && (
             <Card>
               <CardHeader
-                title="Permissions & Capabilities"
+                title="Capabilities"
                 icon={
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" />
                   </svg>
                 }
               />
-              <PermissionsForm
+              <CapabilitiesForm
                 formData={formData}
                 setFormData={setFormData}
                 handleChange={handleChange}
@@ -1421,7 +1421,7 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
                   rows={3}
                   value={revisionChangelog}
                   onChange={(e) => setRevisionChangelog(e.target.value)}
-                  placeholder="e.g. Added biometric auth permission, updated endpoint to v2 API, upgraded dependencies..."
+                  placeholder="e.g. Added biometric auth capability, updated endpoint to v2 API, upgraded dependencies..."
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
                 />
               </div>

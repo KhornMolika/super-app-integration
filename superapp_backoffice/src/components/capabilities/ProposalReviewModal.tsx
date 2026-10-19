@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/inputs';
 import { Code, GitPullRequest, GitBranch, Smartphone, User, X } from 'lucide-react';
 import { PermissionProposal } from '@/api/permissions.api';
+import { getCapabilityVisual } from '@/lib/capability-visuals';
 
 interface ProposalReviewModalProps {
   proposal: PermissionProposal | null;
@@ -47,19 +48,27 @@ export function ProposalReviewModal({
     ? permKey.charAt(0).toUpperCase() + permKey.slice(1)
     : '';
 
+  const visual = getCapabilityVisual(proposal.permissionKey, proposal.permissionName, proposal.description);
+  const Icon = visual.Icon;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
       <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 space-y-5 shadow-2xl border-slate-700 bg-white dark:bg-slate-900">
         {/* Header */}
         <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400">
-              <Code className="w-4 h-4" />
+            <div className={`p-2 rounded-xl ${visual.bgColor} ${visual.borderColor} border shrink-0 transition-colors`}>
+              <Icon className={`w-4 h-4 ${visual.iconColor}`} />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                Review Capability Proposal
-              </h3>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                  {proposal.permissionName || 'Review Capability Proposal'}
+                </h3>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${visual.pillBgColor} ${visual.badgeTextColor}`}>
+                  {visual.category}
+                </span>
+              </div>
               <p className="text-[11px] text-slate-400 font-mono mt-0.5">
                 {proposal.id}
               </p>
@@ -78,7 +87,7 @@ export function ProposalReviewModal({
         {/* Metadata Chips */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs bg-slate-50 dark:bg-slate-950/60 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
           <div>
-            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Capability</span>
+            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Capability Key</span>
             <p className="font-mono font-semibold text-slate-800 dark:text-slate-200 truncate mt-0.5">
               {proposal.permissionKey}
             </p>

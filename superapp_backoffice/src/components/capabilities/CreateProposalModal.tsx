@@ -8,6 +8,26 @@ import { permissionsApi } from '@/api/permissions.api';
 import { miniappsApi } from '@/api';
 import { useAuth } from '@/lib/auth';
 import { toast } from '@/components/ui/Toast';
+import { getCapabilityVisual } from '@/lib/capability-visuals';
+
+function deriveDisplayName(key: string): string {
+  if (!key.trim()) return '';
+  return key
+    .split(/[_\-\s]+/)
+    .map((word) => {
+      const lower = word.toLowerCase();
+      if (lower === 'nfc') return 'NFC';
+      if (lower === 'gps') return 'GPS';
+      if (lower === 'qr') return 'QR';
+      if (lower === 'ble') return 'BLE';
+      if (lower === 'sdk') return 'SDK';
+      if (lower === 'api') return 'API';
+      if (lower === 'sms') return 'SMS';
+      if (lower === 'id') return 'ID';
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(' ');
+}
 
 interface CreateProposalModalProps {
   isOpen: boolean;
@@ -78,16 +98,21 @@ export function CreateProposalModal({
           ? customMiniAppName.trim()
           : chosenMiniApp?.name || 'MiniApp';
 
+      const autoName = deriveDisplayName(permissionKey);
+      const finalName = permissionName.trim() || autoName || permissionKey.trim();
+      const visual = getCapabilityVisual(permissionKey, finalName, description);
+
       await permissionsApi.createProposal({
         permissionKey: permissionKey.trim(),
-        permissionName: permissionName.trim() || permissionKey.trim(),
+        permissionName: finalName,
         description: description.trim() || `Capability proposal for ${permissionKey.trim()}`,
         miniAppId: !isPlatform && !isCustom && chosenMiniApp ? chosenMiniApp.id : undefined,
         metadata: {
           miniAppName,
           miniAppId: !isPlatform && !isCustom && chosenMiniApp ? chosenMiniApp.id : undefined,
           appId: !isPlatform && !isCustom && chosenMiniApp ? chosenMiniApp.appId : undefined,
-          category: chosenMiniApp?.category,
+          category: visual.category,
+          visualId: visual.id,
           requestedSource: 'DIRECT_PROPOSAL',
         },
       });
@@ -106,6 +131,9 @@ export function CreateProposalModal({
       setIsSubmitting(false);
     }
   };
+
+  const autoName = deriveDisplayName(permissionKey);
+  const matchedVisual = getCapabilityVisual(permissionKey, permissionName || autoName, description);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -191,19 +219,26 @@ export function CreateProposalModal({
               required
               value={permissionKey}
               onChange={(e) => setPermissionKey(e.target.value)}
-              placeholder="e.g. nfc, bluetooth, healthkit, telephony"
+              placeholder="e.g. nfc_reader, bluetooth_beacon, telephony"
               className="h-9 text-xs font-mono"
             />
           </div>
 
           <div className="space-y-1">
-            <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-              Display Name
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Capability Name
+              </Label>
+              {autoName && !permissionName && (
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                  Auto-inferred: {autoName}
+                </span>
+              )}
+            </div>
             <Input
               value={permissionName}
               onChange={(e) => setPermissionName(e.target.value)}
-              placeholder="e.g. NFC Smart Card Reader"
+              placeholder={autoName ? `e.g. ${autoName}` : 'e.g. NFC Reader'}
               className="h-9 text-xs"
             />
           </div>
@@ -220,6 +255,36 @@ export function CreateProposalModal({
               placeholder="e.g. Scan contactless smart cards and national identity e-chips for biometric authentication."
               className="w-full text-xs p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
             />
+          </div>
+
+          {/* Automated Visual & Styling Preview - Zero Effort */}
+          <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div
+                className={`p-2 rounded-xl ${matchedVisual.bgColor} ${matchedVisual.borderColor} border shrink-0 transition-all`}
+              >
+                <matchedVisual.Icon className={`w-4 h-4 ${matchedVisual.iconColor}`} />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                    {permissionName.trim() || autoName || (permissionKey.trim() ? permissionKey.trim() : 'Platform Feature')}
+                  </span>
+                  <span
+                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${matchedVisual.pillBgColor} ${matchedVisual.badgeTextColor}`}
+                  >
+                    {matchedVisual.category}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  Visual icon &amp; styling matched automatically
+                </p>
+              </div>
+            </div>
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-200/60 dark:border-emerald-800/60 shrink-0">
+              <Sparkles className="w-3 h-3" />
+              Auto-Styled
+            </span>
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">

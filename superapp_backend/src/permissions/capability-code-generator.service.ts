@@ -292,20 +292,69 @@ export class CapabilityCodeGeneratorService {
         (proposal.metadata as any)?.miniAppName ||
         'Platform / Host Core Shell';
 
-      const mrTitle = encodeURIComponent(`feat(capability): Add ${proposal.permissionKey} capability`);
-      const mrDescription = encodeURIComponent(
+      const mrTitleRaw = `feat(capability): Add ${proposal.permissionKey} capability`;
+      const mrDescriptionRaw =
         `### Automated Capability PR / Merge Request\n\n` +
-          `* **Capability Key**: \`${proposal.permissionKey}\`\n` +
-          `* **Requested By**: ${proposal.requestedBy?.name || 'MiniApp Developer'}\n` +
-          `* **MiniApp**: ${miniAppDisplay}\n` +
-          `* **Target SuperApp Version**: ${targetVersion || '1.1.0'}\n` +
-          `* **Target Branch**: \`${targetBranch}\`\n\n` +
-          `#### Injected Changes:\n` +
-          filesModified.map((f) => `- \`${f}\``).join('\n') +
-          `\n\n*Generated automatically by FSA SuperApp BackOffice.*`,
-      );
+        `* **Capability Key**: \`${proposal.permissionKey}\`\n` +
+        `* **Requested By**: ${proposal.requestedBy?.name || 'MiniApp Developer'}\n` +
+        `* **MiniApp**: ${miniAppDisplay}\n` +
+        `* **Target SuperApp Version**: ${targetVersion || '1.1.0'}\n` +
+        `* **Target Branch**: \`${targetBranch}\`\n\n` +
+        `#### Injected Changes:\n` +
+        filesModified.map((f) => `- \`${f}\``).join('\n') +
+        `\n\n*Generated automatically by FSA SuperApp BackOffice.*`;
 
-      const mrUrl = `https://git.fintechcenterfsa.com/frontend/super-app/-/merge_requests/new?merge_request[source_branch]=${encodeURIComponent(branchName)}&merge_request[target_branch]=${encodeURIComponent(targetBranch)}&merge_request[title]=${mrTitle}&merge_request[description]=${mrDescription}`;
+      const mrTitle = encodeURIComponent(mrTitleRaw);
+      const mrDescription = encodeURIComponent(mrDescriptionRaw);
+
+      let mrUrl = `https://git.fintechcenterfsa.com/frontend/super-app/-/merge_requests/new?merge_request[source_branch]=${encodeURIComponent(branchName)}&merge_request[target_branch]=${encodeURIComponent(targetBranch)}&merge_request[title]=${mrTitle}&merge_request[description]=${mrDescription}`;
+
+      // Open Merge Request directly via GitLab REST API if configured
+      const gitlabBaseUrl =
+        this.configService.get<string>('GITLAB_BASE_URL') ||
+        'https://git.fintechcenterfsa.com';
+      const gitlabToken = this.configService.get<string>('GITLAB_TOKEN');
+      const projectSlug = 'frontend/super-app';
+
+      if (gitlabToken) {
+        try {
+          const apiEndpoint = `${gitlabBaseUrl.replace(/\/+$/, '')}/api/v4/projects/${encodeURIComponent(projectSlug)}/merge_requests`;
+          const res = await fetch(apiEndpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'PRIVATE-TOKEN': gitlabToken,
+              'User-Agent': 'FSA-SuperApp-Platform',
+            },
+            body: JSON.stringify({
+              source_branch: branchName,
+              target_branch: targetBranch,
+              title: mrTitleRaw,
+              description: mrDescriptionRaw,
+              remove_source_branch: true,
+            }),
+          });
+
+          if (res.ok) {
+            const mrData = (await res.json()) as any;
+            if (mrData.web_url) {
+              mrUrl = mrData.web_url;
+              this.logger.log(
+                `Created GitLab Merge Request directly: ${mrUrl} (IID: ${mrData.iid})`,
+              );
+            }
+          } else {
+            const errBody = await res.text();
+            this.logger.warn(
+              `Direct GitLab MR creation returned ${res.status}: ${errBody}. Falling back to draft creation URL.`,
+            );
+          }
+        } catch (apiErr: any) {
+          this.logger.warn(
+            `GitLab MR API call failed: ${apiErr.message}. Falling back to draft creation URL.`,
+          );
+        }
+      }
 
       return {
         success: true,

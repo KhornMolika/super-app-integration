@@ -11,8 +11,8 @@ import SubmissionModal, { SubmissionModalState } from '@/components/ui/Submissio
 import BasicInfoForm from '@/components/forms/BasicInfoForm';
 import TeamForm from '@/components/forms/TeamForm';
 import IntegrationForm, { generateClientVerificationToken, generateClientMiniAppId, deriveNativeSdkDefaults } from '@/components/forms/IntegrationForm';
-import PermissionsForm, { formatCompliantPurpose, WHITELISTED_HOST_CAPABILITIES, normalizeCapabilityKey } from '@/components/forms/PermissionsForm';
-import UnsupportedPermissionsModal from '@/components/forms/UnsupportedPermissionsModal';
+import CapabilitiesForm, { formatCompliantPurpose, WHITELISTED_HOST_CAPABILITIES, normalizeCapabilityKey } from '@/components/forms/CapabilitiesForm';
+import UnsupportedCapabilitiesModal from '@/components/forms/UnsupportedCapabilitiesModal';
 import SecurityForm from '@/components/forms/SecurityForm';
 import ReviewSummaryStep from '@/components/forms/ReviewSummaryStep';
 import RegistrationWizardSteps from '@/components/forms/RegistrationWizardSteps';
@@ -839,7 +839,7 @@ export default function RegisterMiniAppPage() {
           {step === 4 && (
             <Card>
               <CardHeader
-                title="Native Permissions"
+                title="Capabilities"
                 icon={
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -851,7 +851,7 @@ export default function RegisterMiniAppPage() {
                   </svg>
                 }
               />
-              <PermissionsForm
+              <CapabilitiesForm
                 formData={formData}
                 setFormData={setFormData}
                 handleChange={handleChange}
@@ -951,7 +951,7 @@ export default function RegisterMiniAppPage() {
         />
       </div>
 
-      <UnsupportedPermissionsModal
+      <UnsupportedCapabilitiesModal
         isOpen={showUnsupportedModal}
         unsupportedPermissions={(formData.permissions || []).filter(
           (p: any) => !WHITELISTED_HOST_CAPABILITIES.includes(normalizeCapabilityKey(p.type || ''))

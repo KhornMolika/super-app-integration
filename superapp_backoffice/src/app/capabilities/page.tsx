@@ -20,14 +20,8 @@ import {
   GitPullRequest,
   PlusCircle,
   RefreshCw,
-  Camera,
-  MapPin,
-  Fingerprint,
-  Mic,
-  Folder,
-  CreditCard,
-  Key,
 } from 'lucide-react';
+import { renderCapabilityIcon } from '@/lib/capability-visuals';
 
 function CapabilitiesContent() {
   const searchParams = useSearchParams();
@@ -139,16 +133,7 @@ function CapabilitiesContent() {
     }
   };
 
-  const getPermissionIcon = (key?: string) => {
-    const k = (key || '').toLowerCase();
-    if (k.includes('camera') || k.includes('qr') || k.includes('photo')) return <Camera className="w-4 h-4 text-amber-500" />;
-    if (k.includes('location')) return <MapPin className="w-4 h-4 text-emerald-500" />;
-    if (k.includes('biometric') || k.includes('face')) return <Fingerprint className="w-4 h-4 text-cyan-500" />;
-    if (k.includes('mic') || k.includes('audio')) return <Mic className="w-4 h-4 text-rose-500" />;
-    if (k.includes('storage') || k.includes('file')) return <Folder className="w-4 h-4 text-blue-500" />;
-    if (k.includes('pay') || k.includes('bakong')) return <CreditCard className="w-4 h-4 text-violet-500" />;
-    return <Key className="w-4 h-4 text-slate-400" />;
-  };
+  const getPermissionIcon = (key?: string) => renderCapabilityIcon(key);
 
   return (
     <ProtectedRoute permission="permission:read">

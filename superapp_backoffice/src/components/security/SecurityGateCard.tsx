@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/inputs';
@@ -181,7 +181,7 @@ export default function SecurityGateCard({ miniApp }: SecurityGateCardProps) {
               1
             </span>
             <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100">
-              Pre-Publish Security Gate 1: Code & Permissions Audit
+              Pre-Publish Security Gate 1: Code & Capabilities Audit
             </h4>
             {gate1Report && (
               <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
@@ -260,7 +260,7 @@ export default function SecurityGateCard({ miniApp }: SecurityGateCardProps) {
                 </span>
               </div>
               <div className="p-3.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200/80 dark:border-slate-700 shadow-sm">
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold block">Permissions</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold block">Capabilities</span>
                 <span className={`text-xs font-bold flex items-center gap-1 mt-1.5 ${gate1Report.checks.permissionCompliance.passed ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                   {gate1Report.checks.permissionCompliance.passed ? (
                     <>
@@ -305,7 +305,7 @@ export default function SecurityGateCard({ miniApp }: SecurityGateCardProps) {
             ) : (
               <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl border border-emerald-200 dark:border-emerald-800/60 text-xs text-emerald-900 dark:text-emerald-200 flex items-center gap-2 font-medium">
                 <CheckCircleIcon className="w-4 h-4 text-emerald-500 shrink-0" />
-                <span>Gate 1 Passed: Code is clean and permissions are fully compliant!</span>
+                <span>Gate 1 Passed: Code is clean and capabilities are fully compliant!</span>
               </div>
             )}
           </div>
@@ -399,7 +399,7 @@ export default function SecurityGateCard({ miniApp }: SecurityGateCardProps) {
               </div>
 
               <div className="flex items-center justify-between text-slate-700 dark:text-slate-300">
-                <span>Consolidated Permissions:</span>
+                <span>Consolidated Capabilities:</span>
                 <span className="font-mono text-accent-600 dark:text-accent-400 font-bold">
                   {gate2Report.manifest?.consolidatedPermissions?.join(', ') || 'NFC, NETWORK'}
                 </span>
@@ -437,7 +437,7 @@ export default function SecurityGateCard({ miniApp }: SecurityGateCardProps) {
             <p className="text-slate-500 dark:text-slate-400 mt-0.5">
               {gate1Passed
                 ? 'All security gates satisfied. Use the Actions (...) menu in the top header to Approve or Reject this MiniApp.'
-                : 'Resolve Gate 1 audit findings (e.g. declare permissions in the Permissions tab) before approving.'}
+                : 'Resolve Gate 1 audit findings (e.g. declare capabilities in the Capabilities tab) before approving.'}
             </p>
           </div>
         </div>

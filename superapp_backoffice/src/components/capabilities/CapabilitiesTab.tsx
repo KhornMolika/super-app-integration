@@ -5,10 +5,11 @@ import { Card } from '@/components/ui/card';
 import { CapabilityItem } from '@/api/permissions.api';
 import { Copy, Check, Package, Smartphone } from 'lucide-react';
 import { Pagination, usePagination } from '@/components/ui/Pagination';
+import { getCapabilityVisual } from '@/lib/capability-visuals';
 
 interface CapabilitiesTabProps {
   capabilities: CapabilityItem[];
-  getPermissionIcon: (key?: string) => React.ReactNode;
+  getPermissionIcon?: (key?: string) => React.ReactNode;
 }
 
 export function CapabilitiesTab({ capabilities = [], getPermissionIcon }: CapabilitiesTabProps) {
@@ -35,27 +36,37 @@ export function CapabilitiesTab({ capabilities = [], getPermissionIcon }: Capabi
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {paginatedItems.map((cap) => (
-          <Card
-            key={cap.id}
-            className="p-5 flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md transition-all group bg-white dark:bg-slate-900/60"
-          >
-            <div className="space-y-3">
-              {/* Header */}
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 group-hover:bg-brand-50 dark:group-hover:bg-brand-950/60 group-hover:text-brand-600 transition-colors shrink-0">
-                    {getPermissionIcon(cap.key)}
+        {paginatedItems.map((cap) => {
+          const visual = getCapabilityVisual(cap.key, cap.name, cap.description);
+          const Icon = visual.Icon;
+
+          return (
+            <Card
+              key={cap.id}
+              className="p-5 flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md transition-all group bg-white dark:bg-slate-900/60"
+            >
+              <div className="space-y-3">
+                {/* Header */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className={`p-2 rounded-xl ${visual.bgColor} ${visual.borderColor} border shrink-0 transition-all`}>
+                      <Icon className={`w-4 h-4 ${visual.iconColor}`} />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm truncate">
+                        {cap.name}
+                      </h3>
+                      <div className="flex items-center gap-1.5 truncate">
+                        <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+                          {cap.key}
+                        </span>
+                        <span className="text-[10px] text-slate-400">•</span>
+                        <span className={`text-[10px] font-medium ${visual.badgeTextColor}`}>
+                          {visual.category}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm truncate">
-                      {cap.name}
-                    </h3>
-                    <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500 truncate block">
-                      {cap.key}
-                    </span>
-                  </div>
-                </div>
 
                 <span
                   className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 ${
@@ -124,8 +135,9 @@ export function CapabilitiesTab({ capabilities = [], getPermissionIcon }: Capabi
                 ● Live in Shell
               </span>
             </div>
-          </Card>
-        ))}
+            </Card>
+          );
+        })}
       </div>
 
       {/* Pagination Controls */}

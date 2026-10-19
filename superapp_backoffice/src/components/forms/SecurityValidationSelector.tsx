@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/inputs';
@@ -48,7 +48,7 @@ export const CATEGORY_DEFINITIONS: {
   {
     id: 'access',
     title: 'Secrets & Capability Controls',
-    description: 'Credential leak protection and host device permission gating.',
+    description: 'Credential leak protection and host device capability gating.',
     icon: LockIcon,
     accentColor: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800/60',
   },
@@ -119,7 +119,7 @@ export const ALL_SECURITY_CHECKS: SecurityCheckItem[] = [
   {
     id: 'capability_gate',
     name: 'Host Capability Gatekeeper Audit',
-    description: 'Verifies requested native capabilities and permissions against SuperApp security policies.',
+    description: 'Verifies requested native capabilities against SuperApp security policies.',
     tool: 'SuperApp Gatekeeper',
     category: 'access',
     methods: ['FLUTTER_PACKAGE', 'NATIVE_SDK', 'DEEP_LINK'],

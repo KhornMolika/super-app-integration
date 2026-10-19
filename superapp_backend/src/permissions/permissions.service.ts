@@ -43,35 +43,35 @@ export class PermissionsService implements OnApplicationBootstrap {
         name: 'Camera & Document Capture',
         category: 'MEDIA_HARDWARE',
         description:
-          'Photo capture and image selection from camera for KYC verification and document uploads.',
+          'Take photos and scan QR codes for identity verification and document uploads.',
       },
       {
         key: 'location',
         name: 'Geolocation Services',
         category: 'LOCATION',
         description:
-          'Real-time GPS coordinates for branch discovery, nearby regulatory offices, and geo-fencing.',
+          'Find nearby service centers, verify local branches, and use map features.',
       },
       {
         key: 'biometrics',
         name: 'Biometric Authentication',
         category: 'SECURITY',
         description:
-          'Hardware FaceID, TouchID, and Android BiometricPrompt identity verification.',
+          'Log in and approve transactions quickly and securely using Face ID or fingerprint.',
       },
       {
         key: 'storage',
         name: 'Secure Vault Storage',
         category: 'SECURITY',
         description:
-          'Hardware-backed encrypted key-value storage (Android KeyStore & iOS Keychain).',
+          'Keep user login tokens and sensitive data safely encrypted on the device.',
       },
       {
         key: 'webview_runtime',
         name: 'Sandboxed WebView Runtime',
         category: 'PLATFORM',
         description:
-          'Isolated web application host container with security boundary and JS bridge.',
+          'Runs web-based MiniApps securely inside the SuperApp with native bridge support.',
       },
     ];
 
@@ -81,6 +81,16 @@ export class PermissionsService implements OnApplicationBootstrap {
         await this.permissionDefinitionRepository.save(
           this.permissionDefinitionRepository.create(p),
         );
+      } else if (
+        exists.description !== p.description &&
+        (exists.description?.includes('Isolated web application') ||
+          exists.description?.includes('Hardware FaceID') ||
+          exists.description?.includes('Hardware-backed encrypted') ||
+          exists.description?.includes('Photo capture and image selection') ||
+          exists.description?.includes('Real-time GPS coordinates'))
+      ) {
+        exists.description = p.description;
+        await this.permissionDefinitionRepository.save(exists);
       }
     }
 
@@ -487,7 +497,7 @@ export class PermissionsService implements OnApplicationBootstrap {
         name: 'Camera & Document Capture',
         description:
           extractPlistString('NSCameraUsageDescription') ||
-          'Photo capture and image selection from camera for KYC verification and document uploads.',
+          'Take photos and scan QR codes for identity verification and document uploads.',
         category: 'MEDIA_HARDWARE',
         requiredPermissions: ['camera'],
         platform: 'Cross-Platform',
@@ -515,7 +525,7 @@ export class PermissionsService implements OnApplicationBootstrap {
         description:
           extractPlistString('NSLocationWhenInUseUsageDescription') ||
           extractPlistString('NSLocationAlwaysUsageDescription') ||
-          'Real-time GPS coordinates for branch discovery, nearby regulatory offices, and geo-fencing.',
+          'Find nearby service centers, verify local branches, and use map features.',
         category: 'LOCATION',
         requiredPermissions: ['location'],
         platform: 'Cross-Platform',
@@ -541,7 +551,7 @@ export class PermissionsService implements OnApplicationBootstrap {
         name: 'Biometric Authentication',
         description:
           extractPlistString('NSFaceIDUsageDescription') ||
-          'Hardware FaceID, TouchID, and Android BiometricPrompt identity verification.',
+          'Log in and approve transactions quickly and securely using Face ID or fingerprint.',
         category: 'SECURITY',
         requiredPermissions: ['biometrics'],
         platform: 'Cross-Platform',
@@ -565,7 +575,7 @@ export class PermissionsService implements OnApplicationBootstrap {
         key: 'secure_storage',
         name: 'Secure Vault Storage',
         description:
-          'Hardware-backed encrypted key-value storage (Android KeyStore & iOS Keychain).',
+          'Keep user login tokens and sensitive data safely encrypted on the device.',
         category: 'SECURITY',
         requiredPermissions: ['storage'],
         platform: 'Cross-Platform',
@@ -584,7 +594,7 @@ export class PermissionsService implements OnApplicationBootstrap {
         key: 'webview_runtime',
         name: 'Sandboxed WebView Runtime',
         description:
-          'Isolated web application host container with security boundary and JS bridge.',
+          'Runs web-based MiniApps securely inside the SuperApp with native bridge support.',
         category: 'PLATFORM',
         requiredPermissions: ['internet'],
         platform: 'Cross-Platform',

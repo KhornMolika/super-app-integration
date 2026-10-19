@@ -7,7 +7,7 @@ export interface RegistrationWizardStepsProps {
   currentStep: number;
 }
 
-const STEP_LABELS = ['Basic Info', 'Team', 'Integration', 'Permissions', 'Security', 'Review'];
+const STEP_LABELS = ['Basic Info', 'Team', 'Integration', 'Capabilities', 'Security', 'Review'];
 
 export default function RegistrationWizardSteps({ currentStep }: RegistrationWizardStepsProps) {
   return (

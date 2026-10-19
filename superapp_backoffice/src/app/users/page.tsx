@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
@@ -44,17 +44,17 @@ const PERMISSION_GROUPS: PermissionCategoryGroup[] = [
     ],
   },
   {
-    category: 'Permissions & Proposals',
+    category: 'Capabilities & Proposals',
     icon: 'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z',
-    description: 'Hardware/OS capability scope declarations, proposals, and regulatory approvals',
+    description: 'Hardware/OS capability declarations, proposals, and platform approvals',
     color: 'amber',
     permissions: [
-      { key: 'permission:read', label: 'View Scope Catalog', desc: 'Browse platform host capability scopes and requirements', level: 'STANDARD' },
-      { key: 'permission:manage', label: 'Manage Scope Catalog', desc: 'Create, edit, or deprecate platform permission declarations', level: 'SYSTEM' },
-      { key: 'permission_proposal:read', label: 'View Proposals', desc: 'Inspect permission elevation requests submitted by mini apps', level: 'STANDARD' },
-      { key: 'permission_proposal:review', label: 'Review Proposals', desc: 'Evaluate justification, risk score, and compliance impact', level: 'ELEVATED' },
-      { key: 'permission_proposal:approve', label: 'Approve Proposals', desc: 'Grant elevated device/financial host permissions', level: 'CRITICAL' },
-      { key: 'miniapp_permission:approve', label: 'Authorize Scope Bundles', desc: 'Batch authorize capability bundles for mini applications', level: 'CRITICAL' },
+      { key: 'permission:read', label: 'View Capabilities Catalog', desc: 'Browse platform host capability catalog and requirements', level: 'STANDARD' },
+      { key: 'permission:manage', label: 'Manage Capabilities Catalog', desc: 'Create, edit, or deprecate platform capability declarations', level: 'SYSTEM' },
+      { key: 'permission_proposal:read', label: 'View Capability Proposals', desc: 'Inspect capability extension requests submitted by mini apps', level: 'STANDARD' },
+      { key: 'permission_proposal:review', label: 'Review Capability Proposals', desc: 'Evaluate justification, risk score, and compliance impact', level: 'ELEVATED' },
+      { key: 'permission_proposal:approve', label: 'Approve Capability Proposals', desc: 'Grant elevated device and bridge capabilities', level: 'CRITICAL' },
+      { key: 'miniapp_permission:approve', label: 'Authorize Capability Bundles', desc: 'Batch authorize capability bundles for mini applications', level: 'CRITICAL' },
       { key: 'issue:resolve', label: 'Resolve Security Issues', desc: 'Override or clear flagged security gate and compliance items', level: 'ELEVATED' },
     ],
   },
