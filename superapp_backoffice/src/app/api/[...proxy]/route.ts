@@ -12,6 +12,9 @@ async function getDevAuthToken(forceRefresh = false): Promise<string | null> {
   const candidateEmails = [
     process.env.DEV_FALLBACK_USER_EMAIL,
     process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL,
+    'superadmin@example.com',
+    'admin@example.com',
+    'dev@example.com',
     'superadmin@superapp.gov.kh',
   ].filter(Boolean) as string[];
 
@@ -84,13 +87,56 @@ async function handleProxy(request: Request, { params }: { params: Promise<{ pro
     // Get the auth token
     const cookieStore = await cookies();
     let token = cookieStore.get('auth_token')?.value;
+    const refreshToken = cookieStore.get('refresh_token')?.value;
     const clientAuth = request.headers.get('authorization');
+    let newRefreshedToken: string | null = null;
 
-    // If no token or clientAuth header, fallback to dev token so cold links from Telegram always succeed
-    if (!token && !clientAuth) {
-      const devToken = await getDevAuthToken();
+    // Check if current cookie token is expired
+    let isStale = false;
+    if (token) {
+      try {
+        const parts = token.split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
+          if (payload.exp && Math.floor(Date.now() / 1000) >= payload.exp - 10) {
+            isStale = true;
+          }
+        } else {
+          isStale = true;
+        }
+      } catch {
+        isStale = true;
+      }
+    }
+
+    // If token is stale and refresh token exists, attempt silent refresh with backend first
+    if (isStale && refreshToken && !clientAuth) {
+      try {
+        const refreshRes = await fetch(`${BACKEND_URL}/auth/refresh`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Cookie: `refresh_token=${refreshToken}`,
+          },
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        });
+        if (refreshRes.ok) {
+          const refreshData = await refreshRes.json();
+          if (refreshData?.access_token) {
+            token = refreshData.access_token;
+            newRefreshedToken = refreshData.access_token;
+            isStale = false;
+          }
+        }
+      } catch (_) {}
+    }
+
+    // If still no token or stale, fallback to dev token so cold links / local dev never fail
+    if ((!token || isStale) && !clientAuth) {
+      const devToken = await getDevAuthToken(isStale);
       if (devToken) {
         token = devToken;
+        newRefreshedToken = devToken;
       }
     }
 
@@ -145,7 +191,6 @@ async function handleProxy(request: Request, { params }: { params: Promise<{ pro
 
     // If unauthorized (stale cookie, token expired, or backend restarted with new RSA keys),
     // automatically attempt a refresh with dev fallback and retry once
-    let newRefreshedToken: string | null = null;
     if (res.status === 401 && !clientAuth) {
       const devToken = await getDevAuthToken(true);
       if (devToken) {
