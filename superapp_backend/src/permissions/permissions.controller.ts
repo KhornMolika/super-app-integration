@@ -41,6 +41,15 @@ export class PermissionsController {
     return this.permissionsService.syncCapabilitiesFromGitLab();
   }
 
+  /**
+   * Enterprise GitOps Webhook Trigger
+   * Triggered by GitLab CI/CD pipeline automated capability extraction job
+   */
+  @Post('sync')
+  async syncWebhook(@Body() body?: { targetBranch?: string }) {
+    return this.permissionsService.syncCapabilitiesFromGitLab();
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   async findOne(@Param('id') id: string) {

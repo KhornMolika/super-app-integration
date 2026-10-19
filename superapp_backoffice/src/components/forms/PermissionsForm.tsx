@@ -105,7 +105,6 @@ export const WHITELISTED_HOST_CAPABILITIES = [
   'camera',
   'location',
   'biometrics',
-  'microphone',
   'storage',
   'secure_storage',
   'webview_runtime',
@@ -113,7 +112,6 @@ export const WHITELISTED_HOST_CAPABILITIES = [
 ];
 
 export const CANONICAL_SHELL_CAPABILITIES = [
-  'Microphone',
   'Webview_runtime',
   'Camera',
   'Location',
@@ -543,18 +541,28 @@ export default function PermissionsForm({
       }
     };
 
-    // 1. All 6 Core Shell Capabilities (ensures all 6 live in shell capabilities from /capabilities are always present)
+    // 1. Core Shell Capabilities (active 5 verified capabilities)
     CANONICAL_SHELL_CAPABILITIES.forEach((c) => addType(c));
 
     // 2. Real SuperApp capabilities detected from shell (from /api/permissions/capabilities)
     hostCapabilities.forEach((c) => {
-      addType(c.key);
-      (c.requiredPermissions || []).forEach((p) => addType(p));
+      if (c.status === 'Active' || c.status === 'Beta') {
+        addType(c.key);
+      }
     });
 
-    // 3. Real permissions defined in database
+    // 3. Real active permissions defined in database
     hostPermissions.forEach((p) => {
-      addType(p.key || p.name || '');
+      if (p.isActive !== false && (p as any).status !== 'Deprecated') {
+        const canon = normalizeCapabilityKey(p.key || p.name || '');
+        if (canon === 'microphone') {
+          const isLiveInHost = hostCapabilities.some(
+            (c) => normalizeCapabilityKey(c.key) === 'microphone' && c.status === 'Active',
+          );
+          if (!isLiveInHost) return;
+        }
+        addType(p.key || p.name || '');
+      }
     });
 
     // 4. Any permission currently requested by the MiniApp

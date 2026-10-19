@@ -87,6 +87,7 @@ export const permissionsApi = {
     apiClient<{
       success: boolean;
       syncedCount: number;
+      deactivatedCount?: number;
       targetBranch: string;
       repoUrl: string;
       commitSha?: string;

@@ -60,13 +60,6 @@ export class PermissionsService implements OnApplicationBootstrap {
           'Hardware FaceID, TouchID, and Android BiometricPrompt identity verification.',
       },
       {
-        key: 'microphone',
-        name: 'Microphone',
-        category: 'MEDIA_HARDWARE',
-        description:
-          'Access device microphone to record audio notes or voice features',
-      },
-      {
         key: 'storage',
         name: 'Secure Vault Storage',
         category: 'SECURITY',
@@ -90,10 +83,58 @@ export class PermissionsService implements OnApplicationBootstrap {
         );
       }
     }
+
+    // Immediately deactivate legacy mock 'microphone' from prior database seeds
+    const legacyMic = await this.findByKey('microphone');
+    if (
+      legacyMic &&
+      legacyMic.isActive &&
+      legacyMic.metadata?.source !== 'gitlab:main'
+    ) {
+      legacyMic.isActive = false;
+      legacyMic.metadata = {
+        ...(legacyMic.metadata || {}),
+        status: 'Deprecated',
+        deactivationReason:
+          'Mock seed data deactivated. Requires native plugin proposal.',
+      };
+      await this.permissionDefinitionRepository.save(legacyMic);
+      this.logger.log(
+        `Deactivated legacy mock permission 'microphone' from startup seed.`,
+      );
+    }
   }
 
   async findAll(): Promise<PermissionDefinition[]> {
-    return this.permissionDefinitionRepository.find();
+    const all = await this.permissionDefinitionRepository.find({
+      where: { isActive: true },
+    });
+
+    const activeList: PermissionDefinition[] = [];
+    for (const p of all) {
+      const meta = p.metadata || {};
+      const isLegacyMockMic =
+        p.key === 'microphone' &&
+        (!meta.commitSha ||
+          meta.source !== 'gitlab:main' ||
+          meta.providerPackage === 'microphone' ||
+          !meta.providerPackage?.includes(':'));
+
+      if (isLegacyMockMic) {
+        p.isActive = false;
+        p.metadata = {
+          ...meta,
+          status: 'Deprecated',
+          deactivationReason:
+            'Mock seed data. Microphone is not supported by native SuperApp shell yet.',
+        };
+        await this.permissionDefinitionRepository.save(p);
+      } else {
+        activeList.push(p);
+      }
+    }
+
+    return activeList;
   }
 
   async findByKey(key: string): Promise<PermissionDefinition | null> {
@@ -131,6 +172,7 @@ export class PermissionsService implements OnApplicationBootstrap {
   async syncCapabilitiesFromGitLab(): Promise<{
     success: boolean;
     syncedCount: number;
+    deactivatedCount: number;
     targetBranch: string;
     repoUrl: string;
     commitSha?: string;
@@ -263,13 +305,47 @@ export class PermissionsService implements OnApplicationBootstrap {
       syncedCount++;
     }
 
+    // Reconcile capabilities against active source code on GitLab main.
+    // Any capability in the database that is no longer detected in the shell repository is deactivated.
+    const activeSyncedKeys = new Set<string>();
+    for (const cap of detectedCaps) {
+      activeSyncedKeys.add(cap.key.toLowerCase());
+      if (Array.isArray(cap.requiredPermissions)) {
+        for (const rp of cap.requiredPermissions) {
+          activeSyncedKeys.add(rp.toLowerCase());
+        }
+      }
+    }
+
+    const allDbPerms = await this.permissionDefinitionRepository.find();
+    let deactivatedCount = 0;
+    for (const perm of allDbPerms) {
+      const isStillPresent = activeSyncedKeys.has(perm.key.toLowerCase());
+      if (!isStillPresent && perm.isActive) {
+        perm.isActive = false;
+        perm.metadata = {
+          ...(perm.metadata || {}),
+          status: 'Deprecated',
+          lastDeactivatedAt: now,
+          source: 'reconciled-from-gitlab',
+          deactivationReason: `Not detected in SuperApp repository (GitLab branch: ${targetBranch})`,
+        };
+        await this.permissionDefinitionRepository.save(perm);
+        deactivatedCount++;
+        this.logger.log(
+          `Deactivated capability '${perm.key}' in PostgreSQL: removed or not present in SuperApp on branch '${targetBranch}'.`,
+        );
+      }
+    }
+
     this.logger.log(
-      `Successfully synced ${syncedCount} capabilities from GitLab '${targetBranch}' into PostgreSQL database.`,
+      `Successfully synced ${syncedCount} capabilities (deactivated ${deactivatedCount} obsolete) from GitLab '${targetBranch}' into PostgreSQL database.`,
     );
 
     return {
       success: true,
       syncedCount,
+      deactivatedCount,
       targetBranch,
       repoUrl: superAppRepoUrl,
       commitSha,
@@ -289,9 +365,37 @@ export class PermissionsService implements OnApplicationBootstrap {
       await this.syncCapabilitiesFromGitLab();
     }
 
-    const dbDefinitions = await this.permissionDefinitionRepository.find({
+    const allActive = await this.permissionDefinitionRepository.find({
       where: { isActive: true },
     });
+
+    // Auto-clean any unverified mock seed (such as legacy microphone without GitLab source)
+    const dbDefinitions: PermissionDefinition[] = [];
+    for (const perm of allActive) {
+      const meta = perm.metadata || {};
+      const isLegacyMockMic =
+        perm.key === 'microphone' &&
+        (!meta.commitSha ||
+          meta.source !== 'gitlab:main' ||
+          meta.providerPackage === 'microphone' ||
+          !meta.providerPackage?.includes(':'));
+
+      if (isLegacyMockMic) {
+        perm.isActive = false;
+        perm.metadata = {
+          ...meta,
+          status: 'Deprecated',
+          deactivationReason:
+            'Mock seed data. Microphone is not supported by native SuperApp shell yet.',
+        };
+        await this.permissionDefinitionRepository.save(perm);
+        this.logger.log(
+          `Automatically deactivated legacy mock capability '${perm.key}'.`,
+        );
+      } else {
+        dbDefinitions.push(perm);
+      }
+    }
 
     // If database is empty, run initial sync immediately
     if (dbDefinitions.length === 0) {
@@ -494,24 +598,128 @@ export class PermissionsService implements OnApplicationBootstrap {
       });
     }
 
-    // 7. Dynamic check for any extra dynamically added plugins
+    // 7. Microphone & Audio Recording capability (live only when native audio plugin or manifest permission exists)
+    if (
+      deps['record'] ||
+      deps['audio_recorder'] ||
+      deps['sound_recorder'] ||
+      deps['audioplayers'] ||
+      deps['flutter_sound'] ||
+      manifestContent.includes('RECORD_AUDIO')
+    ) {
+      capabilities.push({
+        id: 'cap-microphone',
+        key: 'microphone',
+        name: 'Microphone & Audio Capture',
+        description:
+          extractPlistString('NSMicrophoneUsageDescription') ||
+          'Audio capture and voice recording bridge for speech-to-text, voice notes, and customer support audio.',
+        category: 'MEDIA_HARDWARE',
+        requiredPermissions: ['microphone'],
+        platform: 'Cross-Platform',
+        implementationType: 'FLUTTER_PLUGIN',
+        providerPackage: deps['record']
+          ? `record: ${deps['record']}`
+          : deps['audioplayers']
+          ? `audioplayers: ${deps['audioplayers']}`
+          : 'native_audio_record',
+        jsBridgeMethod: 'FSASuperApp.microphone()',
+        status: 'Active',
+        source: detectionSource,
+      });
+    }
+
+    // 8. Near Field Communication (NFC) capability
+    if (
+      deps['nfc_manager'] ||
+      deps['flutter_nfc_kit'] ||
+      manifestContent.includes('NFC')
+    ) {
+      capabilities.push({
+        id: 'cap-nfc',
+        key: 'nfc',
+        name: 'Near Field Communication (NFC)',
+        description:
+          extractPlistString('NFCReaderUsageDescription') ||
+          'Contactless card and tag reading for electronic identity, transit cards, and tap-to-pay tokenization.',
+        category: 'MEDIA_HARDWARE',
+        requiredPermissions: ['nfc'],
+        platform: 'Cross-Platform',
+        implementationType: 'FLUTTER_PLUGIN',
+        providerPackage: deps['nfc_manager']
+          ? `nfc_manager: ${deps['nfc_manager']}`
+          : 'nfc_manager: ^3.3.0',
+        jsBridgeMethod: 'FSASuperApp.readNfc()',
+        status: 'Active',
+        source: detectionSource,
+      });
+    }
+
+    // 9. Bluetooth Low Energy capability
+    if (
+      deps['flutter_blue_plus'] ||
+      deps['flutter_blue'] ||
+      deps['bluetooth_low_energy'] ||
+      manifestContent.includes('BLUETOOTH')
+    ) {
+      capabilities.push({
+        id: 'cap-bluetooth',
+        key: 'bluetooth',
+        name: 'Bluetooth Low Energy',
+        description:
+          extractPlistString('NSBluetoothAlwaysUsageDescription') ||
+          'Peripheral Bluetooth LE discovery and communication for external POS terminals and IoT devices.',
+        category: 'CONNECTIVITY',
+        requiredPermissions: ['bluetooth'],
+        platform: 'Cross-Platform',
+        implementationType: 'FLUTTER_PLUGIN',
+        providerPackage: deps['flutter_blue_plus']
+          ? `flutter_blue_plus: ${deps['flutter_blue_plus']}`
+          : 'flutter_blue_plus: ^1.30.0',
+        jsBridgeMethod: 'FSASuperApp.connectBluetooth()',
+        status: 'Active',
+        source: detectionSource,
+      });
+    }
+
+    // 10. Generic Dynamic Extension for any newly added Flutter plugin
+    const handledFrameworkPackages = new Set([
+      'flutter',
+      'flutter_riverpod',
+      'riverpod_annotation',
+      'go_router',
+      'get_it',
+      'injectable',
+      'url_launcher',
+      'dio',
+      'retrofit',
+      'carousel_slider',
+      'google_fonts',
+      'flutter_secure_storage',
+      'app_links',
+      'web',
+      'webview_flutter',
+      'geolocator',
+      'image_picker',
+      'local_auth',
+      'record',
+      'nfc_manager',
+      'flutter_blue_plus',
+      'cupertino_icons',
+      'ma_flutter_kyc',
+      'sc_public_miniapp',
+      'sc_private_miniapp',
+    ]);
+
     for (const [pkg, version] of Object.entries(deps)) {
-      if (
-        ['record', 'file_picker', 'nfc_manager', 'qr_code_scanner'].includes(pkg)
-      ) {
+      if (!handledFrameworkPackages.has(pkg) && !pkg.startsWith('flutter_test')) {
         capabilities.push({
           id: `cap-${pkg}`,
           key: pkg,
-          name: pkg.replace('_', ' ').toUpperCase(),
+          name: pkg.replace(/_/g, ' ').toUpperCase(),
           description: `Dynamically integrated Flutter capability provider (${pkg}).`,
           category: 'DYNAMIC_EXTENSION',
-          requiredPermissions: [
-            pkg.includes('record')
-              ? 'microphone'
-              : pkg.includes('nfc')
-              ? 'nfc'
-              : 'storage',
-          ],
+          requiredPermissions: [pkg],
           platform: 'Cross-Platform',
           implementationType: 'FLUTTER_PLUGIN',
           providerPackage: `${pkg}: ${typeof version === 'object' ? 'custom' : version}`,
