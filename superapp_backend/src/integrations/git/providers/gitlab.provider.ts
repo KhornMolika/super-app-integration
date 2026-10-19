@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as YAML from 'yaml';
+import { execFileSync } from 'child_process';
 import {
   FlutterPackageValidation,
   GitCommitInfo,
@@ -252,30 +253,88 @@ export class GitLabProvider implements GitProvider {
     ref?: string,
     token?: string,
   ): Promise<string> {
+    const effectiveToken = token || this.getDefaultToken();
     const parsed = this.parseUrl(urlOrSlug);
-    const projectId = this.getProjectIdentifier(parsed);
-    const encodedFilePath = encodeURIComponent(filePath.replace(/^\//, ''));
-    let apiUrl = `${this.getApiBaseUrl(parsed.host)}/projects/${projectId}/repository/files/${encodedFilePath}/raw`;
-    if (ref) {
-      apiUrl += `?ref=${encodeURIComponent(ref)}`;
-    }
+    const targetRef = ref || 'main';
 
-    const res = await fetch(apiUrl, {
-      headers: this.getAuthHeaders(token),
-    });
+    // 1. If GitLab API token is provided, attempt GitLab REST API first
+    if (effectiveToken) {
+      try {
+        const projectId = this.getProjectIdentifier(parsed);
+        const encodedFilePath = encodeURIComponent(filePath.replace(/^\//, ''));
+        let apiUrl = `${this.getApiBaseUrl(parsed.host)}/projects/${projectId}/repository/files/${encodedFilePath}/raw`;
+        if (targetRef) {
+          apiUrl += `?ref=${encodeURIComponent(targetRef)}`;
+        }
 
-    if (!res.ok) {
-      if (res.status === 404) {
-        throw new Error(
-          `File '${filePath}' not found in GitLab project '${parsed.fullName}' (ref: ${ref || 'default'}).`,
+        const res = await fetch(apiUrl, {
+          headers: this.getAuthHeaders(effectiveToken),
+        });
+
+        if (res.ok) {
+          return await res.text();
+        }
+
+        this.logger.debug(
+          `GitLab REST API returned ${res.status} for '${filePath}'. Attempting Git remote transport fallback...`,
+        );
+      } catch (apiErr: any) {
+        this.logger.debug(
+          `GitLab REST API request error for '${filePath}': ${apiErr.message}. Attempting Git remote transport fallback...`,
         );
       }
-      throw new Error(
-        `GitLab API error fetching '${filePath}' (${res.status}): ${await res.text()}`,
-      );
     }
 
-    return await res.text();
+    // 2. Fetch directly from the remote GitLab repository via Git transport
+    // (strictly from the remote repository URL, no local directory fallback)
+    return this.getFileContentViaGit(parsed.rawUrl || urlOrSlug, filePath, targetRef);
+  }
+
+  async getFileContentViaGit(
+    repoUrl: string,
+    filePath: string,
+    ref: string = 'main',
+  ): Promise<string> {
+    const cleanRepoUrl = repoUrl.trim();
+    const targetRef = ref || 'main';
+    const normalizedPath = filePath.replace(/^\//, '');
+
+    try {
+      this.logger.log(
+        `Fetching '${normalizedPath}' directly from GitLab remote (${cleanRepoUrl}) on ref '${targetRef}'...`,
+      );
+
+      // Perform a shallow fetch of the ref directly from the remote GitLab repository
+      execFileSync('git', ['fetch', cleanRepoUrl, targetRef, '--depth=1'], {
+        encoding: 'utf8',
+        stdio: 'pipe',
+        timeout: 25000,
+        env: {
+          ...process.env,
+          GIT_TERMINAL_PROMPT: '0',
+        },
+      });
+
+      // Extract the file content directly from FETCH_HEAD
+      const content = execFileSync(
+        'git',
+        ['show', `FETCH_HEAD:${normalizedPath}`],
+        {
+          encoding: 'utf8',
+          stdio: 'pipe',
+          timeout: 5000,
+        },
+      );
+
+      return content;
+    } catch (gitErr: any) {
+      this.logger.error(
+        `Git remote fetch failed for '${normalizedPath}' from GitLab (${cleanRepoUrl}) [${targetRef}]: ${gitErr.message}`,
+      );
+      throw new Error(
+        `File '${normalizedPath}' not found in GitLab project '${cleanRepoUrl}' (ref: ${targetRef}): ${gitErr.message}`,
+      );
+    }
   }
 
   async validateFlutterPackage(
@@ -352,34 +411,59 @@ export class GitLabProvider implements GitProvider {
     token?: string,
   ): Promise<string> {
     const parsed = this.parseUrl(urlOrSlug);
-    const projectId = this.getProjectIdentifier(parsed);
     const trimmedRef = (ref || '').trim();
-    if (!trimmedRef) {
-      const repo = await this.getRepository(urlOrSlug, token);
-      return this.resolveCommitSha(
-        urlOrSlug,
-        repo.defaultBranch || 'main',
-        token,
-      );
-    }
 
     if (/^[0-9a-f]{40}$/i.test(trimmedRef)) {
       return trimmedRef;
     }
 
-    const apiUrl = `${this.getApiBaseUrl(parsed.host)}/projects/${projectId}/repository/commits/${encodeURIComponent(trimmedRef)}`;
-    const res = await fetch(apiUrl, {
-      headers: this.getAuthHeaders(token),
-    });
+    const effectiveToken = token || this.getDefaultToken();
+    if (effectiveToken) {
+      try {
+        const projectId = this.getProjectIdentifier(parsed);
+        const apiUrl = `${this.getApiBaseUrl(parsed.host)}/projects/${projectId}/repository/commits/${encodeURIComponent(trimmedRef || 'main')}`;
+        const res = await fetch(apiUrl, {
+          headers: this.getAuthHeaders(effectiveToken),
+        });
 
-    if (!res.ok) {
-      throw new Error(
-        `Failed to resolve commit SHA for '${trimmedRef}' in GitLab project '${parsed.fullName}': ${res.statusText}`,
-      );
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.id) return data.id;
+        }
+      } catch (_) {}
     }
 
-    const data = await res.json();
-    return data.id;
+    // Fallback: resolve commit SHA directly from GitLab remote using git ls-remote or rev-parse FETCH_HEAD
+    try {
+      const output = execFileSync(
+        'git',
+        ['ls-remote', parsed.rawUrl || urlOrSlug, trimmedRef || 'main'],
+        {
+          encoding: 'utf8',
+          stdio: 'pipe',
+          timeout: 10000,
+          env: {
+            ...process.env,
+            GIT_TERMINAL_PROMPT: '0',
+          },
+        },
+      );
+      const match = output.trim().split(/\s+/)[0];
+      if (match && /^[0-9a-f]{40}$/i.test(match)) {
+        return match;
+      }
+    } catch (_) {}
+
+    try {
+      const sha = execFileSync('git', ['rev-parse', 'FETCH_HEAD'], {
+        encoding: 'utf8',
+        stdio: 'pipe',
+        timeout: 5000,
+      }).trim();
+      if (/^[0-9a-f]{40}$/i.test(sha)) return sha;
+    } catch (_) {}
+
+    return '';
   }
 
   generateDependencySnippet(options: {
