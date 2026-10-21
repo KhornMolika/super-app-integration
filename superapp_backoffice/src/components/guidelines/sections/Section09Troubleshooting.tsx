@@ -2,7 +2,7 @@
 
 import React from "react";
 
-export function Section08Troubleshooting() {
+export function Section09Troubleshooting() {
   const issues = [
     {
       issue: "BUILD_FAILED: Multiple conflicting versions of Flutter SDK",

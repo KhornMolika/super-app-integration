@@ -1,4 +1,4 @@
-﻿import { Injectable, Logger, BadRequestException, Optional } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
@@ -22,6 +22,8 @@ import {
   extractDecryptedDeployKey,
   extractDecryptedGitToken,
 } from './flutter-credential.helper';
+
+import { PermissionsService } from '../../permissions/permissions.service';
 
 @Injectable()
 export class MiniappLifecycleHelper {
@@ -48,7 +50,9 @@ export class MiniappLifecycleHelper {
     private nexusService?: NexusIntegrationService,
     @Optional()
     private apkBuildManager?: ApkBuildManagerService,
-  ) {}
+    @Optional()
+    private permissionsService?: PermissionsService,
+  ) { }
 
 
 
@@ -88,13 +92,33 @@ export class MiniappLifecycleHelper {
 
     const declaredPerms = Array.isArray(app.permissions)
       ? app.permissions
-          .map((p: any) => (typeof p === 'string' ? p : p.name || p.id || p.type))
-          .filter(Boolean)
+        .map((p: any) => (typeof p === 'string' ? p : p.name || p.id || p.type))
+        .filter(Boolean)
       : [];
     const requiredPerms = declaredPerms;
 
-    // SuperApp Host Supported Capabilities whitelist
-    const allowedCaps = ['camera', 'geolocator', 'location', 'local_auth', 'biometrics'];
+    // SuperApp Host Supported Capabilities (Zero-Hardcoded Policy: Query real PostgreSQL registry)
+    let allowedCaps: string[] = [];
+    if (this.permissionsService) {
+      try {
+        const realCaps = await this.permissionsService.getCapabilities();
+        allowedCaps = realCaps.map((c) => c.key.toLowerCase());
+      } catch (err: any) {
+        this.logger.warn(
+          `Could not fetch dynamic capabilities for lifecycle: ${err.message}`,
+        );
+      }
+    }
+    if (allowedCaps.length === 0) {
+      const latestCap = await this.superAppService.findLatestCapability();
+      allowedCaps = latestCap?.capabilities
+        ? Array.isArray(latestCap.capabilities)
+          ? latestCap.capabilities.map((c: string) => c.trim().toLowerCase())
+          : String(latestCap.capabilities)
+            .split(',')
+            .map((c) => c.trim().toLowerCase())
+        : [];
+    }
     const requiredCaps = requiredPerms;
 
     const allowedDomains = Array.isArray(cfg.allowedDomains)
@@ -227,8 +251,8 @@ export class MiniappLifecycleHelper {
 
     const declaredPerms = Array.isArray(app.permissions)
       ? app.permissions
-          .map((p: any) => (typeof p === 'string' ? p : p.name || p.id || p.type))
-          .filter(Boolean)
+        .map((p: any) => (typeof p === 'string' ? p : p.name || p.id || p.type))
+        .filter(Boolean)
       : [];
     const requiredPerms = declaredPerms;
 
@@ -544,7 +568,7 @@ export class MiniappLifecycleHelper {
 
         await this.pubspecService.injectMiniApp(app);
         await this.pubspecService.validateDependencies({ dryRun: true });
-        this.pubspecService.triggerSandboxRebuild(`Approval of ${app.name}`).catch(() => {});
+        this.pubspecService.triggerSandboxRebuild(`Approval of ${app.name}`).catch(() => { });
         this.logger.log(`Auto-injected and validated Flutter package ${app.name} into SuperApp pubspec.yaml`);
       } catch (err: any) {
         this.logger.warn(`Pubspec auto-injection warning on approve for ${app.name}: ${err.message}`);
@@ -700,7 +724,7 @@ export class MiniappLifecycleHelper {
         'STATUS_CHANGE',
         'Changes Requested on Revision',
         reason ||
-          'SA Admin sent staged revision back to Draft for remediation; live app remains active',
+        'SA Admin sent staged revision back to Draft for remediation; live app remains active',
         'REQUEST_CHANGES',
         null,
         app,
@@ -798,9 +822,9 @@ export class MiniappLifecycleHelper {
           buildType: testBuildType,
         });
         if (this.apkBuildManager) {
-          this.apkBuildManager.triggerBuild({ releaseVersion, appName: 'superapp', buildType: testBuildType }).catch(() => {});
+          this.apkBuildManager.triggerBuild({ releaseVersion, appName: 'superapp', buildType: testBuildType }).catch(() => { });
         }
-        this.jenkinsService.triggerSuperAppSandboxBuild().catch(() => {});
+        this.jenkinsService.triggerSuperAppSandboxBuild().catch(() => { });
       } catch (err: any) {
         this.logger.error(`Error triggering Jenkins test build for revision: ${err.message}`);
       }
@@ -1147,7 +1171,7 @@ export class MiniappLifecycleHelper {
       try {
         await this.pubspecService.injectMiniApp(app);
         await this.pubspecService.validateDependencies({ dryRun: true });
-        this.pubspecService.triggerSandboxRebuild(`Publish revision ${nextVersion} for ${app.name}`).catch(() => {});
+        this.pubspecService.triggerSandboxRebuild(`Publish revision ${nextVersion} for ${app.name}`).catch(() => { });
         this.logger.log(`Auto-updated and validated Flutter package ${app.name} (${nextVersion}) in SuperApp pubspec.yaml`);
       } catch (err: any) {
         this.logger.warn(`Pubspec auto-update warning on revision publish for ${app.name}: ${err.message}`);
@@ -1217,7 +1241,7 @@ export class MiniappLifecycleHelper {
         targetEmail,
         app.name || app.appId,
         reason ||
-          'Proposed revision was discarded by administrator. Live version remains active in the SuperApp catalog.',
+        'Proposed revision was discarded by administrator. Live version remains active in the SuperApp catalog.',
         `${this.backofficeBaseUrl}/miniapps/${app.id}`,
       );
     }
@@ -1228,7 +1252,7 @@ export class MiniappLifecycleHelper {
       'STATUS_CHANGE',
       `Revision Discarded for ${app.name}`,
       reason ||
-        'Pending draft revision was discarded without affecting the live version',
+      'Pending draft revision was discarded without affecting the live version',
       'DISCARD_REVISION',
       oldRev,
       null,
@@ -1305,7 +1329,7 @@ export class MiniappLifecycleHelper {
       try {
         await this.pubspecService.injectMiniApp(app);
         await this.pubspecService.validateDependencies({ dryRun: true });
-        this.pubspecService.triggerSandboxRebuild(`Rollback to ${targetVersion} for ${app.name}`).catch(() => {});
+        this.pubspecService.triggerSandboxRebuild(`Rollback to ${targetVersion} for ${app.name}`).catch(() => { });
         this.logger.log(
           `Rolled back Flutter package ${app.name} to ${targetVersion} in pubspec.yaml`,
         );
@@ -1320,8 +1344,7 @@ export class MiniappLifecycleHelper {
       await this.notificationsService.createNotification(
         app.ownerId,
         'MiniApp Rolled Back',
-        `MiniApp "${app.name}" was rolled back from ${prevVersion} to ${targetVersion}.${
-          reason ? ` Reason: ${reason}` : ''
+        `MiniApp "${app.name}" was rolled back from ${prevVersion} to ${targetVersion}.${reason ? ` Reason: ${reason}` : ''
         }`,
         'MINIAPP_ROLLED_BACK',
         app.id,

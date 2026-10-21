@@ -129,16 +129,15 @@ export class ApkDownloadController {
       return res.send(buf);
     }
 
-    // Mock binary payload fallback
-    const mockPayload = Buffer.from(
-      `SUPERAPP_APK_BINARY_PAYLOAD [AppName: superapp, Version: ${normVer}, Filename: ${standardizedFilename}]`,
+    // Real artifact check: If not found on Nexus or disk, return 404
+    this.logger.warn(
+      `APK artifact "${standardizedFilename}" (version ${normVer}) not found on Nexus or local storage.`,
     );
-    res.setHeader('Content-Type', 'application/vnd.android.package-archive');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${standardizedFilename}"`,
-    );
-    res.setHeader('Content-Length', mockPayload.length);
-    return res.send(mockPayload);
+    res.setHeader('Content-Type', 'application/json');
+    return res.status(404).json({
+      statusCode: 404,
+      error: 'Not Found',
+      message: `APK binary "${standardizedFilename}" not found on repository storage. Please verify CI/CD build completion.`,
+    });
   }
 }

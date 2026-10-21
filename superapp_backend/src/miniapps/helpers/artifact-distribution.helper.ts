@@ -1,4 +1,4 @@
-﻿import {
+import {
   Injectable,
   Logger,
   NotFoundException,
@@ -321,19 +321,15 @@ export class ArtifactDistributionHelper {
           }
         }
 
-        const mockContent = Buffer.from(
-          `SUPERAPP_APK_BINARY_PAYLOAD [AppName: superapp, Version: ${normVer}, Type: ${artifactType.toUpperCase()}, Filename: ${downloadFilename}]`,
+        this.logger.warn(
+          `Artifact "${downloadFilename}" not found on Nexus (${nexusUrl}) or local disk.`,
         );
-        res?.setHeader?.(
-          'Content-Type',
-          'application/vnd.android.package-archive',
-        );
-        res?.setHeader?.(
-          'Content-Disposition',
-          `attachment; filename="${downloadFilename}"`,
-        );
-        res?.setHeader?.('Content-Length', mockContent.length);
-        return res?.send?.(mockContent);
+        res?.setHeader?.('Content-Type', 'application/json');
+        return res?.status?.(404)?.json?.({
+          statusCode: 404,
+          error: 'Not Found',
+          message: `Artifact "${downloadFilename}" (type: ${artifactType.toUpperCase()}) not found on repository storage.`,
+        });
       }
 
       res?.setHeader?.('Content-Type', 'application/vnd.android.package-archive');
@@ -353,15 +349,12 @@ export class ArtifactDistributionHelper {
       }
     } catch (err: any) {
       this.logger.error(`Error proxying artifact from Nexus: ${err.message}`);
-      const mockContent = Buffer.from(
-        `SUPERAPP_APK_BINARY_PAYLOAD [AppName: superapp, Version: ${normVer}, Type: ${artifactType.toUpperCase()}, Filename: ${downloadFilename}]`,
-      );
-      res?.setHeader?.('Content-Type', 'application/vnd.android.package-archive');
-      res?.setHeader?.(
-        'Content-Disposition',
-        `attachment; filename="${downloadFilename}"`,
-      );
-      return res?.send?.(mockContent);
+      res?.setHeader?.('Content-Type', 'application/json');
+      return res?.status?.(502)?.json?.({
+        statusCode: 502,
+        error: 'Bad Gateway',
+        message: `Failed to retrieve artifact "${downloadFilename}": ${err.message}`,
+      });
     }
   }
 }

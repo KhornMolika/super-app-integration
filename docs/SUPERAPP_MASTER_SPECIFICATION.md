@@ -17,6 +17,8 @@
 6. [Two-Stage Mobile Build & Multi-Platform Architecture](#6-two-stage-mobile-build--multi-platform-architecture)
 7. [Capability Catalog & Rule-Based Configuration Engine (DAG)](#7-capability-catalog--rule-based-configuration-engine-dag)
 8. [Role-Based Access Control (RBAC) & Shared UI](#8-role-based-access-control-rbac--shared-ui)
+9. [Capability Code Generator Architecture](#9-capability-code-generator-architecture)
+10. [FSASuperApp SDK Runtime Contract & Rejection Protocol](#10-fsasuperapp-sdk-runtime-contract--rejection-protocol)
 
 ---
 
@@ -439,4 +441,56 @@ The Back-Office (`superapp_backoffice/src/app/miniapps/[id]/page.tsx` & `MiniApp
 * **`<VersionHistoryTab />` (Versions & Releases Tab):** Archive of historical and active versions, staging test builds, release changelogs, and APK download links.
 * **`<MiniAppDetailHeader />` & `<MiniAppLifecycleBanners />`:** Top-level lifecycle status chips (`DRAFT`, `SUBMITTED`, `IN_REVIEW`, `APPROVED`, `PUBLISHED`, `SUSPENDED`) and contextual review/submission action bars.
 * **`<RevisionReviewModal />`:** Side-by-side JSON/field diff modal enabling SA Admins to evaluate and approve pending change revisions.
+
+---
+
+## 9. Capability Code Generator Architecture
+
+### 1. Distinction: Capability vs. FSASuperApp SDK
+* **Capability (`Permission` entity):** A native host OS permission or hardware entitlement (e.g., `camera`, `biometrics`, `location`, `storage:secure`, `notification:push`). It represents platform security boundaries and must be governed through the BackOffice Capability Catalog and verified during CI/CD security scanning.
+* **FSASuperApp SDK (`@fsasuperapp/miniapp-web-sdk`, `fsa_superapp_miniapp_flutter_sdk`, Native `.aar`):** The versioned client-side bridge library imported by MiniApp developers. It wraps raw inter-process communication (`window.FSASuperAppChannel` on Web, `MethodChannel` on Flutter/Native) into typed, asynchronous helper functions (`FSASuperApp.canIUse()`, `FSASuperApp.getUserProfile()`, etc.).
+
+### 2. End-to-End Capability Proposal & Codegen Flow
+When a partner engineer requires an uncatalogued device capability:
+1. **Proposal:** Developer submits a `PermissionProposal` in BackOffice.
+2. **Review & Approval:** SuperApp Admins audit the security implications and approve the proposal.
+3. **Automated Code Generator (`CapabilityCodeGeneratorService`):**
+   * Automatically resolves Android permissions and injects `<uses-permission android:name="..." />` into `android/app/src/main/AndroidManifest.xml`.
+   * Automatically resolves iOS plist keys and injects `<key>NS...UsageDescription</key>` into `ios/Runner/Info.plist`.
+   * Injects audited, pinned Flutter plugins into `pubspec.yaml` (e.g., `local_auth: ^2.2.0`, `mobile_scanner: ^5.2.3`).
+   * Automatically cuts an isolated Git feature branch (`capa/add-<key>-<timestamp>`) and opens a GitLab Merge Request (MR).
+4. **SDK Extension:** The platform extends the `FSASuperApp` SDK contract definitions and publishes the updated SDK version to the private package registry.
+
+---
+
+## 10. FSASuperApp SDK Runtime Contract & Rejection Protocol
+
+### 1. Unified Client Bridge Contract
+All guest MiniApps interact with the host shell through standardized contracts:
+* **Dynamic Introspection (`canIUse`):** `await FSASuperApp.canIUse('biometrics')` checks whether the host shell version and device hardware support the capability before invoking it.
+* **Staff Authentication (`getAuthToken`):** Obtains a short-lived, audience-restricted staff session token (`accessToken`, `expiresIn`, `scope`) without re-authenticating the employee.
+* **Profile Introspection (`getUserProfile`):** Retrieves the current employee's enterprise identity (`id`, `displayName`, `email`, `organization`).
+
+### 2. Standardized Rejection Protocol
+If an unwhitelisted, unsupported, or user-denied capability is invoked, the native host container returns a structured **Rejection Envelope**:
+
+```json
+{
+  "code": "CAPABILITY_UNSUPPORTED",
+  "capability": "biometrics",
+  "message": "Host shell does not support capability: biometrics. Minimum required host version: v1.4.0",
+  "hostVersion": "1.2.0",
+  "supportedCapabilities": ["storage:secure", "staff:profile:read", "notification:push"]
+}
+```
+
+#### Rejection Codes & Error Hierarchy:
+1. **`CAPABILITY_UNSUPPORTED`**: The host mobile shell version lacks the driver or plugin. In client SDKs, this throws `CapabilityUnsupportedError` (Web) or `CapabilityUnsupportedException` (Flutter), providing `supportedCapabilities` for graceful software fallbacks.
+2. **`UNREGISTERED_SCOPE`**: The MiniApp attempted to call a capability it did not declare in its BackOffice registration manifest.
+3. **`PERMISSION_DENIED`**: The staff user explicitly denied the OS permission dialog.
+4. **`SECURITY_VIOLATION`**: Origin or domain verification failure.
+5. **`USER_CANCELLED`**: The user dismissed the native biometric dialog or camera viewfinder.
+
+*(Refer to [ADR-004: Capability Generator Flow, FSASuperApp SDK Runtime Contract & Rejection Protocol](file:///d:/Projects/fintect/superapp/superapp-poc/docs/ADR-004-CAPABILITY-GENERATOR-AND-SDK-RUNTIME-CONTRACT.md) for full architectural specifications.)*
+
 

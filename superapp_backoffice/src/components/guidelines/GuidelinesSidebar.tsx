@@ -1,7 +1,5 @@
 "use client";
 
-import React from "react";
-import Link from "next/link";
 import { SearchIcon } from "@/components/ui/Icons";
 import { Section } from "@/types";
 
@@ -53,10 +51,10 @@ export function GuidelinesSidebar({
 
       {/* Structured Navigation Tree */}
       <div className="space-y-6">
-        {/* Category 1: GETTING STARTED */}
+        {/* Milestone 1: START HERE */}
         <div>
           <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-3 mb-2 flex items-center justify-between">
-            <span>Getting Started</span>
+            <span>1. Start Here</span>
             <span className="text-[10px] font-mono text-slate-400/70">01-02</span>
           </div>
           <nav className="space-y-1">
@@ -90,14 +88,41 @@ export function GuidelinesSidebar({
           </nav>
         </div>
 
-        {/* Category 2: ARCHITECTURE & PROTOCOLS */}
+        {/* Milestone 2: STACK & SDK SETUP */}
         <div>
           <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-3 mb-2 flex items-center justify-between">
-            <span>Integration Architecture</span>
-            <span className="text-[10px] font-mono text-slate-400/70">03-06</span>
+            <span>2. Stack &amp; SDK Setup</span>
+            <span className="text-[10px] font-mono text-slate-400/70">03-04</span>
           </div>
           <nav className="space-y-1">
-            {/* 03 SDK Contract */}
+            {/* 03 Methods */}
+            <a
+              href="#methods"
+              onClick={() => setActiveSection("methods")}
+              className={`flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium border-l-2 transition-all ${
+                activeSection === "methods"
+                  ? "border-brand-500 bg-brand-50/80 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 font-semibold"
+                  : "border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/40 hover:text-slate-900 dark:hover:text-slate-200"
+              }`}
+            >
+              <div className="flex items-center gap-3 truncate">
+                <span
+                  className={`font-mono text-xs ${
+                    activeSection === "methods"
+                      ? "text-brand-500 dark:text-brand-400 font-bold"
+                      : "text-slate-400 dark:text-slate-500"
+                  }`}
+                >
+                  03
+                </span>
+                <span className="truncate">Tech Stack &amp; Delivery</span>
+              </div>
+              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 uppercase">
+                {activeMethodTab === "webview" ? "Web" : activeMethodTab === "flutter" ? "Flutter" : activeMethodTab === "native" ? "Native" : "Deep Link"}
+              </span>
+            </a>
+
+            {/* 04 SDK Contract */}
             <a
               href="#sdk-contract"
               onClick={() => setActiveSection("sdk-contract")}
@@ -114,68 +139,21 @@ export function GuidelinesSidebar({
                     : "text-slate-400 dark:text-slate-500"
                 }`}
               >
-                03
+                04
               </span>
-              <span className="truncate">MiniApp SDK Contract</span>
+              <span className="truncate">SDK &amp; Bridge Setup</span>
             </a>
+          </nav>
+        </div>
 
-            {/* 04 Methods (Expandable sub-tree) */}
-            <div className="space-y-1 pt-0.5">
-              <a
-                href="#methods"
-                onClick={() => setActiveSection("methods")}
-                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium border-l-2 transition-all ${
-                  activeSection === "methods"
-                    ? "border-brand-500 bg-brand-50/80 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 font-semibold"
-                    : "border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/40 hover:text-slate-900 dark:hover:text-slate-200"
-                }`}
-              >
-                <span
-                  className={`font-mono text-xs ${
-                    activeSection === "methods"
-                      ? "text-brand-500 dark:text-brand-400 font-bold"
-                      : "text-slate-400 dark:text-slate-500"
-                  }`}
-                >
-                  04
-                </span>
-                <span className="truncate">Integration Methods</span>
-              </a>
-
-              {/* Sub-tabs for Methods */}
-              <div className="pl-6 space-y-1 py-1 border-l border-slate-200/60 dark:border-slate-800/60 ml-4">
-                {[
-                  { id: "webview", label: "WebView & Verify", badge: "Web" },
-                  { id: "flutter", label: "Flutter Package", badge: "Flutter" },
-                  { id: "native", label: "Native SDK (AAR/ZIP)", badge: "Native" },
-                  { id: "deeplink", label: "Deep Link Protocol", badge: "URI" },
-                ].map((sub) => {
-                  const isCurrent = activeMethodTab === sub.id && activeSection === "methods";
-                  return (
-                    <button
-                      key={sub.id}
-                      type="button"
-                      onClick={() => {
-                        setActiveMethodTab(sub.id as any);
-                        setActiveSection("methods");
-                        const el = document.getElementById("methods");
-                        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-                      }}
-                      className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between transition-colors ${
-                        isCurrent
-                          ? "text-brand-600 dark:text-brand-400 font-bold bg-brand-50/60 dark:bg-brand-950/40"
-                          : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
-                      }`}
-                    >
-                      <span className="truncate">{sub.label}</span>
-                      <span className="text-[10px] font-mono opacity-70 uppercase">{sub.badge}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* 05 Capabilities Catalog */}
+        {/* Milestone 3: BUILD & INTEGRATE */}
+        <div>
+          <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-3 mb-2 flex items-center justify-between">
+            <span>3. Build &amp; Integrate</span>
+            <span className="text-[10px] font-mono text-slate-400/70">05-06</span>
+          </div>
+          <nav className="space-y-1">
+            {/* 05 Features & APIs */}
             <a
               href="#capabilities"
               onClick={() => setActiveSection("capabilities")}
@@ -194,43 +172,44 @@ export function GuidelinesSidebar({
               >
                 05
               </span>
-              <span className="truncate">Capabilities Catalog</span>
+              <span className="truncate">Features &amp; APIs</span>
             </a>
 
-            {/* 06 Security Gates */}
+            {/* 06 UI/UX & Safe Areas */}
             <a
-              href="#security-checkpoints"
-              onClick={() => setActiveSection("security-checkpoints")}
+              href="#ux-ui-guidelines"
+              onClick={() => setActiveSection("ux-ui-guidelines")}
               className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium border-l-2 transition-all ${
-                activeSection === "security-checkpoints"
+                activeSection === "ux-ui-guidelines"
                   ? "border-brand-500 bg-brand-50/80 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 font-semibold"
                   : "border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/40 hover:text-slate-900 dark:hover:text-slate-200"
               }`}
             >
               <span
                 className={`font-mono text-xs ${
-                  activeSection === "security-checkpoints"
+                  activeSection === "ux-ui-guidelines"
                     ? "text-brand-500 dark:text-brand-400 font-bold"
                     : "text-slate-400 dark:text-slate-500"
                 }`}
               >
                 06
               </span>
-              <span className="truncate">Security Gates</span>
+              <span className="truncate">UI/UX &amp; Safe Areas</span>
             </a>
           </nav>
         </div>
 
-        {/* Category 3: OPERATIONS & GOVERNANCE */}
+        {/* Milestone 4: LAUNCH & SUPPORT */}
         <div>
           <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-3 mb-2 flex items-center justify-between">
-            <span>Operations &amp; Support</span>
-            <span className="text-[10px] font-mono text-slate-400/70">07-08</span>
+            <span>4. Launch &amp; Support</span>
+            <span className="text-[10px] font-mono text-slate-400/70">07-09</span>
           </div>
           <nav className="space-y-1">
             {[
-              { id: "validation-lifecycle", num: "07", title: "Validation Lifecycle (10 States)" },
-              { id: "troubleshooting", num: "08", title: "Troubleshooting & Remedies" },
+              { id: "security-checkpoints", num: "07", title: "Security & Compliance" },
+              { id: "validation-lifecycle", num: "08", title: "Review, Testing & Launch" },
+              { id: "troubleshooting", num: "09", title: "Help & Troubleshooting" },
             ].map((item) => {
               const isActive = activeSection === item.id;
               return (
@@ -257,20 +236,6 @@ export function GuidelinesSidebar({
             })}
           </nav>
         </div>
-      </div>
-
-      {/* Quick Footer Links */}
-      <div className="mt-auto pt-6 border-t border-slate-200/80 dark:border-slate-800/80 space-y-2">
-        <Link
-          href="/"
-          className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium bg-slate-100/80 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 hover:bg-brand-500 hover:text-white dark:hover:bg-brand-600 dark:hover:text-white transition-all group shadow-xs"
-        >
-          <span className="flex items-center gap-2.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Backoffice Console</span>
-          </span>
-          <span className="text-xs opacity-60 group-hover:translate-x-0.5 transition-transform">→</span>
-        </Link>
       </div>
     </aside>
   );

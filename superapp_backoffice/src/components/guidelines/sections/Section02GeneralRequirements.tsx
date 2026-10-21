@@ -7,7 +7,7 @@ export function Section02GeneralRequirements() {
   return (
     <div className="space-y-6 text-base text-slate-600 dark:text-slate-300">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-5 bg-slate-50/50 dark:bg-slate-900/40">
+        <div id="req-identity" className="border border-slate-200 dark:border-slate-800 rounded-xl p-5 bg-slate-50/50 dark:bg-slate-900/40 scroll-mt-24">
           <h5 className="font-bold text-slate-900 dark:text-white text-base flex items-center gap-2 mb-2">
             <TagIcon /> MiniApp Identity
           </h5>
@@ -23,7 +23,7 @@ export function Section02GeneralRequirements() {
           </p>
         </div>
 
-        <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-5 bg-slate-50/50 dark:bg-slate-900/40">
+        <div id="req-semver" className="border border-slate-200 dark:border-slate-800 rounded-xl p-5 bg-slate-50/50 dark:bg-slate-900/40 scroll-mt-24">
           <h5 className="font-bold text-slate-900 dark:text-white text-base flex items-center gap-2 mb-2">
             <HashIcon /> Semantic Versioning
           </h5>
@@ -39,7 +39,7 @@ export function Section02GeneralRequirements() {
         </div>
       </div>
 
-      <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 space-y-3">
+      <div id="req-environments" className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 space-y-3 scroll-mt-24">
         <h5 className="font-semibold text-slate-900 dark:text-white text-sm uppercase tracking-wider">
           Environment Segregation
         </h5>

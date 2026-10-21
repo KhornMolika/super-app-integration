@@ -133,8 +133,8 @@ describe('Gradle renderers', () => {
 describe('iOS handlers', () => {
   it('emits a self-contained channel per vendor', () => {
     const out = renderIosHandlers([permit, parking]);
-    expect(out).toContain('name: "com.example.dsp_mobile/permit_check"');
-    expect(out).toContain('name: "com.example.dsp_mobile/parking_pass"');
+    expect(out).toContain('name: "com.example.mobile_super_app/permit_check"');
+    expect(out).toContain('name: "com.example.mobile_super_app/parking_pass"');
     expect(out).toContain('PermitCheck.initialize(userId: userId');
     expect(out).toContain('ParkingPass.present(from: presenter)');
     expect(out).toContain('"already in progress"');
@@ -146,10 +146,10 @@ describe('Android handlers', () => {
   it('emits a MethodChannel per vendor', () => {
     const out = renderAndroidHandlers([permit, parking]);
     expect(out).toContain(
-      'MethodChannel(messenger, "com.example.dsp_mobile/permit_check")',
+      'MethodChannel(messenger, "com.example.mobile_super_app/permit_check")',
     );
     expect(out).toContain(
-      'MethodChannel(messenger, "com.example.dsp_mobile/parking_pass")',
+      'MethodChannel(messenger, "com.example.mobile_super_app/parking_pass")',
     );
     expect(out).toContain('PermitCheck.initialize(userId, jwtToken)');
     expect(out).toContain('ParkingPass.present(this) {');
@@ -159,7 +159,7 @@ describe('Android handlers', () => {
 describe('marker table', () => {
   it('targets mobile-super-app paths', () => {
     expect(NATIVE_SDK_MARKED_REGIONS.mainActivity.path).toBe(
-      'android/app/src/main/kotlin/com/example/dsp_mobile/MainActivity.kt',
+      'android/app/src/main/kotlin/com/example/mobile_super_app/MainActivity.kt',
     );
   });
 

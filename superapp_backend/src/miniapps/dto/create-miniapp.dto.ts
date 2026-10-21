@@ -326,6 +326,10 @@ export class CreateMiniAppDto {
   appId!: string;
 
   @IsString()
+  @IsOptional()
+  slug?: string;
+
+  @IsString()
   @IsNotEmpty()
   name!: string;
 
@@ -374,8 +378,8 @@ export class CreateMiniAppDto {
   ownerName?: string;
 
   @IsString()
-  @IsNotEmpty()
-  ownerEmail!: string;
+  @IsOptional()
+  ownerEmail?: string;
 
   @IsString()
   @IsOptional()

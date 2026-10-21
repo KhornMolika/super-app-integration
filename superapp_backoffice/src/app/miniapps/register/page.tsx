@@ -10,7 +10,7 @@ import PreviewModal from '@/components/ui/PreviewModal';
 import SubmissionModal, { SubmissionModalState } from '@/components/ui/SubmissionModal';
 import BasicInfoForm from '@/components/forms/BasicInfoForm';
 import TeamForm from '@/components/forms/TeamForm';
-import IntegrationForm, { generateClientVerificationToken, generateClientMiniAppId, deriveNativeSdkDefaults } from '@/components/forms/IntegrationForm';
+import IntegrationForm, { generateClientVerificationToken, generateClientMiniAppId, generateClientSlug, deriveNativeSdkDefaults } from '@/components/forms/IntegrationForm';
 import CapabilitiesForm, { formatCompliantPurpose, WHITELISTED_HOST_CAPABILITIES, normalizeCapabilityKey } from '@/components/forms/CapabilitiesForm';
 import UnsupportedCapabilitiesModal from '@/components/forms/UnsupportedCapabilitiesModal';
 import SecurityForm from '@/components/forms/SecurityForm';
@@ -228,12 +228,47 @@ export default function RegisterMiniAppPage() {
 
   useEffect(() => {
     if (formData.name && formData.name.trim()) {
-      const generatedId = generateClientMiniAppId(formData.name);
-      setFormData((prev) => ({ ...prev, appId: generatedId }));
-    } else if (formData.appId !== '') {
-      setFormData((prev) => ({ ...prev, appId: '' }));
+      const generatedSlug = generateClientSlug(formData.name);
+      setFormData((prev) => ({
+        ...prev,
+        slug: generatedSlug,
+        appId: prev.appId || `com.fsa.${generatedSlug.replace(/-/g, '_')}`,
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, slug: '' }));
     }
   }, [formData.name]);
+
+  // Wizard Auto-Detection Bridge: Wire package-to-app_id detection directly into Integration step
+  useEffect(() => {
+    let detectedId = '';
+    if (formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE) {
+      detectedId = formData.integrationConfigFlutter?.packageName?.trim() || '';
+    } else if (formData.integrationMethod === IntegrationMethod.NATIVE_SDK) {
+      detectedId = (formData.integrationConfigNativeSdk?.androidPackageName || formData.integrationConfigNativeSdk?.iosModuleName)?.trim() || '';
+    } else if (formData.integrationMethod === IntegrationMethod.DEEP_LINK) {
+      detectedId = (formData.integrationConfigDeepLink?.packageName || formData.integrationConfigDeepLink?.urlScheme)?.trim() || '';
+    } else if (formData.integrationMethod === IntegrationMethod.WEBVIEW) {
+      if (formData.slug) {
+        detectedId = `com.fsa.${formData.slug.replace(/-/g, '_')}`;
+      }
+    }
+
+    if (detectedId && detectedId !== formData.appId) {
+      setFormData((prev) => ({
+        ...prev,
+        appId: detectedId,
+      }));
+    }
+  }, [
+    formData.integrationMethod,
+    formData.integrationConfigFlutter?.packageName,
+    formData.integrationConfigNativeSdk?.androidPackageName,
+    formData.integrationConfigNativeSdk?.iosModuleName,
+    formData.integrationConfigDeepLink?.packageName,
+    formData.integrationConfigDeepLink?.urlScheme,
+    formData.slug,
+  ]);
 
   useEffect(() => {
     const errors: Record<string, string> = {};

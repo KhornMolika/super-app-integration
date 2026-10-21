@@ -23,6 +23,17 @@ export interface AuthUserResponse {
   [key: string]: any;
 }
 
+export interface DeveloperTokenItem {
+  id: string;
+  name: string;
+  tokenPrefix: string;
+  scopes: string[];
+  expiresAt?: string;
+  lastUsedAt?: string;
+  createdAt: string;
+  isActive: boolean;
+}
+
 export const authApi = {
   login: (data: LoginPayload) =>
     apiClient<{ success: boolean; user: AuthUserResponse; expires_in?: number }>('/api/auth/login', {
@@ -49,5 +60,21 @@ export const authApi = {
   getSsoProviders: () =>
     apiClient<Array<{ id: string; name: string; enabled: boolean }>>('/api/auth/sso/providers', {
       method: 'GET',
+    }),
+
+  getDeveloperTokens: () =>
+    apiClient<{ success: boolean; tokens: DeveloperTokenItem[] }>('/api/auth/developer-tokens', {
+      method: 'GET',
+    }),
+
+  createDeveloperToken: (data: { name: string; expirationDays?: number; scopes?: string[] }) =>
+    apiClient<{ success: boolean; token: string; tokenItem: DeveloperTokenItem }>('/api/auth/developer-tokens', {
+      method: 'POST',
+      body: data,
+    }),
+
+  revokeDeveloperToken: (id: string) =>
+    apiClient<{ success: boolean }>('/api/auth/developer-tokens/' + id, {
+      method: 'DELETE',
     }),
 };

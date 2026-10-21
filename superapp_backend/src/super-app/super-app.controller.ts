@@ -1,9 +1,14 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { SuperAppService } from './super-app.service';
 
-@Controller('super-app')
+@Controller(['super-app', 'api/super-app'])
 export class SuperAppController {
   constructor(private readonly superAppService: SuperAppService) {}
+
+  @Get('info')
+  async getSuperAppInfo() {
+    return this.superAppService.getSuperAppInfo();
+  }
 
   @Get('ecosystem-status')
   async getEcosystemStatus() {

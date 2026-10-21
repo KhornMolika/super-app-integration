@@ -29,9 +29,19 @@ export class PermissionsController {
    */
   @Get('capabilities')
   async getCapabilities(@Query('refresh') refresh?: string) {
-    return this.permissionsService.getRealCapabilities({
+    return this.permissionsService.getCapabilities({
       refresh: refresh === 'true' || refresh === '1',
     });
+  }
+
+  /**
+   * Phase 2: Official FSASuperApp SDK JS Bridge Runtime Manifest
+   * Serves dynamically generated capability signatures, canIUse contract, and error envelope.
+   * Publicly accessible for WebView runtime initialization and client introspection.
+   */
+  @Get('bridge-manifest')
+  async getBridgeManifest() {
+    return this.permissionsService.getJsBridgeManifest();
   }
 
   @Post('sync-gitlab')

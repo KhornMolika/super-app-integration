@@ -1,4 +1,4 @@
-﻿# Agent Instructions & Guidelines
+# Agent Instructions & Guidelines
 
 ## ⚡ Global Package Manager Policy
 - **STRICTLY ALWAYS USE pnpm** for all commands, scripts, builds, and dependency management across all projects in this repository (never 
@@ -11,6 +11,10 @@ pm or yarn).
 ## 🔒 Git & Security Rules
 - **Push code only if explicitly told to do so**: Never execute git push or push branches/commits to any remote repository unless the user specifically and explicitly commands you to do so.
 - **Always check and remove hardcode credentials**: Never hardcode sensitive credentials, passwords, private keys, secrets, or API tokens in source code. Always use environment variables or secure configuration loaders.
+
+## 🛡️ Zero Hardcoded Data & Real Backend API Sourcing Rule
+- **Always query real data from backend API / database registry**: All capabilities, permissions, system features, and integration bridge signatures MUST be queried dynamically from the real backend API (`GET /api/permissions/capabilities` on frontend) or the PostgreSQL database registry (`PermissionsService.getCapabilities()` on backend).
+- **Strictly Zero Hardcoded & Zero Mock Data**: Never use static arrays, mock objects, or hardcoded capability lists (such as `['camera', 'location', ...]`). Both frontend and backend must maintain zero hardcoded capability definitions and reflect live data synchronized from GitLab (`Info.plist` and `AndroidManifest.xml`). Always refer to `.agents/rules/zero-hardcoded-capabilities.md`.
 
 ---
 
@@ -26,7 +30,8 @@ pm or yarn).
 * **Pure Utilities**: Stateless, domain-agnostic functions in src/common/utils/<name>.util.ts.
 * **TypeORM Safety**:
   * Multi-table writes **must** use dataSource.transaction().
-  * Avoid N+1 queries (leftJoinAndSelect / elations).
+  * Avoid N+1 queries (leftJoinAndSelect / 
+elations).
   * synchronize: false in production; use migrations (pnpm migration:run).
 * **REST & DTOs**:
   * All inputs validated via DTOs and ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }).
@@ -49,7 +54,9 @@ pm or yarn).
 * **RSC First**: Keep pages and layouts as React Server Components. Push 'use client' down to the leaves (interactive buttons, dropdowns, inputs).
 * **Data Fetching & Caching**:
   * Data fetching is dynamic by default. Use use cache or unstable_cache for explicit caching.
-  * Trigger on-demand revalidation (evalidateTag(), evalidatePath()) in Server Actions.
+  * Trigger on-demand revalidation (
+evalidateTag(), 
+evalidatePath()) in Server Actions.
   * Unwrap promises in Client Components using React's native use() hook without heavy client fetch libraries.
 * **Schema Separation**: Form validation schemas live in pure TypeScript validator files (src/lib/validators/<domain>.validator.ts e.g. miniapp-form.validator.ts) using Zod. Never inline validation rules in JSX. Always re-parse input using safeParse() in Server Actions.
 * **Stateful Modal Isolation**: Modals maintaining multi-step input or async state (e.g. <RevisionReviewModal />, <BuildProgressModal />) must be separate components or use Intercepting/Parallel routes (@modal).
@@ -71,7 +78,9 @@ ext/image.
 * **Riverpod Code Generation & AsyncNotifier**:
   * Use @riverpod annotations and AsyncNotifier for async state and mutations.
   * Always use AsyncValue.guard(() => ...) for automatic error catching.
-  * Read providers in mutation callbacks via ef.read(); watch state in uild() via ef.watch().
+  * Read providers in mutation callbacks via 
+ef.read(); watch state in uild() via 
+ef.watch().
 * **Declarative Routing (go_router)**: Centralize auth guards and redirect logic in pp_router.dart. Use ShellRoute for persistent bottom navigation.
 * **Widget Granularity**: Keep uild() methods under **100 lines**. Extract layout blocks into dedicated StatelessWidget / ConsumerWidget classes (not private _buildHelper() methods) to optimize rebuilds. Use const constructors aggressively.
 * **Zero-Widget Unit Testing**: Test business logic notifiers in pure Dart unit tests using ProviderContainer without pumping widgets.

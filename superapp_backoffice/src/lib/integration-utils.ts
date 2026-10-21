@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Validation and utility functions for MiniApp Technical Integrations
  */
 
@@ -99,6 +99,17 @@ export const generateClientRandomSuffix = () => {
     return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
   }
   return Math.random().toString(36).substring(2, 8);
+};
+
+export const generateClientSlug = (name?: string) => {
+  if (name && name.trim()) {
+    return name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+  return '';
 };
 
 export const generateClientMiniAppId = (name?: string, suffix?: string) => {

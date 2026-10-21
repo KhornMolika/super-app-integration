@@ -5,12 +5,16 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  OneToOne,
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
 import { User } from '../../access-control/entities/user.entity';
 import { MiniAppActivity } from './miniapp-activity.entity';
 import { MiniAppIssue } from './miniapp-issue.entity';
+import { MiniAppVersion } from './miniapp-version.entity';
+import { MiniAppBuild } from './miniapp-build.entity';
+import { MiniAppLegal } from './miniapp-legal.entity';
 import { Notification } from '../../notifications/entities/notification.entity';
 
 export enum MiniAppStatus {
@@ -34,6 +38,9 @@ export class MiniApp {
   @Column({ unique: true })
   appId!: string;
 
+  @Column({ unique: true, nullable: true })
+  slug?: string;
+
   @Column()
   name!: string;
 
@@ -47,9 +54,6 @@ export class MiniApp {
   logo!: string;
 
   @Column({ nullable: true })
-  category!: string;
-
-  @Column({ nullable: true })
   organization?: string;
 
   @Column({ nullable: true })
@@ -58,23 +62,60 @@ export class MiniApp {
   @Column({ default: 'DRAFT' })
   status!: string;
 
-  @Column({ nullable: true })
-  termsUrl?: string;
+  @OneToOne(() => MiniAppLegal, (legal) => legal.miniApp, {
+    cascade: true,
+    eager: true,
+  })
+  legal?: MiniAppLegal;
 
-  @Column({ type: 'text', nullable: true })
-  termsDescription?: string;
+  // Virtual accessors for legal & compliance terms delegating to MiniAppLegal
+  get termsUrl(): string | undefined {
+    return this.legal?.termsUrl;
+  }
+  set termsUrl(val: string | undefined) {
+    if (!this.legal) {
+      this.legal = new MiniAppLegal();
+      this.legal.miniApp = this;
+      this.legal.miniAppId = this.id;
+    }
+    this.legal.termsUrl = val;
+  }
 
-  @Column({ nullable: true })
-  privacyPolicyUrl?: string;
+  get termsDescription(): string | undefined {
+    return this.legal?.termsDescription;
+  }
+  set termsDescription(val: string | undefined) {
+    if (!this.legal) {
+      this.legal = new MiniAppLegal();
+      this.legal.miniApp = this;
+      this.legal.miniAppId = this.id;
+    }
+    this.legal.termsDescription = val;
+  }
 
-  @Column({ type: 'text', nullable: true })
-  privacyPolicyDescription?: string;
+  get privacyPolicyUrl(): string | undefined {
+    return this.legal?.privacyPolicyUrl;
+  }
+  set privacyPolicyUrl(val: string | undefined) {
+    if (!this.legal) {
+      this.legal = new MiniAppLegal();
+      this.legal.miniApp = this;
+      this.legal.miniAppId = this.id;
+    }
+    this.legal.privacyPolicyUrl = val;
+  }
 
-  @Column({ nullable: true })
-  ownerName!: string;
-
-  @Column({ nullable: true })
-  ownerEmail!: string;
+  get privacyPolicyDescription(): string | undefined {
+    return this.legal?.privacyPolicyDescription;
+  }
+  set privacyPolicyDescription(val: string | undefined) {
+    if (!this.legal) {
+      this.legal = new MiniAppLegal();
+      this.legal.miniApp = this;
+      this.legal.miniAppId = this.id;
+    }
+    this.legal.privacyPolicyDescription = val;
+  }
 
   @ManyToOne(() => User, (user) => user.ownedMiniApps, {
     nullable: true,
@@ -94,6 +135,34 @@ export class MiniApp {
 
   @Column({ nullable: true })
   teamName!: string;
+
+  // Virtual accessors for normalized user ownership and backwards compatibility
+  get ownerEmail(): string | undefined {
+    return this.owner?.email;
+  }
+  set ownerEmail(val: string | undefined) {
+    if (this.owner && val) {
+      this.owner.email = val;
+    }
+  }
+
+  get ownerName(): string | undefined {
+    return this.owner?.name;
+  }
+  set ownerName(val: string | undefined) {
+    if (this.owner && val) {
+      this.owner.name = val;
+    }
+  }
+
+  get category(): string | undefined {
+    return this.organization;
+  }
+  set category(val: string | undefined) {
+    if (val && !this.organization) {
+      this.organization = val;
+    }
+  }
 
   @Column({ nullable: true })
   integrationMethod!: string; // WEBVIEW, FLUTTER_PACKAGE, NATIVE_SDK, DEEP_LINK
@@ -152,35 +221,73 @@ export class MiniApp {
   @Column({ nullable: true })
   draftVersion?: string;
 
-  @Column({ type: 'jsonb', nullable: true, default: () => "'[]'" })
-  versionHistory?: {
-    version: string;
-    gitRef?: string;
-    packageName?: string;
-    sourceType?: 'GIT' | 'ARTIFACT' | 'WEBVIEW' | string;
-    saVersion?: string;
-    type: 'PRODUCTION' | 'TEST' | 'DRAFT';
-    status:
-      | 'ACTIVE'
-      | 'TESTING'
-      | 'PREVIOUS'
-      | 'DEPRECATED'
-      | 'SUPERSEDED'
-      | 'ARCHIVED'
-      | 'IN_REVIEW'
-      | 'APPROVED'
-      | 'DRAFT';
-    changelog?: string;
-    artifactUrl?: string;
-    apkSize?: string;
-    checksum?: string;
-    releasedAt: string;
-    releasedBy?: string;
-    buildNumber?: number;
-    jenkinsJobUrl?: string;
-    integrationConfig?: Record<string, any>;
-    permissions?: string[];
-  }[];
+  @OneToMany(() => MiniAppVersion, (version) => version.miniApp, {
+    cascade: true,
+    eager: true,
+  })
+  versions!: MiniAppVersion[];
+
+  @OneToMany(() => MiniAppBuild, (build) => build.miniApp, {
+    cascade: true,
+  })
+  builds!: MiniAppBuild[];
+
+  // Virtual accessor for backwards compatibility with legacy versionHistory callers
+  get versionHistory(): any[] {
+    if (this.versions && Array.isArray(this.versions) && this.versions.length > 0) {
+      return this.versions.map((v) => ({
+        version: v.version,
+        gitRef: v.gitRef,
+        packageName: v.packageName,
+        sourceType: v.sourceType,
+        saVersion: v.saVersion,
+        type: v.type,
+        status: v.status,
+        changelog: v.changelog,
+        artifactUrl: v.artifactUrl,
+        apkSize: v.apkSize,
+        checksum: v.checksum,
+        releasedAt: v.releasedAt
+          ? typeof v.releasedAt === 'string'
+            ? v.releasedAt
+            : v.releasedAt.toISOString()
+          : '',
+        releasedBy: v.releasedBy,
+        buildNumber: v.buildNumber,
+        jenkinsJobUrl: v.jenkinsJobUrl,
+        integrationConfig: v.integrationConfig,
+        permissions: v.permissions,
+      }));
+    }
+    return [];
+  }
+  set versionHistory(val: any[] | undefined) {
+    if (Array.isArray(val)) {
+      this.versions = val.map((item) => {
+        const v = new MiniAppVersion();
+        v.miniApp = this;
+        v.miniAppId = this.id;
+        v.version = item.version || '1.0.0';
+        v.gitRef = item.gitRef;
+        v.packageName = item.packageName;
+        v.sourceType = item.sourceType;
+        v.saVersion = item.saVersion;
+        v.type = item.type || 'PRODUCTION';
+        v.status = item.status || 'DRAFT';
+        v.changelog = item.changelog;
+        v.artifactUrl = item.artifactUrl;
+        v.apkSize = item.apkSize;
+        v.checksum = item.checksum;
+        v.releasedAt = item.releasedAt ? new Date(item.releasedAt) : new Date();
+        v.releasedBy = item.releasedBy;
+        v.buildNumber = item.buildNumber;
+        v.jenkinsJobUrl = item.jenkinsJobUrl;
+        v.integrationConfig = item.integrationConfig;
+        v.permissions = item.permissions;
+        return v;
+      });
+    }
+  }
 
   @OneToMany(() => MiniAppIssue, (issue) => issue.miniApp, {
     cascade: true,

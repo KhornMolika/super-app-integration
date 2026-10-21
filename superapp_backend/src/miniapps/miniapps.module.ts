@@ -6,6 +6,9 @@ import { ApkDownloadController } from './apk-download.controller';
 import { MiniApp } from './entities/miniapp.entity';
 import { MiniAppIssue } from './entities/miniapp-issue.entity';
 import { MiniAppActivity } from './entities/miniapp-activity.entity';
+import { MiniAppVersion } from './entities/miniapp-version.entity';
+import { MiniAppBuild } from './entities/miniapp-build.entity';
+import { MiniAppLegal } from './entities/miniapp-legal.entity';
 
 import { AuthModule } from '../auth/auth.module';
 import { NotificationsModule } from '../notifications/notifications.module';
@@ -28,7 +31,14 @@ import { UrlProbeHelper } from './helpers/url-probe.helper';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([MiniApp, MiniAppIssue, MiniAppActivity]),
+    TypeOrmModule.forFeature([
+      MiniApp,
+      MiniAppIssue,
+      MiniAppActivity,
+      MiniAppVersion,
+      MiniAppBuild,
+      MiniAppLegal,
+    ]),
     AuthModule,
     NotificationsModule,
     PermissionsModule,

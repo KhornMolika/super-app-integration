@@ -400,23 +400,30 @@ export class MiniappValidationHelper {
 
         if (!permissionDef) {
           // UNKNOWN PERMISSION -> create proposal in permission_proposals
+          if (perm.required !== false) {
+            errors[`permissions.${index}.capability`] =
+              `Required capability "${permKey}" is not recognized by the SuperApp platform. Please mark it as optional or submit a capability proposal.`;
+          }
           await this.createPermissionProposal(app, permKey);
         } else {
           // Known permission, check SuperApp Runtime Compatibility
-          const latestCapability =
-            await this.superAppService.findLatestCapability();
-          const supportedCaps = latestCapability
-            ? (Array.isArray(latestCapability.capabilities)
-                ? latestCapability.capabilities
-                : String(latestCapability.capabilities).split(',')
-              ).map((c) => c.trim().toLowerCase())
-            : ['camera', 'location', 'storage', 'microphone', 'biometrics'];
+          const realCaps = await this.permissionsService.getCapabilities();
+          const supportedCaps = realCaps.map((c) => c.key.toLowerCase());
 
           const isSupported =
             supportedCaps.includes(permissionDef.key.toLowerCase()) ||
             supportedCaps.includes(permissionDef.name.toLowerCase());
 
           if (!isSupported) {
+            if (perm.required !== false) {
+              errors[`permissions.${index}.capability`] =
+                `Required capability "${permKey}" is not supported by the current SuperApp host shell. Please either mark it as optional or wait for shell support.`;
+            } else {
+              this.logger.log(
+                `MiniApp "${app.name}" declares optional unsupported capability "${permKey}" - permitted in degraded runtime mode.`,
+              );
+            }
+
             await this.createPermissionProposal(
               app,
               permissionDef.key,

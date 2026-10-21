@@ -52,7 +52,7 @@ import { NativeSdkVendor } from './vendor.types';
  *            (channel `com.example.mobile_super_app/<appId identifier>`,
  *            method `present`), each self-contained.
  *
- * Target: android/app/src/main/kotlin/com/example/dsp_mobile/MainActivity.kt
+ * Target: android/app/src/main/kotlin/com/example/mobile_super_app/MainActivity.kt
  *   IMPORTS  after the existing `import io.flutter.embedding.android.FlutterActivity`
  *            line (top level). Task 8 must also add, outside the regions:
  *            `import io.flutter.embedding.engine.FlutterEngine` and
@@ -90,14 +90,14 @@ export const REGION_DEPS = 'DEPS';
 export const REGION_IMPORTS = 'IMPORTS';
 export const REGION_HANDLERS = 'HANDLERS';
 
-const CHANNEL_PREFIX = 'com.example.dsp_mobile';
+const CHANNEL_PREFIX = 'com.example.mobile_super_app';
 
 export const NATIVE_SDK_TARGET_FILES = {
   podfile: 'ios/Podfile',
   gradle: 'android/app/build.gradle.kts',
   appDelegate: 'ios/Runner/AppDelegate.swift',
   mainActivity:
-    'android/app/src/main/kotlin/com/example/dsp_mobile/MainActivity.kt',
+    'android/app/src/main/kotlin/com/example/mobile_super_app/MainActivity.kt',
 } as const;
 
 export type NativeSdkTargetKey = keyof typeof NATIVE_SDK_TARGET_FILES;

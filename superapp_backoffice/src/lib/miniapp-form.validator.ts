@@ -59,11 +59,12 @@ export async function validateMiniAppStep(
       errors.name = 'MiniApp Name must be at least 2 characters';
       isValid = false;
     }
-    if (!formData.appId) {
-      errors.appId = 'MiniApp ID is required';
+    const slugVal = formData.slug || formData.appId;
+    if (!slugVal) {
+      errors.slug = 'MiniApp Slug is required';
       isValid = false;
-    } else if (!/^[a-z0-9_.-]+$/.test(formData.appId)) {
-      errors.appId = 'MiniApp ID can only contain lowercase letters, numbers, and underscores (e.g. miniapp_8f32a1)';
+    } else if (!/^[a-z0-9_.-]+$/.test(slugVal)) {
+      errors.slug = 'MiniApp Slug can only contain lowercase letters, numbers, and dashes (e.g. staff-portal-attendance)';
       isValid = false;
     }
     if (!formData.logo || !formData.logo.trim()) {

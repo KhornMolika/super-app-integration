@@ -24,7 +24,7 @@ export class PermissionsService implements OnApplicationBootstrap {
     private permissionDefinitionRepository: Repository<PermissionDefinition>,
     private readonly configService: ConfigService,
     private readonly gitlabProvider: GitLabProvider,
-  ) {}
+  ) { }
 
   async onApplicationBootstrap() {
     await this.seedInitialPermissions();
@@ -370,7 +370,7 @@ export class PermissionsService implements OnApplicationBootstrap {
    * If refresh is requested, triggers synchronization from GitLab first.
    * Guarantees sub-millisecond response times with zero runtime dependency on GitLab uptime.
    */
-  async getRealCapabilities(options?: { refresh?: boolean }) {
+  async getCapabilities(options?: { refresh?: boolean }) {
     if (options?.refresh) {
       await this.syncCapabilitiesFromGitLab();
     }
@@ -439,6 +439,123 @@ export class PermissionsService implements OnApplicationBootstrap {
         commitSha: meta.commitSha,
       };
     });
+  }
+
+
+  /**
+   * Pre-Publish Hard Gate: Validates declared MiniApp capabilities against the active
+   * PostgreSQL database registry (synced from GitLab).
+   * Strict Zero-Hardcoded Policy: Always queries real database records.
+   * - required: true & unsupported -> Rejected (isValid = false)
+   * - required: false & unsupported -> Permitted in degraded mode
+   */
+  async validateMiniAppCapabilities(permissions: any[]): Promise<{
+    isValid: boolean;
+    errors: Record<string, string>;
+    unsupportedCapabilities: string[];
+    degradedCapabilities: string[];
+    activeRegistryKeys: string[];
+  }> {
+    const realCapabilities = await this.getCapabilities();
+    const activeRegistryKeys = realCapabilities.map((c) => c.key.toLowerCase());
+    const activeKeySet = new Set(activeRegistryKeys);
+
+    for (const cap of realCapabilities) {
+      if (Array.isArray(cap.requiredPermissions)) {
+        for (const rp of cap.requiredPermissions) {
+          activeKeySet.add(rp.toLowerCase());
+        }
+      }
+      if (cap.name) {
+        activeKeySet.add(cap.name.toLowerCase());
+      }
+    }
+
+    const errors: Record<string, string> = {};
+    const unsupportedCapabilities: string[] = [];
+    const degradedCapabilities: string[] = [];
+
+    if (!Array.isArray(permissions) || permissions.length === 0) {
+      return {
+        isValid: true,
+        errors,
+        unsupportedCapabilities,
+        degradedCapabilities,
+        activeRegistryKeys,
+      };
+    }
+
+    for (let index = 0; index < permissions.length; index++) {
+      const perm = permissions[index];
+      const rawKey = (
+        typeof perm === 'string' ? perm : perm.type || perm.key || perm.name || ''
+      ).trim();
+      if (!rawKey) continue;
+
+      const lowerKey = rawKey.toLowerCase();
+      const isRequired = typeof perm === 'object' && perm.required !== false;
+
+      // Capability normalization matching against real database registry
+      const isSupported =
+        activeKeySet.has(lowerKey) ||
+        (lowerKey === 'camera' && activeKeySet.has('scan_qr_code')) ||
+        (lowerKey === 'scan_qr_code' && activeKeySet.has('camera')) ||
+        (lowerKey === 'location' && activeKeySet.has('high_precision_gps')) ||
+        (lowerKey === 'biometrics' && activeKeySet.has('biometric_auth'));
+
+      if (!isSupported) {
+        if (isRequired) {
+          errors[`permissions.${index}.capability`] =
+            `Required capability "${rawKey}" is not supported by the current SuperApp host shell. Please mark it as optional or request shell support.`;
+          unsupportedCapabilities.push(rawKey);
+        } else {
+          degradedCapabilities.push(rawKey);
+          this.logger.log(
+            `MiniApp declares optional capability "${rawKey}" not currently supported by host shell - permitted with graceful degradation.`,
+          );
+        }
+      }
+    }
+
+    return {
+      isValid: Object.keys(errors).length === 0,
+      errors,
+      unsupportedCapabilities,
+      degradedCapabilities,
+      activeRegistryKeys,
+    };
+  }
+
+  /**
+   * Phase 2: Runtime SDK & JS Bridge Contract Manifest
+   * Serves dynamically generated bridge specifications for @fsasuperapp/sdk and window.FSASuperApp.
+   * Zero-Hardcoded Policy: Generates supported method signatures directly from active DB definitions.
+   */
+  async getJsBridgeManifest() {
+    const realCapabilities = await this.getCapabilities();
+    const activeKeys = realCapabilities.map((c) => c.key);
+
+    return {
+      sdkVersion: '1.0.0',
+      hostVersion: '1.0.0',
+      bridgeNamespace: 'FSASuperApp',
+      supportedCapabilities: realCapabilities.map((c) => ({
+        key: c.key,
+        name: c.name,
+        category: c.category,
+        jsBridgeMethod: c.jsBridgeMethod,
+        description: c.description,
+      })),
+      supportedCapabilityKeys: activeKeys,
+      introspectionMethod:
+        'FSASuperApp.canIUse(capabilityKey: string): Promise<boolean>',
+      standardRejectionEnvelope: {
+        code: 'CAPABILITY_UNSUPPORTED',
+        message: 'Host shell does not support capability: {capabilityKey}',
+        hostVersion: '1.0.0',
+        supportedCapabilities: activeKeys,
+      },
+    };
   }
 
   private buildCapabilitiesList(
@@ -631,8 +748,8 @@ export class PermissionsService implements OnApplicationBootstrap {
         providerPackage: deps['record']
           ? `record: ${deps['record']}`
           : deps['audioplayers']
-          ? `audioplayers: ${deps['audioplayers']}`
-          : 'native_audio_record',
+            ? `audioplayers: ${deps['audioplayers']}`
+            : 'native_audio_record',
         jsBridgeMethod: 'FSASuperApp.microphone()',
         status: 'Active',
         source: detectionSource,

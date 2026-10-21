@@ -5,12 +5,16 @@ import {
   BadGatewayException,
   NotFoundException,
   OnApplicationBootstrap,
+  Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MiniApp } from './entities/miniapp.entity';
 import { MiniAppIssue } from './entities/miniapp-issue.entity';
 import { MiniAppActivity } from './entities/miniapp-activity.entity';
+import { MiniAppVersion } from './entities/miniapp-version.entity';
+import { MiniAppBuild } from './entities/miniapp-build.entity';
+import { MiniAppLegal } from './entities/miniapp-legal.entity';
 import { AuditService } from '../audit/audit.service';
 import { PermissionDetectorHelper } from './helpers/permission-detector.helper';
 import { MiniappValidationHelper } from './helpers/miniapp-validation.helper';
@@ -21,6 +25,7 @@ import { DomainAssociationHelper } from './helpers/domain-association.helper';
 import { MiniappMutationHelper } from './helpers/miniapp-mutation.helper';
 import { NativeSdkCodegenService } from '../native-sdk-codegen/native-sdk-codegen.service';
 import { SdkArtifactUploadService } from '../sdk-artifacts/sdk-artifact-upload.service';
+import { PermissionsService } from '../permissions/permissions.service';
 import { resolveOrganizationDetails } from '../common/constants/fsa-organizations';
 
 @Injectable()
@@ -46,6 +51,19 @@ export class MiniappsService implements OnApplicationBootstrap {
     private miniappMutationHelper: MiniappMutationHelper,
     private nativeSdkCodegenService: NativeSdkCodegenService,
     private sdkArtifactUploadService: SdkArtifactUploadService,
+    private permissionsService: PermissionsService,
+
+    @Optional()
+    @InjectRepository(MiniAppVersion)
+    private versionRepository?: Repository<MiniAppVersion>,
+
+    @Optional()
+    @InjectRepository(MiniAppBuild)
+    private buildRepository?: Repository<MiniAppBuild>,
+
+    @Optional()
+    @InjectRepository(MiniAppLegal)
+    private legalRepository?: Repository<MiniAppLegal>,
   ) {}
 
   async onApplicationBootstrap() {
@@ -200,7 +218,13 @@ export class MiniappsService implements OnApplicationBootstrap {
   async findOne(id: string) {
     return this.miniappRepository.findOne({
       where: { id },
-      relations: { issues: true, activities: true },
+      relations: {
+        issues: true,
+        activities: true,
+        versions: true,
+        builds: true,
+        legal: true,
+      },
     });
   }
 
@@ -242,11 +266,12 @@ export class MiniappsService implements OnApplicationBootstrap {
     const qb = this.miniappRepository
       .createQueryBuilder('app')
       .leftJoinAndSelect('app.issues', 'issues')
+      .leftJoinAndSelect('app.owner', 'owner')
       .orderBy('app.updatedAt', 'DESC');
 
     if (ownerId || ownerEmail) {
       qb.where(
-        '(app.ownerId = :ownerId OR (app.ownerEmail IS NOT NULL AND LOWER(app.ownerEmail) = LOWER(:ownerEmail)))',
+        '(app.ownerId = :ownerId OR (owner.email IS NOT NULL AND LOWER(owner.email) = LOWER(:ownerEmail)))',
         {
           ownerId: ownerId || '',
           ownerEmail: ownerEmail || '',
@@ -325,6 +350,25 @@ export class MiniappsService implements OnApplicationBootstrap {
   async submitForReview(id: string, actorId: string) {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
+
+    // Hard Gate Check (Phase 1): Pre-publish validation against real SuperApp capability registry
+    if (this.permissionsService && app.permissions && Array.isArray(app.permissions) && app.permissions.length > 0) {
+      const capabilityCheck =
+        await this.permissionsService.validateMiniAppCapabilities(
+          app.permissions,
+        );
+      if (!capabilityCheck.isValid) {
+        throw new BadRequestException({
+          statusCode: 400,
+          error: 'GATE_CAPABILITY_UNSUPPORTED',
+          message:
+            'MiniApp contains required capabilities that are not supported by the SuperApp host shell.',
+          unsupportedCapabilities: capabilityCheck.unsupportedCapabilities,
+          details: capabilityCheck.errors,
+        });
+      }
+    }
+
     return this.lifecycleHelper.submitForReview(
       app,
       actorId,
@@ -492,6 +536,24 @@ export class MiniappsService implements OnApplicationBootstrap {
   async approve(id: string, actorId: string) {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
+
+    // Final Gate Check (Phase 1): Ensure no unsupported required capabilities pass approval
+    if (app.permissions && Array.isArray(app.permissions) && app.permissions.length > 0) {
+      const capabilityCheck =
+        await this.permissionsService.validateMiniAppCapabilities(
+          app.permissions,
+        );
+      if (!capabilityCheck.isValid) {
+        throw new BadRequestException({
+          statusCode: 400,
+          error: 'GATE_CAPABILITY_UNSUPPORTED',
+          message:
+            'Cannot approve MiniApp with unsupported required capabilities. Please update capability requirements or deploy host shell support.',
+          unsupportedCapabilities: capabilityCheck.unsupportedCapabilities,
+          details: capabilityCheck.errors,
+        });
+      }
+    }
 
     const isNativeSdk = this.assertNativeSdkReady(app);
     if (isNativeSdk) {

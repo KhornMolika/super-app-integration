@@ -86,6 +86,7 @@ export interface NativeSdkConfigDto {
 
 export interface CreateMiniAppDto {
   appId: string;
+  slug?: string;
   name: string;
   category?: string;
   organization?: string;
@@ -99,7 +100,7 @@ export interface CreateMiniAppDto {
   privacyPolicyDescription?: string;
   
   ownerName?: string;
-  ownerEmail: string;
+  ownerEmail?: string;
   supportEmail?: string;
   teamName?: string;
   teamTelegramChatId?: string;

@@ -10,6 +10,8 @@ import { ArtifactScannerService } from './artifact-scanner.service';
 import { SdkArtifactUploadService } from './sdk-artifact-upload.service';
 import { sdkUploadMulterOptions } from './sdk-upload-multer.options';
 import { SdkArtifactsController } from './sdk-artifacts.controller';
+import { SdkRegistryProxyController } from './sdk-registry-proxy.controller';
+import { PubRegistryProxyController } from './pub-registry-proxy.controller';
 
 @Module({
   imports: [
@@ -24,7 +26,11 @@ import { SdkArtifactsController } from './sdk-artifacts.controller';
     IntegrationsModule,
     StorageModule,
   ],
-  controllers: [SdkArtifactsController],
+  controllers: [
+    SdkArtifactsController,
+    SdkRegistryProxyController,
+    PubRegistryProxyController,
+  ],
   providers: [ArtifactScannerService, SdkArtifactUploadService],
   exports: [SdkArtifactUploadService],
 })

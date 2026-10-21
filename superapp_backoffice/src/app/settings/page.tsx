@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -15,6 +15,7 @@ import {
   ArtifactRetentionCard,
   NotificationEventsCard,
   TelegramGroupItem,
+  DeveloperTokensCard,
 } from '@/components/settings';
 
 
@@ -407,7 +408,7 @@ export default function SettingsPage() {
     toast.info(`Copied "${text}" to clipboard!`, 'Copied');
   };
 
-  const [activeTab, setActiveTab] = useState<'profile' | 'telegram' | 'pipeline' | 'retention' | 'guide'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'tokens' | 'telegram' | 'pipeline' | 'retention' | 'guide'>('profile');
 
   const isSuperAdmin = role === 'SUPER_ADMIN';
   const isAdmin = role === 'ADMIN';
@@ -477,6 +478,21 @@ export default function SettingsPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
               <span>Profile &amp; Account</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('tokens')}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all duration-150 cursor-pointer whitespace-nowrap ${
+                activeTab === 'tokens'
+                  ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+              </svg>
+              <span>Developer Tokens</span>
             </button>
 
             <button
@@ -560,6 +576,13 @@ export default function SettingsPage() {
               onProfileUpdated={fetchTelegramStatus}
             />
             <NotificationEventsCard />
+          </div>
+        )}
+
+        {/* Tab: Developer Access Tokens (PAT) */}
+        {activeTab === 'tokens' && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            <DeveloperTokensCard />
           </div>
         )}
 

@@ -4,10 +4,15 @@ import {
   OnModuleInit,
   UnauthorizedException,
   BadRequestException,
+  NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
 import { AccessControlService } from '../access-control/access-control.service';
+import { DeveloperToken } from '../access-control/entities/developer-token.entity';
 
 export const END_USER_TYP = 'end_user';
 export const BACK_OFFICE_TYP = 'back_office';
@@ -31,6 +36,9 @@ export class AuthService implements OnModuleInit {
   constructor(
     private jwtService: JwtService,
     private accessControlService: AccessControlService,
+    @Optional()
+    @InjectRepository(DeveloperToken)
+    private developerTokenRepo?: Repository<DeveloperToken>,
   ) {}
 
   private get issuer(): string {
@@ -381,5 +389,106 @@ export class AuthService implements OnModuleInit {
     }
 
     return this.generateAuthTokens(user);
+  }
+
+  /**
+   * Developer Access Tokens (PAT) Management for Private Registries & Scoped SDK Gateways
+   */
+  async createDeveloperToken(
+    userId: string,
+    name: string,
+    expirationDays = 90,
+    scopes = ['sdk:read', 'packages:read'],
+  ) {
+    const user = await this.accessControlService.findUserById(userId);
+    if (!user) throw new NotFoundException('User not found');
+
+    const expiresInSeconds =
+      expirationDays > 0 ? expirationDays * 24 * 60 * 60 : 365 * 24 * 60 * 60;
+    const expiresAt = new Date(Date.now() + expiresInSeconds * 1000);
+
+    const roles = (user.roles || [])
+      .map((r: any) => (typeof r === 'string' ? r : r?.name))
+      .filter(Boolean);
+
+    const tokenPayload = {
+      sub: user.id,
+      email: user.email,
+      name: user.name,
+      roles: roles.length > 0 ? roles : ['MINI_APP_DEVELOPER'],
+      scopes,
+      typ: BACK_OFFICE_TYP, // Permits authentication via general AuthGuards, NPM proxy, and Pub proxy
+    };
+
+    const rawToken = this.jwtService.sign(tokenPayload, {
+      privateKey: this.privateKey,
+      algorithm: 'RS256',
+      keyid: this.keyId,
+      issuer: this.issuer,
+      expiresIn: expiresInSeconds,
+    });
+
+    const tokenHash = crypto
+      .createHash('sha256')
+      .update(rawToken)
+      .digest('hex');
+    const tokenPrefix = `fsa_pat_${rawToken.substring(0, 8)}...${rawToken.substring(rawToken.length - 6)}`;
+
+    let savedItem: any = {
+      id: crypto.randomUUID(),
+      name: name.trim() || 'Developer Access Token',
+      tokenPrefix,
+      scopes,
+      expiresAt,
+      createdAt: new Date(),
+      isActive: true,
+    };
+
+    if (this.developerTokenRepo) {
+      const entity = this.developerTokenRepo.create({
+        userId: user.id,
+        name: name.trim() || 'Developer Access Token',
+        tokenPrefix,
+        tokenHash,
+        scopes,
+        expiresAt,
+        isActive: true,
+      });
+      const saved = await this.developerTokenRepo.save(entity);
+      savedItem = {
+        id: saved.id,
+        name: saved.name,
+        tokenPrefix: saved.tokenPrefix,
+        scopes: saved.scopes,
+        expiresAt: saved.expiresAt,
+        createdAt: saved.createdAt,
+        isActive: saved.isActive,
+      };
+    }
+
+    return {
+      success: true,
+      token: rawToken,
+      tokenItem: savedItem,
+    };
+  }
+
+  async listDeveloperTokens(userId: string) {
+    if (!this.developerTokenRepo) return [];
+    return this.developerTokenRepo.find({
+      where: { userId, isActive: true },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async revokeDeveloperToken(userId: string, tokenId: string) {
+    if (!this.developerTokenRepo) return { success: true };
+    const token = await this.developerTokenRepo.findOne({
+      where: { id: tokenId, userId },
+    });
+    if (!token) throw new NotFoundException('Token not found');
+    token.isActive = false;
+    await this.developerTokenRepo.save(token);
+    return { success: true };
   }
 }

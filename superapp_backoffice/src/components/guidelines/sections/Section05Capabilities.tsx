@@ -7,13 +7,73 @@ import { PlusCircle, RefreshCw } from "lucide-react";
 import { permissionsApi, CapabilityItem } from "@/api/permissions.api";
 import { renderCapabilityIcon, getCapabilityVisual } from "@/lib/capability-visuals";
 
+import { IntegrationMethodTab } from "@/types";
+
+interface Section05CapabilitiesProps {
+  activeMethodTab?: IntegrationMethodTab;
+  setActiveMethodTab?: (tab: IntegrationMethodTab) => void;
+}
+
+interface CapabilitySyntax {
+  code: string;
+  lang: string;
+  returnType: string;
+}
+
+function getCapabilitySyntax(
+  capKey: string,
+  method: IntegrationMethodTab,
+  defaultJs?: string
+): CapabilitySyntax {
+  switch (method) {
+    case "flutter": {
+      const map: Record<string, CapabilitySyntax> = {
+        camera: { code: "await appCtx.capabilities.scanQRCode()", lang: "Dart", returnType: "Future<String?>" },
+        location: { code: "await appCtx.capabilities.getLocation()", lang: "Dart", returnType: "Future<LocationData>" },
+        biometrics: { code: "await appCtx.capabilities.authenticateBiometric()", lang: "Dart", returnType: "Future<bool>" },
+        storage: { code: "await appCtx.capabilities.getSecureStorage(key)", lang: "Dart", returnType: "Future<String?>" },
+        notification: { code: "await appCtx.capabilities.showNotification(title, body)", lang: "Dart", returnType: "Future<void>" },
+      };
+      return map[capKey] || { code: `await appCtx.capabilities.${capKey}()`, lang: "Dart", returnType: "Future<dynamic>" };
+    }
+    case "native": {
+      const map: Record<string, CapabilitySyntax> = {
+        camera: { code: "appCtx.capabilities.scanQRCode { qr -> ... }", lang: "Kotlin / Swift", returnType: "Result<String>" },
+        location: { code: "appCtx.capabilities.getLocation { loc -> ... }", lang: "Kotlin / Swift", returnType: "Result<Location>" },
+        biometrics: { code: "appCtx.capabilities.authenticateBiometric(prompt, cb)", lang: "Kotlin / Swift", returnType: "Result<Boolean>" },
+        storage: { code: "appCtx.capabilities.getSecureStorage(key)", lang: "Kotlin / Swift", returnType: "String?" },
+        notification: { code: "appCtx.capabilities.showNotification(notification)", lang: "Kotlin / Swift", returnType: "Unit / Void" },
+      };
+      return map[capKey] || { code: `appCtx.capabilities.invoke("${capKey}", cb)`, lang: "Kotlin / Swift", returnType: "Result<Any>" };
+    }
+    case "deeplink": {
+      const map: Record<string, CapabilitySyntax> = {
+        camera: { code: "fsa://camera/scan?callback_url=fsahr://qr", lang: "URI Protocol", returnType: "URI Redirect" },
+        location: { code: "fsa://location/get?callback_url=fsahr://loc", lang: "URI Protocol", returnType: "URI Redirect" },
+        biometrics: { code: "fsa://auth/biometric?callback_url=fsahr://bio", lang: "URI Protocol", returnType: "URI Redirect" },
+        storage: { code: "fsa://storage/read?key=attendance_cache&callback_url=fsahr://cb", lang: "URI Protocol", returnType: "URI Callback" },
+        notification: { code: "fsa://notify?msg=Clock-in+Confirmed", lang: "URI Protocol", returnType: "URI Redirect" },
+      };
+      return map[capKey] || { code: `fsa://${capKey}?callback_url=fsahr://cb`, lang: "URI Protocol", returnType: "URL Handoff" };
+    }
+    case "webview":
+    default: {
+      return {
+        code: defaultJs || `await FSASuperApp.${capKey}()`,
+        lang: "JS / TS",
+        returnType: "Promise<any>",
+      };
+    }
+  }
+}
+
 // Safe fallback baseline if backend service is temporarily offline
 const FALLBACK_CAPABILITIES: CapabilityItem[] = [
   {
     id: "camera",
     key: "camera",
-    name: "Camera & QR Scanner",
-    description: "Capture photos, scan QR codes, and upload identity/claim documents.",
+    name: "Camera & Kiosk Scanner",
+    description: "Capture photos, scan office attendance kiosk QR codes, and scan staff identity credentials.",
     category: "HARDWARE",
     requiredPermissions: ["android.permission.CAMERA", "NSCameraUsageDescription"],
     platform: "Cross-Platform",
@@ -25,7 +85,7 @@ const FALLBACK_CAPABILITIES: CapabilityItem[] = [
     id: "location",
     key: "location",
     name: "High-Precision GPS",
-    description: "Access GPS coordinates for local services, branch locator, and fraud prevention.",
+    description: "Access GPS coordinates for office building geofencing and branch proximity verification.",
     category: "DEVICE",
     requiredPermissions: ["android.permission.ACCESS_FINE_LOCATION", "NSLocationWhenInUseUsageDescription"],
     platform: "Cross-Platform",
@@ -37,7 +97,7 @@ const FALLBACK_CAPABILITIES: CapabilityItem[] = [
     id: "biometrics",
     key: "biometrics",
     name: "Biometric & FaceID Signing",
-    description: "Hardware FaceID, TouchID, and Android BiometricPrompt identity verification.",
+    description: "Hardware FaceID, TouchID, and Android BiometricPrompt for high-security approvals and leave requests.",
     category: "SECURITY",
     requiredPermissions: ["android.permission.USE_BIOMETRIC", "NSFaceIDUsageDescription"],
     platform: "Cross-Platform",
@@ -46,34 +106,10 @@ const FALLBACK_CAPABILITIES: CapabilityItem[] = [
     status: "Active",
   },
   {
-    id: "payment",
-    key: "payment",
-    name: "In-App KHQR & Wallet",
-    description: "National Bakong KHQR dynamic and static merchant settlement bridge.",
-    category: "FINANCIAL",
-    requiredPermissions: [],
-    platform: "Cross-Platform",
-    implementationType: "CUSTOM_IN_APP",
-    jsBridgeMethod: "FSASuperApp.requestPayment()",
-    status: "Active",
-  },
-  {
-    id: "microphone",
-    key: "microphone",
-    name: "Audio & Voice Input",
-    description: "Access device microphone to record audio notes or voice features.",
-    category: "HARDWARE",
-    requiredPermissions: ["android.permission.RECORD_AUDIO", "NSMicrophoneUsageDescription"],
-    platform: "Cross-Platform",
-    implementationType: "OS_SYSTEM_API",
-    jsBridgeMethod: "FSASuperApp.recordAudio()",
-    status: "Active",
-  },
-  {
     id: "storage",
     key: "storage",
     name: "Encrypted Hardware Vault",
-    description: "Hardware-backed encrypted key-value storage (Android KeyStore & iOS Keychain).",
+    description: "Hardware-backed encrypted key-value storage (Android KeyStore & iOS Keychain) for offline attendance punch logs and leave quotas.",
     category: "STORAGE",
     requiredPermissions: [],
     platform: "Cross-Platform",
@@ -85,7 +121,7 @@ const FALLBACK_CAPABILITIES: CapabilityItem[] = [
     id: "notification",
     key: "notification",
     name: "Transactional Push Alerts",
-    description: "High-priority transactional notification dispatch and system alert triggers.",
+    description: "High-priority push alert dispatch triggered when office face recognition scanner or Telegram bot logs clock-in.",
     category: "DEVICE",
     requiredPermissions: ["android.permission.POST_NOTIFICATIONS"],
     platform: "Cross-Platform",
@@ -95,12 +131,22 @@ const FALLBACK_CAPABILITIES: CapabilityItem[] = [
   },
 ];
 
-export function Section05Capabilities() {
+export function Section05Capabilities({
+  activeMethodTab = "webview",
+  setActiveMethodTab,
+}: Section05CapabilitiesProps) {
   const [capabilities, setCapabilities] = useState<CapabilityItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [isLiveSource, setIsLiveSource] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const copyCode = (code: string, key: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
 
   const fetchRealCapabilities = async () => {
     try {
@@ -158,7 +204,7 @@ export function Section05Capabilities() {
       </p>
 
       {/* Core Gatekeeper Banner */}
-      <div className="p-5 rounded-xl border-l-4 border-brand-500 bg-brand-50/70 dark:bg-brand-950/30 text-sm text-brand-900 dark:text-brand-200 space-y-2">
+      <div id="cap-gatekeeper" className="p-5 rounded-xl border-l-4 border-brand-500 bg-brand-50/70 dark:bg-brand-950/30 text-sm text-brand-900 dark:text-brand-200 space-y-2 scroll-mt-28">
         <span className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-xs block">
           Core Platform Principle: Capability Gatekeeper
         </span>
@@ -168,7 +214,7 @@ export function Section05Capabilities() {
       </div>
 
       {/* Strategy to Maximize App Store & Google Play Approval */}
-      <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-4">
+      <div id="cap-approval" className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-4 scroll-mt-28">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <h5 className="font-bold text-slate-900 dark:text-white text-sm uppercase tracking-wider flex items-center gap-2">
             <ShieldIcon />
@@ -289,7 +335,7 @@ export function Section05Capabilities() {
       </div>
 
       {/* ─── LIVE REAL SUPERAPP CAPABILITIES CATALOG ─── */}
-      <div className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 space-y-5">
+      <div id="cap-directory" className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 space-y-5 scroll-mt-28">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2.5">
@@ -306,7 +352,7 @@ export function Section05Capabilities() {
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Real device bridge features and JS SDK methods exposed by the SuperApp host container.
+              Real device bridge features and SDK methods exposed by the SuperApp host container.
             </p>
           </div>
 
@@ -380,6 +426,7 @@ export function Section05Capabilities() {
             {filteredCapabilities.map((cap) => {
               const visual = getCapabilityVisual(cap.key, cap.category);
               const isApproved = cap.status === "Active";
+              const syntax = getCapabilitySyntax(cap.key, activeMethodTab, cap.jsBridgeMethod);
 
               return (
                 <div
@@ -426,13 +473,28 @@ export function Section05Capabilities() {
                   </div>
 
                   {/* Bridge method signature & permissions */}
-                  <div className="pt-2 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between gap-2 text-[11px] font-mono">
-                    <span className="text-slate-400 dark:text-slate-500 truncate" title={cap.jsBridgeMethod || "JS Bridge API"}>
-                      {cap.jsBridgeMethod || `FSASuperApp.${cap.key}()`}
-                    </span>
-                    <span className="text-[10px] font-semibold text-slate-500 shrink-0 font-sans">
-                      {cap.implementationType === "CUSTOM_IN_APP" ? "In-App Feature" : "Native Bridge"}
-                    </span>
+                  <div className="pt-2.5 border-t border-slate-100 dark:border-slate-700/60 space-y-1.5">
+                    <div className="flex items-center justify-between gap-2 text-[10px] text-slate-400">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                          Invocation ({syntax.lang})
+                        </span>
+                        <span className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-700/70 font-mono text-[9px] text-slate-600 dark:text-slate-300">
+                          {syntax.returnType}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => copyCode(syntax.code, cap.key)}
+                        className="text-[10px] text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 font-mono flex items-center gap-1 transition"
+                        title="Copy method invocation"
+                      >
+                        <span>{copiedKey === cap.key ? "Copied ✓" : "📋 Copy"}</span>
+                      </button>
+                    </div>
+                    <div className="p-2 bg-slate-950 text-slate-200 font-mono text-[11px] rounded-lg overflow-x-auto no-scrollbar border border-slate-800">
+                      <code>{syntax.code}</code>
+                    </div>
                   </div>
                 </div>
               );

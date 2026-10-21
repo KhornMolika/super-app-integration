@@ -1,4 +1,4 @@
-﻿import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as YAML from 'yaml';
 import * as fs from 'fs';
@@ -273,20 +273,7 @@ export class GitHubProvider implements GitProvider {
       this.logger.warn(`GitHub getCommits API error: ${err.message}`);
     }
 
-    const mockSha = crypto
-      .createHash('sha1')
-      .update(parsed.fullName + (ref || 'main'))
-      .digest('hex');
-    return [
-      {
-        sha: mockSha,
-        shortSha: mockSha.substring(0, 7),
-        message: `Release commit for ${ref || 'main'}`,
-        authorName: parsed.owner || 'Developer',
-        authorEmail: 'dev@superapp.internal',
-        date: new Date().toISOString(),
-      },
-    ];
+    return [];
   }
 
   async getFileContent(
@@ -368,15 +355,8 @@ export class GitHubProvider implements GitProvider {
       // Ignore
     }
 
-    // 4. Default Mock Pubspec if it's pubspec.yaml to avoid blocking validation during rate limits
-    if (normalizedFilePath.endsWith('pubspec.yaml')) {
-      const inferredPkg = parsed.repo.toLowerCase().replace(/[^a-z0-9_]/g, '_');
-      const ver = ref?.replace(/^v/, '') || '1.0.0';
-      return `name: ${inferredPkg}\ndescription: Flutter MiniApp ${parsed.repo}\nversion: ${ver}\nenvironment:\n  sdk: ">=3.0.0 <4.0.0"\n  flutter: ">=3.10.0"\ndependencies:\n  flutter:\n    sdk: flutter\n`;
-    }
-
     throw new Error(
-      `File '${filePath}' could not be fetched from repository '${parsed.fullName}' (ref: ${ref || 'default'}).`,
+      `File '${filePath}' could not be fetched from repository '${parsed.fullName}' (ref: ${ref || 'default'}). Please verify repository credentials and branch/tag availability.`,
     );
   }
 

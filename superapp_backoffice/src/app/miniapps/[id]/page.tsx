@@ -36,6 +36,7 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
 
   const [formData, setFormData] = useState<Partial<CreateMiniAppDto & { id?: string; status: string; validationErrors?: Record<string, string>; validationStatus?: string; validationStages?: any; validationReport?: any; buildStages?: any; buildStatus?: string; buildError?: string; issues?: any[]; pendingRevision?: any; activeTestVersion?: string; currentReleaseVersion?: string; draftVersion?: string; version?: string; versionHistory?: any[]; integrationConfig?: any }>>({
     name: '',
+    slug: '',
     appId: '',
     category: 'Insurance',
     shortDescription: '',

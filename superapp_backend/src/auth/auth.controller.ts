@@ -3,13 +3,17 @@ import {
   Post,
   Body,
   Get,
+  Delete,
+  Param,
   Req,
   Res,
+  UseGuards,
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -112,5 +116,44 @@ export class AuthController {
   @Get('sso/providers')
   getSsoProviders() {
     return this.authService.getSsoProviders();
+  }
+
+  @Get('developer-tokens')
+  @UseGuards(JwtAuthGuard)
+  async listDeveloperTokens(@Req() req: Request) {
+    const user = (req as any).user;
+    const userId = user?.sub || user?.id;
+    if (!userId) throw new UnauthorizedException();
+    const tokens = await this.authService.listDeveloperTokens(userId);
+    return { success: true, tokens };
+  }
+
+  @Post('developer-tokens')
+  @UseGuards(JwtAuthGuard)
+  async createDeveloperToken(
+    @Req() req: Request,
+    @Body() body: { name: string; expirationDays?: number; scopes?: string[] },
+  ) {
+    const user = (req as any).user;
+    const userId = user?.sub || user?.id;
+    if (!userId) throw new UnauthorizedException();
+    return this.authService.createDeveloperToken(
+      userId,
+      body.name,
+      body.expirationDays,
+      body.scopes,
+    );
+  }
+
+  @Delete('developer-tokens/:id')
+  @UseGuards(JwtAuthGuard)
+  async revokeDeveloperToken(
+    @Req() req: Request,
+    @Param('id') tokenId: string,
+  ) {
+    const user = (req as any).user;
+    const userId = user?.sub || user?.id;
+    if (!userId) throw new UnauthorizedException();
+    return this.authService.revokeDeveloperToken(userId, tokenId);
   }
 }

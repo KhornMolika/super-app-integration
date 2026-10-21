@@ -1,4 +1,4 @@
-﻿import {
+import {
   Injectable,
   Logger,
   ServiceUnavailableException,
@@ -87,16 +87,39 @@ export class NexusIntegrationService {
       const repos = (await res.json()) as Array<{ name: string; format: string; type: string }>;
       const existingNames = new Set(repos.map((r) => r.name));
 
-      const requiredHostedRaw = ['raw-sdk-artifacts', 'cocoapods-specs', 'apk-releases', 'apk-test-builds', 'superapp-artifacts'];
+      const rawRepo = this.configService.get<string>('NEXUS_RAW_SDK_REPO') || 'raw-sdk-artifacts';
+      const specsRepo = this.configService.get<string>('NEXUS_COCOAPODS_SPECS_REPO') || 'cocoapods-specs';
+      const requiredHostedRaw = [rawRepo, specsRepo, 'apk-releases', 'apk-test-builds', 'superapp-artifacts'];
       for (const repoName of requiredHostedRaw) {
         if (!existingNames.has(repoName)) {
           await this.createHostedRawRepository(baseUrl, repoName, authHeader);
         }
       }
 
-      if (!existingNames.has('maven-sdk-hosted')) {
-        await this.createHostedMavenRepository(baseUrl, 'maven-sdk-hosted', authHeader);
+      const mavenRepo = this.configService.get<string>('NEXUS_MAVEN_SDK_REPO') || 'maven-sdk-hosted';
+      if (!existingNames.has(mavenRepo)) {
+        await this.createHostedMavenRepository(baseUrl, mavenRepo, authHeader);
       }
+
+      const npmRepo = this.configService.get<string>('NEXUS_NPM_SDK_REPO') || 'npm-hosted';
+      if (!existingNames.has(npmRepo)) {
+        await this.createHostedNpmRepository(baseUrl, npmRepo, authHeader);
+      }
+    } catch (_) {}
+  }
+
+  private async createHostedNpmRepository(baseUrl: string, name: string, headers: Record<string, string>): Promise<void> {
+    try {
+      await fetch(`${baseUrl}/service/rest/v1/repositories/npm/hosted`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          online: true,
+          storage: { blobStoreName: 'default', strictContentTypeValidation: false, writePolicy: 'ALLOW' },
+        }),
+      });
+      this.logger.log(`Created Nexus repository "${name}" (npm/hosted).`);
     } catch (_) {}
   }
 

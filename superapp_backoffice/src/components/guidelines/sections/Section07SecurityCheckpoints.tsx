@@ -2,7 +2,7 @@
 
 import React from "react";
 
-export function Section06SecurityCheckpoints() {
+export function Section07SecurityCheckpoints() {
   const scanners = [
     {
       name: "Gitleaks",

@@ -129,21 +129,24 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
               {allErrors.name && <p className="mt-1.5 text-sm text-rose-600 font-medium">{allErrors.name}</p>}
             </div>
             <div>
-              <Label>MiniApp ID (Auto-generated) <span className="text-rose-500">*</span></Label>
+              <Label>MiniApp Slug <span className="text-slate-400 font-normal text-xs">(URL &amp; Catalog Key)</span> <span className="text-rose-500">*</span></Label>
               <div className="relative flex items-center">
                 <Input 
                   disabled
                   readOnly 
-                  name="appId" 
-                  value={formData.appId || ''} 
-                  placeholder="miniapp_core_banking_8f32a1" 
-                  className={`font-mono text-base !bg-slate-200/70 dark:!bg-slate-800/90 !border-slate-300/80 dark:!border-slate-700 !text-slate-500 dark:!text-slate-400 placeholder:!text-slate-400 dark:placeholder:!text-slate-500 cursor-not-allowed select-all pr-10 ${allErrors.appId ? '!border-rose-500 ring-1 ring-rose-500 bg-rose-50/50' : ''}`}
+                  name="slug" 
+                  value={formData.slug || ''} 
+                  placeholder="e.g. staff-portal-attendance" 
+                  className={`font-mono text-base !bg-slate-200/70 dark:!bg-slate-800/90 !border-slate-300/80 dark:!border-slate-700 !text-slate-500 dark:!text-slate-400 placeholder:!text-slate-400 dark:placeholder:!text-slate-500 cursor-not-allowed select-all pr-10 ${allErrors.slug ? '!border-rose-500 ring-1 ring-rose-500 bg-rose-50/50' : ''}`}
                 />
                 <div className="absolute right-3.5 pointer-events-none flex items-center text-slate-400 dark:text-slate-500">
                   <LockIcon className="w-4 h-4" />
                 </div>
               </div>
-              {allErrors.appId && <p className="mt-1.5 text-sm text-rose-600 font-medium">{allErrors.appId}</p>}
+              <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                Binary MiniApp ID (<code>app_id</code>) is auto-detected from your package in the Integration step.
+              </p>
+              {allErrors.slug && <p className="mt-1.5 text-sm text-rose-600 font-medium">{allErrors.slug}</p>}
             </div>
             <div>
               <div className="flex items-center justify-between mb-1">

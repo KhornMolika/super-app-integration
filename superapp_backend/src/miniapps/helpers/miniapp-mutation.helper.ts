@@ -1,4 +1,4 @@
-﻿import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
@@ -48,10 +48,14 @@ export class MiniappMutationHelper {
     data.pendingRevision = null;
 
     // Resolve & normalize organization name and short code (e.g. FTC, IRC, etc.)
-    const orgInfo = resolveOrganizationDetails(data.organization || data.category);
+    const orgInfo = resolveOrganizationDetails(data.organization || (data as any).category);
     data.organization = orgInfo.name;
     data.organizationCode = orgInfo.code;
-    data.category = orgInfo.name;
+
+    // Ensure slug is populated
+    if (!data.slug && data.name) {
+      data.slug = data.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    }
 
     // Automatically upload base64 image data to MinIO object storage on submission
     const isBase64Logo =
@@ -275,6 +279,7 @@ export class MiniappMutationHelper {
       if (!hasSecurityImpact) {
         // SMART FAST-TRACK: Only General Metadata / Contact / Legal info modified
         if (data.name !== undefined) existing.name = data.name;
+        if (data.slug !== undefined) existing.slug = data.slug;
         if (data.shortDescription !== undefined)
           existing.shortDescription = data.shortDescription;
         if (data.fullDescription !== undefined)

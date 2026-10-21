@@ -7,7 +7,7 @@
 #        NEXUS_ADMIN_PASSWORD (required)
 set -euo pipefail
 
-NEXUS_BASE_URL="${NEXUS_BASE_URL:-http://localhost:8081}"
+NEXUS_BASE_URL="${NEXUS_BASE_URL:-https://app.fintechcenterfsa.com/nexus}"
 NEXUS_BASE_URL="${NEXUS_BASE_URL%/}"
 NEXUS_ADMIN_USER="${NEXUS_ADMIN_USER:-admin}"
 : "${NEXUS_ADMIN_PASSWORD:?NEXUS_ADMIN_PASSWORD is required}"
@@ -63,5 +63,6 @@ create_repo cocoapods-specs   raw ALLOW "$RAW_EXTRA"
 create_repo apk-test-builds   raw ALLOW "$RAW_EXTRA"
 create_repo apk-releases      raw ALLOW "$RAW_EXTRA"
 create_repo maven-sdk-hosted  maven ALLOW "$MAVEN_EXTRA"
+create_repo npm-hosted        npm ALLOW ""
 
 echo "Done."

@@ -1,6 +1,8 @@
-﻿import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as fs from 'fs';
+import * as path from 'path';
 import { AuditLog } from './entities/audit-log.entity';
 
 @Injectable()
@@ -14,9 +16,33 @@ export class AuditService implements OnApplicationBootstrap {
     await this.seedInitialLogs();
   }
 
+  private resolveAppVersion(): string {
+    if (process.env.APP_VERSION) {
+      const v = process.env.APP_VERSION.trim();
+      return v.startsWith('v') ? v : `v${v}`;
+    }
+
+    try {
+      const pkgPath = path.resolve(process.cwd(), 'package.json');
+      if (fs.existsSync(pkgPath)) {
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+        if (pkg.version) {
+          return pkg.version.startsWith('v') ? pkg.version : `v${pkg.version}`;
+        }
+      }
+    } catch (_) {
+      // fallback
+    }
+
+    return 'v1.0.0';
+  }
+
   private async seedInitialLogs() {
     const count = await this.auditLogRepository.count();
     if (count > 0) return;
+
+    const version = this.resolveAppVersion();
+    const cleanVersion = version.replace(/^v/, '');
 
     const initial = [
       {
@@ -25,12 +51,12 @@ export class AuditService implements OnApplicationBootstrap {
         resourceType: 'PLATFORM',
         resourceId: 'super-app-core',
         metadata: {
-          event: 'SuperApp Platform Ecosystem Initialized',
-          version: 'v2.4.0',
-          environment: 'production',
+          event: 'FSA SuperApp Platform Ecosystem Initialized',
+          version,
+          environment: process.env.NODE_ENV || 'production',
         },
         ipAddress: '127.0.0.1',
-        userAgent: 'SuperApp/2.4.0 Kernel',
+        userAgent: `SuperApp/${cleanVersion} Kernel`,
       },
       {
         actorId: 'admin',
