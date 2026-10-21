@@ -16,7 +16,7 @@ export function Section02GeneralRequirements() {
             <code className="font-mono text-brand-600 dark:text-brand-400">miniapp_</code>.
           </p>
           <div className="bg-slate-900 text-slate-200 px-3 py-2 rounded-lg font-mono text-sm">
-            miniapp_banking_8f32a1
+            miniapp_hr_attendance_8f32a1
           </div>
           <p className="text-sm text-slate-500 mt-2">
             Allowed: lowercase letters, digits, and underscores.
