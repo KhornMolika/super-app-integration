@@ -1,10 +1,11 @@
-﻿import { Injectable, OnApplicationBootstrap, Logger } from '@nestjs/common';
+import { Injectable, OnApplicationBootstrap, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { Role } from './entities/role.entity';
 import { Permission } from './entities/permission.entity';
+import { hashPassword } from '../common/utils/password.util';
 
 @Injectable()
 export class SeederService implements OnApplicationBootstrap {
@@ -23,7 +24,7 @@ export class SeederService implements OnApplicationBootstrap {
   }
 
   async seed() {
-    // Standardized 25 platform permissions
+    // 1. Standardized platform permissions (25 permissions)
     const allPerms = [
       'miniapp:create',
       'miniapp:read',
@@ -62,16 +63,16 @@ export class SeederService implements OnApplicationBootstrap {
       savedPerms.push(perm);
     }
 
-    // Role definitions (Renamed MINI_APP_DEVELOPER -> MINI_APP_DEVELOPER)
+    // 2. Streamlined 3 Enterprise Roles (SUPER_ADMIN, ADMIN, MINI_APP_DEVELOPER)
     const rolesConfig: Array<{ name: string; description: string; perms: string[] }> = [
       {
         name: 'SUPER_ADMIN',
-        description: 'Super Administrator with unrestricted platform-wide access',
+        description: 'Super Administrator with unrestricted platform-wide governance and access control',
         perms: allPerms,
       },
       {
         name: 'ADMIN',
-        description: 'Platform Administrator for review, approvals, and user auditing',
+        description: 'Platform Administrator for review, audit, approval workflow, and tenant supervision',
         perms: [
           'miniapp:create',
           'miniapp:read',
@@ -100,35 +101,7 @@ export class SeederService implements OnApplicationBootstrap {
       },
       {
         name: 'MINI_APP_DEVELOPER',
-        description: 'MiniApp Developer for creating, testing, and submitting MiniApps',
-        perms: [
-          'miniapp:create',
-          'miniapp:read',
-          'miniapp:update',
-          'miniapp:submit',
-          'permission_proposal:read',
-          'permission:read',
-          'super_app:read',
-          'organization:read',
-        ],
-      },
-      {
-        name: 'QA_TESTER',
-        description: 'QA Test Engineer for end-to-end MiniApp testing, sandbox verification, and submissions',
-        perms: [
-          'miniapp:create',
-          'miniapp:read',
-          'miniapp:update',
-          'miniapp:submit',
-          'permission_proposal:read',
-          'permission:read',
-          'super_app:read',
-          'organization:read',
-        ],
-      },
-      {
-        name: 'DEVELOPER',
-        description: 'Developer with sandbox and documentation read access',
+        description: 'MiniApp Developer for building, testing, verifying, and submitting MiniApps',
         perms: [
           'miniapp:create',
           'miniapp:read',
@@ -164,108 +137,158 @@ export class SeederService implements OnApplicationBootstrap {
       rolesMap.set(rConfig.name, role);
     }
 
-    // Migrate any legacy MINI_APP_DEVELOPER role to MINI_APP_DEVELOPER
-    const legacyManagerRole = await this.roleRepository.findOne({
-      where: { name: 'MINI_APP_DEVELOPER' },
-      relations: { users: true },
-    });
-    if (legacyManagerRole) {
-      const devRole = rolesMap.get('MINI_APP_DEVELOPER')!;
-      for (const u of legacyManagerRole.users || []) {
-        u.roles = (u.roles || []).filter((r) => r.name !== 'MINI_APP_DEVELOPER').concat(devRole);
-        await this.userRepository.save(u);
-      }
-      await this.roleRepository.remove(legacyManagerRole).catch(() => {});
-      this.logger.log('Migrated legacy MINI_APP_DEVELOPER role to MINI_APP_DEVELOPER');
-    }
-
     const superAdminRole = rolesMap.get('SUPER_ADMIN')!;
     const adminRole = rolesMap.get('ADMIN')!;
     const devRole = rolesMap.get('MINI_APP_DEVELOPER')!;
-    const qaRole = rolesMap.get('QA_TESTER') || devRole;
 
-    const superAdminEmail = this.configService.get<string>('SUPERADMIN_EMAIL', 'superadmin@superapp.gov.kh');
-    const adminEmail = this.configService.get<string>('ADMIN_EMAIL', 'admin@superapp.gov.kh');
-    const devEmail = this.configService.get<string>('DEV_EMAIL', 'ma-developer@superapp.gov.kh');
-
-    // Migrate any legacy developer@superapp.gov.kh user account to ma-developer@superapp.gov.kh
-    try {
-      const legacyDev = await this.userRepository.findOne({ where: { email: 'developer@superapp.gov.kh' } });
-      if (legacyDev) {
-        legacyDev.email = 'ma-developer@superapp.gov.kh';
-        await this.userRepository.save(legacyDev);
-        this.logger.log('Migrated legacy developer@superapp.gov.kh account to ma-developer@superapp.gov.kh');
+    // 3. Migrate and clean up any legacy redundant roles (QA_TESTER, DEVELOPER)
+    const legacyRoleNames = ['QA_TESTER', 'DEVELOPER'];
+    for (const legacyName of legacyRoleNames) {
+      try {
+        const legacyRole = await this.roleRepository.findOne({
+          where: { name: legacyName },
+          relations: { users: true },
+        });
+        if (legacyRole) {
+          for (const u of legacyRole.users || []) {
+            u.roles = (u.roles || []).filter((r) => r.name !== legacyName).concat(devRole);
+            await this.userRepository.save(u);
+          }
+          await this.roleRepository.remove(legacyRole).catch(() => {});
+          this.logger.log(`Migrated users from redundant ${legacyName} role to MINI_APP_DEVELOPER and removed role`);
+        }
+      } catch (err: any) {
+        this.logger.warn(`Could not clean up legacy role ${legacyName}: ${err?.message}`);
       }
-    } catch (_) {}
+    }
 
-    // Standard test accounts for QA
-    const defaultUsers = [
-      { email: superAdminEmail, name: 'Super Admin', role: superAdminRole },
-      { email: adminEmail, name: 'Admin User', role: adminRole },
-      { email: devEmail, name: 'MiniApp Developer', role: devRole },
-      { email: 'superadmin@superapp.gov.kh', name: 'Super Admin', role: superAdminRole },
-      { email: 'admin@superapp.gov.kh', name: 'Admin User', role: adminRole },
-      { email: 'ma-developer@superapp.gov.kh', name: 'MiniApp Developer', role: devRole },
-      { email: 'qa@superapp.gov.kh', name: 'QA Test Engineer', role: qaRole },
-      { email: 'dev@superapp.gov.kh', name: 'MiniApp Developer', role: devRole },
+    // 4. Default Seed Password: Password123!@#
+    const defaultPassword = this.configService.get<string>('SUPERADMIN_PASSWORD', 'Password123!@#');
+    const defaultPasswordHash = await hashPassword(defaultPassword);
+
+    // 5. Official Production & Governance Accounts
+    const officialAccounts = [
+      {
+        email: 'molikakhorn71@gmail.com',
+        name: 'Molika Khorn',
+        role: superAdminRole,
+      },
+      {
+        email: 'thavorac.chun@gmail.com',
+        name: 'Thavorac Chun',
+        role: superAdminRole,
+      },
+      {
+        email: 'sea.hutmonineat@gmail.com',
+        name: 'Sea Hutmonineat',
+        role: superAdminRole,
+      },
+      {
+        email: 'lymoly1122@gmail.com',
+        name: 'Moly Ly',
+        role: adminRole,
+      },
     ];
 
-    for (const u of defaultUsers) {
-      if (!u.email) continue;
-      const existing = await this.userRepository.findOne({
-        where: { email: u.email.toLowerCase() },
+    let primarySuperAdmin: User | null = null;
+
+    for (const acc of officialAccounts) {
+      const email = acc.email.toLowerCase().trim();
+      let user = await this.userRepository.findOne({
+        where: { email },
         relations: { roles: true },
       });
-      if (!existing) {
-        const newUser = this.userRepository.create({
-          email: u.email.toLowerCase(),
-          name: u.name,
-          roles: [u.role],
+
+      if (!user) {
+        user = this.userRepository.create({
+          email,
+          name: acc.name,
+          roles: [acc.role],
           isActive: true,
+          status: 'ACTIVE',
+          passwordHash: defaultPasswordHash,
         });
-        await this.userRepository.save(newUser);
-      } else if (!existing.roles || existing.roles.length === 0) {
-        existing.roles = [u.role];
-        await this.userRepository.save(existing);
+        user = await this.userRepository.save(user);
+        this.logger.log(`Created official account: ${email} (${acc.role.name})`);
+      } else {
+        let changed = false;
+        if (!user.roles || !user.roles.some((r) => r.name === acc.role.name)) {
+          user.roles = [acc.role];
+          changed = true;
+        }
+        if (!user.passwordHash) {
+          user.passwordHash = defaultPasswordHash;
+          changed = true;
+        }
+        if (user.status !== 'ACTIVE') {
+          user.status = 'ACTIVE';
+          changed = true;
+        }
+        if (user.isActive !== true) {
+          user.isActive = true;
+          changed = true;
+        }
+        if (user.name !== acc.name) {
+          user.name = acc.name;
+          changed = true;
+        }
+        if (changed) {
+          user = await this.userRepository.save(user);
+          this.logger.log(`Synchronized credentials and role for official account: ${email}`);
+        }
+      }
+
+      if (email === 'molikakhorn71@gmail.com') {
+        primarySuperAdmin = user;
       }
     }
 
-    // Purge any legacy accounts with @example.com
+    // 6. Purge ALL Mock Accounts (@superapp.gov.kh and @example.com)
     try {
-      const exampleUsers = await this.userRepository
+      const mockUsers = await this.userRepository
         .createQueryBuilder('user')
-        .where('user.email LIKE :pattern', { pattern: '%@example.com' })
+        .where('user.email LIKE :govPattern OR user.email LIKE :examplePattern', {
+          govPattern: '%@superapp.gov.kh',
+          examplePattern: '%@example.com',
+        })
         .getMany();
 
-      if (exampleUsers.length > 0) {
-        const exampleUserIds = exampleUsers.map((u) => u.id);
-        const officialDev = await this.userRepository.findOne({
-          where: { email: 'ma-developer@superapp.gov.kh' },
-        });
+      if (mockUsers.length > 0 && primarySuperAdmin) {
+        const mockUserIds = mockUsers.map((u) => u.id);
 
-        if (officialDev && exampleUserIds.length > 0) {
-          // Reassign any foreign key dependencies to official developer account
-          await this.userRepository.query(
-            `UPDATE "mini_apps" SET "ownerId" = $1 WHERE "ownerId" = ANY($2)`,
-            [officialDev.id, exampleUserIds],
-          );
-          await this.userRepository.query(
-            `UPDATE "permission_proposals" SET "requestedById" = $1 WHERE "requestedById" = ANY($2)`,
-            [officialDev.id, exampleUserIds],
-          ).catch(() => {});
-          await this.userRepository.query(
-            `UPDATE "notification" SET "userId" = $1 WHERE "userId" = ANY($2)`,
-            [officialDev.id, exampleUserIds],
-          ).catch(() => {});
-        }
+        // Reassign all foreign keys to the primary Super Admin so database integrity is preserved
+        await this.userRepository.query(
+          `UPDATE "mini_apps" SET "ownerId" = $1 WHERE "ownerId" = ANY($2)`,
+          [primarySuperAdmin.id, mockUserIds],
+        ).catch(() => {});
 
-        await this.userRepository.remove(exampleUsers);
-        this.logger.log(`Purged ${exampleUsers.length} legacy @example.com user account(s) from database`);
+        await this.userRepository.query(
+          `UPDATE "permission_proposals" SET "requestedById" = $1 WHERE "requestedById" = ANY($2)`,
+          [primarySuperAdmin.id, mockUserIds],
+        ).catch(() => {});
+
+        await this.userRepository.query(
+          `UPDATE "notification" SET "userId" = $1 WHERE "userId" = ANY($2)`,
+          [primarySuperAdmin.id, mockUserIds],
+        ).catch(() => {});
+
+        await this.userRepository.query(
+          `UPDATE "developer_tokens" SET "userId" = $1 WHERE "userId" = ANY($2)`,
+          [primarySuperAdmin.id, mockUserIds],
+        ).catch(() => {});
+
+        await this.userRepository.query(
+          `DELETE FROM "user_roles" WHERE "userId" = ANY($1)`,
+          [mockUserIds],
+        ).catch(() => {});
+
+        await this.userRepository.remove(mockUsers);
+        this.logger.log(`Purged ${mockUsers.length} legacy mock account(s) (@superapp.gov.kh / @example.com)`);
       }
     } catch (err: any) {
-      this.logger.warn(`Could not purge @example.com users: ${err?.message}`);
+      this.logger.warn(`Could not purge mock users: ${err?.message}`);
     }
 
-    this.logger.log('Database seeded with standard permissions, roles, and official accounts');
+    this.logger.log('Database successfully seeded with official Super Admin & Admin accounts. Password initialized to Password123!@#');
   }
 }

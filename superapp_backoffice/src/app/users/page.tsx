@@ -901,19 +901,41 @@ export default function UsersPage() {
                             </td>
 
                             <td className="px-6 py-4">
-                              <span
-                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold ${
-                                  user.isActive !== false
-                                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20'
-                                    : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
-                                }`}
-                              >
-                                <span className={`w-1.5 h-1.5 rounded-full ${user.isActive !== false ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
-                                {user.isActive !== false ? 'Active' : 'Suspended'}
-                              </span>
+                              {user.status === 'PENDING_APPROVAL' || user.isActive === false || !user.roles || user.roles.length === 0 ? (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                  Pending Approval
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                  Active
+                                </span>
+                              )}
                             </td>
 
                             <td className="px-6 py-4 text-right space-x-1.5 whitespace-nowrap">
+                              {(user.status === 'PENDING_APPROVAL' || user.isActive === false || !user.roles || user.roles.length === 0) && can('user:manage') && (
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    try {
+                                      await usersApi.approve(user.id, 'MINI_APP_DEVELOPER');
+                                      toast.success(`${user.name} approved as MiniApp Developer!`);
+                                      fetchUsers();
+                                    } catch (err: any) {
+                                      toast.error(err.message || 'Failed to approve user');
+                                    }
+                                  }}
+                                  className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-500/30 font-semibold text-xs px-2.5 py-1.5 rounded-lg transition-colors"
+                                  title="Approve user and assign MiniApp Developer role"
+                                >
+                                  <svg className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                  Approve
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 onClick={() => handleOpenEditUser(user)}

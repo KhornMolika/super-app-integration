@@ -7,6 +7,7 @@ export interface User {
   telegramChatId?: string | null;
   telegramUsername?: string | null;
   isActive?: boolean;
+  status?: string;
   roles: { id: string; name: string }[];
   createdAt?: string;
   updatedAt?: string;
@@ -68,5 +69,11 @@ export const usersApi = {
   delete: (id: string) =>
     apiClient<{ success: boolean; message: string }>(`/api/users/${id}`, {
       method: 'DELETE',
+    }),
+
+  approve: (id: string, roleName = 'MINI_APP_DEVELOPER') =>
+    apiClient<User>(`/api/users/${id}/approve`, {
+      method: 'POST',
+      body: { roleName },
     }),
 };

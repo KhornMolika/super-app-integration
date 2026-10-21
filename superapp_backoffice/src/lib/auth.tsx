@@ -1,9 +1,10 @@
-﻿"use client";
+"use client";
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { authApi } from '@/api/auth.api';
+import { usersApi } from '@/api/users.api';
 
-export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'MINI_APP_DEVELOPER' | 'QA_TESTER';
+export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'MINI_APP_DEVELOPER';
 
 const ROLE_PERMISSIONS: Record<Role, string[]> = {
   SUPER_ADMIN: [
@@ -35,13 +36,6 @@ const ROLE_PERMISSIONS: Record<Role, string[]> = {
     'super_app:read',
     'organization:read'
   ],
-  QA_TESTER: [
-    'miniapp:create', 'miniapp:read', 'miniapp:update', 'miniapp:submit',
-    'permission_proposal:read',
-    'permission:read',
-    'super_app:read',
-    'organization:read'
-  ]
 };
 
 export interface AuthUser {
@@ -49,112 +43,92 @@ export interface AuthUser {
   name: string;
   email: string;
   role: Role;
+  roles?: string[];
   permissions?: string[];
+  status?: string;
+  isActive?: boolean;
 }
-
-export const ROLE_USER_PROFILES: Record<Role, { name: string; email: string }> = {
-  SUPER_ADMIN: {
-    name: 'Super Admin',
-    email: 'superadmin@superapp.gov.kh',
-  },
-  ADMIN: {
-    name: 'Admin User',
-    email: 'admin@superapp.gov.kh',
-  },
-  MINI_APP_DEVELOPER: {
-    name: 'MiniApp Developer',
-    email: 'ma-developer@superapp.gov.kh',
-  },
-  QA_TESTER: {
-    name: 'QA Test Engineer',
-    email: 'qa@superapp.gov.kh',
-  },
-};
 
 interface AuthContextType {
   role: Role;
-  user: AuthUser;
+  user: AuthUser | null;
   isAuthenticated: boolean;
-  setRole: (role: Role) => Promise<void>;
-  loginWithEmail: (email: string, password?: string) => Promise<{ success: boolean; error?: string }>;
+  isLoading: boolean;
+  loginWithEmail: (email: string, password?: string) => Promise<{ success: boolean; error?: string; pendingApproval?: boolean }>;
   can: (permission: string) => boolean;
   hasRole: (role: Role) => boolean;
   logout: () => Promise<void>;
+  refreshSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRoleState] = useState<Role>('SUPER_ADMIN');
-  const [currentUser, setCurrentUser] = useState<AuthUser>({
-    name: 'Super Admin',
-    email: 'superadmin@superapp.gov.kh',
-    role: 'SUPER_ADMIN',
-  });
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const performLogin = async (currentRole: Role) => {
-    const profile = ROLE_USER_PROFILES[currentRole] || ROLE_USER_PROFILES.SUPER_ADMIN;
+  const fetchSession = async () => {
     try {
-      const res = await authApi.login({ email: profile.email, role: currentRole });
-      if (res?.user) {
-        const userRole = (res.user.roles?.[0] as Role) || currentRole;
-        setRoleState(userRole);
+      const profile = await usersApi.getProfile();
+      if (profile && profile.email) {
+        const userRoles: string[] = (profile.roles || []).map((r: any) => typeof r === 'string' ? r : r?.name);
+        const primaryRole: Role = (userRoles.find((r) => ['SUPER_ADMIN', 'ADMIN', 'MINI_APP_DEVELOPER'].includes(r)) as Role) || 'MINI_APP_DEVELOPER';
+
+        setRoleState(primaryRole);
         setCurrentUser({
-          id: res.user.id,
-          name: res.user.name || profile.name,
-          email: res.user.email || profile.email,
-          role: userRole,
-          permissions: res.user.permissions,
+          id: profile.id,
+          name: profile.name,
+          email: profile.email,
+          role: primaryRole,
+          roles: userRoles,
+          isActive: profile.isActive,
         });
         setIsAuthenticated(true);
+      } else {
+        setIsAuthenticated(false);
+        setCurrentUser(null);
       }
-    } catch (e) {
-      console.error('Session handshake:', e);
+    } catch (_) {
+      setIsAuthenticated(false);
+      setCurrentUser(null);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('superapp_active_role') as Role;
-      if (saved && ROLE_PERMISSIONS[saved]) {
-        setRoleState(saved);
-        performLogin(saved);
-      } else {
-        performLogin('SUPER_ADMIN');
-      }
-    } catch (_) {
-      performLogin('SUPER_ADMIN');
-    }
+    fetchSession();
   }, []);
-
-  const setRole = async (newRole: Role) => {
-    try {
-      localStorage.setItem('superapp_active_role', newRole);
-    } catch (_) {}
-    await performLogin(newRole);
-  };
 
   const loginWithEmail = async (email: string, password?: string) => {
     try {
       const res = await authApi.login({ email, password });
       if (res?.user) {
-        const userRole = (res.user.roles?.[0] as Role) || 'MINI_APP_DEVELOPER';
-        setRoleState(userRole);
+        const userRoles: string[] = (res.user.roles || []).map((r: any) => typeof r === 'string' ? r : r?.name);
+        const primaryRole: Role = (userRoles.find((r) => ['SUPER_ADMIN', 'ADMIN', 'MINI_APP_DEVELOPER'].includes(r)) as Role) || 'MINI_APP_DEVELOPER';
+
+        setRoleState(primaryRole);
         setCurrentUser({
           id: res.user.id,
-          name: res.user.name || 'Authenticated User',
+          name: res.user.name || 'Platform User',
           email: res.user.email || email,
-          role: userRole,
+          role: primaryRole,
+          roles: userRoles,
           permissions: res.user.permissions,
         });
         setIsAuthenticated(true);
-        localStorage.setItem('superapp_active_role', userRole);
         return { success: true };
       }
-      return { success: false, error: 'Invalid credentials' };
+      return { success: false, error: 'Invalid credentials or user not found' };
     } catch (err: any) {
-      return { success: false, error: err.message || 'Login failed' };
+      const isPending = err?.data?.pendingApproval || err?.message?.toLowerCase().includes('pending approval');
+      return {
+        success: false,
+        pendingApproval: isPending,
+        error: err.message || (isPending ? 'Your account is pending Super Administrator approval.' : 'Login failed'),
+      };
     }
   };
 
@@ -163,6 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await authApi.logout();
     } catch (_) {}
     setIsAuthenticated(false);
+    setCurrentUser(null);
     if (typeof window !== 'undefined') {
       window.location.href = '/login';
     }
@@ -180,7 +155,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ role, user: currentUser, isAuthenticated, setRole, loginWithEmail, can, hasRole, logout }}>
+    <AuthContext.Provider
+      value={{
+        role,
+        user: currentUser,
+        isAuthenticated,
+        isLoading,
+        loginWithEmail,
+        can,
+        hasRole,
+        logout,
+        refreshSession: fetchSession,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -56,12 +56,14 @@ export class AccessControlService {
     const email = (requester.email || '').toLowerCase().trim();
     return (
       roles.some((r) => r.toUpperCase() === 'SUPER_ADMIN' || r.toUpperCase() === 'SUPERADMIN') ||
-      email.includes('superadmin')
+      email === 'molikakhorn71@gmail.com' ||
+      email === 'thavorac.chun@gmail.com' ||
+      email === 'sea.hutmonineat@gmail.com'
     );
   }
 
   async createUser(dto: CreateUserDto, requester?: any): Promise<User> {
-    const existing = await this.userRepository.findOne({ where: { email: dto.email } });
+    const existing = await this.userRepository.findOne({ where: { email: dto.email.toLowerCase().trim() } });
     if (existing) {
       throw new BadRequestException(`User with email '${dto.email}' already exists.`);
     }
@@ -73,7 +75,7 @@ export class AccessControlService {
       roles = await this.roleRepository.findBy({ id: In(dto.roleIds) });
     } else if (dto.roleNames && dto.roleNames.length > 0) {
       roles = await this.roleRepository.findBy({ name: In(dto.roleNames) });
-    } else {
+    } else if (dto.roleNames === undefined && dto.roleIds === undefined) {
       const defaultRole = await this.roleRepository.findOne({ where: { name: 'MINI_APP_DEVELOPER' } });
       if (defaultRole) roles = [defaultRole];
     }
@@ -84,11 +86,13 @@ export class AccessControlService {
 
     const user = this.userRepository.create({
       name: dto.name,
-      email: dto.email,
+      email: dto.email.toLowerCase().trim(),
       roles,
       telegramChatId: dto.telegramChatId || undefined,
       telegramUsername: dto.telegramUsername || undefined,
-      isActive: dto.isActive !== undefined ? dto.isActive : true,
+      isActive: dto.isActive !== undefined ? dto.isActive : roles.length > 0,
+      status: dto.status || (dto.isActive === false || roles.length === 0 ? 'PENDING_APPROVAL' : 'ACTIVE'),
+      passwordHash: dto.passwordHash || undefined,
     });
 
     return this.userRepository.save(user);
@@ -114,12 +118,13 @@ export class AccessControlService {
 
     if (dto.name !== undefined) user.name = dto.name;
     if (dto.avatarUrl !== undefined) user.avatarUrl = dto.avatarUrl;
-    if (dto.email !== undefined && dto.email !== user.email) {
-      const existing = await this.userRepository.findOne({ where: { email: dto.email } });
+    if (dto.email !== undefined && dto.email.toLowerCase().trim() !== user.email) {
+      const targetEmail = dto.email.toLowerCase().trim();
+      const existing = await this.userRepository.findOne({ where: { email: targetEmail } });
       if (existing && existing.id !== id) {
         throw new BadRequestException(`Email '${dto.email}' is already in use.`);
       }
-      user.email = dto.email;
+      user.email = targetEmail;
     }
     if (dto.telegramChatId !== undefined) user.telegramChatId = dto.telegramChatId;
     if (dto.telegramUsername !== undefined) user.telegramUsername = dto.telegramUsername;
@@ -127,7 +132,10 @@ export class AccessControlService {
     
     // Only administrators or superadmins can modify account active status and roles
     if (!isSelf || isSuperAdmin) {
-      if (dto.isActive !== undefined) user.isActive = dto.isActive;
+      if (dto.isActive !== undefined) {
+        user.isActive = dto.isActive;
+        user.status = dto.isActive ? 'ACTIVE' : 'DEACTIVATED';
+      }
     }
 
     if (dto.roleIds !== undefined || dto.roleNames !== undefined) {
@@ -145,7 +153,34 @@ export class AccessControlService {
         throw new ForbiddenException('Only Super Administrators can assign the Super Admin role');
       }
       user.roles = newRoles;
+      if (newRoles.length > 0 && user.status === 'PENDING_APPROVAL') {
+        user.status = 'ACTIVE';
+        user.isActive = true;
+      }
     }
+
+    return this.userRepository.save(user);
+  }
+
+  async approveUser(
+    id: string,
+    roleName = 'MINI_APP_DEVELOPER',
+    requester?: any,
+  ): Promise<User> {
+    const isSuperAdmin = this.isRequesterSuperAdmin(requester);
+    if (!isSuperAdmin) {
+      throw new ForbiddenException('Only Super Administrators can approve pending accounts and assign roles');
+    }
+
+    const user = await this.findUserById(id);
+    const role = await this.roleRepository.findOne({ where: { name: roleName } });
+    if (!role) {
+      throw new BadRequestException(`Role '${roleName}' does not exist.`);
+    }
+
+    user.roles = [role];
+    user.isActive = true;
+    user.status = 'ACTIVE';
 
     return this.userRepository.save(user);
   }

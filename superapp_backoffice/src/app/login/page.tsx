@@ -3,28 +3,32 @@
 import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuth, ROLE_USER_PROFILES, Role } from '@/lib/auth';
+import { useAuth } from '@/lib/auth';
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isExpired = searchParams?.get('expired') === 'true';
 
-  const { loginWithEmail, setRole } = useAuth();
+  const { loginWithEmail } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(isExpired ? 'Your session expired. Please sign in again.' : null);
+  const [isPendingApproval, setIsPendingApproval] = useState(false);
+  const [showSeedAccounts, setShowSeedAccounts] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) {
       setError('Please enter your email address.');
+      setIsPendingApproval(false);
       return;
     }
 
     setLoading(true);
     setError(null);
+    setIsPendingApproval(false);
 
     const res = await loginWithEmail(email.trim(), password);
     setLoading(false);
@@ -32,18 +36,16 @@ function LoginForm() {
     if (res.success) {
       router.push('/miniapps');
     } else {
+      if (res.pendingApproval || res.error?.toLowerCase().includes('pending approval')) {
+        setIsPendingApproval(true);
+      }
       setError(res.error || 'Failed to sign in. Please verify your credentials.');
     }
   };
 
-  const handleQuickLogin = async (roleKey: Role) => {
-    setLoading(true);
-    setError(null);
-    const profile = ROLE_USER_PROFILES[roleKey];
-    setEmail(profile.email);
-    await setRole(roleKey);
-    setLoading(false);
-    router.push('/miniapps');
+  const handleSelectAccount = (accountEmail: string) => {
+    setEmail(accountEmail);
+    setPassword('Password123!@#');
   };
 
   return (
@@ -63,7 +65,7 @@ function LoginForm() {
           </div>
           <div>
             <h2 className="text-2xl font-bold tracking-tight text-white">SuperApp Gateway</h2>
-            <p className="text-xs font-medium text-slate-400">Government MiniApp Orchestration Platform</p>
+            <p className="text-xs font-medium text-slate-400">Enterprise MiniApp Governance Platform</p>
           </div>
         </div>
       </div>
@@ -72,17 +74,30 @@ function LoginForm() {
         <div className="bg-slate-900/90 backdrop-blur-xl py-8 px-6 shadow-2xl shadow-black/50 sm:rounded-2xl sm:px-10 border border-slate-800">
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-white">Sign In to Backoffice</h3>
-            <p className="text-xs text-slate-400 mt-1">Enter your credentials or use Single Sign-On (SSO).</p>
+            <p className="text-xs text-slate-400 mt-1">Authenticate with your authorized platform credentials.</p>
           </div>
 
-          {error && (
+          {/* Pending Approval Notice */}
+          {isPendingApproval ? (
+            <div className="mb-5 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-300 text-xs space-y-2">
+              <div className="flex items-center gap-2 font-bold text-amber-400">
+                <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span>Account Pending Super Admin Approval</span>
+              </div>
+              <p className="text-[11px] text-amber-300/90 leading-relaxed">
+                Your account is registered but awaiting review. Platform access is granted only after a Super Administrator approves your profile and assigns your role.
+              </p>
+            </div>
+          ) : error ? (
             <div className="mb-5 p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-xs flex items-center gap-2">
               <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
               <span>{error}</span>
             </div>
-          )}
+          ) : null}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -92,7 +107,7 @@ function LoginForm() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@superapp.gov.kh"
+                placeholder="e.g. molikakhorn71@gmail.com"
                 className="w-full px-3.5 py-2.5 bg-slate-950/60 border border-slate-700/80 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all"
               />
             </div>
@@ -100,13 +115,14 @@ function LoginForm() {
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-xs font-medium text-slate-300">Password</label>
-                <span className="text-[11px] text-slate-500">Default: password123</span>
+                <span className="text-[11px] text-slate-500">Initialized: Password123!@#</span>
               </div>
               <input
                 type="password"
+                required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="Enter Password123!@#"
                 className="w-full px-3.5 py-2.5 bg-slate-950/60 border border-slate-700/80 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all"
               />
             </div>
@@ -120,54 +136,95 @@ function LoginForm() {
             </button>
           </form>
 
-          {/* Quick Persona Switcher for QA / Local Testing */}
+          {/* Official Seed Accounts Reference (Collapsible) */}
           <div className="mt-6 pt-5 border-t border-slate-800/80">
-            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2.5">
-              QA Quick Test Switcher:
-            </p>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('SUPER_ADMIN')}
-                className="p-2 text-left bg-slate-950/80 hover:bg-slate-800/80 border border-slate-800 rounded-lg text-slate-300 transition-colors"
+            <button
+              type="button"
+              onClick={() => setShowSeedAccounts(!showSeedAccounts)}
+              className="w-full flex items-center justify-between text-[11px] font-semibold text-slate-400 hover:text-slate-200 uppercase tracking-wider transition-colors"
+            >
+              <span>Official Seed Accounts</span>
+              <svg
+                className={`w-3.5 h-3.5 transition-transform ${showSeedAccounts ? 'rotate-180' : ''}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                <div className="font-semibold text-amber-400">Super Admin</div>
-                <div className="text-[10px] text-slate-500 truncate">superadmin@superapp.gov.kh</div>
-              </button>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
 
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('ADMIN')}
-                className="p-2 text-left bg-slate-950/80 hover:bg-slate-800/80 border border-slate-800 rounded-lg text-slate-300 transition-colors"
-              >
-                <div className="font-semibold text-blue-400">Admin User</div>
-                <div className="text-[10px] text-slate-500 truncate">admin@superapp.gov.kh</div>
-              </button>
+            {showSeedAccounts && (
+              <div className="mt-3 space-y-2 text-xs">
+                <div className="text-[10px] text-slate-400 font-medium pb-1">
+                  Click to pre-fill credentials (Password: <code className="text-emerald-400 font-mono">Password123!@#</code>):
+                </div>
 
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('MINI_APP_DEVELOPER')}
-                className="p-2 text-left bg-slate-950/80 hover:bg-slate-800/80 border border-slate-800 rounded-lg text-slate-300 transition-colors"
-              >
-                <div className="font-semibold text-emerald-400">MiniApp Developer</div>
-                <div className="text-[10px] text-slate-500 truncate">ma-developer@superapp.gov.kh</div>
-              </button>
+                <div className="grid grid-cols-1 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleSelectAccount('molikakhorn71@gmail.com')}
+                    className="p-2 text-left bg-slate-950/80 hover:bg-slate-800/80 border border-slate-800 rounded-lg text-slate-300 transition-colors flex items-center justify-between"
+                  >
+                    <div>
+                      <div className="font-semibold text-amber-400">Molika Khorn</div>
+                      <div className="text-[10px] text-slate-500">molikakhorn71@gmail.com</div>
+                    </div>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 font-bold">
+                      SUPER ADMIN
+                    </span>
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('QA_TESTER')}
-                className="p-2 text-left bg-slate-950/80 hover:bg-slate-800/80 border border-slate-800 rounded-lg text-slate-300 transition-colors"
-              >
-                <div className="font-semibold text-indigo-400">QA Tester</div>
-                <div className="text-[10px] text-slate-500 truncate">qa@superapp.gov.kh</div>
-              </button>
-            </div>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectAccount('thavorac.chun@gmail.com')}
+                    className="p-2 text-left bg-slate-950/80 hover:bg-slate-800/80 border border-slate-800 rounded-lg text-slate-300 transition-colors flex items-center justify-between"
+                  >
+                    <div>
+                      <div className="font-semibold text-amber-400">Thavorac Chun</div>
+                      <div className="text-[10px] text-slate-500">thavorac.chun@gmail.com</div>
+                    </div>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 font-bold">
+                      SUPER ADMIN
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSelectAccount('sea.hutmonineat@gmail.com')}
+                    className="p-2 text-left bg-slate-950/80 hover:bg-slate-800/80 border border-slate-800 rounded-lg text-slate-300 transition-colors flex items-center justify-between"
+                  >
+                    <div>
+                      <div className="font-semibold text-amber-400">Sea Hutmonineat</div>
+                      <div className="text-[10px] text-slate-500">sea.hutmonineat@gmail.com</div>
+                    </div>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 font-bold">
+                      SUPER ADMIN
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSelectAccount('lymoly1122@gmail.com')}
+                    className="p-2 text-left bg-slate-950/80 hover:bg-slate-800/80 border border-slate-800 rounded-lg text-slate-300 transition-colors flex items-center justify-between"
+                  >
+                    <div>
+                      <div className="font-semibold text-brand-400">Moly Ly</div>
+                      <div className="text-[10px] text-slate-500">lymoly1122@gmail.com</div>
+                    </div>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-brand-500/10 text-brand-400 border border-brand-500/30 font-bold">
+                      ADMIN
+                    </span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="mt-6 text-center text-xs text-slate-400">
-            Need a developer account?{' '}
+            Need a MiniApp Developer account?{' '}
             <Link href="/signup" className="font-semibold text-brand-400 hover:text-brand-300 transition-colors">
-              Sign up as MiniApp Developer
+              Sign up with your personal/secondary email
             </Link>
           </div>
         </div>
@@ -187,4 +244,3 @@ export default function LoginPage() {
     </Suspense>
   );
 }
-

@@ -15,9 +15,17 @@ export async function POST(request: Request) {
 
     const data = await res.json().catch(() => null);
 
-    if (!res.ok || !data?.success || !data?.access_token) {
+    if (!res.ok || !data?.success) {
       const message = data?.message || 'Registration failed. Please check your inputs.';
       return NextResponse.json({ error: message }, { status: res.status === 200 ? 400 : res.status });
+    }
+
+    if (data.pendingApproval || !data.access_token) {
+      return NextResponse.json({
+        success: true,
+        pendingApproval: true,
+        message: data.message || 'Registration submitted successfully. Your account is pending Super Administrator approval.',
+      });
     }
 
     const cookieStore = await cookies();

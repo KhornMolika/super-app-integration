@@ -12,10 +12,9 @@ async function getDevAuthToken(forceRefresh = false): Promise<string | null> {
   const candidateEmails = [
     process.env.DEV_FALLBACK_USER_EMAIL,
     process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL,
-    'superadmin@example.com',
-    'admin@example.com',
-    'dev@example.com',
-    'superadmin@superapp.gov.kh',
+    'molikakhorn71@gmail.com',
+    'thavorac.chun@gmail.com',
+    'sea.hutmonineat@gmail.com',
   ].filter(Boolean) as string[];
 
   for (const email of candidateEmails) {
@@ -23,7 +22,7 @@ async function getDevAuthToken(forceRefresh = false): Promise<string | null> {
       const res = await fetch(`${BACKEND_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, password: 'Password123!@#' }),
       });
       if (res.ok) {
         const data = await res.json();

@@ -13,6 +13,7 @@ import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
 import { AccessControlService } from '../access-control/access-control.service';
 import { DeveloperToken } from '../access-control/entities/developer-token.entity';
+import { verifyPassword, hashPassword } from '../common/utils/password.util';
 
 export const END_USER_TYP = 'end_user';
 export const BACK_OFFICE_TYP = 'back_office';
@@ -271,28 +272,42 @@ export class AuthService implements OnModuleInit {
   }
 
   /**
-   * User Sign-In (Local credentials or verified QA email)
+   * User Sign-In (Local credentials with password verification and approval gate)
    */
   async login(body: any) {
-    const rawEmail = typeof body?.email === 'string' ? body.email.trim() : '';
-    let user = rawEmail ? await this.accessControlService.findByEmailWithPermissions(rawEmail) : null;
+    const rawEmail = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
+    const rawPassword = typeof body?.password === 'string' ? body.password : '';
 
-    if (!user && rawEmail) {
-      const allUsers = await this.accessControlService.findAllUsers();
-      if (rawEmail.toLowerCase().includes('superadmin')) {
-        user = allUsers.find((u) => u.roles?.some((r) => r.name === 'SUPER_ADMIN')) || null;
-      } else if (rawEmail.toLowerCase().includes('admin')) {
-        user = allUsers.find((u) => u.roles?.some((r) => r.name === 'ADMIN')) || null;
-      } else if (rawEmail.toLowerCase().includes('dev') || rawEmail.toLowerCase().includes('developer') || rawEmail.toLowerCase().includes('manager')) {
-        user = allUsers.find((u) => u.roles?.some((r) => r.name === 'MINI_APP_DEVELOPER' || r.name === 'DEVELOPER')) || null;
-      }
-      if (user) {
-        user = await this.accessControlService.findByEmailWithPermissions(user.email);
-      }
+    if (!rawEmail) {
+      return { success: false as const, message: 'Please enter your email address' };
     }
+
+    const user = await this.accessControlService.findByEmailWithPermissions(rawEmail);
 
     if (!user) {
       return { success: false as const, message: 'Invalid credentials or user not found' };
+    }
+
+    // 1. Password Verification
+    if (user.passwordHash) {
+      const isMatch = await verifyPassword(rawPassword, user.passwordHash);
+      if (!isMatch) {
+        return { success: false as const, message: 'Invalid email or password' };
+      }
+    } else {
+      // Transitional fallback for existing accounts before password set
+      if (rawPassword !== 'Password123!@#' && rawPassword !== 'password123') {
+        return { success: false as const, message: 'Invalid email or password' };
+      }
+    }
+
+    // 2. SuperAdmin Approval Gate: Pending accounts cannot log in
+    if (user.isActive === false || user.status === 'PENDING_APPROVAL' || !user.roles || user.roles.length === 0) {
+      return {
+        success: false as const,
+        pendingApproval: true,
+        message: 'Your account is pending Super Administrator approval. Please contact a Super Administrator to activate your account and assign permissions.',
+      };
     }
 
     const tokens = this.generateAuthTokens(user);
@@ -304,11 +319,12 @@ export class AuthService implements OnModuleInit {
   }
 
   /**
-   * User Self Sign-Up (Creates a new MINI_APP_DEVELOPER user)
+   * User Self Sign-Up (Creates an inactive user in PENDING_APPROVAL status)
    */
   async register(body: { email: string; name: string; password?: string; organization?: string }) {
     const email = (body.email || '').trim().toLowerCase();
     const name = (body.name || '').trim();
+    const password = body.password || '';
 
     if (!email || !name) {
       throw new BadRequestException('Name and email are required for registration');
@@ -319,20 +335,22 @@ export class AuthService implements OnModuleInit {
       throw new BadRequestException('An account with this email already exists. Please sign in.');
     }
 
-    const newUser = await this.accessControlService.createUser({
+    const passwordHash = password ? await hashPassword(password) : undefined;
+
+    // Self-registered accounts are inactive with no roles until approved by Super Admin
+    await this.accessControlService.createUser({
       name,
       email,
-      roleNames: ['MINI_APP_DEVELOPER'],
-      isActive: true,
+      roleNames: [],
+      isActive: false,
+      status: 'PENDING_APPROVAL',
+      passwordHash,
     });
-
-    const userWithPerms = await this.accessControlService.findByEmailWithPermissions(newUser.email);
-    const tokens = this.generateAuthTokens(userWithPerms || newUser);
 
     return {
       success: true,
-      message: 'Account created successfully',
-      ...tokens,
+      pendingApproval: true,
+      message: 'Registration submitted successfully. Your account is pending Super Administrator approval. Once approved, you will be able to sign in.',
     };
   }
 

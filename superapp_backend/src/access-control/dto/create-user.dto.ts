@@ -37,4 +37,12 @@ export class CreateUserDto {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  @IsString()
+  @IsOptional()
+  status?: string;
+
+  @IsString()
+  @IsOptional()
+  passwordHash?: string;
 }

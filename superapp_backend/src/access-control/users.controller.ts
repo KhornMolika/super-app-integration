@@ -112,6 +112,20 @@ export class UsersController {
     return this.accessControlService.updateUser(id, dto, requester);
   }
 
+  @Post(':id/approve')
+  @RequirePermissions('user:manage')
+  async approve(
+    @Param('id') id: string,
+    @Body() body: { role?: string; roleName?: string },
+    @Req() req: any,
+  ) {
+    return this.accessControlService.approveUser(
+      id,
+      body?.roleName || body?.role || 'MINI_APP_DEVELOPER',
+      req?.user,
+    );
+  }
+
   @Delete(':id')
   @RequirePermissions('user:manage')
   async remove(@Param('id') id: string, @Req() req: any) {

@@ -32,6 +32,12 @@ export class User {
   @Column({ default: true })
   isActive!: boolean;
 
+  @Column({ default: 'ACTIVE' })
+  status!: string;
+
+  @Column({ nullable: true })
+  passwordHash?: string;
+
   @Column({ nullable: true })
   telegramChatId?: string;
 
