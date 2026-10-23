@@ -47,6 +47,7 @@ export interface AuthUser {
   permissions?: string[];
   status?: string;
   isActive?: boolean;
+  avatarUrl?: string;
   organizationId?: string | null;
   organization?: {
     id: string;
