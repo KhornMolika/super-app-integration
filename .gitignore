@@ -38,7 +38,7 @@ start.sh
 
 # Standalone Mobile Super App clone
 super-app/
-scratch/
+/scratch/
 *.patch
 *.apk
 cookies.txt

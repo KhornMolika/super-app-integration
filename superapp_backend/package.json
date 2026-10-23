@@ -26,7 +26,7 @@
         "push:fintech:dev": "git -C .. subtree push --prefix=superapp_backend https://git.fintechcenterfsa.com/backend/super-app.git development",
         "push:fintech:molika": "git -C .. subtree push --prefix=superapp_backend https://git.fintechcenterfsa.com/backend/super-app.git molika",
         "push:fintech": "pnpm push:fintech:dev && pnpm push:fintech:molika",
-        "setup:nexus": "powershell -ExecutionPolicy Bypass -File ./scripts/setup-nexus.ps1",
+        "setup:nexus": "powershell -ExecutionPolicy Bypass -File ./scripts/setup-nexus-sdk-repositories.ps1",
         "setup:nexus:sdk": "bash ./scripts/setup-nexus-sdk-repositories.sh",
         "setup:callback-token": "bash ./scripts/setup-jenkins-callback-token.sh",
         "sync:jenkins": "node scripts/sync-jenkins-jobs.mjs",
