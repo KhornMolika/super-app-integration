@@ -1,5 +1,17 @@
 import { apiClient } from './client';
 
+export interface UserRole {
+  id: string;
+  name: string;
+}
+
+export interface UserOrganization {
+  id: string;
+  name: string;
+  code?: string;
+  parentAuthority?: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -8,7 +20,10 @@ export interface User {
   telegramUsername?: string | null;
   isActive?: boolean;
   status?: string;
-  roles: { id: string; name: string }[];
+  role?: UserRole;
+  roles?: UserRole[];
+  organizationId?: string | null;
+  organization?: UserOrganization | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -71,7 +86,7 @@ export const usersApi = {
       method: 'DELETE',
     }),
 
-  approve: (id: string, roleName = 'MINI_APP_DEVELOPER') =>
+  approve: (id: string, roleName = 'MA_DEVELOPER') =>
     apiClient<User>(`/api/users/${id}/approve`, {
       method: 'POST',
       body: { roleName },

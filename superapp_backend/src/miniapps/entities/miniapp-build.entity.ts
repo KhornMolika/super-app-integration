@@ -9,6 +9,7 @@ import {
   Index,
 } from 'typeorm';
 import { MiniApp } from './miniapp.entity';
+import { MiniAppVersion } from './miniapp-version.entity';
 
 @Entity('miniapp_builds')
 export class MiniAppBuild {
@@ -24,6 +25,14 @@ export class MiniAppBuild {
   })
   @JoinColumn({ name: 'miniAppId' })
   miniApp!: MiniApp;
+
+  @Index()
+  @Column({ type: 'uuid', nullable: true })
+  versionId?: string;
+
+  @ManyToOne(() => MiniAppVersion, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'versionId' })
+  versionRelation?: MiniAppVersion;
 
   @Column({ nullable: true })
   version?: string;

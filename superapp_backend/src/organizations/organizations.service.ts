@@ -1,56 +1,41 @@
-import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import {
+  Injectable,
+  OnApplicationBootstrap,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Organization, OrganizationStatus } from './entities/organization.entity';
-import { FSA_ORGANIZATIONS } from '../common/constants/fsa-organizations';
-
+import {
+  setOrganizationDataSource,
+  resolveOrganizationDetails,
+  ResolvedOrganization,
+} from '../common/constants/fsa-organizations';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
+import { User } from '../access-control/entities/user.entity';
+import { MiniApp } from '../miniapps/entities/miniapp.entity';
 
 @Injectable()
 export class OrganizationsService implements OnApplicationBootstrap {
+  private readonly logger = new Logger(OrganizationsService.name);
+
   constructor(
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>,
   ) {}
 
   async onApplicationBootstrap() {
-    await this.seedInitialOrganizations();
+    // Register the repository for global database organization resolution
+    setOrganizationDataSource(this.organizationRepository);
+    const count = await this.organizationRepository.count();
+    this.logger.log(`Initialized OrganizationsService with ${count} real database records`);
   }
 
-  private async seedInitialOrganizations() {
-    for (const org of FSA_ORGANIZATIONS) {
-      const existing = await this.organizationRepository.findOne({
-        where: [{ code: org.code }, { domain: org.domain }, { name: org.name }],
-      });
-      const orgData = {
-        name: org.name,
-        code: org.code,
-        domain: org.domain,
-        description: org.description,
-        status: OrganizationStatus.ACTIVE,
-        contactEmail: org.contactEmail,
-        metadata: {
-          shortCode: org.code,
-          acronym: org.code,
-          entityType: org.entityType,
-          entityTypeLabel: org.entityTypeLabel,
-          parentAuthority: org.parentAuthority,
-          parentMinistry: org.parentMinistry,
-        },
-      };
-      if (!existing) {
-        await this.organizationRepository.save(this.organizationRepository.create(orgData));
-      } else {
-        existing.code = orgData.code;
-        existing.name = orgData.name;
-        existing.domain = orgData.domain;
-        existing.description = orgData.description;
-        existing.contactEmail = orgData.contactEmail;
-        existing.metadata = orgData.metadata;
-        await this.organizationRepository.save(existing);
-      }
-    }
+  async resolveOrganization(input?: string): Promise<ResolvedOrganization> {
+    return resolveOrganizationDetails(input, this.organizationRepository);
   }
 
   async findAll(status?: OrganizationStatus | string): Promise<Organization[]> {
@@ -60,12 +45,50 @@ export class OrganizationsService implements OnApplicationBootstrap {
     }
     return this.organizationRepository.find({
       where,
-      order: { createdAt: 'DESC' },
+      order: { name: 'ASC' },
     });
   }
 
   async findOne(id: string): Promise<Organization | null> {
-    return this.organizationRepository.findOne({ where: { id } });
+    const org = await this.organizationRepository.findOne({ where: { id } });
+    if (!org) return null;
+
+    const users = await this.organizationRepository.manager.getRepository(User).find({
+      where: { organizationId: id },
+      relations: { role: true },
+      order: { name: 'ASC' },
+    });
+
+    const miniApps = await this.organizationRepository.manager.getRepository(MiniApp).find({
+      where: { organizationId: id },
+      order: { name: 'ASC' },
+    });
+
+    const safeUsers = users.map((u) => {
+      const { passwordHash, organization, ...rest } = u as any;
+      return rest;
+    });
+
+    const safeMiniApps = miniApps.map((m) => {
+      const { organizationRelation, ...rest } = m as any;
+      return rest;
+    });
+
+    return {
+      ...org,
+      users: safeUsers,
+      miniApps: safeMiniApps,
+    } as Organization;
+  }
+
+  async findByCodeOrName(codeOrName: string): Promise<Organization | null> {
+    const clean = codeOrName.trim().toLowerCase();
+    return this.organizationRepository
+      .createQueryBuilder('org')
+      .where('LOWER(TRIM(org.code)) = :term OR LOWER(TRIM(org.name)) = :term', {
+        term: clean,
+      })
+      .getOne();
   }
 
   async create(data: CreateOrganizationDto): Promise<Organization> {
@@ -86,6 +109,17 @@ export class OrganizationsService implements OnApplicationBootstrap {
   }
 
   async remove(id: string): Promise<boolean> {
+    const org = await this.findOne(id);
+    if (!org) {
+      throw new NotFoundException(`Organization ${id} not found`);
+    }
+    const hasUsers = (org.users?.length ?? 0) > 0;
+    const hasMiniApps = (org.miniApps?.length ?? 0) > 0;
+    if (hasUsers || hasMiniApps) {
+      throw new BadRequestException(
+        `Regulatory organizations cannot be deleted because historical records (users or mini-apps) are associated with it. Please set its status to INACTIVE to disable instead.`,
+      );
+    }
     const result = await this.organizationRepository.delete(id);
     return (result.affected ?? 0) > 0;
   }

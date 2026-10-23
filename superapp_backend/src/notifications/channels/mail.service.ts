@@ -1,4 +1,4 @@
-﻿import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import type { Resend } from 'resend';
 import { MailApiHelper } from './helpers/mail-api.helper';
 import { MailTemplateHelper } from './helpers/mail-template.helper';
@@ -85,40 +85,19 @@ export class MailService {
     toEmail: string,
     name: string,
     verifyUrl: string,
+    otpCode?: string,
   ): Promise<void> {
-    if (!this.resend) {
-      this.logger.log(
-        `[DUMMY] Would have sent email verification to ${toEmail} (mail is not configured)`,
-      );
-      return;
-    }
-    if (!this.isDeliverableEmail(toEmail)) {
-      this.logger.debug(
-        `[SKIPPED] Skipped email verification to mock/test address: ${toEmail}`,
-      );
-      return;
-    }
-
     const template = MailTemplateHelper.renderEmailVerification(
       name,
       verifyUrl,
+      otpCode,
     );
-    try {
-      const result = await this.resend.emails.send({
-        from: `FSA SuperApp <${this.fromEmail}>`,
-        to: toEmail,
-        subject: template.subject,
-        html: template.html,
-      });
-      if (result.error) {
-        this.logger.error(
-          `Resend API error sending email verification: ${result.error.message}`,
-        );
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`Failed to send email verification: ${message}`);
-    }
+    return this.dispatchLifecycleNotification(toEmail, template, {
+      dummyLog: `[DUMMY] Would have sent email verification to ${toEmail} (mail is not configured)`,
+      skippedLog: `[SKIPPED] Skipped email verification to mock/test address: ${toEmail}`,
+      successLog: `Email verification dispatched successfully to ${toEmail}`,
+      errorLog: `Failed to send email verification to ${toEmail}`,
+    });
   }
 
   async sendRegistrationSuccessEmail(
@@ -340,6 +319,25 @@ export class MailService {
     });
   }
 
+  async sendPasswordResetOtp(
+    toEmail: string,
+    userName: string,
+    code: string,
+    expiresInMinutes: number = 5,
+  ): Promise<void> {
+    const template = MailTemplateHelper.renderPasswordResetOtp(
+      userName,
+      code,
+      expiresInMinutes,
+    );
+    return this.dispatchLifecycleNotification(toEmail, template, {
+      dummyLog: `[DUMMY] Would have sent Password Reset OTP ${code} to ${toEmail}`,
+      skippedLog: `[SKIPPED] Skipped Password Reset OTP to mock address: ${toEmail}`,
+      successLog: `Password Reset OTP successfully dispatched to ${toEmail}`,
+      errorLog: `Failed to send password reset OTP to ${toEmail}`,
+    });
+  }
+
   private async dispatchLifecycleNotification(
     toEmail: string,
     rendered: { subject: string; html: string; from?: string },
@@ -362,6 +360,7 @@ export class MailService {
 
     try {
       const from = rendered.from || `FSA SuperApp <${this.fromEmail}>`;
+      this.logger.log(`Dispatching lifecycle email -> From: "${from}", To: "${toEmail}"`);
       const result = await this.resend.emails.send({
         from,
         to: toEmail,
@@ -370,13 +369,39 @@ export class MailService {
       });
 
       if (result.error) {
+        const errorMsg = result.error.message || '';
+        // If sender domain is not verified, retry with default sandbox address
+        if (
+          (errorMsg.includes('not verified') || errorMsg.includes('domain')) &&
+          !from.includes('onboarding@resend.dev')
+        ) {
+          this.logger.warn(
+            `Primary sender domain not verified in Resend. Retrying with fallback onboarding@resend.dev...`,
+          );
+          const fallbackResult = await this.resend.emails.send({
+            from: 'FSA SuperApp <onboarding@resend.dev>',
+            to: toEmail,
+            subject: rendered.subject,
+            html: rendered.html,
+          });
+          if (fallbackResult.error) {
+            this.logger.error(
+              `${options.errorLog} (fallback failed): ${fallbackResult.error.message}`,
+            );
+            throw new Error(fallbackResult.error.message);
+          }
+          this.logger.log(`${options.successLog} (ID: ${fallbackResult.data?.id})`);
+          return;
+        }
+
         this.logger.error(`${options.errorLog}: ${result.error.message}`);
-        return;
+        throw new Error(result.error.message);
       }
 
-      this.logger.log(options.successLog);
-    } catch (error) {
-      this.logger.error(`${options.errorLog}:`, error);
+      this.logger.log(`${options.successLog} (ID: ${result.data?.id})`);
+    } catch (error: any) {
+      this.logger.error(`${options.errorLog}: ${error?.message || error}`);
+      throw error;
     }
   }
 }

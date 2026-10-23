@@ -79,10 +79,8 @@ export class RbacGuard implements CanActivate {
     }
 
     if (
-      normalizedRoles.some((r) => r.includes('DEVELOPER') || r.includes('DEV') || r.includes('MINI_APP') || r.includes('TESTER') || r.includes('QA')) ||
+      normalizedRoles.some((r) => r === 'MA_DEVELOPER' || r.includes('DEVELOPER') || r.includes('DEV') || r.includes('MINI_APP')) ||
       email.includes('dev') ||
-      email.includes('qa') ||
-      email.includes('tester') ||
       normalizedRoles.length === 0
     ) {
       [

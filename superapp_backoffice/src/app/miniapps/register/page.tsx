@@ -19,7 +19,6 @@ import RegistrationWizardSteps from '@/components/forms/RegistrationWizardSteps'
 import { validateMiniAppStep } from '@/lib/miniapp-form.validator';
 import { validateUrlFormat } from '@/components/ui/ValidatedUrlInput';
 import { CreateMiniAppDto, FlutterPackageConfigDto, NativeSdkConfigDto, IntegrationMethod, SourceType } from '@/types/miniapp.types';
-import { getOrganizationDef, FSA_ORGANIZATIONS } from '@/lib/constants/fsa-organizations';
 import { miniappsApi, telegramApi } from '@/api';
 import { permissionsApi } from '@/api/permissions.api';
 import { toast } from '@/components/ui/Toast';
@@ -37,9 +36,9 @@ export default function RegisterMiniAppPage() {
   const [formData, setFormData] = useState<Partial<CreateMiniAppDto>>({
     name: '',
     appId: '',
-    category: FSA_ORGANIZATIONS[0].name,
-    organization: FSA_ORGANIZATIONS[0].name,
-    organizationCode: FSA_ORGANIZATIONS[0].code,
+    category: '',
+    organization: '',
+    organizationCode: '',
     shortDescription: '',
     fullDescription: '',
     logo: '',
@@ -386,14 +385,17 @@ export default function RegisterMiniAppPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     if (name === 'organization' || name === 'category') {
-      const def = getOrganizationDef(value);
-      const orgName = def?.name || value;
-      const orgCode = def?.code || '';
       setFormData((prev) => ({
         ...prev,
-        organization: orgName,
-        organizationCode: orgCode,
-        category: orgName,
+        organization: value,
+        category: value,
+      }));
+      return;
+    }
+    if (name === 'organizationCode') {
+      setFormData((prev) => ({
+        ...prev,
+        organizationCode: value,
       }));
       return;
     }

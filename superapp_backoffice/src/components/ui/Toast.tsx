@@ -61,7 +61,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const handleToast: ToastListener = (item) => {
-      setToasts((prev) => [...prev.slice(-4), item]); // Keep max 5 toasts
+      setToasts((prev) => {
+        // Prevent duplicate toasts if one with the same message & title is already active
+        const exists = prev.some(
+          (t) => t.message === item.message && t.title === item.title,
+        );
+        if (exists) return prev;
+        return [...prev.slice(-4), item]; // Keep max 5 toasts
+      });
 
       if (item.duration && item.duration > 0) {
         setTimeout(() => {

@@ -119,7 +119,8 @@ import { useSidebar } from '@/components/ui/SidebarContext';
 
 export function SidebarNav() {
   const pathname = usePathname();
-  const { can } = useAuth();
+  const { can, user, role } = useAuth();
+  const isSuperOrAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN' || can('organization:manage');
   const { isCollapsed } = useSidebar();
 
   return (
@@ -141,24 +142,36 @@ export function SidebarNav() {
             )}
             <div className="space-y-1">
               {visibleItems.map((item) => {
-                const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+                let targetHref = item.href;
+                let displayName = item.name;
+
+                if (item.href === '/organizations') {
+                  if (!isSuperOrAdmin) {
+                    displayName = 'My Organization';
+                    targetHref = user?.organizationId ? `/organizations/${user.organizationId}` : '/organizations';
+                  }
+                }
+
+                const isActive = pathname === targetHref || (targetHref !== '/' && pathname.startsWith(targetHref));
                 
                 return (
                   <Link 
                     key={item.href} 
-                    href={item.href} 
-                    title={isCollapsed ? item.name : undefined}
-                    className={`group flex items-center ${isCollapsed ? 'justify-center px-2 py-3' : 'space-x-3 px-3 py-2.5'} rounded-xl transition-all duration-200 ${
+                    href={targetHref} 
+                    title={isCollapsed ? displayName : undefined}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 group relative ${
                       isActive 
-                        ? 'bg-brand-800 dark:bg-brand-900 border border-brand-700 dark:border-brand-800 shadow-inner text-white' 
-                        : 'hover:bg-brand-800 dark:hover:bg-brand-900 hover:text-white text-brand-200'
+                        ? 'bg-brand-500/10 text-white font-bold border-l-2 border-brand-400 pl-[10px]' 
+                        : 'text-brand-100 hover:text-white hover:bg-white/5'
                     }`}
                   >
-                    <div className={`transition-colors shrink-0 ${isActive ? 'text-accent-400' : 'text-brand-400 group-hover:text-accent-400'}`}>
+                    <span className={`shrink-0 transition-transform duration-200 group-hover:scale-110 ${
+                      isActive ? 'text-brand-400' : 'text-brand-300 group-hover:text-white'
+                    }`}>
                       {item.icon}
-                    </div>
+                    </span>
                     {!isCollapsed && (
-                      <span className="font-medium text-sm whitespace-nowrap overflow-hidden text-ellipsis">{item.name}</span>
+                      <span className="truncate tracking-wide">{displayName}</span>
                     )}
                   </Link>
                 );

@@ -28,11 +28,12 @@ pm or yarn).
   4. Low-level probes (SSRF IP checks, DNS, crypto keys via url-probe.helper.ts, lutter-credential.helper.ts).
   5. Zero-mock unit testing (*.helper.spec.ts without mocking NestJS DI or TypeORM).
 * **Pure Utilities**: Stateless, domain-agnostic functions in src/common/utils/<name>.util.ts.
-* **TypeORM Safety**:
-  * Multi-table writes **must** use dataSource.transaction().
-  * Avoid N+1 queries (leftJoinAndSelect / 
-elations).
-  * synchronize: false in production; use migrations (pnpm migration:run).
+* **TypeORM Safety & QueryBuilder Policy**:
+  * **Strict Prohobition of Raw SQL Strings**: Never use raw SQL queries (`repository.query(...)`, `manager.query(...)`). Use TypeORM `QueryBuilder` (`createQueryBuilder()`) or repository methods for all queries and mutations to guarantee type safety, prevent schema drift, and support automatic escaping.
+  * **Mandatory Database Transactions**: Multi-table writes, cascading deletes, or destructive data operations **must** use `dataSource.transaction(async (manager) => { ... })`. Never use `.catch(() => {})` to silently swallow errors. Refer to `.agents/rules/typeorm-querybuilder-transactions.md`.
+  * **Zero Token Reassignment**: Revoke/delete auth tokens and credentials rather than reassigning foreign keys to other users.
+  * Avoid N+1 queries (use `leftJoinAndSelect` / `relations`).
+  * `synchronize: false` in production; all schema changes must go through TypeORM migrations (`pnpm migration:run`).
 * **REST & DTOs**:
   * All inputs validated via DTOs and ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }).
   * Unified JSON response wrappers via TransformInterceptor and HttpExceptionFilter.

@@ -1,246 +1,259 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { useState, Suspense, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { toast } from '@/components/ui/Toast';
+import { AuthSplitLayout } from '@/components/auth/AuthSplitLayout';
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isExpired = searchParams?.get('expired') === 'true';
+  const hasWarnedRef = useRef(false);
 
   const { loginWithEmail } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(isExpired ? 'Your session expired. Please sign in again.' : null);
-  const [isPendingApproval, setIsPendingApproval] = useState(false);
-  const [showSeedAccounts, setShowSeedAccounts] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+
+  useEffect(() => {
+    if (isExpired && !hasWarnedRef.current) {
+      hasWarnedRef.current = true;
+      toast.warning('Your session expired. Please sign in again.', 'Session Expired');
+
+      // Clean query parameter from browser address bar so page refresh won't re-trigger warning
+      if (typeof window !== 'undefined' && window.history?.replaceState) {
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, '', cleanUrl);
+      }
+    }
+  }, [isExpired]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) {
-      setError('Please enter your email address.');
-      setIsPendingApproval(false);
+
+    setEmailError('');
+    setPasswordError('');
+
+    let hasValidationError = false;
+    const trimmedEmail = email.trim();
+
+    if (!trimmedEmail) {
+      setEmailError('Email address is required.');
+      hasValidationError = true;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setEmailError('Please enter a valid email format.');
+      hasValidationError = true;
+    }
+
+    if (!password) {
+      setPasswordError('Password is required.');
+      hasValidationError = true;
+    }
+
+    if (hasValidationError) {
+      toast.error('Please enter valid credentials before signing in.', 'Validation Error');
       return;
     }
 
     setLoading(true);
-    setError(null);
-    setIsPendingApproval(false);
 
-    const res = await loginWithEmail(email.trim(), password);
+    const res = await loginWithEmail(trimmedEmail, password);
     setLoading(false);
 
     if (res.success) {
+      toast.success('Signed in successfully! Redirecting...', 'Welcome Back');
       router.push('/miniapps');
     } else {
       if (res.pendingApproval || res.error?.toLowerCase().includes('pending approval')) {
-        setIsPendingApproval(true);
+        setEmailError('Account registered but pending Super Administrator approval.');
+        toast.warning(
+          'Your account is registered but pending Super Administrator approval.',
+          'Account Pending'
+        );
+      } else {
+        const failureMessage = res.error || 'Invalid email or password.';
+        setEmailError('Invalid email or unverified credentials.');
+        setPasswordError('Incorrect password or credentials. Please try again.');
+        toast.error(failureMessage, 'Authentication Failed');
       }
-      setError(res.error || 'Failed to sign in. Please verify your credentials.');
     }
   };
 
-  const handleSelectAccount = (accountEmail: string) => {
-    setEmail(accountEmail);
-    setPassword('Password123!@#');
-  };
-
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
-      {/* Background glowing effects */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-brand-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
-
-      <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
-        <div className="flex items-center justify-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 to-emerald-400 p-0.5 shadow-lg shadow-brand-500/20">
-            <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-              <span className="text-xl font-black bg-gradient-to-r from-brand-400 to-emerald-400 bg-clip-text text-transparent">
-                SA
-              </span>
-            </div>
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight text-white">SuperApp Gateway</h2>
-            <p className="text-xs font-medium text-slate-400">Enterprise MiniApp Governance Platform</p>
-          </div>
+    <form onSubmit={handleSubmit} noValidate className="space-y-5 animate-in fade-in duration-300">
+      {/* Email Input */}
+      <div>
+        <label
+          htmlFor="email"
+          className={`block text-xs font-semibold mb-2 transition-colors ${
+            emailError ? 'text-rose-400' : 'text-slate-300'
+          }`}
+        >
+          Email address
+        </label>
+        <div className="relative">
+          <input
+            id="email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (emailError) setEmailError('');
+              if (passwordError) setPasswordError('');
+            }}
+            placeholder="name@company.com"
+            disabled={loading}
+            className={`w-full px-4 py-3 rounded-xl text-sm text-white placeholder-slate-500 bg-slate-900/80 border transition-all duration-200 outline-none ${
+              emailError
+                ? 'border-rose-500/80 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 text-rose-100'
+                : 'border-slate-800 hover:border-slate-700 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15'
+            } disabled:opacity-50`}
+          />
         </div>
+        {emailError && (
+          <p className="mt-1.5 text-xs text-rose-400 flex items-center gap-1.5 animate-in fade-in">
+            <span>•</span> {emailError}
+          </p>
+        )}
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
-        <div className="bg-slate-900/90 backdrop-blur-xl py-8 px-6 shadow-2xl shadow-black/50 sm:rounded-2xl sm:px-10 border border-slate-800">
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold text-white">Sign In to Backoffice</h3>
-            <p className="text-xs text-slate-400 mt-1">Authenticate with your authorized platform credentials.</p>
-          </div>
-
-          {/* Pending Approval Notice */}
-          {isPendingApproval ? (
-            <div className="mb-5 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-300 text-xs space-y-2">
-              <div className="flex items-center gap-2 font-bold text-amber-400">
-                <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <span>Account Pending Super Admin Approval</span>
-              </div>
-              <p className="text-[11px] text-amber-300/90 leading-relaxed">
-                Your account is registered but awaiting review. Platform access is granted only after a Super Administrator approves your profile and assigns your role.
-              </p>
-            </div>
-          ) : error ? (
-            <div className="mb-5 p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-xs flex items-center gap-2">
-              <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      {/* Password Input */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label
+            htmlFor="password"
+            className={`block text-xs font-semibold transition-colors ${
+              passwordError ? 'text-rose-400' : 'text-slate-300'
+            }`}
+          >
+            Password
+          </label>
+          <Link
+            href="/forgot-password"
+            className="text-xs font-medium text-brand-400 hover:text-brand-300 transition-colors"
+          >
+            Forgot password?
+          </Link>
+        </div>
+        <div className="relative">
+          <input
+            id="password"
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              if (passwordError) setPasswordError('');
+            }}
+            placeholder="••••••••••"
+            disabled={loading}
+            className={`w-full pl-4 pr-11 py-3 rounded-xl text-sm text-white placeholder-slate-500 bg-slate-900/80 border transition-all duration-200 outline-none ${
+              passwordError
+                ? 'border-rose-500/80 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 text-rose-100'
+                : 'border-slate-800 hover:border-slate-700 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15'
+            } disabled:opacity-50`}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            tabIndex={-1}
+            className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 transition-colors"
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+          >
+            {showPassword ? (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
               </svg>
-              <span>{error}</span>
-            </div>
-          ) : null}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1.5">Official Email</label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="e.g. molikakhorn71@gmail.com"
-                className="w-full px-3.5 py-2.5 bg-slate-950/60 border border-slate-700/80 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-medium text-slate-300">Password</label>
-                <span className="text-[11px] text-slate-500">Initialized: Password123!@#</span>
-              </div>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter Password123!@#"
-                className="w-full px-3.5 py-2.5 bg-slate-950/60 border border-slate-700/80 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full mt-2 py-2.5 px-4 bg-gradient-to-r from-brand-600 to-emerald-600 hover:from-brand-500 hover:to-emerald-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-brand-500/20 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all disabled:opacity-50"
-            >
-              {loading ? 'Signing in...' : 'Sign In'}
-            </button>
-          </form>
-
-          {/* Official Seed Accounts Reference (Collapsible) */}
-          <div className="mt-6 pt-5 border-t border-slate-800/80">
-            <button
-              type="button"
-              onClick={() => setShowSeedAccounts(!showSeedAccounts)}
-              className="w-full flex items-center justify-between text-[11px] font-semibold text-slate-400 hover:text-slate-200 uppercase tracking-wider transition-colors"
-            >
-              <span>Official Seed Accounts</span>
-              <svg
-                className={`w-3.5 h-3.5 transition-transform ${showSeedAccounts ? 'rotate-180' : ''}`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            ) : (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
-            </button>
-
-            {showSeedAccounts && (
-              <div className="mt-3 space-y-2 text-xs">
-                <div className="text-[10px] text-slate-400 font-medium pb-1">
-                  Click to pre-fill credentials (Password: <code className="text-emerald-400 font-mono">Password123!@#</code>):
-                </div>
-
-                <div className="grid grid-cols-1 gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => handleSelectAccount('molikakhorn71@gmail.com')}
-                    className="p-2 text-left bg-slate-950/80 hover:bg-slate-800/80 border border-slate-800 rounded-lg text-slate-300 transition-colors flex items-center justify-between"
-                  >
-                    <div>
-                      <div className="font-semibold text-amber-400">Molika Khorn</div>
-                      <div className="text-[10px] text-slate-500">molikakhorn71@gmail.com</div>
-                    </div>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 font-bold">
-                      SUPER ADMIN
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleSelectAccount('thavorac.chun@gmail.com')}
-                    className="p-2 text-left bg-slate-950/80 hover:bg-slate-800/80 border border-slate-800 rounded-lg text-slate-300 transition-colors flex items-center justify-between"
-                  >
-                    <div>
-                      <div className="font-semibold text-amber-400">Thavorac Chun</div>
-                      <div className="text-[10px] text-slate-500">thavorac.chun@gmail.com</div>
-                    </div>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 font-bold">
-                      SUPER ADMIN
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleSelectAccount('sea.hutmonineat@gmail.com')}
-                    className="p-2 text-left bg-slate-950/80 hover:bg-slate-800/80 border border-slate-800 rounded-lg text-slate-300 transition-colors flex items-center justify-between"
-                  >
-                    <div>
-                      <div className="font-semibold text-amber-400">Sea Hutmonineat</div>
-                      <div className="text-[10px] text-slate-500">sea.hutmonineat@gmail.com</div>
-                    </div>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 font-bold">
-                      SUPER ADMIN
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleSelectAccount('lymoly1122@gmail.com')}
-                    className="p-2 text-left bg-slate-950/80 hover:bg-slate-800/80 border border-slate-800 rounded-lg text-slate-300 transition-colors flex items-center justify-between"
-                  >
-                    <div>
-                      <div className="font-semibold text-brand-400">Moly Ly</div>
-                      <div className="text-[10px] text-slate-500">lymoly1122@gmail.com</div>
-                    </div>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-brand-500/10 text-brand-400 border border-brand-500/30 font-bold">
-                      ADMIN
-                    </span>
-                  </button>
-                </div>
-              </div>
             )}
-          </div>
-
-          <div className="mt-6 text-center text-xs text-slate-400">
-            Need a MiniApp Developer account?{' '}
-            <Link href="/signup" className="font-semibold text-brand-400 hover:text-brand-300 transition-colors">
-              Sign up with your personal/secondary email
-            </Link>
-          </div>
+          </button>
         </div>
+        {passwordError && (
+          <p className="mt-1.5 text-xs text-rose-400 flex items-center gap-1.5 animate-in fade-in">
+            <span>•</span> {passwordError}
+          </p>
+        )}
       </div>
-    </div>
+
+      {/* Remember Me Checkbox */}
+      <div className="flex items-center justify-between pt-1">
+        <label className="flex items-center gap-2.5 cursor-pointer text-xs text-slate-400 hover:text-slate-300 select-none">
+          <input
+            type="checkbox"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+            className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-brand-500 focus:ring-brand-500 focus:ring-offset-0 focus:ring-offset-transparent cursor-pointer"
+          />
+          <span>Keep me signed in for 7 days</span>
+        </label>
+      </div>
+
+      {/* Primary Submit Button */}
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full py-3.5 px-4 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-brand-600 via-brand-500 to-brand-600 hover:from-brand-500 hover:to-brand-500 shadow-lg shadow-brand-500/25 hover:shadow-brand-500/40 border border-brand-400/30 transition-all duration-200 flex items-center justify-center gap-2 group disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer active:scale-[0.99]"
+      >
+        {loading ? (
+          <>
+            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            <span>Authenticating...</span>
+          </>
+        ) : (
+          <>
+            <span>Sign In to Backoffice</span>
+            <span className="text-accent-300 group-hover:translate-x-0.5 transition-transform">→</span>
+          </>
+        )}
+      </button>
+
+      {/* Sign Up Redirect */}
+      <div className="pt-4 text-center">
+        <p className="text-xs text-slate-400">
+          Don&apos;t have an account?{' '}
+          <Link
+            href="/signup"
+            className="font-semibold text-brand-400 hover:text-brand-300 transition-colors"
+          >
+            Create account
+          </Link>
+        </p>
+      </div>
+    </form>
   );
 }
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400 text-xs">
-        Loading SuperApp Gateway...
-      </div>
-    }>
-      <LoginForm />
-    </Suspense>
+    <AuthSplitLayout
+      title="Welcome back"
+      subtitle="Sign in to manage your FSA SuperApp workspace."
+      activeTab="login"
+    >
+      <Suspense
+        fallback={
+          <div className="p-8 text-center text-xs text-slate-500">
+            Loading authentication portal...
+          </div>
+        }
+      >
+        <LoginForm />
+      </Suspense>
+    </AuthSplitLayout>
   );
 }

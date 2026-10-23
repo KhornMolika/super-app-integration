@@ -9,10 +9,21 @@ import {
   Res,
   UseGuards,
   UnauthorizedException,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
-import { LoginDto } from './dto/login.dto';
+import {
+  LoginDto,
+  RegisterDto,
+  RefreshTokenDto,
+  CreateDeveloperTokenDto,
+  ChangePasswordDto,
+  RequestOtpDto,
+  VerifyOtpDto,
+  ResetPasswordDto,
+} from './dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @Controller('auth')
@@ -20,6 +31,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login')
+  @HttpCode(HttpStatus.OK)
   async login(@Body() body: LoginDto, @Res({ passthrough: true }) res: Response) {
     const result = await this.authService.login(body);
     if (result.success && 'access_token' in result && result.access_token) {
@@ -45,37 +57,14 @@ export class AuthController {
   }
 
   @Post('register')
-  async register(
-    @Body() body: { email: string; name: string; password?: string; organization?: string },
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const result = await this.authService.register(body);
-    if (result.success && 'access_token' in result && result.access_token) {
-      const isProd = process.env.NODE_ENV === 'production';
-      res.cookie('auth_token', result.access_token, {
-        httpOnly: true,
-        secure: isProd,
-        sameSite: 'lax',
-        path: '/',
-        maxAge: result.expires_in * 1000,
-      });
-      if (result.refresh_token) {
-        res.cookie('refresh_token', result.refresh_token, {
-          httpOnly: true,
-          secure: isProd,
-          sameSite: 'lax',
-          path: '/',
-          maxAge: result.refresh_expires_in * 1000,
-        });
-      }
-    }
-    return result;
+  async register(@Body() body: RegisterDto) {
+    return this.authService.register(body);
   }
 
   @Post('refresh')
   async refresh(
     @Req() req: Request,
-    @Body() body: { refresh_token?: string },
+    @Body() body: RefreshTokenDto,
     @Res({ passthrough: true }) res: Response,
   ) {
     const refreshToken =
@@ -113,10 +102,10 @@ export class AuthController {
     return this.authService.getJwks();
   }
 
-  @Get('sso/providers')
-  getSsoProviders() {
-    return this.authService.getSsoProviders();
-  }
+  // @Get('sso/providers')
+  // getSsoProviders() {
+  //   return this.authService.getSsoProviders();
+  // }
 
   @Get('developer-tokens')
   @UseGuards(JwtAuthGuard)
@@ -132,7 +121,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   async createDeveloperToken(
     @Req() req: Request,
-    @Body() body: { name: string; expirationDays?: number; scopes?: string[] },
+    @Body() body: CreateDeveloperTokenDto,
   ) {
     const user = (req as any).user;
     const userId = user?.sub || user?.id;
@@ -156,4 +145,35 @@ export class AuthController {
     if (!userId) throw new UnauthorizedException();
     return this.authService.revokeDeveloperToken(userId, tokenId);
   }
+
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  async changePassword(
+    @Req() req: Request,
+    @Body() body: ChangePasswordDto,
+  ) {
+    const user = (req as any).user;
+    const userId = user?.sub || user?.id;
+    if (!userId) throw new UnauthorizedException('Authentication required');
+    return this.authService.changePassword(userId, body);
+  }
+
+  @Post('request-otp')
+  @HttpCode(HttpStatus.OK)
+  async requestOtp(@Body() body: RequestOtpDto) {
+    return this.authService.requestOtp(body);
+  }
+
+  @Post('verify-otp')
+  @HttpCode(HttpStatus.OK)
+  async verifyOtp(@Body() body: VerifyOtpDto) {
+    return this.authService.verifyOtp(body);
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() body: ResetPasswordDto) {
+    return this.authService.resetPassword(body);
+  }
 }
+

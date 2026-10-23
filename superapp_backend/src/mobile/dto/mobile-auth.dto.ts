@@ -48,11 +48,11 @@ export class VerifyEmailDto {
   @MaxLength(256)
   token!: string;
 
-  /** Must be the password chosen at (the latest) registration of this email. */
+  /** Must be the password chosen at (the latest) registration of this email (optional for OTP verification). */
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
   @MaxLength(1024)
-  password!: string;
+  password?: string;
 }
 
 /** Logout is idempotent: a missing/empty token is a silent no-op (204). */

@@ -63,7 +63,7 @@ export class NotificationsService {
       if (userId) {
         const user = await this.userRepository.findOne({
           where: { id: userId },
-          relations: { roles: true },
+          relations: { role: true },
         });
         if (
           user?.telegramChatId &&

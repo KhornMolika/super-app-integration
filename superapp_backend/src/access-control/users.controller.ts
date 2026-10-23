@@ -121,7 +121,7 @@ export class UsersController {
   ) {
     return this.accessControlService.approveUser(
       id,
-      body?.roleName || body?.role || 'MINI_APP_DEVELOPER',
+      body?.roleName || body?.role || 'MA_DEVELOPER',
       req?.user,
     );
   }

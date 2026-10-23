@@ -44,5 +44,9 @@ export class CreateUserDto {
 
   @IsString()
   @IsOptional()
+  organizationId?: string;
+
+  @IsString()
+  @IsOptional()
   passwordHash?: string;
 }

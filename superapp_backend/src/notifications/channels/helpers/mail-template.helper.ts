@@ -1,4 +1,4 @@
-﻿import { EmailLayoutOptions, SecurityValidationFinding } from './mail.types';
+import { EmailLayoutOptions, SecurityValidationFinding } from './mail.types';
 
 export class MailTemplateHelper {
   /**
@@ -69,7 +69,7 @@ export class MailTemplateHelper {
     return {
       subject: 'Test Notification: SuperApp Email Gateway',
       html: this.renderEmailLayout({
-        category: 'SuperApp Gateway',
+        category: 'FSA SuperApp Platform',
         categoryColor: '#38bdf8',
         title: 'Email Notification Test',
         borderAccentColor: '#0284c7',
@@ -82,6 +82,7 @@ export class MailTemplateHelper {
   public static renderEmailVerification(
     name: string,
     verifyUrl: string,
+    otpCode?: string,
   ): { subject: string; html: string } {
     const escName = this.escapeHtml(name);
     const escUrl = this.escapeHtml(verifyUrl);
@@ -94,39 +95,63 @@ export class MailTemplateHelper {
       tokenCode = '';
     }
     const escToken = this.escapeHtml(tokenCode || verifyUrl);
+    const displayOtp = otpCode ? otpCode.trim() : (tokenCode && tokenCode.length === 6 ? tokenCode : '');
 
-    const contentHtml = `
-      <p style="font-size: 14px; line-height: 1.6; margin-top: 0;">Hello <strong>${escName}</strong>,</p>
-      <p style="font-size: 14px; line-height: 1.6;">
-        Use the verification code below or paste the link into your SuperApp to complete your registration. This code expires in 24 hours.
-      </p>
-
+    const otpSectionHtml = displayOtp
+      ? `
+      <div style="background: #f0fdf4; border: 2px dashed #16a34a; border-radius: 12px; padding: 24px 16px; margin: 24px 0; text-align: center;">
+        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #15803d; letter-spacing: 1.5px; margin-bottom: 8px;">
+          YOUR 6-DIGIT VERIFICATION CODE
+        </div>
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace; font-size: 38px; font-weight: 800; color: #166534; letter-spacing: 8px; line-height: 1.2;">
+          ${displayOtp}
+        </div>
+        <div style="font-size: 12px; color: #15803d; margin-top: 8px; font-weight: 500;">
+          Enter this code in your SuperApp to verify your email.
+        </div>
+      </div>
+      `
+      : `
       <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; margin: 20px 0; text-align: center;">
         <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; margin-bottom: 6px;">Your Verification Code / Token</div>
         <div style="font-family: monospace, Courier, monospace; font-size: 18px; font-weight: 700; color: #0284c7; letter-spacing: 1px; word-break: break-all; user-select: all;">
           ${escToken}
         </div>
       </div>
+      `;
 
-      <p style="margin: 20px 0;">
-        <a href="${escUrl}" style="display: inline-block; background: #0284c7; color: #ffffff; text-decoration: none; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 700;">Open in SuperApp</a>
+    const contentHtml = `
+      <p style="font-size: 14px; line-height: 1.6; margin-top: 0; color: #1e293b;">Hello <strong>${escName}</strong>,</p>
+      <p style="font-size: 14px; line-height: 1.6; color: #475569;">
+        Thank you for registering with the FSA SuperApp Platform. Please verify your email address to complete your registration and activate your mobile account.
       </p>
 
-      <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
-        <p style="font-size: 12px; color: #64748b; margin-bottom: 4px;">Direct Link / URL:</p>
-        <code style="font-size: 11px; color: #475569; word-break: break-all; background: #f8fafc; padding: 6px 8px; border-radius: 4px; display: block; border: 1px solid #e2e8f0;">${escUrl}</code>
+      ${otpSectionHtml}
+
+      <div style="text-align: center; margin: 24px 0;">
+        <a href="${escUrl}" style="display: inline-block; background: #16a34a; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-size: 14px; font-weight: 700; box-shadow: 0 4px 6px -1px rgba(22, 163, 74, 0.25);">
+          Open in SuperApp &rarr;
+        </a>
+        <p style="font-size: 12px; color: #64748b; margin: 8px 0 0 0;">
+          Tap to open the SuperApp and verify automatically on your mobile device.
+        </p>
       </div>
 
-      <p style="font-size: 13px; color: #64748b; line-height: 1.5; margin-top: 20px;">If you did not create this account you can safely ignore this email.</p>
+      <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+        <p style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;">Direct Deep Link / Legacy Token (for copy-pasting if needed):</p>
+        <code style="font-size: 10px; color: #64748b; word-break: break-all; background: #f8fafc; padding: 6px 8px; border-radius: 4px; display: block; border: 1px solid #e2e8f0;">${escUrl}</code>
+      </div>
+
+      <p style="font-size: 12px; color: #94a3b8; line-height: 1.5; margin-top: 20px;">If you did not create this account you can safely ignore this email.</p>
     `;
 
     return {
       subject: 'Verify your SuperApp email address',
       html: `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
-          <div style="background: #0f172a; padding: 32px 24px; text-align: left; color: #ffffff; border-bottom: 3px solid #0284c7;">
-            <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #38bdf8; font-weight: 700;">SuperApp</span>
-            <h1 style="margin: 8px 0 0 0; font-size: 22px; font-weight: 700; color: #ffffff;">Verify your email</h1>
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);">
+          <div style="background: #0f172a; padding: 32px 24px; text-align: left; color: #ffffff; border-bottom: 3px solid #16a34a;">
+            <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #4ade80; font-weight: 700;">FSA SuperApp</span>
+            <h1 style="margin: 8px 0 0 0; font-size: 22px; font-weight: 700; color: #ffffff;">Verify Your Email Address</h1>
           </div>
           <div style="padding: 32px 24px;">
             ${contentHtml}
@@ -165,7 +190,7 @@ export class MailTemplateHelper {
     return {
       subject: `MiniApp Registration Successful: ${appName}`,
       html: this.renderEmailLayout({
-        category: 'SuperApp Gateway',
+        category: 'FSA SuperApp Platform',
         categoryColor: '#38bdf8',
         title: 'MiniApp Registration Successful',
         borderAccentColor: '#0284c7',
@@ -320,7 +345,7 @@ export class MailTemplateHelper {
     return {
       subject: `Action Required: MiniApp Registration Issues (${appName})`,
       html: this.renderEmailLayout({
-        category: 'SuperApp Gateway',
+        category: 'FSA SuperApp Platform',
         categoryColor: '#fb7185',
         title: 'Registration Issues Detected',
         borderAccentColor: '#e11d48',
@@ -532,7 +557,7 @@ export class MailTemplateHelper {
     const escAppName = this.escapeHtml(appName);
     const escReason = this.escapeHtml(
       reason ||
-        'Please review the requested changes and submit a new revision.',
+      'Please review the requested changes and submit a new revision.',
     );
     const escUrl = this.escapeHtml(detailsUrl);
 
@@ -614,6 +639,50 @@ export class MailTemplateHelper {
         borderAccentColor: '#10b981',
         contentHtml,
         signatureTeam: 'SuperApp Governance Team',
+      }),
+    };
+  }
+
+  public static renderPasswordResetOtp(
+    userName: string,
+    code: string,
+    expiresInMinutes: number = 5,
+  ): { subject: string; html: string } {
+    const escName = this.escapeHtml(userName || 'User');
+    const escCode = this.escapeHtml(code);
+
+    const contentHtml = `
+      <p style="font-size: 14px; line-height: 1.6; margin-top: 0;">Hello <strong>${escName}</strong>,</p>
+      <p style="font-size: 14px; line-height: 1.6; color: #334155;">
+        We received a request to reset your password for the <strong>FSA SuperApp Platform</strong>. Use the 6-digit recovery code below to proceed.
+      </p>
+
+      <div style="background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0;">
+        <div style="font-size: 11px; text-transform: uppercase; color: #94a3b8; letter-spacing: 1.5px; font-weight: 700; margin-bottom: 10px;">
+          Single-Use Recovery Code
+        </div>
+        <div style="font-size: 34px; font-weight: 800; letter-spacing: 10px; color: #a3e635; font-family: 'Courier New', Courier, monospace; padding: 6px 0;">
+          ${escCode}
+        </div>
+        <div style="font-size: 12px; color: #f59e0b; margin-top: 10px; font-weight: 600;">
+          ⏱️ Valid for ${expiresInMinutes} minutes &bull; Single-use only
+        </div>
+      </div>
+
+      <p style="font-size: 13px; line-height: 1.6; color: #64748b; margin-bottom: 8px;">
+        <strong>Security Notice:</strong> This code will expire immediately after one use. If you did not request this code, no action is needed — your account remains secure.
+      </p>
+    `;
+
+    return {
+      subject: `FSA SuperApp — Password Reset Code: ${code}`,
+      html: this.renderEmailLayout({
+        category: 'FSA Security Authority',
+        categoryColor: '#f59e0b',
+        title: 'Password Reset Verification',
+        borderAccentColor: '#58761B',
+        contentHtml,
+        signatureTeam: 'FSA Security & Governance Team',
       }),
     };
   }

@@ -29,13 +29,21 @@ export class RefreshToken {
   @Column()
   tokenHash!: string;
 
-  @Index('IDX_end_user_rt_userId')
-  @Column({ type: 'uuid' })
-  userId!: string;
+  @Index('IDX_end_user_rt_endUserId')
+  @Column({ name: 'endUserId', type: 'uuid' })
+  endUserId!: string;
+
+  // Backwards compatibility for userId
+  get userId(): string {
+    return this.endUserId;
+  }
+  set userId(val: string) {
+    this.endUserId = val;
+  }
 
   @ManyToOne(() => EndUser, { onDelete: 'CASCADE', nullable: false })
   @JoinColumn({
-    name: 'userId',
+    name: 'endUserId',
     foreignKeyConstraintName: 'FK_end_user_rt_userId',
   })
   user?: EndUser;

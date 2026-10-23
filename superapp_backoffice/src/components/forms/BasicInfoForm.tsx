@@ -1,10 +1,8 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Input, Label, Select, Textarea } from '@/components/ui/inputs';
 import { LogoUploadInput } from '@/components/ui/LogoUploadInput';
 import { LockIcon, BuildingIcon } from '@/components/ui/Icons';
-import { CreateMiniAppDto, IntegrationMethod, SourceType } from '@/types/miniapp.types';
 import { organizationsApi, Organization } from '@/api/organizations.api';
-import { FSA_ORGANIZATIONS, FSA_ORGANIZATION_GROUPS, getOrganizationDef, FsaEntityType } from '@/lib/constants/fsa-organizations';
 
 export default function BasicInfoForm({ formData, handleChange, allErrors = {}, isEditable = true }: any) {
   const [dbOrganizations, setDbOrganizations] = useState<Organization[]>([]);
@@ -18,192 +16,198 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
         const data = await organizationsApi.getAll({ status: 'ACTIVE' });
         if (mounted && Array.isArray(data) && data.length > 0) {
           setDbOrganizations(data);
+
+          // If no organization is currently selected, default to the first active organization from the database
+          if (!formData.organization && data[0] && handleChange) {
+            handleChange({
+              target: { name: 'organization', value: data[0].name },
+            } as any);
+            if (data[0].code) {
+              handleChange({
+                target: { name: 'organizationCode', value: data[0].code },
+              } as any);
+            }
+            handleChange({
+              target: { name: 'category', value: data[0].name },
+            } as any);
+          }
         }
       } catch (err) {
-        console.warn('Could not fetch organizations from API, using default registry:', err);
+        console.error('Failed to query organizations from database API:', err);
       } finally {
         if (mounted) setLoadingOrgs(false);
       }
     };
+
     loadOrgs();
     return () => {
       mounted = false;
     };
   }, []);
 
-  // Filter out any INACTIVE organizations from dropdown
-  const activeDbOrgs = dbOrganizations.filter((o) => {
-    const s = (o.status || 'ACTIVE').toUpperCase();
-    return s !== 'INACTIVE';
-  });
+  // Filter out any INACTIVE organizations (safeguard)
+  const activeDbOrgs = useMemo(
+    () => dbOrganizations.filter((o) => (o.status || 'ACTIVE').toUpperCase() === 'ACTIVE'),
+    [dbOrganizations]
+  );
 
-  // Dynamically group live active organizations from DB or fallback to predefined registry
-  const organizationGroups = activeDbOrgs.length > 0
-    ? [
-        {
-          label: 'Administrative & Policy Body (FSA)',
-          type: 'ADMINISTRATIVE' as FsaEntityType,
-          organizations: activeDbOrgs
-            .filter((o) => {
-              const def = getOrganizationDef(o.name) || getOrganizationDef(o.code);
-              return def?.entityType === 'ADMINISTRATIVE' || o.metadata?.entityType === 'ADMINISTRATIVE' || ['FTC', 'GAD', 'PD', 'TLAD'].includes(o.code || '');
-            })
-            .map((o) => {
-              const def = getOrganizationDef(o.name) || getOrganizationDef(o.code);
-              return {
-                id: o.id,
-                code: o.code || def?.code || 'FTC',
-                name: o.name,
-              };
-            }),
-        },
-        {
-          label: 'Sector-Specific Regulators (FSA)',
-          type: 'SECTOR_REGULATOR' as FsaEntityType,
-          organizations: activeDbOrgs
-            .filter((o) => {
-              const def = getOrganizationDef(o.name) || getOrganizationDef(o.code);
-              return def?.entityType === 'SECTOR_REGULATOR' || o.metadata?.entityType === 'SECTOR_REGULATOR' || ['IRC', 'SERC', 'SSR', 'TR', 'ACAR', 'RPR'].includes(o.code || '');
-            })
-            .map((o) => {
-              const def = getOrganizationDef(o.name) || getOrganizationDef(o.code);
-              return {
-                id: o.id,
-                code: o.code || def?.code || 'REG',
-                name: o.name,
-              };
-            }),
-        },
-        {
-          label: 'Oversight & Compliance Unit (FSA)',
-          type: 'OVERSIGHT_UNIT' as FsaEntityType,
-          organizations: activeDbOrgs
-            .filter((o) => {
-              const def = getOrganizationDef(o.name) || getOrganizationDef(o.code);
-              return def?.entityType === 'OVERSIGHT_UNIT' || o.metadata?.entityType === 'OVERSIGHT_UNIT' || o.code === 'IAU';
-            })
-            .map((o) => {
-              const def = getOrganizationDef(o.name) || getOrganizationDef(o.code);
-              return {
-                id: o.id,
-                code: o.code || def?.code || 'IAU',
-                name: o.name,
-              };
-            }),
-        },
-      ].filter((g) => g.organizations.length > 0)
-    : FSA_ORGANIZATION_GROUPS;
-
-  const currentOrgDef = getOrganizationDef(formData.organization || formData.organizationCode || formData.category);
-  const selectedOrgValue = currentOrgDef?.name || FSA_ORGANIZATIONS[0].name;
+  // Group active database organizations dynamically by their official `parentAuthority` attribute
+  const groupedByParent = useMemo(() => {
+    const groups: Record<string, Organization[]> = {};
+    activeDbOrgs.forEach((org) => {
+      const parent = org.parentAuthority || 'Non-Bank Financial Services Authority';
+      if (!groups[parent]) groups[parent] = [];
+      groups[parent].push(org);
+    });
+    return groups;
+  }, [activeDbOrgs]);
 
   const handleOrgSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const chosen = e.target.value;
-    const def = getOrganizationDef(chosen);
-    const orgName = def?.name || chosen;
+    const chosenName = e.target.value;
+    const selectedOrg = dbOrganizations.find((o) => o.name === chosenName);
 
     if (handleChange) {
       handleChange({
-        target: {
-          name: 'organization',
-          value: orgName,
-        },
+        target: { name: 'organization', value: chosenName },
+      } as any);
+
+      handleChange({
+        target: { name: 'organizationCode', value: selectedOrg?.code || '' },
+      } as any);
+
+      handleChange({
+        target: { name: 'category', value: chosenName },
       } as any);
     }
   };
 
   return (
     <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <Label>MiniApp Name <span className="text-rose-500">*</span></Label>
-              <Input 
-                required 
-                disabled={!isEditable}
-                name="name" 
-                value={formData.name} 
-                onChange={handleChange} 
-                placeholder="e.g. Core Banking App" 
-                className={allErrors.name ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
-              />
-              {allErrors.name && <p className="mt-1.5 text-sm text-rose-600 font-medium">{allErrors.name}</p>}
-            </div>
-            <div>
-              <Label>MiniApp Slug <span className="text-slate-400 font-normal text-xs">(URL &amp; Catalog Key)</span> <span className="text-rose-500">*</span></Label>
-              <div className="relative flex items-center">
-                <Input 
-                  disabled
-                  readOnly 
-                  name="slug" 
-                  value={formData.slug || ''} 
-                  placeholder="e.g. staff-portal-attendance" 
-                  className={`font-mono text-base !bg-slate-200/70 dark:!bg-slate-800/90 !border-slate-300/80 dark:!border-slate-700 !text-slate-500 dark:!text-slate-400 placeholder:!text-slate-400 dark:placeholder:!text-slate-500 cursor-not-allowed select-all pr-10 ${allErrors.slug ? '!border-rose-500 ring-1 ring-rose-500 bg-rose-50/50' : ''}`}
-                />
-                <div className="absolute right-3.5 pointer-events-none flex items-center text-slate-400 dark:text-slate-500">
-                  <LockIcon className="w-4 h-4" />
-                </div>
-              </div>
-              <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                Binary MiniApp ID (<code>app_id</code>) is auto-detected from your package in the Integration step.
-              </p>
-              {allErrors.slug && <p className="mt-1.5 text-sm text-rose-600 font-medium">{allErrors.slug}</p>}
-            </div>
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <Label className="flex items-center gap-1.5">
-                  <BuildingIcon className="w-3.5 h-3.5 text-sky-500" />
-                  <span>Organization <span className="text-rose-500">*</span></span>
-                </Label>
-              </div>
-              <Select 
-                name="organization" 
-                value={selectedOrgValue} 
-                onChange={handleOrgSelect}
-                disabled={!isEditable}
-                className="text-sm font-medium"
-              >
-                {organizationGroups.map((group) => (
-                  <optgroup key={group.type} label={group.label} className="font-semibold text-slate-700 dark:text-slate-200">
-                    {group.organizations.map((org) => (
-                      <option key={`${group.type}-${org.code}-${org.name}`} value={org.name} className="font-normal text-slate-800 dark:text-slate-300">
-                        {org.code} - {org.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </Select>
-            </div>
-            <div>
-              <LogoUploadInput
-                value={formData.logo || ''}
-                onChange={(logoVal) => handleChange({ target: { name: 'logo', value: logoVal } })}
-                error={allErrors.logo}
-                required={true}
-              />
-            </div>
-            <div className="col-span-1 md:col-span-2">
-              <div className="flex items-center justify-between mb-1">
-                <Label>Short Description</Label>
-                <span className="text-xs text-slate-400 font-medium">Optional</span>
-              </div>
-              <Input name="shortDescription" value={formData.shortDescription || ''} onChange={handleChange} placeholder="e.g. Instant payments and digital wallet for retail users" />
-            </div>
-            <div className="col-span-1 md:col-span-2">
-              <div className="flex items-center justify-between mb-1">
-                <Label>Full Description</Label>
-                <span className="text-xs text-slate-400 font-medium">Optional</span>
-              </div>
-              <Textarea
-                name="fullDescription"
-                rows={3}
-                value={formData.fullDescription || ''}
-                onChange={handleChange}
-                placeholder="e.g. Comprehensive details explaining the features, user flows, and core functionality of this MiniApp..."
-                className={allErrors.fullDescription ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
-              />
-              {allErrors.fullDescription && <p className="mt-1.5 text-sm text-rose-600 font-medium">{allErrors.fullDescription}</p>}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* 1. MiniApp Name */}
+        <div>
+          <Label>
+            MiniApp Name <span className="text-rose-500">*</span>
+          </Label>
+          <Input
+            required
+            disabled={!isEditable}
+            name="name"
+            value={formData.name || ''}
+            onChange={handleChange}
+            placeholder="e.g. Core Banking App"
+            className={allErrors.name ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
+          />
+          {allErrors.name && <p className="mt-1.5 text-sm text-rose-600 font-medium">{allErrors.name}</p>}
+        </div>
+
+        {/* 2. MiniApp Slug */}
+        <div>
+          <Label>
+            MiniApp Slug <span className="text-slate-400 font-normal text-xs">(URL &amp; Catalog Key)</span> <span className="text-rose-500">*</span>
+          </Label>
+          <div className="relative flex items-center">
+            <Input
+              disabled
+              readOnly
+              name="slug"
+              value={formData.slug || ''}
+              placeholder="e.g. staff-portal-attendance"
+              className={`font-mono text-base !bg-slate-200/70 dark:!bg-slate-800/90 !border-slate-300/80 dark:!border-slate-700 !text-slate-500 dark:!text-slate-400 placeholder:!text-slate-400 dark:placeholder:!text-slate-500 cursor-not-allowed select-all pr-10 ${allErrors.slug ? '!border-rose-500 ring-1 ring-rose-500 bg-rose-50/50' : ''}`}
+            />
+            <div className="absolute right-3.5 pointer-events-none flex items-center text-slate-400 dark:text-slate-500">
+              <LockIcon className="w-4 h-4" />
             </div>
           </div>
+          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+            Binary MiniApp ID (<code>app_id</code>) is auto-detected from your package in the Integration step.
+          </p>
+          {allErrors.slug && <p className="mt-1.5 text-sm text-rose-600 font-medium">{allErrors.slug}</p>}
+        </div>
+
+        {/* 3. Organization Dropdown (100% Live Database Driven) */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <Label className="flex items-center gap-1.5">
+              <BuildingIcon className="w-3.5 h-3.5 text-sky-500" />
+              <span>
+                Organization <span className="text-rose-500">*</span>
+              </span>
+            </Label>
+            {loadingOrgs && (
+              <span className="text-[11px] text-slate-400 animate-pulse">
+                Querying database...
+              </span>
+            )}
+          </div>
+          <Select
+            name="organization"
+            value={formData.organization || ''}
+            onChange={handleOrgSelect}
+            disabled={!isEditable || loadingOrgs}
+            className="text-sm font-medium"
+          >
+            {activeDbOrgs.length === 0 ? (
+              <option value="">
+                {loadingOrgs ? 'Loading organizations from database...' : 'No active organizations found'}
+              </option>
+            ) : (
+              Object.entries(groupedByParent).map(([parent, orgs]) => (
+                <optgroup key={parent} label={parent} className="font-semibold text-slate-700 dark:text-slate-200">
+                  {orgs.map((org) => (
+                    <option key={org.id} value={org.name} className="font-normal text-slate-800 dark:text-slate-300">
+                      {org.code ? `${org.code} — ` : ''}{org.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ))
+            )}
+          </Select>
+        </div>
+
+        {/* 4. Logo Upload */}
+        <div>
+          <LogoUploadInput
+            value={formData.logo || ''}
+            onChange={(logoVal) => handleChange({ target: { name: 'logo', value: logoVal } })}
+            error={allErrors.logo}
+            required={true}
+          />
+        </div>
+
+        {/* 5. Short Description */}
+        <div className="col-span-1 md:col-span-2">
+          <div className="flex items-center justify-between mb-1">
+            <Label>Short Description</Label>
+            <span className="text-xs text-slate-400 font-medium">Optional</span>
+          </div>
+          <Input
+            name="shortDescription"
+            value={formData.shortDescription || ''}
+            onChange={handleChange}
+            placeholder="e.g. Instant payments and digital wallet for retail users"
+          />
+        </div>
+
+        {/* 6. Full Description */}
+        <div className="col-span-1 md:col-span-2">
+          <div className="flex items-center justify-between mb-1">
+            <Label>Full Description</Label>
+            <span className="text-xs text-slate-400 font-medium">Optional</span>
+          </div>
+          <Textarea
+            name="fullDescription"
+            rows={3}
+            value={formData.fullDescription || ''}
+            onChange={handleChange}
+            placeholder="e.g. Comprehensive details explaining the features, user flows, and core functionality of this MiniApp..."
+            className={allErrors.fullDescription ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
+          />
+          {allErrors.fullDescription && (
+            <p className="mt-1.5 text-sm text-rose-600 font-medium">{allErrors.fullDescription}</p>
+          )}
+        </div>
+      </div>
     </>
   );
 }

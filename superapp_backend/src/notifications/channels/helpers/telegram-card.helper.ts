@@ -41,7 +41,7 @@ export class TelegramCardHelper {
 + Security     : Pre-flight scan queued
 </code></pre>
 
-<blockquote>MiniApp <b>"${appDisplayName}"</b> registered successfully on the SuperApp Gateway.</blockquote>
+<blockquote>MiniApp <b>"${appDisplayName}"</b> registered successfully on the FSA SuperApp Platform.</blockquote>
         `.trim();
 
         buttons.push([{ text: '🔍 View in Backoffice', url: detailsUrl }]);
@@ -102,13 +102,13 @@ export class TelegramCardHelper {
         const score = metadata?.score ?? 0;
         const cleanIssue = message
           ? message
-              .split('\n')
-              .filter(Boolean)
-              .map((l) => {
-                const line = l.trim().replace(/^[-•!+]\s*/, '');
-                return `- Issue        : ${line}`;
-              })
-              .join('\n')
+            .split('\n')
+            .filter(Boolean)
+            .map((l) => {
+              const line = l.trim().replace(/^[-•!+]\s*/, '');
+              return `- Issue        : ${line}`;
+            })
+            .join('\n')
           : '- Issue        : Security compliance gate requirements not satisfied';
 
         const text = `
@@ -227,10 +227,10 @@ ${cleanIssue}
           'latest';
         const cleanReason = message
           ? message
-              .split('\n')
-              .filter(Boolean)
-              .map((l) => `- Error        : ${l.trim().replace(/^[-•!+]\s*/, '')}`)
-              .join('\n')
+            .split('\n')
+            .filter(Boolean)
+            .map((l) => `- Error        : ${l.trim().replace(/^[-•!+]\s*/, '')}`)
+            .join('\n')
           : '- Error        : Fastlane packaging or Nexus publish failed';
 
         const text = `
@@ -256,10 +256,10 @@ ${cleanReason}
       case 'CHANGES_REQUESTED': {
         const cleanFeedback = message
           ? message
-              .split('\n')
-              .filter(Boolean)
-              .map((l) => `! Note         : ${l.trim().replace(/^[-•!+]\s*/, '')}`)
-              .join('\n')
+            .split('\n')
+            .filter(Boolean)
+            .map((l) => `! Note         : ${l.trim().replace(/^[-•!+]\s*/, '')}`)
+            .join('\n')
           : '! Note         : Revisions requested before approval';
 
         const text = `
@@ -285,10 +285,10 @@ ${cleanFeedback}
       case 'MINIAPP_REJECTED': {
         const cleanReason = message
           ? message
-              .split('\n')
-              .filter(Boolean)
-              .map((l) => `- Reason       : ${l.trim().replace(/^[-•!+]\s*/, '')}`)
-              .join('\n')
+            .split('\n')
+            .filter(Boolean)
+            .map((l) => `- Reason       : ${l.trim().replace(/^[-•!+]\s*/, '')}`)
+            .join('\n')
           : '- Reason       : Submission does not meet integration policies';
 
         const text = `
@@ -339,10 +339,10 @@ ${cleanReason}
 
         const detailLines = message
           ? message
-              .split('\n')
-              .filter(Boolean)
-              .map((l) => `${prefix} Detail       : ${l.trim().replace(/^[-•!+]\s*/, '')}`)
-              .join('\n')
+            .split('\n')
+            .filter(Boolean)
+            .map((l) => `${prefix} Detail       : ${l.trim().replace(/^[-•!+]\s*/, '')}`)
+            .join('\n')
           : `${prefix} Detail       : Notification update`;
 
         const text = `
@@ -355,7 +355,7 @@ ${badge} <b>${header.toUpperCase()}</b>
 ${detailLines}
 </code></pre>
 
-<blockquote>${message || 'SuperApp Gateway notification update.'}</blockquote>
+<blockquote>${message || 'FSA SuperApp Platform notification update.'}</blockquote>
         `.trim();
 
         if (miniAppId) {

@@ -1,0 +1,70 @@
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+} from 'typeorm';
+import { MiniApp } from '../../miniapps/entities/miniapp.entity';
+import { User } from '../../access-control/entities/user.entity';
+
+@Entity('capability_proposals')
+export class CapabilityProposal {
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
+
+  @Column()
+  capabilityKey!: string;
+
+  @Column({ nullable: true })
+  capabilityName!: string;
+
+  // Backwards-compatible aliases
+  get permissionKey(): string {
+    return this.capabilityKey;
+  }
+  set permissionKey(val: string) {
+    this.capabilityKey = val;
+  }
+
+  get permissionName(): string {
+    return this.capabilityName;
+  }
+  set permissionName(val: string) {
+    this.capabilityName = val;
+  }
+
+  @Column({ type: 'text', nullable: true })
+  description!: string;
+
+  @ManyToOne(() => MiniApp, { nullable: true, onDelete: 'CASCADE' })
+  miniApp!: MiniApp;
+
+  @ManyToOne(() => User, { nullable: true })
+  requestedBy!: User;
+
+  @Column({ default: 'PENDING_REVIEW' })
+  status!: string;
+
+  @Column({ type: 'text', nullable: true })
+  adminDecisionReason!: string;
+
+  @Column({ nullable: true })
+  targetSuperAppVersion!: string;
+
+  @Column({ nullable: true })
+  implementedInSuperAppVersion!: string;
+
+  @Column({ type: 'jsonb', nullable: true })
+  metadata!: any;
+
+  @CreateDateColumn({ type: 'timestamptz' })
+  createdAt!: Date;
+
+  @UpdateDateColumn({ type: 'timestamptz' })
+  updatedAt!: Date;
+}
+
+// Backwards-compatible alias
+export { CapabilityProposal as PermissionProposal };

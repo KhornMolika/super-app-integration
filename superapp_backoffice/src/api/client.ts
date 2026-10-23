@@ -1,5 +1,5 @@
-﻿/**
- * Core API Client for SuperApp Gateway Backoffice
+/**
+ * Core API Client for FSA SuperApp Platform Backoffice
  * Routes all client-side requests through Next.js BFF API layer (/api/...)
  * with automatic 401 Silent Refresh and Session Expiry Interceptors.
  */
@@ -132,7 +132,15 @@ export async function apiClient<T = any>(endpoint: string, options: RequestOptio
   }
 
   // 401 Unauthorized Interceptor: Attempt silent refresh with HttpOnly refresh token
-  if (response.status === 401 && !_retry && !url.includes('/api/auth/login') && !url.includes('/api/auth/refresh')) {
+  const isAuthPage =
+    typeof window !== 'undefined' &&
+    (window.location.pathname.startsWith('/login') ||
+      window.location.pathname.startsWith('/signup') ||
+      window.location.pathname.startsWith('/verify-otp') ||
+      window.location.pathname.startsWith('/forgot-password') ||
+      window.location.pathname.startsWith('/legal'));
+
+  if (response.status === 401 && !_retry && !isAuthPage && !url.includes('/api/auth/login') && !url.includes('/api/auth/refresh')) {
     if (!isRefreshing) {
       isRefreshing = true;
       try {

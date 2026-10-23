@@ -1,0 +1,55 @@
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
+
+@Entity('capability_definitions')
+export class CapabilityDefinition {
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
+
+  @Column({ unique: true })
+  key!: string;
+
+  @Column()
+  name!: string;
+
+  @Column({ type: 'text', nullable: true })
+  description!: string;
+
+  @Column({ nullable: true })
+  category!: string;
+
+  @Column({ default: true })
+  isActive!: boolean;
+
+  @Column({ default: false })
+  isDeprecated!: boolean;
+
+  @Column({ nullable: true })
+  introducedInVersion!: string;
+
+  @Column({ nullable: true })
+  deprecatedInVersion!: string;
+
+  @Column({ nullable: true })
+  minSuperAppVersion!: string;
+
+  @Column({ nullable: true })
+  maxSuperAppVersion!: string;
+
+  @Column({ type: 'jsonb', nullable: true })
+  metadata!: any;
+
+  @CreateDateColumn({ type: 'timestamptz' })
+  createdAt!: Date;
+
+  @UpdateDateColumn({ type: 'timestamptz' })
+  updatedAt!: Date;
+}
+
+// Backwards-compatible alias
+export { CapabilityDefinition as PermissionDefinition };

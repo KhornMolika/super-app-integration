@@ -3,6 +3,7 @@ export * from './miniapps.api';
 export * from './super-app.api';
 export * from './organizations.api';
 export * from './permissions.api';
+export * from './capabilities.api';
 export * from './notifications.api';
 export * from './audit-logs.api';
 export * from './users.api';

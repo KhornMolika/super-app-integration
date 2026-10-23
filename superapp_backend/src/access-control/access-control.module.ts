@@ -5,6 +5,7 @@ import { User } from './entities/user.entity';
 import { Role } from './entities/role.entity';
 import { Permission } from './entities/permission.entity';
 import { DeveloperToken } from './entities/developer-token.entity';
+import { Organization } from '../organizations/entities/organization.entity';
 import { AccessControlService } from './access-control.service';
 import { SeederService } from './seeder.service';
 import { UsersController } from './users.controller';
@@ -12,7 +13,13 @@ import { RolesController } from './roles.controller';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Role, Permission, DeveloperToken]),
+    TypeOrmModule.forFeature([
+      User,
+      Role,
+      Permission,
+      DeveloperToken,
+      Organization,
+    ]),
     forwardRef(() => AuthModule),
   ],
   controllers: [UsersController, RolesController],

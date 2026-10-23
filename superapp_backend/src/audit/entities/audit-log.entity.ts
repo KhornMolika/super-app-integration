@@ -13,6 +13,15 @@ export class AuditLog {
   @Column({ nullable: true })
   actorId!: string;
 
+  @Column({ nullable: true })
+  actorName?: string;
+
+  @Column({ nullable: true })
+  actorEmail?: string;
+
+  @Column({ nullable: true })
+  actorRole?: string;
+
   @Column()
   action!: string;
 

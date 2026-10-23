@@ -336,6 +336,31 @@ export class MiniappsController {
     return this.miniappService.getActivities(id);
   }
 
+  @Get(':id/collaborators')
+  @RequirePermissions('miniapp:read')
+  async getCollaborators(@Param('id', ParseUUIDPipe) id: string) {
+    return this.miniappService.getCollaborators(id);
+  }
+
+  @Post(':id/collaborators')
+  @RequirePermissions('miniapp:update')
+  async addCollaborator(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: { userId: string; role?: any },
+  ) {
+    return this.miniappService.addCollaborator(id, body.userId, body.role || 'DEVELOPER');
+  }
+
+  @Delete(':id/collaborators/:userId')
+  @RequirePermissions('miniapp:update')
+  async removeCollaborator(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('userId', ParseUUIDPipe) userId: string,
+  ) {
+    await this.miniappService.removeCollaborator(id, userId);
+    return { success: true };
+  }
+
   @Get(':id')
   @RequirePermissions('miniapp:read')
   async findOne(@Param('id', ParseUUIDPipe) id: string) {

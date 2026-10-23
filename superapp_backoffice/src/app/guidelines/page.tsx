@@ -3,10 +3,10 @@
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Section, IntegrationMethodTab } from "@/types";
+import { GuidelinesHeader } from "@/components/guidelines/GuidelinesHeader";
+import { GuidelinesSidebar } from "@/components/guidelines/GuidelinesSidebar";
+import { GuidelinesTableOfContents } from "@/components/guidelines/GuidelinesTableOfContents";
 import {
-  GuidelinesHeader,
-  GuidelinesSidebar,
-  GuidelinesTableOfContents,
   Section01Overview,
   Section02GeneralRequirements,
   Section03Methods,
@@ -16,7 +16,7 @@ import {
   Section07SecurityCheckpoints,
   Section08ValidationLifecycle,
   Section09Troubleshooting,
-} from "@/components/guidelines";
+} from "@/components/guidelines/sections";
 
 const CATEGORY_FRIENDLY_NAMES: Record<string, string> = {
   GENERAL: "Fundamentals",

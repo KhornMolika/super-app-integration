@@ -23,7 +23,6 @@ import { RevisionReviewModal } from '@/components/review/RevisionReviewModal';
 import ReasonPromptModal from '@/components/ui/ReasonPromptModal';
 import BuildProgressModal, { BuildProgressModalState } from '@/components/ui/BuildProgressModal';
 import { CreateMiniAppDto, IntegrationMethod, NativeSdkConfigDto, SourceType } from '@/types/miniapp.types';
-import { getOrganizationDef } from '@/lib/constants/fsa-organizations';
 import { validateUrlFormat } from '@/components/ui/ValidatedUrlInput';
 import { toast } from '@/components/ui/Toast';
 import { miniappsApi, superAppApi, isBackendUnreachableError } from '@/api';
@@ -402,14 +401,17 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
     const fieldName = e.target.name;
     const fieldValue = e.target.value;
     if (fieldName === 'organization' || fieldName === 'category') {
-      const def = getOrganizationDef(fieldValue);
-      const orgName = def?.name || fieldValue;
-      const orgCode = def?.code || '';
       setFormData((prev) => ({
         ...prev,
-        organization: orgName,
-        organizationCode: orgCode,
-        category: orgName,
+        organization: fieldValue,
+        category: fieldValue,
+      }));
+      return;
+    }
+    if (fieldName === 'organizationCode') {
+      setFormData((prev) => ({
+        ...prev,
+        organizationCode: fieldValue,
       }));
       return;
     }

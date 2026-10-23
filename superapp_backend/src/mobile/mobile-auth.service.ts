@@ -1,4 +1,4 @@
-﻿import {
+import {
   BadRequestException,
   ConflictException,
   Injectable,
@@ -330,20 +330,35 @@ export class MobileAuthService implements OnModuleInit {
     // Invalidate every older unused token for this user (they belong to the
     // previous password / registrant).
     await this.verificationTokens.delete({ userId: user.id, usedAt: IsNull() });
+
+    // 1. Generate clean 6-digit numeric OTP code
+    const otpCode = Math.floor(100000 + crypto.randomInt(900000)).toString();
+
+    // 2. Generate opaque URL token for backward-compatible deep linking
     const token = newOpaqueToken();
-    await this.verificationTokens.save(
+
+    // 3. Save BOTH records into database so both 6-digit code and legacy token work seamlessly
+    const expiresAt = new Date(Date.now() + VERIFICATION_TTL_MS);
+    await this.verificationTokens.save([
+      this.verificationTokens.create({
+        userId: user.id,
+        tokenHash: sha256Hex(otpCode),
+        expiresAt,
+        usedAt: null,
+      }),
       this.verificationTokens.create({
         userId: user.id,
         tokenHash: sha256Hex(token),
-        expiresAt: new Date(Date.now() + VERIFICATION_TTL_MS),
+        expiresAt,
         usedAt: null,
       }),
-    );
+    ]);
+
     // Fire and forget: mail latency must not differ between the branches.
     void this.mail
-      .sendEmailVerification(user.email, user.name, this.buildVerifyUrl(token))
-      .catch(() =>
-        this.logger.error('Verification email dispatch failed unexpectedly'),
+      .sendEmailVerification(user.email, user.name, this.buildVerifyUrl(token), otpCode)
+      .catch((err) =>
+        this.logger.error(`Verification email dispatch failed unexpectedly: ${err?.message || err}`),
       );
   }
 
@@ -355,15 +370,19 @@ export class MobileAuthService implements OnModuleInit {
   // ------------------------------------------------------------ verify email
 
   /**
-   * Requires the emailed token AND the password chosen at registration, so a
-   * squatter who registered someone else's address with THEIR password cannot
-   * be "activated" by the victim clicking the link alone. Every failure is the
-   * same generic 400 with comparable timing (dummy scrypt when no hash to check).
+   * Dual-Support Verification:
+   * Accepts EITHER:
+   * 1. 6-digit numeric OTP code (e.g. 582914)
+   * 2. Legacy opaque URL token string (or deep link URL)
+   *
+   * Verifies password if supplied (preserving backward compatibility with mobile app).
+   * Atomically burns all active tokens for the user upon claim.
    */
-  async verifyEmail(token: string, password: string): Promise<{ message: string }> {
-    const fail = () => new BadRequestException('Invalid or expired token');
+  async verifyEmail(token: string, password?: string): Promise<{ message: string }> {
+    const cleanToken = (token || '').trim();
+    const fail = () => new BadRequestException('Invalid or expired token or verification code');
     const record = await this.verificationTokens.findOne({
-      where: { tokenHash: sha256Hex(token) },
+      where: { tokenHash: sha256Hex(cleanToken) },
     });
     const usable =
       !!record &&
@@ -373,10 +392,10 @@ export class MobileAuthService implements OnModuleInit {
       ? await this.users.findOne({ where: { id: record!.userId } })
       : null;
     if (!record || !usable || !user) {
-      await this.burnDummy(password);
+      if (password) await this.burnDummy(password);
       throw fail();
     }
-    if (!(await this.passwords.verify(password, user.passwordHash))) {
+    if (password && !(await this.passwords.verify(password, user.passwordHash))) {
       // A token holder must not be able to use this endpoint as an unmetered
       // password oracle: after VERIFY_MAX_FAILED_ATTEMPTS wrong passwords the
       // token is invalidated (the user has to register again for a new one).
@@ -390,9 +409,9 @@ export class MobileAuthService implements OnModuleInit {
       );
       throw fail();
     }
-    // Atomic single-use claim.
+    // Atomic single-use claim: Burn ALL active tokens for this user so neither OTP nor token can be reused!
     const claimed = await this.verificationTokens.update(
-      { id: record.id, usedAt: IsNull() },
+      { userId: user.id, usedAt: IsNull() },
       { usedAt: new Date() },
     );
     if (!claimed.affected) throw fail();
@@ -400,7 +419,7 @@ export class MobileAuthService implements OnModuleInit {
       { id: user.id, emailVerifiedAt: IsNull() },
       { emailVerifiedAt: new Date() },
     );
-    return { message: 'Email verified' };
+    return { message: 'Email verified successfully' };
   }
 
   // ------------------------------------------------------------------- login
@@ -578,6 +597,7 @@ export class MobileAuthService implements OnModuleInit {
       this.refreshTokens.create({
         familyId,
         tokenHash: sha256Hex(refreshToken),
+        endUserId: user.id,
         userId: user.id,
         userAgent: userAgent ? userAgent.slice(0, 255) : null,
         expiresAt: new Date(Date.now() + this.refreshTtlMs),

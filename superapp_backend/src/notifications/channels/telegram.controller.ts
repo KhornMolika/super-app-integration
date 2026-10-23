@@ -32,7 +32,7 @@ interface AuthenticatedRequest {
 
 @Controller(['telegram', 'api/telegram'])
 export class TelegramController {
-  constructor(private readonly telegramService: TelegramService) {}
+  constructor(private readonly telegramService: TelegramService) { }
 
   @Get('status')
   @UseGuards(JwtAuthGuard)
@@ -243,7 +243,7 @@ export class TelegramController {
 + [TARGET]  ${appName}
 + [STATUS]  Automated alerts & build artifacts connected
 </code></pre>
-<blockquote>This group channel is connected to receive automated security scan results, review status updates, and CI/CD test build APK alerts from the SuperApp Gateway.</blockquote>`;
+<blockquote>This group channel is connected to receive automated security scan results, review status updates, and CI/CD test build APK alerts from the FSA SuperApp Platform.</blockquote>`;
 
     const result = await this.telegramService.sendMessageWithDetails(
       msgText,

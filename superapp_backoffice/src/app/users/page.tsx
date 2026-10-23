@@ -9,6 +9,8 @@ import { useAuth } from '@/lib/auth';
 import { usersApi, rolesApi, telegramApi, User, Role, TelegramBotChat } from '@/api';
 import { useToast } from '@/components/ui/Toast';
 import { CheckIcon, AlertTriangleIcon, ZapIcon, EyeIcon, DevicePhoneIcon } from '@/components/ui/Icons';
+import { ActionMenu } from '@/components/ui/ActionMenu';
+import { Pagination, usePagination } from '@/components/ui/Pagination';
 
 // Permission Categories & Definition Catalog
 export interface PermissionItem {
@@ -118,7 +120,7 @@ export default function UsersPage() {
   const [userFormData, setUserFormData] = useState({
     name: '',
     email: '',
-    roleNames: ['MINI_APP_DEVELOPER'] as string[],
+    roleNames: ['MA_DEVELOPER'] as string[],
     telegramChatId: '',
     telegramUsername: '',
     isActive: true,
@@ -210,7 +212,7 @@ export default function UsersPage() {
     setUserFormData({
       name: '',
       email: '',
-      roleNames: ['MINI_APP_DEVELOPER'],
+      roleNames: ['MA_DEVELOPER'],
       telegramChatId: '',
       telegramUsername: '',
       isActive: true,
@@ -219,6 +221,12 @@ export default function UsersPage() {
   };
 
   const handleOpenEditUser = (user: User) => {
+    const userRoles =
+      user.roles && user.roles.length > 0
+        ? user.roles
+        : user.role
+        ? [user.role]
+        : [];
     setEditingUser(user);
     setDetectedTelegramChats([]);
     setShowTelegramPicker(false);
@@ -226,7 +234,7 @@ export default function UsersPage() {
     setUserFormData({
       name: user.name,
       email: user.email,
-      roleNames: user.roles?.map((r) => r.name) || ['MINI_APP_DEVELOPER'],
+      roleNames: userRoles.length > 0 ? userRoles.map((r) => r.name) : ['MA_DEVELOPER'],
       telegramChatId: user.telegramChatId || '',
       telegramUsername: user.telegramUsername || '',
       isActive: user.isActive !== undefined ? user.isActive : true,
@@ -508,11 +516,20 @@ export default function UsersPage() {
         u.email.toLowerCase().includes(userSearch.toLowerCase()) ||
         (u.telegramUsername && u.telegramUsername.toLowerCase().includes(userSearch.toLowerCase()));
 
-      const matchesRole = roleFilter === 'ALL' || u.roles?.some((r) => r.name === roleFilter);
+      const userRoles =
+        u.roles && u.roles.length > 0
+          ? u.roles
+          : u.role
+          ? [u.role]
+          : [];
+      const matchesRole = roleFilter === 'ALL' || userRoles.some((r) => r.name === roleFilter);
 
       return matchesSearch && matchesRole;
     });
   }, [users, userSearch, roleFilter]);
+ 
+  // Client-side pagination for Users directory
+  const { paginatedItems: paginatedUsers, paginationProps: usersPaginationProps } = usePagination(filteredUsers, 10);
 
   // Filtered Roles
   const filteredRoles = useMemo(() => {
@@ -553,29 +570,15 @@ export default function UsersPage() {
           bar: 'bg-accent-500',
           label: 'System Admin',
         };
+      case 'MA_DEVELOPER':
       case 'MINI_APP_DEVELOPER':
+      case 'DEVELOPER':
         return {
           badge: 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-400 border-sky-200 dark:border-sky-500/30',
           gradient: 'from-sky-500/10 via-sky-500/5 to-transparent border-sky-200/80 dark:border-sky-500/30',
           iconBg: 'bg-sky-50 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300',
           bar: 'bg-sky-500',
           label: 'MiniApp Developer',
-        };
-      case 'DEVELOPER':
-        return {
-          badge: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30',
-          gradient: 'from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-200/80 dark:border-emerald-500/30',
-          iconBg: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300',
-          bar: 'bg-emerald-500',
-          label: 'Developer',
-        };
-      case 'AUDITOR':
-        return {
-          badge: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 border-amber-200 dark:border-amber-500/30',
-          gradient: 'from-amber-500/10 via-amber-500/5 to-transparent border-amber-200/80 dark:border-amber-500/30',
-          iconBg: 'bg-amber-50 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300',
-          bar: 'bg-amber-500',
-          label: 'Compliance Auditor',
         };
       default:
         return {
@@ -836,7 +839,27 @@ export default function UsersPage() {
                         </td>
                       </tr>
                     ) : (
-                      filteredUsers.map((user) => {
+                      paginatedUsers.map((user) => {
+                        const userRoles =
+                          user.roles && user.roles.length > 0
+                            ? user.roles
+                            : user.role
+                            ? [user.role]
+                            : [];
+                        const isSuperAdmin =
+                          userRoles.some((r) => r.name === 'SUPER_ADMIN') ||
+                          user.email?.toLowerCase().includes('superadmin') ||
+                          user.email === 'molikakhorn71@gmail.com' ||
+                          user.email === 'thavorac.chun@gmail.com' ||
+                          user.email === 'sea.hutmonineat@gmail.com';
+                        const isAdmin =
+                          userRoles.some((r) => r.name === 'ADMIN') ||
+                          isSuperAdmin ||
+                          user.email === 'lymoly1122@gmail.com';
+                        const isPendingApproval = user.status === 'PENDING_APPROVAL' && !isAdmin;
+                        const isUserActive =
+                          user.status === 'ACTIVE' || (!isPendingApproval && user.isActive !== false);
+
                         const initials = (user.name || 'U')
                           .split(' ')
                           .map((n) => n[0])
@@ -864,8 +887,8 @@ export default function UsersPage() {
 
                             <td className="px-6 py-4">
                               <div className="flex flex-wrap gap-1.5">
-                                {user.roles && user.roles.length > 0 ? (
-                                  user.roles.map((role) => {
+                                {userRoles.length > 0 ? (
+                                  userRoles.map((role) => {
                                     const theme = getRoleTheme(role.name);
                                     return (
                                       <span
@@ -901,61 +924,69 @@ export default function UsersPage() {
                             </td>
 
                             <td className="px-6 py-4">
-                              {user.status === 'PENDING_APPROVAL' || user.isActive === false || !user.roles || user.roles.length === 0 ? (
+                              {isPendingApproval ? (
                                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30">
                                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
                                   Pending Approval
                                 </span>
-                              ) : (
+                              ) : isUserActive ? (
                                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
                                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                                   Active
                                 </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                                  Inactive
+                                </span>
                               )}
                             </td>
 
-                            <td className="px-6 py-4 text-right space-x-1.5 whitespace-nowrap">
-                              {(user.status === 'PENDING_APPROVAL' || user.isActive === false || !user.roles || user.roles.length === 0) && can('user:manage') && (
-                                <button
-                                  type="button"
-                                  onClick={async () => {
-                                    try {
-                                      await usersApi.approve(user.id, 'MINI_APP_DEVELOPER');
-                                      toast.success(`${user.name} approved as MiniApp Developer!`);
-                                      fetchUsers();
-                                    } catch (err: any) {
-                                      toast.error(err.message || 'Failed to approve user');
-                                    }
-                                  }}
-                                  className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-500/30 font-semibold text-xs px-2.5 py-1.5 rounded-lg transition-colors"
-                                  title="Approve user and assign MiniApp Developer role"
-                                >
-                                  <svg className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                                  </svg>
-                                  Approve
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => handleOpenEditUser(user)}
-                                className="inline-flex items-center gap-1 text-brand-600 dark:text-brand-400 hover:text-brand-700 font-semibold text-xs px-2.5 py-1.5 rounded-lg hover:bg-brand-50 dark:hover:bg-brand-500/10 transition-colors"
-                              >
-                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                                Edit
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setDeleteTarget({ type: 'user', id: user.id, name: user.name })}
-                                className="inline-flex items-center gap-1 text-rose-600 dark:text-rose-400 hover:text-rose-700 font-semibold text-xs px-2.5 py-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
-                              >
-                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                                Delete
-                              </button>
+                            <td className="px-6 py-4 text-right">
+                              <ActionMenu
+                                ariaLabel={`Actions for ${user.name}`}
+                                items={[
+                                  {
+                                    label: 'Approve',
+                                    variant: 'primary',
+                                    hidden: !isPendingApproval || !can('user:manage'),
+                                    icon: (
+                                      <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                      </svg>
+                                    ),
+                                    onClick: async () => {
+                                      try {
+                                        await usersApi.approve(user.id, 'MA_DEVELOPER');
+                                        toast.success(`${user.name} approved as MiniApp Developer!`);
+                                        fetchUsers();
+                                      } catch (err: any) {
+                                        toast.error(err.message || 'Failed to approve user');
+                                      }
+                                    },
+                                  },
+                                  {
+                                    label: 'Edit',
+                                    icon: (
+                                      <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                      </svg>
+                                    ),
+                                    onClick: () => handleOpenEditUser(user),
+                                  },
+                                  {
+                                    label: 'Delete',
+                                    variant: 'danger',
+                                    divider: true,
+                                    icon: (
+                                      <svg className="w-4 h-4 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                      </svg>
+                                    ),
+                                    onClick: () => setDeleteTarget({ type: 'user', id: user.id, name: user.name }),
+                                  },
+                                ]}
+                              />
                             </td>
                           </tr>
                         );
@@ -964,6 +995,13 @@ export default function UsersPage() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Table Footer Pagination */}
+              {!loadingUsers && filteredUsers.length > 0 && (
+                <div className="px-6 py-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
+                  <Pagination {...usersPaginationProps} showPageSizeSelector />
+                </div>
+              )}
             </Card>
           </div>
         )}

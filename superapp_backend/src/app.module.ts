@@ -8,8 +8,8 @@ import { AuthModule } from './auth/auth.module';
 import { MiniappsModule } from './miniapps/miniapps.module';
 import { AccessControlModule } from './access-control/access-control.module';
 import { NotificationsModule } from './notifications/notifications.module';
-import { PermissionsModule } from './permissions/permissions.module';
-import { PermissionProposalsModule } from './permission-proposals/permission-proposals.module';
+import { CapabilitiesModule } from './capabilities/capabilities.module';
+import { CapabilityProposalsModule } from './capability-proposals/capability-proposals.module';
 import { SuperAppModule } from './super-app/super-app.module';
 import { IntegrationsModule } from './integrations/integrations.module';
 import { StorageModule } from './storage/storage.module';
@@ -53,8 +53,8 @@ import { AppService } from './app.service';
     AuthModule,
     AccessControlModule,
     NotificationsModule,
-    PermissionsModule,
-    PermissionProposalsModule,
+    CapabilitiesModule,
+    CapabilityProposalsModule,
     SuperAppModule,
     MiniappsModule,
     OrganizationsModule,

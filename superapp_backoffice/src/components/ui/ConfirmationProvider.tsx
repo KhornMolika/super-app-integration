@@ -2,12 +2,17 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
-type ConfirmationOptions = {
+export type ConfirmationOptions = {
   title: string;
-  message: string;
+  message: ReactNode;
   confirmText?: string;
   cancelText?: string;
   confirmVariant?: 'primary' | 'danger' | 'warning' | 'success';
+  requireInputMatch?: {
+    expectedValue: string;
+    placeholder?: string;
+    label?: ReactNode;
+  };
 };
 
 type ConfirmationContextType = {
@@ -27,9 +32,11 @@ export const useConfirm = () => {
 export const ConfirmationProvider = ({ children }: { children: ReactNode }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [options, setOptions] = useState<ConfirmationOptions | null>(null);
+  const [inputValue, setInputValue] = useState('');
   const [resolvePromise, setResolvePromise] = useState<(value: boolean) => void>();
 
   const confirm = (opts: ConfirmationOptions) => {
+    setInputValue('');
     setOptions(opts);
     setIsOpen(true);
     return new Promise<boolean>((resolve) => {
@@ -48,6 +55,16 @@ export const ConfirmationProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const variant = options?.confirmVariant || 'primary';
+  const isInputValid = (() => {
+    if (!options?.requireInputMatch) return true;
+    const input = inputValue.trim().toLowerCase();
+    const expected = options.requireInputMatch.expectedValue.trim().toLowerCase();
+    if (!input) return false;
+    if (input === expected) return true;
+    const cleanExpected = expected.replace(/\s*\([^)]*\)/g, '').trim();
+    if (cleanExpected && input === cleanExpected) return true;
+    return false;
+  })();
 
   return (
     <ConfirmationContext.Provider value={{ confirm }}>
@@ -58,7 +75,7 @@ export const ConfirmationProvider = ({ children }: { children: ReactNode }) => {
             className="fixed inset-0 bg-slate-900/50 dark:bg-slate-950/70 backdrop-blur-sm transition-opacity animate-in fade-in"
             onClick={handleCancel}
           />
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-md relative z-10 animate-in zoom-in-95 duration-200 overflow-hidden flex flex-col">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-lg relative z-10 animate-in zoom-in-95 duration-200 overflow-hidden flex flex-col">
             <div className="p-6 pb-4">
               <div className="flex items-start space-x-4">
                 {variant === 'danger' && (
@@ -91,7 +108,36 @@ export const ConfirmationProvider = ({ children }: { children: ReactNode }) => {
                 )}
                 <div className="flex-1 min-w-0">
                   <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight">{options.title}</h3>
-                  <p className="text-slate-600 dark:text-slate-300 mt-1.5 text-sm leading-relaxed">{options.message}</p>
+                  <div className="text-slate-600 dark:text-slate-300 mt-2 text-sm leading-relaxed">{options.message}</div>
+
+                  {options.requireInputMatch && (
+                    <div className="mt-4 pt-3.5 border-t border-slate-200 dark:border-slate-800 space-y-2">
+                      <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
+                        <label className="font-semibold">
+                          {options.requireInputMatch.label || (
+                            <span>
+                              Type <span className="font-mono font-bold text-rose-600 dark:text-rose-400 select-all">{options.requireInputMatch.expectedValue}</span> to confirm:
+                            </span>
+                          )}
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setInputValue(options.requireInputMatch!.expectedValue)}
+                          className="text-[11px] font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors cursor-pointer"
+                        >
+                          Auto-fill
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
+                        placeholder={options.requireInputMatch.placeholder || options.requireInputMatch.expectedValue}
+                        className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 font-medium transition-all"
+                        autoFocus
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -108,8 +154,9 @@ export const ConfirmationProvider = ({ children }: { children: ReactNode }) => {
               </button>
               <button
                 type="button"
+                disabled={!isInputValid}
                 onClick={handleConfirm}
-                className={`inline-flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all text-white shadow-md active:scale-[0.98] cursor-pointer ${
+                className={`inline-flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all text-white shadow-md active:scale-[0.98] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 ${
                   variant === 'danger'
                     ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/20'
                     : variant === 'warning'

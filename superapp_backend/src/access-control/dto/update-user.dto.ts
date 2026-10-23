@@ -10,5 +10,9 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   @IsString()
   @IsOptional()
   teamTelegramChatId?: string;
+
+  @IsString()
+  @IsOptional()
+  password?: string;
 }
 

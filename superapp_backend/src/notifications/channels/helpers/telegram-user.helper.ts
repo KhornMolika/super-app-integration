@@ -31,7 +31,7 @@ export class TelegramUserHelper {
     const displayName = firstName || user.name || 'User';
     if (sendMessageFn) {
       await sendMessageFn(
-        `<b>⚡ SuperApp Gateway: Telegram Connected</b>
+        `<b>⚡ FSA SuperApp Platform: Telegram Connected</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 <pre><code class="language-diff">
 + [STATUS] Account Link Verified

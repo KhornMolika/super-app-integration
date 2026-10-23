@@ -284,7 +284,7 @@ export default function SettingsPage() {
   };
 
   const handleSendTestEmail = async (targetEmail?: string) => {
-    const dest = targetEmail || user.email;
+    const dest = targetEmail || user?.email;
     if (!dest) return;
     setSendingTestEmail(true);
     try {
@@ -412,27 +412,20 @@ export default function SettingsPage() {
 
   const isSuperAdmin = role === 'SUPER_ADMIN';
   const isAdmin = role === 'ADMIN';
-  const isDev = role === 'MINI_APP_DEVELOPER';
-  const isQA = role === 'QA_TESTER';
+  const isDev = role === 'MA_DEVELOPER';
 
   const eyebrowText = isDev
     ? 'Developer Account & Notifications'
-    : isQA
-    ? 'QA Tester Account & Notifications'
     : 'Platform Governance & Settings';
 
   const pageTitle = isDev
     ? 'MiniApp Developer Profile & Notification Hub'
-    : isQA
-    ? 'QA Tester Profile & Alert Hub'
     : isSuperAdmin
     ? 'Platform Settings & Governance'
     : 'Admin Settings & Profile';
 
   const pageSubtitle = isDev
     ? 'Manage your developer identity, connect direct Telegram bot alerts for security scan reviews, and configure team channels for your MiniApps.'
-    : isQA
-    ? 'Manage your QA tester identity, receive immediate test APK release builds via Telegram, and verify test email delivery.'
     : 'Manage system-wide pipeline automation timing, storage retention policies, admin profile, and platform notification channels.';
 
   const isTelegramConnected = Boolean(telegramStatus?.user?.isConnected);

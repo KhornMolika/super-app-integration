@@ -4,12 +4,14 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
 } from 'typeorm';
+import { User } from '../../access-control/entities/user.entity';
+import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 
 export enum OrganizationStatus {
   ACTIVE = 'ACTIVE',
   INACTIVE = 'INACTIVE',
-  PENDING = 'PENDING',
 }
 
 @Entity('organizations')
@@ -23,8 +25,11 @@ export class Organization {
   @Column({ nullable: true })
   code?: string;
 
-  @Column({ unique: true })
-  domain!: string;
+  @Column({
+    type: 'varchar',
+    default: 'Non-Bank Financial Services Authority',
+  })
+  parentAuthority!: string;
 
   @Column({ type: 'text', nullable: true })
   description?: string;
@@ -36,14 +41,12 @@ export class Organization {
   })
   status!: OrganizationStatus;
 
-  @Column({ nullable: true })
-  contactEmail?: string;
+  @OneToMany(() => User, (user) => user.organization)
+  users!: User[];
 
-  @Column({ nullable: true })
-  contactPhone?: string;
+  @OneToMany(() => MiniApp, (miniApp) => miniApp.organizationRelation)
+  miniApps!: MiniApp[];
 
-  @Column({ type: 'jsonb', nullable: true })
-  metadata?: any;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;

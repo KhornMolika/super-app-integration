@@ -4,7 +4,7 @@
 export class AppService {
   getInfo() {
     return {
-      name: 'SuperApp Platform API Gateway',
+      name: 'FSA SuperApp Platform',
       organization: 'FinTech Center General Secretariat of FSA',
       status: 'operational',
       health: '/health',

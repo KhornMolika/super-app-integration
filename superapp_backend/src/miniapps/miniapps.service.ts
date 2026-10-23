@@ -11,7 +11,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MiniApp } from './entities/miniapp.entity';
 import { MiniAppIssue } from './entities/miniapp-issue.entity';
-import { MiniAppActivity } from './entities/miniapp-activity.entity';
+import { MiniAppCollaborator } from './entities/miniapp-collaborator.entity';
 import { MiniAppVersion } from './entities/miniapp-version.entity';
 import { MiniAppBuild } from './entities/miniapp-build.entity';
 import { MiniAppLegal } from './entities/miniapp-legal.entity';
@@ -36,8 +36,8 @@ export class MiniappsService implements OnApplicationBootstrap {
     @InjectRepository(MiniApp)
     private miniappRepository: Repository<MiniApp>,
 
-    @InjectRepository(MiniAppActivity)
-    private activityRepository: Repository<MiniAppActivity>,
+    @InjectRepository(MiniAppCollaborator)
+    private collaboratorRepository: Repository<MiniAppCollaborator>,
 
     @InjectRepository(MiniAppIssue)
     private issueRepository: Repository<MiniAppIssue>,
@@ -76,7 +76,7 @@ export class MiniappsService implements OnApplicationBootstrap {
       for (const app of apps) {
         let changed = false;
         if (!app.organizationCode || !app.organization) {
-          const resolved = resolveOrganizationDetails(app.organization || app.category);
+          const resolved = await resolveOrganizationDetails(app.organization || app.category);
           app.organization = resolved.name;
           app.organizationCode = resolved.code;
           app.category = resolved.name;
@@ -106,27 +106,17 @@ export class MiniappsService implements OnApplicationBootstrap {
     newVal?: any,
   ) {
     try {
-      await this.activityRepository.save(
-        this.activityRepository.create({
-          miniAppId,
-          actorId,
-          type: actionType,
-          title,
-          description,
-        }),
-      );
-    } catch (e: any) {
-      this.logger.warn(`Failed to log activity: ${e.message}`);
-    }
-    if (auditAction) {
       await this.auditService.log({
         actorId,
-        action: auditAction,
+        action: auditAction || actionType || 'MINIAPP_UPDATE',
         resourceType: 'MiniApp',
         resourceId: miniAppId,
         oldValue: oldVal,
         newValue: newVal,
+        metadata: { title, description, actionType },
       });
+    } catch (e: any) {
+      this.logger.warn(`Failed to log audit activity: ${e.message}`);
     }
   }
 
@@ -186,10 +176,40 @@ export class MiniappsService implements OnApplicationBootstrap {
   }
 
   async getActivities(id: string) {
-    return this.activityRepository.find({
-      where: { miniAppId: id },
-      order: { createdAt: 'DESC' },
+    const logs = await this.auditService.findByResource('MiniApp', id);
+    return logs.map((l) => ({
+      id: l.id,
+      miniAppId: l.resourceId,
+      actorId: l.actorId,
+      actorName: l.actorName,
+      type: l.action,
+      title: l.metadata?.title || l.action,
+      description: l.metadata?.description || `${l.action} performed on MiniApp`,
+      createdAt: l.createdAt,
+    }));
+  }
+
+  async getCollaborators(miniAppId: string) {
+    return this.collaboratorRepository.find({
+      where: { miniAppId },
+      relations: { user: true },
     });
+  }
+
+  async addCollaborator(miniAppId: string, userId: string, role: any) {
+    const existing = await this.collaboratorRepository.findOne({
+      where: { miniAppId, userId },
+    });
+    if (existing) {
+      existing.role = role;
+      return this.collaboratorRepository.save(existing);
+    }
+    const collab = this.collaboratorRepository.create({ miniAppId, userId, role });
+    return this.collaboratorRepository.save(collab);
+  }
+
+  async removeCollaborator(miniAppId: string, userId: string) {
+    await this.collaboratorRepository.delete({ miniAppId, userId });
   }
 
   async checkExists(appId?: string, name?: string, excludeId?: string) {
@@ -220,7 +240,7 @@ export class MiniappsService implements OnApplicationBootstrap {
       where: { id },
       relations: {
         issues: true,
-        activities: true,
+        collaborators: true,
         versions: true,
         builds: true,
         legal: true,

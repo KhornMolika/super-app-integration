@@ -1,31 +1,89 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { authApi } from '@/api/auth.api';
+import { organizationsApi, Organization } from '@/api/organizations.api';
+import { toast } from '@/components/ui/Toast';
+import { AuthSplitLayout } from '@/components/auth/AuthSplitLayout';
+import { PasswordStrengthMeter, getPasswordStrength } from '@/components/auth/PasswordStrengthMeter';
 
 export default function SignupPage() {
+  const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [organization, setOrganization] = useState('');
+  const [dbOrganizations, setDbOrganizations] = useState<Organization[]>([]);
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+
+  // Field validation errors
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    organizationsApi.getAll()
+      .then((orgs) => {
+        if (Array.isArray(orgs)) {
+          setDbOrganizations(orgs);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const validate = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!name.trim()) {
+      newErrors.name = 'Full name is required.';
+    }
+
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      newErrors.email = 'Email address is required.';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      newErrors.email = 'Please enter a valid email format.';
+    }
+
+    if (!organization.trim()) {
+      newErrors.organization = 'Organization name is required.';
+    }
+
+    if (!password) {
+      newErrors.password = 'Password is required.';
+    } else {
+      const strength = getPasswordStrength(password);
+      if (!strength.hasLength) {
+        newErrors.password = 'Password must be at least 8 characters long.';
+      } else if (!strength.hasNumber) {
+        newErrors.password = 'Password must contain at least 1 number.';
+      } else if (!strength.hasUpper) {
+        newErrors.password = 'Password must contain at least 1 uppercase letter.';
+      }
+    }
+
+    if (!confirmPassword) {
+      newErrors.confirmPassword = 'Confirmation password is required.';
+    } else if (password !== confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match.';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim()) {
-      setError('Please fill in your name and email.');
-      return;
-    }
-    if (!password || password.length < 6) {
-      setError('Password must be at least 6 characters long.');
+
+    if (!validate()) {
+      toast.error('Please resolve the highlighted form errors.', 'Validation Error');
       return;
     }
 
     setLoading(true);
-    setError(null);
 
     try {
       const res = await authApi.register({
@@ -36,162 +94,308 @@ export default function SignupPage() {
       });
 
       if (res?.success) {
-        setIsSubmitted(true);
+        toast.success(
+          'Registration submitted! Please verify your email with the 6-digit code.',
+          'Account Created'
+        );
+        // Transition to OTP verification step
+        router.push(`/verify-otp?email=${encodeURIComponent(email.trim().toLowerCase())}`);
       } else {
-        setError('Registration could not be completed. Please try again.');
+        toast.error(
+          res?.message || 'Registration could not be completed. Please try again.',
+          'Registration Failed'
+        );
       }
     } catch (err: any) {
-      setError(err.message || 'Registration failed. Email may already be in use.');
+      const msg = err.message || 'Registration failed. Email may already be in use.';
+      toast.error(msg, 'Registration Error');
+      if (msg.toLowerCase().includes('already exists')) {
+        setErrors((prev) => ({ ...prev, email: 'An account with this email already exists.' }));
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-
-      <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
-        <div className="flex items-center justify-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 to-emerald-400 p-0.5 shadow-lg shadow-brand-500/20">
-            <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-              <span className="text-xl font-black bg-gradient-to-r from-brand-400 to-emerald-400 bg-clip-text text-transparent">
-                SA
-              </span>
-            </div>
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight text-white">SuperApp Gateway</h2>
-            <p className="text-xs font-medium text-slate-400">MiniApp Developer Portal Registration</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
-        <div className="bg-slate-900/90 backdrop-blur-xl py-8 px-6 shadow-2xl shadow-black/50 sm:rounded-2xl sm:px-10 border border-slate-800">
-          {isSubmitted ? (
-            <div className="text-center space-y-4 py-4 animate-in fade-in-50 duration-200">
-              <div className="w-14 h-14 bg-emerald-500/10 border border-emerald-500/30 rounded-full flex items-center justify-center mx-auto text-emerald-400">
-                <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-bold text-white">Registration Submitted!</h3>
-                <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
-                  Your developer account for <strong className="text-slate-200">{email}</strong> has been registered successfully.
-                </p>
-              </div>
-
-              <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-left space-y-1.5">
-                <div className="flex items-center gap-2 text-xs font-bold text-amber-400">
-                  <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>Super Admin Approval Required</span>
-                </div>
-                <p className="text-[11px] text-amber-300/80 leading-relaxed">
-                  A Super Administrator must review and approve your account to assign the MiniApp Developer role before you can sign in.
-                </p>
-              </div>
-
-              <div className="pt-2">
-                <Link
-                  href="/login"
-                  className="block w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-xl transition-all"
-                >
-                  Return to Sign In
-                </Link>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-white">Create Developer Account</h3>
-                <p className="text-xs text-slate-400 mt-1">Register to build, test, and publish MiniApps.</p>
-              </div>
-
-              {error && (
-                <div className="mb-5 p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-xs flex items-center gap-2">
-                  <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                  <span>{error}</span>
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1.5">Full Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Sopheak Sok"
-                    className="w-full px-3.5 py-2.5 bg-slate-950/60 border border-slate-700/80 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1.5">Work / Secondary Email</label>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="e.g. your.personal@gmail.com"
-                    className="w-full px-3.5 py-2.5 bg-slate-950/60 border border-slate-700/80 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1.5">Organization / Unit (Optional)</label>
-                  <input
-                    type="text"
-                    value={organization}
-                    onChange={(e) => setOrganization(e.target.value)}
-                    placeholder="e.g. Fintech Center / Partner Team"
-                    className="w-full px-3.5 py-2.5 bg-slate-950/60 border border-slate-700/80 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1.5">Password</label>
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Create a secure password"
-                    className="w-full px-3.5 py-2.5 bg-slate-950/60 border border-slate-700/80 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all"
-                  />
-                </div>
-
-                <div className="p-3 bg-slate-950/60 border border-slate-800 rounded-xl text-[11px] text-slate-400">
-                  <span className="font-semibold text-slate-300">Approval Policy:</span> Newly registered accounts enter a pending state until authorized by a platform Super Administrator.
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full mt-2 py-2.5 px-4 bg-gradient-to-r from-brand-600 to-emerald-600 hover:from-brand-500 hover:to-emerald-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-brand-500/20 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all disabled:opacity-50"
-                >
-                  {loading ? 'Submitting Registration...' : 'Submit for Super Admin Approval'}
-                </button>
-              </form>
-
-              <div className="mt-6 text-center text-xs text-slate-400">
-                Already have an account?{' '}
-                <Link href="/login" className="font-semibold text-brand-400 hover:text-brand-300 transition-colors">
-                  Sign In
-                </Link>
-              </div>
-            </>
+    <AuthSplitLayout
+      title="Create your account"
+      subtitle="Register as an authorized developer to build and publish mini-apps on the FSA platform."
+      activeTab="signup"
+    >
+      <form onSubmit={handleSubmit} noValidate className="space-y-4 animate-in fade-in duration-300">
+        {/* 1. Full Name */}
+        <div>
+          <label
+            htmlFor="name"
+            className={`block text-xs font-semibold mb-1.5 transition-colors ${
+              errors.name ? 'text-rose-400' : 'text-slate-300'
+            }`}
+          >
+            Full Name
+          </label>
+          <input
+            id="name"
+            type="text"
+            autoComplete="name"
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              if (errors.name) setErrors((prev) => ({ ...prev, name: '' }));
+            }}
+            placeholder="e.g., Sokha Chan"
+            disabled={loading}
+            className={`w-full px-4 py-2.5 rounded-xl text-sm text-white placeholder-slate-500 bg-slate-900/80 border transition-all duration-200 outline-none ${
+              errors.name
+                ? 'border-rose-500/80 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 text-rose-100'
+                : 'border-slate-800 hover:border-slate-700 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15'
+            } disabled:opacity-50`}
+          />
+          {errors.name && (
+            <p className="mt-1 text-xs text-rose-400 flex items-center gap-1">
+              <span>•</span> {errors.name}
+            </p>
           )}
         </div>
-      </div>
-    </div>
+
+        {/* 2. Email */}
+        <div>
+          <label
+            htmlFor="email"
+            className={`block text-xs font-semibold mb-1.5 transition-colors ${
+              errors.email ? 'text-rose-400' : 'text-slate-300'
+            }`}
+          >
+            Email Address
+          </label>
+          <input
+            id="email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (errors.email) setErrors((prev) => ({ ...prev, email: '' }));
+            }}
+            placeholder="e.g., developer@fintech.com.kh"
+            disabled={loading}
+            className={`w-full px-4 py-2.5 rounded-xl text-sm text-white placeholder-slate-500 bg-slate-900/80 border transition-all duration-200 outline-none ${
+              errors.email
+                ? 'border-rose-500/80 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 text-rose-100'
+                : 'border-slate-800 hover:border-slate-700 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15'
+            } disabled:opacity-50`}
+          />
+          {errors.email && (
+            <p className="mt-1 text-xs text-rose-400 flex items-center gap-1">
+              <span>•</span> {errors.email}
+            </p>
+          )}
+        </div>
+
+        {/* 3. Organization */}
+        <div>
+          <label
+            htmlFor="organization"
+            className={`block text-xs font-semibold mb-1.5 transition-colors ${
+              errors.organization ? 'text-rose-400' : 'text-slate-300'
+            }`}
+          >
+            Organization
+          </label>
+          <input
+            id="organization"
+            type="text"
+            list="db-organizations-list"
+            value={organization}
+            onChange={(e) => {
+              setOrganization(e.target.value);
+              if (errors.organization) setErrors((prev) => ({ ...prev, organization: '' }));
+            }}
+            placeholder="Select regulator or type entity (e.g. FTC, IRC, SERC)"
+            disabled={loading}
+            className={`w-full px-4 py-2.5 rounded-xl text-sm text-white placeholder-slate-500 bg-slate-900/80 border transition-all duration-200 outline-none ${
+              errors.organization
+                ? 'border-rose-500/80 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 text-rose-100'
+                : 'border-slate-800 hover:border-slate-700 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15'
+            } disabled:opacity-50`}
+          />
+          <datalist id="db-organizations-list">
+            {dbOrganizations.map((org) => (
+              <option key={org.id} value={org.name}>
+                {org.code ? `${org.code} — ` : ''}{org.name}
+              </option>
+            ))}
+          </datalist>
+          {errors.organization && (
+            <p className="mt-1 text-xs text-rose-400 flex items-center gap-1">
+              <span>•</span> {errors.organization}
+            </p>
+          )}
+        </div>
+
+        {/* 4. Password with Live Strength Indicator */}
+        <div>
+          <label
+            htmlFor="password"
+            className={`block text-xs font-semibold mb-1.5 transition-colors ${
+              errors.password ? 'text-rose-400' : 'text-slate-300'
+            }`}
+          >
+            Password
+          </label>
+          <div className="relative">
+            <input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (errors.password) setErrors((prev) => ({ ...prev, password: '' }));
+              }}
+              placeholder="Create a strong password"
+              disabled={loading}
+              className={`w-full pl-4 pr-11 py-2.5 rounded-xl text-sm text-white placeholder-slate-500 bg-slate-900/80 border transition-all duration-200 outline-none ${
+                errors.password
+                  ? 'border-rose-500/80 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 text-rose-100'
+                  : 'border-slate-800 hover:border-slate-700 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15'
+              } disabled:opacity-50`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              tabIndex={-1}
+              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 transition-colors"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              )}
+            </button>
+          </div>
+
+          {/* Live Strength Meter */}
+          <PasswordStrengthMeter password={password} />
+
+          {errors.password && (
+            <p className="mt-1 text-xs text-rose-400 flex items-center gap-1">
+              <span>•</span> {errors.password}
+            </p>
+          )}
+        </div>
+
+        {/* 5. Confirm Password */}
+        <div>
+          <label
+            htmlFor="confirmPassword"
+            className={`block text-xs font-semibold mb-1.5 transition-colors ${
+              errors.confirmPassword ? 'text-rose-400' : 'text-slate-300'
+            }`}
+          >
+            Confirm Password
+          </label>
+          <div className="relative">
+            <input
+              id="confirmPassword"
+              type={showConfirmPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(e) => {
+                setConfirmPassword(e.target.value);
+                if (errors.confirmPassword) setErrors((prev) => ({ ...prev, confirmPassword: '' }));
+              }}
+              placeholder="Re-enter your password"
+              disabled={loading}
+              className={`w-full pl-4 pr-11 py-2.5 rounded-xl text-sm text-white placeholder-slate-500 bg-slate-900/80 border transition-all duration-200 outline-none ${
+                errors.confirmPassword
+                  ? 'border-rose-500/80 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 text-rose-100'
+                  : confirmPassword && password === confirmPassword
+                  ? 'border-brand-500/80 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15'
+                  : 'border-slate-800 hover:border-slate-700 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15'
+              } disabled:opacity-50`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              tabIndex={-1}
+              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 transition-colors"
+              aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+            >
+              {showConfirmPassword ? (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              )}
+            </button>
+          </div>
+
+          {/* Match indicator */}
+          {confirmPassword && (
+            <p
+              className={`mt-1 text-xs flex items-center gap-1 ${
+                password === confirmPassword ? 'text-brand-400 font-medium' : 'text-rose-400'
+              }`}
+            >
+              {password === confirmPassword ? '✓ Passwords match' : '• Passwords do not match'}
+            </p>
+          )}
+
+          {errors.confirmPassword && (
+            <p className="mt-1 text-xs text-rose-400 flex items-center gap-1">
+              <span>•</span> {errors.confirmPassword}
+            </p>
+          )}
+        </div>
+
+        {/* 6. Submit Button: Continue to Email Verification */}
+        <div className="pt-3">
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3.5 px-4 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-brand-600 via-brand-500 to-brand-600 hover:from-brand-500 hover:to-brand-500 shadow-lg shadow-brand-500/25 hover:shadow-brand-500/40 border border-brand-400/30 transition-all duration-200 flex items-center justify-center gap-2 group disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer active:scale-[0.99]"
+          >
+            {loading ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                <span>Creating Account...</span>
+              </>
+            ) : (
+              <>
+                <span>Continue to Email Verification</span>
+                <span className="text-accent-300 group-hover:translate-x-0.5 transition-transform">→</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Sign In Redirect */}
+        <div className="pt-3 text-center">
+          <p className="text-xs text-slate-400">
+            Already have an account?{' '}
+            <Link
+              href="/login"
+              className="font-semibold text-brand-400 hover:text-brand-300 transition-colors"
+            >
+              Sign in
+            </Link>
+          </p>
+        </div>
+      </form>
+    </AuthSplitLayout>
   );
 }

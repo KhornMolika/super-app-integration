@@ -16,10 +16,10 @@ export async function POST(request: Request) {
     const data = await res.json().catch(() => null);
 
     if (!res.ok || !data?.success || !data?.access_token) {
-      const message = data?.message || 'Invalid credentials or user not found.';
+      const message = data?.message || data?.error || 'Invalid credentials or user not found.';
       return NextResponse.json(
         { error: message, pendingApproval: Boolean(data?.pendingApproval) },
-        { status: res.status === 200 ? 401 : res.status },
+        { status: 401 },
       );
     }
 

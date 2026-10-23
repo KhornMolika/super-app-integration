@@ -173,7 +173,7 @@ export async function POST(request: Request) {
           sub: user.id || 'dev-user',
           email: user.email || 'developer@example.com',
           name: user.name || 'Developer',
-          roles: user.roles || ['MINI_APP_DEVELOPER'],
+          roles: user.roles || ['MA_DEVELOPER'],
           scopes,
           typ: 'back_office',
         },

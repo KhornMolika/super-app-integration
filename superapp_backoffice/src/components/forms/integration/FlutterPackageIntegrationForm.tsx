@@ -5,6 +5,7 @@ import { SourceType } from "@/types/miniapp.types";
 import { miniappsApi, integrationsApi, pubspecApi } from "@/api";
 import { useAuth } from "@/lib/auth";
 import { inferPackageNameFromGitUrl } from "@/lib/miniapp-form.validator";
+import { toast } from "@/components/ui/Toast";
 import {
   FlutterModeSelector,
   FlutterIntegrationMode,
@@ -137,7 +138,7 @@ export default function FlutterPackageIntegrationForm({
       .replace(/[^a-z0-9_]/g, "_");
 
     if (!rawPkg) {
-      alert("Please enter a package name before running pre-check simulation.");
+      toast.warning("Please enter a package name before running pre-check simulation.", "Input Required");
       return;
     }
 

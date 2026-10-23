@@ -89,6 +89,7 @@ async function handleProxy(request: Request, { params }: { params: Promise<{ pro
     const refreshToken = cookieStore.get('refresh_token')?.value;
     const clientAuth = request.headers.get('authorization');
     let newRefreshedToken: string | null = null;
+    let newRefreshToken: string | null = null;
 
     // Check if current cookie token is expired
     let isStale = false;
@@ -124,10 +125,18 @@ async function handleProxy(request: Request, { params }: { params: Promise<{ pro
           if (refreshData?.access_token) {
             token = refreshData.access_token;
             newRefreshedToken = refreshData.access_token;
+            if (refreshData?.refresh_token) {
+              newRefreshToken = refreshData.refresh_token;
+            }
             isStale = false;
           }
         }
       } catch (_) {}
+    }
+
+    // For session identification (/users/me), immediately return 401 if unauthenticated
+    if (path === 'users/me' && !token && !clientAuth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // If still no token or stale, fallback to dev token so cold links / local dev never fail
@@ -222,6 +231,15 @@ async function handleProxy(request: Request, { params }: { params: Promise<{ pro
           path: '/',
           maxAge: 60 * 60 * 24,
         });
+        if (newRefreshToken) {
+          response.cookies.set('refresh_token', newRefreshToken, {
+            httpOnly: true,
+            secure: isProd,
+            sameSite: 'lax',
+            path: '/',
+            maxAge: 7 * 24 * 60 * 60,
+          });
+        }
       }
       return response;
     };

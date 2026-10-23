@@ -5,15 +5,15 @@ import { MiniappsController } from './miniapps.controller';
 import { ApkDownloadController } from './apk-download.controller';
 import { MiniApp } from './entities/miniapp.entity';
 import { MiniAppIssue } from './entities/miniapp-issue.entity';
-import { MiniAppActivity } from './entities/miniapp-activity.entity';
+import { MiniAppCollaborator } from './entities/miniapp-collaborator.entity';
 import { MiniAppVersion } from './entities/miniapp-version.entity';
 import { MiniAppBuild } from './entities/miniapp-build.entity';
 import { MiniAppLegal } from './entities/miniapp-legal.entity';
 
 import { AuthModule } from '../auth/auth.module';
 import { NotificationsModule } from '../notifications/notifications.module';
-import { PermissionsModule } from '../permissions/permissions.module';
-import { PermissionProposalsModule } from '../permission-proposals/permission-proposals.module';
+import { CapabilitiesModule } from '../capabilities/capabilities.module';
+import { CapabilityProposalsModule } from '../capability-proposals/capability-proposals.module';
 import { SuperAppModule } from '../super-app/super-app.module';
 import { AuditModule } from '../audit/audit.module';
 import { IntegrationsModule } from '../integrations/integrations.module';
@@ -34,15 +34,15 @@ import { UrlProbeHelper } from './helpers/url-probe.helper';
     TypeOrmModule.forFeature([
       MiniApp,
       MiniAppIssue,
-      MiniAppActivity,
+      MiniAppCollaborator,
       MiniAppVersion,
       MiniAppBuild,
       MiniAppLegal,
     ]),
     AuthModule,
     NotificationsModule,
-    PermissionsModule,
-    PermissionProposalsModule,
+    CapabilitiesModule,
+    CapabilityProposalsModule,
     SuperAppModule,
     AuditModule,
     IntegrationsModule,

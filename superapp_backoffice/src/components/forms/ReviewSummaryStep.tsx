@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { ShieldCheckIcon, BuildingIcon, DevicePhoneIcon, PackageIcon } from '@/components/ui/Icons';
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 import { CreateMiniAppDto, IntegrationMethod } from '@/types/miniapp.types';
-import { getOrganizationCode, getOrganizationFullName } from '@/lib/constants/fsa-organizations';
+import { getOrganizationCode, getOrganizationFullName } from '@/api';
 import { renderCapabilityIcon } from '@/lib/capability-visuals';
 
 export interface ReviewSummaryStepProps {

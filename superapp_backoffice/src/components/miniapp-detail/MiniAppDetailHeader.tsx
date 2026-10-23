@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
 import { BackButton } from '@/components/ui/BackButton';
@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/inputs';
 import { IntegrationMethod } from '@/types/miniapp.types';
 import { BuildingIcon } from '@/components/ui/Icons';
 import { AppLogoAvatar } from '@/components/ui/AppLogoAvatar';
-import { getOrganizationCode, getOrganizationFullName } from '@/lib/constants/fsa-organizations';
+import { getOrganizationCode, getOrganizationFullName } from '@/api';
 
 export interface MiniAppDetailHeaderProps {
   formData: any;

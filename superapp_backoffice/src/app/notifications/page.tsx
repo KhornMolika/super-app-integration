@@ -1,9 +1,10 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { notificationsApi, NotificationItem } from '@/api';
 import { useNotificationSocket } from '@/hooks/useNotificationSocket';
+import { toast } from '@/components/ui/Toast';
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -55,8 +56,10 @@ export default function NotificationsPage() {
     try {
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
       await notificationsApi.markAllAsRead();
+      toast.success('All notifications marked as read.', 'Notifications');
     } catch (err) {
       console.error('Failed to mark all read:', err);
+      toast.error('Failed to mark all notifications as read.');
     } finally {
       setIsProcessing(false);
     }
@@ -66,8 +69,10 @@ export default function NotificationsPage() {
     try {
       setNotifications(prev => prev.filter(n => n.id !== id));
       await notificationsApi.delete(id);
+      toast.info('Notification dismissed.', 'Removed');
     } catch (err) {
       console.error('Failed to delete notification:', err);
+      toast.error('Failed to delete notification.');
     }
   };
 

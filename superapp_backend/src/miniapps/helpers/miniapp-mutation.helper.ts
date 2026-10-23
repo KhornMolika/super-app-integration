@@ -48,7 +48,7 @@ export class MiniappMutationHelper {
     data.pendingRevision = null;
 
     // Resolve & normalize organization name and short code (e.g. FTC, IRC, etc.)
-    const orgInfo = resolveOrganizationDetails(data.organization || (data as any).category);
+    const orgInfo = await resolveOrganizationDetails(data.organization || (data as any).category);
     data.organization = orgInfo.name;
     data.organizationCode = orgInfo.code;
 
@@ -324,7 +324,7 @@ export class MiniappMutationHelper {
         await this.miniappRepository.save(existing);
         const updated = await this.miniappRepository.findOne({
           where: { id: existing.id },
-          relations: { issues: true, activities: true },
+          relations: { issues: true, collaborators: true },
         });
         if (logActivityFn) {
           await logActivityFn(
@@ -446,7 +446,7 @@ export class MiniappMutationHelper {
 
       const updated = await this.miniappRepository.findOne({
         where: { id: existing.id },
-        relations: { issues: true, activities: true },
+        relations: { issues: true, collaborators: true },
       });
 
       if (logActivityFn) {
@@ -490,7 +490,7 @@ export class MiniappMutationHelper {
       merged.teamTelegramChatId = data.teamTelegramChatId;
     }
     if (data.organization || data.category) {
-      const orgInfo = resolveOrganizationDetails(data.organization || data.category);
+      const orgInfo = await resolveOrganizationDetails(data.organization || data.category);
       merged.organization = orgInfo.name;
       merged.organizationCode = orgInfo.code;
       merged.category = orgInfo.name;
@@ -594,7 +594,7 @@ export class MiniappMutationHelper {
 
     const updated = await this.miniappRepository.findOne({
       where: { id: existing.id },
-      relations: { issues: true, activities: true },
+      relations: { issues: true, collaborators: true },
     });
 
     if (logActivityFn) {

@@ -38,6 +38,17 @@ export async function POST() {
       maxAge: (data.expires_in || 15 * 60),
     });
 
+    // Sliding rotation: update refresh_token cookie if new token or TTL returned
+    if (data.refresh_token) {
+      cookieStore.set('refresh_token', data.refresh_token, {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: (data.refresh_expires_in || 7 * 24 * 60 * 60),
+      });
+    }
+
     const { access_token, refresh_token, ...userPayload } = data;
     return NextResponse.json(userPayload);
   } catch {

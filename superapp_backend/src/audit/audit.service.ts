@@ -121,4 +121,11 @@ export class AuditService implements OnApplicationBootstrap {
   async findOne(id: string): Promise<AuditLog | null> {
     return this.auditLogRepository.findOne({ where: { id } });
   }
+
+  async findByResource(resourceType: string, resourceId: string): Promise<AuditLog[]> {
+    return this.auditLogRepository.find({
+      where: { resourceType, resourceId },
+      order: { createdAt: 'DESC' },
+    });
+  }
 }

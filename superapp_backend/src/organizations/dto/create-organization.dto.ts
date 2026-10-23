@@ -3,8 +3,6 @@ import {
   IsNotEmpty,
   IsOptional,
   IsEnum,
-  IsEmail,
-  IsObject,
 } from 'class-validator';
 import { OrganizationStatus } from '../entities/organization.entity';
 
@@ -18,26 +16,14 @@ export class CreateOrganizationDto {
   code?: string;
 
   @IsString()
-  @IsNotEmpty({ message: 'Domain is required' })
-  domain!: string;
+  @IsOptional()
+  parentAuthority?: string;
 
   @IsString()
   @IsOptional()
   description?: string;
 
-  @IsEnum(OrganizationStatus, { message: 'Status must be ACTIVE, INACTIVE, or PENDING' })
+  @IsEnum(OrganizationStatus, { message: 'Status must be ACTIVE or INACTIVE' })
   @IsOptional()
   status?: OrganizationStatus;
-
-  @IsEmail({}, { message: 'Must be a valid email address' })
-  @IsOptional()
-  contactEmail?: string;
-
-  @IsString()
-  @IsOptional()
-  contactPhone?: string;
-
-  @IsObject()
-  @IsOptional()
-  metadata?: Record<string, any>;
 }

@@ -20,14 +20,14 @@ export function HeaderProfile() {
       badgeColor: 'bg-brand-500/10 text-brand-700 dark:text-brand-300 border-brand-500/30',
       description: 'Platform review, approval, and management',
     },
-    MINI_APP_DEVELOPER: {
+    MA_DEVELOPER: {
       label: 'MiniApp Developer',
       badgeColor: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
       description: 'MiniApp creation, integration & release',
     },
   };
 
-  const currentRole = (role && roleConfigs[role]) ? roleConfigs[role] : roleConfigs.MINI_APP_DEVELOPER;
+  const currentRole = (role && roleConfigs[role]) ? roleConfigs[role] : roleConfigs.MA_DEVELOPER;
   const userName = user?.name || 'Authenticated User';
   const userEmail = user?.email || 'user@platform.local';
   const initials = userName

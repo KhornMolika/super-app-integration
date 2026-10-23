@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   ManyToMany,
+  OneToMany,
   JoinTable,
 } from 'typeorm';
 import { User } from './user.entity';
@@ -24,7 +25,7 @@ export class Role {
   @Column({ default: true })
   isActive!: boolean;
 
-  @ManyToMany(() => User, (user) => user.roles)
+  @OneToMany(() => User, (user) => user.role)
   users!: User[];
 
   @ManyToMany(() => Permission, (permission) => permission.roles, {

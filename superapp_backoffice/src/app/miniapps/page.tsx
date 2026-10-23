@@ -8,10 +8,12 @@ import { RegisterMiniAppButton } from '@/components/ui/RegisterMiniAppButton';
 import { TagIcon, SettingsIcon, ArrowRightIcon, BuildingIcon, DevicePhoneIcon } from '@/components/ui/Icons';
 import DownloadApkModal from '@/components/ui/DownloadApkModal';
 import { AppLogoAvatar } from '@/components/ui/AppLogoAvatar';
-import { miniappsApi, isBackendUnreachableError } from '@/api';
+import { miniappsApi, isBackendUnreachableError, getOrganizationCode, getOrganizationFullName } from '@/api';
 import { BackendServiceOfflineNotice } from '@/components/ui/BackendServiceOfflineNotice';
 import { useAuth } from '@/lib/auth';
-import { getOrganizationCode, getOrganizationFullName } from '@/lib/constants/fsa-organizations';
+import { toast } from '@/components/ui/Toast';
+import ActionMenu from '@/components/ui/ActionMenu';
+import { Pagination, usePagination } from '@/components/ui/Pagination';
 
 export default function MiniAppsPage() {
   const { role, user, hasRole } = useAuth();
@@ -24,6 +26,9 @@ export default function MiniAppsPage() {
   const [isApkModalOpen, setIsApkModalOpen] = useState(false);
   const [apkModalVersion, setApkModalVersion] = useState<string>('v0.2.0');
 
+  // Client-side pagination for MiniApps catalog
+  const { paginatedItems: paginatedMiniApps, paginationProps: miniAppsPaginationProps } = usePagination(miniApps, 10);
+
   const fetchMiniApps = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -34,7 +39,9 @@ export default function MiniAppsPage() {
       setMiniApps(Array.isArray(data) ? data : []);
     } catch (error: any) {
       console.error('Failed to fetch mini apps', error);
-      setFetchError(error.message || 'Error fetching mini apps');
+      const msg = error.message || 'Error fetching mini apps';
+      setFetchError(msg);
+      toast.error(msg, 'Load Failed');
     } finally {
       setIsLoading(false);
     }
@@ -129,7 +136,19 @@ export default function MiniAppsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                {miniApps.length === 0 ? (
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-16 text-center text-slate-500">
+                      <div className="flex items-center justify-center gap-2">
+                        <svg className="animate-spin h-5 w-5 text-brand-500" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Loading mini apps...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : miniApps.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-6 py-16 text-center">
                       <div className="flex flex-col items-center justify-center">
@@ -143,7 +162,7 @@ export default function MiniAppsPage() {
                     </td>
                   </tr>
                 ) : (
-                miniApps.map((app) => {
+                paginatedMiniApps.map((app) => {
                   const isLiveProduction = app.status === 'ACTIVE' || app.status === 'Published';
                   const hasProductionHistory = Boolean(
                     app.versionHistory?.some((v: any) => v.type === 'PRODUCTION' && (v.status === 'ACTIVE' || v.status === 'PREVIOUS'))
@@ -312,29 +331,53 @@ export default function MiniAppsPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <div className="inline-flex items-center gap-2">
-                          {(app.status === 'TESTING' || app.status === 'ACTIVE') && (() => {
-                            const testVersion = (app as any).activeTestVersion || app.integrationConfig?.superAppTestVersion || 'v0.2.0';
-                            return (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setApkModalVersion(testVersion);
-                                  setIsApkModalOpen(true);
-                                }}
-                                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-300 dark:hover:border-emerald-700 shadow-sm transition-all flex items-center justify-center cursor-pointer"
-                                title={`Download SuperApp Test APK & Scan QR Code (${testVersion})`}
-                              >
-                                <DevicePhoneIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                              </button>
-                            );
-                          })()}
-                          <Link href={`/miniapps/${app.id}`} className="inline-flex items-center space-x-1 text-slate-500 dark:text-slate-400 hover:text-brand-700 dark:hover:text-brand-300 font-medium text-sm transition-all px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-brand-50 dark:hover:bg-brand-900/30 hover:border-brand-200 dark:hover:border-brand-800 shadow-sm group-hover:text-brand-600 dark:group-hover:text-brand-400 group-hover:border-brand-200 dark:group-hover:border-brand-800">
-                            <span>Manage</span>
-                            <svg className="w-4 h-4 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
-                          </Link>
-                        </div>
+                        <ActionMenu
+                          ariaLabel={`Actions for ${app.name}`}
+                          items={[
+                            {
+                              label: 'Manage Details',
+                              href: `/miniapps/${app.id}`,
+                              icon: (
+                                <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                              ),
+                            },
+                            {
+                              label: 'Test APK & QR Code',
+                              hidden: app.status !== 'TESTING' && app.status !== 'ACTIVE',
+                              icon: <DevicePhoneIcon className="w-4 h-4 text-emerald-500" />,
+                              onClick: () => {
+                                const testVersion =
+                                  (app as any).activeTestVersion ||
+                                  app.integrationConfig?.superAppTestVersion ||
+                                  'v0.2.0';
+                                setApkModalVersion(testVersion);
+                                setIsApkModalOpen(true);
+                              },
+                            },
+                            {
+                              label: 'Inspect Capabilities',
+                              href: `/miniapps/${app.id}?tab=capabilities`,
+                              icon: (
+                                <svg className="w-4 h-4 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                              ),
+                            },
+                            {
+                              label: 'View Issues',
+                              href: `/issues?appId=${app.id}`,
+                              divider: true,
+                              icon: (
+                                <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                              ),
+                            },
+                          ]}
+                        />
                       </td>
                     </ClickableTableRow>
                   );
@@ -343,6 +386,13 @@ export default function MiniAppsPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Table Footer Pagination */}
+        {!isLoading && miniApps.length > 0 && (
+          <div className="px-6 py-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
+            <Pagination {...miniAppsPaginationProps} showPageSizeSelector />
+          </div>
+        )}
       </div>
       )}
 

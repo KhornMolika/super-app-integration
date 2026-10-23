@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -8,7 +8,7 @@ import { usersApi } from '@/api/users.api';
 import { toast } from '@/components/ui/Toast';
 
 interface UserProfileCardProps {
-  user: { id?: string; name?: string; email?: string; avatarUrl?: string };
+  user: { id?: string; name?: string; email?: string; avatarUrl?: string } | null;
   role: string;
   telegramStatus: any;
   onSendTestEmail: (targetEmail?: string) => Promise<void>;
@@ -37,13 +37,11 @@ export function UserProfileCard({
   const userEmail = user?.email || '';
 
   const roleBadgeStyle =
-    role === 'MINI_APP_DEVELOPER'
-      ? 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/50 dark:text-sky-300 dark:border-sky-800'
-      : role === 'SUPER_ADMIN'
+    role === 'SUPER_ADMIN'
       ? 'bg-accent-50 text-accent-800 border-accent-200 dark:bg-accent-950/50 dark:text-accent-300 dark:border-accent-800'
-      : role === 'QA_TESTER'
-      ? 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800'
-      : 'bg-brand-50 text-brand-700 border-brand-200 dark:bg-brand-950/50 dark:text-brand-300 dark:border-brand-800';
+      : role === 'ADMIN'
+      ? 'bg-brand-50 text-brand-700 border-brand-200 dark:bg-brand-950/50 dark:text-brand-300 dark:border-brand-800'
+      : 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/50 dark:text-sky-300 dark:border-sky-800'; // MA_DEVELOPER
 
   const roleBadgeLabel = role
     .split('_')
@@ -61,10 +59,8 @@ export function UserProfileCard({
     role === 'SUPER_ADMIN'
       ? 'SuperApp Global Administration & Root Governance'
       : role === 'ADMIN'
-      ? 'SuperApp Platform Administration'
-      : role === 'MINI_APP_DEVELOPER'
-      ? 'MiniApp Submissions & Management'
-      : 'MiniApp Quality Verification & Testing';
+      ? 'SuperApp Platform Administration & Audit'
+      : 'MiniApp Development, Sandbox Testing & Submissions';
 
   const isConnected = Boolean(telegramStatus?.user?.isConnected);
 

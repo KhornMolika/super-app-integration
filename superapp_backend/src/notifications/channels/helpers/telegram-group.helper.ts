@@ -1,4 +1,4 @@
-﻿import { Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { User } from '../../../access-control/entities/user.entity';
 import { MiniApp } from '../../../miniapps/entities/miniapp.entity';
 import { SettingsService } from '../../../settings/settings.service';
@@ -34,7 +34,7 @@ export class TelegramGroupHelper {
     if (userId && userRepository) {
       dbUser = await userRepository.findOne({
         where: { id: userId },
-        relations: { roles: true },
+        relations: { role: true },
       });
     }
 

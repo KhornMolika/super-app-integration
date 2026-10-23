@@ -12,9 +12,8 @@ export function AppSidebar() {
 
   return (
     <aside
-      className={`${
-        isCollapsed ? 'w-20' : 'w-72'
-      } bg-brand-950 dark:bg-slate-950 text-slate-200 flex flex-col border-r border-brand-900 dark:border-slate-900 shadow-2xl relative z-20 transition-all duration-300 ease-in-out select-none shrink-0`}
+      className={`${isCollapsed ? 'w-20' : 'w-72'
+        } bg-brand-950 dark:bg-slate-950 text-slate-200 flex flex-col border-r border-brand-900 dark:border-slate-900 shadow-2xl relative z-20 transition-all duration-300 ease-in-out select-none shrink-0`}
     >
       {/* Sidebar Header / Brand */}
       <div className={`p-4 pb-2 ${isCollapsed ? 'px-3' : 'p-6 pb-4'} transition-all duration-300`}>
@@ -27,7 +26,7 @@ export function AppSidebar() {
               <div className="overflow-hidden transition-all duration-300">
                 <h1 className="text-2xl font-extrabold text-white tracking-tight whitespace-nowrap">SuperApp</h1>
                 <p className="text-[10px] font-semibold text-brand-300 uppercase tracking-widest whitespace-nowrap">
-                  SuperApp Gateway
+                  FSA SuperApp Platform
                 </p>
               </div>
             )}

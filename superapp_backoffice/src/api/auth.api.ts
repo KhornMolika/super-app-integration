@@ -36,13 +36,13 @@ export interface DeveloperTokenItem {
 
 export const authApi = {
   login: (data: LoginPayload) =>
-    apiClient<{ success: boolean; user: AuthUserResponse; expires_in?: number }>('/api/auth/login', {
+    apiClient<{ success: boolean; user?: AuthUserResponse; message?: string; pendingApproval?: boolean; expires_in?: number }>('/api/auth/login', {
       method: 'POST',
       body: data,
     }),
 
   register: (data: RegisterPayload) =>
-    apiClient<{ success: boolean; user: AuthUserResponse; expires_in?: number }>('/api/auth/register', {
+    apiClient<{ success: boolean; user?: AuthUserResponse; message?: string; pendingApproval?: boolean; expires_in?: number }>('/api/auth/register', {
       method: 'POST',
       body: data,
     }),
@@ -77,4 +77,64 @@ export const authApi = {
     apiClient<{ success: boolean }>('/api/auth/developer-tokens/' + id, {
       method: 'DELETE',
     }),
+
+  changePassword: (data: { oldPassword: string; newPassword: string }) =>
+    apiClient<{ success: boolean; message: string }>('/api/auth/change-password', {
+      method: 'POST',
+      body: data,
+    }),
+
+  requestOtp: (data: { email: string; purpose?: 'PASSWORD_RESET' | 'EMAIL_VERIFICATION' }) =>
+    apiClient<{
+      success: boolean;
+      message: string;
+      expiresInSeconds?: number;
+      emailDispatched?: boolean;
+    }>('/api/auth/request-otp', {
+      method: 'POST',
+      body: data,
+    }),
+
+  verifyOtp: (data: {
+    email: string;
+    code: string;
+    purpose?: 'PASSWORD_RESET' | 'EMAIL_VERIFICATION';
+  }) =>
+    apiClient<{
+      success: boolean;
+      resetToken?: string;
+      verified?: boolean;
+      message: string;
+    }>('/api/auth/verify-otp', {
+      method: 'POST',
+      body: data,
+    }),
+
+  requestRecoveryOtp: (email: string) =>
+    apiClient<{
+      success: boolean;
+      message: string;
+      expiresInSeconds?: number;
+      emailDispatched?: boolean;
+    }>('/api/auth/forgot-password', {
+      method: 'POST',
+      body: { email, purpose: 'PASSWORD_RESET' },
+    }),
+
+  verifyRecoveryOtp: (email: string, code: string) =>
+    apiClient<{
+      success: boolean;
+      resetToken: string;
+      message: string;
+    }>('/api/auth/verify-otp', {
+      method: 'POST',
+      body: { email, code, purpose: 'PASSWORD_RESET' },
+    }),
+
+  resetPassword: (resetToken: string, newPassword: string) =>
+    apiClient<{ success: boolean; message: string }>('/api/auth/reset-password', {
+      method: 'POST',
+      body: { resetToken, newPassword },
+    }),
 };
+
