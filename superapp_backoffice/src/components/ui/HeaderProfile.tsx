@@ -2,32 +2,13 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { useAuth, Role } from '@/lib/auth';
+import { useAuth } from '@/lib/auth';
 
 export function HeaderProfile() {
   const { user, role, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const roleConfigs: Record<Role, { label: string; badgeColor: string; description: string }> = {
-    SUPER_ADMIN: {
-      label: 'Super Admin',
-      badgeColor: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30',
-      description: 'Super Administrator with platform-wide governance',
-    },
-    ADMIN: {
-      label: 'Admin',
-      badgeColor: 'bg-brand-500/10 text-brand-700 dark:text-brand-300 border-brand-500/30',
-      description: 'Platform review, approval, and management',
-    },
-    MA_DEVELOPER: {
-      label: 'MiniApp Developer',
-      badgeColor: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
-      description: 'MiniApp creation, integration & release',
-    },
-  };
-
-  const currentRole = (role && roleConfigs[role]) ? roleConfigs[role] : roleConfigs.MA_DEVELOPER;
   const userName = user?.name || 'Authenticated User';
   const userEmail = user?.email || 'user@platform.local';
   const initials = userName
@@ -71,7 +52,7 @@ export function HeaderProfile() {
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         className="relative flex items-center justify-center p-0.5 rounded-full hover:ring-2 hover:ring-brand-500/50 dark:hover:ring-brand-400/50 transition-all cursor-pointer focus:outline-none"
-        title={`${userName} (${currentRole.label})`}
+        title={userName}
         aria-label="User Profile & Settings Menu"
         aria-expanded={isOpen}
       >
@@ -97,21 +78,16 @@ export function HeaderProfile() {
       {/* 2. User Profile Dropdown Menu */}
       {isOpen && (
         <div className="absolute right-0 top-full mt-2 w-72 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xl p-2 animate-in fade-in-0 zoom-in-95 duration-150">
-          {/* User Identity Card with Name, Email & Role Badge */}
+          {/* User Identity Card with Name & Email (No role label) */}
           <div className="p-3 bg-slate-50/90 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-700/50">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-600 to-accent-600 flex items-center justify-center text-white font-bold text-sm shadow-xs shrink-0">
                 {initials}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-1">
-                  <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">
-                    {userName}
-                  </h4>
-                  <span className={`shrink-0 px-1.5 py-0.2 rounded text-[9px] font-bold border ${currentRole.badgeColor}`}>
-                    {currentRole.label}
-                  </span>
-                </div>
+                <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">
+                  {userName}
+                </h4>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
                   {userEmail}
                 </p>
