@@ -44,4 +44,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+.developer_tokens.json
 /fix
+
+.developer_tokens.json

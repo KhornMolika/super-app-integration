@@ -1,11 +1,11 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSidebar } from '@/components/ui/SidebarContext';
 import { SidebarNav } from '@/components/ui/SidebarNav';
-import { SidebarProfile } from '@/components/ui/SidebarProfile';
+import { SidebarGuidelines } from '@/components/ui/SidebarGuidelines';
 
 export function AppSidebar() {
   const { isCollapsed, toggleSidebar } = useSidebar();
@@ -67,8 +67,8 @@ export function AppSidebar() {
       {/* Navigation */}
       <SidebarNav />
 
-      {/* Profile */}
-      <SidebarProfile />
+      {/* Guidelines Footer Link */}
+      <SidebarGuidelines />
     </aside>
   );
 }
