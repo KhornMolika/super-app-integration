@@ -52,6 +52,7 @@ export interface DataTableProps<T> {
   className?: string;
   tableClassName?: string;
   rowClassName?: string | ((item: T, index: number) => string);
+  onRowClick?: (item: T, index: number) => void;
 }
 
 export function DataTable<T>({
@@ -75,6 +76,7 @@ export function DataTable<T>({
   className = '',
   tableClassName = '',
   rowClassName = '',
+  onRowClick,
 }: DataTableProps<T>) {
   const showToolbar = onSearchChange !== undefined || filters.length > 0 || actions !== undefined;
   const totalCount = totalItemsCount ?? data.length;
@@ -232,7 +234,8 @@ export function DataTable<T>({
                   return (
                     <tr
                       key={key}
-                      className={`hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors ${dynamicRowClass}`}
+                      onClick={onRowClick ? () => onRowClick(item, index) : undefined}
+                      className={`hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors ${onRowClick ? 'cursor-pointer ' : ''}${dynamicRowClass}`}
                     >
                       {columns.map((col) => (
                         <td key={`${key}-${col.key}`} className={`px-6 py-4 ${col.className || ''}`}>

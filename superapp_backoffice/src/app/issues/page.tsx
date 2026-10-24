@@ -1,95 +1,225 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { miniappsApi } from '@/api';
+import { miniappsApi, unwrapData } from '@/api';
+import { DataTable, DataTableColumn } from '@/components/ui/DataTable';
+
+interface MiniAppIssueItem {
+  id: string;
+  classification?: string;
+  description?: string;
+  severity?: string;
+  status?: string;
+  miniApp?: {
+    id: string;
+    name?: string;
+    appId?: string;
+  };
+}
 
 export default function IssuesPage() {
-  const [issues, setIssues] = useState<any[]>([]);
+  const [issues, setIssues] = useState<MiniAppIssueItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [severityFilter, setSeverityFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL');
 
   useEffect(() => {
-    miniappsApi.getAllIssues()
-      .then(data => {
-        setIssues(Array.isArray(data) ? data : (data as any)?.data || []);
+    miniappsApi
+      .getAllIssues()
+      .then((data) => {
+        const list = unwrapData<MiniAppIssueItem>(data);
+        setIssues(Array.isArray(list) ? list : []);
         setIsLoading(false);
       })
       .catch(() => setIsLoading(false));
   }, []);
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center mt-32">
-        <svg className="animate-spin h-10 w-10 text-brand-600" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-      </div>
-    );
-  }
+  // Filtered Issues (Client-side search & filtering)
+  const filteredIssues = useMemo(() => {
+    return issues.filter((issue) => {
+      // 1. Search Query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const appName = issue.miniApp?.name?.toLowerCase() || '';
+        const appId = issue.miniApp?.appId?.toLowerCase() || '';
+        const desc = issue.description?.toLowerCase() || '';
+        const classification = issue.classification?.toLowerCase() || '';
+        if (
+          !appName.includes(q) &&
+          !appId.includes(q) &&
+          !desc.includes(q) &&
+          !classification.includes(q)
+        ) {
+          return false;
+        }
+      }
+
+      // 2. Severity Filter
+      if (severityFilter !== 'ALL' && issue.severity !== severityFilter) {
+        return false;
+      }
+
+      // 3. Status Filter
+      if (statusFilter !== 'ALL' && issue.status !== statusFilter) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [issues, searchQuery, severityFilter, statusFilter]);
+
+  const columns: DataTableColumn<MiniAppIssueItem>[] = useMemo(
+    () => [
+      {
+        key: 'miniApp',
+        header: 'MiniApp',
+        width: 'w-[20%]',
+        cell: (issue) => (
+          <div>
+            <Link
+              href={`/miniapps/${issue.miniApp?.id}`}
+              className="font-semibold text-brand-600 dark:text-brand-400 hover:underline text-sm block truncate"
+            >
+              {issue.miniApp?.name || 'Unknown App'}
+            </Link>
+            {issue.miniApp?.appId && (
+              <span className="text-[11px] font-mono text-slate-400 block truncate">
+                {issue.miniApp.appId}
+              </span>
+            )}
+          </div>
+        ),
+      },
+      {
+        key: 'classification',
+        header: 'Classification',
+        width: 'w-[16%]',
+        cell: (issue) => (
+          <span className="inline-flex px-2.5 py-1 text-xs font-semibold rounded-md bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+            {issue.classification || 'MINI_APP_ISSUE'}
+          </span>
+        ),
+      },
+      {
+        key: 'description',
+        header: 'Description',
+        width: 'w-[36%]',
+        cell: (issue) => (
+          <div
+            className="text-sm text-slate-600 dark:text-slate-300 truncate max-w-md"
+            title={issue.description}
+          >
+            {issue.description || '—'}
+          </div>
+        ),
+      },
+      {
+        key: 'severity',
+        header: 'Severity',
+        width: 'w-[10%]',
+        cell: (issue) => {
+          const isHigh = issue.severity === 'HIGH' || issue.severity === 'CRITICAL';
+          return (
+            <span
+              className={`inline-flex items-center px-2.5 py-0.5 text-xs font-bold rounded-full ${
+                isHigh
+                  ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200 dark:border-rose-800'
+                  : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
+              }`}
+            >
+              {issue.severity || 'LOW'}
+            </span>
+          );
+        },
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        width: 'w-[10%]',
+        cell: (issue) => (
+          <span className="inline-flex px-2.5 py-0.5 text-xs font-semibold rounded-full border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800">
+            {issue.status || 'OPEN'}
+          </span>
+        ),
+      },
+      {
+        key: 'actions',
+        header: <span className="block text-right">Actions</span>,
+        width: 'w-[8%]',
+        className: 'text-right',
+        cell: (issue) => (
+          <Link
+            href={`/miniapps/${issue.miniApp?.id}`}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline px-2.5 py-1 rounded-lg hover:bg-brand-50 dark:hover:bg-brand-950/30 transition-colors"
+          >
+            View App
+          </Link>
+        ),
+      },
+    ],
+    [],
+  );
 
   return (
-    <div className="w-full py-6">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Issues Management</h1>
-          <p className="text-slate-500 mt-1">Centralized view of all validation, security, and integration failures.</p>
-        </div>
+    <div className="w-full py-6 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
+      <div>
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+          Issues Management
+        </h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
+          Centralized view of all validation, security, and integration failures across registered MiniApps.
+        </p>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
-              <tr>
-                <th className="w-[18%] px-6 py-4 text-xs font-semibold uppercase text-slate-500">MiniApp</th>
-                <th className="w-[18%] px-6 py-4 text-xs font-semibold uppercase text-slate-500">Classification</th>
-                <th className="w-[36%] px-6 py-4 text-xs font-semibold uppercase text-slate-500">Description</th>
-                <th className="w-[10%] px-6 py-4 text-xs font-semibold uppercase text-slate-500">Severity</th>
-                <th className="w-[10%] px-6 py-4 text-xs font-semibold uppercase text-slate-500">Status</th>
-                <th className="w-[8%] px-6 py-4 text-xs font-semibold uppercase text-slate-500 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-              {issues.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">No issues found.</td>
-                </tr>
-              ) : (
-                issues.map(issue => (
-                  <tr key={issue.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                    <td className="px-6 py-4">
-                      <Link href={`/miniapps/${issue.miniApp?.id}`} className="font-medium text-brand-600 hover:underline">
-                        {issue.miniApp?.name || 'Unknown'}
-                      </Link>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex px-2 py-1 text-xs font-bold rounded-md bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
-                        {issue.classification || 'MINI_APP_ISSUE'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 max-w-[36%] truncate text-sm text-slate-600 dark:text-slate-400" title={issue.description}>
-                      {issue.description}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex px-2 py-1 text-xs font-bold rounded-full ${issue.severity === 'HIGH' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'}`}>
-                        {issue.severity}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex px-2 py-1 text-xs font-bold rounded-full border">
-                        {issue.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <Link href={`/miniapps/${issue.miniApp?.id}`} className="text-sm font-medium text-brand-600 hover:underline">
-                        View App
-                      </Link>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <DataTable<MiniAppIssueItem>
+        data={filteredIssues}
+        columns={columns}
+        keyExtractor={(item) => item.id}
+        loading={isLoading}
+        loadingMessage="Loading ecosystem issues..."
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder="Search issues by MiniApp, appId, or description..."
+        filters={[
+          {
+            id: 'severity',
+            label: 'Severity',
+            value: severityFilter,
+            options: [
+              { label: 'All Severities', value: 'ALL' },
+              { label: 'High / Critical', value: 'HIGH' },
+              { label: 'Medium', value: 'MEDIUM' },
+              { label: 'Low', value: 'LOW' },
+            ],
+            onChange: setSeverityFilter,
+            dropdownWidth: 'w-48',
+          },
+          {
+            id: 'status',
+            label: 'Status',
+            value: statusFilter,
+            options: [
+              { label: 'All Statuses', value: 'ALL' },
+              { label: 'Open', value: 'OPEN' },
+              { label: 'Resolved', value: 'RESOLVED' },
+              { label: 'Dismissed', value: 'DISMISSED' },
+            ],
+            onChange: setStatusFilter,
+            dropdownWidth: 'w-48',
+          },
+        ]}
+        isFiltered={searchQuery.trim() !== '' || severityFilter !== 'ALL' || statusFilter !== 'ALL'}
+        onResetFilters={() => {
+          setSearchQuery('');
+          setSeverityFilter('ALL');
+          setStatusFilter('ALL');
+        }}
+        totalItemsCount={issues.length}
+        emptyMessage="No issues match your criteria"
+        emptySubMessage="All validation and security checks are currently clear for this selection."
+      />
     </div>
   );
 }

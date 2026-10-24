@@ -4,12 +4,10 @@ import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'reac
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/inputs';
 import { useAuth } from '@/lib/auth';
 import { auditLogsApi, AuditLog, unwrapData, unwrapMeta, PaginationMeta } from '@/api';
-import { Pagination, PaginationProps } from '@/components/ui/Pagination';
-import { DocumentTextIcon } from '@/components/ui/Icons';
+import { PaginationProps } from '@/components/ui/Pagination';
+import { DataTable, DataTableColumn } from '@/components/ui/DataTable';
 
 const COMMON_AUDIT_ACTIONS = [
   'ALL',
@@ -167,6 +165,86 @@ function AuditLogsContent() {
     return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700';
   };
 
+  // Audit Log Table Columns for Generic DataTable
+  const auditColumns: DataTableColumn<AuditLog>[] = useMemo(() => [
+    {
+      key: 'timestamp',
+      header: 'Timestamp',
+      width: 'w-[18%]',
+      cell: (log) => (
+        <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
+          {parseDate(log.createdAt).toLocaleString()}
+        </span>
+      ),
+    },
+    {
+      key: 'actor',
+      header: 'Actor',
+      width: 'w-[15%]',
+      cell: (log) => (
+        <div className="font-semibold text-sm text-slate-800 dark:text-slate-200">
+          {log.actorId || 'system'}
+        </div>
+      ),
+    },
+    {
+      key: 'action',
+      header: 'Action Event',
+      width: 'w-[20%]',
+      cell: (log) => (
+        <span
+          className={`inline-flex px-2.5 py-1 rounded-md text-xs font-bold border uppercase tracking-wider ${getActionBadgeClass(
+            log.action
+          )}`}
+        >
+          {log.action}
+        </span>
+      ),
+    },
+    {
+      key: 'resource',
+      header: 'Resource Target',
+      width: 'w-[25%]',
+      cell: (log) => (
+        <div>
+          <div className="text-sm font-medium text-slate-800 dark:text-slate-200">
+            {log.resourceType}
+          </div>
+          {log.resourceId && (
+            <div className="text-xs font-mono text-slate-400 truncate max-w-xs" title={log.resourceId}>
+              {log.resourceId}
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'ip',
+      header: 'IP Address',
+      width: 'w-[12%]',
+      cell: (log) => (
+        <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
+          {log.ipAddress || '127.0.0.1'}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: <span className="block text-right">Details</span>,
+      width: 'w-[10%]',
+      className: 'text-right',
+      cell: (log) => (
+        <button
+          type="button"
+          onClick={() => setSelectedLog(log)}
+          className="text-brand-600 dark:text-brand-400 hover:underline font-semibold text-xs bg-brand-50 dark:bg-brand-950/40 px-2.5 py-1 rounded-lg border border-brand-200 dark:border-brand-800/50 cursor-pointer"
+        >
+          Inspect JSON
+        </button>
+      ),
+    },
+  ], []);
+
   // Pagination Props for Card Footer
   const paginationProps: PaginationProps = {
     currentPage: paginationMeta.page || currentPage,
@@ -188,156 +266,52 @@ function AuditLogsContent() {
     <ProtectedRoute permission="audit_log:read">
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out space-y-6">
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4">
-          <div>
-            <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">
-              Audit Logs & Security Events
-            </h2>
-            <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
-              Immutable ledger of platform actions, capability approvals, pipeline runs, and security events.
-            </p>
-          </div>
-
-          {/* Search & Action Filters */}
-          <div className="flex items-center gap-3">
-            <div className="relative w-64">
-              <Input
-                placeholder="Search audit trail..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-10 w-full text-sm pr-8"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              )}
-            </div>
-
-            <select
-              value={actionFilter}
-              onChange={(e) => handleActionChange(e.target.value)}
-              className="h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer shadow-xs"
-            >
-              <option value="ALL">All Actions ({paginationMeta.totalItems})</option>
-              {COMMON_AUDIT_ACTIONS.filter((act) => act !== 'ALL').map((act) => (
-                <option key={act} value={act}>
-                  {act}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div>
+          <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">
+            Audit Logs & Security Events
+          </h2>
+          <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
+            Immutable ledger of platform actions, capability approvals, pipeline runs, and security events.
+          </p>
         </div>
 
-        {/* Audit Logs Table Card */}
-        <Card className="!p-0 overflow-hidden shadow-sm border border-slate-200 dark:border-slate-800 rounded-2xl">
-          <div className="overflow-x-auto min-h-[360px]">
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm border-b border-slate-200/80 dark:border-slate-800 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                <tr>
-                  <th className="w-[18%] px-6 py-4 font-semibold text-xs tracking-wider">
-                    Timestamp
-                  </th>
-                  <th className="w-[15%] px-6 py-4 font-semibold text-xs tracking-wider">
-                    Actor
-                  </th>
-                  <th className="w-[20%] px-6 py-4 font-semibold text-xs tracking-wider">
-                    Action Event
-                  </th>
-                  <th className="w-[25%] px-6 py-4 font-semibold text-xs tracking-wider">
-                    Resource Target
-                  </th>
-                  <th className="w-[12%] px-6 py-4 font-semibold text-xs tracking-wider">
-                    IP Address
-                  </th>
-                  <th className="w-[10%] px-6 py-4 font-semibold text-xs tracking-wider text-right">
-                    Details
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-sm">
-                {loading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <tr key={`skeleton-${i}`} className="animate-pulse">
-                      <td className="px-6 py-4"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-28" /></td>
-                      <td className="px-6 py-4"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-24" /></td>
-                      <td className="px-6 py-4"><div className="h-5 bg-slate-200 dark:bg-slate-800 rounded-md w-32" /></td>
-                      <td className="px-6 py-4"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-36" /></td>
-                      <td className="px-6 py-4"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-20" /></td>
-                      <td className="px-6 py-4 text-right"><div className="h-6 bg-slate-200 dark:bg-slate-800 rounded-lg w-20 ml-auto" /></td>
-                    </tr>
-                  ))
-                ) : logs.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-14 text-center text-slate-500">
-                      No audit logs match your search or filter criteria.
-                    </td>
-                  </tr>
-                ) : (
-                  logs.map((log) => (
-                    <tr
-                      key={log.id}
-                      className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
-                    >
-                      <td className="px-6 py-4 text-xs font-mono text-slate-500 dark:text-slate-400">
-                        {parseDate(log.createdAt).toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="font-semibold text-sm text-slate-800 dark:text-slate-200">
-                          {log.actorId || 'system'}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`inline-flex px-2.5 py-1 rounded-md text-xs font-bold border uppercase tracking-wider ${getActionBadgeClass(
-                            log.action
-                          )}`}
-                        >
-                          {log.action}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm font-medium text-slate-800 dark:text-slate-200">
-                          {log.resourceType}
-                        </div>
-                        {log.resourceId && (
-                          <div className="text-xs font-mono text-slate-400 truncate max-w-xs">
-                            {log.resourceId}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-xs font-mono text-slate-500 dark:text-slate-400">
-                        {log.ipAddress || '127.0.0.1'}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedLog(log)}
-                          className="text-brand-600 dark:text-brand-400 hover:underline font-semibold text-xs bg-brand-50 dark:bg-brand-950/40 px-2.5 py-1 rounded-lg border border-brand-200 dark:border-brand-800/50 cursor-pointer"
-                        >
-                          Inspect JSON
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Server-Driven Pagination Footer */}
-          {!loading && logs.length > 0 && (
-            <div className="px-6 py-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/60">
-              <Pagination {...paginationProps} showPageSizeSelector />
-            </div>
-          )}
-        </Card>
+        {/* Universal DataTable */}
+        <DataTable<AuditLog>
+          data={logs}
+          columns={auditColumns}
+          keyExtractor={(log) => log.id}
+          loading={loading}
+          loadingMessage="Loading audit trail..."
+          searchValue={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder="Search audit trail by actor, resource..."
+          filters={[
+            {
+              id: 'action',
+              label: 'Action',
+              value: actionFilter,
+              options: [
+                { label: `All Actions (${paginationMeta.totalItems})`, value: 'ALL' },
+                ...COMMON_AUDIT_ACTIONS.filter((act) => act !== 'ALL').map((act) => ({
+                  label: act,
+                  value: act,
+                })),
+              ],
+              onChange: handleActionChange,
+              dropdownWidth: 'w-72',
+            },
+          ]}
+          isFiltered={searchQuery.trim() !== '' || actionFilter !== 'ALL'}
+          onResetFilters={() => {
+            setSearchQuery('');
+            setActionFilter('ALL');
+            setCurrentPage(1);
+          }}
+          totalItemsCount={paginationMeta.totalItems}
+          emptyMessage="No audit logs match your search or filter criteria"
+          emptySubMessage="Try adjusting your keyword or action filter to locate system security events"
+          paginationProps={paginationProps}
+        />
 
         {/* Audit Log Detail Inspector Modal */}
         {mounted && selectedLog && createPortal(
