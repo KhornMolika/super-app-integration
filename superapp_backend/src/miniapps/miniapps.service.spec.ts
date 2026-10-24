@@ -1,4 +1,4 @@
-﻿import {
+import {
   BadGatewayException,
   BadRequestException,
   NotFoundException,
@@ -47,6 +47,7 @@ function build(app: any) {
     {} as any,
     codegen as any,
     sdkUpload as any,
+    {} as any,
   );
   return { service, miniappRepository, lifecycleHelper, codegen, sdkUpload, patches };
 }

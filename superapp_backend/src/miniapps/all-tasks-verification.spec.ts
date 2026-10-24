@@ -1,4 +1,4 @@
-﻿import { BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
+import { BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
 import { MiniappsService } from './miniapps.service';
 import { AllExceptionsFilter } from '../common/filters/all-exceptions.filter';
 import { PubspecPrecheckService } from '../integrations/flutter/pubspec-precheck.service';
@@ -70,6 +70,7 @@ describe('All Tasks Verification - Multi-Method MiniApps & Enterprise Plan', () 
         {} as any,
         mockCodegen,
         mockSdkUpload,
+        {} as any,
       );
     });
 
