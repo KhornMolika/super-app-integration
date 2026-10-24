@@ -146,7 +146,7 @@ export class MobileAuthService implements OnModuleInit {
       this.logger.warn(`Could not purge @example.com mobile end-users: ${err?.message}`);
     }
 
-    this.logger.log(`Mobile accounts ready (Password: ${adminPass}): ${defaultUsers.map((u) => u.email).join(', ')}`);
+    this.logger.log(`Mobile accounts ready: ${defaultUsers.map((u) => u.email).join(', ')}`);
   }
 
   get accessTtlSeconds(): number {
