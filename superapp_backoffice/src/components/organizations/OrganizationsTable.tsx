@@ -14,6 +14,7 @@ interface OrganizationsTableProps {
   onEdit: (org: Organization) => void;
   onToggleStatus: (org: Organization) => void;
   paginationProps?: PaginationProps;
+  userOrganizationId?: string | null;
 }
 
 export function OrganizationsTable({
@@ -23,6 +24,7 @@ export function OrganizationsTable({
   onEdit,
   onToggleStatus,
   paginationProps,
+  userOrganizationId,
 }: OrganizationsTableProps) {
   return (
     <Card className="!p-0 overflow-hidden shadow-sm border border-slate-200 dark:border-slate-800/80 rounded-2xl">
@@ -103,8 +105,11 @@ export function OrganizationsTable({
                           <div className="font-semibold text-slate-900 dark:text-slate-100 text-sm group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors flex items-center gap-2">
                             <span className="truncate">{org.name}</span>
                             {isRoot && (
-                              <span className="shrink-0 px-1.5 py-0.2 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                                Root Authority
+                              <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 inline-flex items-center gap-1">
+                                <svg className="w-2.5 h-2.5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                                System Anchor
                               </span>
                             )}
                           </div>
@@ -161,6 +166,7 @@ export function OrganizationsTable({
                         onView={onView}
                         onEdit={onEdit}
                         onToggleStatus={onToggleStatus}
+                        isOwnOrg={userOrganizationId === org.id}
                       />
                     </td>
                   </tr>

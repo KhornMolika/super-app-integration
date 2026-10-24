@@ -98,7 +98,7 @@ export function getOrganizationFullName(input?: string): string {
 /**
  * Detects if an organization is the root regulatory authority or central executive secretariat
  * (e.g. Non-Bank Financial Services Authority (FSA) or Financial Technology Center (FTC)).
- * Root authorities require heightened safety locks (Super Admin name confirmation) before disabling.
+ * Root authorities are System Anchors that cannot be disabled because they operate the SuperApp platform.
  */
 export function isRootOrganization(
   org: { name?: string; code?: string; parentAuthority?: string } | null | undefined,
@@ -113,3 +113,5 @@ export function isRootOrganization(
     name.includes('financial technology center')
   );
 }
+
+export const isSystemAnchorOrganization = isRootOrganization;

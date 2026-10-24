@@ -126,9 +126,19 @@ export default function OrganizationsPage() {
     const isRoot = isRootOrganization(org);
     const isOwnOrg = user?.organizationId === org.id;
 
-    // Disabling guard: Non-superadmins cannot disable root authority
-    if (isCurrentlyActive && isRoot && role !== 'SUPER_ADMIN') {
-      toast.error('The root regulatory authority can only be disabled by a Super Administrator.');
+    // Disabling guard 1: Root system anchor cannot be disabled
+    if (isCurrentlyActive && isRoot) {
+      toast.error(
+        'The root regulatory system anchor (FTC/FSA) cannot be disabled because it operates the SuperApp core infrastructure.',
+      );
+      return;
+    }
+
+    // Disabling guard 2: Operators cannot disable their own assigned organization
+    if (isCurrentlyActive && isOwnOrg) {
+      toast.error(
+        'Self-deactivation guard: You cannot disable your own assigned organization.',
+      );
       return;
     }
 
@@ -330,6 +340,7 @@ export default function OrganizationsPage() {
         onEdit={handleOpenEdit}
         onToggleStatus={handleToggleStatus}
         paginationProps={filteredOrganizations.length > 0 ? paginationProps : undefined}
+        userOrganizationId={user?.organizationId}
       />
 
       {/* Create / Edit Modal */}

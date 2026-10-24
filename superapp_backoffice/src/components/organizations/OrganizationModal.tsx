@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Organization } from '@/api/organizations.api';
+import { Organization, isRootOrganization } from '@/api/organizations.api';
 import { Button, Input, Label, Select } from '@/components/ui/inputs';
 import { BuildingIcon, ShieldCheckIcon, DocumentTextIcon, CheckIcon, XIcon } from '@/components/ui/Icons';
 
@@ -38,6 +38,8 @@ export function OrganizationModal({
     description: '',
     status: 'ACTIVE',
   });
+
+  const isRoot = isRootOrganization(editingOrg);
 
   useEffect(() => {
     if (editingOrg) {
@@ -178,17 +180,26 @@ export function OrganizationModal({
             <Select
               id="org-status"
               value={formData.status}
+              disabled={isRoot}
               onChange={(e) =>
                 setFormData({
                   ...formData,
                   status: e.target.value as 'ACTIVE' | 'INACTIVE',
                 })
               }
-              className="w-full text-sm"
+              className={`w-full text-sm ${isRoot ? 'opacity-70 bg-slate-100 dark:bg-slate-800 cursor-not-allowed' : ''}`}
             >
               <option value="ACTIVE">ACTIVE</option>
-              <option value="INACTIVE">INACTIVE</option>
+              {!isRoot && <option value="INACTIVE">INACTIVE</option>}
             </Select>
+            {isRoot && (
+              <p className="mt-1.5 text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                <span>Regulatory system anchor organization must remain ACTIVE.</span>
+              </p>
+            )}
           </div>
 
           {/* Footer */}

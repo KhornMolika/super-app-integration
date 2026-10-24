@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   Query,
+  Req,
   UseGuards,
   NotFoundException,
 } from '@nestjs/common';
@@ -50,14 +51,18 @@ export class OrganizationsController {
   async update(
     @Param('id') id: string,
     @Body() data: UpdateOrganizationDto,
+    @Req() req: any,
   ): Promise<Organization> {
-    return this.organizationsService.update(id, data);
+    return this.organizationsService.update(id, data, req?.user);
   }
 
   @Delete(':id')
   @RequirePermissions('organization:manage')
-  async remove(@Param('id') id: string): Promise<{ success: boolean }> {
-    const success = await this.organizationsService.remove(id);
+  async remove(
+    @Param('id') id: string,
+    @Req() req: any,
+  ): Promise<{ success: boolean }> {
+    const success = await this.organizationsService.remove(id, req?.user);
     return { success };
   }
 }

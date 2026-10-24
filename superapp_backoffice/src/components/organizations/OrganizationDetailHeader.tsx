@@ -17,6 +17,7 @@ export interface OrganizationDetailHeaderProps {
   isSuperOrAdmin: boolean;
   onToggleStatus: () => void;
   onEdit: () => void;
+  isOwnOrg?: boolean;
 }
 
 export function OrganizationDetailHeader({
@@ -24,6 +25,7 @@ export function OrganizationDetailHeader({
   isSuperOrAdmin,
   onToggleStatus,
   onEdit,
+  isOwnOrg = false,
 }: OrganizationDetailHeaderProps) {
   const isActive = organization.status === 'ACTIVE';
   const isRoot = isRootOrganization(organization);
@@ -59,8 +61,11 @@ export function OrganizationDetailHeader({
                 </span>
               )}
               {isRoot && (
-                <span className="px-2 py-0.5 rounded-md text-[11px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25">
-                  Root Authority
+                <span className="px-2.5 py-0.5 rounded-md text-[11px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25 inline-flex items-center gap-1.5 shadow-xs">
+                  <svg className="w-3 h-3 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  System Anchor
                 </span>
               )}
               <span
@@ -100,8 +105,26 @@ export function OrganizationDetailHeader({
               <span>Edit Organization</span>
             </Button>
 
-            {/* Toggle Status: Disable / Enable */}
-            {isActive ? (
+            {/* Toggle Status / Anchor Protection */}
+            {isRoot ? (
+              <div
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs font-semibold border border-slate-200 dark:border-slate-700 select-none cursor-default shadow-xs"
+                title="Root regulatory system anchor cannot be deactivated"
+              >
+                <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                <span>System Anchor (Protected)</span>
+              </div>
+            ) : isActive && isOwnOrg ? (
+              <div
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 text-xs font-semibold border border-slate-200 dark:border-slate-700 select-none cursor-not-allowed shadow-xs"
+                title="You cannot deactivate your own assigned organization"
+              >
+                <BanIcon className="w-3.5 h-3.5 text-slate-400" />
+                <span>Assigned Org (Protected)</span>
+              </div>
+            ) : isActive ? (
               <Button
                 variant="outline"
                 onClick={onToggleStatus}

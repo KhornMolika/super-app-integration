@@ -99,20 +99,68 @@ export class OrganizationsService implements OnApplicationBootstrap {
     return this.organizationRepository.save(org);
   }
 
-  async update(id: string, data: UpdateOrganizationDto): Promise<Organization> {
-    const org = await this.findOne(id);
-    if (!org) {
-      throw new Error(`Organization ${id} not found`);
-    }
-    const merged = this.organizationRepository.merge(org, data);
-    return this.organizationRepository.save(merged);
-  }
-
-  async remove(id: string): Promise<boolean> {
+  async update(
+    id: string,
+    data: UpdateOrganizationDto,
+    currentUser?: any,
+  ): Promise<Organization> {
     const org = await this.findOne(id);
     if (!org) {
       throw new NotFoundException(`Organization ${id} not found`);
     }
+
+    // Guard: Prevent deactivating Root System Anchors (FTC, FSA)
+    if (
+      data.status === OrganizationStatus.INACTIVE ||
+      (data.status as any) === 'INACTIVE'
+    ) {
+      const code = (org.code || '').trim().toUpperCase();
+      const name = (org.name || '').toLowerCase();
+      const isRootAnchor =
+        code === 'FSA' ||
+        code === 'FTC' ||
+        name.includes('financial technology center') ||
+        name.includes('non-bank financial services authority');
+
+      if (isRootAnchor) {
+        throw new BadRequestException(
+          `Regulatory system anchor "${org.name}" (${org.code || 'ROOT'}) cannot be deactivated. It hosts the SuperApp core platform and active system governance.`,
+        );
+      }
+
+      // Guard: Self-deactivation prevention
+      const currentOrgId = currentUser?.organizationId || currentUser?.orgId;
+      if (currentOrgId && currentOrgId === org.id) {
+        throw new BadRequestException(
+          `Self-deactivation guard: You cannot deactivate your own assigned organization ("${org.name}").`,
+        );
+      }
+    }
+
+    const merged = this.organizationRepository.merge(org, data);
+    return this.organizationRepository.save(merged);
+  }
+
+  async remove(id: string, currentUser?: any): Promise<boolean> {
+    const org = await this.findOne(id);
+    if (!org) {
+      throw new NotFoundException(`Organization ${id} not found`);
+    }
+
+    const code = (org.code || '').trim().toUpperCase();
+    const name = (org.name || '').toLowerCase();
+    const isRootAnchor =
+      code === 'FSA' ||
+      code === 'FTC' ||
+      name.includes('financial technology center') ||
+      name.includes('non-bank financial services authority');
+
+    if (isRootAnchor) {
+      throw new BadRequestException(
+        `Regulatory system anchor "${org.name}" (${org.code || 'ROOT'}) cannot be deleted. It hosts the SuperApp core platform and active system governance.`,
+      );
+    }
+
     const hasUsers = (org.users?.length ?? 0) > 0;
     const hasMiniApps = (org.miniApps?.length ?? 0) > 0;
     if (hasUsers || hasMiniApps) {
