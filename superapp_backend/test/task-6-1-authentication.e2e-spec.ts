@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
@@ -7,6 +8,7 @@ import { AuthService } from '../src/auth/auth.service';
 describe('Task 6.1: End-to-End Authentication Verification', () => {
   let app: INestApplication;
   let authService: AuthService;
+  const testPassword = process.env.SUPERADMIN_PASSWORD || '';
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -37,7 +39,7 @@ describe('Task 6.1: End-to-End Authentication Verification', () => {
         .post('/auth/login')
         .send({
           email: 'molikakhorn71@gmail.com',
-          password: 'Password123!@#',
+          password: testPassword,
         })
         .expect(200);
 
@@ -77,7 +79,7 @@ describe('Task 6.1: End-to-End Authentication Verification', () => {
         .post('/auth/login')
         .send({
           email: 'lymoly1122@gmail.com',
-          password: 'Password123!@#',
+          password: testPassword,
         })
         .expect(200);
 
@@ -103,7 +105,7 @@ describe('Task 6.1: End-to-End Authentication Verification', () => {
         .post('/auth/login')
         .send({
           email: 'molikakhorn71@gmail.com',
-          password: 'WrongPassword123!',
+          password: 'InvalidPassword_999!',
         })
         .expect(200);
 
@@ -119,7 +121,7 @@ describe('Task 6.1: End-to-End Authentication Verification', () => {
         .post('/auth/login')
         .send({
           email: 'nonexistent-user-test@superapp.gov.kh',
-          password: 'Password123!@#',
+          password: testPassword,
         })
         .expect(200);
 
@@ -134,7 +136,7 @@ describe('Task 6.1: End-to-End Authentication Verification', () => {
         .post('/auth/login')
         .send({
           email: 'not-an-email',
-          password: 'Password123!@#',
+          password: testPassword,
         })
         .expect(400);
 

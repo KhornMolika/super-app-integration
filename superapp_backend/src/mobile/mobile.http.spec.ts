@@ -21,7 +21,7 @@ import { User } from '../access-control/entities/user.entity';
 import { hashPassword } from '../common/utils/password.util';
 
 const PW = 'a-very-good-password';
-const ADMIN_PW = 'Password123!@#';
+const ADMIN_PW = 'mock-admin-test-pw';
 
 describe('Mobile HTTP (in-process)', () => {
   let app: INestApplication;

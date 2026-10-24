@@ -12,8 +12,10 @@ describe('EndUserAuthGuard', () => {
   let guard: EndUserAuthGuard;
   const jwt = new JwtService({});
 
+  const testPassword = 'mock-admin-guard-pw';
+
   beforeEach(async () => {
-    const adminPasswordHash = await hashPassword('Password123!@#');
+    const adminPasswordHash = await hashPassword(testPassword);
     authService = new AuthService(jwt, {
       findByEmailWithPermissions: async () => ({
         id: 'admin-1',
@@ -56,7 +58,7 @@ describe('EndUserAuthGuard', () => {
   });
 
   it('rejects back-office tokens', async () => {
-    const login: any = await authService.login({ email: 'admin@x.io', password: 'Password123!@#' });
+    const login: any = await authService.login({ email: 'admin@x.io', password: testPassword });
     expect(login.access_token).toBeDefined();
     await expect(guard.canActivate(ctx(bearer(login.access_token)).ctx)).rejects.toBeInstanceOf(UnauthorizedException);
   });

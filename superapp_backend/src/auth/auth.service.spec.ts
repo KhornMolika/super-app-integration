@@ -187,7 +187,8 @@ describe('AuthService / JwtAuthGuard', () => {
   });
 
   it('back-office login tokens verify and expire in configured TTL window', async () => {
-    const passwordHash = await hashPassword('Password123!@#');
+    const testPassword = 'mock-auth-test-pw';
+    const passwordHash = await hashPassword(testPassword);
     const s = new AuthService(new JwtService({}), {
       findByEmailWithPermissions: async () => ({
         id: 7,
@@ -200,7 +201,7 @@ describe('AuthService / JwtAuthGuard', () => {
       }),
     } as any);
     s.onModuleInit();
-    const res: any = await s.login({ email: 'a@b.c', password: 'Password123!@#' });
+    const res: any = await s.login({ email: 'a@b.c', password: testPassword });
     const p = s.verifyToken(res.access_token);
     expect(p.iss).toBe('super-app-backend');
     expect(p.exp - p.iat).toBe(BACK_OFFICE_ACCESS_TOKEN_TTL_SECONDS);

@@ -30,7 +30,7 @@ export class AccessControlService {
   ) {}
 
   async updatePasswordDirectly(userId: string, passwordHash: string): Promise<void> {
-    await this.userRepository.update({ id: userId }, { passwordHash, isActive: true, status: 'ACTIVE' });
+    await this.userRepository.update({ id: userId }, { passwordHash, status: 'ACTIVE' });
   }
 
   async findByEmailWithPermissions(email: string): Promise<User | null> {

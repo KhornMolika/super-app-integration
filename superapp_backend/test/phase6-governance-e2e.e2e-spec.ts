@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
@@ -66,7 +67,9 @@ describe('Phase 6: Tasks 6.2, 6.3 & 6.4 Governance & Isolation Verification', ()
       devRole = (await roleRepo.findOne({ where: { name: 'ADMIN' } }))!;
     }
 
-    const defaultPwHash = await hashPassword('Password123!@#');
+    const testDevPassword = 'TestGovDevPass_2026!';
+    const defaultPwHash = await hashPassword(testDevPassword);
+    const superAdminPassword = process.env.SUPERADMIN_PASSWORD || '';
 
     // 1. Lead Developer under FTC
     leadDevUser = await userRepo.save(
@@ -84,7 +87,7 @@ describe('Phase 6: Tasks 6.2, 6.3 & 6.4 Governance & Isolation Verification', ()
     );
     const leadLogin: any = await authService.login({
       email: leadDevUser.email,
-      password: 'Password123!@#',
+      password: testDevPassword,
     });
     leadDevToken = leadLogin.access_token;
 
@@ -104,7 +107,7 @@ describe('Phase 6: Tasks 6.2, 6.3 & 6.4 Governance & Isolation Verification', ()
     );
     const teammateLogin: any = await authService.login({
       email: teammateUser.email,
-      password: 'Password123!@#',
+      password: testDevPassword,
     });
     teammateToken = teammateLogin.access_token;
 
@@ -124,14 +127,14 @@ describe('Phase 6: Tasks 6.2, 6.3 & 6.4 Governance & Isolation Verification', ()
     );
     const foreignLogin: any = await authService.login({
       email: foreignDevUser.email,
-      password: 'Password123!@#',
+      password: testDevPassword,
     });
     foreignDevToken = foreignLogin.access_token;
 
     // 4. Super Admin
     const superAdminLogin: any = await authService.login({
       email: 'molikakhorn71@gmail.com',
-      password: 'Password123!@#',
+      password: superAdminPassword,
     });
     superAdminToken = superAdminLogin.access_token;
   }, 60000);

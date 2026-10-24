@@ -7,13 +7,15 @@ describe('NexusIntegrationService uploads', () => {
   let fetchMock: jest.Mock;
   let env: Record<string, string>;
   const originalFetch = global.fetch;
-  const auth = `Basic ${Buffer.from('admin:pw').toString('base64')}`;
+  const testNexusUser = 'admin';
+  const testNexusPass = 'mock-nexus-pw';
+  const auth = `Basic ${Buffer.from(`${testNexusUser}:${testNexusPass}`).toString('base64')}`;
 
   beforeEach(() => {
     env = {
       NEXUS_BASE_URL: 'http://nexus:8081/',
-      NEXUS_ADMIN_USER: 'admin',
-      NEXUS_ADMIN_PASSWORD: 'pw',
+      NEXUS_ADMIN_USER: testNexusUser,
+      NEXUS_ADMIN_PASSWORD: testNexusPass,
     };
     const cfg = {
       get: (k: string, d?: string) => env[k] ?? d,
@@ -146,7 +148,7 @@ describe('NexusIntegrationService uploads', () => {
     });
 
     it('username still defaults to admin', async () => {
-      env.NEXUS_ADMIN_PASSWORD = 'pw';
+      env.NEXUS_ADMIN_PASSWORD = testNexusPass;
       delete env.NEXUS_ADMIN_USER;
       fetchMock.mockResolvedValue({ ok: true, status: 201 });
       await service.putRawAsset('r', 'a', Buffer.from('x'));

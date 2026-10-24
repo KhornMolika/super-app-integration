@@ -95,7 +95,7 @@ describe('NativeSdkCodegenService', () => {
       CODEGEN_BASE_BRANCH: 'main',
       NEXUS_BASE_URL: 'http://nexus.test:8081',
       NEXUS_ADMIN_USER: 'admin',
-      NEXUS_ADMIN_PASSWORD: 'secret',
+      NEXUS_ADMIN_PASSWORD: process.env.NEXUS_ADMIN_PASSWORD || 'mock-nexus-test-pass',
       ...extraConfig,
     };
     const module: TestingModule = await Test.createTestingModule({
