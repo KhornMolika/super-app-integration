@@ -100,9 +100,9 @@ export class MiniappLifecycleHelper {
 
     // SuperApp Host Supported Capabilities (Zero-Hardcoded Policy: Query real PostgreSQL registry)
     let allowedCaps: string[] = [];
-    if (this.CapabilitiesService) {
+    if (this.capabilitiesService) {
       try {
-        const realCaps = await this.CapabilitiesService.getCapabilities();
+        const realCaps = await this.capabilitiesService.getCapabilities();
         allowedCaps = realCaps.map((c) => c.key.toLowerCase());
       } catch (err: any) {
         this.logger.warn(

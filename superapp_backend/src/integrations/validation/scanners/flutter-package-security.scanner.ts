@@ -323,7 +323,7 @@ export class FlutterPackageSecurityScanner {
       let hasUnsupportedRequired = false;
       for (const p of perms) {
         const permName = typeof p === 'string' ? p : p.name || p.type;
-        const isSupported = !!(await this.permissionsService.findByKey(permName));
+        const isSupported = !!(await this.capabilitiesService.findByKey(permName));
         if (!isSupported) {
           hasUnsupportedRequired = true;
           findings.push({

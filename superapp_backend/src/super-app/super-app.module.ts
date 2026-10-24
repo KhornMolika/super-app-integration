@@ -5,13 +5,13 @@ import { SuperAppCapability } from './entities/super-app-capability.entity';
 import { MiniApp } from '../miniapps/entities/miniapp.entity';
 import { SuperAppController } from './super-app.controller';
 import { SuperAppService } from './super-app.service';
-import { PermissionsModule } from '../permissions/permissions.module';
+import { CapabilitiesModule } from '../capabilities/capabilities.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([SuperAppCapability, MiniApp]),
     AuthModule,
-    PermissionsModule,
+    CapabilitiesModule,
   ],
   controllers: [SuperAppController],
   providers: [SuperAppService],

@@ -400,7 +400,7 @@ export class MiniappValidationHelper {
         }
 
         // Permission Catalog & Compatibility Check
-        const permissionDef = await this.CapabilitiesService.findByKey(permKey);
+        const permissionDef = await this.capabilitiesService.findByKey(permKey);
 
         if (!permissionDef) {
           // UNKNOWN PERMISSION -> create proposal in permission_proposals
@@ -411,7 +411,7 @@ export class MiniappValidationHelper {
           await this.createPermissionProposal(app, permKey);
         } else {
           // Known permission, check SuperApp Runtime Compatibility
-          const realCaps = await this.CapabilitiesService.getCapabilities();
+          const realCaps = await this.capabilitiesService.getCapabilities();
           const supportedCaps = realCaps.map((c) => c.key.toLowerCase());
 
           const isSupported =
@@ -656,12 +656,12 @@ export class MiniappValidationHelper {
   ) {
     const cleanKey = permissionKey.toLowerCase().trim().replace(/[^a-z0-9_]/g, '_');
     const [existing] =
-      await this.permissionProposalsService.findPendingByKey(cleanKey);
+      await this.capabilityProposalsService.findPendingByKey(cleanKey);
     if (existing) {
       return existing;
     }
 
-    const proposal = await this.permissionProposalsService.create({
+    const proposal = await this.capabilityProposalsService.create({
       permissionKey: cleanKey,
       permissionName: permissionName || cleanKey,
       description: `Capability proposal for "${cleanKey}" requested by MiniApp "${app.name || app.appId}".`,

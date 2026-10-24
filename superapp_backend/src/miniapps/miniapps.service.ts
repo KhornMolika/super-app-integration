@@ -501,9 +501,9 @@ export class MiniappsService implements OnApplicationBootstrap {
     if (!app) throw new BadRequestException('App not found');
 
     const rawCaps = (app as any).capabilities || (app as any).permissions;
-    if (this.permissionsService && rawCaps && Array.isArray(rawCaps) && rawCaps.length > 0) {
+    if (this.capabilitiesService && rawCaps && Array.isArray(rawCaps) && rawCaps.length > 0) {
       const capabilityCheck =
-        await this.permissionsService.validateMiniAppCapabilities(rawCaps);
+        await this.capabilitiesService.validateMiniAppCapabilities(rawCaps);
       if (!capabilityCheck.isValid) {
         throw new BadRequestException({
           statusCode: 400,
@@ -685,9 +685,9 @@ export class MiniappsService implements OnApplicationBootstrap {
     if (!app) throw new BadRequestException('App not found');
 
     const rawCaps = (app as any).capabilities || (app as any).permissions;
-    if (rawCaps && Array.isArray(rawCaps) && rawCaps.length > 0) {
+    if (this.capabilitiesService && rawCaps && Array.isArray(rawCaps) && rawCaps.length > 0) {
       const capabilityCheck =
-        await this.permissionsService.validateMiniAppCapabilities(rawCaps);
+        await this.capabilitiesService.validateMiniAppCapabilities(rawCaps);
       if (!capabilityCheck.isValid) {
         throw new BadRequestException({
           statusCode: 400,

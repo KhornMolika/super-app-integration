@@ -7,7 +7,7 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import { SuperAppCapability } from './entities/super-app-capability.entity';
 import { MiniApp } from '../miniapps/entities/miniapp.entity';
-import { PermissionsService } from '../permissions/permissions.service';
+import { CapabilitiesService } from '../capabilities/capabilities.service';
 
 @Injectable()
 export class SuperAppService implements OnApplicationBootstrap {
@@ -19,7 +19,7 @@ export class SuperAppService implements OnApplicationBootstrap {
     @InjectRepository(MiniApp)
     private miniAppRepository: Repository<MiniApp>,
     private configService: ConfigService,
-    private permissionsService: PermissionsService,
+    private capabilitiesService: CapabilitiesService,
   ) {}
 
   async onApplicationBootstrap() {
@@ -32,7 +32,7 @@ export class SuperAppService implements OnApplicationBootstrap {
    */
   private async seedInitialCapabilities() {
     try {
-      const realCaps = await this.permissionsService.getCapabilities();
+      const realCaps = await this.capabilitiesService.getCapabilities();
       const activeCapKeys = realCaps.map((c) => c.key);
 
       const exists = await this.superAppCapabilityRepository.findOne({
@@ -60,7 +60,7 @@ export class SuperAppService implements OnApplicationBootstrap {
    */
   async getActiveCapabilities(): Promise<string[]> {
     try {
-      const realCaps = await this.permissionsService.getCapabilities();
+      const realCaps = await this.capabilitiesService.getCapabilities();
       return realCaps.map((c) => c.key);
     } catch (err: any) {
       this.logger.warn(`Could not fetch dynamic capabilities: ${err.message}`);
