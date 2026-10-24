@@ -6,8 +6,8 @@ import { MiniApp } from '../entities/miniapp.entity';
 import { MiniAppIssue } from '../entities/miniapp-issue.entity';
 import { IsUrlReachableConstraint } from '../../common/validators/is-url-reachable.validator';
 import { NotificationsService, MailService } from '../../notifications';
-import { PermissionsService } from '../../permissions/permissions.service';
-import { PermissionProposalsService } from '../../permission-proposals/permission-proposals.service';
+import { CapabilitiesService } from '../../capabilities/capabilities.service';
+import { CapabilityProposalsService } from '../../capability-proposals/capability-proposals.service';
 import { SuperAppService } from '../../super-app/super-app.service';
 import { GitIntegrationService } from '../../integrations/git/git-integration.service';
 import { NexusIntegrationService } from '../../integrations/nexus/nexus-integration.service';
@@ -32,8 +32,8 @@ export class MiniappValidationHelper {
 
     private mailService: MailService,
     private notificationsService: NotificationsService,
-    private permissionsService: PermissionsService,
-    private permissionProposalsService: PermissionProposalsService,
+    private capabilitiesService: CapabilitiesService,
+    private capabilityProposalsService: CapabilityProposalsService,
     private superAppService: SuperAppService,
     private gitService: GitIntegrationService,
     private nexusService: NexusIntegrationService,
@@ -400,7 +400,7 @@ export class MiniappValidationHelper {
         }
 
         // Permission Catalog & Compatibility Check
-        const permissionDef = await this.permissionsService.findByKey(permKey);
+        const permissionDef = await this.CapabilitiesService.findByKey(permKey);
 
         if (!permissionDef) {
           // UNKNOWN PERMISSION -> create proposal in permission_proposals
@@ -411,7 +411,7 @@ export class MiniappValidationHelper {
           await this.createPermissionProposal(app, permKey);
         } else {
           // Known permission, check SuperApp Runtime Compatibility
-          const realCaps = await this.permissionsService.getCapabilities();
+          const realCaps = await this.CapabilitiesService.getCapabilities();
           const supportedCaps = realCaps.map((c) => c.key.toLowerCase());
 
           const isSupported =

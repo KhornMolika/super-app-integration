@@ -16,7 +16,7 @@ import { MiniAppIssue } from '../miniapps/entities/miniapp-issue.entity';
 import { User } from '../access-control/entities/user.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { AuditModule } from '../audit/audit.module';
-import { PermissionsModule } from '../permissions/permissions.module';
+import { CapabilitiesModule } from '../capabilities/capabilities.module';
 import { DomainVerificationService } from './webview/domain-verification.service';
 import { ValidationCallbackController } from './validation/validation-callback.controller';
 import { JenkinsService } from './jenkins/jenkins.service';
@@ -39,7 +39,7 @@ import { PubspecInjectorController } from './flutter/pubspec-injector.controller
     TypeOrmModule.forFeature([MiniApp, MiniAppIssue, User]),
     NotificationsModule,
     AuditModule,
-    PermissionsModule,
+    CapabilitiesModule,
   ],
   controllers: [
     GitIntegrationController,

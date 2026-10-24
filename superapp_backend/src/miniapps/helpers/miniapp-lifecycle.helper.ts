@@ -24,7 +24,7 @@ import {
   extractDecryptedGitToken,
 } from './flutter-credential.helper';
 
-import { PermissionsService } from '../../permissions/permissions.service';
+import { CapabilitiesService } from '../../capabilities/capabilities.service';
 
 @Injectable()
 export class MiniappLifecycleHelper {
@@ -52,7 +52,7 @@ export class MiniappLifecycleHelper {
     @Optional()
     private apkBuildManager?: ApkBuildManagerService,
     @Optional()
-    private permissionsService?: PermissionsService,
+    private capabilitiesService?: CapabilitiesService,
   ) { }
 
 
@@ -100,9 +100,9 @@ export class MiniappLifecycleHelper {
 
     // SuperApp Host Supported Capabilities (Zero-Hardcoded Policy: Query real PostgreSQL registry)
     let allowedCaps: string[] = [];
-    if (this.permissionsService) {
+    if (this.CapabilitiesService) {
       try {
-        const realCaps = await this.permissionsService.getCapabilities();
+        const realCaps = await this.CapabilitiesService.getCapabilities();
         allowedCaps = realCaps.map((c) => c.key.toLowerCase());
       } catch (err: any) {
         this.logger.warn(

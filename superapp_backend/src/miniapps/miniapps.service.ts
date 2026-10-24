@@ -25,7 +25,7 @@ import { DomainAssociationHelper } from './helpers/domain-association.helper';
 import { MiniappMutationHelper } from './helpers/miniapp-mutation.helper';
 import { NativeSdkCodegenService } from '../native-sdk-codegen/native-sdk-codegen.service';
 import { SdkArtifactUploadService } from '../sdk-artifacts/sdk-artifact-upload.service';
-import { PermissionsService } from '../permissions/permissions.service';
+import { CapabilitiesService } from '../capabilities/capabilities.service';
 import { resolveOrganizationDetails } from '../common/constants/fsa-organizations';
 import { QueryMiniAppsDto } from './dto/query-miniapps.dto';
 import { QueryIssuesDto } from './dto/query-issues.dto';
@@ -58,7 +58,7 @@ export class MiniappsService implements OnApplicationBootstrap {
     private miniappMutationHelper: MiniappMutationHelper,
     private nativeSdkCodegenService: NativeSdkCodegenService,
     private sdkArtifactUploadService: SdkArtifactUploadService,
-    private permissionsService: PermissionsService,
+    private capabilitiesService: CapabilitiesService,
 
     @Optional()
     @InjectRepository(MiniAppVersion)

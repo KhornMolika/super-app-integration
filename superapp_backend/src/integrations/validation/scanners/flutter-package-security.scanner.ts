@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { MiniApp } from '../../../miniapps/entities/miniapp.entity';
 import { MiniAppIssue } from '../../../miniapps/entities/miniapp-issue.entity';
 import { NotificationsService, PipelinePacerService } from '../../../notifications';
-import { PermissionsService } from '../../../permissions/permissions.service';
+import { CapabilitiesService } from '../../../capabilities/capabilities.service';
 import { ValidationFindingDto } from '../validation-callback.controller';
 import { PubVulnerabilityScannerService } from '../pub-vulnerability-scanner.service';
 import {
@@ -25,7 +25,7 @@ export class FlutterPackageSecurityScanner {
     private readonly issueRepository: Repository<MiniAppIssue>,
 
     private readonly notificationsService: NotificationsService,
-    private readonly permissionsService: PermissionsService,
+    private readonly capabilitiesService: CapabilitiesService,
     private readonly pipelinePacerService: PipelinePacerService,
     private readonly scanFinalizer: ScanFinalizerService,
     @Optional()
