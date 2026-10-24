@@ -504,26 +504,27 @@ export class AuthService implements OnModuleInit {
   //   ];
   // }
 
-  async handleSsoCallback(provider: string, ssoProfile: { email: string; name: string; externalId?: string }) {
-    let user = await this.accessControlService.findByEmailWithPermissions(ssoProfile.email);
-    if (!user) {
-      // Auto-provision new SSO user with default MINI_APP_DEVELOPER role
-      const newUser = await this.accessControlService.createUser({
-        name: ssoProfile.name || ssoProfile.email.split('@')[0],
-        email: ssoProfile.email,
-        roleNames: ['MINI_APP_DEVELOPER'],
-        isActive: true,
-      });
-      user = await this.accessControlService.findByEmailWithPermissions(newUser.email);
-    }
+  // async handleSsoCallback(provider: string, ssoProfile: { email: string; name: string; externalId?: string }) {
+  //   let user = await this.accessControlService.findByEmailWithPermissions(ssoProfile.email);
+  //   if (!user) {
+  //     // Auto-provision new SSO user with default MINI_APP_DEVELOPER role
+  //     const newUser = await this.accessControlService.createUser({
+  //       name: ssoProfile.name || ssoProfile.email.split('@')[0],
+  //       email: ssoProfile.email,
+  //       roleNames: ['MINI_APP_DEVELOPER'],
+  //       isActive: true,
+  //     });
+  //     user = await this.accessControlService.findByEmailWithPermissions(newUser.email);
+  //   }
 
-    return this.generateAuthTokens(user);
-  }
+  //   return this.generateAuthTokens(user);
+  // }
 
   /**
-   * Developer Access Tokens (PAT) Management for Private Registries & Scoped SDK Gateways
+   * Personal Access Tokens (PAT) Management for Private Registries & Scoped SDK Gateways
+   * Usable by all platform roles (SUPER_ADMIN, ADMIN, MA_DEVELOPER)
    */
-  async createDeveloperToken(
+  async createAccessToken(
     userId: string,
     name: string,
     expirationDays = 90,
@@ -566,7 +567,7 @@ export class AuthService implements OnModuleInit {
 
     let savedItem: any = {
       id: crypto.randomUUID(),
-      name: name.trim() || 'Developer Access Token',
+      name: name.trim() || 'Personal Access Token',
       tokenPrefix,
       scopes,
       expiresAt,
@@ -577,7 +578,7 @@ export class AuthService implements OnModuleInit {
     if (this.developerTokenRepo) {
       const entity = this.developerTokenRepo.create({
         userId: user.id,
-        name: name.trim() || 'Developer Access Token',
+        name: name.trim() || 'Personal Access Token',
         tokenPrefix,
         tokenHash,
         scopes,
@@ -603,7 +604,7 @@ export class AuthService implements OnModuleInit {
     };
   }
 
-  async listDeveloperTokens(userId: string) {
+  async listAccessTokens(userId: string) {
     if (!this.developerTokenRepo) return [];
     return this.developerTokenRepo.find({
       where: { userId, isActive: true },
@@ -611,7 +612,7 @@ export class AuthService implements OnModuleInit {
     });
   }
 
-  async revokeDeveloperToken(userId: string, tokenId: string) {
+  async revokeAccessToken(userId: string, tokenId: string) {
     if (!this.developerTokenRepo) return { success: true };
     const token = await this.developerTokenRepo.findOne({
       where: { id: tokenId, userId },
@@ -620,6 +621,24 @@ export class AuthService implements OnModuleInit {
     token.isActive = false;
     await this.developerTokenRepo.save(token);
     return { success: true };
+  }
+
+  // Backwards-compatible aliases for legacy callers
+  async createDeveloperToken(
+    userId: string,
+    name: string,
+    expirationDays = 90,
+    scopes = ['sdk:read', 'packages:read'],
+  ) {
+    return this.createAccessToken(userId, name, expirationDays, scopes);
+  }
+
+  async listDeveloperTokens(userId: string) {
+    return this.listAccessTokens(userId);
+  }
+
+  async revokeDeveloperToken(userId: string, tokenId: string) {
+    return this.revokeAccessToken(userId, tokenId);
   }
 
   /**

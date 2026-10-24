@@ -2,5 +2,6 @@ export * from './login.dto';
 export * from './register.dto';
 export * from './refresh-token.dto';
 export * from './create-developer-token.dto';
+export * from './create-access-token.dto';
 export * from './change-password.dto';
 export * from './otp.dto';

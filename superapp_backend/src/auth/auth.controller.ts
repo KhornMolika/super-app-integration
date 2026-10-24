@@ -19,6 +19,7 @@ import {
   RegisterDto,
   RefreshTokenDto,
   CreateDeveloperTokenDto,
+  CreateAccessTokenDto,
   ChangePasswordDto,
   RequestOtpDto,
   VerifyOtpDto,
@@ -107,26 +108,26 @@ export class AuthController {
   //   return this.authService.getSsoProviders();
   // }
 
-  @Get('developer-tokens')
+  @Get(['access-tokens', 'personal-access-tokens', 'developer-tokens'])
   @UseGuards(JwtAuthGuard)
-  async listDeveloperTokens(@Req() req: Request) {
+  async listAccessTokens(@Req() req: Request) {
     const user = (req as any).user;
     const userId = user?.sub || user?.id;
     if (!userId) throw new UnauthorizedException();
-    const tokens = await this.authService.listDeveloperTokens(userId);
+    const tokens = await this.authService.listAccessTokens(userId);
     return { success: true, tokens };
   }
 
-  @Post('developer-tokens')
+  @Post(['access-tokens', 'personal-access-tokens', 'developer-tokens'])
   @UseGuards(JwtAuthGuard)
-  async createDeveloperToken(
+  async createAccessToken(
     @Req() req: Request,
-    @Body() body: CreateDeveloperTokenDto,
+    @Body() body: CreateAccessTokenDto,
   ) {
     const user = (req as any).user;
     const userId = user?.sub || user?.id;
     if (!userId) throw new UnauthorizedException();
-    return this.authService.createDeveloperToken(
+    return this.authService.createAccessToken(
       userId,
       body.name,
       body.expirationDays,
@@ -134,16 +135,20 @@ export class AuthController {
     );
   }
 
-  @Delete('developer-tokens/:id')
+  @Delete([
+    'access-tokens/:id',
+    'personal-access-tokens/:id',
+    'developer-tokens/:id',
+  ])
   @UseGuards(JwtAuthGuard)
-  async revokeDeveloperToken(
+  async revokeAccessToken(
     @Req() req: Request,
     @Param('id') tokenId: string,
   ) {
     const user = (req as any).user;
     const userId = user?.sub || user?.id;
     if (!userId) throw new UnauthorizedException();
-    return this.authService.revokeDeveloperToken(userId, tokenId);
+    return this.authService.revokeAccessToken(userId, tokenId);
   }
 
   @Post('change-password')

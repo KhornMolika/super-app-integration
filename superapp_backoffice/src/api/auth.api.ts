@@ -23,7 +23,7 @@ export interface AuthUserResponse {
   [key: string]: any;
 }
 
-export interface DeveloperTokenItem {
+export interface AccessTokenItem {
   id: string;
   name: string;
   tokenPrefix: string;
@@ -33,6 +33,9 @@ export interface DeveloperTokenItem {
   createdAt: string;
   isActive: boolean;
 }
+
+// Backwards-compatible alias
+export type DeveloperTokenItem = AccessTokenItem;
 
 export const authApi = {
   login: (data: LoginPayload) =>
@@ -62,19 +65,36 @@ export const authApi = {
       method: 'GET',
     }),
 
+  getAccessTokens: () =>
+    apiClient<{ success: boolean; tokens: AccessTokenItem[] }>('/api/auth/access-tokens', {
+      method: 'GET',
+    }),
+
+  createAccessToken: (data: { name: string; expirationDays?: number; scopes?: string[] }) =>
+    apiClient<{ success: boolean; token: string; tokenItem: AccessTokenItem }>('/api/auth/access-tokens', {
+      method: 'POST',
+      body: data,
+    }),
+
+  revokeAccessToken: (id: string) =>
+    apiClient<{ success: boolean }>('/api/auth/access-tokens/' + id, {
+      method: 'DELETE',
+    }),
+
+  // Backwards-compatible aliases
   getDeveloperTokens: () =>
-    apiClient<{ success: boolean; tokens: DeveloperTokenItem[] }>('/api/auth/developer-tokens', {
+    apiClient<{ success: boolean; tokens: AccessTokenItem[] }>('/api/auth/access-tokens', {
       method: 'GET',
     }),
 
   createDeveloperToken: (data: { name: string; expirationDays?: number; scopes?: string[] }) =>
-    apiClient<{ success: boolean; token: string; tokenItem: DeveloperTokenItem }>('/api/auth/developer-tokens', {
+    apiClient<{ success: boolean; token: string; tokenItem: AccessTokenItem }>('/api/auth/access-tokens', {
       method: 'POST',
       body: data,
     }),
 
   revokeDeveloperToken: (id: string) =>
-    apiClient<{ success: boolean }>('/api/auth/developer-tokens/' + id, {
+    apiClient<{ success: boolean }>('/api/auth/access-tokens/' + id, {
       method: 'DELETE',
     }),
 

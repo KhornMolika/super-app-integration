@@ -27,12 +27,12 @@ export function DeveloperTokensCard() {
   const fetchTokens = async () => {
     try {
       setLoading(true);
-      const res = await authApi.getDeveloperTokens();
+      const res = await authApi.getAccessTokens();
       if (res && res.tokens) {
         setTokens(res.tokens);
       }
     } catch (err: any) {
-      console.error('Failed to load developer tokens:', err);
+      console.error('Failed to load access tokens:', err);
     } finally {
       setLoading(false);
     }
@@ -51,7 +51,7 @@ export function DeveloperTokensCard() {
 
     try {
       setCreating(true);
-      const res = await authApi.createDeveloperToken({
+      const res = await authApi.createAccessToken({
         name: tokenName.trim(),
         expirationDays: parseInt(expirationDays, 10),
         scopes,
@@ -65,10 +65,10 @@ export function DeveloperTokensCard() {
         setExpirationDays('7');
         setScopes(['sdk:read', 'packages:read']);
         fetchTokens();
-        toast.success('Developer token generated successfully!');
+        toast.success('Personal access token generated successfully!');
       }
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to generate developer token.');
+      toast.error(err?.message || 'Failed to generate access token.');
     } finally {
       setCreating(false);
     }
@@ -76,7 +76,7 @@ export function DeveloperTokensCard() {
 
   const handleRevokeToken = async (tokenId: string, name: string) => {
     const isConfirmed = await confirm({
-      title: 'Revoke Developer Token',
+      title: 'Revoke Access Token',
       message: `Are you sure you want to revoke "${name}"? Any build systems, scripts, or local IDEs using this token will lose access to the private SDK registries immediately.`,
       confirmText: 'Revoke Token',
       cancelText: 'Keep Token',
@@ -86,7 +86,7 @@ export function DeveloperTokensCard() {
     if (!isConfirmed) return;
 
     try {
-      await authApi.revokeDeveloperToken(tokenId);
+      await authApi.revokeAccessToken(tokenId);
       toast.success(`Token "${name}" has been revoked.`);
       fetchTokens();
     } catch (err: any) {
@@ -134,14 +134,14 @@ export function DeveloperTokensCard() {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  Developer Access Tokens (PAT)
+                  Personal Access Tokens (PAT)
                 </h3>
                 <span className="px-2 py-0.5 rounded-full text-2xs font-semibold bg-brand-100 text-brand-700 dark:bg-brand-950/70 dark:text-brand-300">
-                  Private Registry Auth
+                  All Roles: SDK &amp; Registry Auth
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-2xl leading-relaxed">
-                Personal Access Tokens (PAT) authenticate your CLI package managers to download private scoped SDKs (<code className="text-brand-600 dark:text-brand-400 font-mono text-2xs">@fsasuperapp/*</code> and <code className="text-brand-600 dark:text-brand-400 font-mono text-2xs">fsa_superapp_flutter_sdk</code>). You do not need to register a MiniApp first to obtain SDKs.
+                Personal Access Tokens (PAT) allow any authenticated user (<strong className="text-slate-700 dark:text-slate-300">Super Admin, Admin, MiniApp Developer</strong>) to authenticate CLI package managers and download official scoped SDKs (<code className="text-brand-600 dark:text-brand-400 font-mono text-2xs">@fsasuperapp/*</code> and <code className="text-brand-600 dark:text-brand-400 font-mono text-2xs">fsa_superapp_flutter_sdk</code>). You do not need to register a MiniApp first to obtain SDKs.
               </p>
             </div>
           </div>
@@ -201,7 +201,7 @@ export function DeveloperTokensCard() {
           {loading ? (
             <div className="py-12 text-center text-slate-400 text-xs">
               <div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-              Loading developer tokens...
+              Loading access tokens...
             </div>
           ) : tokens.length === 0 ? (
             <div className="py-12 text-center rounded-xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20">
@@ -211,10 +211,10 @@ export function DeveloperTokensCard() {
                 </svg>
               </div>
               <h5 className="font-bold text-slate-900 dark:text-white text-sm mb-1">
-                No Developer Tokens Found
+                No Personal Access Tokens Found
               </h5>
               <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto mb-4">
-                Generate a Personal Access Token to download the official private SDKs to your local machine.
+                Generate a Personal Access Token to download official private SDKs to your local machine.
               </p>
             </div>
           ) : (
@@ -295,7 +295,7 @@ export function DeveloperTokensCard() {
                   </svg>
                 </div>
                 <h4 className="font-bold text-slate-900 dark:text-white text-sm">
-                  Generate Developer Access Token
+                  Generate Personal Access Token
                 </h4>
               </div>
               <button
@@ -441,7 +441,7 @@ export function DeveloperTokensCard() {
                     Token Generated Successfully
                   </h4>
                   <p className="text-2xs text-amber-600 dark:text-amber-400 font-semibold">
-                    Make sure to copy your developer token now. You will not be able to see it again!
+                    Make sure to copy your access token now. You will not be able to see it again!
                   </p>
                 </div>
               </div>
@@ -450,7 +450,7 @@ export function DeveloperTokensCard() {
             <div className="p-5 space-y-4">
               <div>
                 <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 block">
-                  Your Developer Access Token
+                  Your Personal Access Token
                 </Label>
                 <div className="relative">
                   <input
