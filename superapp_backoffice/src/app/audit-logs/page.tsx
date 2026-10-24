@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth';
 import { auditLogsApi, AuditLog, unwrapData, unwrapMeta, PaginationMeta } from '@/api';
 import { PaginationProps } from '@/components/ui/Pagination';
 import { DataTable, DataTableColumn } from '@/components/ui/DataTable';
+import { DocumentTextIcon } from '@/components/ui/Icons';
 
 const COMMON_AUDIT_ACTIONS = [
   'ALL',
