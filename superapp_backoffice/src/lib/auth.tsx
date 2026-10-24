@@ -79,7 +79,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchSession = async () => {
     try {
-      const profile = await usersApi.getProfile();
+      const rawProfile: any = await usersApi.getProfile();
+      const profile =
+        rawProfile?.data && rawProfile?.email === undefined
+          ? rawProfile.data
+          : rawProfile;
       if (profile && profile.email) {
         const rawRoleList =
           profile.roles && profile.roles.length > 0

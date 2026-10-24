@@ -24,9 +24,13 @@ export interface BackendHealthResponse {
 
 export const healthApi = {
   check: (): Promise<BackendHealthResponse> => {
-    return apiClient<BackendHealthResponse>('/api/health');
+    return apiClient<any>('/api/health').then((res) =>
+      res?.data && res?.status === undefined ? res.data : res,
+    );
   },
   liveness: (): Promise<{ status: string; uptime: number }> => {
-    return apiClient<{ status: string; uptime: number }>('/api/health/liveness');
+    return apiClient<any>('/api/health/liveness').then((res) =>
+      res?.data && res?.status === undefined ? res.data : res,
+    );
   },
 };

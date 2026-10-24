@@ -26,7 +26,9 @@ export function SystemHealthIndicator() {
   const fetchHealth = async (isManual = false) => {
     if (isManual) setLoading(true);
     try {
-      const data = await healthApi.check();
+      const res: any = await healthApi.check();
+      const data: BackendHealthResponse =
+        res?.data && res?.status === undefined ? res.data : res;
       setHealth(data);
       setError(null);
       setLastChecked(new Date());

@@ -205,7 +205,10 @@ export const pubspecApi = {
       method: 'POST',
     }),
 
-  getSandboxBuildStatus: () => apiClient<SandboxBuildStatus>('/api/pubspec/sandbox-build/status'),
+  getSandboxBuildStatus: () =>
+    apiClient<any>('/api/pubspec/sandbox-build/status').then((res) =>
+      res?.data && res?.state === undefined ? res.data : res,
+    ),
 
   triggerSandboxBuild: () =>
     apiClient<{ success: boolean; message: string }>('/api/pubspec/sandbox-build/trigger', {

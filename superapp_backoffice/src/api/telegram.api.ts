@@ -34,16 +34,24 @@ export interface TelegramBotChat {
 
 export const telegramApi = {
   getStatus: () =>
-    apiClient<TelegramStatus>('/api/telegram/status'),
+    apiClient<any>('/api/telegram/status').then((res) =>
+      res?.data && res?.configured === undefined ? res.data : res,
+    ),
 
   getRecentChats: () =>
-    apiClient<{ chats: TelegramBotChat[] }>('/api/telegram/recent-chats'),
+    apiClient<any>('/api/telegram/recent-chats').then((res) =>
+      res?.data && res?.chats === undefined ? res.data : res,
+    ),
 
   getUserGroups: () =>
-    apiClient<{ groups: TelegramGroup[] }>('/api/telegram/user-groups'),
+    apiClient<any>('/api/telegram/user-groups').then((res) =>
+      res?.data && res?.groups === undefined ? res.data : res,
+    ),
 
   getRecentGroups: () =>
-    apiClient<{ groups: TelegramGroup[] }>('/api/telegram/recent-groups'),
+    apiClient<any>('/api/telegram/recent-groups').then((res) =>
+      res?.data && res?.groups === undefined ? res.data : res,
+    ),
 
   validateChat: (chatId: string) =>
     apiClient<{ valid: boolean; title?: string }>('/api/telegram/validate-chat', {

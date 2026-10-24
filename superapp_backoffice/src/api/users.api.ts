@@ -30,7 +30,9 @@ export interface User {
 
 export const usersApi = {
   getProfile: () =>
-    apiClient<User>('/api/users/me'),
+    apiClient<any>('/api/users/me').then((res) =>
+      res?.data && res?.email === undefined ? res.data : res,
+    ),
 
   updateProfile: (data: {
     name?: string;
@@ -39,10 +41,10 @@ export const usersApi = {
     telegramUsername?: string;
     teamTelegramChatId?: string;
   }) =>
-    apiClient<User>('/api/users/me', {
+    apiClient<any>('/api/users/me', {
       method: 'PUT',
       body: data,
-    }),
+    }).then((res) => (res?.data && res?.email === undefined ? res.data : res)),
 
   getAll: (params?: Record<string, any>) =>
     apiClient<PaginatedResponse<User> | User[]>('/api/users', { params }),

@@ -1,4 +1,4 @@
-﻿import {
+import {
   Controller,
   Get,
   Post,
@@ -16,6 +16,7 @@ import {
   ValidateDependencyDto,
   PrecheckConflictDto,
 } from './dto/pubspec-injector.dto';
+import { BypassTransform } from '../../common/decorators/bypass-transform.decorator';
 
 @Controller(['pubspec', 'api/pubspec', 'integrations/pubspec', 'api/integrations/pubspec'])
 export class PubspecInjectorController {
@@ -72,6 +73,7 @@ export class PubspecInjectorController {
   }
 
   @Get('sandbox-build/status')
+  @BypassTransform()
   async getSandboxBuildStatus() {
     return this.sandboxBuildManager.getStatus();
   }

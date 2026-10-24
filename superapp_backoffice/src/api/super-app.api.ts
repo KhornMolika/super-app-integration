@@ -15,30 +15,40 @@ export interface EcosystemStatus {
 
 export const superAppApi = {
   getEcosystemStatus: () =>
-    apiClient<EcosystemStatus>('/api/super-app/ecosystem-status'),
+    apiClient<any>('/api/super-app/ecosystem-status').then((res) =>
+      res?.data && res?.superAppVersion === undefined ? res.data : res,
+    ),
 
   getNextVersion: () =>
-    apiClient<{ nextVersion: string }>('/api/super-app/next-version'),
+    apiClient<any>('/api/super-app/next-version').then((res) =>
+      res?.data && res?.nextVersion === undefined ? res.data : res,
+    ),
 
   verifyReleaseAssembly: (payload: any) =>
     apiClient<any>('/api/release-assembly/verify', {
       method: 'POST',
       body: payload,
-    }),
+    }).then((res) => (res?.data !== undefined ? res.data : res)),
 
   getStorageLicenseStatus: () =>
-    apiClient<any>('/api/storage/license-status'),
+    apiClient<any>('/api/storage/license-status').then((res) =>
+      res?.data !== undefined ? res.data : res,
+    ),
 
   updateStorageLicense: (licenseKey: string) =>
     apiClient<any>('/api/storage/update-license', {
       method: 'POST',
       body: { licenseKey },
-    }),
+    }).then((res) => (res?.data !== undefined ? res.data : res)),
 
   getReleaseHistory: () =>
-    apiClient<any[]>('/api/super-app/releases/history'),
+    apiClient<any>('/api/super-app/releases/history').then((res) =>
+      res?.data && !Array.isArray(res) ? res.data : res,
+    ),
 
   compareReleases: (base: string, target: string) =>
-    apiClient<any>(`/api/super-app/releases/compare?base=${encodeURIComponent(base)}&target=${encodeURIComponent(target)}`),
+    apiClient<any>(
+      `/api/super-app/releases/compare?base=${encodeURIComponent(base)}&target=${encodeURIComponent(target)}`,
+    ).then((res) => (res?.data !== undefined ? res.data : res)),
 };
 

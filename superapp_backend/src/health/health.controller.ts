@@ -1,8 +1,10 @@
 import { Controller, Get, Res, HttpStatus } from '@nestjs/common';
 import type { Response } from 'express';
 import { HealthService, HealthCheckResult } from './health.service';
+import { BypassTransform } from '../common/decorators/bypass-transform.decorator';
 
 @Controller('health')
+@BypassTransform()
 export class HealthController {
   constructor(private readonly healthService: HealthService) {}
 

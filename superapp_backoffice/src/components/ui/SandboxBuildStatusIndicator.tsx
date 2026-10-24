@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -33,8 +33,15 @@ export default function SandboxBuildStatusIndicator() {
 
   const fetchStatus = async () => {
     try {
-      const res = await pubspecApi.getSandboxBuildStatus();
-      setStatus(res);
+      const res: any = await pubspecApi.getSandboxBuildStatus();
+      const unwrapped: SandboxBuildStatus =
+        res?.data && res?.state === undefined ? res.data : res;
+      if (unwrapped && typeof unwrapped === 'object') {
+        setStatus({
+          ...unwrapped,
+          recentLogs: Array.isArray(unwrapped.recentLogs) ? unwrapped.recentLogs : [],
+        });
+      }
     } catch (_) {}
   };
 
@@ -75,7 +82,7 @@ export default function SandboxBuildStatusIndicator() {
   };
 
   const handleCopyLogs = () => {
-    if (!status?.recentLogs?.length) return;
+    if (!status?.recentLogs || !status.recentLogs.length) return;
     const text = status.recentLogs.join('\n');
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
@@ -83,7 +90,7 @@ export default function SandboxBuildStatusIndicator() {
     });
   };
 
-  if (!status || status.state === 'IDLE') return null;
+  if (!status || !status.state || status.state === 'IDLE') return null;
 
   return (
     <>
@@ -264,13 +271,13 @@ export default function SandboxBuildStatusIndicator() {
 
             {/* Terminal Screen & Log Viewer */}
             <div className="flex-1 p-4 bg-[#0a0d14] font-mono text-xs text-slate-200 overflow-y-auto max-h-[60vh] space-y-1.5 select-text scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
-              {status.recentLogs.length === 0 ? (
+              {(!status?.recentLogs || status.recentLogs.length === 0) ? (
                 <div className="text-slate-500 py-12 text-center flex flex-col items-center gap-2">
                   <GlobeIcon className="w-6 h-6 text-slate-600 animate-pulse" />
                   <span>No compilation logs buffered yet. Build is standing by.</span>
                 </div>
               ) : (
-                status.recentLogs.map((line, idx) => {
+                (status.recentLogs || []).map((line, idx) => {
                   const isError =
                     line.includes('ERROR') ||
                     line.includes('[WARN/ERR]') ||

@@ -256,3 +256,15 @@ export function unwrapMeta(res: any): PaginationMeta | undefined {
   if (res.data?.meta) return res.data.meta;
   return undefined;
 }
+
+/**
+ * Safely extracts single object or payload whether the API returns a raw object or a standardized ApiResponse envelope.
+ */
+export function unwrapItem<T = any>(res: ApiResponse<T> | T | any): T {
+  if (!res) return res;
+  if (typeof res === 'object' && 'data' in res && ('success' in res || 'statusCode' in res)) {
+    return res.data;
+  }
+  return res;
+}
+
