@@ -211,9 +211,16 @@ export class SeederService implements OnApplicationBootstrap {
       }
     }
 
-    // 4. Default Seed Password: Password123!@#
-    const defaultPassword = this.configService.get<string>('SUPERADMIN_PASSWORD', 'Password123!@#');
-    const defaultPasswordHash = await hashPassword(defaultPassword);
+    // 4. Seed Password
+    const defaultPassword = this.configService.get<string>('SUPERADMIN_PASSWORD');
+    if (!defaultPassword && process.env.NODE_ENV === 'production') {
+      throw new Error('SUPERADMIN_PASSWORD must be explicitly configured in production environment');
+    }
+    const seedPassword = defaultPassword || (process.env.NODE_ENV !== 'production' ? 'Password123!@#' : '');
+    if (!seedPassword) {
+      throw new Error('SUPERADMIN_PASSWORD is required to seed official accounts');
+    }
+    const defaultPasswordHash = await hashPassword(seedPassword);
 
     // 5. Official Production & Governance Accounts
     const officialAccounts = [

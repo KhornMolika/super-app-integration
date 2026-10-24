@@ -255,7 +255,13 @@ export class SdkRegistryProxyController {
 
   private getNexusAuthHeader(): Record<string, string> {
     const user = this.configService.get<string>('NEXUS_ADMIN_USER', 'admin');
-    const pass = this.configService.get<string>('NEXUS_ADMIN_PASSWORD', 'admin123');
+    const pass =
+      this.configService.get<string>('NEXUS_ADMIN_PASSWORD') ||
+      process.env.NEXUS_ADMIN_PASSWORD ||
+      '';
+    if (!pass) {
+      return {};
+    }
     const b64 = Buffer.from(`${user}:${pass}`).toString('base64');
     return { Authorization: `Basic ${b64}` };
   }

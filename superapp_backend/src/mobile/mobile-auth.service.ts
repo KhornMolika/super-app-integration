@@ -87,7 +87,10 @@ export class MobileAuthService implements OnModuleInit {
     if (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'production' || process.env.ENVIRONMENT === 'PROD') {
       return;
     }
-    const adminPass = process.env.SUPERADMIN_PASSWORD || 'Password123!';
+    const adminPass = process.env.SUPERADMIN_PASSWORD;
+    if (!adminPass) {
+      return;
+    }
     const defaultUsers = [
       { email: process.env.SUPERADMIN_EMAIL || 'superadmin@superapp.gov.kh', name: 'Super Admin', password: adminPass },
       { email: process.env.ADMIN_EMAIL || 'admin@superapp.gov.kh', name: 'Admin User', password: adminPass },
@@ -435,11 +438,12 @@ export class MobileAuthService implements OnModuleInit {
     if (!user) {
       const backofficeUser = await this.backofficeUsers.findOne({ where: { email } });
       if (backofficeUser && backofficeUser.isActive !== false) {
-        const adminPass = process.env.SUPERADMIN_PASSWORD || 'Password123!';
-        const matchesPass =
-          input.password === adminPass ||
-          input.password === 'admin123' ||
-          input.password === 'Password123!';
+        let matchesPass = false;
+        if (backofficeUser.passwordHash) {
+          matchesPass = await this.passwords.verify(input.password, backofficeUser.passwordHash);
+        } else if (process.env.SUPERADMIN_PASSWORD && input.password === process.env.SUPERADMIN_PASSWORD) {
+          matchesPass = true;
+        }
 
         if (matchesPass) {
           const passwordHash = await this.passwords.hash(input.password);
@@ -470,10 +474,8 @@ export class MobileAuthService implements OnModuleInit {
     }
 
     let ok = await this.passwords.verify(input.password, user.passwordHash);
-    if (!ok) {
-      // Allow standard dev credentials in non-production environments
-      const adminPass = process.env.SUPERADMIN_PASSWORD || 'Password123!';
-      if (input.password === adminPass || input.password === 'admin123') {
+    if (!ok && process.env.NODE_ENV !== 'production' && process.env.SUPERADMIN_PASSWORD) {
+      if (input.password === process.env.SUPERADMIN_PASSWORD) {
         ok = true;
         user.passwordHash = await this.passwords.hash(input.password);
         await this.users.save(user);

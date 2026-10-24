@@ -35,6 +35,14 @@ async function resolveToken(request: Request): Promise<string | null> {
   const cookieToken = cookieStore.get('auth_token')?.value;
   if (cookieToken) return cookieToken;
 
+  if (process.env.NODE_ENV === 'production') {
+    return null;
+  }
+  const password = process.env.DEV_FALLBACK_USER_PASSWORD || process.env.SUPERADMIN_PASSWORD;
+  if (!password) {
+    return null;
+  }
+
   const candidateEmails = [
     process.env.DEV_FALLBACK_USER_EMAIL,
     process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL,
@@ -48,7 +56,7 @@ async function resolveToken(request: Request): Promise<string | null> {
       const res = await fetch(`${BACKEND_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password: 'Password123!@#' }),
+        body: JSON.stringify({ email, password }),
       });
       if (res.ok) {
         const data = await res.json();

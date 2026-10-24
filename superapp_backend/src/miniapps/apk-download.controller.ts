@@ -63,8 +63,10 @@ export class ApkDownloadController {
     const nexusPass =
       process.env.NEXUS_ADMIN_PASSWORD ||
       process.env.NEXUS_PASSWORD ||
-      'admin123';
-    const b64 = Buffer.from(`${nexusUser}:${nexusPass}`).toString('base64');
+      '';
+    const b64 = nexusPass
+      ? Buffer.from(`${nexusUser}:${nexusPass}`).toString('base64')
+      : '';
 
     const primaryFilename = isRelease ? 'app-release.apk' : 'app-release.apk';
     const altFilename = 'app-debug.apk';
@@ -79,8 +81,12 @@ export class ApkDownloadController {
 
     for (const url of candidateUrls) {
       try {
+        const headers: Record<string, string> = { cache: 'no-store' };
+        if (b64) {
+          headers['Authorization'] = `Basic ${b64}`;
+        }
         const upstreamRes = await fetch(url, {
-          headers: { Authorization: `Basic ${b64}` },
+          headers,
           cache: 'no-store',
         });
 

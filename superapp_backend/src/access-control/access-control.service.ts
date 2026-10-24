@@ -53,9 +53,13 @@ export class AccessControlService {
       // Only initialize default seed password if account has NO password hash yet.
       // If user already has a passwordHash, preserve it so user can update their password later.
       if (!user.passwordHash) {
-        const defaultPassword = process.env.SUPERADMIN_PASSWORD || 'Password123!@#';
-        user.passwordHash = await hashPassword(defaultPassword);
-        userChanged = true;
+        const defaultPassword =
+          process.env.SUPERADMIN_PASSWORD ||
+          (process.env.NODE_ENV !== 'production' ? 'Password123!@#' : '');
+        if (defaultPassword) {
+          user.passwordHash = await hashPassword(defaultPassword);
+          userChanged = true;
+        }
       }
       if (user.isActive !== true) {
         user.isActive = true;
@@ -119,7 +123,12 @@ export class AccessControlService {
       role = await this.roleRepository.save(role);
     }
 
-    const defaultPassword = process.env.SUPERADMIN_PASSWORD || 'Password123!@#';
+    const defaultPassword =
+      process.env.SUPERADMIN_PASSWORD ||
+      (process.env.NODE_ENV !== 'production' ? 'Password123!@#' : '');
+    if (!defaultPassword) {
+      throw new Error('SUPERADMIN_PASSWORD must be configured to bootstrap seed accounts');
+    }
     const passwordHash = await hashPassword(defaultPassword);
 
     let user = this.userRepository.create({

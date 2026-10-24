@@ -6,6 +6,13 @@ const BACKEND_URL = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_U
 let cachedDevToken: { token: string; expiresAt: number } | null = null;
 
 async function getDevAuthToken(forceRefresh = false): Promise<string | null> {
+  if (process.env.NODE_ENV === 'production') {
+    return null;
+  }
+  const password = process.env.DEV_FALLBACK_USER_PASSWORD || process.env.SUPERADMIN_PASSWORD;
+  if (!password) {
+    return null;
+  }
   if (!forceRefresh && cachedDevToken && Date.now() < cachedDevToken.expiresAt) {
     return cachedDevToken.token;
   }
@@ -22,7 +29,7 @@ async function getDevAuthToken(forceRefresh = false): Promise<string | null> {
       const res = await fetch(`${BACKEND_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password: 'Password123!@#' }),
+        body: JSON.stringify({ email, password }),
       });
       if (res.ok) {
         const data = await res.json();

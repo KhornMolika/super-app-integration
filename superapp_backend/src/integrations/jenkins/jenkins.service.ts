@@ -1,4 +1,4 @@
-﻿import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
@@ -405,7 +405,11 @@ private getAuthHeader(): string | null {
 
     const callbackToken = process.env.RELEASE_CALLBACK_TOKEN || '';
     const nexusUser = process.env.NEXUS_ADMIN_USER || 'admin';
-    const nexusPassword = process.env.NEXUS_ADMIN_PASSWORD || process.env.NEXUS_PASSWORD || 'admin123';
+    const nexusPassword =
+      this.configService.get<string>('NEXUS_ADMIN_PASSWORD') ||
+      process.env.NEXUS_ADMIN_PASSWORD ||
+      process.env.NEXUS_PASSWORD ||
+      '';
 
     const params = new URLSearchParams({
       APP_NAME: appName,

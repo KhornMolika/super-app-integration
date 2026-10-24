@@ -41,8 +41,8 @@ export async function GET(request: NextRequest) {
     'http://localhost:8081'
   ).replace(/\/+$/, '');
   const adminUser = process.env.NEXUS_ADMIN_USER || 'admin';
-  const adminPass = process.env.NEXUS_ADMIN_PASSWORD || 'admin123';
-  const b64 = Buffer.from(`${adminUser}:${adminPass}`).toString('base64');
+  const adminPass = process.env.NEXUS_ADMIN_PASSWORD || '';
+  const b64 = adminPass ? Buffer.from(`${adminUser}:${adminPass}`).toString('base64') : '';
 
   const backendBase = (
     process.env.BACKEND_INTERNAL_URL ||
@@ -90,9 +90,11 @@ export async function GET(request: NextRequest) {
     for (const fn of fileCandidates) {
       const nexusUrl = `${nexusBase}/repository/${repoName}/${appName}/${ver}/${fn}`;
       try {
+        const fetchHeaders: Record<string, string> = {};
+        if (b64) fetchHeaders['Authorization'] = `Basic ${b64}`;
         const res = await fetch(nexusUrl, {
           cache: 'no-store',
-          headers: { Authorization: `Basic ${b64}` },
+          headers: fetchHeaders,
         });
 
         if (res.ok) {
@@ -118,13 +120,15 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // 2. NEXUS REST ASSETS SEARCH (Search newest uploaded blob in repo)
+  // 3. NEXUS REST ASSETS SEARCH (Search newest uploaded blob in repo)
   try {
+    const searchHeaders: Record<string, string> = { Accept: 'application/json' };
+    if (b64) searchHeaders['Authorization'] = `Basic ${b64}`;
     const assetsRes = await fetch(
       `${nexusBase}/service/rest/v1/assets?repository=${repoName}`,
       {
         cache: 'no-store',
-        headers: { Authorization: `Basic ${b64}`, Accept: 'application/json' },
+        headers: searchHeaders,
       },
     );
     if (assetsRes.ok) {
@@ -138,9 +142,11 @@ export async function GET(request: NextRequest) {
         );
         const latestAsset = items[0];
         if (latestAsset?.downloadUrl) {
+          const dlHeaders: Record<string, string> = {};
+          if (b64) dlHeaders['Authorization'] = `Basic ${b64}`;
           const latestRes = await fetch(latestAsset.downloadUrl, {
             cache: 'no-store',
-            headers: { Authorization: `Basic ${b64}` },
+            headers: dlHeaders,
           });
           if (latestRes.ok) {
             const arrayBuffer = await latestRes.arrayBuffer();

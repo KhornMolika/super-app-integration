@@ -11,8 +11,18 @@ const AUTH_TAG_LENGTH = 16; // 128-bit authentication tag
 function getEncryptionKey(): Buffer {
   const rawKey =
     process.env.CREDENTIAL_ENCRYPTION_KEY ||
-    process.env.JWT_SECRET ||
-    'superapp-dsp-credential-encryption-key-fallback';
+    process.env.JWT_SECRET;
+  if (!rawKey) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'CREDENTIAL_ENCRYPTION_KEY or JWT_SECRET must be configured in production environment',
+      );
+    }
+    return crypto
+      .createHash('sha256')
+      .update('superapp-dsp-dev-encryption-key-fallback')
+      .digest();
+  }
   return crypto.createHash('sha256').update(rawKey).digest();
 }
 

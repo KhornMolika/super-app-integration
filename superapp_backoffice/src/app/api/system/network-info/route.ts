@@ -129,16 +129,20 @@ export async function GET(request: NextRequest) {
     'http://localhost:8081'
   ).replace(/\/+$/, '');
   const adminUser = process.env.NEXUS_ADMIN_USER || 'admin';
-  const adminPass = process.env.NEXUS_ADMIN_PASSWORD || 'admin123';
-  const b64 = Buffer.from(`${adminUser}:${adminPass}`).toString('base64');
+  const adminPass = process.env.NEXUS_ADMIN_PASSWORD || '';
+  const b64 = adminPass ? Buffer.from(`${adminUser}:${adminPass}`).toString('base64') : '';
 
   try {
     const nexusController = new AbortController();
     const timeoutId = setTimeout(() => nexusController.abort(), 2000);
+    const headers: Record<string, string> = { cache: 'no-store' };
+    if (b64) {
+      headers['Authorization'] = `Basic ${b64}`;
+    }
     const nexusRes = await fetch(
       `${nexusBase}/service/rest/v1/search/assets?repository=apk-test-builds`,
       {
-        headers: { Authorization: `Basic ${b64}` },
+        headers,
         signal: nexusController.signal,
         cache: 'no-store',
       },

@@ -333,7 +333,7 @@ export class AuthService implements OnModuleInit {
     }
 
     // 1. Password Verification
-    const SEED_DEFAULT_PASSWORD = process.env.SUPERADMIN_PASSWORD || 'Password123!@#';
+    const SEED_DEFAULT_PASSWORD = process.env.SUPERADMIN_PASSWORD;
     const isSeedAccount = Boolean(OFFICIAL_SEEDS[rawEmail]);
     let isMatch = false;
 
@@ -345,21 +345,18 @@ export class AuthService implements OnModuleInit {
       }
     }
 
-    // Default Seed / Prod password fallback: Only Password123!@#
-    if (!isMatch && isSeedAccount) {
+    // In non-production environments only, allow sync if SUPERADMIN_PASSWORD is configured
+    if (!isMatch && isSeedAccount && process.env.NODE_ENV !== 'production' && SEED_DEFAULT_PASSWORD) {
       const isDefaultSeedPassword =
-        rawPassword === 'Password123!@#' ||
-        rawPassword.trim() === 'Password123!@#' ||
         rawPassword === SEED_DEFAULT_PASSWORD ||
-        rawPassword.trim() === SEED_DEFAULT_PASSWORD;
+        rawPassword.trim() === SEED_DEFAULT_PASSWORD.trim();
 
       if (isDefaultSeedPassword) {
         isMatch = true;
-        // If not yet initialized or recovering, sync hash to Password123!@#
-        const initialHash = await hashPassword('Password123!@#');
+        const initialHash = await hashPassword(SEED_DEFAULT_PASSWORD);
         await this.accessControlService.updatePasswordDirectly(user.id, initialHash);
         user.passwordHash = initialHash;
-        this.logger.log(`[AUTH] Authenticated with default seed password (Password123!@#) for: ${rawEmail}`);
+        this.logger.log(`[AUTH] Authenticated with configured seed password for: ${rawEmail}`);
       }
     }
 
@@ -633,7 +630,7 @@ export class AuthService implements OnModuleInit {
       throw new NotFoundException('User not found');
     }
 
-    const defaultSeedPassword = process.env.SUPERADMIN_PASSWORD || 'Password123!@#';
+    const defaultSeedPassword = process.env.SUPERADMIN_PASSWORD;
     let isOldValid = false;
 
     if (user.passwordHash) {
@@ -643,7 +640,7 @@ export class AuthService implements OnModuleInit {
       }
     }
 
-    if (!isOldValid && (body.oldPassword === defaultSeedPassword || body.oldPassword === 'Password123!@#')) {
+    if (!isOldValid && process.env.NODE_ENV !== 'production' && defaultSeedPassword && body.oldPassword === defaultSeedPassword) {
       isOldValid = true;
     }
 

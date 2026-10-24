@@ -424,8 +424,10 @@ export class TelegramApiHelper {
       const nexusPass =
         process.env.NEXUS_ADMIN_PASSWORD ||
         process.env.NEXUS_PASSWORD ||
-        'admin123';
-      const nexusAuthHeader = `Basic ${Buffer.from(`${nexusUser}:${nexusPass}`).toString('base64')}`;
+        '';
+      const nexusAuthHeader = nexusPass
+        ? `Basic ${Buffer.from(`${nexusUser}:${nexusPass}`).toString('base64')}`
+        : '';
 
       const backofficeBase = (
         process.env.BACKOFFICE_BASE_URL ||
@@ -453,28 +455,29 @@ export class TelegramApiHelper {
           ? [
               {
                 url: sanitizedIncomingUrl,
-                headers: sanitizedIncomingUrl.includes(':8081') || sanitizedIncomingUrl.includes('nexus')
-                  ? { Authorization: nexusAuthHeader }
-                  : undefined,
+                headers:
+                  nexusAuthHeader && (sanitizedIncomingUrl.includes(':8081') || sanitizedIncomingUrl.includes('nexus'))
+                    ? { Authorization: nexusAuthHeader }
+                    : undefined,
               },
             ]
           : []),
         // 3. Direct Sonatype Nexus test builds repository (release APK preferred, debug APK fallback)
         {
           url: `${nexusBase}/repository/apk-test-builds/superapp/${normVer}/app-release.apk`,
-          headers: { Authorization: nexusAuthHeader },
+          headers: nexusAuthHeader ? { Authorization: nexusAuthHeader } : undefined,
         },
         {
           url: `${nexusBase}/repository/apk-test-builds/superapp/${normVer}/app-debug.apk`,
-          headers: { Authorization: nexusAuthHeader },
+          headers: nexusAuthHeader ? { Authorization: nexusAuthHeader } : undefined,
         },
         {
           url: `${nexusBase}/repository/apk-test-builds/superapp/latest/app-release.apk`,
-          headers: { Authorization: nexusAuthHeader },
+          headers: nexusAuthHeader ? { Authorization: nexusAuthHeader } : undefined,
         },
         {
           url: `${nexusBase}/repository/apk-test-builds/superapp/latest/app-debug.apk`,
-          headers: { Authorization: nexusAuthHeader },
+          headers: nexusAuthHeader ? { Authorization: nexusAuthHeader } : undefined,
         },
       ];
 

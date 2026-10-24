@@ -173,7 +173,11 @@ export class ArtifactDistributionHelper {
       durationMs = 90 * 24 * 60 * 60 * 1000;
 
     const expiresAt = new Date(Date.now() + durationMs).toISOString();
-    const secret = process.env.JWT_SECRET || 'super-app-secret-key';
+    const secret = process.env.JWT_SECRET;
+    if (!secret && process.env.NODE_ENV === 'production') {
+      throw new Error('JWT_SECRET must be configured in production environment');
+    }
+    const tokenSecret = secret || 'dev-distribution-signing-key';
     const payloadStr = JSON.stringify({
       miniAppId: appId,
       expiresAt,
@@ -182,7 +186,7 @@ export class ArtifactDistributionHelper {
     });
 
     const signature = crypto
-      .createHmac('sha256', secret)
+      .createHmac('sha256', tokenSecret)
       .update(payloadStr)
       .digest('hex');
 
@@ -203,9 +207,13 @@ export class ArtifactDistributionHelper {
       const decoded = JSON.parse(
         Buffer.from(token, 'base64url').toString('utf8'),
       );
-      const secret = process.env.JWT_SECRET || 'super-app-secret-key';
+      const secret = process.env.JWT_SECRET;
+      if (!secret && process.env.NODE_ENV === 'production') {
+        throw new Error('JWT_SECRET must be configured in production environment');
+      }
+      const tokenSecret = secret || 'dev-distribution-signing-key';
       const expectedSig = crypto
-        .createHmac('sha256', secret)
+        .createHmac('sha256', tokenSecret)
         .update(decoded.payload)
         .digest('hex');
       if (decoded.sig !== expectedSig) return false;
