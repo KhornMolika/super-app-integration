@@ -18,7 +18,6 @@ import {
   LoginDto,
   RegisterDto,
   RefreshTokenDto,
-  CreateDeveloperTokenDto,
   CreateAccessTokenDto,
   ChangePasswordDto,
   RequestOtpDto,

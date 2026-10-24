@@ -535,6 +535,4 @@ export function AccessTokensCard() {
   );
 }
 
-// Backwards-compatible alias
-export const DeveloperTokensCard = AccessTokensCard;
 
