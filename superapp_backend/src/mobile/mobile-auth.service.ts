@@ -437,7 +437,7 @@ export class MobileAuthService implements OnModuleInit {
     // Auto-sync backoffice portal developer/admin accounts if not yet in EndUser
     if (!user) {
       const backofficeUser = await this.backofficeUsers.findOne({ where: { email } });
-      if (backofficeUser && backofficeUser.isActive !== false) {
+      if (backofficeUser && backofficeUser.status === 'ACTIVE') {
         let matchesPass = false;
         if (backofficeUser.passwordHash) {
           matchesPass = await this.passwords.verify(input.password, backofficeUser.passwordHash);
@@ -562,7 +562,7 @@ export class MobileAuthService implements OnModuleInit {
       throw fail();
     }
 
-    const user = await this.users.findOne({ where: { id: record.userId } });
+    const user = await this.users.findOne({ where: { id: record.endUserId } });
     if (!user || user.status !== EndUserStatus.ACTIVE || !user.emailVerifiedAt) {
       await this.revokeFamily(record.familyId);
       throw fail();
@@ -600,7 +600,6 @@ export class MobileAuthService implements OnModuleInit {
         familyId,
         tokenHash: sha256Hex(refreshToken),
         endUserId: user.id,
-        userId: user.id,
         userAgent: userAgent ? userAgent.slice(0, 255) : null,
         expiresAt: new Date(Date.now() + this.refreshTtlMs),
         rotatedAt: null,

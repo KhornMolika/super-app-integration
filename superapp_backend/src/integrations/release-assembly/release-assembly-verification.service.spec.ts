@@ -1,4 +1,4 @@
-﻿import { Test, TestingModule } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ReleaseAssemblyVerificationService } from './release-assembly-verification.service';
 import { NexusIntegrationService } from '../nexus/nexus-integration.service';
@@ -130,7 +130,7 @@ describe('ReleaseAssemblyVerificationService', () => {
       ],
     });
     expect(mockMiniappRepo.update).toHaveBeenCalledWith('app-1', {
-      status: 'BUILDING',
+      lifecycleStatus: 'BUILDING',
       buildStages: null,
     });
   });
@@ -169,7 +169,7 @@ describe('ReleaseAssemblyVerificationService', () => {
   describe('handleBuildStageUpdate', () => {
     const dto = {
       appName: 'superapp',
-      releaseVersion: 'v1.2.0',
+      releaseVersion: 'v1.0.0',
       stageId: 'compile',
       stageName: 'Compile',
       status: 'RUNNING' as const,
@@ -211,7 +211,7 @@ describe('ReleaseAssemblyVerificationService', () => {
       expect(notificationsService.emitBuildStageUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
           miniAppId: 'app-1',
-          releaseVersion: 'v1.2.0',
+          releaseVersion: 'v1.0.0',
           stages,
         }),
       );
@@ -252,7 +252,7 @@ describe('ReleaseAssemblyVerificationService', () => {
     it('moves BUILDING to TESTING, notifies owner and emits build_completed', async () => {
       const res = await service.handleBuildCallback({
         appName: 'superapp',
-        releaseVersion: 'v1.2.0',
+        releaseVersion: 'v1.0.0',
         status: 'SUCCESS',
         buildType: 'debug',
         apkUrl: 'http://nexus/app-debug.apk',
@@ -265,12 +265,12 @@ describe('ReleaseAssemblyVerificationService', () => {
         expect.any(String),
         'TEST_BUILD_READY',
         'app-1',
-        expect.objectContaining({ releaseVersion: 'v1.2.0' }),
+        expect.objectContaining({ releaseVersion: 'v1.0.0' }),
       );
       expect(notificationsService.emitBuildCompleted).toHaveBeenCalledWith(
         expect.objectContaining({
           miniAppId: 'app-1',
-          releaseVersion: 'v1.2.0',
+          releaseVersion: 'v1.0.0',
         }),
       );
       expect(res).toEqual({ success: true });
@@ -279,14 +279,14 @@ describe('ReleaseAssemblyVerificationService', () => {
     it('transitions BUILDING apps to BUILD_FAILED on a failed build with diagnostics', async () => {
       const res = await service.handleBuildCallback({
         appName: 'superapp',
-        releaseVersion: 'v1.2.0',
+        releaseVersion: 'v1.0.0',
         status: 'FAILED',
         errorMessage: 'APK build error',
       });
       expect(mockMiniappRepo.update).toHaveBeenCalledWith(
         'app-1',
         expect.objectContaining({
-          status: 'BUILD_FAILED',
+          lifecycleStatus: 'BUILD_FAILED',
           buildStatus: 'FAILED',
           buildError: 'APK build error',
         }),
@@ -297,7 +297,7 @@ describe('ReleaseAssemblyVerificationService', () => {
         expect.any(String),
         'BUILD_FAILED',
         'app-1',
-        expect.objectContaining({ releaseVersion: 'v1.2.0', error: 'APK build error' }),
+        expect.objectContaining({ releaseVersion: 'v1.0.0', error: 'APK build error' }),
       );
       expect(notificationsService.emitBuildCompleted).toHaveBeenCalledWith(
         expect.objectContaining({ miniAppId: 'app-1', status: 'FAILED', error: 'APK build error' }),

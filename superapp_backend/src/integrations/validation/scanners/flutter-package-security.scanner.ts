@@ -1,4 +1,4 @@
-﻿import { Injectable, Logger, Optional } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MiniApp } from '../../../miniapps/entities/miniapp.entity';
@@ -317,7 +317,9 @@ export class FlutterPackageSecurityScanner {
       await emitUpdate('capability_gate');
       await this.delay(500);
 
-      const perms = Array.isArray(app.permissions) ? app.permissions : [];
+      const perms = Array.isArray(app.capabilities || (app as any).permissions)
+        ? (app.capabilities || (app as any).permissions)
+        : [];
       let hasUnsupportedRequired = false;
       for (const p of perms) {
         const permName = typeof p === 'string' ? p : p.name || p.type;

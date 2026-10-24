@@ -33,13 +33,6 @@ export class RefreshToken {
   @Column({ name: 'endUserId', type: 'uuid' })
   endUserId!: string;
 
-  // Backwards compatibility for userId
-  get userId(): string {
-    return this.endUserId;
-  }
-  set userId(val: string) {
-    this.endUserId = val;
-  }
 
   @ManyToOne(() => EndUser, { onDelete: 'CASCADE', nullable: false })
   @JoinColumn({

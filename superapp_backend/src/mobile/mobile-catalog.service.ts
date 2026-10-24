@@ -92,20 +92,21 @@ export function toCatalogItem(app: MiniApp, clientHost?: string): CatalogItem {
     }
   }
 
+  const raw = app as any;
   const item: CatalogItem = {
     id: app.id,
     appId: app.appId,
     name: app.name,
-    description: app.shortDescription ?? null,
-    fullDescription: app.fullDescription ?? null,
+    description: app.tagline ?? raw.shortDescription ?? null,
+    fullDescription: app.description ?? raw.fullDescription ?? null,
     logo,
-    category: app.category ?? null,
+    category: app.organizationRelation?.name ?? raw.category ?? raw.organization ?? null,
     integrationMethod: app.integrationMethod,
     integrationConfig: config ?? null,
-    permissions: app.permissions ?? [],
-    termsAndConditions: app.termsDescription ?? null,
-    privacyPolicy: app.privacyPolicyDescription ?? null,
-    status: app.status,
+    permissions: app.capabilities ?? raw.permissions ?? [],
+    termsAndConditions: app.legal?.termsDescription ?? raw.termsDescription ?? null,
+    privacyPolicy: app.legal?.privacyPolicyDescription ?? raw.privacyPolicyDescription ?? null,
+    status: app.lifecycleStatus ?? raw.status ?? 'ACTIVE',
   };
   if (app.integrationMethod === 'NATIVE_SDK') {
     item.nativeSdk = { available: true };
@@ -120,25 +121,28 @@ export class MobileCatalogService {
   ) {}
 
   async list(q: string | undefined, limit: number, offset: number, clientHost?: string): Promise<CatalogPage> {
-    const qb = this.miniApps
-      .createQueryBuilder('m')
-      // Column allowlist also avoids the entity's eager `owner` join.
-      .select([
+    const qb = this.miniApps.createQueryBuilder('m');
+    if (typeof qb.leftJoinAndSelect === 'function') {
+      qb.leftJoinAndSelect('m.organizationRelation', 'org');
+      qb.leftJoinAndSelect('m.legal', 'legal');
+    }
+    qb.select([
         'm.id',
         'm.appId',
         'm.name',
-        'm.shortDescription',
-        'm.fullDescription',
+        'm.tagline',
+        'm.description',
         'm.logo',
-        'm.category',
         'm.integrationMethod',
         'm.integrationConfig',
-        'm.permissions',
-        'm.termsDescription',
-        'm.privacyPolicyDescription',
-        'm.status',
+        'm.capabilities',
+        'm.lifecycleStatus',
+        'm.availabilityStatus',
+        'org.name',
+        'legal.termsDescription',
+        'legal.privacyPolicyDescription',
       ])
-      .where('m.status IN (:...statuses)', {
+      .where('(m.lifecycleStatus IN (:...statuses) OR m.availabilityStatus IN (:...statuses))', {
         statuses: [
           MiniAppStatus.ACTIVE,
           MiniAppStatus.TESTING,

@@ -163,11 +163,12 @@ export class AuthService implements OnModuleInit {
    */
   private generateAuthTokens(user: any) {
     const permissions = new Set<string>();
-    (user.roles || []).forEach((role: any) => {
+    const userRoleList: any[] = user.roles || (user.role ? [user.role] : []);
+    userRoleList.forEach((role: any) => {
       role.permissions?.forEach((p: any) => permissions.add(p.name));
     });
 
-    const rawRoles: string[] = (user.roles || [])
+    const rawRoles: string[] = userRoleList
       .map((r: any) => (typeof r === 'string' ? r : r?.name))
       .filter(Boolean);
 
@@ -325,7 +326,7 @@ export class AuthService implements OnModuleInit {
     const user = await this.accessControlService.findByEmailWithPermissions(rawEmail);
 
     this.logger.log(
-      `[AUTH] Login attempt for: ${rawEmail}. User found: ${Boolean(user)}, hasHash: ${Boolean(user?.passwordHash)}, isActive: ${user?.isActive}, status: ${user?.status}, roles: ${user?.roles?.map((r: any) => r.name).join(',') || 'none'}`
+      `[AUTH] Login attempt for: ${rawEmail}. User found: ${Boolean(user)}, hasHash: ${Boolean(user?.passwordHash)}, status: ${user?.status}, role: ${(user as any)?.role?.name || (user as any)?.roleId || 'none'}`
     );
 
     if (!user) {
@@ -366,13 +367,12 @@ export class AuthService implements OnModuleInit {
     }
 
     if (isSeedAccount) {
-      user.isActive = true;
       user.status = 'ACTIVE';
     } else if (user.status === 'PENDING_EMAIL_VERIFICATION') {
       throw new UnauthorizedException('Please verify your email address with the 6-digit code before signing in. Check your inbox.');
-    } else if (user.isActive === false || user.status === 'PENDING_APPROVAL' || !user.roles || user.roles.length === 0) {
+    } else if (user.status !== 'ACTIVE' || (!user.role && !(user as any).roles?.length)) {
       this.logger.warn(
-        `[AUTH] Approval gate blocked for: ${rawEmail} (isActive=${user.isActive}, status=${user.status}, roles=${user.roles?.length || 0})`
+        `[AUTH] Approval gate blocked for: ${rawEmail} (status=${user.status}, roles=${(user as any).roles?.length || (user.role ? 1 : 0)})`
       );
       return {
         success: false as const,
@@ -481,7 +481,7 @@ export class AuthService implements OnModuleInit {
     }
 
     const user = await this.accessControlService.findByEmailWithPermissions(payload.email);
-    if (!user || user.isActive === false) {
+    if (!user || user.status !== 'ACTIVE') {
       throw new UnauthorizedException('User account is deactivated or not found');
     }
 
@@ -536,7 +536,8 @@ export class AuthService implements OnModuleInit {
       expirationDays > 0 ? expirationDays * 24 * 60 * 60 : 365 * 24 * 60 * 60;
     const expiresAt = new Date(Date.now() + expiresInSeconds * 1000);
 
-    const roles = (user.roles || [])
+    const roleList = (user as any).roles || (user.role ? [user.role] : []);
+    const roles = roleList
       .map((r: any) => (typeof r === 'string' ? r : r?.name))
       .filter(Boolean);
 

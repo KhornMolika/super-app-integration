@@ -232,7 +232,7 @@ export class ReleaseAssemblyVerificationService {
       for (const appDto of dto.miniApps) {
         try {
           await this.miniappRepository.update(appDto.id, {
-            status: 'BUILDING',
+            lifecycleStatus: 'BUILDING',
             buildStages: null as any,
           });
 
@@ -329,11 +329,11 @@ export class ReleaseAssemblyVerificationService {
       };
       app.buildStages = { ...currentStages };
       if (body.status === 'FAILED') {
-        app.status = 'BUILD_FAILED';
+        app.lifecycleStatus = 'BUILD_FAILED';
         app.buildStatus = 'FAILED';
         app.buildError = body.details || body.errorMessage || `Stage ${body.stageName || body.stageId} failed.`;
       } else if (body.stageId === 'publish' && (body.status === 'COMPLETED' || body.status === 'SUCCESS')) {
-        app.status = 'TESTING';
+        app.lifecycleStatus = 'TESTING';
         app.buildStatus = 'COMPLETED';
         app.buildError = undefined;
       }
@@ -440,8 +440,8 @@ export class ReleaseAssemblyVerificationService {
       await this.miniappRepository
         .createQueryBuilder()
         .update(MiniApp)
-        .set({ status: 'TESTING', buildStatus: 'COMPLETED' })
-        .where("status = 'BUILDING'")
+        .set({ lifecycleStatus: 'TESTING', buildStatus: 'COMPLETED' })
+        .where("lifecycle_status = 'BUILDING'")
         .execute();
 
       const repoName = 'apk-test-builds';
@@ -513,12 +513,12 @@ export class ReleaseAssemblyVerificationService {
           allCompletedStages[k].status = 'COMPLETED';
         }
 
-        app.status = 'TESTING';
+        app.lifecycleStatus = 'TESTING';
         app.buildStatus = 'COMPLETED';
         app.buildStages = allCompletedStages;
         app.buildError = null as any;
         await this.miniappRepository.update(app.id, {
-          status: 'TESTING',
+          lifecycleStatus: 'TESTING',
           buildStatus: 'COMPLETED',
           buildError: null as any,
           buildStages: allCompletedStages,
@@ -536,7 +536,7 @@ export class ReleaseAssemblyVerificationService {
 
         // Resolve App Owner and notify
         let targetOwnerId = app.ownerId || app.owner?.id;
-        let targetEmail = app.ownerEmail || app.owner?.email;
+        let targetEmail = app.supportEmail || app.owner?.email || (app as any).ownerEmail;
 
         if (!targetOwnerId && targetEmail) {
           const ownerUser = await this.userRepository.findOne({
@@ -563,7 +563,7 @@ export class ReleaseAssemblyVerificationService {
               apkUrl: finalApkUrl,
               nexusApkUrl: sanitizedNexusUrl,
               buildType: body.buildType || 'debug',
-              teamTelegramChatId: app.teamTelegramChatId,
+              teamTelegramChatId: app.alertTelegramChatId || (app as any).teamTelegramChatId,
             },
           );
         }
@@ -618,7 +618,7 @@ export class ReleaseAssemblyVerificationService {
             version: effectiveVersion,
             apkUrl: standaloneApkUrl,
             buildType: body.buildType || 'release',
-            teamTelegramChatId: fallbackApp?.teamTelegramChatId,
+            teamTelegramChatId: fallbackApp?.alertTelegramChatId || (fallbackApp as any)?.teamTelegramChatId,
           },
         );
       }
@@ -677,7 +677,7 @@ export class ReleaseAssemblyVerificationService {
       }
 
       await this.miniappRepository.update(app.id, {
-        status: 'BUILD_FAILED',
+        lifecycleStatus: 'BUILD_FAILED',
         buildStatus: 'FAILED',
         buildError: errorMessage,
         buildStages: currentStages,
@@ -694,7 +694,7 @@ export class ReleaseAssemblyVerificationService {
 
       // Resolve App Owner and dispatch notifications
       let targetOwnerId = app.ownerId || app.owner?.id;
-      let targetEmail = app.ownerEmail || app.owner?.email;
+      let targetEmail = app.supportEmail || app.owner?.email || (app as any).ownerEmail;
 
       if (!targetOwnerId && targetEmail) {
         const ownerUser = await this.userRepository.findOne({
@@ -721,7 +721,7 @@ export class ReleaseAssemblyVerificationService {
             buildType,
             error: errorMessage,
             failedAt: new Date().toISOString(),
-            teamTelegramChatId: app.teamTelegramChatId,
+            teamTelegramChatId: app.alertTelegramChatId || (app as any).teamTelegramChatId,
           },
         );
       }

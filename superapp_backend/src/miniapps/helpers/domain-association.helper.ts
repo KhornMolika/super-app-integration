@@ -60,8 +60,8 @@ export class DomainAssociationHelper {
       }
 
       if (result.permissions && result.permissions.length > 0) {
-        const currentPerms = Array.isArray(app.permissions)
-          ? app.permissions
+        const currentPerms = Array.isArray(app.capabilities || (app as any).permissions)
+          ? (app.capabilities || (app as any).permissions)
           : [];
         const newPerms = [...currentPerms];
         for (const p of result.permissions) {
@@ -80,11 +80,11 @@ export class DomainAssociationHelper {
               purpose:
                 permPurpose ||
                 `Required by ${app.name} as declared in domain association file`,
-              termsUrl: app.termsUrl || 'https://privacy.example.com',
+              termsUrl: app.legal?.termsUrl || (app as any).termsUrl || 'https://privacy.example.com',
             });
           }
         }
-        app.permissions = newPerms;
+        app.capabilities = newPerms;
       }
 
       await this.miniappRepository.save(app);
@@ -94,7 +94,7 @@ export class DomainAssociationHelper {
         message: result.message,
         domainVerifiedAt: app.domainVerifiedAt,
         allowedDomains: app.integrationConfig?.allowedDomains,
-        permissions: app.permissions,
+        permissions: app.capabilities,
       };
     } else {
       return {

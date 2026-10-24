@@ -108,7 +108,8 @@ export class MiniappsController {
   @RequirePermissions('miniapp:create')
   async createDraft(@Body() createData: any, @Req() req: any) {
     const dataToSave = this.extractIntegrationConfig(createData);
-    dataToSave.status = MiniAppStatus.DRAFT;
+    dataToSave.lifecycleStatus = 'DRAFT';
+    dataToSave.status = 'DRAFT';
     dataToSave.ownerId = req.user.sub || req.user.id;
     dataToSave.ownerEmail = dataToSave.ownerEmail || req.user.email;
     dataToSave.ownerName = dataToSave.ownerName || req.user.name;
@@ -133,7 +134,8 @@ export class MiniappsController {
   @RequirePermissions('miniapp:create')
   async create(@Body() createData: CreateMiniAppDto, @Req() req: any) {
     const dataToSave = this.extractIntegrationConfig(createData);
-    dataToSave.status = MiniAppStatus.IN_REVIEW;
+    dataToSave.lifecycleStatus = 'IN_REVIEW';
+    dataToSave.status = 'IN_REVIEW';
     dataToSave.ownerId = req.user.sub || req.user.id;
     dataToSave.ownerEmail = dataToSave.ownerEmail || req.user.email;
     dataToSave.ownerName = dataToSave.ownerName || req.user.name;

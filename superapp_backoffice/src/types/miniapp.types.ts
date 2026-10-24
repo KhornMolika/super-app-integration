@@ -88,12 +88,15 @@ export interface CreateMiniAppDto {
   appId: string;
   slug?: string;
   name: string;
+  tagline?: string;
+  description?: string;
   category?: string;
   organization?: string;
   organizationCode?: string;
   shortDescription?: string;
   fullDescription?: string;
   logo?: string;
+  iconUrl?: string;
   termsUrl?: string;
   termsDescription?: string;
   privacyPolicyUrl?: string;
@@ -102,8 +105,14 @@ export interface CreateMiniAppDto {
   ownerName?: string;
   ownerEmail?: string;
   supportEmail?: string;
+  supportUrl?: string;
   teamName?: string;
   teamTelegramChatId?: string;
+  alertTelegramChatId?: string;
+  
+  lifecycleStatus?: string;
+  availabilityStatus?: string;
+  capabilities?: PermissionDto[];
   
   integrationMethod: IntegrationMethod;
   integrationConfigWebView?: WebViewConfigDto;

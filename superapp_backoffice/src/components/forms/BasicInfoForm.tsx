@@ -175,36 +175,42 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
           />
         </div>
 
-        {/* 5. Short Description */}
+        {/* 5. Tagline / Short Description */}
         <div className="col-span-1 md:col-span-2">
           <div className="flex items-center justify-between mb-1">
-            <Label>Short Description</Label>
+            <Label>Tagline / Short Description</Label>
             <span className="text-xs text-slate-400 font-medium">Optional</span>
           </div>
           <Input
-            name="shortDescription"
-            value={formData.shortDescription || ''}
-            onChange={handleChange}
+            name="tagline"
+            value={formData.tagline !== undefined ? formData.tagline : (formData.shortDescription || '')}
+            onChange={(e) => {
+              handleChange(e);
+              handleChange({ target: { name: 'shortDescription', value: e.target.value } } as any);
+            }}
             placeholder="e.g. Instant payments and digital wallet for retail users"
           />
         </div>
 
-        {/* 6. Full Description */}
+        {/* 6. Description */}
         <div className="col-span-1 md:col-span-2">
           <div className="flex items-center justify-between mb-1">
-            <Label>Full Description</Label>
+            <Label>Description</Label>
             <span className="text-xs text-slate-400 font-medium">Optional</span>
           </div>
           <Textarea
-            name="fullDescription"
+            name="description"
             rows={3}
-            value={formData.fullDescription || ''}
-            onChange={handleChange}
+            value={formData.description !== undefined ? formData.description : (formData.fullDescription || '')}
+            onChange={(e) => {
+              handleChange(e);
+              handleChange({ target: { name: 'fullDescription', value: e.target.value } } as any);
+            }}
             placeholder="e.g. Comprehensive details explaining the features, user flows, and core functionality of this MiniApp..."
-            className={allErrors.fullDescription ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
+            className={allErrors.description || allErrors.fullDescription ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
           />
-          {allErrors.fullDescription && (
-            <p className="mt-1.5 text-sm text-rose-600 font-medium">{allErrors.fullDescription}</p>
+          {(allErrors.description || allErrors.fullDescription) && (
+            <p className="mt-1.5 text-sm text-rose-600 font-medium">{allErrors.description || allErrors.fullDescription}</p>
           )}
         </div>
       </div>

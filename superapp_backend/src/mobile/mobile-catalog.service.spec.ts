@@ -58,6 +58,7 @@ describe('MobileCatalogService.list', () => {
   function qbFor(rows: MiniApp[]) {
     const calls: any = { where: [], and: [] };
     const qb: any = {
+      leftJoinAndSelect: jest.fn(() => qb),
       select: jest.fn((cols) => ((calls.select = cols), qb)),
       where: jest.fn((sql, p) => (calls.where.push([sql, p]), qb)),
       andWhere: jest.fn((sql, p) => (calls.and.push([sql, p]), qb)),

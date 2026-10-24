@@ -26,9 +26,22 @@ export default function TeamForm({
 
   const updateField = (name: string, value: string) => {
     if (setFormData) {
-      setFormData((prev: any) => ({ ...prev, [name]: value }));
+      setFormData((prev: any) => {
+        const next = { ...prev, [name]: value };
+        if (name === 'teamTelegramChatId') {
+          next.alertTelegramChatId = value;
+        } else if (name === 'alertTelegramChatId') {
+          next.teamTelegramChatId = value;
+        }
+        return next;
+      });
     } else if (handleChange) {
       handleChange({ target: { name, value } } as any);
+      if (name === 'teamTelegramChatId') {
+        handleChange({ target: { name: 'alertTelegramChatId', value } } as any);
+      } else if (name === 'alertTelegramChatId') {
+        handleChange({ target: { name: 'teamTelegramChatId', value } } as any);
+      }
     }
   };
 
@@ -51,13 +64,14 @@ export default function TeamForm({
           if (!formData.supportEmail && data.user?.email) {
             updateField('supportEmail', data.user.email);
           }
-          if (!formData.teamTelegramChatId) {
-            const defaultChat = data.user?.teamTelegramChatId || data.user?.telegramChatId;
+          if (!formData.alertTelegramChatId && !formData.teamTelegramChatId) {
+            const defaultChat = data.user?.alertTelegramChatId || data.user?.teamTelegramChatId || data.user?.telegramChatId;
             if (defaultChat) {
+              updateField('alertTelegramChatId', defaultChat);
               updateField('teamTelegramChatId', defaultChat);
             }
           }
-          if (data.user?.teamTelegramChatId) {
+          if (data.user?.teamTelegramChatId || data.user?.alertTelegramChatId) {
             setGroupMode('EXISTING');
           } else {
             setGroupMode('NEW');

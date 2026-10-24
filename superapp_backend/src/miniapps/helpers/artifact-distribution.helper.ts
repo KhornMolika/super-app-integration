@@ -24,7 +24,7 @@ export class ArtifactDistributionHelper {
     const isOwner =
       user?.sub === app.ownerId ||
       (user?.email &&
-        (user.email === app.ownerEmail || user.email === app.owner?.email));
+        (user.email === app.supportEmail || user.email === app.owner?.email || user.email === (app as any).ownerEmail));
 
     if (user && !isSuperAdmin && !isOwner) {
       throw new ForbiddenException(
@@ -37,12 +37,12 @@ export class ArtifactDistributionHelper {
       app.integrationConfig?.ref ||
       app.integrationConfig?.gitBranch ||
       app.integrationConfig?.versionConstraint?.replace(/^[\^~>=<]+/, '') ||
-      app.version ||
+      (app as any).version ||
       'v1.0.0';
 
     const currentRelease =
       app.currentReleaseVersion ||
-      app.version ||
+      (app as any).version ||
       effectiveGitRef ||
       '1.0.0';
 
@@ -59,8 +59,8 @@ export class ArtifactDistributionHelper {
     const draftVer =
       app.draftVersion || (app.pendingRevision ? (app.pendingRevision.version || 'v1.1.0-draft') : null);
 
-    const history: any[] = Array.isArray(app.versionHistory)
-      ? [...app.versionHistory]
+    const history: any[] = Array.isArray((app as any).versionHistory || app.versions)
+      ? [...((app as any).versionHistory || app.versions)]
       : [];
 
     if (history.length === 0) {
@@ -76,22 +76,22 @@ export class ArtifactDistributionHelper {
             ? 'WEBVIEW'
             : 'ARTIFACT',
         type:
-          app.status === 'ACTIVE'
+          app.lifecycleStatus === 'PUBLISHED'
             ? 'PRODUCTION'
-            : app.status === 'TESTING'
+            : app.lifecycleStatus === 'TESTING'
             ? 'TEST'
             : 'PRODUCTION',
         status:
-          app.status === 'ACTIVE'
+          app.lifecycleStatus === 'PUBLISHED'
             ? 'ACTIVE'
-            : app.status === 'TESTING'
+            : app.lifecycleStatus === 'TESTING'
             ? 'TESTING'
-            : app.status === 'IN_REVIEW'
+            : app.lifecycleStatus === 'IN_REVIEW'
             ? 'IN_REVIEW'
             : 'ACTIVE',
         changelog: `Official package release ${currentRelease} for ${app.name}`,
         releasedAt: (app.updatedAt || app.createdAt || new Date()).toISOString(),
-        releasedBy: app.ownerName || 'MiniApp Developer',
+        releasedBy: app.owner?.name || (app as any).ownerName || 'MiniApp Developer',
         checksum:
           app.integrationConfig?.archiveChecksum ||
           'sha256:' +
@@ -113,7 +113,7 @@ export class ArtifactDistributionHelper {
         status: 'PREVIOUS',
         changelog: `Prior stable build for ${app.name}`,
         releasedAt: new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString(),
-        releasedBy: app.ownerName || 'MiniApp Developer',
+        releasedBy: app.owner?.name || (app as any).ownerName || 'MiniApp Developer',
         checksum:
           'sha256:' +
           crypto
@@ -133,7 +133,7 @@ export class ArtifactDistributionHelper {
         status: 'TESTING',
         changelog: `Candidate build for sandbox testing on branch ${app.integrationConfig?.gitBranch || 'develop'}`,
         releasedAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(),
-        releasedBy: app.ownerName || 'MiniApp Developer',
+        releasedBy: app.owner?.name || (app as any).ownerName || 'MiniApp Developer',
         checksum:
           'sha256:' +
           crypto
@@ -148,7 +148,7 @@ export class ArtifactDistributionHelper {
       miniAppId: app.id,
       appName: app.name,
       appId: app.appId,
-      status: app.status,
+      status: app.lifecycleStatus || (app as any).status,
       packageName,
       gitRef: effectiveGitRef,
       sourceType: app.integrationMethod === 'FLUTTER_PACKAGE' ? 'Git Repository' : app.integrationMethod === 'WEBVIEW' ? 'Web Sandbox' : 'Artifact Package',
@@ -256,7 +256,7 @@ export class ArtifactDistributionHelper {
       const isOwner =
         user.sub === app.ownerId ||
         (user.email &&
-          (user.email === app.ownerEmail || user.email === app.owner?.email));
+          (user.email === app.supportEmail || user.email === app.owner?.email || user.email === (app as any).ownerEmail));
       if (isSuperAdmin || isOwner || user.sub) {
         authorized = true;
       }

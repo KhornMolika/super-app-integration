@@ -147,7 +147,7 @@ export class CapabilityCodeGeneratorService {
       this.configService.get<string>('CODEGEN_TARGET_BRANCH') ||
       'development';
 
-    const key = proposal.capabilityKey || proposal.permissionKey;
+    const key = proposal.capabilityKey || (proposal as any).permissionKey;
     const mapping = this.resolveCapabilityMapping(key, proposal.metadata);
 
     const cleanKey = key.toLowerCase().replace(/[^a-z0-9]/g, '-');

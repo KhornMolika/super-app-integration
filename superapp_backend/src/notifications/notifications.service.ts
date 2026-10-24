@@ -71,17 +71,6 @@ export class NotificationsService {
         ) {
           targetChatIds.push(user.telegramChatId);
         }
-        if (user?.teamTelegramChatId) {
-          const splitUserTeamIds = user.teamTelegramChatId
-            .split(',')
-            .map((s) => s.trim())
-            .filter(Boolean);
-          for (const uId of splitUserTeamIds) {
-            if (!targetChatIds.includes(uId)) {
-              targetChatIds.push(uId);
-            }
-          }
-        }
       }
 
       // Check MiniApp team Telegram group & owner's Telegram
@@ -105,7 +94,8 @@ export class NotificationsService {
         if (appEntity) {
           miniAppName = appEntity.name;
           const groupChatId =
-            appEntity.teamTelegramChatId ||
+            appEntity.alertTelegramChatId ||
+            (appEntity as any).teamTelegramChatId ||
             appEntity.pendingRevision?.teamTelegramChatId;
           if (groupChatId) {
             const splitIds = groupChatId
@@ -123,17 +113,6 @@ export class NotificationsService {
             !targetChatIds.includes(appEntity.owner.telegramChatId)
           ) {
             targetChatIds.push(appEntity.owner.telegramChatId);
-          }
-          if (appEntity.owner?.teamTelegramChatId) {
-            const splitOwnerTeamIds = appEntity.owner.teamTelegramChatId
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean);
-            for (const otId of splitOwnerTeamIds) {
-              if (!targetChatIds.includes(otId)) {
-                targetChatIds.push(otId);
-              }
-            }
           }
         }
       }
@@ -153,11 +132,12 @@ export class NotificationsService {
 
       // Check Super Admins & Platform Admins personal Telegram and Ops Group
       const allUsers = await this.userRepository.find({
-        relations: { roles: true },
+        relations: { role: true },
       });
-      const adminUsers = allUsers.filter((u) =>
-        u.roles?.some((r) => r.name === 'SUPER_ADMIN' || r.name === 'ADMIN'),
-      );
+      const adminUsers = allUsers.filter((u) => {
+        const rList = (u as any).roles || (u.role ? [u.role] : []);
+        return rList.some((r: any) => r.name === 'SUPER_ADMIN' || r.name === 'ADMIN');
+      });
 
       for (const admin of adminUsers) {
         if (
@@ -165,17 +145,6 @@ export class NotificationsService {
           !targetChatIds.includes(admin.telegramChatId)
         ) {
           targetChatIds.push(admin.telegramChatId);
-        }
-        if (admin.teamTelegramChatId) {
-          const splitAdminTeamIds = admin.teamTelegramChatId
-            .split(',')
-            .map((s) => s.trim())
-            .filter(Boolean);
-          for (const aId of splitAdminTeamIds) {
-            if (!targetChatIds.includes(aId)) {
-              targetChatIds.push(aId);
-            }
-          }
         }
       }
 
@@ -215,11 +184,12 @@ export class NotificationsService {
   ) {
     try {
       const allUsers = await this.userRepository.find({
-        relations: { roles: true },
+        relations: { role: true },
       });
-      const admins = allUsers.filter((u) =>
-        u.roles?.some((r) => r.name === 'SUPER_ADMIN' || r.name === 'ADMIN'),
-      );
+      const admins = allUsers.filter((u) => {
+        const rList = (u as any).roles || (u.role ? [u.role] : []);
+        return rList.some((r: any) => r.name === 'SUPER_ADMIN' || r.name === 'ADMIN');
+      });
 
       const targets = admins.length > 0 ? admins : (allUsers.length > 0 ? [allUsers[0]] : []);
 

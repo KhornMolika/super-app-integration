@@ -4,6 +4,7 @@ import {
   isMaskedCredential,
   maskCredential,
 } from '../../common/utils/credential-cipher.util';
+import { formatMiniAppResponse } from './miniapp-response.helper';
 
 export interface FlutterIntegrationConfig {
   deployKey?: string;
@@ -150,7 +151,7 @@ function sanitizeConfigDictionary(
 export function maskMiniAppCredentials<T>(app: T): T {
   if (!app || typeof app !== 'object') return app;
 
-  const target = app as Record<string, unknown>;
+  const target = formatMiniAppResponse(app) as Record<string, unknown>;
 
   // Break circular back-references from child relations before JSON serialization
   if (Array.isArray(target.versions)) {
@@ -220,5 +221,5 @@ export function maskMiniAppCredentials<T>(app: T): T {
     });
   }
 
-  return app;
+  return target as T;
 }

@@ -169,7 +169,7 @@ describe('NativeSdkCodegenService', () => {
     await service.regenerate();
     const where = miniappFind.mock.calls[0][0].where;
     expect(where.integrationMethod).toBe('NATIVE_SDK');
-    expect(where.status.value).toEqual(['APPROVED', 'ACTIVE']);
+    expect((where.lifecycleStatus || where.status).value).toEqual(['APPROVED', 'ACTIVE']);
   });
 
   it('returns no changed files when the generated content already matches', async () => {

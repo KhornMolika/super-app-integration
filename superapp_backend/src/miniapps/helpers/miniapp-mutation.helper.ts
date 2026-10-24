@@ -2,7 +2,8 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
-import { MiniApp, MiniAppStatus } from '../entities/miniapp.entity';
+import { MiniApp, MiniAppStatus, MiniAppLifecycleStatus, MiniAppAvailabilityStatus } from '../entities/miniapp.entity';
+import { MiniAppLegal } from '../entities/miniapp-legal.entity';
 import { StorageService } from '../../storage/storage.service';
 import { DomainAssociationHelper } from './domain-association.helper';
 import { NotificationsService, MailService } from '../../notifications';
@@ -26,10 +27,10 @@ export class MiniappMutationHelper {
     private notificationsService: NotificationsService,
     private validationHelper: MiniappValidationHelper,
     private permissionDetectorHelper: PermissionDetectorHelper,
-  ) {}
+  ) { }
 
   async create(
-    data: Partial<MiniApp>,
+    data: any,
     actorId?: string,
     logActivityFn?: (
       miniAppId: string,
@@ -43,7 +44,7 @@ export class MiniappMutationHelper {
     ) => Promise<void>,
   ): Promise<MiniApp> {
     delete data.status;
-    data.status = 'PROCESSING';
+    data.lifecycleStatus = data.lifecycleStatus || MiniAppLifecycleStatus.DRAFT;
     data.currentReleaseVersion = undefined;
     data.pendingRevision = null;
 
@@ -84,8 +85,8 @@ export class MiniappMutationHelper {
       }
     }
 
-    if (!data.permissions) {
-      data.permissions = [];
+    if (!data.capabilities) {
+      data.capabilities = (data as any).permissions || [];
     }
 
     if (data.integrationMethod === 'WEBVIEW') {
@@ -141,16 +142,16 @@ export class MiniappMutationHelper {
           checksum:
             data.integrationConfig?.archiveChecksum ||
             'sha256:' +
-              crypto
-                .createHash('sha256')
-                .update((data.appId || 'miniapp') + packageVer)
-                .digest('hex')
-                .substring(0, 16),
+            crypto
+              .createHash('sha256')
+              .update((data.appId || 'miniapp') + packageVer)
+              .digest('hex')
+              .substring(0, 16),
         },
       ];
     }
 
-    const app = this.miniappRepository.create(data);
+    const app = this.miniappRepository.create(data as Partial<MiniApp>) as MiniApp;
     let savedApp: MiniApp;
     try {
       savedApp = await this.miniappRepository.save(app);
@@ -165,8 +166,9 @@ export class MiniappMutationHelper {
 
     // 1. Dispatch Notification (WebSocket + Telegram to MA Manager, MA Team Group, & SA Admins)
     const isDraft =
-      savedApp.status === 'DRAFT' ||
-      savedApp.status === MiniAppStatus.DRAFT;
+      savedApp.lifecycleStatus === 'DRAFT' ||
+      savedApp.lifecycleStatus === MiniAppLifecycleStatus.DRAFT ||
+      (savedApp as any).status === 'DRAFT';
 
     const targetUserId = savedApp.ownerId || actorId || '';
     if (targetUserId) {
@@ -174,28 +176,28 @@ export class MiniappMutationHelper {
         await this.notificationsService.createNotification(
           targetUserId,
           'MiniApp Saved as Draft',
-          `MiniApp "${savedApp.name || savedApp.appId}" has been saved as a draft by ${savedApp.ownerName || 'Operator'}.`,
+          `MiniApp "${savedApp.name || savedApp.appId}" has been saved as a draft by ${savedApp.owner?.name || (savedApp as any).ownerName || 'Operator'}.`,
           'MINIAPP_DRAFT_SAVED',
           savedApp.id,
           {
             integrationMethod: savedApp.integrationMethod,
-            category: savedApp.category,
-            teamName: savedApp.teamName,
-            teamTelegramChatId: savedApp.teamTelegramChatId,
+            category: savedApp.organizationRelation?.name || (savedApp as any).category,
+            teamName: savedApp.organizationRelation?.name || savedApp.owner?.name || (savedApp as any).teamName,
+            teamTelegramChatId: savedApp.alertTelegramChatId || (savedApp as any).teamTelegramChatId,
           },
         );
       } else {
         await this.notificationsService.createNotification(
           targetUserId,
           'MiniApp Registered',
-          `MiniApp "${savedApp.name || savedApp.appId}" has been registered successfully by ${savedApp.ownerName || 'Operator'} and queued for security validation.`,
+          `MiniApp "${savedApp.name || savedApp.appId}" has been registered successfully by ${savedApp.owner?.name || (savedApp as any).ownerName || 'Operator'} and queued for security validation.`,
           'MINIAPP_REGISTERED',
           savedApp.id,
           {
             integrationMethod: savedApp.integrationMethod,
-            category: savedApp.category,
-            teamName: savedApp.teamName,
-            teamTelegramChatId: savedApp.teamTelegramChatId,
+            category: savedApp.organizationRelation?.name || (savedApp as any).category,
+            teamName: savedApp.organizationRelation?.name || savedApp.owner?.name || (savedApp as any).teamName,
+            teamTelegramChatId: savedApp.alertTelegramChatId || (savedApp as any).teamTelegramChatId,
           },
         );
       }
@@ -212,9 +214,10 @@ export class MiniappMutationHelper {
           );
         });
 
-      if (savedApp.ownerEmail) {
+      const ownerEmail = savedApp.supportEmail || savedApp.owner?.email || (savedApp as any).ownerEmail;
+      if (ownerEmail) {
         await this.mailService.sendRegistrationSuccessEmail(
-          savedApp.ownerEmail,
+          ownerEmail,
           savedApp.name || savedApp.appId,
         );
       }
@@ -238,7 +241,7 @@ export class MiniappMutationHelper {
 
   async update(
     existing: MiniApp,
-    data: Partial<MiniApp>,
+    data: any,
     actorId?: string,
     logActivityFn?: (
       miniAppId: string,
@@ -270,7 +273,9 @@ export class MiniappMutationHelper {
     }
 
     const isLive =
-      existing.status === 'ACTIVE' || existing.status === 'TESTING';
+      existing.lifecycleStatus === 'ACTIVE' ||
+      (existing as any).status === 'ACTIVE' ||
+      (existing as any).status === 'TESTING';
 
     // Automatically upload base64 image data to MinIO object storage on submission
     const isBase64Logo =
@@ -297,53 +302,63 @@ export class MiniappMutationHelper {
 
       if (!hasSecurityImpact) {
         // SMART FAST-TRACK: Only General Metadata / Contact / Legal info modified
-        if (data.name !== undefined) existing.name = data.name;
-        if (data.slug !== undefined) existing.slug = data.slug;
-        if (data.shortDescription !== undefined)
-          existing.shortDescription = data.shortDescription;
-        if (data.fullDescription !== undefined)
-          existing.fullDescription = data.fullDescription;
-        if (data.logo !== undefined) existing.logo = data.logo;
-        if (data.category !== undefined) existing.category = data.category;
-        if (data.termsUrl !== undefined) existing.termsUrl = data.termsUrl;
-        if (data.termsDescription !== undefined)
-          existing.termsDescription = data.termsDescription;
-        if (data.privacyPolicyUrl !== undefined)
-          existing.privacyPolicyUrl = data.privacyPolicyUrl;
-        if (data.privacyPolicyDescription !== undefined)
-          existing.privacyPolicyDescription = data.privacyPolicyDescription;
-        if (data.ownerName !== undefined) existing.ownerName = data.ownerName;
-        if (data.ownerEmail !== undefined)
-          existing.ownerEmail = data.ownerEmail;
-        if (data.supportEmail !== undefined)
-          existing.supportEmail = data.supportEmail;
-        if (data.teamName !== undefined) existing.teamName = data.teamName;
-        if (data.teamTelegramChatId !== undefined)
-          existing.teamTelegramChatId = data.teamTelegramChatId;
+        const d = data as any;
+        if (d.name !== undefined) existing.name = d.name;
+        if (d.slug !== undefined) existing.slug = d.slug;
+        if (d.tagline !== undefined || d.shortDescription !== undefined) {
+          existing.tagline = d.tagline ?? d.shortDescription;
+        }
+        if (d.description !== undefined || d.fullDescription !== undefined) {
+          existing.description = d.description ?? d.fullDescription;
+        }
+        if (d.logo !== undefined) existing.logo = d.logo;
+        if (d.alertTelegramChatId !== undefined || d.teamTelegramChatId !== undefined) {
+          existing.alertTelegramChatId = d.alertTelegramChatId ?? d.teamTelegramChatId;
+        }
+        if (d.supportEmail !== undefined) existing.supportEmail = d.supportEmail;
+
+        if (
+          d.termsUrl !== undefined ||
+          d.termsDescription !== undefined ||
+          d.privacyPolicyUrl !== undefined ||
+          d.privacyPolicyDescription !== undefined
+        ) {
+          const legalRepo = this.miniappRepository.manager.getRepository(MiniAppLegal);
+          let legal = existing.legal || (await legalRepo.findOne({ where: { miniAppId: existing.id } }));
+          if (!legal) {
+            legal = legalRepo.create({ miniAppId: existing.id });
+          }
+          if (d.termsUrl !== undefined) legal.termsUrl = d.termsUrl;
+          if (d.termsDescription !== undefined) legal.termsDescription = d.termsDescription;
+          if (d.privacyPolicyUrl !== undefined) legal.privacyPolicyUrl = d.privacyPolicyUrl;
+          if (d.privacyPolicyDescription !== undefined) legal.privacyPolicyDescription = d.privacyPolicyDescription;
+          existing.legal = await legalRepo.save(legal);
+        }
 
         // Keep pendingRevision branding in sync if one already exists
         if (existing.pendingRevision) {
           existing.pendingRevision = {
             ...existing.pendingRevision,
             name: existing.name,
-            shortDescription: existing.shortDescription,
-            fullDescription: existing.fullDescription,
+            tagline: existing.tagline,
+            shortDescription: existing.tagline,
+            description: existing.description,
+            fullDescription: existing.description,
             logo: existing.logo,
-            category: existing.category,
-            termsUrl: existing.termsUrl,
-            termsDescription: existing.termsDescription,
-            privacyPolicyUrl: existing.privacyPolicyUrl,
-            privacyPolicyDescription: existing.privacyPolicyDescription,
+            termsUrl: existing.legal?.termsUrl || d.termsUrl,
+            termsDescription: existing.legal?.termsDescription || d.termsDescription,
+            privacyPolicyUrl: existing.legal?.privacyPolicyUrl || d.privacyPolicyUrl,
+            privacyPolicyDescription: existing.legal?.privacyPolicyDescription || d.privacyPolicyDescription,
             supportEmail: existing.supportEmail,
-            teamName: existing.teamName,
-            teamTelegramChatId: existing.teamTelegramChatId,
+            alertTelegramChatId: existing.alertTelegramChatId,
+            teamTelegramChatId: existing.alertTelegramChatId,
           };
         }
 
         await this.miniappRepository.save(existing);
         const updated = await this.miniappRepository.findOne({
           where: { id: existing.id },
-          relations: { issues: true, collaborators: true },
+          relations: { issues: true, collaborators: true, legal: true },
         });
         if (logActivityFn) {
           await logActivityFn(
@@ -361,65 +376,89 @@ export class MiniappMutationHelper {
       }
 
       // SECURITY GATEWAY: Changes include Permissions, URLs, Allowed Domains, or Packages
-      if (data.teamTelegramChatId !== undefined) {
-        existing.teamTelegramChatId = data.teamTelegramChatId;
+      const d = data as any;
+      if (d.alertTelegramChatId !== undefined || d.teamTelegramChatId !== undefined) {
+        existing.alertTelegramChatId = d.alertTelegramChatId ?? d.teamTelegramChatId;
       }
-      const existingRev = existing.pendingRevision || {};
+      const existingRev = (existing.pendingRevision || {}) as any;
       const revisionData = {
         ...existingRev,
-        name: data.name ?? existingRev.name ?? existing.name,
-        shortDescription:
-          data.shortDescription ??
+        name: d.name ?? existingRev.name ?? existing.name,
+        tagline:
+          d.tagline ??
+          d.shortDescription ??
+          existingRev.tagline ??
           existingRev.shortDescription ??
-          existing.shortDescription,
-        fullDescription:
-          data.fullDescription ??
+          existing.tagline,
+        shortDescription:
+          d.shortDescription ??
+          d.tagline ??
+          existingRev.shortDescription ??
+          existingRev.tagline ??
+          existing.tagline,
+        description:
+          d.description ??
+          d.fullDescription ??
+          existingRev.description ??
           existingRev.fullDescription ??
-          existing.fullDescription,
-        logo: data.logo ?? existingRev.logo ?? existing.logo,
-        category: data.category ?? existingRev.category ?? existing.category,
-        termsUrl: data.termsUrl ?? existingRev.termsUrl ?? existing.termsUrl,
+          existing.description,
+        fullDescription:
+          d.fullDescription ??
+          d.description ??
+          existingRev.fullDescription ??
+          existingRev.description ??
+          existing.description,
+        logo: d.logo ?? existingRev.logo ?? existing.logo,
+        termsUrl: d.termsUrl ?? existingRev.termsUrl ?? existing.legal?.termsUrl,
         termsDescription:
-          data.termsDescription ??
+          d.termsDescription ??
           existingRev.termsDescription ??
-          existing.termsDescription,
+          existing.legal?.termsDescription,
         privacyPolicyUrl:
-          data.privacyPolicyUrl ??
+          d.privacyPolicyUrl ??
           existingRev.privacyPolicyUrl ??
-          existing.privacyPolicyUrl,
+          existing.legal?.privacyPolicyUrl,
         privacyPolicyDescription:
-          data.privacyPolicyDescription ??
+          d.privacyPolicyDescription ??
           existingRev.privacyPolicyDescription ??
-          existing.privacyPolicyDescription,
+          existing.legal?.privacyPolicyDescription,
         ownerName:
-          data.ownerName ?? existingRev.ownerName ?? existing.ownerName,
+          (data as any).ownerName ?? existingRev.ownerName ?? (existing as any).ownerName,
         ownerEmail:
-          data.ownerEmail ?? existingRev.ownerEmail ?? existing.ownerEmail,
+          (data as any).ownerEmail ?? existingRev.ownerEmail ?? (existing as any).ownerEmail,
         supportEmail:
           data.supportEmail ??
           existingRev.supportEmail ??
           existing.supportEmail,
-        teamName: data.teamName ?? existingRev.teamName ?? existing.teamName,
+        teamName: (data as any).teamName ?? existingRev.teamName ?? (existing as any).teamName,
         teamTelegramChatId:
-          data.teamTelegramChatId ??
+          (data as any).teamTelegramChatId ??
+          data.alertTelegramChatId ??
           existingRev.teamTelegramChatId ??
-          existing.teamTelegramChatId,
+          existing.alertTelegramChatId,
+        alertTelegramChatId:
+          data.alertTelegramChatId ??
+          (data as any).teamTelegramChatId ??
+          existingRev.alertTelegramChatId ??
+          existing.alertTelegramChatId,
         integrationMethod:
           data.integrationMethod ??
           existingRev.integrationMethod ??
           existing.integrationMethod,
         integrationConfig:
           data.integrationMethod === 'FLUTTER_PACKAGE' ||
-          existing.integrationMethod === 'FLUTTER_PACKAGE'
+            existing.integrationMethod === 'FLUTTER_PACKAGE'
             ? secureFlutterIntegrationConfig(
-                data.integrationConfig,
-                existingRev.integrationConfig ?? existing.integrationConfig,
-              )
+              data.integrationConfig,
+              existingRev.integrationConfig ?? existing.integrationConfig,
+            )
             : (data.integrationConfig ??
               existingRev.integrationConfig ??
               existing.integrationConfig),
         permissions:
-          data.permissions ?? existingRev.permissions ?? existing.permissions,
+          (data as any).permissions ?? data.capabilities ?? existingRev.permissions ?? (existing as any).permissions,
+        capabilities:
+          data.capabilities ?? (data as any).permissions ?? existingRev.capabilities ?? existing.capabilities,
         securityChecks:
           data.securityChecks ??
           existingRev.securityChecks ??
@@ -499,20 +538,18 @@ export class MiniappMutationHelper {
       return updated || existing;
     }
 
-    data.status = 'PROCESSING';
+    data.lifecycleStatus = 'SUBMITTED';
 
     const merged = this.miniappRepository.merge(existing, data);
-    if (data.permissions) {
-      merged.permissions = data.permissions;
+    if ((data as any).capabilities || (data as any).permissions) {
+      merged.capabilities = (data as any).capabilities || (data as any).permissions;
     }
-    if (data.teamTelegramChatId !== undefined) {
-      merged.teamTelegramChatId = data.teamTelegramChatId;
+    if (data.alertTelegramChatId !== undefined || (data as any).teamTelegramChatId !== undefined) {
+      merged.alertTelegramChatId = data.alertTelegramChatId || (data as any).teamTelegramChatId;
     }
-    if (data.organization || data.category) {
-      const orgInfo = await resolveOrganizationDetails(data.organization || data.category);
-      merged.organization = orgInfo.name;
-      merged.organizationCode = orgInfo.code;
-      merged.category = orgInfo.name;
+    if ((data as any).organization || (data as any).category) {
+      const orgInfo = await resolveOrganizationDetails((data as any).organization || (data as any).category);
+      if (orgInfo?.id) merged.organizationId = orgInfo.id;
     }
 
     // Reset domain verification status if productionUrl changes
@@ -546,16 +583,16 @@ export class MiniappMutationHelper {
       data.integrationConfig?.gitTag ||
       data.integrationConfig?.ref ||
       data.integrationConfig?.versionConstraint?.replace(/^[\^~>=<]+/, '') ||
-      data.version;
+      (data as any).version ||
+      data.currentReleaseVersion;
     if (effectiveVer) {
-      merged.version = effectiveVer;
       merged.currentReleaseVersion = effectiveVer;
     }
 
-    const currentHistory = Array.isArray(merged.versionHistory)
-      ? [...merged.versionHistory]
+    const currentHistory = Array.isArray((merged as any).versionHistory)
+      ? [...(merged as any).versionHistory]
       : [];
-    const verToAdd = effectiveVer || merged.version || '1.0.0';
+    const verToAdd = effectiveVer || merged.currentReleaseVersion || '1.0.0';
     const existingVerIdx = currentHistory.findIndex((h: any) => h.version === verToAdd);
     const newRecord = {
       version: verToAdd,
@@ -568,19 +605,19 @@ export class MiniappMutationHelper {
         merged.integrationConfig?.packageName ||
         merged.appId ||
         merged.name,
-      type: (merged.status === 'ACTIVE' ? 'PRODUCTION' : 'TEST') as 'PRODUCTION' | 'TEST' | 'DRAFT',
-      status: (merged.status === 'ACTIVE' ? 'ACTIVE' : 'IN_REVIEW') as any,
+      type: (merged.lifecycleStatus === 'ACTIVE' ? 'PRODUCTION' : 'TEST') as 'PRODUCTION' | 'TEST' | 'DRAFT',
+      status: (merged.lifecycleStatus === 'ACTIVE' ? 'ACTIVE' : 'IN_REVIEW') as any,
       changelog: (data as any).changelog || `Version update to ${verToAdd}`,
       releasedAt: new Date().toISOString(),
-      releasedBy: actorId || merged.ownerName || 'MiniApp Developer',
+      releasedBy: actorId || merged.owner?.name || (merged as any).ownerName || 'MiniApp Developer',
       checksum:
         merged.integrationConfig?.archiveChecksum ||
         'sha256:' +
-          crypto
-            .createHash('sha256')
-            .update(merged.id + verToAdd + Date.now())
-            .digest('hex')
-            .substring(0, 16),
+        crypto
+          .createHash('sha256')
+          .update(merged.id + verToAdd + Date.now())
+          .digest('hex')
+          .substring(0, 16),
     };
 
     if (existingVerIdx >= 0) {
@@ -591,14 +628,14 @@ export class MiniappMutationHelper {
     } else {
       currentHistory.unshift(newRecord);
     }
-    merged.versionHistory = currentHistory;
+    (merged as any).versionHistory = currentHistory;
 
     await this.miniappRepository.save(merged);
 
     // Kick off async validation only when NOT in draft mode
     const isDraft =
-      merged.status === 'DRAFT' ||
-      merged.status === MiniAppStatus.DRAFT;
+      merged.lifecycleStatus === 'DRAFT' ||
+      (merged as any).status === 'DRAFT';
 
     if (!isDraft) {
       this.validationHelper

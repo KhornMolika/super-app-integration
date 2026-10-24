@@ -33,13 +33,6 @@ export class User {
   @Column({ default: 'ACTIVE' })
   status!: string;
 
-  // Backwards compatibility for isActive
-  get isActive(): boolean {
-    return this.status === 'ACTIVE';
-  }
-  set isActive(val: boolean) {
-    this.status = val ? 'ACTIVE' : 'INACTIVE';
-  }
 
   @Column({ nullable: true })
   passwordHash?: string;
@@ -53,15 +46,6 @@ export class User {
   @Column({ nullable: true, type: 'timestamp' })
   telegramConnectedAt?: Date;
 
-  // Backwards compatibility for teamTelegramChatId
-  get teamTelegramChatId(): string | undefined {
-    return this.telegramChatId;
-  }
-  set teamTelegramChatId(val: string | undefined) {
-    if (val && !this.telegramChatId) {
-      this.telegramChatId = val;
-    }
-  }
 
   // Direct 1-to-1 Role Association
   @Column({ type: 'uuid' })
@@ -71,16 +55,6 @@ export class User {
   @JoinColumn({ name: 'roleId' })
   role!: Role;
 
-  // Backwards compatibility for roles array
-  get roles(): Role[] {
-    return this.role ? [this.role] : [];
-  }
-  set roles(val: Role[]) {
-    if (Array.isArray(val) && val.length > 0) {
-      this.role = val[0];
-      this.roleId = val[0].id;
-    }
-  }
 
   // Direct 1-to-1 Organization Association
   @Column({ type: 'uuid', nullable: true })

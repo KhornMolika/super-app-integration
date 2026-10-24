@@ -199,8 +199,8 @@ export class ValidationCallbackController {
     if (dto.status === 'PASSED') {
       app.validationStatus = 'PASSED';
       const initialStatuses = ['DRAFT', 'SUBMITTED'];
-      if (!hasPendingRevision && initialStatuses.includes(app.status)) {
-        app.status = 'IN_REVIEW';
+      if (!hasPendingRevision && initialStatuses.includes(app.lifecycleStatus)) {
+        app.lifecycleStatus = 'IN_REVIEW';
       }
       app.validationErrors = null;
 
@@ -211,14 +211,14 @@ export class ValidationCallbackController {
         hasPendingRevision ? 'Revision Validation Passed' : 'Automated Validation Passed',
         hasPendingRevision
           ? `${app.name || 'MiniApp'} revision passed automated ${dto.method} validation (Score: ${dto.score}/100). Live version remains active.`
-          : initialStatuses.includes(app.status)
+          : initialStatuses.includes(app.lifecycleStatus)
           ? `${app.name || 'MiniApp'} passed automated ${dto.method} security validation (Score: ${dto.score}/100) and is now In Review.`
-          : `${app.name || 'MiniApp'} security re-scan passed (${dto.score}/100). Status remains ${app.status}.`,
+          : `${app.name || 'MiniApp'} security re-scan passed (${dto.score}/100). Status remains ${app.lifecycleStatus}.`,
         'REVIEW_STARTED',
         app.id,
       );
 
-      const targetEmail = app.ownerEmail || app.owner?.email;
+      const targetEmail = app.supportEmail || app.owner?.email || (app as any).ownerEmail;
       if (targetEmail) {
         await this.mailService.sendValidationPassedEmail(
           targetEmail,
@@ -234,7 +234,7 @@ export class ValidationCallbackController {
         resourceType: 'MiniApp',
         resourceId: app.id,
         newValue: {
-          status: app.status,
+          status: app.lifecycleStatus,
           validationStatus: 'PASSED',
           score: dto.score,
         },
@@ -242,14 +242,14 @@ export class ValidationCallbackController {
 
       return {
         success: true,
-        newStatus: app.status,
+        newStatus: app.lifecycleStatus,
         validationStatus: 'PASSED',
       };
     } else {
       app.validationStatus = 'FAILED';
       const resetToDraftStatuses = ['DRAFT', 'SUBMITTED', 'IN_REVIEW'];
-      if (!hasPendingRevision && resetToDraftStatuses.includes(app.status)) {
-        app.status = 'DRAFT'; // Auto-reset to DRAFT for remediation if in pre-approval stage
+      if (!hasPendingRevision && resetToDraftStatuses.includes(app.lifecycleStatus)) {
+        app.lifecycleStatus = 'DRAFT'; // Auto-reset to DRAFT for remediation if in pre-approval stage
       }
 
       // Mark running/pending stages as FAILED
@@ -331,7 +331,7 @@ export class ValidationCallbackController {
         app.id,
       );
 
-      const targetEmail = app.ownerEmail || app.owner?.email;
+      const targetEmail = app.supportEmail || app.owner?.email || (app as any).ownerEmail;
       if (targetEmail) {
         await this.mailService.sendValidationFailedEmail(
           targetEmail,

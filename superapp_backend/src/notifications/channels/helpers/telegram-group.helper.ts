@@ -39,8 +39,8 @@ export class TelegramGroupHelper {
     }
 
     // 1. User's saved profile team chat ID
-    if (dbUser?.teamTelegramChatId) {
-      const chatId = dbUser.teamTelegramChatId.trim();
+    if (dbUser?.telegramChatId) {
+      const chatId = dbUser.telegramChatId.trim();
       groupsMap.set(chatId, {
         id: chatId,
         title: 'User Default Team Channel',
@@ -58,8 +58,9 @@ export class TelegramGroupHelper {
     }
 
     // 2. Scan all mini apps owned by this user (or all mini apps if SUPER_ADMIN / ADMIN)
-    const isAdmin = dbUser?.roles?.some(
-      (r) => r.name === 'SUPER_ADMIN' || r.name === 'ADMIN',
+    const userRoleList = (dbUser as any)?.roles || (dbUser?.role ? [dbUser.role] : []);
+    const isAdmin = userRoleList.some(
+      (r: any) => r.name === 'SUPER_ADMIN' || r.name === 'ADMIN',
     );
 
     let miniApps: MiniApp[] = [];
@@ -72,8 +73,9 @@ export class TelegramGroupHelper {
     }
 
     for (const app of miniApps) {
-      if (app.teamTelegramChatId && app.teamTelegramChatId.trim()) {
-        const rawIds = app.teamTelegramChatId
+      const targetTeamChat = app.alertTelegramChatId || (app as any).teamTelegramChatId;
+      if (targetTeamChat && targetTeamChat.trim()) {
+        const rawIds = targetTeamChat
           .split(',')
           .map((s) => s.trim())
           .filter(Boolean);
@@ -84,8 +86,8 @@ export class TelegramGroupHelper {
             id: app.id,
             name: app.name,
             appId: app.appId,
-            status: app.status,
-            category: app.category,
+            status: app.lifecycleStatus,
+            category: app.tagline || (app as any).category,
             logo: app.logo,
             label: `MiniApp: ${app.name}`,
           };
@@ -453,18 +455,19 @@ export class TelegramGroupHelper {
     if (userId) {
       const user = await userRepository.findOne({
         where: { id: userId },
-        relations: { roles: true },
+        relations: { role: true },
       });
-      const isAdmin = user?.roles?.some(
-        (r) => r.name === 'SUPER_ADMIN' || r.name === 'ADMIN',
+      const userRoles = (user as any)?.roles || (user?.role ? [user.role] : []);
+      const isAdmin = userRoles.some(
+        (r: any) => r.name === 'SUPER_ADMIN' || r.name === 'ADMIN',
       );
       userApps = isAdmin
         ? await miniAppRepository.find()
         : await miniAppRepository.find({ where: { ownerId: userId } });
 
-      // Update user profile teamTelegramChatId if matching
-      if (user && user.teamTelegramChatId?.trim() === trimmedOld) {
-        user.teamTelegramChatId = trimmedNew || undefined;
+      // Update user profile telegramChatId if matching
+      if (user && user.telegramChatId?.trim() === trimmedOld) {
+        user.telegramChatId = trimmedNew || undefined;
         await userRepository.save(user);
       }
     } else {
@@ -477,7 +480,7 @@ export class TelegramGroupHelper {
         | null
         | undefined;
       const currentChatId =
-        app.teamTelegramChatId || pendingRev?.teamTelegramChatId;
+        app.alertTelegramChatId || (app as any).teamTelegramChatId || pendingRev?.teamTelegramChatId;
       if (!currentChatId) continue;
       const ids: string[] = currentChatId
         .split(',')
@@ -489,7 +492,8 @@ export class TelegramGroupHelper {
           const updatedIds = Array.from(
             new Set(ids.map((id) => (id === trimmedOld ? trimmedNew : id))),
           );
-          app.teamTelegramChatId = updatedIds.join(',');
+          app.alertTelegramChatId = updatedIds.join(',');
+          (app as any).teamTelegramChatId = updatedIds.join(',');
           if (pendingRev) {
             pendingRev.teamTelegramChatId = updatedIds.join(',');
             app.pendingRevision = pendingRev;
@@ -498,7 +502,8 @@ export class TelegramGroupHelper {
           const remainingIds = ids.filter((id) => id !== trimmedOld);
           const finalVal =
             remainingIds.length > 0 ? remainingIds.join(',') : null;
-          app.teamTelegramChatId = finalVal || undefined;
+          app.alertTelegramChatId = finalVal || undefined;
+          (app as any).teamTelegramChatId = finalVal;
           if (pendingRev) {
             pendingRev.teamTelegramChatId = finalVal;
             app.pendingRevision = pendingRev;
@@ -546,10 +551,11 @@ export class TelegramGroupHelper {
     if (userId) {
       const user = await userRepository.findOne({
         where: { id: userId },
-        relations: { roles: true },
+        relations: { role: true },
       });
-      const isAdmin = user?.roles?.some(
-        (r) => r.name === 'SUPER_ADMIN' || r.name === 'ADMIN',
+      const userRoles = (user as any)?.roles || (user?.role ? [user.role] : []);
+      const isAdmin = userRoles.some(
+        (r: any) => r.name === 'SUPER_ADMIN' || r.name === 'ADMIN',
       );
       if (!isAdmin && app.ownerId !== userId) {
         return {
@@ -560,7 +566,8 @@ export class TelegramGroupHelper {
     }
 
     const trimmedNew = newChatId?.trim() || null;
-    app.teamTelegramChatId = trimmedNew || undefined;
+    app.alertTelegramChatId = trimmedNew || undefined;
+    (app as any).teamTelegramChatId = trimmedNew;
     const pendingRev = app.pendingRevision as
       | { teamTelegramChatId?: string | null; [key: string]: unknown }
       | null

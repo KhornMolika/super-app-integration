@@ -1,4 +1,4 @@
-﻿import { Test, TestingModule } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TelegramService } from './telegram.service';
@@ -102,17 +102,17 @@ describe('TelegramService & Helper Modules', () => {
         'Demo MiniApp',
         {
           miniAppId: 'app-123',
-          version: 'v1.2.0',
+          version: 'v1.0.0',
           apkUrl: 'https://example.com/app.apk',
         },
         'http://localhost:3000',
       );
 
       expect(text).toContain('SUPER APP TEST BUILD READY');
-      expect(text).toContain('v1.2.0');
+      expect(text).toContain('v1.0.0');
       expect(buttons).toBeDefined();
-      expect(buttons?.[0][0].text).toContain('superapp-test-v1.2.0.apk');
-      expect(buttons?.[0][0].url).toContain('/api/download-apk?type=test&version=v1.2.0&appName=superapp');
+      expect(buttons?.[0][0].text).toContain('superapp-test-v1.0.0.apk');
+      expect(buttons?.[0][0].url).toContain('/api/download-apk?type=test&version=v1.0.0&appName=superapp');
       expect(buttons?.[0][1].text).toContain('Launch Sandbox');
     });
 
@@ -218,7 +218,7 @@ describe('TelegramService & Helper Modules', () => {
         '-100999888',
         getUserRepo(),
       );
-      expect(updated?.teamTelegramChatId).toBe('-100999888');
+      expect(updated?.telegramChatId).toBe('-100999888');
       expect(mockUserRepo.save).toHaveBeenCalledWith(user);
     });
   });

@@ -1,4 +1,4 @@
-﻿import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as fs from 'fs';
@@ -255,7 +255,7 @@ export class ApkBuildManagerService {
             // Notify connected clients that compile & publish stages completed
             try {
               const buildingApps = await this.miniappRepository.find({
-                where: [{ status: 'BUILDING' }, { activeTestVersion: releaseVersion }],
+                where: [{ lifecycleStatus: 'BUILDING' }, { activeTestVersion: releaseVersion }],
               });
               for (const app of buildingApps) {
                 this.notificationsService.emitBuildStageUpdate({

@@ -149,7 +149,7 @@ When a MiniApp attempts to invoke a capability that is unsupported, unwhiteliste
 {
   "code": "CAPABILITY_UNSUPPORTED",
   "capability": "biometrics",
-  "message": "Host shell v1.2.0 does not support capability: biometrics. Minimum host version required: v1.4.0.",
+  "message": "Host shell v1.0.0 does not support capability: biometrics. Minimum host version required: v1.4.0.",
   "hostVersion": "1.2.0",
   "supportedCapabilities": [
     "storage:secure",

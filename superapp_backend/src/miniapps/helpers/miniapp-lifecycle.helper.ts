@@ -2,7 +2,8 @@ import { Injectable, Logger, BadRequestException, Optional } from '@nestjs/commo
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
-import { MiniApp } from '../entities/miniapp.entity';
+import { MiniApp, MiniAppLifecycleStatus, MiniAppAvailabilityStatus } from '../entities/miniapp.entity';
+import { MiniAppLegal } from '../entities/miniapp-legal.entity';
 import { NotificationsService, MailService } from '../../notifications';
 import { PipelinePacerService } from '../../notifications/pipeline-pacer.service';
 import { JenkinsService } from '../../integrations/jenkins/jenkins.service';
@@ -70,7 +71,7 @@ export class MiniappLifecycleHelper {
       newVal?: any,
     ) => Promise<void>,
   ) {
-    const currentStatus = app.status?.toUpperCase();
+    const currentStatus = (app.lifecycleStatus || (app as any).status)?.toUpperCase();
     if (currentStatus !== 'DRAFT' && currentStatus !== 'REJECTED') {
       throw new BadRequestException('App is not in DRAFT or REJECTED status');
     }
@@ -82,7 +83,7 @@ export class MiniappLifecycleHelper {
       app.securityChecks,
     );
     app.validationStages = initialStages;
-    app.status = 'SUBMITTED';
+    app.lifecycleStatus = MiniAppLifecycleStatus.SUBMITTED;
     app.validationStatus = 'RUNNING';
     await this.miniappRepository.save(app);
 
@@ -90,8 +91,8 @@ export class MiniappLifecycleHelper {
     const envVal = (process.env.ENVIRONMENT || '').toUpperCase();
     const allowLocal = envVal === 'DEV';
 
-    const declaredPerms = Array.isArray(app.permissions)
-      ? app.permissions
+    const declaredPerms = Array.isArray((app as any).capabilities || (app as any).permissions)
+      ? ((app as any).capabilities || (app as any).permissions)
         .map((p: any) => (typeof p === 'string' ? p : p.name || p.id || p.type))
         .filter(Boolean)
       : [];
@@ -249,8 +250,8 @@ export class MiniappLifecycleHelper {
     const envVal = (process.env.ENVIRONMENT || '').toUpperCase();
     const allowLocal = envVal === 'DEV';
 
-    const declaredPerms = Array.isArray(app.permissions)
-      ? app.permissions
+    const declaredPerms = Array.isArray((app as any).capabilities || (app as any).permissions)
+      ? ((app as any).capabilities || (app as any).permissions)
         .map((p: any) => (typeof p === 'string' ? p : p.name || p.id || p.type))
         .filter(Boolean)
       : [];
@@ -426,8 +427,8 @@ export class MiniappLifecycleHelper {
   ) {
     const id = app.id;
     app.validationStatus = 'FAILED';
-    if (app.status === 'SUBMITTED') {
-      app.status = 'DRAFT';
+    if (app.lifecycleStatus === 'SUBMITTED' || (app as any).status === 'SUBMITTED') {
+      app.lifecycleStatus = MiniAppLifecycleStatus.DRAFT;
     }
 
     const stages = app.validationStages || {};
@@ -491,50 +492,55 @@ export class MiniappLifecycleHelper {
       newVal?: any,
     ) => Promise<void>,
   ) {
-    if (app.status === 'ACTIVE' && app.pendingRevision) {
+    const currentStatus = (app.lifecycleStatus || (app as any).status || '').toUpperCase();
+    if ((currentStatus === 'ACTIVE' || app.availabilityStatus === MiniAppAvailabilityStatus.PRODUCTION) && app.pendingRevision) {
       return this.publishRevision(app, actorId, logActivityFn);
     }
 
     const validStatuses = ['IN_REVIEW', 'SUBMITTED', 'DRAFT'];
-    if (!validStatuses.includes(app.status?.toUpperCase())) {
+    if (!validStatuses.includes(currentStatus)) {
       throw new BadRequestException(
-        `App is not in review (current status: ${app.status})`,
+        `App is not in review (current status: ${app.lifecycleStatus || currentStatus})`,
       );
     }
 
     if (app.pendingRevision) {
       const rev = app.pendingRevision;
       app.name = rev.name ?? app.name;
-      app.shortDescription = rev.shortDescription ?? app.shortDescription;
-      app.fullDescription = rev.fullDescription ?? app.fullDescription;
+      app.tagline = rev.tagline ?? rev.shortDescription ?? app.tagline;
+      app.description = rev.description ?? rev.fullDescription ?? app.description;
       app.logo = rev.logo ?? app.logo;
-      app.category = rev.category ?? app.category;
-      app.termsUrl = rev.termsUrl ?? app.termsUrl;
-      app.termsDescription = rev.termsDescription ?? app.termsDescription;
-      app.privacyPolicyUrl = rev.privacyPolicyUrl ?? app.privacyPolicyUrl;
-      app.privacyPolicyDescription =
-        rev.privacyPolicyDescription ?? app.privacyPolicyDescription;
-      app.ownerName = rev.ownerName ?? app.ownerName;
-      app.ownerEmail = rev.ownerEmail ?? app.ownerEmail;
+      if (rev.termsUrl || rev.termsDescription || rev.privacyPolicyUrl || rev.privacyPolicyDescription) {
+        if (!app.legal) {
+          app.legal = new MiniAppLegal();
+          app.legal.miniApp = app;
+          app.legal.miniAppId = app.id;
+        }
+        if (rev.termsUrl !== undefined) app.legal.termsUrl = rev.termsUrl;
+        if (rev.termsDescription !== undefined) app.legal.termsDescription = rev.termsDescription;
+        if (rev.privacyPolicyUrl !== undefined) app.legal.privacyPolicyUrl = rev.privacyPolicyUrl;
+        if (rev.privacyPolicyDescription !== undefined) app.legal.privacyPolicyDescription = rev.privacyPolicyDescription;
+      }
       app.supportEmail = rev.supportEmail ?? app.supportEmail;
-      app.teamName = rev.teamName ?? app.teamName;
-      if (rev.teamTelegramChatId !== undefined) {
-        app.teamTelegramChatId = rev.teamTelegramChatId;
+      if (rev.alertTelegramChatId !== undefined || rev.teamTelegramChatId !== undefined) {
+        app.alertTelegramChatId = rev.alertTelegramChatId ?? rev.teamTelegramChatId ?? app.alertTelegramChatId;
       }
       app.integrationMethod = rev.integrationMethod ?? app.integrationMethod;
       app.integrationConfig = rev.integrationConfig ?? app.integrationConfig;
-      app.permissions = rev.permissions ?? app.permissions;
+      if (rev.capabilities || rev.permissions) {
+        app.capabilities = rev.capabilities ?? rev.permissions ?? app.capabilities;
+      }
       app.pendingRevision = null;
     }
 
-    app.status = 'APPROVED';
+    app.lifecycleStatus = MiniAppLifecycleStatus.APPROVED;
     await this.miniappRepository.save(app);
 
     // Auto-inject Flutter package dependency into SuperApp pubspec.yaml if applicable
     if ((app.integrationMethod || '').toUpperCase() === 'FLUTTER_PACKAGE') {
       try {
         const pkgName = app.integrationConfig?.packageName || (app.name || '').toLowerCase().replace(/[^a-z0-9_]/g, '_');
-        const rawVer = app.integrationConfig?.versionConstraint || app.version || '1.0.0';
+        const rawVer = app.integrationConfig?.versionConstraint || app.currentReleaseVersion || (app as any).version || '1.0.0';
         const pkgVer = String(rawVer).replace(/^[\^~>=<]+/, '') || '1.0.0';
         const storagePath = app.integrationConfig?.packageStoragePath;
 
@@ -588,7 +594,7 @@ export class MiniappLifecycleHelper {
     }
 
     // 2. Dispatch Email to MiniApp Owner
-    const targetEmail = app.ownerEmail || app.owner?.email;
+    const targetEmail = (app as any).ownerEmail || app.supportEmail || app.owner?.email;
     if (targetEmail) {
       await this.mailService.sendMiniAppApprovedEmail(
         targetEmail,
@@ -625,17 +631,18 @@ export class MiniappLifecycleHelper {
       newVal?: any,
     ) => Promise<void>,
   ) {
-    if (app.status === 'ACTIVE' && app.pendingRevision) {
+    const currentStatus = (app.lifecycleStatus || (app as any).status || '').toUpperCase();
+    if ((currentStatus === 'ACTIVE' || app.availabilityStatus === MiniAppAvailabilityStatus.PRODUCTION) && app.pendingRevision) {
       return this.discardRevision(app, actorId, logActivityFn, reason);
     }
 
     const validStatuses = ['IN_REVIEW', 'SUBMITTED', 'APPROVED', 'TESTING'];
-    if (!validStatuses.includes(app.status?.toUpperCase())) {
+    if (!validStatuses.includes(currentStatus)) {
       throw new BadRequestException(
-        `App cannot be rejected from current status: ${app.status}`,
+        `App cannot be rejected from current status: ${app.lifecycleStatus || currentStatus}`,
       );
     }
-    app.status = 'REJECTED';
+    app.lifecycleStatus = MiniAppLifecycleStatus.REJECTED;
     await this.miniappRepository.save(app);
 
     // 1. Dispatch Notification (WebSocket + Telegram to MA Manager, MA Team Group, & SA Admins)
@@ -650,7 +657,7 @@ export class MiniappLifecycleHelper {
     }
 
     // 2. Dispatch Email to MiniApp Owner
-    const targetEmail = app.ownerEmail || app.owner?.email;
+    const targetEmail = (app as any).ownerEmail || app.supportEmail || app.owner?.email;
     if (targetEmail) {
       await this.mailService.sendMiniAppRejectedEmail(
         targetEmail,
@@ -688,7 +695,11 @@ export class MiniappLifecycleHelper {
       newVal?: any,
     ) => Promise<void>,
   ) {
-    if (app.status === 'ACTIVE' && app.pendingRevision) {
+    const currentStatus = (app.lifecycleStatus || (app as any).status || '').toUpperCase();
+    if ((currentStatus === 'ACTIVE' || app.availabilityStatus === MiniAppAvailabilityStatus.PRODUCTION) && app.pendingRevision) {
+      if (!app.lifecycleStatus) {
+        app.lifecycleStatus = (app as any).status || 'ACTIVE';
+      }
       app.pendingRevision = {
         ...app.pendingRevision,
         revisionStatus: 'DRAFT',
@@ -708,7 +719,7 @@ export class MiniappLifecycleHelper {
         );
       }
 
-      const targetEmail = app.ownerEmail || app.owner?.email;
+      const targetEmail = app.owner?.email || (app as any).ownerEmail;
       if (targetEmail) {
         await this.mailService.sendChangesRequestedEmail(
           targetEmail,
@@ -732,7 +743,7 @@ export class MiniappLifecycleHelper {
       return app;
     }
 
-    app.status = 'DRAFT';
+    app.lifecycleStatus = MiniAppLifecycleStatus.CHANGES_REQUESTED;
     await this.miniappRepository.save(app);
 
     // 1. Dispatch Notification (WebSocket + Telegram to MA Manager, MA Team Group, & SA Admins)
@@ -747,7 +758,7 @@ export class MiniappLifecycleHelper {
     }
 
     // 2. Dispatch Email to MiniApp Owner
-    const targetEmail = app.ownerEmail || app.owner?.email;
+    const targetEmail = (app as any).ownerEmail || app.supportEmail || app.owner?.email;
     if (targetEmail) {
       await this.mailService.sendChangesRequestedEmail(
         targetEmail,
@@ -785,14 +796,15 @@ export class MiniappLifecycleHelper {
     ) => Promise<void>,
   ) {
     const id = app.id;
+    const currentStatus = (app.lifecycleStatus || (app as any).status || '').toUpperCase();
     const validStatuses = ['APPROVED', 'BUILDING', 'IN_REVIEW', 'TESTING', 'ACTIVE', 'BUILD_FAILED'];
-    if (!validStatuses.includes(app.status?.toUpperCase())) {
+    if (!validStatuses.includes(currentStatus) && app.availabilityStatus !== MiniAppAvailabilityStatus.TESTING) {
       throw new BadRequestException(
-        `App must be in APPROVED, BUILDING, IN_REVIEW, TESTING, ACTIVE, or BUILD_FAILED status before moving to TESTING (current: ${app.status})`,
+        `App must be in APPROVED, BUILDING, IN_REVIEW, TESTING, ACTIVE, or BUILD_FAILED status before moving to TESTING (current: ${app.lifecycleStatus || currentStatus})`,
       );
     }
 
-    if (app.status === 'ACTIVE' && app.pendingRevision) {
+    if ((currentStatus === 'ACTIVE' || app.availabilityStatus === MiniAppAvailabilityStatus.PRODUCTION) && app.pendingRevision) {
       const releaseVersion = await this.superAppService.getAndRegisterNextVersion();
       app.activeTestVersion = releaseVersion;
       app.pendingRevision = {
@@ -844,7 +856,8 @@ export class MiniappLifecycleHelper {
     }
 
     // For APPROVED, IN_REVIEW, TESTING, BUILDING, BUILD_FAILED
-    app.status = 'BUILDING';
+    app.lifecycleStatus = MiniAppLifecycleStatus.APPROVED;
+    app.availabilityStatus = MiniAppAvailabilityStatus.TESTING;
     app.buildStatus = 'BUILDING';
     app.buildError = null as any;
     await this.miniappRepository.update(app.id, {
@@ -973,8 +986,11 @@ export class MiniappLifecycleHelper {
     ) => Promise<void>,
   ) {
     const id = app.id;
-    const validStatuses = ['TESTING', 'APPROVED'];
-    if (!validStatuses.includes(app.status?.toUpperCase())) {
+    const currentStatus = (app.lifecycleStatus || (app as any).status || '').toUpperCase();
+    const isTestingOrApproved =
+      ['TESTING', 'APPROVED'].includes(currentStatus) ||
+      app.availabilityStatus === MiniAppAvailabilityStatus.TESTING;
+    if (!isTestingOrApproved) {
       throw new BadRequestException(
         'App must be in TESTING or APPROVED status to activate',
       );
@@ -1002,7 +1018,8 @@ export class MiniappLifecycleHelper {
       );
     }
 
-    app.status = 'ACTIVE';
+    app.lifecycleStatus = MiniAppLifecycleStatus.APPROVED;
+    app.availabilityStatus = MiniAppAvailabilityStatus.PRODUCTION;
     await this.miniappRepository.save(app);
 
     if (app.ownerId) {
@@ -1015,7 +1032,7 @@ export class MiniappLifecycleHelper {
       );
     }
 
-    const targetLiveEmail = app.ownerEmail || app.owner?.email;
+    const targetLiveEmail = (app as any).ownerEmail || app.supportEmail || app.owner?.email;
     if (targetLiveEmail) {
       await this.mailService.sendMiniAppActivatedEmail(
         targetLiveEmail,
@@ -1053,7 +1070,7 @@ export class MiniappLifecycleHelper {
       newVal?: any,
     ) => Promise<void>,
   ) {
-    app.status = 'SUSPENDED';
+    app.availabilityStatus = MiniAppAvailabilityStatus.SUSPENDED;
     await this.miniappRepository.save(app);
     await logActivityFn(
       app.id,
@@ -1090,25 +1107,29 @@ export class MiniappLifecycleHelper {
     const oldVal = { ...app };
 
     app.name = rev.name ?? app.name;
-    app.shortDescription = rev.shortDescription ?? app.shortDescription;
-    app.fullDescription = rev.fullDescription ?? app.fullDescription;
+    app.tagline = rev.tagline ?? rev.shortDescription ?? app.tagline;
+    app.description = rev.description ?? rev.fullDescription ?? app.description;
     app.logo = rev.logo ?? app.logo;
-    app.category = rev.category ?? app.category;
-    app.termsUrl = rev.termsUrl ?? app.termsUrl;
-    app.termsDescription = rev.termsDescription ?? app.termsDescription;
-    app.privacyPolicyUrl = rev.privacyPolicyUrl ?? app.privacyPolicyUrl;
-    app.privacyPolicyDescription =
-      rev.privacyPolicyDescription ?? app.privacyPolicyDescription;
-    app.ownerName = rev.ownerName ?? app.ownerName;
-    app.ownerEmail = rev.ownerEmail ?? app.ownerEmail;
+    if (rev.termsUrl || rev.termsDescription || rev.privacyPolicyUrl || rev.privacyPolicyDescription) {
+      if (!app.legal) {
+        app.legal = new MiniAppLegal();
+        app.legal.miniApp = app;
+        app.legal.miniAppId = app.id;
+      }
+      if (rev.termsUrl !== undefined) app.legal.termsUrl = rev.termsUrl;
+      if (rev.termsDescription !== undefined) app.legal.termsDescription = rev.termsDescription;
+      if (rev.privacyPolicyUrl !== undefined) app.legal.privacyPolicyUrl = rev.privacyPolicyUrl;
+      if (rev.privacyPolicyDescription !== undefined) app.legal.privacyPolicyDescription = rev.privacyPolicyDescription;
+    }
     app.supportEmail = rev.supportEmail ?? app.supportEmail;
-    app.teamName = rev.teamName ?? app.teamName;
-    if (rev.teamTelegramChatId !== undefined) {
-      app.teamTelegramChatId = rev.teamTelegramChatId;
+    if (rev.alertTelegramChatId !== undefined || rev.teamTelegramChatId !== undefined) {
+      app.alertTelegramChatId = rev.alertTelegramChatId ?? rev.teamTelegramChatId ?? app.alertTelegramChatId;
     }
     app.integrationMethod = rev.integrationMethod ?? app.integrationMethod;
     app.integrationConfig = rev.integrationConfig ?? app.integrationConfig;
-    app.permissions = rev.permissions ?? app.permissions;
+    if (rev.capabilities || rev.permissions) {
+      app.capabilities = rev.capabilities ?? rev.permissions ?? app.capabilities;
+    }
     if (rev.isDomainVerified !== undefined)
       app.isDomainVerified = rev.isDomainVerified;
     if (rev.domainVerifiedAt !== undefined)
@@ -1128,10 +1149,9 @@ export class MiniappLifecycleHelper {
         ? `1.${parseInt(app.currentReleaseVersion.split('.')[1] || '0', 10) + 1}.0`
         : '1.1.0');
     app.currentReleaseVersion = nextVersion;
-    app.version = nextVersion;
 
-    const history = Array.isArray(app.versionHistory)
-      ? [...app.versionHistory]
+    const history = Array.isArray((app as any).versionHistory)
+      ? [...(app as any).versionHistory]
       : [];
     history.forEach((h: any) => {
       if (h.type === 'PRODUCTION' && h.status === 'ACTIVE') {
@@ -1155,12 +1175,17 @@ export class MiniappLifecycleHelper {
           .digest('hex')
           .substring(0, 16),
       releasedAt: new Date().toISOString(),
-      releasedBy: actorId || app.ownerName || 'MiniApp Manager',
+      releasedBy: actorId || app.owner?.name || (app as any).ownerName || 'MiniApp Manager',
     });
-    app.versionHistory = history;
+    (app as any).versionHistory = history;
 
     app.pendingRevision = null;
-    app.status = 'ACTIVE';
+    if (app.lifecycleStatus === 'ACTIVE' || (app as any).status === 'ACTIVE') {
+      app.lifecycleStatus = 'ACTIVE';
+    } else {
+      app.lifecycleStatus = MiniAppLifecycleStatus.APPROVED;
+    }
+    app.availabilityStatus = MiniAppAvailabilityStatus.PRODUCTION;
 
     await this.miniappRepository.save(app);
 
@@ -1219,6 +1244,12 @@ export class MiniappLifecycleHelper {
 
     const oldRev = app.pendingRevision;
     app.pendingRevision = null;
+    if (!app.capabilities && (app as any).permissions) {
+      app.capabilities = (app as any).permissions;
+    }
+    if (!app.lifecycleStatus) {
+      app.lifecycleStatus = (app as any).status || 'ACTIVE';
+    }
     await this.miniappRepository.save(app);
 
     // 1. Dispatch Notification
@@ -1233,7 +1264,7 @@ export class MiniappLifecycleHelper {
     }
 
     // 2. Dispatch Email
-    const targetEmail = app.ownerEmail || app.owner?.email;
+    const targetEmail = (app as any).ownerEmail || app.supportEmail || app.owner?.email;
     if (targetEmail) {
       await this.mailService.sendMiniAppRejectedEmail(
         targetEmail,
@@ -1279,7 +1310,7 @@ export class MiniappLifecycleHelper {
       throw new BadRequestException('Target version is required for rollback');
     }
 
-    const history = Array.isArray(app.versionHistory) ? [...app.versionHistory] : [];
+    const history = Array.isArray((app as any).versionHistory) ? [...(app as any).versionHistory] : [];
     const targetRecord = history.find((h: any) => h.version === targetVersion);
     if (!targetRecord) {
       throw new BadRequestException(
@@ -1288,11 +1319,11 @@ export class MiniappLifecycleHelper {
     }
 
     const oldVal = { ...app };
-    const prevVersion = app.currentReleaseVersion || app.version;
+    const prevVersion = app.currentReleaseVersion || (app as any).version;
 
     app.currentReleaseVersion = targetVersion;
-    app.version = targetVersion;
-    app.status = 'ACTIVE';
+    app.lifecycleStatus = MiniAppLifecycleStatus.APPROVED;
+    app.availabilityStatus = MiniAppAvailabilityStatus.PRODUCTION;
 
     if (targetRecord.integrationConfig) {
       app.integrationConfig = {
@@ -1301,7 +1332,7 @@ export class MiniappLifecycleHelper {
       };
     }
     if (targetRecord.permissions) {
-      app.permissions = targetRecord.permissions;
+      app.capabilities = targetRecord.permissions;
     }
     if (targetRecord.packageName && app.integrationConfig) {
       app.integrationConfig.packageName = targetRecord.packageName;
@@ -1319,7 +1350,7 @@ export class MiniappLifecycleHelper {
         h.status = 'SUPERSEDED';
       }
     });
-    app.versionHistory = history;
+    (app as any).versionHistory = history;
 
     await this.miniappRepository.save(app);
 

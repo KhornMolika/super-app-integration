@@ -75,12 +75,15 @@ export class MiniappsService implements OnApplicationBootstrap {
       const apps = await this.miniappRepository.find();
       for (const app of apps) {
         let changed = false;
-        if (!app.organizationCode || !app.organization) {
-          const resolved = await resolveOrganizationDetails(app.organization || app.category);
-          app.organization = resolved.name;
-          app.organizationCode = resolved.code;
-          app.category = resolved.name;
-          changed = true;
+        if (!app.organizationId) {
+          const rawOrg = (app as any).organization || (app as any).category;
+          if (rawOrg) {
+            const resolved = await resolveOrganizationDetails(rawOrg);
+            if (resolved?.id) {
+              app.organizationId = resolved.id;
+              changed = true;
+            }
+          }
         }
         if (!app.logo || app.logo.trim() === '') {
           app.logo = 'https://app.fintechcenterfsa.com/fsa-logo.png';
@@ -267,7 +270,7 @@ export class MiniappsService implements OnApplicationBootstrap {
     if (isElevated && !isMineRequested) {
       const where: any = {};
       if (typeof queryOrOwnerId === 'object' && queryOrOwnerId?.status) {
-        where.status = queryOrOwnerId.status;
+        where.lifecycleStatus = queryOrOwnerId.status;
       }
       return this.miniappRepository.find({
         where,
@@ -306,9 +309,12 @@ export class MiniappsService implements OnApplicationBootstrap {
     }
 
     if (typeof queryOrOwnerId === 'object' && queryOrOwnerId?.status) {
-      qb.andWhere('app.status = :reqStatus', {
-        reqStatus: queryOrOwnerId.status,
-      });
+      qb.andWhere(
+        '(app.lifecycleStatus = :reqStatus OR app.availabilityStatus = :reqStatus)',
+        {
+          reqStatus: queryOrOwnerId.status,
+        },
+      );
     }
 
     return qb.getMany();
@@ -375,12 +381,10 @@ export class MiniappsService implements OnApplicationBootstrap {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
 
-    // Hard Gate Check (Phase 1): Pre-publish validation against real SuperApp capability registry
-    if (this.permissionsService && app.permissions && Array.isArray(app.permissions) && app.permissions.length > 0) {
+    const rawCaps = (app as any).capabilities || (app as any).permissions;
+    if (this.permissionsService && rawCaps && Array.isArray(rawCaps) && rawCaps.length > 0) {
       const capabilityCheck =
-        await this.permissionsService.validateMiniAppCapabilities(
-          app.permissions,
-        );
+        await this.permissionsService.validateMiniAppCapabilities(rawCaps);
       if (!capabilityCheck.isValid) {
         throw new BadRequestException({
           statusCode: 400,
@@ -531,7 +535,7 @@ export class MiniappsService implements OnApplicationBootstrap {
         'Codegen only applies to NATIVE_SDK mini apps.',
       );
     }
-    if (!['APPROVED', 'ACTIVE'].includes(app.status?.toUpperCase())) {
+    if (!['APPROVED', 'ACTIVE'].includes((app.lifecycleStatus || (app as any).status)?.toUpperCase())) {
       throw new BadRequestException(
         'Approve the mini app before verifying native launcher configuration.',
       );
@@ -561,12 +565,10 @@ export class MiniappsService implements OnApplicationBootstrap {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
 
-    // Final Gate Check (Phase 1): Ensure no unsupported required capabilities pass approval
-    if (app.permissions && Array.isArray(app.permissions) && app.permissions.length > 0) {
+    const rawCaps = (app as any).capabilities || (app as any).permissions;
+    if (rawCaps && Array.isArray(rawCaps) && rawCaps.length > 0) {
       const capabilityCheck =
-        await this.permissionsService.validateMiniAppCapabilities(
-          app.permissions,
-        );
+        await this.permissionsService.validateMiniAppCapabilities(rawCaps);
       if (!capabilityCheck.isValid) {
         throw new BadRequestException({
           statusCode: 400,
@@ -769,7 +771,9 @@ export class MiniappsService implements OnApplicationBootstrap {
       return VersionDiffHelper.computeDiff(app, app);
     }
 
-    const history = Array.isArray(app.versionHistory) ? app.versionHistory : [];
+    const history = Array.isArray((app as any).versionHistory)
+      ? (app as any).versionHistory
+      : (app.versions || []);
     const baseRecord = history.find((h) => h.version === baseVer) || app;
     const targetRecord =
       history.find((h) => h.version === targetVer) ||

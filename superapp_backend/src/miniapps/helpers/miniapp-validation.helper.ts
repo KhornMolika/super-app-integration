@@ -60,7 +60,8 @@ export class MiniappValidationHelper {
     const urlValidator = new IsUrlReachableConstraint();
     const checks: Promise<void>[] = [];
 
-    if (!app.ownerEmail || !isEmail(app.ownerEmail)) {
+    const ownerEmail = (app as any).ownerEmail || app.supportEmail || app.owner?.email;
+    if (!ownerEmail || !isEmail(ownerEmail)) {
       errors.ownerEmail = 'ownerEmail must be a valid email address.';
     }
     if (app.supportEmail && !isEmail(app.supportEmail)) {
@@ -363,9 +364,10 @@ export class MiniappValidationHelper {
       }
     }
 
-    if (app.termsUrl && app.termsUrl.trim() !== '') {
+    const termsUrl = app.legal?.termsUrl || (app as any).termsUrl;
+    if (termsUrl && termsUrl.trim() !== '') {
       checks.push(
-        urlValidator.validate(app.termsUrl, null as any).then((isValid) => {
+        urlValidator.validate(termsUrl, null as any).then((isValid) => {
           if (!isValid)
             errors.termsUrl =
               'The Terms & Conditions URL is unreachable. Please verify the link is publicly accessible.';
@@ -373,10 +375,11 @@ export class MiniappValidationHelper {
       );
     }
 
-    if (app.privacyPolicyUrl && app.privacyPolicyUrl.trim() !== '') {
+    const privacyPolicyUrl = app.legal?.privacyPolicyUrl || (app as any).privacyPolicyUrl;
+    if (privacyPolicyUrl && privacyPolicyUrl.trim() !== '') {
       checks.push(
         urlValidator
-          .validate(app.privacyPolicyUrl, null as any)
+          .validate(privacyPolicyUrl, null as any)
           .then((isValid) => {
             if (!isValid)
               errors.privacyPolicyUrl =
@@ -385,9 +388,10 @@ export class MiniappValidationHelper {
       );
     }
 
-    if (app.permissions && Array.isArray(app.permissions)) {
-      for (let index = 0; index < app.permissions.length; index++) {
-        const perm = app.permissions[index];
+    const rawCapabilities = (app as any).capabilities || (app as any).permissions;
+    if (rawCapabilities && Array.isArray(rawCapabilities)) {
+      for (let index = 0; index < rawCapabilities.length; index++) {
+        const perm = rawCapabilities[index];
         const permKey = perm.type || 'unknown';
 
         if (!perm.purpose || perm.purpose.trim() === '') {
@@ -439,7 +443,13 @@ export class MiniappValidationHelper {
     // Clear old issues
     await this.issueRepository.delete({ miniAppId: id });
 
-    const isLive = app.status === 'ACTIVE' || app.status === 'TESTING' || Boolean(app.pendingRevision);
+    const isLive =
+      app.lifecycleStatus === 'ACTIVE' ||
+      app.availabilityStatus === 'TESTING' ||
+      app.availabilityStatus === 'PRODUCTION' ||
+      (app as any).status === 'ACTIVE' ||
+      (app as any).status === 'TESTING' ||
+      Boolean(app.pendingRevision);
 
     if (Object.keys(errors).length > 0) {
       const updatePayload: any = {
@@ -447,7 +457,7 @@ export class MiniappValidationHelper {
         validationStatus: 'FAILED',
       };
       if (!isLive) {
-        updatePayload.status = 'DRAFT';
+        updatePayload.lifecycleStatus = 'DRAFT';
       } else if (app.pendingRevision) {
         updatePayload.pendingRevision = {
           ...app.pendingRevision,
@@ -497,9 +507,10 @@ export class MiniappValidationHelper {
         );
       }
 
-      if (app.ownerEmail) {
+      const failEmail = (app as any).ownerEmail || app.supportEmail || app.owner?.email;
+      if (failEmail) {
         await this.mailService.sendRegistrationFailureEmail(
-          app.ownerEmail,
+          failEmail,
           app.name || app.appId || 'Unknown App',
           errors,
         );
@@ -517,7 +528,7 @@ export class MiniappValidationHelper {
         validationErrors: null as any,
       };
       if (!isLive) {
-        updatePayload.status = 'SUBMITTED';
+        updatePayload.lifecycleStatus = 'SUBMITTED';
       } else if (app.pendingRevision) {
         updatePayload.pendingRevision = {
           ...app.pendingRevision,
@@ -531,8 +542,8 @@ export class MiniappValidationHelper {
       const allowLocal = envVal === 'DEV';
       const cfg = app.integrationConfig || {};
 
-      const declaredPerms = Array.isArray(app.permissions)
-        ? app.permissions
+      const declaredPerms = Array.isArray((app as any).capabilities || (app as any).permissions)
+        ? ((app as any).capabilities || (app as any).permissions)
             .map((p: any) => (typeof p === 'string' ? p : p.name || p.id || p.type))
             .filter(Boolean)
         : [];
@@ -658,7 +669,7 @@ export class MiniappValidationHelper {
       metadata: {
         miniAppName: app.name,
         miniAppId: app.appId || app.id,
-        category: app.category,
+        category: app.tagline || (app as any).category,
         requestedSource: 'MINIAPP_REGISTRATION',
       },
     });

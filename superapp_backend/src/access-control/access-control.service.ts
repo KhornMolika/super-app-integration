@@ -10,6 +10,7 @@ import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 
 import { hashPassword, verifyPassword } from '../common/utils/password.util';
+import { formatUserResponse } from './helpers/user-response.helper';
 
 export const OFFICIAL_SEEDS: Record<string, { name: string; roleName: string }> = {
   'molikakhorn71@gmail.com': { name: 'Molika Khorn', roleName: 'SUPER_ADMIN' },
@@ -61,10 +62,6 @@ export class AccessControlService {
           userChanged = true;
         }
       }
-      if (user.isActive !== true) {
-        user.isActive = true;
-        userChanged = true;
-      }
       if (user.status !== 'ACTIVE') {
         user.status = 'ACTIVE';
         userChanged = true;
@@ -102,7 +99,7 @@ export class AccessControlService {
       }
     }
 
-    return user;
+    return user ? (formatUserResponse(user) as User) : null;
   }
 
   private async ensureSeedAccount(email: string): Promise<User | null> {
@@ -136,20 +133,21 @@ export class AccessControlService {
       name: seedInfo.name,
       roleId: role.id,
       role: role,
-      isActive: true,
       status: 'ACTIVE',
       passwordHash,
     });
 
     await this.userRepository.save(user);
 
-    return this.userRepository
+    const created = await this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.role', 'role')
       .leftJoinAndSelect('role.permissions', 'permission')
       .leftJoinAndSelect('user.organization', 'organization')
       .where('LOWER(TRIM(user.email)) = :email', { email })
       .getOne();
+
+    return created ? (formatUserResponse(created) as User) : null;
   }
 
   // --- User Management ---
@@ -169,11 +167,7 @@ export class AccessControlService {
     }
 
     const users = await qb.getMany();
-    return users.map((u) => {
-      (u as any).roles = u.role ? [u.role] : [];
-      (u as any).isActive = u.status === 'ACTIVE';
-      return u;
-    });
+    return users.map((u) => formatUserResponse(u) as User);
   }
 
   async findUserById(id: string): Promise<User> {
@@ -184,9 +178,7 @@ export class AccessControlService {
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
-    (user as any).roles = user.role ? [user.role] : [];
-    (user as any).isActive = user.status === 'ACTIVE';
-    return user;
+    return formatUserResponse(user) as User;
   }
 
   private isRequesterSuperAdmin(requester?: any): boolean {
@@ -232,16 +224,15 @@ export class AccessControlService {
       email: dto.email.toLowerCase().trim(),
       roleId: roles[0]?.id,
       role: roles[0],
-      roles,
       organizationId: dto.organizationId || undefined,
-      telegramChatId: dto.telegramChatId || undefined,
+      telegramChatId: dto.telegramChatId || (dto as any).teamTelegramChatId || undefined,
       telegramUsername: dto.telegramUsername || undefined,
-      isActive: dto.isActive !== undefined ? dto.isActive : roles.length > 0,
       status: dto.status || (dto.isActive === false || roles.length === 0 ? 'PENDING_APPROVAL' : 'ACTIVE'),
       passwordHash: dto.passwordHash || undefined,
     });
 
-    return this.userRepository.save(user);
+    const saved = await this.userRepository.save(user);
+    return formatUserResponse(saved) as User;
   }
 
   async updateUser(
@@ -257,7 +248,8 @@ export class AccessControlService {
         requester.sub === id ||
         (requester.email && requester.email.toLowerCase() === user.email.toLowerCase()));
 
-    const isTargetSuperAdmin = (user.roles || []).some((r) => r.name === 'SUPER_ADMIN');
+    const targetRoles = (user as any).roles || (user.role ? [user.role] : []);
+    const isTargetSuperAdmin = targetRoles.some((r: any) => r.name === 'SUPER_ADMIN');
     if (isTargetSuperAdmin && !isSuperAdmin && !isSelf) {
       throw new ForbiddenException('Administrators cannot modify Super Admin accounts');
     }
@@ -274,7 +266,9 @@ export class AccessControlService {
     }
     if (dto.telegramChatId !== undefined) user.telegramChatId = dto.telegramChatId;
     if (dto.telegramUsername !== undefined) user.telegramUsername = dto.telegramUsername;
-    if (dto.teamTelegramChatId !== undefined) user.teamTelegramChatId = dto.teamTelegramChatId;
+    if (dto.teamTelegramChatId !== undefined && !dto.telegramChatId) {
+      user.telegramChatId = dto.teamTelegramChatId;
+    }
     if (dto.organizationId !== undefined) user.organizationId = dto.organizationId;
     if (dto.status !== undefined) user.status = dto.status;
 
@@ -287,7 +281,6 @@ export class AccessControlService {
     // Only administrators or superadmins can modify account active status and roles
     if (!isSelf || isSuperAdmin) {
       if (dto.isActive !== undefined) {
-        user.isActive = dto.isActive;
         user.status = dto.isActive ? 'ACTIVE' : 'DEACTIVATED';
       }
     }
@@ -308,14 +301,13 @@ export class AccessControlService {
       }
       user.role = newRoles[0];
       user.roleId = newRoles[0]?.id;
-      user.roles = newRoles;
       if (newRoles.length > 0 && user.status === 'PENDING_APPROVAL') {
         user.status = 'ACTIVE';
-        user.isActive = true;
       }
     }
 
-    return this.userRepository.save(user);
+    const saved = await this.userRepository.save(user);
+    return formatUserResponse(saved) as User;
   }
 
   async approveUser(
@@ -340,17 +332,17 @@ export class AccessControlService {
 
     user.role = role;
     user.roleId = role.id;
-    user.roles = [role];
-    user.isActive = true;
     user.status = 'ACTIVE';
 
-    return this.userRepository.save(user);
+    const saved = await this.userRepository.save(user);
+    return formatUserResponse(saved) as User;
   }
 
   async deleteUser(id: string, requester?: any): Promise<{ success: boolean; message: string }> {
     const user = await this.findUserById(id);
     const isSuperAdmin = this.isRequesterSuperAdmin(requester);
-    const isTargetSuperAdmin = (user.roles || []).some((r) => r.name === 'SUPER_ADMIN');
+    const targetRoles = (user as any).roles || (user.role ? [user.role] : []);
+    const isTargetSuperAdmin = targetRoles.some((r: any) => r.name === 'SUPER_ADMIN');
 
     if (isTargetSuperAdmin && !isSuperAdmin) {
       throw new ForbiddenException('Administrators cannot delete Super Admin accounts');
@@ -363,18 +355,8 @@ export class AccessControlService {
   async updateUserStatus(id: string, status: string): Promise<User> {
     const user = await this.findUserById(id);
     user.status = status;
-    if (status === 'ACTIVE') {
-      user.isActive = true;
-    } else if (
-      status === 'PENDING_APPROVAL' ||
-      status === 'PENDING_EMAIL_VERIFICATION' ||
-      status === 'INACTIVE' ||
-      status === 'SUSPENDED' ||
-      status === 'REJECTED'
-    ) {
-      user.isActive = false;
-    }
-    return this.userRepository.save(user);
+    const saved = await this.userRepository.save(user);
+    return formatUserResponse(saved) as User;
   }
 
   // --- Role Management ---

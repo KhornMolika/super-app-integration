@@ -122,7 +122,7 @@ export class NativeSdkCodegenService {
    */
   async loadVendors(): Promise<NativeSdkVendor[]> {
     const apps = await this.miniappRepository.find({
-      where: { integrationMethod: 'NATIVE_SDK', status: In(LIVE_STATUSES) },
+      where: { integrationMethod: 'NATIVE_SDK', lifecycleStatus: In(LIVE_STATUSES) },
       order: { appId: 'ASC' },
     });
 

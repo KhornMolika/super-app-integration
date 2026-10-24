@@ -69,7 +69,7 @@ describe('MiniappLifecycleHelper - Revision & Approval Lifecycle', () => {
 
       const result = await helper.submitForReview(app, 'user-1', mockLogActivityFn);
 
-      expect(result.status).toBe('SUBMITTED');
+      expect(result.lifecycleStatus).toBe('SUBMITTED');
       expect(result.validationStatus).toBe('RUNNING');
       expect(mockMiniappRepo.save).toHaveBeenCalled();
     });
@@ -86,7 +86,7 @@ describe('MiniappLifecycleHelper - Revision & Approval Lifecycle', () => {
 
       const result = await helper.approve(app, 'admin-1', mockLogActivityFn);
 
-      expect(result.status).toBe('APPROVED');
+      expect(result.lifecycleStatus).toBe('APPROVED');
       expect(result.pendingRevision).toBeFalsy();
       expect(mockNotificationsService.createNotification).toHaveBeenCalledWith(
         'user-1',
@@ -105,6 +105,7 @@ describe('MiniappLifecycleHelper - Revision & Approval Lifecycle', () => {
         id: 'app-active-1',
         appId: 'com.test.ss',
         name: 'SS Banking (Original)',
+        lifecycleStatus: 'ACTIVE',
         status: 'ACTIVE',
         currentReleaseVersion: '1.0.0',
         version: '1.0.0',
@@ -128,19 +129,19 @@ describe('MiniappLifecycleHelper - Revision & Approval Lifecycle', () => {
       const result = await helper.approve(app, 'admin-1', mockLogActivityFn);
 
       // Verify that status remains ACTIVE
-      expect(result.status).toBe('ACTIVE');
+      expect(result.lifecycleStatus).toBe('ACTIVE');
       // Verify pendingRevision is completely cleared
       expect(result.pendingRevision).toBeNull();
       // Verify proposed revision fields are merged into live entity
       expect(result.name).toBe('SS Banking (Updated)');
-      expect(result.permissions).toEqual(['camera', 'biometrics']);
+      expect(result.capabilities).toEqual(['camera', 'biometrics']);
       // Verify version bump
       expect(result.currentReleaseVersion).toBe('1.1.0');
       // Verify versionHistory has new active release and previous superseded
-      expect(result.versionHistory?.length).toBe(2);
-      expect(result.versionHistory?.[0].version).toBe('1.1.0');
-      expect(result.versionHistory?.[0].status).toBe('ACTIVE');
-      expect(result.versionHistory?.[1].status).toBe('PREVIOUS');
+      expect((result as any).versionHistory?.length).toBe(2);
+      expect((result as any).versionHistory?.[0].version).toBe('1.1.0');
+      expect((result as any).versionHistory?.[0].status).toBe('ACTIVE');
+      expect((result as any).versionHistory?.[1].status).toBe('PREVIOUS');
     });
   });
 
@@ -150,8 +151,10 @@ describe('MiniappLifecycleHelper - Revision & Approval Lifecycle', () => {
         id: 'app-active-2',
         appId: 'com.test.ss',
         name: 'SS Banking Live',
+        lifecycleStatus: 'ACTIVE',
         status: 'ACTIVE',
         currentReleaseVersion: '1.0.0',
+        capabilities: ['camera'],
         permissions: ['camera'],
         ownerId: 'user-1',
         ownerEmail: 'owner@test.com',
@@ -170,11 +173,11 @@ describe('MiniappLifecycleHelper - Revision & Approval Lifecycle', () => {
       );
 
       // Status MUST stay ACTIVE
-      expect(result.status).toBe('ACTIVE');
+      expect(result.lifecycleStatus).toBe('ACTIVE');
       // Pending revision must be discarded
       expect(result.pendingRevision).toBeNull();
       // Live permissions must NOT be modified
-      expect(result.permissions).toEqual(['camera']);
+      expect(result.capabilities).toEqual(['camera']);
       // Discard notification must be dispatched
       expect(mockNotificationsService.createNotification).toHaveBeenCalledWith(
         'user-1',
@@ -192,6 +195,7 @@ describe('MiniappLifecycleHelper - Revision & Approval Lifecycle', () => {
         id: 'app-active-3',
         appId: 'com.test.ss',
         name: 'SS Banking Live',
+        lifecycleStatus: 'ACTIVE',
         status: 'ACTIVE',
         currentReleaseVersion: '1.0.0',
         ownerId: 'user-1',
@@ -211,7 +215,7 @@ describe('MiniappLifecycleHelper - Revision & Approval Lifecycle', () => {
       );
 
       // Status MUST stay ACTIVE
-      expect(result.status).toBe('ACTIVE');
+      expect(result.lifecycleStatus).toBe('ACTIVE');
       // Staged revision remains but moved to DRAFT for developer remediation
       expect(result.pendingRevision).toBeDefined();
       expect(result.pendingRevision.revisionStatus).toBe('DRAFT');

@@ -20,20 +20,6 @@ export class CapabilityProposal {
   @Column({ nullable: true })
   capabilityName!: string;
 
-  // Backwards-compatible aliases
-  get permissionKey(): string {
-    return this.capabilityKey;
-  }
-  set permissionKey(val: string) {
-    this.capabilityKey = val;
-  }
-
-  get permissionName(): string {
-    return this.capabilityName;
-  }
-  set permissionName(val: string) {
-    this.capabilityName = val;
-  }
 
   @Column({ type: 'text', nullable: true })
   description!: string;

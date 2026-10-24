@@ -1,4 +1,4 @@
-﻿import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
@@ -80,8 +80,8 @@ export class ScanFinalizerService {
       await this.pipelinePacerService.paceValidationPass(app.name || app.appId);
       app.validationStatus = 'PASSED';
       const initialStatuses = ['DRAFT', 'SUBMITTED'];
-      if (!hasPendingRevision && initialStatuses.includes(app.status)) {
-        app.status = 'IN_REVIEW';
+      if (!hasPendingRevision && initialStatuses.includes(app.lifecycleStatus)) {
+        app.lifecycleStatus = 'IN_REVIEW';
       }
       app.validationErrors = null;
       await this.miniappRepository.save(app);
@@ -98,14 +98,14 @@ export class ScanFinalizerService {
         hasPendingRevision ? 'Revision Validation Passed' : 'Automated Validation Passed',
         hasPendingRevision
           ? `All configured ${method} security checks for pending revision passed (${score}/100). Live version remains active.`
-          : initialStatuses.includes(app.status)
+          : initialStatuses.includes(app.lifecycleStatus)
           ? `All configured ${method} security checks passed successfully (${score}/100). Status updated to IN_REVIEW.`
-          : `All configured ${method} security checks passed (${score}/100). Status remains ${app.status}.`,
+          : `All configured ${method} security checks passed (${score}/100). Status remains ${app.lifecycleStatus}.`,
         'VALIDATION_SUCCESS',
         app.id,
       );
 
-      const targetPassedEmail = app.ownerEmail || app.owner?.email;
+      const targetPassedEmail = app.supportEmail || app.owner?.email || (app as any).ownerEmail;
       if (targetPassedEmail) {
         await this.mailService.sendValidationPassedEmail(
           targetPassedEmail,
@@ -121,7 +121,7 @@ export class ScanFinalizerService {
         resourceType: 'MiniApp',
         resourceId: app.id,
         newValue: {
-          status: app.status,
+          status: app.lifecycleStatus,
           validationStatus: 'PASSED',
           score,
           issuesCount: 0,
@@ -130,8 +130,8 @@ export class ScanFinalizerService {
     } else {
       app.validationStatus = 'FAILED';
       const resetToDraftStatuses = ['DRAFT', 'SUBMITTED', 'IN_REVIEW'];
-      if (!hasPendingRevision && resetToDraftStatuses.includes(app.status)) {
-        app.status = 'DRAFT';
+      if (!hasPendingRevision && resetToDraftStatuses.includes(app.lifecycleStatus)) {
+        app.lifecycleStatus = 'DRAFT';
       }
 
       const issuesToCreate: MiniAppIssue[] = [];
@@ -181,7 +181,7 @@ export class ScanFinalizerService {
         app.id,
       );
 
-      const targetFailedEmail = app.ownerEmail || app.owner?.email;
+      const targetFailedEmail = app.supportEmail || app.owner?.email || (app as any).ownerEmail;
       if (targetFailedEmail) {
         await this.mailService.sendValidationFailedEmail(
           targetFailedEmail,

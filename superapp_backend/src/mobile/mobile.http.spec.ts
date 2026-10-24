@@ -40,7 +40,7 @@ describe('Mobile HTTP (in-process)', () => {
       },
     ];
     const qb: any = {};
-    for (const m of ['select', 'where', 'andWhere', 'orderBy', 'addOrderBy', 'take', 'skip']) qb[m] = () => qb;
+    for (const m of ['select', 'where', 'andWhere', 'orderBy', 'addOrderBy', 'take', 'skip', 'leftJoinAndSelect']) qb[m] = () => qb;
     qb.getManyAndCount = async () => [miniRows, 1];
     const adminPasswordHash = await hashPassword(ADMIN_PW);
     const authInstance = new AuthService(new JwtService({}), {

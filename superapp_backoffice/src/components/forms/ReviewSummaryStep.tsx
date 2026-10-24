@@ -240,24 +240,24 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
               </div>
             </div>
 
-            {formData.shortDescription && (
+            {(formData.tagline || formData.shortDescription) && (
               <div>
                 <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">
-                  Short Tagline
+                  Tagline
                 </span>
                 <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-sm">
-                  {formData.shortDescription}
+                  {formData.tagline || formData.shortDescription}
                 </div>
               </div>
             )}
 
-            {formData.fullDescription && (
+            {(formData.description || formData.fullDescription) && (
               <div>
                 <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">
-                  Full Description
+                  Description
                 </span>
                 <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-sm max-h-28 overflow-y-auto">
-                  {formData.fullDescription}
+                  {formData.description || formData.fullDescription}
                 </div>
               </div>
             )}
@@ -363,7 +363,7 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
               <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1.5">
                 Automated Alerts & CI/CD Channel
               </span>
-              {formData.teamTelegramChatId ? (
+              {formData.alertTelegramChatId || formData.teamTelegramChatId ? (
                 <div className="flex items-center justify-between p-3 rounded-xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 text-sky-900 dark:text-sky-200">
                   <div className="flex items-center gap-2.5">
                     <svg className="w-5 h-5 text-sky-500 shrink-0" fill="currentColor" viewBox="0 0 24 24">
@@ -371,7 +371,7 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                     </svg>
                     <div>
                       <span className="font-semibold text-xs text-sky-800 dark:text-sky-200 block">Telegram Group Channel</span>
-                      <code className="font-mono text-xs text-sky-700 dark:text-sky-300 font-bold">{formData.teamTelegramChatId}</code>
+                      <code className="font-mono text-xs text-sky-700 dark:text-sky-300 font-bold">{formData.alertTelegramChatId || formData.teamTelegramChatId}</code>
                     </div>
                   </div>
                   <span className="text-[11px] font-semibold bg-sky-200/70 dark:bg-sky-900/60 text-sky-800 dark:text-sky-300 px-2 py-0.5 rounded-full">

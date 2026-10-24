@@ -28,11 +28,6 @@ export class MiniAppVersion {
   @Column()
   version!: string;
 
-  // Type column was dropped in DB, maintain virtual property for backwards compatibility
-  get type(): string {
-    return 'PRODUCTION';
-  }
-  set type(_val: string) {}
 
   @Column({ default: 'DRAFT' })
   status!: string; // ACTIVE, TESTING, PREVIOUS, DEPRECATED, SUPERSEDED, ARCHIVED, IN_REVIEW, APPROVED, DRAFT
@@ -79,12 +74,6 @@ export class MiniAppVersion {
   @Column({ type: 'jsonb', nullable: true, default: () => "'[]'" })
   permissions?: string[];
 
-  get capabilities(): string[] | undefined {
-    return this.permissions;
-  }
-  set capabilities(val: string[] | undefined) {
-    this.permissions = val;
-  }
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;

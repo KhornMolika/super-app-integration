@@ -352,7 +352,7 @@ export class SuperAppService implements OnApplicationBootstrap {
   async getReleaseHistory(): Promise<any[]> {
     const allApps = await this.miniAppRepository.find();
     const approvedApps = allApps.filter((a) =>
-      ['APPROVED', 'PUBLISHED', 'ACTIVE'].includes(a.status || ''),
+      ['APPROVED', 'PUBLISHED', 'ACTIVE'].includes(a.lifecycleStatus || ''),
     );
     const officialVer = this.getOfficialReleaseVersion();
     const nexusUrl =
@@ -373,9 +373,9 @@ export class SuperAppService implements OnApplicationBootstrap {
         (a as any).packageId ||
         a.appId ||
         `ma_${a.name.toLowerCase().replace(/[^a-z0-9_]/g, '_')}`,
-      version: a.currentReleaseVersion || a.version || '1.0.0',
+      version: a.currentReleaseVersion || (a as any).version || '1.0.0',
       integrationMethod: a.integrationMethod,
-      permissions: Array.isArray(a.permissions) ? a.permissions : [],
+      permissions: Array.isArray(a.capabilities) ? a.capabilities : [],
       status: releaseStatus,
     });
 
@@ -417,7 +417,7 @@ export class SuperAppService implements OnApplicationBootstrap {
             apkUrl: `${nexusUrl}/repository/superapp-binaries/releases/superapp/${item.superAppVersion}/superapp-${item.superAppVersion}-debug.apk`,
             capabilities: releaseCaps,
             bundledMiniApps: approvedApps.map((a) =>
-              formatBundledApp(a, a.status || 'TESTING'),
+              formatBundledApp(a, a.lifecycleStatus || 'TESTING'),
             ),
             gate2AuditStatus: 'PASSED',
             integrityDigest: digest,
@@ -441,8 +441,8 @@ export class SuperAppService implements OnApplicationBootstrap {
               .filter(
                 (a) =>
                   a.currentReleaseVersion ||
-                  a.status === 'ACTIVE' ||
-                  a.status === 'APPROVED',
+                  a.lifecycleStatus === 'ACTIVE' ||
+                  a.lifecycleStatus === 'APPROVED',
               )
               .map((a) => formatBundledApp(a, 'ACTIVE')),
             gate2AuditStatus: 'PASSED',

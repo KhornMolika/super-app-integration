@@ -1,4 +1,4 @@
-﻿import {
+import {
   Controller,
   Get,
   Post,
@@ -50,7 +50,7 @@ export class TelegramController {
         telegramChatId: dbUser?.telegramChatId || null,
         telegramUsername: dbUser?.telegramUsername || null,
         telegramConnectedAt: dbUser?.telegramConnectedAt || null,
-        teamTelegramChatId: dbUser?.teamTelegramChatId || null,
+        teamTelegramChatId: dbUser?.telegramChatId || null,
         isConnected: !!dbUser?.telegramChatId,
       },
     };
@@ -178,7 +178,8 @@ export class TelegramController {
 
     return {
       success: true,
-      teamTelegramChatId: user?.teamTelegramChatId || null,
+      teamTelegramChatId: user?.telegramChatId || null,
+      telegramChatId: user?.telegramChatId || null,
     };
   }
 
@@ -227,7 +228,7 @@ export class TelegramController {
   ) {
     const userId = req.user?.sub || req.user?.id;
     const dbUser = userId ? await this.telegramService.getUser(userId) : null;
-    const targetChat = body.chatId?.trim() || dbUser?.teamTelegramChatId;
+    const targetChat = body.chatId?.trim() || dbUser?.telegramChatId;
 
     if (!targetChat) {
       throw new BadRequestException('Team Telegram Chat ID is required');

@@ -432,7 +432,7 @@ export class PubspecInjectorService {
 
     const approvedMiniApps = await this.miniappRepository.find({
       where: {
-        status: In(['APPROVED', 'TESTING', 'ACTIVE', 'IN_REVIEW']),
+        lifecycleStatus: In(['APPROVED', 'TESTING', 'ACTIVE', 'IN_REVIEW', 'BUILDING']),
       },
     });
 

@@ -23,6 +23,7 @@ describe('All Tasks Verification - Multi-Method MiniApps & Enterprise Plan', () 
         iosMinioKey: 'miniapp-artifacts/spa/v1.0.0/spa-booking.xcframework.zip',
         ...configOverwrites,
       },
+      lifecycleStatus: status,
       status,
     });
 
@@ -39,7 +40,7 @@ describe('All Tasks Verification - Multi-Method MiniApps & Enterprise Plan', () 
         })),
       };
       mockLifecycle = {
-        approve: jest.fn().mockImplementation(async (app) => ({ ...app, status: 'APPROVED' })),
+        approve: jest.fn().mockImplementation(async (app) => ({ ...app, lifecycleStatus: 'APPROVED', status: 'APPROVED' })),
       };
       mockCodegen = {
         regenerate: jest.fn(),
@@ -89,7 +90,7 @@ describe('All Tasks Verification - Multi-Method MiniApps & Enterprise Plan', () 
 
       const approved = await service.approve('ma-native-spa-001', 'admin-1');
 
-      expect(approved.status).toBe('APPROVED');
+      expect((approved as any).lifecycleStatus || (approved as any).status).toBe('APPROVED');
       expect(mockSdkUpload.publishToNexus).toHaveBeenCalledWith('ma-native-spa-001');
       // Zero calls to codegen service or GitLab MRs
       expect(mockCodegen.regenerate).not.toHaveBeenCalled();

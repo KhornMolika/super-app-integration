@@ -1,4 +1,4 @@
-﻿import { Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { User } from '../../../access-control/entities/user.entity';
 import { TelegramApiHelper } from './telegram-api.helper';
 import { TelegramSyncUserResult, TelegramLogger } from './telegram.types';
@@ -77,7 +77,7 @@ export class TelegramUserHelper {
     const user = await userRepository.findOne({ where: { id: userId } });
     if (!user) return null;
 
-    user.teamTelegramChatId = teamChatId ? teamChatId.trim() : undefined;
+    user.telegramChatId = teamChatId ? teamChatId.trim() : undefined;
     await userRepository.save(user);
     return user;
   }
