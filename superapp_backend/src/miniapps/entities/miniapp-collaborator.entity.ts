@@ -43,4 +43,10 @@ export class MiniAppCollaborator {
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
+
+  toJSON() {
+    const clone = { ...this };
+    delete (clone as any).miniApp;
+    return clone;
+  }
 }

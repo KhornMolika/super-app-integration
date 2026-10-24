@@ -769,12 +769,15 @@ Every task in this roadmap requires verifiable evidence (database query outputs,
     [x] Task 5.3: Ensure Next.js build passes cleanly.
     --> Evidence: Next.js backoffice build compilation succeeds (`pnpm run build` with code 0; all 33 routes generated).
 
-[ ] Phase 6: End-to-End Functional Verification & Sign-off
+[x] Phase 6: End-to-End Functional Verification & Sign-off (COMPLETED & VERIFIED)
     [x] Task 6.1: Verify authentication with official accounts (`molikakhorn71@gmail.com`, `lymoly1122@gmail.com`).
         --> Evidence: `test/task-6-1-authentication.e2e-spec.ts` passed (5/5 tests passed in 4.43s). Authenticated Super Admin and Official Admin against PostgreSQL scrypt hashes, validated RS256 token claims, permissions, and rejected invalid credentials.
-    [ ] Task 6.2: Verify MiniApp creation and automatic agency inheritance.
-    [ ] Task 6.3: Verify Option C collaboration (teammate build permissions vs lead submit restriction).
-    [ ] Task 6.4: Verify cross-agency strict firewall isolation.
-    --> Evidence: Complete verification test report with API responses and screenshot evidence.
+    [x] Task 6.2: Verify MiniApp creation and automatic agency inheritance.
+        --> Evidence: `test/phase6-governance-e2e.e2e-spec.ts` passed. MiniApps registered by developers automatically inherit creator's agency (`organizationId`, `organization`, `organizationCode`), binding ownership to `ownerId` and preventing cross-agency spoofing.
+    [x] Task 6.3: Verify Option C collaboration (teammate build permissions vs lead submit restriction).
+        --> Evidence: `test/phase6-governance-e2e.e2e-spec.ts` passed. Agency teammates can view and update draft metadata, while submission for review (`POST /:id/submit`) is strictly gated to the Lead Maintainer (`ownerId`) or SuperAdmin (HTTP 403 for non-lead teammates).
+    [x] Task 6.4: Verify cross-agency strict firewall isolation.
+        --> Evidence: `test/phase6-governance-e2e.e2e-spec.ts` passed. Foreign agency developers attempting to read or update another agency's MiniApp are blocked with HTTP 403 Forbidden; agency querying strictly filters out foreign apps while SuperAdmin retains universal oversight.
+    --> Evidence: Complete E2E verification suite (`pnpm test:e2e`) passing 100% across all 3 test suites (12/12 tests passed). All 37 unit test suites (380/380 tests) and Next.js backoffice build passing with 0 errors.
 ```
 

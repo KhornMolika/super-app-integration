@@ -395,4 +395,16 @@ export class MiniApp {
 
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt!: Date;
+
+  toJSON() {
+    return {
+      ...this,
+      shortDescription: this.shortDescription,
+      fullDescription: this.fullDescription,
+      organization: this.organization,
+      organizationCode: this.organizationCode,
+      teamName: this.teamName,
+      status: this.status,
+    };
+  }
 }

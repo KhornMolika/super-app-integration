@@ -267,6 +267,9 @@ export class AuthService implements OnModuleInit {
       name: user.name,
       roles,
       permissions: Array.from(permissions),
+      organizationId: user.organizationId || user.organization?.id || null,
+      organization: user.organization?.name || null,
+      organizationCode: user.organization?.code || null,
       typ: BACK_OFFICE_TYP,
     };
 

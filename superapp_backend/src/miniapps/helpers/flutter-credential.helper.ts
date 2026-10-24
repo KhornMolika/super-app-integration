@@ -152,6 +152,39 @@ export function maskMiniAppCredentials<T>(app: T): T {
 
   const target = app as Record<string, unknown>;
 
+  // Break circular back-references from child relations before JSON serialization
+  if (Array.isArray(target.versions)) {
+    target.versions.forEach((v: any) => {
+      if (v && typeof v === 'object' && 'miniApp' in v) {
+        delete v.miniApp;
+      }
+    });
+  }
+  if (Array.isArray(target.builds)) {
+    target.builds.forEach((b: any) => {
+      if (b && typeof b === 'object' && 'miniApp' in b) {
+        delete b.miniApp;
+      }
+    });
+  }
+  if (Array.isArray(target.collaborators)) {
+    target.collaborators.forEach((c: any) => {
+      if (c && typeof c === 'object' && 'miniApp' in c) {
+        delete c.miniApp;
+      }
+    });
+  }
+  if (Array.isArray(target.issues)) {
+    target.issues.forEach((i: any) => {
+      if (i && typeof i === 'object' && 'miniApp' in i) {
+        delete i.miniApp;
+      }
+    });
+  }
+  if (target.legal && typeof target.legal === 'object' && 'miniApp' in (target.legal as any)) {
+    delete (target.legal as any).miniApp;
+  }
+
   // Mask main integrationConfig
   if (target.integrationConfig && typeof target.integrationConfig === 'object') {
     target.integrationConfig = sanitizeConfigDictionary(

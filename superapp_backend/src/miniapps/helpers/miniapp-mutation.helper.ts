@@ -47,10 +47,20 @@ export class MiniappMutationHelper {
     data.currentReleaseVersion = undefined;
     data.pendingRevision = null;
 
+    if (data.shortDescription !== undefined && !data.tagline) {
+      data.tagline = data.shortDescription;
+    }
+    if (data.fullDescription !== undefined && !data.description) {
+      data.description = data.fullDescription;
+    }
+
     // Resolve & normalize organization name and short code (e.g. FTC, IRC, etc.)
     const orgInfo = await resolveOrganizationDetails(data.organization || (data as any).category);
     data.organization = orgInfo.name;
     data.organizationCode = orgInfo.code;
+    if (orgInfo.id && !data.organizationId) {
+      data.organizationId = orgInfo.id;
+    }
 
     // Ensure slug is populated
     if (!data.slug && data.name) {
@@ -242,6 +252,15 @@ export class MiniappMutationHelper {
     ) => Promise<void>,
   ): Promise<MiniApp> {
     delete data.status;
+
+    if (data.shortDescription !== undefined) {
+      data.tagline = data.shortDescription;
+      existing.tagline = data.shortDescription;
+    }
+    if (data.fullDescription !== undefined) {
+      data.description = data.fullDescription;
+      existing.description = data.fullDescription;
+    }
 
     if (data.permissions && Array.isArray(data.permissions)) {
       // Deduplicate permissions array by type

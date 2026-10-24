@@ -91,4 +91,10 @@ export class MiniAppVersion {
 
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt!: Date;
+
+  toJSON() {
+    const clone = { ...this };
+    delete (clone as any).miniApp;
+    return clone;
+  }
 }

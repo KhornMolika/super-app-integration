@@ -282,6 +282,7 @@ export class MiniappsService implements OnApplicationBootstrap {
       user?.id ||
       (typeof queryOrOwnerId === 'string' ? queryOrOwnerId : undefined);
     const ownerEmail = user?.email;
+    const userOrgId = user?.organizationId;
 
     const qb = this.miniappRepository
       .createQueryBuilder('app')
@@ -289,12 +290,15 @@ export class MiniappsService implements OnApplicationBootstrap {
       .leftJoinAndSelect('app.owner', 'owner')
       .orderBy('app.updatedAt', 'DESC');
 
-    if (ownerId || ownerEmail) {
+    if (ownerId || ownerEmail || userOrgId) {
       qb.where(
-        '(app.ownerId = :ownerId OR (owner.email IS NOT NULL AND LOWER(owner.email) = LOWER(:ownerEmail)))',
+        '(app.ownerId = :ownerId OR (owner.email IS NOT NULL AND LOWER(owner.email) = LOWER(:ownerEmail))' +
+          (userOrgId ? ' OR app.organizationId = :userOrgId' : '') +
+          ')',
         {
           ownerId: ownerId || '',
           ownerEmail: ownerEmail || '',
+          userOrgId: userOrgId || '',
         },
       );
     } else {
