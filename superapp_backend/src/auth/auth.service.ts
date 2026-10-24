@@ -12,7 +12,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
 import { AccessControlService, OFFICIAL_SEEDS } from '../access-control/access-control.service';
-import { DeveloperToken } from '../access-control/entities/developer-token.entity';
+import { AccessToken, DeveloperToken } from '../access-control/entities/access-token.entity';
 import { AuthOtp, OtpPurpose } from './entities/auth-otp.entity';
 import { MailService } from '../notifications/channels/mail.service';
 import { verifyPassword, hashPassword } from '../common/utils/password.util';
@@ -51,14 +51,18 @@ export class AuthService implements OnModuleInit {
     private jwtService: JwtService,
     private accessControlService: AccessControlService,
     @Optional()
-    @InjectRepository(DeveloperToken)
-    private developerTokenRepo?: Repository<DeveloperToken>,
+    @InjectRepository(AccessToken)
+    private accessTokenRepo?: Repository<AccessToken>,
     @Optional()
     @InjectRepository(AuthOtp)
     private otpRepo?: Repository<AuthOtp>,
     @Optional()
     private mailService?: MailService,
   ) {}
+
+  private get developerTokenRepo(): Repository<AccessToken> | undefined {
+    return this.accessTokenRepo;
+  }
 
   private get issuer(): string {
     return process.env.JWT_ISSUER || 'super-app-backend';

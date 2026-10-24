@@ -6,6 +6,5 @@ export * from './PipelineTimingCard';
 export * from './ArtifactRetentionCard';
 export * from './NotificationEventsCard';
 export * from './AssignMiniAppModal';
+export * from './AccessTokensCard';
 export * from './DeveloperTokensCard';
-
-

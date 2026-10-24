@@ -5,7 +5,7 @@ import { Repository, DataSource } from 'typeorm';
 import { User } from './entities/user.entity';
 import { Role } from './entities/role.entity';
 import { Permission } from './entities/permission.entity';
-import { DeveloperToken } from './entities/developer-token.entity';
+import { AccessToken, DeveloperToken } from './entities/access-token.entity';
 import { RefreshToken } from '../mobile/entities/refresh-token.entity';
 import { Organization, OrganizationStatus } from '../organizations/entities/organization.entity';
 import { MiniApp } from '../miniapps/entities/miniapp.entity';

@@ -6,7 +6,7 @@ import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { AccessControlModule } from '../access-control/access-control.module';
 import { NotificationsModule } from '../notifications/notifications.module';
-import { DeveloperToken } from '../access-control/entities/developer-token.entity';
+import { AccessToken } from '../access-control/entities/access-token.entity';
 import { AuthOtp } from './entities/auth-otp.entity';
 
 @Module({
@@ -14,7 +14,7 @@ import { AuthOtp } from './entities/auth-otp.entity';
     forwardRef(() => AccessControlModule),
     forwardRef(() => NotificationsModule),
     JwtModule.register({}),
-    TypeOrmModule.forFeature([DeveloperToken, AuthOtp]),
+    TypeOrmModule.forFeature([AccessToken, AuthOtp]),
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtAuthGuard],

@@ -4,7 +4,7 @@ import { AuthModule } from '../auth/auth.module';
 import { User } from './entities/user.entity';
 import { Role } from './entities/role.entity';
 import { Permission } from './entities/permission.entity';
-import { DeveloperToken } from './entities/developer-token.entity';
+import { AccessToken } from './entities/access-token.entity';
 import { Organization } from '../organizations/entities/organization.entity';
 import { AccessControlService } from './access-control.service';
 import { SeederService } from './seeder.service';
@@ -17,7 +17,7 @@ import { RolesController } from './roles.controller';
       User,
       Role,
       Permission,
-      DeveloperToken,
+      AccessToken,
       Organization,
     ]),
     forwardRef(() => AuthModule),
