@@ -5,6 +5,7 @@ import { FakeRepo } from './testing/fake-repo';
 import { EndUser, EndUserStatus } from './entities/end-user.entity';
 import { EmailVerificationToken } from './entities/email-verification-token.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
+import { User } from '../access-control/entities/user.entity';
 import {
   MobileAuthService,
   REGISTER_MESSAGE,
@@ -18,6 +19,7 @@ const PW = 'a-very-good-password';
 
 function build() {
   const users = new FakeRepo<EndUser>(['email']);
+  const backofficeUsers = new FakeRepo<User>(['email']);
   const vTokens = new FakeRepo<EmailVerificationToken>();
   const rTokens = new FakeRepo<RefreshToken>();
   const sent: { to: string; name: string; url: string }[] = [];
@@ -32,6 +34,7 @@ function build() {
   const limiter = new AuthRateLimiter();
   const svc = new MobileAuthService(
     users as any,
+    backofficeUsers as any,
     vTokens as any,
     rTokens as any,
     passwords,
@@ -40,7 +43,7 @@ function build() {
     limiter,
   );
   const tokenFromUrl = (url: string) => new URL(url).searchParams.get('token')!;
-  return { svc, limiter, users, vTokens, rTokens, sent, mail, authService, passwords, tokenFromUrl };
+  return { svc, limiter, users, backofficeUsers, vTokens, rTokens, sent, mail, authService, passwords, tokenFromUrl };
 }
 
 async function registerAndVerify(ctx: ReturnType<typeof build>, email = 'Jane@Example.io') {
@@ -179,7 +182,7 @@ describe('MobileAuthService', () => {
       expect(c.sent).toHaveLength(2);
       expect(c.users.rows[0].name).toBe('Victim');
       expect(await c.passwords.verify(PW, c.users.rows[0].passwordHash)).toBe(true);
-      expect(c.vTokens.rows.filter((t) => !t.usedAt)).toHaveLength(1);
+      expect(c.vTokens.rows.filter((t) => !t.usedAt)).toHaveLength(2);
       await expect(c.svc.verifyEmail(c.tokenFromUrl(c.sent[0].url), 'attacker-pass-1')).rejects.toBeInstanceOf(BadRequestException);
       await expect(c.svc.verifyEmail(c.tokenFromUrl(c.sent[0].url), PW)).rejects.toBeInstanceOf(BadRequestException);
       await c.svc.verifyEmail(c.tokenFromUrl(c.sent[1].url), PW);

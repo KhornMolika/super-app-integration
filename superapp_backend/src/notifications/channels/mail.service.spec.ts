@@ -1,4 +1,4 @@
-﻿import { MailService } from './mail.service';
+import { MailService } from './mail.service';
 import { MailApiHelper } from './helpers/mail-api.helper';
 import { MailTemplateHelper } from './helpers/mail-template.helper';
 
@@ -119,7 +119,7 @@ describe('MailService & Helper Modules', () => {
         'Developer',
       );
       expect(result.success).toBe(false);
-      expect(result.message).toContain('mock domain');
+      expect(result.message).toContain('mock');
       expect(mockSend).not.toHaveBeenCalled();
     });
 

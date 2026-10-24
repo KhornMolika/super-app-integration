@@ -19,6 +19,7 @@ describe('NexusIntegrationService uploads', () => {
       get: (k: string, d?: string) => env[k] ?? d,
     } as unknown as ConfigService;
     service = new NexusIntegrationService(cfg);
+    (service as any).workingBaseUrl = 'http://nexus:8081';
     fetchMock = jest.fn();
     global.fetch = fetchMock as any;
   });

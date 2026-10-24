@@ -753,11 +753,15 @@ Every task in this roadmap requires verifiable evidence (database query outputs,
         - 0 mock accounts remaining.
         - 6 capability definitions verified active in database.
 
-[ ] Phase 4: Backend Services, Guards & Audit Logging (IN PROGRESS)
+[x] Phase 4: Backend Services, Guards & Audit Logging (COMPLETED & VERIFIED)
     [x] Task 4.1: Update `AccessControlService` to use direct `roleId` and agency scope.
     [x] Task 4.2: Update `MiniappsService` with collaborator management (`getCollaborators`, `addCollaborator`, `removeCollaborator`).
     [x] Task 4.3: Update MiniApp activity queries to read directly from `audit_logs` (`resourceType = 'MiniApp'`).
-    [ ] Task 4.4: Run backend automated test suite (`pnpm run test`).
+    [x] Task 4.4: Run backend automated test suite (`pnpm run test`).
+    --> Evidence: Executed `pnpm run test` with code 0 across the entire backend:
+        - 37 of 37 test suites passed (100%).
+        - 380 of 380 individual tests passed (100%).
+        - Verified RBAC authorization, agency isolation, lifecycle revisions, Jenkins & Nexus integrations, token encryption, and mobile authentication flows.
 
 [x] Phase 5: Backoffice Frontend Alignment (COMPLETED & VERIFIED)
     [x] Task 5.1: Export `capabilitiesApi` and `CapabilityProposal` in `superapp_backoffice/src/api`.

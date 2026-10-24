@@ -17,6 +17,7 @@ import { MobileCatalogService } from './mobile-catalog.service';
 import { MobileController } from './mobile.controller';
 import { PasswordService } from './password.service';
 import { FakeRepo } from './testing/fake-repo';
+import { User } from '../access-control/entities/user.entity';
 
 const PW = 'a-very-good-password';
 
@@ -56,6 +57,7 @@ describe('Mobile HTTP (in-process)', () => {
         { provide: AuthService, useValue: authInstance },
         { provide: MailService, useValue: { sendEmailVerification: async (_t: string, _n: string, url: string) => void sent.push({ url }) } },
         { provide: getRepositoryToken(EndUser), useValue: users },
+        { provide: getRepositoryToken(User), useValue: new FakeRepo() },
         { provide: getRepositoryToken(EmailVerificationToken), useValue: new FakeRepo() },
         { provide: getRepositoryToken(RefreshToken), useValue: new FakeRepo() },
         { provide: getRepositoryToken(MiniApp), useValue: { createQueryBuilder: () => qb } },

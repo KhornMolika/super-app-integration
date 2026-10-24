@@ -24,7 +24,7 @@ export class CallbackTokenGuard implements CanActivate {
     this.logger.warn(
       `Rejected release-assembly callback: ${reason}. ` +
         `RELEASE_CALLBACK_TOKEN is configured on the backend. ` +
-        `Ensure Jenkins passes the same token in headers['x-callback-token'] or body.callbackToken.`,
+        `Ensure Jenkins passes the release-callback-token in headers['x-callback-token'] or body.callbackToken.`,
     );
   }
 
@@ -57,7 +57,7 @@ export class CallbackTokenGuard implements CanActivate {
       expected.startsWith('CHANGE_ME');
 
     if (!provided) {
-      if (isPlaceholder || process.env.NODE_ENV !== 'production') {
+      if (isPlaceholder && process.env.NODE_ENV !== 'production') {
         this.logger.warn(
           'Callback token missing on release callback, but running with development/placeholder configuration. Permitting callback.',
         );
@@ -74,10 +74,10 @@ export class CallbackTokenGuard implements CanActivate {
       (expected && provided && crypto.timingSafeEqual(hash(provided), hash(expected))) ||
       provided === 'dev-jenkins-callback-token' ||
       provided === 'CHANGE_ME_JENKINS_CALLBACK_TOKEN' ||
-      isPlaceholder;
+      (isPlaceholder && process.env.NODE_ENV !== 'production');
 
     if (!isMatch) {
-      if (isPlaceholder || process.env.NODE_ENV !== 'production') {
+      if (isPlaceholder && process.env.NODE_ENV !== 'production') {
         this.logger.warn(
           `Callback token mismatch (provided: "${provided.substring(0, 8)}...", expected: "${expected.substring(0, 8)}..."), but running in dev mode. Permitting callback.`,
         );

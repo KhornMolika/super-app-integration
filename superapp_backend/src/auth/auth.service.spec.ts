@@ -2,8 +2,9 @@ import { UnauthorizedException } from '@nestjs/common';
 import { ExecutionContext } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as crypto from 'crypto';
-import { AuthService } from './auth.service';
+import { AuthService, BACK_OFFICE_ACCESS_TOKEN_TTL_SECONDS } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { hashPassword } from '../common/utils/password.util';
 
 const ENV_KEYS = ['JWT_PRIVATE_KEY', 'JWT_KEY_ID', 'JWT_ISSUER', 'NODE_ENV'];
 
@@ -185,21 +186,25 @@ describe('AuthService / JwtAuthGuard', () => {
     );
   });
 
-  it('back-office login tokens verify and expire in 3600s', async () => {
+  it('back-office login tokens verify and expire in configured TTL window', async () => {
+    const passwordHash = await hashPassword('Password123!@#');
     const s = new AuthService(new JwtService({}), {
       findByEmailWithPermissions: async () => ({
         id: 7,
         email: 'a@b.c',
         name: 'A',
+        passwordHash,
+        isActive: true,
+        status: 'ACTIVE',
         roles: [{ name: 'r', permissions: [{ name: 'p' }] }],
       }),
     } as any);
     s.onModuleInit();
-    const res: any = await s.login({ email: 'a@b.c' });
+    const res: any = await s.login({ email: 'a@b.c', password: 'Password123!@#' });
     const p = s.verifyToken(res.access_token);
     expect(p.iss).toBe('super-app-backend');
-    expect(p.exp - p.iat).toBe(3600);
-    expect(res.expires_in).toBe(3600);
+    expect(p.exp - p.iat).toBe(BACK_OFFICE_ACCESS_TOKEN_TTL_SECONDS);
+    expect(res.expires_in).toBe(BACK_OFFICE_ACCESS_TOKEN_TTL_SECONDS);
     expect(p.permissions).toEqual(['p']);
     expect(p.typ).toBe('back_office');
   });

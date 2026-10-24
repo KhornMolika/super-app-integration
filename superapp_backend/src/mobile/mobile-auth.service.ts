@@ -342,13 +342,13 @@ export class MobileAuthService implements OnModuleInit {
     await this.verificationTokens.save([
       this.verificationTokens.create({
         userId: user.id,
-        tokenHash: sha256Hex(otpCode),
+        tokenHash: sha256Hex(token),
         expiresAt,
         usedAt: null,
       }),
       this.verificationTokens.create({
         userId: user.id,
-        tokenHash: sha256Hex(token),
+        tokenHash: sha256Hex(otpCode),
         expiresAt,
         usedAt: null,
       }),
@@ -380,7 +380,7 @@ export class MobileAuthService implements OnModuleInit {
    */
   async verifyEmail(token: string, password?: string): Promise<{ message: string }> {
     const cleanToken = (token || '').trim();
-    const fail = () => new BadRequestException('Invalid or expired token or verification code');
+    const fail = () => new BadRequestException('Invalid or expired token');
     const record = await this.verificationTokens.findOne({
       where: { tokenHash: sha256Hex(cleanToken) },
     });
@@ -419,7 +419,7 @@ export class MobileAuthService implements OnModuleInit {
       { id: user.id, emailVerifiedAt: IsNull() },
       { emailVerifiedAt: new Date() },
     );
-    return { message: 'Email verified successfully' };
+    return { message: 'Email verified' };
   }
 
   // ------------------------------------------------------------------- login

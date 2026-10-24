@@ -1,4 +1,4 @@
-﻿import { MiniappLifecycleHelper } from './miniapp-lifecycle.helper';
+import { MiniappLifecycleHelper } from './miniapp-lifecycle.helper';
 import { MiniApp } from '../entities/miniapp.entity';
 
 describe('MiniappLifecycleHelper - Revision & Approval Lifecycle', () => {
@@ -31,6 +31,7 @@ describe('MiniappLifecycleHelper - Revision & Approval Lifecycle', () => {
     };
     mockSuperAppService = {
       getAndRegisterNextVersion: jest.fn().mockResolvedValue('v1.1.1'),
+      findLatestCapability: jest.fn().mockResolvedValue({ capabilities: [] }),
     };
     mockLocalSecurityScannerService = {};
     const mockPipelinePacerService = { paceBuildTrigger: jest.fn().mockResolvedValue(undefined) };

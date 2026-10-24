@@ -20,7 +20,14 @@ export class FakeRepo<T extends Record<string, any>> {
     return { ...data } as T;
   }
 
-  async save(entity: T): Promise<T> {
+  async save(entity: T | T[]): Promise<any> {
+    if (Array.isArray(entity)) {
+      const results: T[] = [];
+      for (const item of entity) {
+        results.push(await this.save(item));
+      }
+      return results;
+    }
     const existing = this.rows.find((r) => r === entity);
     if (existing) return entity;
     for (const key of this.uniqueKeys) {
