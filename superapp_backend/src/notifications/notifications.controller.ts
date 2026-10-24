@@ -5,6 +5,7 @@ import {
   Patch,
   Delete,
   Param,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -12,6 +13,7 @@ import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RbacGuard } from '../access-control/guards/rbac.guard';
 import { RequirePermissions } from '../access-control/decorators/require-permissions.decorator';
+import { QueryNotificationsDto } from './dto/query-notifications.dto';
 
 @UseGuards(JwtAuthGuard, RbacGuard)
 @Controller(['notifications', 'mini-apps/notifications'])
@@ -20,14 +22,14 @@ export class NotificationsController {
 
   @Get()
   @RequirePermissions('miniapp:read')
-  getNotifications(@Req() req: any) {
-    return this.notificationsService.findByUserId(req?.user?.sub || '');
+  getNotifications(@Query() query: QueryNotificationsDto, @Req() req: any) {
+    return this.notificationsService.findByUserId(req?.user?.sub || '', query);
   }
 
   @Get('mine')
   @RequirePermissions('miniapp:read')
-  getMyNotifications(@Req() req: any) {
-    return this.notificationsService.findByUserId(req?.user?.sub || '');
+  getMyNotifications(@Query() query: QueryNotificationsDto, @Req() req: any) {
+    return this.notificationsService.findByUserId(req?.user?.sub || '', query);
   }
 
   @Post('mark-all-read')

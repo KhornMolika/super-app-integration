@@ -12,6 +12,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CapabilitiesService } from './capabilities.service';
 import { RequirePermissions } from '../access-control/decorators/require-permissions.decorator';
 import { UpdateCapabilityDefinitionDto } from './dto/update-capability-definition.dto';
+import { QueryCapabilitiesDto } from './dto/query-capabilities.dto';
 
 @Controller(['capabilities', 'permissions'])
 export class CapabilitiesController {
@@ -19,8 +20,8 @@ export class CapabilitiesController {
 
   @Get()
   @UseGuards(JwtAuthGuard)
-  async findAll() {
-    return this.capabilitiesService.findAll();
+  async findAll(@Query() query: QueryCapabilitiesDto) {
+    return this.capabilitiesService.findAll(query);
   }
 
   /**

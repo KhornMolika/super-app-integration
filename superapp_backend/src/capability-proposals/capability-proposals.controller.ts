@@ -4,6 +4,7 @@ import {
   Post,
   Param,
   Body,
+  Query,
   UseGuards,
   Request,
   NotFoundException,
@@ -18,6 +19,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { CapabilityCodeGeneratorService } from '../capabilities/capability-code-generator.service';
 import { ReviewProposalDto } from './dto/review-proposal.dto';
 import { CreateCapabilityProposalDto } from './dto/create-capability-proposal.dto';
+import { QueryCapabilityProposalsDto } from './dto/query-capability-proposals.dto';
 
 @UseGuards(JwtAuthGuard, RbacGuard)
 @Controller(['capability-proposals', 'permission-proposals'])
@@ -32,8 +34,8 @@ export class CapabilityProposalsController {
 
   @Get()
   @RequirePermissions('permission_proposal:read')
-  async getProposals() {
-    return this.capabilityProposalsService.findAll();
+  async getProposals(@Query() query: QueryCapabilityProposalsDto) {
+    return this.capabilityProposalsService.findAll(query);
   }
 
   @Post()

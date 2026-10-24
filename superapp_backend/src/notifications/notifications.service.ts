@@ -7,6 +7,11 @@ import { MiniApp } from '../miniapps/entities/miniapp.entity';
 import { NotificationGateway } from './notification.gateway';
 import { TelegramService } from './channels/telegram.service';
 import { MailService } from './channels/mail.service';
+import { QueryNotificationsDto } from './dto/query-notifications.dto';
+import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
+import { createPaginatedResponse } from '../common/utils/pagination.util';
+import { escapeLikeString } from '../common/utils/sql.util';
+import { SortOrder } from '../common/dto/pagination-query.dto';
 
 @Injectable()
 export class NotificationsService {
@@ -209,12 +214,60 @@ export class NotificationsService {
     }
   }
 
-  async findByUserId(userId: string) {
-    return this.notificationRepository.find({
-      relations: { miniApp: true },
-      order: { createdAt: 'DESC' },
-      take: 100,
-    });
+  async findByUserId(
+    userId: string,
+    query?: QueryNotificationsDto,
+  ): Promise<PaginatedResult<Notification> | Notification[]> {
+    if (!query) {
+      return this.notificationRepository.find({
+        relations: { miniApp: true },
+        order: { createdAt: 'DESC' },
+        take: 100,
+      });
+    }
+
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      isRead,
+      type,
+      sortBy = 'createdAt',
+      sortOrder = SortOrder.DESC,
+    } = query;
+
+    const qb = this.notificationRepository
+      .createQueryBuilder('notification')
+      .leftJoinAndSelect('notification.miniApp', 'miniApp');
+
+    if (isRead !== undefined) {
+      qb.andWhere('notification.isRead = :isRead', { isRead });
+    }
+
+    if (type && type !== 'all' && type !== 'ALL') {
+      qb.andWhere('LOWER(notification.type) = LOWER(:type)', { type });
+    }
+
+    if (search?.trim()) {
+      const sanitized = escapeLikeString(search.trim());
+      qb.andWhere(
+        '(notification.title ILIKE :search OR notification.message ILIKE :search OR miniApp.name ILIKE :search)',
+        { search: `%${sanitized}%` },
+      );
+    }
+
+    const sortColumns: Record<string, string> = {
+      createdAt: 'notification.createdAt',
+      type: 'notification.type',
+    };
+    const orderColumn = sortColumns[sortBy] || 'notification.createdAt';
+    const direction = sortOrder === SortOrder.ASC ? 'ASC' : 'DESC';
+
+    qb.orderBy(orderColumn, direction).addOrderBy('notification.id', 'ASC');
+    qb.skip((page - 1) * limit).take(limit);
+
+    const [items, totalItems] = await qb.getManyAndCount();
+    return createPaginatedResponse(items, totalItems, page, limit);
   }
 
   async markAsRead(id: string): Promise<{ success: boolean }> {

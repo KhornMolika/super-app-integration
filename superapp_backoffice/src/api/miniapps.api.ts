@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient, PaginatedResponse } from './client';
 
 export interface MiniApp {
   id: string;
@@ -40,14 +40,27 @@ export interface MiniApp {
 }
 
 export const miniappsApi = {
-  getAll: (filterOrStatus?: string | { status?: string; mine?: boolean }) => {
+  getAll: (
+    filterOrStatus?:
+      | string
+      | {
+          status?: string;
+          mine?: boolean;
+          page?: number;
+          limit?: number;
+          search?: string;
+          integrationMethod?: string;
+          sortBy?: string;
+          sortOrder?: 'ASC' | 'DESC';
+        },
+  ) => {
     let params: Record<string, any> = {};
     if (typeof filterOrStatus === 'string') {
       params.status = filterOrStatus;
     } else if (filterOrStatus && typeof filterOrStatus === 'object') {
       params = { ...filterOrStatus };
     }
-    return apiClient<MiniApp[]>('/api/mini-apps', { params });
+    return apiClient<PaginatedResponse<MiniApp> | MiniApp[]>('/api/mini-apps', { params });
   },
 
   getMyMiniApps: (status?: string) =>
@@ -108,8 +121,13 @@ export const miniappsApi = {
   getActivities: (id: string) =>
     apiClient<any[]>(`/api/mini-apps/${id}/activities`),
 
-  getVersions: (id: string) =>
-    apiClient<any[]>(`/api/mini-apps/${id}/versions`),
+  getVersions: (
+    id: string,
+    params?: { page?: number; limit?: number; sortOrder?: 'ASC' | 'DESC' },
+  ) =>
+    apiClient<any>(`/api/mini-apps/${id}/versions`, { params }).then((res) =>
+      res?.data ? res.data : res,
+    ),
 
   rollback: (id: string, targetVersion: string, reason?: string) =>
     apiClient<{ success: boolean; message?: string }>(`/api/mini-apps/${id}/rollback`, {

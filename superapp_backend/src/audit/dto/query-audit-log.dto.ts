@@ -1,12 +1,7 @@
-import { IsOptional, IsString, IsNumber } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsOptional, IsString } from 'class-validator';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
-export class QueryAuditLogDto {
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  limit?: number;
-
+export class QueryAuditLogDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   action?: string;
@@ -14,4 +9,12 @@ export class QueryAuditLogDto {
   @IsOptional()
   @IsString()
   resourceType?: string;
+
+  @IsOptional()
+  @IsString()
+  actorId?: string;
+
+  @IsOptional()
+  @IsString()
+  resourceId?: string;
 }

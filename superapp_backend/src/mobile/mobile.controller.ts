@@ -110,7 +110,7 @@ export class MobileController {
   miniApps(@Query() query: CatalogQueryDto, @Req() req: Request) {
     const rawHost = req.headers['x-forwarded-host'] || req.headers.host || req.hostname || 'localhost:3000';
     const clientHost = String(rawHost).split(':')[0];
-    return this.catalog.list(query.q, query.limit, query.offset, clientHost);
+    return this.catalog.list(query, clientHost);
   }
 
   @Get('auth/dev-reset-limits')

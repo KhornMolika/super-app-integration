@@ -10,7 +10,9 @@ import type { Response } from 'express';
 import { Readable } from 'stream';
 import * as fs from 'fs';
 import * as path from 'path';
+import { BypassTransform } from '../common/decorators/bypass-transform.decorator';
 
+@BypassTransform()
 @Controller(['download-apk', 'api/download-apk'])
 export class ApkDownloadController {
   private readonly logger = new Logger(ApkDownloadController.name);

@@ -18,6 +18,7 @@ import { OrganizationsService } from './organizations.service';
 import { Organization, OrganizationStatus } from './entities/organization.entity';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
+import { QueryOrganizationsDto } from './dto/query-organizations.dto';
 
 @Controller('organizations')
 @UseGuards(JwtAuthGuard, RbacGuard)
@@ -26,8 +27,8 @@ export class OrganizationsController {
 
   @Get()
   @RequirePermissions('organization:read')
-  async findAll(@Query('status') status?: OrganizationStatus): Promise<Organization[]> {
-    return this.organizationsService.findAll(status);
+  async findAll(@Query() query: QueryOrganizationsDto) {
+    return this.organizationsService.findAll(query);
   }
 
   @Get(':id')

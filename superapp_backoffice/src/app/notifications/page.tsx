@@ -16,7 +16,7 @@ export default function NotificationsPage() {
   const fetchNotifications = useCallback(async () => {
     try {
       const data = await notificationsApi.getAll();
-      setNotifications(Array.isArray(data) ? data : []);
+      setNotifications(Array.isArray(data) ? data : (data as any)?.data || []);
     } catch (err) {
       console.error('Failed to load notifications:', err);
     } finally {

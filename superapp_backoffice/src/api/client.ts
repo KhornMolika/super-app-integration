@@ -208,3 +208,51 @@ export async function apiClient<T = any>(endpoint: string, options: RequestOptio
 
   return data as T;
 }
+
+export interface BaseApiResponse {
+  success: boolean;
+  statusCode: number;
+  message: string;
+  path: string;
+  timestamp: string;
+}
+
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  totalItems: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
+export interface PaginatedResponse<T> extends Partial<BaseApiResponse> {
+  success: boolean;
+  data: T[];
+  meta: PaginationMeta;
+}
+
+export interface ApiResponse<T = any> extends BaseApiResponse {
+  data: T;
+  meta?: PaginationMeta;
+}
+
+/**
+ * Safely extracts array data whether the API returns a raw array or a standardized PaginatedResponse envelope.
+ */
+export function unwrapData<T>(res: PaginatedResponse<T> | T[] | any): T[] {
+  if (!res) return [];
+  if (Array.isArray(res)) return res;
+  if (Array.isArray(res.data)) return res.data;
+  return [];
+}
+
+/**
+ * Safely extracts pagination metadata from a response envelope.
+ */
+export function unwrapMeta(res: any): PaginationMeta | undefined {
+  if (!res) return undefined;
+  if (res.meta) return res.meta;
+  if (res.data?.meta) return res.data.meta;
+  return undefined;
+}

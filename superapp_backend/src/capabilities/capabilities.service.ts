@@ -12,6 +12,10 @@ import * as YAML from 'yaml';
 import { CapabilityDefinition } from './entities/capability-definition.entity';
 import { UpdateCapabilityDefinitionDto } from './dto/update-capability-definition.dto';
 import { GitLabProvider } from '../integrations/git/providers/gitlab.provider';
+import { QueryCapabilitiesDto } from './dto/query-capabilities.dto';
+import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
+import { createPaginatedResponse } from '../common/utils/pagination.util';
+import { escapeLikeString } from '../common/utils/sql.util';
 
 @Injectable()
 export class CapabilitiesService implements OnApplicationBootstrap {
@@ -33,36 +37,56 @@ export class CapabilitiesService implements OnApplicationBootstrap {
     });
   }
 
-  async findAll(): Promise<CapabilityDefinition[]> {
-    const all = await this.capabilityDefinitionRepository.find({
-      where: { isActive: true },
-    });
+  async findAll(
+    query: QueryCapabilitiesDto = new QueryCapabilitiesDto(),
+  ): Promise<PaginatedResult<CapabilityDefinition>> {
+    const page = Math.max(1, query.page || 1);
+    const limit = Math.max(1, query.limit || 20);
+    const skip = (page - 1) * limit;
 
-    const activeList: CapabilityDefinition[] = [];
-    for (const p of all) {
-      const meta = p.metadata || {};
-      const isLegacyMockMic =
-        p.key === 'microphone' &&
-        (!meta.commitSha ||
-          meta.source !== 'gitlab:main' ||
-          meta.providerPackage === 'microphone' ||
-          !meta.providerPackage?.includes(':'));
+    const qb = this.capabilityDefinitionRepository.createQueryBuilder('cap');
 
-      if (isLegacyMockMic) {
-        p.isActive = false;
-        p.metadata = {
-          ...meta,
-          status: 'Deprecated',
-          deactivationReason:
-            'Mock seed data. Microphone is not supported by native SuperApp shell yet.',
-        };
-        await this.capabilityDefinitionRepository.save(p);
-      } else {
-        activeList.push(p);
-      }
+    // 1. Active Filter (default to active unless specified otherwise)
+    if (query.isActive !== undefined) {
+      qb.andWhere('cap.isActive = :isActive', { isActive: query.isActive });
+    } else {
+      qb.andWhere('cap.isActive = true');
     }
 
-    return activeList;
+    // 2. Category Filter
+    if (query.category && query.category.toUpperCase() !== 'ALL') {
+      qb.andWhere('LOWER(cap.category) = LOWER(:category)', {
+        category: query.category,
+      });
+    }
+
+    // 3. Search Filter
+    if (query.search?.trim()) {
+      const sanitized = escapeLikeString(query.search.trim().toLowerCase());
+      qb.andWhere(
+        '(LOWER(cap.key) LIKE :pattern OR LOWER(cap.name) LIKE :pattern OR LOWER(cap.description) LIKE :pattern)',
+        { pattern: `%${sanitized}%` },
+      );
+    }
+
+    // 4. Sorting
+    const sortField = query.sortBy || 'createdAt';
+    const sortOrder = query.sortOrder || 'DESC';
+    const allowedSortFields: Record<string, string> = {
+      createdAt: 'cap.createdAt',
+      updatedAt: 'cap.updatedAt',
+      name: 'cap.name',
+      key: 'cap.key',
+      category: 'cap.category',
+    };
+    const dbSortField = allowedSortFields[sortField] || 'cap.createdAt';
+    qb.orderBy(dbSortField, sortOrder);
+
+    qb.skip(skip).take(limit);
+
+    const [items, totalItems] = await qb.getManyAndCount();
+
+    return createPaginatedResponse(items, totalItems, page, limit);
   }
 
   async findByKey(key: string): Promise<CapabilityDefinition | null> {

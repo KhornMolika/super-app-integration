@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient, PaginatedResponse } from './client';
 
 export interface OrganizationUser {
   id: string;
@@ -40,8 +40,15 @@ export interface Organization {
 }
 
 export const organizationsApi = {
-  getAll: (params?: { status?: string }) =>
-    apiClient<Organization[]>('/api/organizations', { params }),
+  getAll: (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    sortBy?: string;
+    sortOrder?: 'ASC' | 'DESC';
+  }) =>
+    apiClient<PaginatedResponse<Organization> | Organization[]>('/api/organizations', { params }),
 
   getById: (id: string) =>
     apiClient<Organization>(`/api/organizations/${id}`),

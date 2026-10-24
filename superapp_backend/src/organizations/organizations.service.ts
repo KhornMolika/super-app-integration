@@ -17,6 +17,11 @@ import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 import { User } from '../access-control/entities/user.entity';
 import { MiniApp } from '../miniapps/entities/miniapp.entity';
+import { QueryOrganizationsDto } from './dto/query-organizations.dto';
+import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
+import { createPaginatedResponse } from '../common/utils/pagination.util';
+import { escapeLikeString } from '../common/utils/sql.util';
+import { SortOrder } from '../common/dto/pagination-query.dto';
 
 @Injectable()
 export class OrganizationsService implements OnApplicationBootstrap {
@@ -38,15 +43,54 @@ export class OrganizationsService implements OnApplicationBootstrap {
     return resolveOrganizationDetails(input, this.organizationRepository);
   }
 
-  async findAll(status?: OrganizationStatus | string): Promise<Organization[]> {
-    const where: any = {};
-    if (status) {
-      where.status = status;
+  async findAll(
+    queryOrStatus?: QueryOrganizationsDto | OrganizationStatus | string,
+  ): Promise<PaginatedResult<Organization> | Organization[]> {
+    if (typeof queryOrStatus === 'string') {
+      return this.organizationRepository.find({
+        where: { status: queryOrStatus as OrganizationStatus },
+        order: { name: 'ASC' },
+      });
     }
-    return this.organizationRepository.find({
-      where,
-      order: { name: 'ASC' },
-    });
+
+    const query: QueryOrganizationsDto = (queryOrStatus || {}) as QueryOrganizationsDto;
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      status,
+      sortBy = 'name',
+      sortOrder = SortOrder.ASC,
+    } = query;
+
+    const qb = this.organizationRepository.createQueryBuilder('org');
+
+    if (status && (status as any) !== 'ALL') {
+      qb.andWhere('org.status = :status', { status });
+    }
+
+    if (search?.trim()) {
+      const sanitized = escapeLikeString(search.trim());
+      qb.andWhere(
+        '(org.name ILIKE :search OR org.code ILIKE :search OR org.parentAuthority ILIKE :search OR org.description ILIKE :search)',
+        { search: `%${sanitized}%` },
+      );
+    }
+
+    const sortColumns: Record<string, string> = {
+      name: 'org.name',
+      code: 'org.code',
+      createdAt: 'org.createdAt',
+      status: 'org.status',
+    };
+    const orderColumn = sortColumns[sortBy] || 'org.name';
+    const direction = sortOrder === SortOrder.DESC ? 'DESC' : 'ASC';
+
+    qb.orderBy(orderColumn, direction).addOrderBy('org.id', 'ASC');
+    qb.skip((page - 1) * limit).take(limit);
+
+    const [items, totalItems] = await qb.getManyAndCount();
+    return createPaginatedResponse(items, totalItems, page, limit);
   }
 
   async findOne(id: string): Promise<Organization | null> {

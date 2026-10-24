@@ -6,6 +6,7 @@ import {
   Delete,
   Param,
   Body,
+  Query,
   Req,
   UseGuards,
   ForbiddenException,
@@ -16,6 +17,7 @@ import { RequirePermissions } from './decorators/require-permissions.decorator';
 import { AccessControlService } from './access-control.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { QueryUsersDto } from './dto/query-users.dto';
 
 @UseGuards(JwtAuthGuard, RbacGuard)
 @Controller(['users', 'api/users'])
@@ -44,8 +46,8 @@ export class UsersController {
 
   @Get()
   @RequirePermissions('user:read')
-  async findAll() {
-    return this.accessControlService.findAllUsers();
+  async findAll(@Query() query: QueryUsersDto) {
+    return this.accessControlService.findAllUsers(query);
   }
 
   @Get(':id')

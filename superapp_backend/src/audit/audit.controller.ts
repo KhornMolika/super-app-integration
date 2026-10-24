@@ -8,12 +8,8 @@ export class AuditController {
   constructor(private readonly auditService: AuditService) {}
 
   @Get()
-  async findAll(@Query() query: QueryAuditLogDto): Promise<AuditLog[]> {
-    return this.auditService.findAll({
-      limit: query.limit ?? 100,
-      action: query.action,
-      resourceType: query.resourceType,
-    });
+  async findAll(@Query() query: QueryAuditLogDto) {
+    return this.auditService.findAll(query);
   }
 
   @Get(':id')

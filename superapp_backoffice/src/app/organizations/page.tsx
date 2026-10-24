@@ -1,12 +1,19 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { organizationsApi, Organization, isRootOrganization } from '@/api';
+import {
+  organizationsApi,
+  Organization,
+  isRootOrganization,
+  unwrapData,
+  unwrapMeta,
+  PaginationMeta,
+} from '@/api';
 import { useConfirm } from '@/components/ui/ConfirmationProvider';
 import { toast } from '@/components/ui/Toast';
-import { usePagination } from '@/components/ui/Pagination';
+import { PaginationProps } from '@/components/ui/Pagination';
 import { BuildingIcon } from '@/components/ui/Icons';
 import {
   OrganizationFilterBar,
@@ -16,16 +23,38 @@ import {
   OrganizationFormData,
 } from '@/components/organizations';
 
-
-export default function OrganizationsPage() {
+function OrganizationsContent() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const { user, role, can, isLoading: isAuthLoading } = useAuth();
   const isSuperOrAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN' || can('organization:manage');
 
+  // Read initial query params from URL
+  const initialPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+  const initialLimit = Math.max(1, parseInt(searchParams.get('limit') || '10', 10));
+  const initialSearch = searchParams.get('search') || '';
+  const initialStatus = (searchParams.get('status') as OrganizationStatusFilter) || 'ALL';
+
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<OrganizationStatusFilter>('ALL');
+
+  // Server-Driven Pagination & Filter State
+  const [currentPage, setCurrentPage] = useState<number>(initialPage);
+  const [pageSize, setPageSize] = useState<number>(initialLimit);
+  const [searchQuery, setSearchQuery] = useState<string>(initialSearch);
+  const [debouncedSearch, setDebouncedSearch] = useState<string>(initialSearch);
+  const [statusFilter, setStatusFilter] = useState<OrganizationStatusFilter>(initialStatus);
+
+  const [paginationMeta, setPaginationMeta] = useState<PaginationMeta>({
+    page: initialPage,
+    limit: initialLimit,
+    totalItems: 0,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPreviousPage: false,
+  });
 
   // Modal states
   const [isCreateEditModalOpen, setIsCreateEditModalOpen] = useState(false);
@@ -44,20 +73,70 @@ export default function OrganizationsPage() {
     }
   }, [isAuthLoading, isSuperOrAdmin, user?.organizationId, router]);
 
-  // 1. Fetch organizations from database (Super Admin / Admin only)
+  // Debounce search input to avoid hitting API on every keystroke
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (debouncedSearch !== searchQuery) {
+        setDebouncedSearch(searchQuery);
+        setCurrentPage(1);
+      }
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery, debouncedSearch]);
+
+  // Synchronize state with browser URL search params
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (currentPage > 1) params.set('page', String(currentPage));
+    if (pageSize !== 10) params.set('limit', String(pageSize));
+    if (debouncedSearch) params.set('search', debouncedSearch);
+    if (statusFilter !== 'ALL') params.set('status', statusFilter);
+
+    const queryStr = params.toString();
+    const targetUrl = queryStr ? `${pathname}?${queryStr}` : pathname;
+    router.replace(targetUrl, { scroll: false });
+  }, [currentPage, pageSize, debouncedSearch, statusFilter, pathname, router]);
+
+  // 1. Fetch organizations from database via Server-Driven Query API
   const fetchOrganizations = useCallback(async () => {
     if (!isSuperOrAdmin) return;
     try {
       setLoading(true);
-      const data = await organizationsApi.getAll();
-      setOrganizations(Array.isArray(data) ? data : []);
+      const queryParams: Record<string, any> = {
+        page: currentPage,
+        limit: pageSize,
+      };
+      if (debouncedSearch.trim()) {
+        queryParams.search = debouncedSearch.trim();
+      }
+      if (statusFilter !== 'ALL') {
+        queryParams.status = statusFilter;
+      }
+
+      const res = await organizationsApi.getAll(queryParams);
+      const orgList = unwrapData<Organization>(res);
+      setOrganizations(orgList);
+
+      const meta = unwrapMeta(res);
+      if (meta) {
+        setPaginationMeta(meta);
+      } else {
+        setPaginationMeta({
+          page: currentPage,
+          limit: pageSize,
+          totalItems: orgList.length,
+          totalPages: Math.max(1, Math.ceil(orgList.length / pageSize)),
+          hasNextPage: false,
+          hasPreviousPage: currentPage > 1,
+        });
+      }
     } catch (err: any) {
       console.error('Failed to fetch organizations:', err);
       toast.error('Failed to load organizations from database.');
     } finally {
       setLoading(false);
     }
-  }, [isSuperOrAdmin]);
+  }, [isSuperOrAdmin, currentPage, pageSize, debouncedSearch, statusFilter]);
 
   useEffect(() => {
     if (!isAuthLoading && isSuperOrAdmin) {
@@ -65,43 +144,13 @@ export default function OrganizationsPage() {
     }
   }, [fetchOrganizations, isAuthLoading, isSuperOrAdmin]);
 
-  // 2. Filter organizations based on search query and status filter (ACTIVE / INACTIVE)
-  const filteredOrganizations = useMemo(() => {
-    return organizations.filter((org) => {
-      // Status filtering
-      if (statusFilter !== 'ALL' && org.status !== statusFilter) {
-        return false;
-      }
+  // Status Filter change handler
+  const handleStatusFilterChange = (filter: OrganizationStatusFilter) => {
+    setStatusFilter(filter);
+    setCurrentPage(1);
+  };
 
-      // Search query filtering across name, code, parentAuthority, and description
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase().trim();
-        const matchesName = org.name?.toLowerCase().includes(query);
-        const matchesCode = org.code?.toLowerCase().includes(query);
-        const matchesParent = org.parentAuthority?.toLowerCase().includes(query);
-        const matchesDesc = org.description?.toLowerCase().includes(query);
-
-        return matchesName || matchesCode || matchesParent || matchesDesc;
-      }
-
-      return true;
-    });
-  }, [organizations, statusFilter, searchQuery]);
-
-  // Client-side pagination (10 items per page with page size selector)
-  const { paginatedItems, paginationProps } = usePagination(filteredOrganizations, 10);
-
-  // Status counts for filter bar tabs
-  const activeCount = useMemo(
-    () => organizations.filter((o) => o.status === 'ACTIVE').length,
-    [organizations]
-  );
-  const inactiveCount = useMemo(
-    () => organizations.filter((o) => o.status === 'INACTIVE').length,
-    [organizations]
-  );
-
-  // 3. Navigation & Action Handlers
+  // 2. Navigation & Action Handlers
   const handleOpenCreate = () => {
     setSelectedOrg(null);
     setErrorMessage(null);
@@ -165,25 +214,6 @@ export default function OrganizationsPage() {
             </span>
           </div>
 
-          {/* Unified Warning Callout */}
-          {(isRoot || isOwnOrg) && (
-            <div className="p-3 rounded-xl bg-rose-50/80 dark:bg-rose-950/30 border border-rose-200/80 dark:border-rose-900/50 text-xs text-rose-800 dark:text-rose-300 space-y-1">
-              <div className="font-bold flex items-center gap-1.5 text-rose-900 dark:text-rose-200">
-                <svg className="w-3.5 h-3.5 text-rose-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <span>High-Impact Regulatory Action</span>
-              </div>
-              <p className="text-[11.5px] leading-relaxed text-rose-700/90 dark:text-rose-300/90">
-                {isRoot && isOwnOrg
-                  ? 'This is the root parent authority and your assigned organization. Suspending it affects all subordinate services and active operator accounts.'
-                  : isRoot
-                  ? 'This is the primary root parent authority. Suspending it will temporarily restrict all dependent mini-apps and regulatory submissions.'
-                  : 'You are an assigned operator of this organization. Disabling it will flag your own authority as inactive.'}
-              </p>
-            </div>
-          )}
-
           <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
             Are you sure you want to disable this organization? Active operations and mini-app reviews will be temporarily suspended until re-enabled.
           </p>
@@ -207,64 +237,39 @@ export default function OrganizationsPage() {
               Inactive
             </span>
           </div>
+
           <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            This will restore operational access for assigned operators and enable mini-app registrations to proceed.
+            Are you sure you want to re-enable this organization?
           </p>
         </div>
       ),
       confirmText: `${actionLabel} Organization`,
-      cancelText: 'Cancel',
-      confirmVariant: isCurrentlyActive ? (isRoot ? 'danger' : 'warning') : 'success',
-      requireInputMatch: isCurrentlyActive && isRoot ? {
-        expectedValue: org.name,
-        placeholder: `Type "${org.name}"`,
-        label: (
-          <span>
-            Root Authority Safety Lock: Type <span className="font-mono font-bold text-rose-600 dark:text-rose-400 select-all">{org.name}</span> to confirm:
-          </span>
-        ),
-      } : undefined,
+      confirmVariant: isCurrentlyActive ? 'danger' : 'primary',
     });
 
     if (!isConfirmed) return;
 
     try {
       await organizationsApi.toggleStatus(org.id, newStatus);
-      toast.success(`Organization "${org.name}" has been ${isCurrentlyActive ? 'disabled' : 'enabled'}.`);
+      toast.success(`Organization ${org.name} has been ${actionLabel.toLowerCase()}d.`);
       await fetchOrganizations();
     } catch (err: any) {
-      console.error(`Error toggling status for organization:`, err);
-      toast.error(
-        err.response?.data?.message || err.message || `Failed to ${actionLabel.toLowerCase()} organization.`
-      );
+      console.error('Error toggling status:', err);
+      toast.error(err.response?.data?.message || err.message || 'Failed to update organization status.');
     }
   };
 
+  // Save (Create or Edit)
   const handleSave = async (formData: OrganizationFormData) => {
-    if (!formData.name.trim()) {
-      setErrorMessage('Organization name is required.');
-      return;
-    }
-
     setIsSubmitting(true);
     setErrorMessage(null);
-
-    const payload = {
-      name: formData.name.trim(),
-      code: formData.code.trim().toUpperCase() || undefined,
-      parentAuthority:
-        formData.parentAuthority.trim() || 'Non-Bank Financial Services Authority',
-      description: formData.description.trim() || undefined,
-      status: formData.status,
-    };
-
     try {
       if (selectedOrg) {
-        await organizationsApi.update(selectedOrg.id, payload);
+        await organizationsApi.update(selectedOrg.id, formData);
         toast.success(`Organization "${formData.name}" updated successfully.`);
       } else {
-        await organizationsApi.create(payload);
-        toast.success(`Organization "${formData.name}" created successfully.`);
+        await organizationsApi.create(formData);
+        toast.success(`Organization "${formData.name}" registered successfully.`);
       }
       setIsCreateEditModalOpen(false);
       setSelectedOrg(null);
@@ -307,6 +312,23 @@ export default function OrganizationsPage() {
     );
   }
 
+  // Server-Driven Pagination Props for OrganizationsTable
+  const paginationProps: PaginationProps = {
+    currentPage: paginationMeta.page || currentPage,
+    totalPages: paginationMeta.totalPages,
+    totalItems: paginationMeta.totalItems,
+    pageSize: paginationMeta.limit || pageSize,
+    onPageChange: (newPage: number) => {
+      setCurrentPage(newPage);
+    },
+    onPageSizeChange: (newPageSize: number) => {
+      setPageSize(newPageSize);
+      setCurrentPage(1);
+    },
+    showPageSizeSelector: true,
+    showTotal: true,
+  };
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Header */}
@@ -325,21 +347,21 @@ export default function OrganizationsPage() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         statusFilter={statusFilter}
-        onStatusFilterChange={setStatusFilter}
-        totalCount={organizations.length}
-        activeCount={activeCount}
-        inactiveCount={inactiveCount}
+        onStatusFilterChange={handleStatusFilterChange}
+        totalCount={paginationMeta.totalItems}
+        activeCount={organizations.filter((o) => o.status === 'ACTIVE').length}
+        inactiveCount={organizations.filter((o) => o.status === 'INACTIVE').length}
         onAddClick={handleOpenCreate}
       />
 
-      {/* Organizations Table with Integrated Card Footer Pagination */}
+      {/* Organizations Table with Server-Driven Pagination */}
       <OrganizationsTable
-        organizations={paginatedItems}
+        organizations={organizations}
         loading={loading}
         onView={handleOpenView}
         onEdit={handleOpenEdit}
         onToggleStatus={handleToggleStatus}
-        paginationProps={filteredOrganizations.length > 0 ? paginationProps : undefined}
+        paginationProps={paginationProps}
         userOrganizationId={user?.organizationId}
       />
 
@@ -356,5 +378,13 @@ export default function OrganizationsPage() {
         onSubmit={handleSave}
       />
     </div>
+  );
+}
+
+export default function OrganizationsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-xs text-slate-400">Loading Organizations Directory...</div>}>
+      <OrganizationsContent />
+    </Suspense>
   );
 }

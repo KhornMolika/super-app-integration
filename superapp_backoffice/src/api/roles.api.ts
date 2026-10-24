@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient, unwrapData, PaginatedResponse } from './client';
 
 export interface Role {
   id: string;
@@ -20,8 +20,15 @@ export interface PermissionDefinition {
 }
 
 export const rolesApi = {
-  getAll: () =>
-    apiClient<Role[]>('/api/roles'),
+  getAll: (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    isActive?: boolean;
+  }) =>
+    apiClient<PaginatedResponse<Role> | Role[]>('/api/roles', { params }).then(
+      (res) => unwrapData<Role>(res),
+    ),
 
   getById: (id: string) =>
     apiClient<Role>(`/api/roles/${id}`),

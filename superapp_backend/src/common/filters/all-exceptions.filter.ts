@@ -67,11 +67,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
     }
 
     response.status(status).json({
+      success: false,
       statusCode: status,
       error,
       message,
       code,
-      path: request.url,
+      path: request.originalUrl || request.url,
       timestamp: new Date().toISOString(),
     });
   }

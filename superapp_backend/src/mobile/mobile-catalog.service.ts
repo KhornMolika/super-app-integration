@@ -2,6 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MiniApp, MiniAppStatus } from '../miniapps/entities/miniapp.entity';
+import { buildPaginationMeta } from '../common/utils/pagination.util';
+import { PaginationMeta } from '../common/interfaces/paginated-result.interface';
+import { CatalogQueryDto } from './dto/catalog-query.dto';
 
 export interface CatalogItem {
   id: string;
@@ -25,6 +28,7 @@ export interface CatalogPage {
   total: number;
   limit: number;
   offset: number;
+  meta?: PaginationMeta & { nextCursor?: string | null };
 }
 
 /** Explicit allowlist: nothing sensitive from the row can ever leak. */
@@ -120,46 +124,96 @@ export class MobileCatalogService {
     @InjectRepository(MiniApp) private readonly miniApps: Repository<MiniApp>,
   ) {}
 
-  async list(q: string | undefined, limit: number, offset: number, clientHost?: string): Promise<CatalogPage> {
+  async list(
+    queryOrQ?: CatalogQueryDto | string,
+    limitOrClientHost?: number | string,
+    offsetParam?: number,
+    clientHostParam?: string,
+  ): Promise<CatalogPage> {
+    let q: string | undefined;
+    let limit = 20;
+    let offset = 0;
+    let page: number | undefined;
+    let clientHost: string | undefined;
+
+    if (queryOrQ && typeof queryOrQ === 'object') {
+      q = queryOrQ.search || queryOrQ.q;
+      limit = queryOrQ.limit || 20;
+      offset = queryOrQ.offset || 0;
+      page = queryOrQ.page;
+      clientHost = typeof limitOrClientHost === 'string' ? limitOrClientHost : undefined;
+    } else {
+      q = queryOrQ;
+      limit = typeof limitOrClientHost === 'number' ? limitOrClientHost : 20;
+      offset = typeof offsetParam === 'number' ? offsetParam : 0;
+      clientHost = clientHostParam;
+    }
+
+    if (page && page > 0) {
+      offset = (page - 1) * limit;
+    }
+
     const qb = this.miniApps.createQueryBuilder('m');
     if (typeof qb.leftJoinAndSelect === 'function') {
       qb.leftJoinAndSelect('m.organizationRelation', 'org');
       qb.leftJoinAndSelect('m.legal', 'legal');
     }
     qb.select([
-        'm.id',
-        'm.appId',
-        'm.name',
-        'm.tagline',
-        'm.description',
-        'm.logo',
-        'm.integrationMethod',
-        'm.integrationConfig',
-        'm.capabilities',
-        'm.lifecycleStatus',
-        'm.availabilityStatus',
-        'org.name',
-        'legal.termsDescription',
-        'legal.privacyPolicyDescription',
-      ])
-      .where('(m.lifecycleStatus IN (:...statuses) OR m.availabilityStatus IN (:...statuses))', {
+      'm.id',
+      'm.appId',
+      'm.name',
+      'm.tagline',
+      'm.description',
+      'm.logo',
+      'm.integrationMethod',
+      'm.integrationConfig',
+      'm.capabilities',
+      'm.lifecycleStatus',
+      'm.availabilityStatus',
+      'org.name',
+      'legal.termsDescription',
+      'legal.privacyPolicyDescription',
+    ]).where(
+      '(m.lifecycleStatus IN (:...statuses) OR m.availabilityStatus IN (:...statuses))',
+      {
         statuses: [
           MiniAppStatus.ACTIVE,
           MiniAppStatus.TESTING,
           MiniAppStatus.APPROVED,
         ],
-      });
+      },
+    );
+
     if (q) {
       const escaped = q.replace(/[\\%_]/g, (c) => `\\${c}`);
       qb.andWhere(`m.name ILIKE :q ESCAPE '\\'`, { q: `%${escaped}%` });
     }
+
     const [rows, total] = await qb
       .orderBy('m.name', 'ASC')
       .addOrderBy('m.id', 'ASC')
       .take(limit)
       .skip(offset)
       .getManyAndCount();
-    return { items: rows.map((r) => toCatalogItem(r, clientHost)), total, limit, offset };
+
+    const effectivePage = page || Math.floor(offset / limit) + 1;
+    const baseMeta = buildPaginationMeta(total, effectivePage, limit);
+    const nextCursor = baseMeta.hasNextPage
+      ? Buffer.from(JSON.stringify({ offset: offset + limit })).toString('base64')
+      : null;
+
+    const meta = {
+      ...baseMeta,
+      nextCursor,
+    };
+
+    return {
+      items: rows.map((r) => toCatalogItem(r, clientHost)),
+      total,
+      limit,
+      offset,
+      meta,
+    };
   }
 }
 

@@ -27,6 +27,13 @@ import { NativeSdkCodegenService } from '../native-sdk-codegen/native-sdk-codege
 import { SdkArtifactUploadService } from '../sdk-artifacts/sdk-artifact-upload.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { resolveOrganizationDetails } from '../common/constants/fsa-organizations';
+import { QueryMiniAppsDto } from './dto/query-miniapps.dto';
+import { QueryIssuesDto } from './dto/query-issues.dto';
+import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
+import { createPaginatedResponse, buildPaginationMeta } from '../common/utils/pagination.util';
+import { escapeLikeString } from '../common/utils/sql.util';
+import { SortOrder, PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { maskMiniAppCredentials } from './helpers/flutter-credential.helper';
 
 @Injectable()
 export class MiniappsService implements OnApplicationBootstrap {
@@ -154,13 +161,79 @@ export class MiniappsService implements OnApplicationBootstrap {
     );
   }
 
-  async findAllIssues() {
-    const issues = await this.issueRepository.find({
-      relations: { miniApp: true },
-      order: { createdAt: 'DESC' },
-    });
+  async findAllIssues(query?: QueryIssuesDto): Promise<PaginatedResult<any> | any[]> {
+    if (!query) {
+      const issues = await this.issueRepository.find({
+        relations: { miniApp: true },
+        order: { createdAt: 'DESC' },
+      });
 
-    return issues.map((issue) => {
+      return issues.map((issue) => {
+        let miniAppName = issue.miniApp?.name || 'Unknown MiniApp';
+        let miniAppId = issue.miniApp?.appId || issue.miniAppId;
+
+        if (!issue.miniApp) {
+          if (issue.metadata?.miniAppName)
+            miniAppName = issue.metadata.miniAppName;
+          if (issue.metadata?.miniAppId) miniAppId = issue.metadata.miniAppId;
+        }
+
+        return {
+          ...issue,
+          miniAppName,
+          miniAppId,
+        };
+      });
+    }
+
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      severity,
+      status,
+      classification,
+      sortBy = 'createdAt',
+      sortOrder = SortOrder.DESC,
+    } = query;
+
+    const qb = this.issueRepository
+      .createQueryBuilder('issue')
+      .leftJoinAndSelect('issue.miniApp', 'miniApp');
+
+    if (severity && severity !== 'ALL') {
+      qb.andWhere('issue.severity = :severity', { severity });
+    }
+
+    if (status && status !== 'ALL') {
+      qb.andWhere('issue.status = :status', { status });
+    }
+
+    if (classification && classification !== 'ALL') {
+      qb.andWhere('issue.classification = :classification', { classification });
+    }
+
+    if (search?.trim()) {
+      const sanitized = escapeLikeString(search.trim());
+      qb.andWhere(
+        '(issue.description ILIKE :search OR issue.ruleId ILIKE :search OR miniApp.name ILIKE :search)',
+        { search: `%${sanitized}%` },
+      );
+    }
+
+    const sortColumns: Record<string, string> = {
+      createdAt: 'issue.createdAt',
+      severity: 'issue.severity',
+      status: 'issue.status',
+    };
+    const orderColumn = sortColumns[sortBy] || 'issue.createdAt';
+    const direction = sortOrder === SortOrder.ASC ? 'ASC' : 'DESC';
+
+    qb.orderBy(orderColumn, direction).addOrderBy('issue.id', 'ASC');
+    qb.skip((page - 1) * limit).take(limit);
+
+    const [issues, totalItems] = await qb.getManyAndCount();
+    const formatted = issues.map((issue) => {
       let miniAppName = issue.miniApp?.name || 'Unknown MiniApp';
       let miniAppId = issue.miniApp?.appId || issue.miniAppId;
 
@@ -176,6 +249,8 @@ export class MiniappsService implements OnApplicationBootstrap {
         miniAppId,
       };
     });
+
+    return createPaginatedResponse(formatted, totalItems, page, limit);
   }
 
   async getActivities(id: string) {
@@ -252,10 +327,10 @@ export class MiniappsService implements OnApplicationBootstrap {
   }
 
   async findAll(
-    queryOrOwnerId?: { status?: string; mine?: boolean | string } | string,
+    queryOrOwnerId?: QueryMiniAppsDto | { status?: string; mine?: boolean | string } | string,
     roles?: string[],
     user?: any,
-  ) {
+  ): Promise<PaginatedResult<MiniApp> | MiniApp[]> {
     const isElevated =
       roles?.includes('SUPER_ADMIN') ||
       roles?.includes('ADMIN') ||
@@ -266,58 +341,102 @@ export class MiniappsService implements OnApplicationBootstrap {
       typeof queryOrOwnerId === 'object' &&
       (queryOrOwnerId?.mine === true || queryOrOwnerId?.mine === 'true');
 
-    // 1. Super Admin / Admin / Compliance Officer: Full platform visibility unless mine=true is specified
-    if (isElevated && !isMineRequested) {
-      const where: any = {};
-      if (typeof queryOrOwnerId === 'object' && queryOrOwnerId?.status) {
-        where.lifecycleStatus = queryOrOwnerId.status;
-      }
-      return this.miniappRepository.find({
-        where,
+    // If called with a simple string (ownerId legacy), maintain backward compatibility
+    if (typeof queryOrOwnerId === 'string') {
+      const apps = await this.miniappRepository.find({
+        where: { ownerId: queryOrOwnerId },
         order: { updatedAt: 'DESC' },
         relations: { issues: true },
       });
+      return apps.map((a) => maskMiniAppCredentials(a));
     }
 
-    // 2. Fetch MiniApps based on logged-in user
-    const ownerId =
-      user?.sub ||
-      user?.id ||
-      (typeof queryOrOwnerId === 'string' ? queryOrOwnerId : undefined);
-    const ownerEmail = user?.email;
-    const userOrgId = user?.organizationId;
+    const query: QueryMiniAppsDto = (typeof queryOrOwnerId === 'object' ? queryOrOwnerId : {}) as QueryMiniAppsDto;
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      status,
+      integrationMethod,
+      organizationId,
+      sortBy = 'createdAt',
+      sortOrder = SortOrder.DESC,
+    } = query;
 
     const qb = this.miniappRepository
       .createQueryBuilder('app')
       .leftJoinAndSelect('app.issues', 'issues')
-      .leftJoinAndSelect('app.owner', 'owner')
-      .orderBy('app.updatedAt', 'DESC');
+      .leftJoinAndSelect('app.owner', 'owner');
 
-    if (ownerId || ownerEmail || userOrgId) {
-      qb.where(
-        '(app.ownerId = :ownerId OR (owner.email IS NOT NULL AND LOWER(owner.email) = LOWER(:ownerEmail))' +
-          (userOrgId ? ' OR app.organizationId = :userOrgId' : '') +
-          ')',
-        {
-          ownerId: ownerId || '',
-          ownerEmail: ownerEmail || '',
-          userOrgId: userOrgId || '',
-        },
-      );
-    } else {
-      return [];
+    // Agency / Ownership Scoping
+    if (!isElevated || isMineRequested) {
+      const ownerId = user?.sub || user?.id;
+      const ownerEmail = user?.email;
+      const userOrgId = user?.organizationId;
+
+      if (ownerId || ownerEmail || userOrgId) {
+        qb.andWhere(
+          '(app.ownerId = :ownerId OR (owner.email IS NOT NULL AND LOWER(owner.email) = LOWER(:ownerEmail))' +
+            (userOrgId ? ' OR app.organizationId = :userOrgId' : '') +
+            ')',
+          {
+            ownerId: ownerId || '',
+            ownerEmail: ownerEmail || '',
+            userOrgId: userOrgId || '',
+          },
+        );
+      } else {
+        return createPaginatedResponse([], 0, page, limit);
+      }
     }
 
-    if (typeof queryOrOwnerId === 'object' && queryOrOwnerId?.status) {
+    // Search: name, description, appId, tagline
+    if (search?.trim()) {
+      const sanitized = escapeLikeString(search.trim());
+      qb.andWhere(
+        '(app.name ILIKE :search OR app.description ILIKE :search OR app.appId ILIKE :search OR app.tagline ILIKE :search)',
+        { search: `%${sanitized}%` },
+      );
+    }
+
+    // Filter Status
+    if (status && status !== 'ALL') {
       qb.andWhere(
         '(app.lifecycleStatus = :reqStatus OR app.availabilityStatus = :reqStatus)',
-        {
-          reqStatus: queryOrOwnerId.status,
-        },
+        { reqStatus: status },
       );
     }
 
-    return qb.getMany();
+    // Filter Integration Method
+    if (integrationMethod && integrationMethod !== 'ALL') {
+      qb.andWhere('app.integrationMethod = :integrationMethod', { integrationMethod });
+    }
+
+    // Filter Organization
+    if (organizationId && organizationId !== 'ALL') {
+      qb.andWhere('app.organizationId = :organizationId', { organizationId });
+    }
+
+    // Allowlisted Sorting
+    const sortColumns: Record<string, string> = {
+      createdAt: 'app.createdAt',
+      updatedAt: 'app.updatedAt',
+      name: 'app.name',
+      status: 'app.lifecycleStatus',
+      integrationMethod: 'app.integrationMethod',
+    };
+    const orderColumn = sortColumns[sortBy] || 'app.createdAt';
+    const direction = sortOrder === SortOrder.ASC ? 'ASC' : 'DESC';
+
+    qb.orderBy(orderColumn, direction).addOrderBy('app.id', 'ASC');
+
+    // Pagination via TypeORM .skip() & .take()
+    qb.skip((page - 1) * limit).take(limit);
+
+    const [apps, totalItems] = await qb.getManyAndCount();
+    const masked = apps.map((a) => maskMiniAppCredentials(a));
+
+    return createPaginatedResponse(masked, totalItems, page, limit);
   }
 
   async cancelValidation(id: string, actorId = 'system') {
@@ -722,10 +841,32 @@ export class MiniappsService implements OnApplicationBootstrap {
     );
   }
 
-  async getVersionHistory(id: string, user?: any) {
+  async getVersionHistory(
+    id: string,
+    user?: any,
+    query: PaginationQueryDto = new PaginationQueryDto(),
+  ) {
     const app = await this.findOne(id);
     if (!app) throw new NotFoundException('MiniApp not found');
-    return this.artifactDistributionHelper.getVersionHistory(app, user);
+    const result = this.artifactDistributionHelper.getVersionHistory(app, user);
+
+    const allVersions: any[] = result.versions || [];
+    const page = Math.max(1, query.page || 1);
+    const limit = Math.max(1, query.limit || 20);
+    const skip = (page - 1) * limit;
+
+    if (query.sortOrder === 'ASC') {
+      allVersions.reverse();
+    }
+
+    const pagedVersions = allVersions.slice(skip, skip + limit);
+    const meta = buildPaginationMeta(allVersions.length, page, limit);
+
+    return {
+      ...result,
+      versions: pagedVersions,
+      meta,
+    };
   }
 
   generateInviteToken(appId: string, user: any, expiresIn: string = '7d') {

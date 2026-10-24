@@ -9,6 +9,12 @@ export class CatalogQueryDto {
   q?: string;
 
   @IsOptional()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @MaxLength(100)
+  search?: string;
+
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
@@ -21,4 +27,14 @@ export class CatalogQueryDto {
   @Min(0)
   @Max(1_000_000)
   offset: number = 0;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @IsOptional()
+  @IsString()
+  cursor?: string;
 }

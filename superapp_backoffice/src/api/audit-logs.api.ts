@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient, PaginatedResponse } from './client';
 
 export interface AuditLog {
   id: string;
@@ -15,6 +15,15 @@ export interface AuditLog {
 }
 
 export const auditLogsApi = {
-  getAll: () =>
-    apiClient<AuditLog[]>('/api/audit-logs'),
+  getAll: (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    action?: string;
+    resourceType?: string;
+    actorId?: string;
+    sortBy?: string;
+    sortOrder?: 'ASC' | 'DESC';
+  }) =>
+    apiClient<PaginatedResponse<AuditLog> | AuditLog[]>('/api/audit-logs', { params }),
 };

@@ -11,6 +11,12 @@ import { UpdateRoleDto } from './dto/update-role.dto';
 
 import { hashPassword, verifyPassword } from '../common/utils/password.util';
 import { formatUserResponse } from './helpers/user-response.helper';
+import { QueryUsersDto } from './dto/query-users.dto';
+import { QueryRolesDto } from './dto/query-roles.dto';
+import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
+import { createPaginatedResponse } from '../common/utils/pagination.util';
+import { escapeLikeString } from '../common/utils/sql.util';
+import { SortOrder } from '../common/dto/pagination-query.dto';
 
 export const OFFICIAL_SEEDS: Record<string, { name: string; roleName: string }> = {
   'molikakhorn71@gmail.com': { name: 'Molika Khorn', roleName: 'SUPER_ADMIN' },
@@ -151,13 +157,15 @@ export class AccessControlService {
   }
 
   // --- User Management ---
-  async findAllUsers(includeUnverified = false): Promise<User[]> {
+  async findAllUsers(
+    query?: QueryUsersDto,
+    includeUnverified = false,
+  ): Promise<PaginatedResult<User> | User[]> {
     const qb = this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.role', 'role')
       .leftJoinAndSelect('role.permissions', 'permission')
-      .leftJoinAndSelect('user.organization', 'organization')
-      .orderBy('user.createdAt', 'DESC');
+      .leftJoinAndSelect('user.organization', 'organization');
 
     if (!includeUnverified) {
       // Stop unverified self-registered emails from cluttering the Super Admin's pending review list
@@ -166,8 +174,72 @@ export class AccessControlService {
       });
     }
 
-    const users = await qb.getMany();
-    return users.map((u) => formatUserResponse(u) as User);
+    if (!query) {
+      qb.orderBy('user.createdAt', 'DESC');
+      const users = await qb.getMany();
+      return users.map((u) => formatUserResponse(u) as User);
+    }
+
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      role,
+      status,
+      organizationId,
+      sortBy = 'createdAt',
+      sortOrder = SortOrder.DESC,
+    } = query;
+
+    // Search across name, email, and telegram username
+    if (search?.trim()) {
+      const sanitized = escapeLikeString(search.trim());
+      qb.andWhere(
+        '(user.name ILIKE :search OR user.email ILIKE :search OR user.telegramUsername ILIKE :search)',
+        { search: `%${sanitized}%` },
+      );
+    }
+
+    // Filter by Role
+    if (role && role !== 'ALL') {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(role);
+      if (isUuid) {
+        qb.andWhere('(role.name = :role OR role.id = :roleUuid)', { role, roleUuid: role });
+      } else {
+        qb.andWhere('role.name = :role', { role });
+      }
+    }
+
+    // Filter by Status
+    if (status && status !== 'ALL') {
+      qb.andWhere('user.status = :status', { status });
+    }
+
+    // Filter by Organization
+    if (organizationId && organizationId !== 'ALL') {
+      qb.andWhere('user.organizationId = :organizationId', { organizationId });
+    }
+
+    // Allowlisted Sorting
+    const sortColumns: Record<string, string> = {
+      createdAt: 'user.createdAt',
+      updatedAt: 'user.updatedAt',
+      name: 'user.name',
+      email: 'user.email',
+      status: 'user.status',
+    };
+    const orderColumn = sortColumns[sortBy] || 'user.createdAt';
+    const direction = sortOrder === SortOrder.ASC ? 'ASC' : 'DESC';
+
+    qb.orderBy(orderColumn, direction).addOrderBy('user.id', 'ASC');
+
+    // Safe offset pagination via TypeORM .skip() & .take()
+    qb.skip((page - 1) * limit).take(limit);
+
+    const [users, totalItems] = await qb.getManyAndCount();
+    const formatted = users.map((u) => formatUserResponse(u) as User);
+
+    return createPaginatedResponse(formatted, totalItems, page, limit);
   }
 
   async findUserById(id: string): Promise<User> {
@@ -360,13 +432,45 @@ export class AccessControlService {
   }
 
   // --- Role Management ---
-  async findAllRoles(): Promise<any[]> {
-    const roles = await this.roleRepository.find({
-      relations: { permissions: true, users: true },
-      order: { createdAt: 'ASC' },
-    });
+  async findAllRoles(
+    query: QueryRolesDto = new QueryRolesDto(),
+  ): Promise<PaginatedResult<any>> {
+    const page = Math.max(1, query.page || 1);
+    const limit = Math.max(1, query.limit || 20);
+    const skip = (page - 1) * limit;
 
-    return roles.map((r) => ({
+    const qb = this.roleRepository
+      .createQueryBuilder('role')
+      .leftJoinAndSelect('role.permissions', 'permission')
+      .leftJoinAndSelect('role.users', 'user');
+
+    if (query.isActive !== undefined) {
+      qb.andWhere('role.isActive = :isActive', { isActive: query.isActive });
+    }
+
+    if (query.search?.trim()) {
+      const sanitized = escapeLikeString(query.search.trim().toLowerCase());
+      qb.andWhere(
+        '(LOWER(role.name) LIKE :pattern OR LOWER(role.description) LIKE :pattern)',
+        { pattern: `%${sanitized}%` },
+      );
+    }
+
+    const sortField = query.sortBy || 'createdAt';
+    const sortOrder = query.sortOrder || 'ASC';
+    const allowedSortFields: Record<string, string> = {
+      createdAt: 'role.createdAt',
+      updatedAt: 'role.updatedAt',
+      name: 'role.name',
+    };
+    const dbSortField = allowedSortFields[sortField] || 'role.createdAt';
+    qb.orderBy(dbSortField, sortOrder);
+
+    qb.skip(skip).take(limit);
+
+    const [roles, totalItems] = await qb.getManyAndCount();
+
+    const formatted = roles.map((r) => ({
       id: r.id,
       name: r.name,
       description: r.description,
@@ -376,6 +480,8 @@ export class AccessControlService {
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,
     }));
+
+    return createPaginatedResponse(formatted, totalItems, page, limit);
   }
 
   async findRoleById(id: string): Promise<Role> {

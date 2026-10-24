@@ -6,21 +6,23 @@ import {
   Delete,
   Param,
   Body,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AccessControlService } from './access-control.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
+import { QueryRolesDto } from './dto/query-roles.dto';
 
 @UseGuards(JwtAuthGuard)
-@Controller('roles')
+@Controller(['roles', 'api/roles'])
 export class RolesController {
   constructor(private readonly accessControlService: AccessControlService) {}
 
   @Get()
-  async findAll() {
-    return this.accessControlService.findAllRoles();
+  async findAll(@Query() query: QueryRolesDto) {
+    return this.accessControlService.findAllRoles(query);
   }
 
   @Get('permissions')

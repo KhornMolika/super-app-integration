@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient, unwrapData, PaginatedResponse } from './client';
 
 export interface Permission {
   id: string;
@@ -77,8 +77,16 @@ export interface PermissionProposal {
 }
 
 export const permissionsApi = {
-  getAll: () =>
-    apiClient<Permission[]>('/api/permissions'),
+  getAll: (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    category?: string;
+  }) =>
+    apiClient<PaginatedResponse<Permission> | Permission[]>(
+      '/api/permissions',
+      { params },
+    ).then((res) => unwrapData<Permission>(res)),
 
   getCapabilities: (refresh?: boolean) =>
     apiClient<CapabilityItem[]>(`/api/permissions/capabilities${refresh ? '?refresh=true' : ''}`),
@@ -106,8 +114,16 @@ export const permissionsApi = {
       body: data,
     }),
 
-  getProposals: () =>
-    apiClient<PermissionProposal[]>('/api/permission-proposals'),
+  getProposals: (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+  }) =>
+    apiClient<PaginatedResponse<PermissionProposal> | PermissionProposal[]>(
+      '/api/permission-proposals',
+      { params },
+    ).then((res) => unwrapData<PermissionProposal>(res)),
 
   createProposal: (data: {
     permissionKey: string;

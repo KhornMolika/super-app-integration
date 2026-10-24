@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient, PaginatedResponse } from './client';
 
 export interface UserRole {
   id: string;
@@ -44,8 +44,8 @@ export const usersApi = {
       body: data,
     }),
 
-  getAll: () =>
-    apiClient<User[]>('/api/users'),
+  getAll: (params?: Record<string, any>) =>
+    apiClient<PaginatedResponse<User> | User[]>('/api/users', { params }),
 
   getById: (id: string) =>
     apiClient<User>(`/api/users/${id}`),

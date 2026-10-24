@@ -4,6 +4,11 @@ import { Repository } from 'typeorm';
 import * as fs from 'fs';
 import * as path from 'path';
 import { AuditLog } from './entities/audit-log.entity';
+import { QueryAuditLogDto } from './dto/query-audit-log.dto';
+import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
+import { createPaginatedResponse } from '../common/utils/pagination.util';
+import { escapeLikeString } from '../common/utils/sql.util';
+import { SortOrder } from '../common/dto/pagination-query.dto';
 
 @Injectable()
 export class AuditService implements OnApplicationBootstrap {
@@ -96,26 +101,65 @@ export class AuditService implements OnApplicationBootstrap {
     return this.auditLogRepository.save(entry);
   }
 
-  async findAll(options?: {
-    limit?: number;
-    action?: string;
-    resourceType?: string;
-  }): Promise<AuditLog[]> {
-    const query = this.auditLogRepository.createQueryBuilder('log');
-
-    if (options?.action) {
-      query.andWhere('log.action = :action', { action: options.action });
-    }
-    if (options?.resourceType) {
-      query.andWhere('log.resourceType = :resourceType', {
-        resourceType: options.resourceType,
+  async findAll(query?: QueryAuditLogDto): Promise<PaginatedResult<AuditLog> | AuditLog[]> {
+    if (!query) {
+      return this.auditLogRepository.find({
+        order: { createdAt: 'DESC' },
+        take: 100,
       });
     }
 
-    query.orderBy('log.createdAt', 'DESC');
-    query.take(options?.limit || 100);
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      action,
+      resourceType,
+      actorId,
+      resourceId,
+      sortBy = 'createdAt',
+      sortOrder = SortOrder.DESC,
+    } = query;
 
-    return query.getMany();
+    const qb = this.auditLogRepository.createQueryBuilder('log');
+
+    if (action && action !== 'ALL') {
+      qb.andWhere('log.action = :action', { action });
+    }
+
+    if (resourceType && resourceType !== 'ALL') {
+      qb.andWhere('log.resourceType = :resourceType', { resourceType });
+    }
+
+    if (actorId) {
+      qb.andWhere('log.actorId = :actorId', { actorId });
+    }
+
+    if (resourceId) {
+      qb.andWhere('log.resourceId = :resourceId', { resourceId });
+    }
+
+    if (search?.trim()) {
+      const sanitized = escapeLikeString(search.trim());
+      qb.andWhere(
+        '(log.action ILIKE :search OR log.resourceType ILIKE :search OR log.actorEmail ILIKE :search OR log.actorName ILIKE :search OR log.resourceId ILIKE :search)',
+        { search: `%${sanitized}%` },
+      );
+    }
+
+    const sortColumns: Record<string, string> = {
+      createdAt: 'log.createdAt',
+      action: 'log.action',
+      resourceType: 'log.resourceType',
+    };
+    const orderColumn = sortColumns[sortBy] || 'log.createdAt';
+    const direction = sortOrder === SortOrder.ASC ? 'ASC' : 'DESC';
+
+    qb.orderBy(orderColumn, direction).addOrderBy('log.id', 'ASC');
+    qb.skip((page - 1) * limit).take(limit);
+
+    const [items, totalItems] = await qb.getManyAndCount();
+    return createPaginatedResponse(items, totalItems, page, limit);
   }
 
   async findOne(id: string): Promise<AuditLog | null> {

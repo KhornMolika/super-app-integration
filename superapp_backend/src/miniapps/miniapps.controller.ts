@@ -39,6 +39,9 @@ import {
   DetectPermissionsDto,
   RescanDto,
 } from './dto/miniapp-actions.dto';
+import { QueryMiniAppsDto } from './dto/query-miniapps.dto';
+import { QueryIssuesDto } from './dto/query-issues.dto';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 
 @UseGuards(JwtAuthGuard, RbacGuard)
 @Controller('mini-apps')
@@ -50,8 +53,8 @@ export class MiniappsController {
 
   @Get('issues/all')
   @RequirePermissions('miniapp:read')
-  getAllIssues() {
-    return this.miniappService.findAllIssues();
+  getAllIssues(@Query() query: QueryIssuesDto) {
+    return this.miniappService.findAllIssues(query);
   }
 
   private extractIntegrationConfig(dto: any): any {
@@ -159,21 +162,13 @@ export class MiniappsController {
   @Get()
   @RequirePermissions('miniapp:read')
   async findAll(
-    @Query('status') status?: string,
-    @Query('mine') mine?: string,
+    @Query() query: QueryMiniAppsDto,
     @Req() req?: any,
   ) {
-    const query: any = status ? { status } : {};
-    if (mine === 'true' || mine === '1') {
-      query.mine = true;
-    }
     const user = req?.user;
     const roles = user?.roles || [];
     try {
-      const apps = await this.miniappService.findAll(query, roles, user);
-      return Array.isArray(apps)
-        ? apps.map((a) => maskMiniAppCredentials(a))
-        : maskMiniAppCredentials(apps);
+      return await this.miniappService.findAll(query, roles, user);
     } catch (error: any) {
       console.error('FIND ALL ERROR:', error);
       throw new HttpException(
@@ -467,8 +462,9 @@ export class MiniappsController {
   async getVersions(
     @Param('id', ParseUUIDPipe) id: string,
     @Req() req: any,
+    @Query() query: PaginationQueryDto,
   ) {
-    return this.miniappService.getVersionHistory(id, req.user);
+    return this.miniappService.getVersionHistory(id, req.user, query);
   }
 
   @Get(':id/diff')
