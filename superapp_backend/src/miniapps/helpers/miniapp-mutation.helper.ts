@@ -54,6 +54,20 @@ export class MiniappMutationHelper {
     if (data.fullDescription !== undefined && !data.description) {
       data.description = data.fullDescription;
     }
+    if (!data.alertTelegramChatId && data.teamTelegramChatId) {
+      data.alertTelegramChatId = data.teamTelegramChatId;
+    }
+    if (!data.logo && data.iconUrl) {
+      data.logo = data.iconUrl;
+    }
+    if (!data.legal && (data.termsUrl || data.termsDescription || data.privacyPolicyUrl || data.privacyPolicyDescription)) {
+      data.legal = {
+        termsUrl: data.termsUrl,
+        termsDescription: data.termsDescription,
+        privacyPolicyUrl: data.privacyPolicyUrl,
+        privacyPolicyDescription: data.privacyPolicyDescription,
+      };
+    }
 
     // Resolve & normalize organization name and short code (e.g. FTC, IRC, etc.)
     const orgInfo = await resolveOrganizationDetails(data.organization || (data as any).category);
@@ -263,6 +277,25 @@ export class MiniappMutationHelper {
     if (data.fullDescription !== undefined) {
       data.description = data.fullDescription;
       existing.description = data.fullDescription;
+    }
+    if (data.teamTelegramChatId !== undefined && data.alertTelegramChatId === undefined) {
+      data.alertTelegramChatId = data.teamTelegramChatId;
+      existing.alertTelegramChatId = data.teamTelegramChatId;
+    }
+    if (data.iconUrl !== undefined && data.logo === undefined) {
+      data.logo = data.iconUrl;
+      existing.logo = data.iconUrl;
+    }
+    if (data.termsUrl !== undefined || data.termsDescription !== undefined || data.privacyPolicyUrl !== undefined || data.privacyPolicyDescription !== undefined) {
+      if (!existing.legal) {
+        existing.legal = new MiniAppLegal();
+        existing.legal.miniApp = existing;
+        existing.legal.miniAppId = existing.id;
+      }
+      if (data.termsUrl !== undefined) existing.legal.termsUrl = data.termsUrl;
+      if (data.termsDescription !== undefined) existing.legal.termsDescription = data.termsDescription;
+      if (data.privacyPolicyUrl !== undefined) existing.legal.privacyPolicyUrl = data.privacyPolicyUrl;
+      if (data.privacyPolicyDescription !== undefined) existing.legal.privacyPolicyDescription = data.privacyPolicyDescription;
     }
 
     if (data.permissions && Array.isArray(data.permissions)) {

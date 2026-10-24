@@ -3,6 +3,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsArray,
+  IsBoolean,
 } from 'class-validator';
 
 export class CreateRoleDto {
@@ -23,4 +24,8 @@ export class CreateRoleDto {
   @IsString({ each: true })
   @IsOptional()
   permissionNames?: string[];
+
+  @IsBoolean()
+  @IsOptional()
+  isActive?: boolean;
 }

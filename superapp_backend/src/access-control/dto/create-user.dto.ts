@@ -16,6 +16,10 @@ export class CreateUserDto {
   @IsNotEmpty({ message: 'Email address is required' })
   email!: string;
 
+  @IsString()
+  @IsOptional()
+  roleId?: string;
+
   @IsArray()
   @IsString({ each: true })
   @IsOptional()
@@ -28,7 +32,15 @@ export class CreateUserDto {
 
   @IsString()
   @IsOptional()
+  avatarUrl?: string;
+
+  @IsString()
+  @IsOptional()
   telegramChatId?: string;
+
+  @IsString()
+  @IsOptional()
+  teamTelegramChatId?: string;
 
   @IsString()
   @IsOptional()

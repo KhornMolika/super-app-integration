@@ -335,6 +335,14 @@ export class CreateMiniAppDto {
 
   @IsString()
   @IsOptional()
+  tagline?: string;
+
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @IsString()
+  @IsOptional()
   shortDescription?: string;
 
   @IsString()
@@ -347,7 +355,15 @@ export class CreateMiniAppDto {
 
   @IsString()
   @IsOptional()
+  iconUrl?: string;
+
+  @IsString()
+  @IsOptional()
   category?: string;
+
+  @IsString()
+  @IsOptional()
+  organizationId?: string;
 
   @IsString()
   @IsOptional()
@@ -356,6 +372,18 @@ export class CreateMiniAppDto {
   @IsString()
   @IsOptional()
   organizationCode?: string;
+
+  @IsString()
+  @IsOptional()
+  sharingScope?: string;
+
+  @IsString()
+  @IsOptional()
+  lifecycleStatus?: string;
+
+  @IsString()
+  @IsOptional()
+  availabilityStatus?: string;
 
   @IsString()
   @IsOptional()
@@ -375,6 +403,10 @@ export class CreateMiniAppDto {
 
   @IsString()
   @IsOptional()
+  ownerId?: string;
+
+  @IsString()
+  @IsOptional()
   ownerName?: string;
 
   @IsString()
@@ -387,11 +419,19 @@ export class CreateMiniAppDto {
 
   @IsString()
   @IsOptional()
+  supportUrl?: string;
+
+  @IsString()
+  @IsOptional()
   teamName?: string;
 
   @IsString()
   @IsOptional()
   teamTelegramChatId?: string;
+
+  @IsString()
+  @IsOptional()
+  alertTelegramChatId?: string;
 
   @IsEnum(IntegrationMethod)
   @IsNotEmpty()
@@ -427,6 +467,12 @@ export class CreateMiniAppDto {
   @ValidateNested({ each: true })
   @Type(() => PermissionDto)
   @IsOptional()
+  capabilities?: PermissionDto[];
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PermissionDto)
+  @IsOptional()
   permissions?: PermissionDto[];
 
   @IsArray()
@@ -444,4 +490,16 @@ export class CreateMiniAppDto {
 
   @IsOptional()
   domainVerifiedAt?: Date | string;
+
+  @IsString()
+  @IsOptional()
+  currentReleaseVersion?: string;
+
+  @IsString()
+  @IsOptional()
+  activeTestVersion?: string;
+
+  @IsString()
+  @IsOptional()
+  draftVersion?: string;
 }

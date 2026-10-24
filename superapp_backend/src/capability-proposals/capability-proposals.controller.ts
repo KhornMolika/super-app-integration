@@ -17,6 +17,7 @@ import { CapabilityProposalsService } from './capability-proposals.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CapabilityCodeGeneratorService } from '../capabilities/capability-code-generator.service';
 import { ReviewProposalDto } from './dto/review-proposal.dto';
+import { CreateCapabilityProposalDto } from './dto/create-capability-proposal.dto';
 
 @UseGuards(JwtAuthGuard, RbacGuard)
 @Controller(['capability-proposals', 'permission-proposals'])
@@ -37,7 +38,7 @@ export class CapabilityProposalsController {
 
   @Post()
   @RequirePermissions('permission_proposal:read')
-  async createProposal(@Request() req: any, @Body() body: any) {
+  async createProposal(@Request() req: any, @Body() body: CreateCapabilityProposalDto) {
     const rawKey = body.capabilityKey || body.permissionKey;
     const rawName = body.capabilityName || body.permissionName;
     const { description, miniAppId, metadata } = body;
