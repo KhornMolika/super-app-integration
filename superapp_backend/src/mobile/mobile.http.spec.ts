@@ -18,8 +18,10 @@ import { MobileController } from './mobile.controller';
 import { PasswordService } from './password.service';
 import { FakeRepo } from './testing/fake-repo';
 import { User } from '../access-control/entities/user.entity';
+import { hashPassword } from '../common/utils/password.util';
 
 const PW = 'a-very-good-password';
+const ADMIN_PW = 'Password123!@#';
 
 describe('Mobile HTTP (in-process)', () => {
   let app: INestApplication;
@@ -40,8 +42,17 @@ describe('Mobile HTTP (in-process)', () => {
     const qb: any = {};
     for (const m of ['select', 'where', 'andWhere', 'orderBy', 'addOrderBy', 'take', 'skip']) qb[m] = () => qb;
     qb.getManyAndCount = async () => [miniRows, 1];
+    const adminPasswordHash = await hashPassword(ADMIN_PW);
     const authInstance = new AuthService(new JwtService({}), {
-      findByEmailWithPermissions: async () => ({ id: 'a', email: 'admin@x.io', name: 'Admin', roles: [{ name: 'R', permissions: [] }] }),
+      findByEmailWithPermissions: async () => ({
+        id: 'a',
+        email: 'admin@x.io',
+        name: 'Admin',
+        passwordHash: adminPasswordHash,
+        isActive: true,
+        status: 'ACTIVE',
+        roles: [{ name: 'R', permissions: [] }],
+      }),
     } as any);
     authInstance.onModuleInit();
 
@@ -157,7 +168,8 @@ describe('Mobile HTTP (in-process)', () => {
     const login = await fullFlow('/mobile');
     await request(server).get(`/mobile/me?access_token=${login.access_token}`).expect(401);
     await request(server).get('/mobile/mini-apps').set('Authorization', `Bearer ${login.access_token}x`).expect(401);
-    const bo: any = await authService.login({ email: 'admin@x.io' });
+    const bo: any = await authService.login({ email: 'admin@x.io', password: ADMIN_PW });
+    expect(bo.access_token).toBeDefined();
     await request(server).get('/mobile/me').set('Authorization', `Bearer ${bo.access_token}`).expect(401);
     // end-user token is refused by the back-office guard
     const boGuard = new JwtAuthGuard(authService);

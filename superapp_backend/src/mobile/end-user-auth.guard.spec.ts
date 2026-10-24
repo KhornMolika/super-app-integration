@@ -4,6 +4,7 @@ import { AuthService } from '../auth/auth.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { EndUserAuthGuard } from './end-user-auth.guard';
 import { EndUserStatus } from './entities/end-user.entity';
+import { hashPassword } from '../common/utils/password.util';
 
 describe('EndUserAuthGuard', () => {
   let authService: AuthService;
@@ -11,12 +12,16 @@ describe('EndUserAuthGuard', () => {
   let guard: EndUserAuthGuard;
   const jwt = new JwtService({});
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    const adminPasswordHash = await hashPassword('Password123!@#');
     authService = new AuthService(jwt, {
       findByEmailWithPermissions: async () => ({
         id: 'admin-1',
         email: 'admin@x.io',
         name: 'Admin',
+        passwordHash: adminPasswordHash,
+        isActive: true,
+        status: 'ACTIVE',
         roles: [{ name: 'ADMIN', permissions: [{ name: 'p' }] }],
       }),
     } as any);
@@ -51,7 +56,8 @@ describe('EndUserAuthGuard', () => {
   });
 
   it('rejects back-office tokens', async () => {
-    const login: any = await authService.login({ email: 'admin@x.io' });
+    const login: any = await authService.login({ email: 'admin@x.io', password: 'Password123!@#' });
+    expect(login.access_token).toBeDefined();
     await expect(guard.canActivate(ctx(bearer(login.access_token)).ctx)).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
