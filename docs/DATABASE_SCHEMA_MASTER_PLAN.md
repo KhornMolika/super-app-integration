@@ -466,7 +466,7 @@ graph TD
 ### 1. Mandatory Organization Selection on Developer Signup
 
 When a user registers for an account as an `MA_DEVELOPER`:
-1. **Mandatory Agency Selection**: The registration form **requires** selecting their specific `organizationId` (e.g., `SERC`, `FSA`, `ABA Bank`).
+1. **Mandatory Agency Selection**: The registration form **requires** selecting their specific `organizationId` (e.g., `SERC`, `FSA`).
 2. **SuperAdmin Approval**: The account is created with `status = 'PENDING_APPROVAL'`. A SuperAdmin verifies and approves the developer for that specific organization.
 3. **Automatic Agency Inheritance**: When an approved developer registers a MiniApp:
    - `mini_apps.organizationId` is automatically set to `currentUser.organizationId`.
@@ -770,7 +770,8 @@ Every task in this roadmap requires verifiable evidence (database query outputs,
     --> Evidence: Next.js backoffice build compilation succeeds (`pnpm run build` with code 0; all 33 routes generated).
 
 [ ] Phase 6: End-to-End Functional Verification & Sign-off
-    [ ] Task 6.1: Verify authentication with official accounts (`molikakhorn71@gmail.com`, `lymoly1122@gmail.com`).
+    [x] Task 6.1: Verify authentication with official accounts (`molikakhorn71@gmail.com`, `lymoly1122@gmail.com`).
+        --> Evidence: `test/task-6-1-authentication.e2e-spec.ts` passed (5/5 tests passed in 4.43s). Authenticated Super Admin and Official Admin against PostgreSQL scrypt hashes, validated RS256 token claims, permissions, and rejected invalid credentials.
     [ ] Task 6.2: Verify MiniApp creation and automatic agency inheritance.
     [ ] Task 6.3: Verify Option C collaboration (teammate build permissions vs lead submit restriction).
     [ ] Task 6.4: Verify cross-agency strict firewall isolation.
