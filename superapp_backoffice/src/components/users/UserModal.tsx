@@ -56,7 +56,7 @@ export function UserModal({
       .then((res) => {
         if (res?.botUsername) setBotUsername(res.botUsername);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [isOpen]);
 
   // Sync edit data when modal opens
@@ -70,8 +70,8 @@ export function UserModal({
         const userRoles = editingUser.roles && editingUser.roles.length > 0
           ? editingUser.roles
           : editingUser.role
-          ? [editingUser.role]
-          : [];
+            ? [editingUser.role]
+            : [];
 
         setFormData({
           name: editingUser.name || '',
@@ -125,7 +125,7 @@ export function UserModal({
       } else {
         const targetQuery = (formData.name || formData.email || '').toLowerCase().trim();
         const match = chats.find(
-          (c) =>
+          (c: any) =>
             (c.username && targetQuery.includes(c.username.toLowerCase())) ||
             (c.name && targetQuery.includes(c.name.toLowerCase()))
         );
@@ -315,11 +315,10 @@ export function UserModal({
                 return (
                   <label
                     key={r.id}
-                    className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors text-xs font-semibold ${
-                      checked
+                    className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors text-xs font-semibold ${checked
                         ? 'bg-brand-50 dark:bg-brand-500/20 text-brand-800 dark:text-brand-300 border border-brand-200 dark:border-brand-500/30'
                         : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                    }`}
+                      }`}
                   >
                     <input
                       type="checkbox"
@@ -494,9 +493,8 @@ export function UserModal({
                   placeholder="e.g. 1193078022"
                 />
                 {chatValidationStatus && (
-                  <div className={`text-[10px] font-semibold mt-1 flex items-center gap-1 ${
-                    chatValidationStatus.valid ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
-                  }`}>
+                  <div className={`text-[10px] font-semibold mt-1 flex items-center gap-1 ${chatValidationStatus.valid ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
+                    }`}>
                     {chatValidationStatus.valid ? (
                       <CheckIcon className="w-3.5 h-3.5 text-emerald-500" />
                     ) : (
@@ -551,7 +549,7 @@ export function UserModal({
               }
               value={formData.isActive ? 'ACTIVE' : 'INACTIVE'}
               options={[
-                { value: 'ACTIVE', label: 'Active (Can sign in & receive alerts)', dotColor: 'bg-emerald-500' },
+                { value: 'ACTIVE', label: 'Active (Can Login & receive alerts)', dotColor: 'bg-emerald-500' },
                 { value: 'INACTIVE', label: 'Inactive / Suspended', dotColor: 'bg-slate-400' },
               ]}
               onChange={(val) => setFormData({ ...formData, isActive: val === 'ACTIVE' })}

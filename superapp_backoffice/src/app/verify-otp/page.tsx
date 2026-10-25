@@ -150,7 +150,7 @@ function VerifyOtpContent() {
             href="/login"
             className="w-full py-3.5 px-4 rounded-xl text-sm font-semibold text-white bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-brand-500/40 transition-all duration-200 flex items-center justify-center gap-2"
           >
-            <span>Return to Sign In</span>
+            <span>Return to Login</span>
             <span className="text-brand-400">→</span>
           </Link>
         </div>

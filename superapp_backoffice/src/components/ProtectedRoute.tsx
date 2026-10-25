@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 interface ProtectedRouteProps {
   permission?: string;
   requiredPermission?: string;
+  requiredRole?: string | string[];
   children: ReactNode;
   fallback?: ReactNode;
   redirectOnForbidden?: boolean;
@@ -15,6 +16,7 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({
   permission,
   requiredPermission,
+  requiredRole,
   children,
   fallback,
   redirectOnForbidden = true,
@@ -22,7 +24,13 @@ export function ProtectedRoute({
   const { can, role } = useAuth();
   const router = useRouter();
   const perm = permission || requiredPermission;
-  const isAllowed = !perm || can(perm);
+  const hasPerm = !perm || can(perm);
+  const hasRole =
+    !requiredRole ||
+    (Array.isArray(requiredRole)
+      ? requiredRole.includes(role || '')
+      : role === requiredRole);
+  const isAllowed = hasPerm && hasRole;
 
   useEffect(() => {
     if (!isAllowed && redirectOnForbidden) {

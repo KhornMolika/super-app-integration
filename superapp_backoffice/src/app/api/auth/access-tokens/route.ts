@@ -74,32 +74,23 @@ async function resolveUserAndToken(request: Request): Promise<{ token: string | 
     token = cookieStore.get('auth_token')?.value || null;
   }
 
-  const candidateEmails = [
-    process.env.DEV_FALLBACK_USER_EMAIL,
-    process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL,
-    'superadmin@example.com',
-    'admin@example.com',
-    'dev@example.com',
-  ].filter(Boolean) as string[];
-
   let user: any = {
     id: '00000000-0000-0000-0000-000000000001',
-    email: 'developer@example.com',
-    name: 'Developer Account',
+    email: 'user@superapp.gov.kh',
+    name: 'Authenticated User',
   };
 
-  for (const email of candidateEmails) {
+  if (token) {
     try {
-      const res = await fetch(`${BACKEND_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.access_token && !token) token = data.access_token;
-        if (data.user) user = data.user;
-        break;
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
+        user = {
+          id: payload.sub || payload.id || user.id,
+          email: payload.email || user.email,
+          name: payload.name || payload.email || user.name,
+          roles: payload.roles || (payload.role ? [payload.role] : ['MA_DEVELOPER']),
+        };
       }
     } catch (_) {}
   }

@@ -25,7 +25,7 @@ import BuildProgressModal, { BuildProgressModalState } from '@/components/ui/Bui
 import { CreateMiniAppDto, IntegrationMethod, NativeSdkConfigDto, SourceType } from '@/types/miniapp.types';
 import { validateUrlFormat } from '@/components/ui/ValidatedUrlInput';
 import { toast } from '@/components/ui/Toast';
-import { miniappsApi, superAppApi, isBackendUnreachableError } from '@/api';
+import { miniappsApi, superAppApi, isBackendUnreachableError, unwrapItem } from '@/api';
 import { BackendServiceOfflineNotice } from '@/components/ui/BackendServiceOfflineNotice';
 
 export default function ManageMiniAppPage({ params: _params }: { params?: Promise<{ id: string }> | { id: string } }) {
@@ -238,14 +238,21 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
     }
   }, []);
 
+  useEffect(() => {
+    if (id === 'superapp') {
+      router.replace('/miniapps');
+    }
+  }, [id, router]);
+
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   const fetchApp = async (isRetry = false, isSilent = false) => {
-    if (!id) return;
+    if (!id || id === 'superapp') return;
     if (!isSilent) setIsLoading(true);
     if (!isRetry) setFetchError(null);
     try {
-      const data = await miniappsApi.getById(id);
+      const raw = await miniappsApi.getById(id);
+      const data = unwrapItem(raw);
       if (data && data.id) {
         setFetchError(null);
         const activeOrRev = data.pendingRevision ? { ...data, ...data.pendingRevision } : data;

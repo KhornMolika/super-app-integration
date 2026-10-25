@@ -100,7 +100,7 @@ export default function PlatformPrivacyPage() {
             href="/login"
             className="text-xs font-semibold text-brand-400 hover:text-brand-300 transition-colors"
           >
-            Return to Sign In →
+            Return to Login →
           </Link>
         </div>
       </div>

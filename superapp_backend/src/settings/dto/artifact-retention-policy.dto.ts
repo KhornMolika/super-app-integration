@@ -6,6 +6,7 @@ import {
   IsString,
   Max,
   Min,
+  ValidateIf,
 } from 'class-validator';
 
 export enum RetentionScheduleType {
@@ -41,6 +42,7 @@ export class UpdateArtifactRetentionDto {
   @IsOptional()
   weeklyDay?: number;
 
+  @ValidateIf((_, val) => val !== null && val !== undefined && val !== '')
   @IsString()
   @IsOptional()
   specificRunDateTime?: string | null;

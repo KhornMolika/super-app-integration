@@ -38,7 +38,7 @@ export default function LegalHubPage() {
             href="/login"
             className="text-xs font-semibold text-brand-400 hover:text-brand-300 transition-colors flex items-center gap-1"
           >
-            <span>Sign In</span>
+            <span>Login</span>
             <span>→</span>
           </Link>
         </div>

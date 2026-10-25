@@ -1,14 +1,33 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { createPortal } from 'react-dom';
 import { Card } from '@/components/ui/card';
 import { Button, Input, Label } from '@/components/ui/inputs';
 import { usersApi } from '@/api/users.api';
 import { toast } from '@/components/ui/Toast';
+import {
+  ShieldCheckIcon,
+  BuildingIcon,
+  CopyIcon,
+  CheckIcon,
+  KeyIcon,
+  ArrowRightIcon,
+  UserIcon,
+  MailIcon,
+  LockIcon,
+  SendIcon,
+} from 'lucide-react';
 
 interface UserProfileCardProps {
-  user: { id?: string; name?: string; email?: string; avatarUrl?: string } | null;
+  user: {
+    id?: string;
+    name?: string;
+    email?: string;
+    avatarUrl?: string;
+    organization?: { name?: string; code?: string } | null;
+  } | null;
   role: string;
   telegramStatus: any;
   onSendTestEmail: (targetEmail?: string) => Promise<void>;
@@ -28,6 +47,7 @@ export function UserProfileCard({
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [testEmailAddress, setTestEmailAddress] = useState(user?.email || '');
   const [saving, setSaving] = useState(false);
+  const [copiedId, setCopiedId] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
     avatarUrl: user?.avatarUrl || '',
@@ -35,13 +55,15 @@ export function UserProfileCard({
 
   const userDisplayName = user?.name || 'Authorized User';
   const userEmail = user?.email || '';
+  const userId = user?.id || '';
+  const orgName = user?.organization?.name || 'Financial Services Authority (FSA)';
 
   const roleBadgeStyle =
     role === 'SUPER_ADMIN'
-      ? 'bg-accent-50 text-accent-800 border-accent-200 dark:bg-accent-950/50 dark:text-accent-300 dark:border-accent-800'
+      ? 'bg-purple-500/10 text-purple-400 border-purple-500/25 ring-1 ring-purple-500/20'
       : role === 'ADMIN'
-      ? 'bg-brand-50 text-brand-700 border-brand-200 dark:bg-brand-950/50 dark:text-brand-300 dark:border-brand-800'
-      : 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/50 dark:text-sky-300 dark:border-sky-800'; // MA_DEVELOPER
+      ? 'bg-brand-500/10 text-brand-400 border-brand-500/25 ring-1 ring-brand-500/20'
+      : 'bg-sky-500/10 text-sky-400 border-sky-500/25 ring-1 ring-sky-500/20';
 
   const roleBadgeLabel = role
     .split('_')
@@ -63,6 +85,14 @@ export function UserProfileCard({
       : 'MiniApp Development, Sandbox Testing & Submissions';
 
   const isConnected = Boolean(telegramStatus?.user?.isConnected);
+
+  const handleCopyId = () => {
+    if (!userId) return;
+    navigator.clipboard.writeText(userId);
+    setCopiedId(true);
+    setTimeout(() => setCopiedId(false), 2000);
+    toast.info('User ID copied to clipboard!', 'Copied');
+  };
 
   const handleOpenEdit = () => {
     setFormData({
@@ -109,122 +139,276 @@ export function UserProfileCard({
   };
 
   return (
-    <>
-      <Card className="p-6 sm:p-7 overflow-hidden relative border-slate-200/80 dark:border-slate-800/80 shadow-xs rounded-2xl">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-4 sm:gap-5">
-            <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white flex items-center justify-center font-bold text-2xl sm:text-3xl shadow-sm ring-4 ring-brand-500/10 shrink-0">
-              {initials}
+    <div className="space-y-6">
+      {/* 1. Hero Profile Card */}
+      <Card className="p-6 sm:p-8 overflow-hidden relative border-slate-200/80 dark:border-slate-800/80 bg-gradient-to-br from-white via-slate-50/50 to-slate-100/40 dark:from-slate-900/90 dark:via-slate-900/70 dark:to-slate-950/90 shadow-xl rounded-3xl">
+        {/* Subtle Decorative Ambient Glow */}
+        <div className="absolute -top-24 -right-24 w-80 h-80 bg-brand-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          {/* Avatar and Primary Identity Info */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-6 min-w-0">
+            {/* Vibrant Avatar with Online Dot */}
+            <div className="relative shrink-0">
+              <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl bg-gradient-to-tr from-brand-600 via-indigo-600 to-violet-500 text-white flex items-center justify-center font-extrabold text-2xl sm:text-3xl shadow-lg ring-4 ring-white/10 dark:ring-slate-800">
+                {initials || 'MK'}
+              </div>
+              <span
+                className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 ring-4 ring-white dark:ring-slate-900 flex items-center justify-center shadow-xs"
+                title="Account Active & Verified"
+              >
+                <CheckIcon className="w-3 h-3 text-white stroke-[3]" />
+              </span>
             </div>
-            <div>
+
+            {/* Names & Metadata */}
+            <div className="space-y-2 min-w-0">
               <div className="flex flex-wrap items-center gap-2.5">
-                <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight truncate">
                   {userDisplayName}
                 </h3>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${roleBadgeStyle}`}>
-                  {roleBadgeLabel}
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${roleBadgeStyle}`}>
+                  <ShieldCheckIcon className="w-3.5 h-3.5" />
+                  <span>{roleBadgeLabel}</span>
                 </span>
-                <button
-                  type="button"
-                  onClick={handleOpenEdit}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold text-brand-700 dark:text-brand-300 bg-brand-50 dark:bg-brand-950/60 hover:bg-brand-100 dark:hover:bg-brand-900/60 border border-brand-200/80 dark:border-brand-800 transition-colors cursor-pointer"
-                  title="Edit user profile information"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
-                  <span>Edit Profile</span>
-                </button>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Active &amp; Verified</span>
+                </span>
               </div>
-              <div className="flex flex-wrap items-center gap-2.5 mt-1.5">
-                <span className="text-xs sm:text-sm font-mono text-slate-500 dark:text-slate-400">
-                  {userEmail}
-                </span>
-                {userEmail && (
-                  <Button
+
+              {/* Subtitle / Meta Details */}
+              <div className="flex flex-wrap items-center gap-y-1.5 gap-x-4 text-xs text-slate-500 dark:text-slate-400">
+                <div className="flex items-center gap-1.5">
+                  <MailIcon className="w-3.5 h-3.5 text-slate-400" />
+                  <span className="font-mono text-slate-700 dark:text-slate-300">{userEmail}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <BuildingIcon className="w-3.5 h-3.5 text-slate-400" />
+                  <span className="font-medium text-slate-700 dark:text-slate-300">{orgName}</span>
+                </div>
+                {userId && (
+                  <button
                     type="button"
-                    variant="outline"
-                    onClick={handleOpenEmailModal}
-                    disabled={sendingTestEmail}
-                    className="text-xs h-6.5 px-2.5 rounded-lg flex items-center gap-1.5 border-slate-200 dark:border-slate-700"
+                    onClick={handleCopyId}
+                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md font-mono text-[11px] bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer border border-slate-200/60 dark:border-slate-700/60"
+                    title="Click to copy User ID"
                   >
-                    <svg
-                      className={`w-3 h-3 text-brand-600 ${sendingTestEmail ? 'animate-spin' : ''}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                      />
-                    </svg>
-                    <span>{sendingTestEmail ? 'Sending...' : 'Send Test Email'}</span>
-                  </Button>
+                    <CopyIcon className="w-3 h-3 text-slate-400" />
+                    <span>ID: {userId.substring(0, 8)}...</span>
+                    {copiedId && <span className="text-emerald-500 font-bold ml-0.5">Copied!</span>}
+                  </button>
                 )}
               </div>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <span className="px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-700/80 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-brand-500"></span>
-              <span>Organization: <strong className="font-semibold text-slate-900 dark:text-white">Financial Services Authority (FSA)</strong></span>
-            </span>
-          </div>
-        </div>
+          {/* Top Actions */}
+          <div className="flex items-center gap-2.5 shrink-0 pt-2 lg:pt-0">
+            <Button
+              type="button"
+              onClick={handleOpenEdit}
+              className="bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs h-9 px-4 rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2"
+            >
+              <UserIcon className="w-3.5 h-3.5" />
+              <span>Edit Profile</span>
+            </Button>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-          <div className="p-4 rounded-xl bg-slate-50/70 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80">
-            <span className="text-[11px] uppercase font-bold text-slate-400 dark:text-slate-500 block tracking-wider">Account Status</span>
-            <div className="flex items-center gap-2 mt-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-              <span className="font-bold text-emerald-700 dark:text-emerald-400 text-sm">Active &amp; Verified</span>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-xl bg-slate-50/70 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80">
-            <span className="text-[11px] uppercase font-bold text-slate-400 dark:text-slate-500 block tracking-wider">Personal Telegram</span>
-            <div className="flex items-center gap-2 mt-1.5">
-              {isConnected ? (
-                <span className="font-bold text-sky-600 dark:text-sky-400 text-sm inline-flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-sky-500"></span>
-                  <span>
-                    {telegramStatus?.user?.telegramUsername
-                      ? `@${telegramStatus.user.telegramUsername}`
-                      : 'Direct Chat Active'}
-                  </span>
-                </span>
-              ) : (
-                <span className="font-medium text-slate-400 dark:text-slate-500 text-sm">Not Connected</span>
-              )}
-            </div>
-          </div>
-
-          <div className="p-4 rounded-xl bg-slate-50/70 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80">
-            <span className="text-[11px] uppercase font-bold text-slate-400 dark:text-slate-500 block tracking-wider">Access Scope</span>
-            <div className="font-semibold text-slate-800 dark:text-slate-200 text-sm mt-1.5 truncate">
-              {accessScopeLabel}
-            </div>
+            {userEmail && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleOpenEmailModal}
+                disabled={sendingTestEmail}
+                className="text-xs h-9 px-3.5 rounded-xl border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800/80 font-semibold flex items-center gap-2 cursor-pointer"
+              >
+                <MailIcon className={`w-3.5 h-3.5 text-brand-500 ${sendingTestEmail ? 'animate-spin' : ''}`} />
+                <span>{sendingTestEmail ? 'Sending...' : 'Send Test Email'}</span>
+              </Button>
+            )}
           </div>
         </div>
       </Card>
 
+      {/* 2. Structured Bento Grid: Credentials & Integrations */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Column (7 cols): Account & Security Specifications */}
+        <div className="lg:col-span-7">
+          <Card className="p-6 sm:p-7 rounded-3xl border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900/60 shadow-xs h-full flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center">
+                    <ShieldCheckIcon className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                      Credentials &amp; Access Scope
+                    </h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Primary administrative authorization parameters
+                    </p>
+                  </div>
+                </div>
+                <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                  Verified Identity
+                </span>
+              </div>
+
+              {/* Specification Rows */}
+              <div className="divide-y divide-slate-100 dark:divide-slate-800/70 text-xs mt-2">
+                <div className="py-3 flex items-center justify-between gap-4">
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">Full Name</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 text-right">{userDisplayName}</span>
+                </div>
+
+                <div className="py-3 flex items-center justify-between gap-4">
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">Primary Email</span>
+                  <div className="flex items-center gap-2 text-right">
+                    <span className="font-mono text-slate-800 dark:text-slate-200">{userEmail}</span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                      Verified
+                    </span>
+                  </div>
+                </div>
+
+                <div className="py-3 flex items-center justify-between gap-4">
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">Organization</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 text-right">{orgName}</span>
+                </div>
+
+                <div className="py-3 flex items-center justify-between gap-4">
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">Role Authority</span>
+                  <span className="font-semibold text-brand-600 dark:text-brand-400 text-right">{roleBadgeLabel}</span>
+                </div>
+
+                <div className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <span className="text-slate-500 dark:text-slate-400 font-medium shrink-0">Access Scope</span>
+                  <span className="text-slate-700 dark:text-slate-300 font-medium sm:text-right leading-relaxed">
+                    {accessScopeLabel}
+                  </span>
+                </div>
+
+                <div className="py-3 flex items-center justify-between gap-4">
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">Session Security</span>
+                  <div className="flex items-center gap-1.5 text-right">
+                    <LockIcon className="w-3.5 h-3.5 text-emerald-500" />
+                    <span className="font-medium text-slate-800 dark:text-slate-200">Active Authentication Session</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+              <span>Account updates synchronized in real time.</span>
+              <button
+                type="button"
+                onClick={handleOpenEdit}
+                className="text-brand-600 dark:text-brand-400 font-bold hover:underline cursor-pointer"
+              >
+                Modify Name
+              </button>
+            </div>
+          </Card>
+        </div>
+
+        {/* Right Column (5 cols): Connected Services & Tokens */}
+        <div className="lg:col-span-5 space-y-6 flex flex-col justify-between">
+          {/* Personal Access Tokens (PAT) Quick Card */}
+          <Card className="p-6 rounded-3xl border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900/60 shadow-xs flex-1 flex flex-col justify-between hover:border-brand-500/40 transition-colors group">
+            <div>
+              <div className="flex items-center justify-between pb-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center border border-amber-500/20">
+                  <KeyIcon className="w-5 h-5" />
+                </div>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                  CLI &amp; API
+                </span>
+              </div>
+              <h4 className="text-base font-bold text-slate-900 dark:text-slate-100 mt-2">
+                Personal Access Tokens
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                Generate and manage scoped API credentials for CLI automated deployments, packaging pipelines, and scripts.
+              </p>
+            </div>
+
+            <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <Link
+                href="/settings/tokens"
+                className="inline-flex items-center justify-between w-full text-xs font-bold text-brand-600 dark:text-brand-400 hover:text-brand-500 transition-colors group-hover:translate-x-0.5 duration-150"
+              >
+                <span>Manage Access Tokens</span>
+                <ArrowRightIcon className="w-4 h-4" />
+              </Link>
+            </div>
+          </Card>
+
+          {/* Telegram Alert Channel Quick Card */}
+          <Card className="p-6 rounded-3xl border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900/60 shadow-xs flex-1 flex flex-col justify-between hover:border-sky-500/40 transition-colors group">
+            <div>
+              <div className="flex items-center justify-between pb-3">
+                <div className="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-500 flex items-center justify-center border border-sky-500/20">
+                  <SendIcon className="w-5 h-5" />
+                </div>
+                {isConnected ? (
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>Connected</span>
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                    Not Connected
+                  </span>
+                )}
+              </div>
+              <h4 className="text-base font-bold text-slate-900 dark:text-slate-100 mt-2">
+                Telegram &amp; Alert Channels
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                {isConnected ? (
+                  <span>
+                    Direct notifications linked to{' '}
+                    <strong className="text-sky-400 font-mono">
+                      {telegramStatus?.user?.telegramUsername ? `@${telegramStatus.user.telegramUsername}` : 'Direct Chat'}
+                    </strong>
+                    . Instant alerts for SAST reviews and submissions.
+                  </span>
+                ) : (
+                  <span>
+                    Link your Telegram account to receive instant notifications when security scans pass or build packages are ready.
+                  </span>
+                )}
+              </p>
+            </div>
+
+            <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <Link
+                href="/settings/telegram"
+                className="inline-flex items-center justify-between w-full text-xs font-bold text-sky-600 dark:text-sky-400 hover:text-sky-500 transition-colors group-hover:translate-x-0.5 duration-150"
+              >
+                <span>Configure Alert Channels</span>
+                <ArrowRightIcon className="w-4 h-4" />
+              </Link>
+            </div>
+          </Card>
+        </div>
+      </div>
+
       {/* Edit Profile Modal */}
       {isEditModalOpen && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-5">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-5">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Edit User Profile</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Update your public name and account details</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Update your public display name</p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsEditModalOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -240,7 +424,7 @@ export function UserProfileCard({
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g. Sok Piseth"
+                  placeholder="e.g. Molika Khorn"
                   required
                 />
               </div>
@@ -294,13 +478,11 @@ export function UserProfileCard({
       {/* Send Test Email Modal */}
       {isEmailModalOpen && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-5">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-5">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 border border-brand-200 dark:border-brand-800">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
+                  <MailIcon className="w-5 h-5" />
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Send Test Email</h3>
@@ -310,7 +492,7 @@ export function UserProfileCard({
               <button
                 type="button"
                 onClick={() => setIsEmailModalOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -326,30 +508,10 @@ export function UserProfileCard({
                   type="email"
                   value={testEmailAddress}
                   onChange={(e) => setTestEmailAddress(e.target.value)}
-                  placeholder="e.g. molikakhorn71@gmail.com"
+                  placeholder="e.g. user@fsa.gov.kh"
                   required
-                  className="font-mono text-xs"
+                  className="font-mono text-xs mt-1.5"
                 />
-              </div>
-
-              {/* Sandbox info callout */}
-              <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 text-xs space-y-2">
-                <div className="flex items-center gap-1.5 font-bold text-amber-900 dark:text-amber-200">
-                  <svg className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>Resend Sandbox Mode Restriction</span>
-                </div>
-                <p className="text-amber-800 dark:text-amber-300 leading-relaxed text-[11px]">
-                  Unless your custom domain (<code className="font-mono">fintechcenterfsa.com</code>) is verified on Resend, emails can only be delivered to your registered Resend account owner address (<code className="font-mono">molikakhorn71@gmail.com</code>).
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setTestEmailAddress('molikakhorn71@gmail.com')}
-                  className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 underline hover:text-amber-900 dark:hover:text-amber-200 cursor-pointer"
-                >
-                  Click here to use verified sandbox address (molikakhorn71@gmail.com)
-                </button>
               </div>
 
               <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100 dark:border-slate-800">
@@ -364,7 +526,7 @@ export function UserProfileCard({
                 <Button
                   type="submit"
                   disabled={sendingTestEmail}
-                  className="bg-brand-600 hover:bg-brand-700 text-white font-semibold"
+                  className="bg-brand-600 hover:bg-brand-700 text-white font-semibold cursor-pointer"
                 >
                   {sendingTestEmail ? 'Sending...' : 'Send Test Email'}
                 </Button>
@@ -374,6 +536,6 @@ export function UserProfileCard({
         </div>,
         document.body
       )}
-    </>
+    </div>
   );
 }

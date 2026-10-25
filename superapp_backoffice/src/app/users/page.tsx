@@ -22,8 +22,6 @@ import { CleanDropdownOption } from '@/components/ui/CleanDropdown';
 import { DataTable, DataTableColumn } from '@/components/ui/DataTable';
 import {
   UserModal,
-  RoleModal,
-  RolesTab,
   getRoleTheme,
   getUserRoles,
   getUserEffectiveStatus,
@@ -39,7 +37,6 @@ function UsersContent() {
   const { can } = useAuth();
   const hasUserRead = can('user:read');
   const canManageUsers = can('user:manage');
-  const canManageRoles = can('role:manage');
 
   // Read initial query params from URL
   const initialPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
@@ -47,8 +44,6 @@ function UsersContent() {
   const initialSearch = searchParams.get('search') || '';
   const initialRole = searchParams.get('role') || 'ALL';
   const initialStatus = searchParams.get('status') || 'ALL';
-
-  const [activeTab, setActiveTab] = useState<'users' | 'roles'>('users');
 
   // Users & Roles Data State
   const [users, setUsers] = useState<User[]>([]);
@@ -76,8 +71,6 @@ function UsersContent() {
   // Modals State
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
-  const [editingRole, setEditingRole] = useState<Role | null>(null);
 
   // Debounce search input to avoid spamming the backend on every keystroke
   useEffect(() => {
@@ -210,50 +203,6 @@ function UsersContent() {
       toast.error(err.message || 'Failed to delete user.');
     }
   }, [confirm, toast, fetchUsers]);
-
-  // Role Actions
-  const handleOpenCreateRole = () => {
-    setEditingRole(null);
-    setIsRoleModalOpen(true);
-  };
-
-  const handleOpenEditRole = useCallback((role: Role) => {
-    setEditingRole(role);
-    setIsRoleModalOpen(true);
-  }, []);
-
-  const handleDuplicateRole = useCallback((role: Role) => {
-    setEditingRole({
-      ...role,
-      id: '',
-      name: `${role.name}_COPY`,
-      description: `Copy of ${role.name}: ${role.description || ''}`,
-    });
-    setIsRoleModalOpen(true);
-  }, []);
-
-  const handleDeleteRole = useCallback(async (role: Role) => {
-    const ok = await confirm({
-      title: 'Delete Custom Role?',
-      message: (
-        <span>
-          Are you sure you want to remove <strong className="text-slate-800 dark:text-slate-200">{role.name}</strong>? Users assigned to this role will lose their entitlements immediately.
-        </span>
-      ),
-      confirmText: 'Confirm Delete',
-      confirmVariant: 'danger',
-    });
-    if (!ok) return;
-
-    try {
-      await rolesApi.delete(role.id);
-      toast.success(`Role '${role.name}' deleted successfully.`);
-      fetchRoles();
-      fetchUsers();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to delete role.');
-    }
-  }, [confirm, toast, fetchRoles, fetchUsers]);
 
   // Derived filter options for Users tab
   const availableRolesForFilter = useMemo(() => {
@@ -605,13 +554,16 @@ function UsersContent() {
             </div>
             <div>
               <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
-                Users & Access Control
+                Users
               </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Manage operator accounts, status approvals, and platform user directory.
+              </p>
             </div>
           </div>
 
           {/* Header Action Button */}
-          {activeTab === 'users' && canManageUsers && (
+          {canManageUsers && (
             <Button
               type="button"
               onClick={handleOpenCreateUser}
@@ -623,130 +575,53 @@ function UsersContent() {
               <span>Add User Account</span>
             </Button>
           )}
-
-          {activeTab === 'roles' && canManageRoles && (
-            <Button
-              type="button"
-              onClick={handleOpenCreateRole}
-              className="gap-2 shadow-sm font-semibold"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-              </svg>
-              <span>Add Custom Role</span>
-            </Button>
-          )}
         </div>
 
-        {/* Main Tab Navigation */}
-        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setActiveTab('users')}
-              className={`flex items-center gap-2.5 px-5 py-3.5 font-semibold text-sm border-b-2 transition-all cursor-pointer ${
-                activeTab === 'users'
-                  ? 'border-brand-500 text-brand-600 dark:text-brand-400 bg-brand-50/30 dark:bg-brand-500/5'
-                  : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-              <span>User Accounts</span>
-              <span className={`px-2 py-0.5 text-xs rounded-full font-bold ${
-                activeTab === 'users'
-                  ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/50 dark:text-brand-300'
-                  : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-              }`}>
-                {paginationMeta.totalItems}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('roles')}
-              className={`flex items-center gap-2.5 px-5 py-3.5 font-semibold text-sm border-b-2 transition-all cursor-pointer ${
-                activeTab === 'roles'
-                  ? 'border-brand-500 text-brand-600 dark:text-brand-400 bg-brand-50/30 dark:bg-brand-500/5'
-                  : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-              <span>Roles & Permissions</span>
-              <span className={`px-2 py-0.5 text-xs rounded-full font-bold ${
-                activeTab === 'roles'
-                  ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/50 dark:text-brand-300'
-                  : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-              }`}>
-                {roles.length}
-              </span>
-            </button>
-          </div>
-        </div>
-
-        {/* --- TAB 1: USERS DIRECTORY (POWERED BY SERVER-DRIVEN GENERIC DATATABLE) --- */}
-        {activeTab === 'users' && (
-          <DataTable<User>
-            data={users}
-            columns={userColumns}
-            keyExtractor={(u) => u.id}
-            loading={loadingUsers}
-            loadingMessage="Fetching accounts from database..."
-            searchValue={userSearch}
-            onSearchChange={setUserSearch}
-            searchPlaceholder="Search by name, email, or @telegram..."
-            filters={[
-              {
-                id: 'role',
-                label: 'Role',
-                icon: (
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                  </svg>
-                ),
-                value: roleFilter,
-                options: roleDropdownOptions,
-                onChange: handleRoleFilterChange,
-                dropdownWidth: 'w-64',
-              },
-              {
-                id: 'status',
-                label: 'Status',
-                icon: (
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                ),
-                value: statusFilter,
-                options: statusDropdownOptions,
-                onChange: handleStatusFilterChange,
-                dropdownWidth: 'w-60',
-              },
-            ]}
-            isFiltered={roleFilter !== 'ALL' || statusFilter !== 'ALL' || !!userSearch}
-            onResetFilters={handleResetFilters}
-            totalItemsCount={paginationMeta.totalItems}
-            paginationProps={paginationProps}
-            emptyMessage="No users match your filter criteria"
-            emptySubMessage="Try adjusting your search query, role, or status filter"
-          />
-        )}
-
-        {/* --- TAB 2: ROLES & PERMISSIONS MANAGEMENT --- */}
-        {activeTab === 'roles' && (
-          <RolesTab
-            roles={roles}
-            loadingRoles={loadingRoles}
-            canManage={canManageRoles}
-            onOpenCreateRole={handleOpenCreateRole}
-            onOpenEditRole={handleOpenEditRole}
-            onDuplicateRole={handleDuplicateRole}
-            onDeleteRole={handleDeleteRole}
-          />
-        )}
+        {/* USERS DIRECTORY (POWERED BY SERVER-DRIVEN GENERIC DATATABLE) */}
+        <DataTable<User>
+          data={users}
+          columns={userColumns}
+          keyExtractor={(u) => u.id}
+          loading={loadingUsers}
+          loadingMessage="Fetching accounts from database..."
+          searchValue={userSearch}
+          onSearchChange={setUserSearch}
+          searchPlaceholder="Search by name, email, or @telegram..."
+          filters={[
+            {
+              id: 'role',
+              label: 'Role',
+              icon: (
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              ),
+              value: roleFilter,
+              options: roleDropdownOptions,
+              onChange: handleRoleFilterChange,
+              dropdownWidth: 'w-64',
+            },
+            {
+              id: 'status',
+              label: 'Status',
+              icon: (
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ),
+              value: statusFilter,
+              options: statusDropdownOptions,
+              onChange: handleStatusFilterChange,
+              dropdownWidth: 'w-60',
+            },
+          ]}
+          isFiltered={roleFilter !== 'ALL' || statusFilter !== 'ALL' || !!userSearch}
+          onResetFilters={handleResetFilters}
+          totalItemsCount={paginationMeta.totalItems}
+          paginationProps={paginationProps}
+          emptyMessage="No users match your filter criteria"
+          emptySubMessage="Try adjusting your search query, role, or status filter"
+        />
 
         {/* User Create / Edit Modal */}
         <UserModal
@@ -755,17 +630,6 @@ function UsersContent() {
           editingUser={editingUser}
           roles={roles}
           onSuccess={fetchUsers}
-        />
-
-        {/* Role Create / Edit Modal */}
-        <RoleModal
-          isOpen={isRoleModalOpen}
-          onClose={() => setIsRoleModalOpen(false)}
-          editingRole={editingRole}
-          onSuccess={() => {
-            fetchRoles();
-            fetchUsers();
-          }}
         />
       </div>
     </ProtectedRoute>

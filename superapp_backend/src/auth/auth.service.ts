@@ -58,7 +58,7 @@ export class AuthService implements OnModuleInit {
     private otpRepo?: Repository<AuthOtp>,
     @Optional()
     private mailService?: MailService,
-  ) {}
+  ) { }
 
   private get developerTokenRepo(): Repository<AccessToken> | undefined {
     return this.accessTokenRepo;
@@ -442,7 +442,7 @@ export class AuthService implements OnModuleInit {
           message: 'A 6-digit verification code has been dispatched to your email address.',
         };
       }
-      throw new BadRequestException('An account with this email already exists. Please sign in.');
+      throw new BadRequestException('An account with this email already exists. Please Login.');
     }
 
     // Self-registered accounts start in PENDING_EMAIL_VERIFICATION so they DO NOT clutter
@@ -712,7 +712,7 @@ export class AuthService implements OnModuleInit {
         return {
           success: true,
           alreadyVerified: true,
-          message: 'This email is already verified. You may proceed to sign in.',
+          message: 'This email is already verified. You may proceed to Login.',
           expiresInSeconds: 0,
         };
       }
@@ -866,10 +866,7 @@ export class AuthService implements OnModuleInit {
         const isSuperOrAdmin =
           user.role?.name === 'SUPER_ADMIN' ||
           user.role?.name === 'ADMIN' ||
-          rawEmail === 'molikakhorn71@gmail.com' ||
-          rawEmail === 'thavorac.chun@gmail.com' ||
-          rawEmail === 'sea.hutmonineat@gmail.com' ||
-          rawEmail === 'lymoly1122@gmail.com';
+          Boolean(OFFICIAL_SEEDS[rawEmail]);
         const nextStatus = isSuperOrAdmin ? 'ACTIVE' : 'PENDING_APPROVAL';
         await this.accessControlService.updateUserStatus(user.id, nextStatus);
         this.logger.log(`[AUTH] User ${rawEmail} successfully verified email. Transitioned to ${nextStatus}`);
@@ -877,7 +874,7 @@ export class AuthService implements OnModuleInit {
       return {
         success: true,
         verified: true,
-        message: 'Email verified successfully! You may now sign in to your account.',
+        message: 'Email verified successfully! You may now Login to your account.',
       };
     }
 
@@ -932,7 +929,7 @@ export class AuthService implements OnModuleInit {
 
     return {
       success: true,
-      message: 'Your password has been changed successfully. Please sign in.',
+      message: 'Your password has been changed successfully. Please Login.',
     };
   }
 }

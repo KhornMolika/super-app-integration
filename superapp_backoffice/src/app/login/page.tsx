@@ -25,7 +25,7 @@ function LoginForm() {
   useEffect(() => {
     if (isExpired && !hasWarnedRef.current) {
       hasWarnedRef.current = true;
-      toast.warning('Your session expired. Please sign in again.', 'Session Expired');
+      toast.warning('Your session expired. Please Login again.', 'Session Expired');
 
       // Clean query parameter from browser address bar so page refresh won't re-trigger warning
       if (typeof window !== 'undefined' && window.history?.replaceState) {
@@ -92,9 +92,8 @@ function LoginForm() {
       <div>
         <label
           htmlFor="email"
-          className={`block text-xs font-semibold mb-2 transition-colors ${
-            emailError ? 'text-rose-400' : 'text-slate-300'
-          }`}
+          className={`block text-xs font-semibold mb-2 transition-colors ${emailError ? 'text-rose-400' : 'text-slate-300'
+            }`}
         >
           Email address
         </label>
@@ -111,11 +110,10 @@ function LoginForm() {
             }}
             placeholder="name@company.com"
             disabled={loading}
-            className={`w-full px-4 py-3 rounded-xl text-sm text-white placeholder-slate-500 bg-slate-900/80 border transition-all duration-200 outline-none ${
-              emailError
+            className={`w-full px-4 py-3 rounded-xl text-sm text-white placeholder-slate-500 bg-slate-900/80 border transition-all duration-200 outline-none ${emailError
                 ? 'border-rose-500/80 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 text-rose-100'
-                : 'border-slate-800 hover:border-slate-700 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15'
-            } disabled:opacity-50`}
+                : 'border-slate-800 hover:border-slate-700 focus:border-brand-500/70 focus:ring-2 focus:ring-brand-500/15'
+              } disabled:opacity-50`}
           />
         </div>
         {emailError && (
@@ -130,15 +128,14 @@ function LoginForm() {
         <div className="flex items-center justify-between mb-2">
           <label
             htmlFor="password"
-            className={`block text-xs font-semibold transition-colors ${
-              passwordError ? 'text-rose-400' : 'text-slate-300'
-            }`}
+            className={`block text-xs font-semibold transition-colors ${passwordError ? 'text-rose-400' : 'text-slate-300'
+              }`}
           >
             Password
           </label>
           <Link
             href="/forgot-password"
-            className="text-xs font-medium text-brand-400 hover:text-brand-300 transition-colors"
+            className="text-xs font-medium text-brand-400/90 hover:text-brand-300 transition-colors"
           >
             Forgot password?
           </Link>
@@ -155,11 +152,10 @@ function LoginForm() {
             }}
             placeholder="••••••••••"
             disabled={loading}
-            className={`w-full pl-4 pr-11 py-3 rounded-xl text-sm text-white placeholder-slate-500 bg-slate-900/80 border transition-all duration-200 outline-none ${
-              passwordError
+            className={`w-full pl-4 pr-11 py-3 rounded-xl text-sm text-white placeholder-slate-500 bg-slate-900/80 border transition-all duration-200 outline-none ${passwordError
                 ? 'border-rose-500/80 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 text-rose-100'
-                : 'border-slate-800 hover:border-slate-700 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15'
-            } disabled:opacity-50`}
+                : 'border-slate-800 hover:border-slate-700 focus:border-brand-500/70 focus:ring-2 focus:ring-brand-500/15'
+              } disabled:opacity-50`}
           />
           <button
             type="button"
@@ -194,17 +190,17 @@ function LoginForm() {
             type="checkbox"
             checked={rememberMe}
             onChange={(e) => setRememberMe(e.target.checked)}
-            className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-brand-500 focus:ring-brand-500 focus:ring-offset-0 focus:ring-offset-transparent cursor-pointer"
+            className="w-4 h-4 rounded bg-slate-900 border-slate-700 text-brand-500 focus:ring-brand-500/20 accent-brand-500 cursor-pointer"
           />
           <span>Keep me signed in for 7 days</span>
         </label>
       </div>
 
-      {/* Primary Submit Button */}
+      {/* Primary Submit Button (Rich Sovereign Emerald with Gold Accent) */}
       <button
         type="submit"
         disabled={loading}
-        className="w-full py-3.5 px-4 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-brand-600 via-brand-500 to-brand-600 hover:from-brand-500 hover:to-brand-500 shadow-lg shadow-brand-500/25 hover:shadow-brand-500/40 border border-brand-400/30 transition-all duration-200 flex items-center justify-center gap-2 group disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer active:scale-[0.99]"
+        className="w-full py-3.5 px-4 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-brand-800 via-brand-700 to-brand-800 hover:from-brand-700 hover:via-brand-600 hover:to-brand-700 border border-brand-500/40 hover:border-brand-400/60 shadow-lg shadow-brand-950/60 hover:shadow-brand-900/40 active:scale-[0.99] transition-all duration-200 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
       >
         {loading ? (
           <>
@@ -216,8 +212,8 @@ function LoginForm() {
           </>
         ) : (
           <>
-            <span>Sign In to Backoffice</span>
-            <span className="text-accent-300 group-hover:translate-x-0.5 transition-transform">→</span>
+            <span>Login</span>
+            <span className="text-accent-300 font-bold group-hover:translate-x-0.5 transition-transform">→</span>
           </>
         )}
       </button>
@@ -228,7 +224,7 @@ function LoginForm() {
           Don&apos;t have an account?{' '}
           <Link
             href="/signup"
-            className="font-semibold text-brand-400 hover:text-brand-300 transition-colors"
+            className="font-semibold text-brand-400 hover:text-brand-300 hover:underline transition-colors"
           >
             Create account
           </Link>
@@ -242,7 +238,7 @@ export default function LoginPage() {
   return (
     <AuthSplitLayout
       title="Welcome back"
-      subtitle="Sign in to manage your FSA SuperApp workspace."
+      subtitle="Login to manage your FSA SuperApp workspace."
       activeTab="login"
     >
       <Suspense

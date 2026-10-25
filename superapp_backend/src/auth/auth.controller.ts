@@ -34,7 +34,10 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async login(@Body() body: LoginDto, @Res({ passthrough: true }) res: Response) {
     const result = await this.authService.login(body);
-    if (result.success && 'access_token' in result && result.access_token) {
+    if (!result.success) {
+      throw new UnauthorizedException(result.message || 'Invalid credentials or user not found');
+    }
+    if ('access_token' in result && result.access_token) {
       const isProd = process.env.NODE_ENV === 'production';
       res.cookie('auth_token', result.access_token, {
         httpOnly: true,

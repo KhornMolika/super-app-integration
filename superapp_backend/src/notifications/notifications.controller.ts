@@ -8,6 +8,7 @@ import {
   Query,
   Req,
   UseGuards,
+  NotFoundException,
 } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -30,6 +31,16 @@ export class NotificationsController {
   @RequirePermissions('miniapp:read')
   getMyNotifications(@Query() query: QueryNotificationsDto, @Req() req: any) {
     return this.notificationsService.findByUserId(req?.user?.sub || '', query);
+  }
+
+  @Get(':id')
+  @RequirePermissions('miniapp:read')
+  async getNotification(@Param('id') id: string) {
+    const notif = await this.notificationsService.findById(id);
+    if (!notif) {
+      throw new NotFoundException(`Notification #${id} not found`);
+    }
+    return notif;
   }
 
   @Post('mark-all-read')

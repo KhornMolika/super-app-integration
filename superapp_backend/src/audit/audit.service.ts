@@ -1,9 +1,10 @@
-import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In, IsNull } from 'typeorm';
 import * as fs from 'fs';
 import * as path from 'path';
 import { AuditLog } from './entities/audit-log.entity';
+import { User } from '../access-control/entities/user.entity';
 import { QueryAuditLogDto } from './dto/query-audit-log.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 import { createPaginatedResponse } from '../common/utils/pagination.util';
@@ -12,13 +13,77 @@ import { SortOrder } from '../common/dto/pagination-query.dto';
 
 @Injectable()
 export class AuditService implements OnApplicationBootstrap {
+  private readonly logger = new Logger(AuditService.name);
+
   constructor(
     @InjectRepository(AuditLog)
     private auditLogRepository: Repository<AuditLog>,
+
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
   ) {}
 
   async onApplicationBootstrap() {
     await this.seedInitialLogs();
+    await this.backfillActorDetails();
+  }
+
+  private async backfillActorDetails() {
+    try {
+      const logsWithoutActorName = await this.auditLogRepository.find({
+        where: [{ actorName: IsNull() }, { actorName: '' }],
+        take: 500,
+      });
+
+      if (logsWithoutActorName.length === 0) return;
+
+      const actorIds = Array.from(
+        new Set(
+          logsWithoutActorName
+            .map((l) => l.actorId)
+            .filter((id): id is string => Boolean(id && /^[0-9a-fA-F-]{36}$/.test(id))),
+        ),
+      );
+
+      const users = actorIds.length > 0
+        ? await this.userRepository.find({
+            where: { id: In(actorIds) },
+            relations: { role: true },
+          })
+        : [];
+
+      const userMap = new Map(users.map((u) => [u.id, u]));
+
+      for (const log of logsWithoutActorName) {
+        let changed = false;
+
+        if (log.actorId === 'admin') {
+          log.actorName = 'System Administrator';
+          log.actorRole = 'SUPER_ADMIN';
+          changed = true;
+        } else if (log.actorId && userMap.has(log.actorId)) {
+          const user = userMap.get(log.actorId)!;
+          log.actorName = user.name;
+          log.actorEmail = user.email;
+          log.actorRole = user.role?.name || log.actorRole;
+          changed = true;
+        } else if (log.newValue?.owner?.name) {
+          log.actorName = log.newValue.owner.name;
+          log.actorEmail = log.newValue.owner.email || log.actorEmail;
+          log.actorRole = log.newValue.owner.role?.name || log.actorRole;
+          changed = true;
+        } else if (log.metadata?.actorName) {
+          log.actorName = log.metadata.actorName;
+          changed = true;
+        }
+
+        if (changed) {
+          await this.auditLogRepository.save(log);
+        }
+      }
+    } catch (err: any) {
+      this.logger.warn(`Failed to backfill actor details: ${err?.message}`);
+    }
   }
 
   private resolveAppVersion(): string {
@@ -97,16 +162,44 @@ export class AuditService implements OnApplicationBootstrap {
   }
 
   async log(data: Partial<AuditLog>): Promise<AuditLog> {
+    if (!data.actorName && data.actorId) {
+      if (data.actorId === 'admin') {
+        data.actorName = 'System Administrator';
+        data.actorRole = 'SUPER_ADMIN';
+      } else if (data.actorId === 'system') {
+        data.actorName = 'System Automation';
+      } else if (/^[0-9a-fA-F-]{36}$/.test(data.actorId)) {
+        try {
+          const u = await this.userRepository.findOne({
+            where: { id: data.actorId },
+            relations: { role: true },
+          });
+          if (u) {
+            data.actorName = u.name;
+            data.actorEmail = u.email;
+            data.actorRole = u.role?.name || data.actorRole;
+          }
+        } catch (_) {}
+      }
+    }
+
+    if (!data.actorName && data.newValue?.owner?.name) {
+      data.actorName = data.newValue.owner.name;
+      data.actorEmail = data.newValue.owner.email || data.actorEmail;
+    }
+
     const entry = this.auditLogRepository.create(data);
     return this.auditLogRepository.save(entry);
   }
 
   async findAll(query?: QueryAuditLogDto): Promise<PaginatedResult<AuditLog> | AuditLog[]> {
     if (!query) {
-      return this.auditLogRepository.find({
+      const all = await this.auditLogRepository.find({
         order: { createdAt: 'DESC' },
         take: 100,
       });
+      await this.enrichActorDetails(all);
+      return all;
     }
 
     const {
@@ -159,7 +252,56 @@ export class AuditService implements OnApplicationBootstrap {
     qb.skip((page - 1) * limit).take(limit);
 
     const [items, totalItems] = await qb.getManyAndCount();
+    await this.enrichActorDetails(items);
     return createPaginatedResponse(items, totalItems, page, limit);
+  }
+
+  private async enrichActorDetails(items: AuditLog[]) {
+    const unresolvedActorIds = Array.from(
+      new Set(
+        items
+          .filter((i) => !i.actorName && i.actorId && /^[0-9a-fA-F-]{36}$/.test(i.actorId))
+          .map((i) => i.actorId),
+      ),
+    );
+
+    if (unresolvedActorIds.length > 0) {
+      try {
+        const users = await this.userRepository.find({
+          where: { id: In(unresolvedActorIds) },
+          relations: { role: true },
+        });
+        const uMap = new Map(users.map((u) => [u.id, u]));
+
+        for (const item of items) {
+          if (!item.actorName && item.actorId && uMap.has(item.actorId)) {
+            const u = uMap.get(item.actorId)!;
+            item.actorName = u.name;
+            item.actorEmail = u.email;
+            item.actorRole = u.role?.name || item.actorRole;
+          } else if (!item.actorName && item.newValue?.owner?.name) {
+            item.actorName = item.newValue.owner.name;
+            item.actorEmail = item.newValue.owner.email || item.actorEmail;
+          }
+        }
+      } catch (_) {}
+    }
+
+    for (const item of items) {
+      if (!item.actorName) {
+        if (item.actorId === 'admin') {
+          item.actorName = 'System Administrator';
+          item.actorRole = 'SUPER_ADMIN';
+        } else if (item.actorId === 'system') {
+          item.actorName = 'System Automation';
+        } else if (item.newValue?.owner?.name) {
+          item.actorName = item.newValue.owner.name;
+          item.actorEmail = item.newValue.owner.email || item.actorEmail;
+        } else if (item.metadata?.actorName) {
+          item.actorName = item.metadata.actorName;
+        }
+      }
+    }
   }
 
   async findOne(id: string): Promise<AuditLog | null> {

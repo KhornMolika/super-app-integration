@@ -31,7 +31,7 @@ export default function SignupPage() {
           setDbOrganizations(orgs);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const validate = (): boolean => {
@@ -128,9 +128,8 @@ export default function SignupPage() {
         <div>
           <label
             htmlFor="name"
-            className={`block text-xs font-semibold mb-1.5 transition-colors ${
-              errors.name ? 'text-rose-400' : 'text-slate-300'
-            }`}
+            className={`block text-xs font-semibold mb-1.5 transition-colors ${errors.name ? 'text-rose-400' : 'text-slate-300'
+              }`}
           >
             Full Name
           </label>
@@ -145,11 +144,10 @@ export default function SignupPage() {
             }}
             placeholder="e.g., Sokha Chan"
             disabled={loading}
-            className={`w-full px-4 py-2.5 rounded-xl text-sm text-white placeholder-slate-500 bg-slate-900/80 border transition-all duration-200 outline-none ${
-              errors.name
+            className={`w-full px-4 py-2.5 rounded-xl text-sm text-white placeholder-slate-500 bg-slate-900/80 border transition-all duration-200 outline-none ${errors.name
                 ? 'border-rose-500/80 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 text-rose-100'
                 : 'border-slate-800 hover:border-slate-700 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15'
-            } disabled:opacity-50`}
+              } disabled:opacity-50`}
           />
           {errors.name && (
             <p className="mt-1 text-xs text-rose-400 flex items-center gap-1">
@@ -162,9 +160,8 @@ export default function SignupPage() {
         <div>
           <label
             htmlFor="email"
-            className={`block text-xs font-semibold mb-1.5 transition-colors ${
-              errors.email ? 'text-rose-400' : 'text-slate-300'
-            }`}
+            className={`block text-xs font-semibold mb-1.5 transition-colors ${errors.email ? 'text-rose-400' : 'text-slate-300'
+              }`}
           >
             Email Address
           </label>
@@ -179,11 +176,10 @@ export default function SignupPage() {
             }}
             placeholder="e.g., developer@fintech.com.kh"
             disabled={loading}
-            className={`w-full px-4 py-2.5 rounded-xl text-sm text-white placeholder-slate-500 bg-slate-900/80 border transition-all duration-200 outline-none ${
-              errors.email
+            className={`w-full px-4 py-2.5 rounded-xl text-sm text-white placeholder-slate-500 bg-slate-900/80 border transition-all duration-200 outline-none ${errors.email
                 ? 'border-rose-500/80 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 text-rose-100'
                 : 'border-slate-800 hover:border-slate-700 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15'
-            } disabled:opacity-50`}
+              } disabled:opacity-50`}
           />
           {errors.email && (
             <p className="mt-1 text-xs text-rose-400 flex items-center gap-1">
@@ -196,9 +192,8 @@ export default function SignupPage() {
         <div>
           <label
             htmlFor="organization"
-            className={`block text-xs font-semibold mb-1.5 transition-colors ${
-              errors.organization ? 'text-rose-400' : 'text-slate-300'
-            }`}
+            className={`block text-xs font-semibold mb-1.5 transition-colors ${errors.organization ? 'text-rose-400' : 'text-slate-300'
+              }`}
           >
             Organization
           </label>
@@ -213,11 +208,10 @@ export default function SignupPage() {
             }}
             placeholder="Select regulator or type entity (e.g. FTC, IRC, SERC)"
             disabled={loading}
-            className={`w-full px-4 py-2.5 rounded-xl text-sm text-white placeholder-slate-500 bg-slate-900/80 border transition-all duration-200 outline-none ${
-              errors.organization
+            className={`w-full px-4 py-2.5 rounded-xl text-sm text-white placeholder-slate-500 bg-slate-900/80 border transition-all duration-200 outline-none ${errors.organization
                 ? 'border-rose-500/80 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 text-rose-100'
                 : 'border-slate-800 hover:border-slate-700 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15'
-            } disabled:opacity-50`}
+              } disabled:opacity-50`}
           />
           <datalist id="db-organizations-list">
             {dbOrganizations.map((org) => (
@@ -237,9 +231,8 @@ export default function SignupPage() {
         <div>
           <label
             htmlFor="password"
-            className={`block text-xs font-semibold mb-1.5 transition-colors ${
-              errors.password ? 'text-rose-400' : 'text-slate-300'
-            }`}
+            className={`block text-xs font-semibold mb-1.5 transition-colors ${errors.password ? 'text-rose-400' : 'text-slate-300'
+              }`}
           >
             Password
           </label>
@@ -255,11 +248,10 @@ export default function SignupPage() {
               }}
               placeholder="Create a strong password"
               disabled={loading}
-              className={`w-full pl-4 pr-11 py-2.5 rounded-xl text-sm text-white placeholder-slate-500 bg-slate-900/80 border transition-all duration-200 outline-none ${
-                errors.password
+              className={`w-full pl-4 pr-11 py-2.5 rounded-xl text-sm text-white placeholder-slate-500 bg-slate-900/80 border transition-all duration-200 outline-none ${errors.password
                   ? 'border-rose-500/80 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 text-rose-100'
                   : 'border-slate-800 hover:border-slate-700 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15'
-              } disabled:opacity-50`}
+                } disabled:opacity-50`}
             />
             <button
               type="button"
@@ -295,9 +287,8 @@ export default function SignupPage() {
         <div>
           <label
             htmlFor="confirmPassword"
-            className={`block text-xs font-semibold mb-1.5 transition-colors ${
-              errors.confirmPassword ? 'text-rose-400' : 'text-slate-300'
-            }`}
+            className={`block text-xs font-semibold mb-1.5 transition-colors ${errors.confirmPassword ? 'text-rose-400' : 'text-slate-300'
+              }`}
           >
             Confirm Password
           </label>
@@ -313,13 +304,12 @@ export default function SignupPage() {
               }}
               placeholder="Re-enter your password"
               disabled={loading}
-              className={`w-full pl-4 pr-11 py-2.5 rounded-xl text-sm text-white placeholder-slate-500 bg-slate-900/80 border transition-all duration-200 outline-none ${
-                errors.confirmPassword
+              className={`w-full pl-4 pr-11 py-2.5 rounded-xl text-sm text-white placeholder-slate-500 bg-slate-900/80 border transition-all duration-200 outline-none ${errors.confirmPassword
                   ? 'border-rose-500/80 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 text-rose-100'
                   : confirmPassword && password === confirmPassword
-                  ? 'border-brand-500/80 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15'
-                  : 'border-slate-800 hover:border-slate-700 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15'
-              } disabled:opacity-50`}
+                    ? 'border-brand-500/80 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15'
+                    : 'border-slate-800 hover:border-slate-700 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15'
+                } disabled:opacity-50`}
             />
             <button
               type="button"
@@ -344,9 +334,8 @@ export default function SignupPage() {
           {/* Match indicator */}
           {confirmPassword && (
             <p
-              className={`mt-1 text-xs flex items-center gap-1 ${
-                password === confirmPassword ? 'text-brand-400 font-medium' : 'text-rose-400'
-              }`}
+              className={`mt-1 text-xs flex items-center gap-1 ${password === confirmPassword ? 'text-brand-400 font-medium' : 'text-rose-400'
+                }`}
             >
               {password === confirmPassword ? '✓ Passwords match' : '• Passwords do not match'}
             </p>
@@ -364,7 +353,7 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 px-4 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-brand-600 via-brand-500 to-brand-600 hover:from-brand-500 hover:to-brand-500 shadow-lg shadow-brand-500/25 hover:shadow-brand-500/40 border border-brand-400/30 transition-all duration-200 flex items-center justify-center gap-2 group disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer active:scale-[0.99]"
+            className="w-full py-3.5 px-4 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-brand-800 via-brand-700 to-brand-800 hover:from-brand-700 hover:via-brand-600 hover:to-brand-700 border border-brand-500/40 hover:border-brand-400/60 shadow-lg shadow-brand-950/60 hover:shadow-brand-900/40 active:scale-[0.99] transition-all duration-200 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {loading ? (
               <>
@@ -376,22 +365,22 @@ export default function SignupPage() {
               </>
             ) : (
               <>
-                <span>Continue to Email Verification</span>
-                <span className="text-accent-300 group-hover:translate-x-0.5 transition-transform">→</span>
+                <span>Register</span>
+                <span className="text-accent-300 font-bold group-hover:translate-x-0.5 transition-transform">→</span>
               </>
             )}
           </button>
         </div>
 
-        {/* Sign In Redirect */}
+        {/* Login Redirect */}
         <div className="pt-3 text-center">
           <p className="text-xs text-slate-400">
             Already have an account?{' '}
             <Link
               href="/login"
-              className="font-semibold text-brand-400 hover:text-brand-300 transition-colors"
+              className="font-semibold text-brand-400 hover:text-brand-300 hover:underline transition-colors"
             >
-              Sign in
+              Login
             </Link>
           </p>
         </div>

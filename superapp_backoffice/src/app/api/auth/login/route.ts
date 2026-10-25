@@ -19,7 +19,7 @@ export async function POST(request: Request) {
       const message = data?.message || data?.error || 'Invalid credentials or user not found.';
       return NextResponse.json(
         { error: message, pendingApproval: Boolean(data?.pendingApproval) },
-        { status: 401 },
+        { status: res.status >= 400 ? res.status : 401 },
       );
     }
 
@@ -49,8 +49,9 @@ export async function POST(request: Request) {
     const { access_token, refresh_token, ...userPayload } = data;
     return NextResponse.json(userPayload);
   } catch (error: any) {
+    console.error('[DEBUG /api/auth/login ERROR]', error);
     return NextResponse.json(
-      { error: 'Authentication service is currently unreachable. Please try again.' },
+      { error: 'Authentication service is currently unreachable. Please try again.', details: error?.message },
       { status: 503 },
     );
   }

@@ -20,7 +20,7 @@ export function AuthCenteredLayout({
   subtitle,
   badge = 'FSA SuperApp',
   backHref = '/login',
-  backLabel = 'Back to sign in',
+  backLabel = 'Back to Login',
   onBack,
 }: AuthCenteredLayoutProps) {
   return (

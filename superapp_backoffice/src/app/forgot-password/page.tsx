@@ -212,7 +212,7 @@ export default function ForgotPasswordPage() {
         subtitle="Your password has been changed successfully."
         badge="Security"
         backHref="/login"
-        backLabel="Back to sign in"
+        backLabel="Back to Login"
       >
         <div className="text-center space-y-6 py-2 animate-in fade-in duration-300">
           <div className="w-16 h-16 rounded-2xl bg-brand-500/15 border border-brand-500/30 flex items-center justify-center mx-auto text-brand-400 shadow-lg shadow-brand-500/10">
@@ -224,7 +224,7 @@ export default function ForgotPasswordPage() {
           <div className="space-y-1.5">
             <h3 className="text-lg font-bold text-white">All Sessions Secured</h3>
             <p className="text-xs text-slate-400 leading-relaxed max-w-sm mx-auto">
-              Your password has been updated. You can now sign in to the FSA SuperApp Platform with your new credentials.
+              Your password has been updated. You can now Login to the FSA SuperApp Platform with your new credentials.
             </p>
           </div>
 
@@ -233,7 +233,7 @@ export default function ForgotPasswordPage() {
               href="/login"
               className="w-full py-3.5 px-4 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-brand-600 via-brand-500 to-brand-600 hover:from-brand-500 hover:to-brand-500 shadow-lg shadow-brand-500/25 border border-brand-400/30 transition-all duration-200 flex items-center justify-center gap-2"
             >
-              <span>Sign In to Backoffice</span>
+              <span>Login</span>
               <span className="text-accent-300">→</span>
             </Link>
           </div>
@@ -349,7 +349,7 @@ export default function ForgotPasswordPage() {
               disabled={loading}
               className="w-full py-3.5 px-4 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-brand-600 via-brand-500 to-brand-600 hover:from-brand-500 hover:to-brand-500 shadow-lg shadow-brand-500/25 border border-brand-400/30 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
-              {loading ? 'Updating Password...' : 'Save New Password & Sign In'}
+              {loading ? 'Updating Password...' : 'Save New Password & Login'}
             </button>
           </div>
         </form>
@@ -371,11 +371,10 @@ export default function ForgotPasswordPage() {
       >
         <div className="space-y-6 animate-in fade-in duration-300">
           {/* Validity Duration Banner */}
-          <div className={`p-3 rounded-xl border flex items-center justify-between text-xs transition-colors ${
-            isCodeExpired
+          <div className={`p-3 rounded-xl border flex items-center justify-between text-xs transition-colors ${isCodeExpired
               ? 'bg-rose-950/20 border-rose-500/40 text-rose-300'
               : 'bg-slate-950/70 border-slate-800 text-slate-300'
-          }`}>
+            }`}>
             <span className="flex items-center gap-2">
               <span className={`w-2 h-2 rounded-full ${isCodeExpired ? 'bg-rose-400' : 'bg-brand-400 animate-pulse'}`} />
               <span>{isCodeExpired ? 'Recovery code expired' : 'Code valid duration:'}</span>
@@ -477,15 +476,14 @@ export default function ForgotPasswordPage() {
       subtitle="Enter your registered platform email address to receive a 6-digit recovery code."
       badge="Step 1 of 3"
       backHref="/login"
-      backLabel="Back to sign in"
+      backLabel="Back to Login"
     >
       <form onSubmit={handleRequestOtp} noValidate className="space-y-5 animate-in fade-in duration-300">
         <div>
           <label
             htmlFor="email"
-            className={`block text-xs font-semibold mb-2 transition-colors ${
-              emailError ? 'text-rose-400' : 'text-slate-300'
-            }`}
+            className={`block text-xs font-semibold mb-2 transition-colors ${emailError ? 'text-rose-400' : 'text-slate-300'
+              }`}
           >
             Email address
           </label>
@@ -500,11 +498,10 @@ export default function ForgotPasswordPage() {
             }}
             placeholder="name@company.com"
             disabled={loading}
-            className={`w-full px-4 py-3 rounded-xl text-sm text-white placeholder-slate-500 bg-slate-900/80 border transition-all duration-200 outline-none ${
-              emailError
+            className={`w-full px-4 py-3 rounded-xl text-sm text-white placeholder-slate-500 bg-slate-900/80 border transition-all duration-200 outline-none ${emailError
                 ? 'border-rose-500/80 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 text-rose-100'
                 : 'border-slate-800 hover:border-slate-700 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15'
-            } disabled:opacity-50`}
+              } disabled:opacity-50`}
           />
           {emailError && (
             <p className="mt-1.5 text-xs text-rose-400 flex items-center gap-1.5 animate-in fade-in">
@@ -539,7 +536,7 @@ export default function ForgotPasswordPage() {
             href="/login"
             className="text-xs font-semibold text-slate-400 hover:text-white transition-colors"
           >
-            Remember your password? Sign in
+            Remember your password? Login
           </Link>
         </div>
       </form>

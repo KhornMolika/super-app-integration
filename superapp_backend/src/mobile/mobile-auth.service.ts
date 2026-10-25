@@ -77,7 +77,7 @@ export class MobileAuthService implements OnModuleInit {
     private readonly authService: AuthService,
     private readonly mail: MailService,
     private readonly limiter: AuthRateLimiter,
-  ) {}
+  ) { }
 
   async onModuleInit() {
     await this.seedDefaultEndUsers();
@@ -267,7 +267,7 @@ export class MobileAuthService implements OnModuleInit {
       else this.logger.warn(msg);
     }
     const taken = new ConflictException(
-      'An account with this email already exists. Sign in instead.',
+      'An account with this email already exists. Login instead.',
     );
 
     let user = await this.users.findOne({ where: { email } });

@@ -1,4 +1,4 @@
-import { apiClient, PaginatedResponse } from './client';
+import { apiClient, PaginatedResponse, unwrapItem } from './client';
 
 export interface MiniApp {
   id: string;
@@ -66,17 +66,25 @@ export const miniappsApi = {
   getMyMiniApps: (status?: string) =>
     apiClient<MiniApp[]>('/api/mini-apps', { params: { status, mine: true } }),
 
-  getById: (id: string) =>
-    apiClient<MiniApp>(`/api/mini-apps/${id}`),
+  getById: async (id: string): Promise<MiniApp> => {
+    const res = await apiClient<any>(`/api/mini-apps/${id}`);
+    return unwrapItem<MiniApp>(res);
+  },
 
-  createDraft: (data: any) =>
-    apiClient<MiniApp>('/api/mini-apps/draft', { method: 'POST', body: data }),
+  createDraft: async (data: any): Promise<MiniApp> => {
+    const res = await apiClient<any>('/api/mini-apps/draft', { method: 'POST', body: data });
+    return unwrapItem<MiniApp>(res);
+  },
 
-  create: (data: any) =>
-    apiClient<MiniApp>('/api/mini-apps', { method: 'POST', body: data }),
+  create: async (data: any): Promise<MiniApp> => {
+    const res = await apiClient<any>('/api/mini-apps', { method: 'POST', body: data });
+    return unwrapItem<MiniApp>(res);
+  },
 
-  update: (id: string, data: any) =>
-    apiClient<MiniApp>(`/api/mini-apps/${id}`, { method: 'PATCH', body: data }),
+  update: async (id: string, data: any): Promise<MiniApp> => {
+    const res = await apiClient<any>(`/api/mini-apps/${id}`, { method: 'PATCH', body: data });
+    return unwrapItem<MiniApp>(res);
+  },
 
   delete: (id: string) =>
     apiClient<void>(`/api/mini-apps/${id}`, { method: 'DELETE' }),

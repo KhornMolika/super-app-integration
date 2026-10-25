@@ -1,4 +1,4 @@
-﻿import { Logger } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { Resend } from 'resend';
 import * as dns from 'dns';
 import { MailSendResult, SendEmailOptions } from './mail.types';
@@ -201,7 +201,7 @@ export class MailApiHelper {
         this.logger.error(`Resend API Error: ${result.error.message}`);
         let friendlyMessage = result.error.message;
         if (friendlyMessage.includes('You can only send testing emails to your own email address')) {
-          friendlyMessage = `Resend Sandbox Mode: Your API key is registered to molikakhorn71@gmail.com. In sandbox mode, emails can only be sent to this owner address. To send to @superapp.gov.kh, verify the domain at resend.com/domains.`;
+          friendlyMessage = `Resend Sandbox Mode: Emails can only be sent to the verified API key owner address in sandbox mode. Verify your sending domain at resend.com/domains to send to all addresses.`;
         }
         return {
           success: false,

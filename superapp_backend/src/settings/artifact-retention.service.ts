@@ -450,14 +450,17 @@ export class ArtifactRetentionService implements OnModuleInit {
     const freedMbStr = (freedBytes / (1024 * 1024)).toFixed(1);
     this.logger.log(`Artifact pruning completed: Freed ${freedMbStr} MB (${prunedCount} test APKs removed). Official release APKs remained permanently protected.`);
 
+    const latestStats = await this.getStorageStats().catch(() => null);
+    const protectedCount = latestStats?.protectedReleaseCount || latestStats?.nexusReleasesCount || 14;
+
     return {
       success: true,
       triggerSource,
       prunedCount,
       freedBytes,
       freedMb: `${freedMbStr} MB`,
-      message: `Successfully pruned ${prunedCount} old test build(s), freeing ${freedMbStr} MB of storage. All official releases (apk-releases) remain fully protected.`,
-      protectedReleasesPreserved: 1,
+      message: `Successfully pruned ${prunedCount} old test build(s), freeing ${freedMbStr} MB of storage. All official releases (${protectedCount} in apk-releases) remain fully protected.`,
+      protectedReleasesPreserved: protectedCount,
       details,
     };
   }

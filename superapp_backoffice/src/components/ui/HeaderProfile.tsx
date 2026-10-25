@@ -99,7 +99,7 @@ export function HeaderProfile() {
           <div className="mt-1.5 pt-1 space-y-0.5">
             {/* Profile */}
             <Link
-              href="/settings"
+              href="/settings/profile"
               onClick={() => setIsOpen(false)}
               className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/80 rounded-xl transition-colors"
             >
@@ -111,7 +111,7 @@ export function HeaderProfile() {
 
             {/* Setting */}
             <Link
-              href="/settings"
+              href="/settings/profile"
               onClick={() => setIsOpen(false)}
               className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/80 rounded-xl transition-colors"
             >

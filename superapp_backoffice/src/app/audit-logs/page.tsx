@@ -8,7 +8,16 @@ import { useAuth } from '@/lib/auth';
 import { auditLogsApi, AuditLog, unwrapData, unwrapMeta, PaginationMeta } from '@/api';
 import { PaginationProps } from '@/components/ui/Pagination';
 import { DataTable, DataTableColumn } from '@/components/ui/DataTable';
-import { DocumentTextIcon } from '@/components/ui/Icons';
+import {
+  DocumentTextIcon,
+  UserIcon,
+  ClockIcon,
+  GlobeIcon,
+  EyeIcon,
+  TagIcon,
+  TargetIcon,
+  ShieldCheckIcon,
+} from '@/components/ui/Icons';
 
 const COMMON_AUDIT_ACTIONS = [
   'ALL',
@@ -166,82 +175,188 @@ function AuditLogsContent() {
     return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700';
   };
 
+  const getActionDotClass = (action: string) => {
+    const act = (action || '').toUpperCase();
+    if (act.includes('DELETE') || act.includes('FAIL') || act.includes('REJECT')) {
+      return 'bg-rose-500';
+    }
+    if (act.includes('CREATE') || act.includes('APPROVE') || act.includes('SUCCESS') || act.includes('BOOTSTRAP')) {
+      return 'bg-emerald-500';
+    }
+    if (act.includes('UPDATE') || act.includes('STATUS') || act.includes('SYNC')) {
+      return 'bg-sky-500';
+    }
+    return 'bg-slate-400';
+  };
+
   // Audit Log Table Columns for Generic DataTable
   const auditColumns: DataTableColumn<AuditLog>[] = useMemo(() => [
     {
       key: 'timestamp',
-      header: 'Timestamp',
-      width: 'w-[18%]',
-      cell: (log) => (
-        <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
-          {parseDate(log.createdAt).toLocaleString()}
-        </span>
+      header: (
+        <div className="flex items-center gap-1.5">
+          <ClockIcon className="w-3.5 h-3.5 text-slate-400" />
+          <span>Timestamp</span>
+        </div>
       ),
+      width: 'w-[18%]',
+      cell: (log) => {
+        const date = parseDate(log.createdAt);
+        return (
+          <div className="flex flex-col">
+            <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+              {date.toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              })}
+            </span>
+            <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500 mt-0.5">
+              {date.toLocaleTimeString(undefined, {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+              })}
+            </span>
+          </div>
+        );
+      },
     },
     {
       key: 'actor',
-      header: 'Actor',
-      width: 'w-[15%]',
-      cell: (log) => (
-        <div className="font-semibold text-sm text-slate-800 dark:text-slate-200">
-          {log.actorId || 'system'}
+      header: (
+        <div className="flex items-center gap-1.5">
+          <UserIcon className="w-3.5 h-3.5 text-slate-400" />
+          <span>Actor Name</span>
         </div>
       ),
+      width: 'w-[26%]',
+      cell: (log) => {
+        const actorName =
+          log.actorName ||
+          log.newValue?.owner?.name ||
+          (log.actorId === 'admin'
+            ? 'System Administrator'
+            : log.actorId === 'system'
+            ? 'System Engine'
+            : 'Operator');
+        const actorEmail = log.actorEmail || log.newValue?.owner?.email;
+        const isSystem = log.actorId === 'admin' || log.actorId === 'system' || !log.actorId;
+        const initials = ((actorName || 'U') as string)
+          .split(' ')
+          .map((p: string) => p[0])
+          .slice(0, 2)
+          .join('')
+          .toUpperCase();
+
+        return (
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div
+              className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 ${
+                isSystem
+                  ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                  : 'bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-2xs'
+              }`}
+            >
+              {isSystem ? (
+                <ShieldCheckIcon className="w-4 h-4 text-brand-600 dark:text-brand-400" />
+              ) : (
+                <span>{initials || 'U'}</span>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div
+                className="font-semibold text-xs sm:text-sm text-slate-900 dark:text-slate-100 truncate"
+                title={actorName}
+              >
+                {actorName}
+              </div>
+              <div
+                className="text-[11px] text-slate-400 dark:text-slate-500 font-mono truncate"
+                title={actorEmail || log.actorId || ''}
+              >
+                {actorEmail || (log.actorId ? `ID: ${log.actorId.substring(0, 8)}...` : 'System')}
+              </div>
+            </div>
+          </div>
+        );
+      },
     },
     {
       key: 'action',
-      header: 'Action Event',
-      width: 'w-[20%]',
+      header: (
+        <div className="flex items-center gap-1.5">
+          <TagIcon className="w-3.5 h-3.5 text-slate-400" />
+          <span>Action Event</span>
+        </div>
+      ),
+      width: 'w-[22%]',
       cell: (log) => (
         <span
-          className={`inline-flex px-2.5 py-1 rounded-md text-xs font-bold border uppercase tracking-wider ${getActionBadgeClass(
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border uppercase tracking-wider ${getActionBadgeClass(
             log.action
           )}`}
         >
-          {log.action}
+          <span className={`w-1.5 h-1.5 rounded-full ${getActionDotClass(log.action)}`} />
+          <span className="truncate">{log.action}</span>
         </span>
       ),
     },
     {
       key: 'resource',
-      header: 'Resource Target',
-      width: 'w-[25%]',
-      cell: (log) => (
-        <div>
-          <div className="text-sm font-medium text-slate-800 dark:text-slate-200">
-            {log.resourceType}
-          </div>
-          {log.resourceId && (
-            <div className="text-xs font-mono text-slate-400 truncate max-w-xs" title={log.resourceId}>
-              {log.resourceId}
-            </div>
-          )}
+      header: (
+        <div className="flex items-center gap-1.5">
+          <TargetIcon className="w-3.5 h-3.5 text-slate-400" />
+          <span>Resource Target</span>
         </div>
       ),
+      width: 'w-[22%]',
+      cell: (log) => {
+        const targetName =
+          log.newValue?.name ||
+          log.oldValue?.name ||
+          log.metadata?.appName ||
+          log.metadata?.title;
+        return (
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                {log.resourceType}
+              </span>
+              {targetName && (
+                <span
+                  className="text-xs font-medium text-slate-900 dark:text-slate-100 truncate max-w-[120px]"
+                  title={targetName}
+                >
+                  {targetName}
+                </span>
+              )}
+            </div>
+            {log.resourceId && (
+              <div
+                className="text-[11px] font-mono text-slate-400 dark:text-slate-500 truncate max-w-[150px] mt-0.5"
+                title={log.resourceId}
+              >
+                {log.resourceId}
+              </div>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: 'ip',
-      header: 'IP Address',
+      header: (
+        <div className="flex items-center gap-1.5">
+          <GlobeIcon className="w-3.5 h-3.5 text-slate-400" />
+          <span>IP Address</span>
+        </div>
+      ),
       width: 'w-[12%]',
       cell: (log) => (
-        <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-mono text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60">
           {log.ipAddress || '127.0.0.1'}
         </span>
-      ),
-    },
-    {
-      key: 'actions',
-      header: <span className="block text-right">Details</span>,
-      width: 'w-[10%]',
-      className: 'text-right',
-      cell: (log) => (
-        <button
-          type="button"
-          onClick={() => setSelectedLog(log)}
-          className="text-brand-600 dark:text-brand-400 hover:underline font-semibold text-xs bg-brand-50 dark:bg-brand-950/40 px-2.5 py-1 rounded-lg border border-brand-200 dark:border-brand-800/50 cursor-pointer"
-        >
-          Inspect JSON
-        </button>
       ),
     },
   ], []);
@@ -286,6 +401,7 @@ function AuditLogsContent() {
           searchValue={searchQuery}
           onSearchChange={setSearchQuery}
           searchPlaceholder="Search audit trail by actor, resource..."
+          onRowClick={(log) => setSelectedLog(log)}
           filters={[
             {
               id: 'action',
@@ -344,15 +460,24 @@ function AuditLogsContent() {
               <div className="space-y-4 text-sm">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/50">
                   <div>
-                    <span className="text-xs text-slate-400 uppercase font-semibold">Action</span>
+                    <span className="text-xs text-slate-400 uppercase font-semibold">Action Event</span>
                     <div className="font-bold text-slate-800 dark:text-slate-100 mt-0.5">
                       {selectedLog.action}
                     </div>
                   </div>
                   <div>
-                    <span className="text-xs text-slate-400 uppercase font-semibold">Actor</span>
-                    <div className="font-bold text-slate-800 dark:text-slate-100 mt-0.5">
-                      {selectedLog.actorId || 'system'}
+                    <span className="text-xs text-slate-400 uppercase font-semibold">Actor Name</span>
+                    <div className="font-bold text-slate-800 dark:text-slate-100 mt-0.5 truncate">
+                      {selectedLog.actorName ||
+                        selectedLog.newValue?.owner?.name ||
+                        (selectedLog.actorId === 'admin'
+                          ? 'System Administrator'
+                          : selectedLog.actorId === 'system'
+                          ? 'System Engine'
+                          : 'Operator')}
+                    </div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate">
+                      {selectedLog.actorEmail || (selectedLog.actorId ? `ID: ${selectedLog.actorId.substring(0, 8)}...` : 'System')}
                     </div>
                   </div>
                   <div>
@@ -360,6 +485,11 @@ function AuditLogsContent() {
                     <div className="font-bold text-slate-800 dark:text-slate-100 mt-0.5">
                       {selectedLog.resourceType}
                     </div>
+                    {selectedLog.resourceId && (
+                      <div className="text-[11px] text-slate-400 font-mono truncate max-w-[140px]" title={selectedLog.resourceId}>
+                        {selectedLog.resourceId}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <span className="text-xs text-slate-400 uppercase font-semibold">IP Address</span>

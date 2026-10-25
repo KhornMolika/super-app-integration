@@ -60,9 +60,7 @@ export class AccessControlService {
       // Only initialize default seed password if account has NO password hash yet.
       // If user already has a passwordHash, preserve it so user can update their password later.
       if (!user.passwordHash) {
-        const defaultPassword =
-          process.env.SUPERADMIN_PASSWORD ||
-          (process.env.NODE_ENV !== 'production' ? 'Password123!@#' : '');
+        const defaultPassword = process.env.SUPERADMIN_PASSWORD;
         if (defaultPassword) {
           user.passwordHash = await hashPassword(defaultPassword);
           userChanged = true;
@@ -126,11 +124,9 @@ export class AccessControlService {
       role = await this.roleRepository.save(role);
     }
 
-    const defaultPassword =
-      process.env.SUPERADMIN_PASSWORD ||
-      (process.env.NODE_ENV !== 'production' ? 'Password123!@#' : '');
+    const defaultPassword = process.env.SUPERADMIN_PASSWORD;
     if (!defaultPassword) {
-      throw new Error('SUPERADMIN_PASSWORD must be configured to bootstrap seed accounts');
+      throw new Error('SUPERADMIN_PASSWORD must be configured in environment to bootstrap seed accounts');
     }
     const passwordHash = await hashPassword(defaultPassword);
 
@@ -263,9 +259,7 @@ export class AccessControlService {
     const email = (requester.email || '').toLowerCase().trim();
     return (
       roles.some((r) => r.toUpperCase() === 'SUPER_ADMIN' || r.toUpperCase() === 'SUPERADMIN') ||
-      email === 'molikakhorn71@gmail.com' ||
-      email === 'thavorac.chun@gmail.com' ||
-      email === 'sea.hutmonineat@gmail.com'
+      Boolean(OFFICIAL_SEEDS[email])
     );
   }
 

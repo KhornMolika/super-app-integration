@@ -216,7 +216,7 @@ export class SeederService implements OnApplicationBootstrap {
     if (!defaultPassword && process.env.NODE_ENV === 'production') {
       throw new Error('SUPERADMIN_PASSWORD must be explicitly configured in production environment');
     }
-    const seedPassword = defaultPassword || (process.env.NODE_ENV !== 'production' ? 'Password123!@#' : '');
+    const seedPassword = defaultPassword;
     if (!seedPassword) {
       throw new Error('SUPERADMIN_PASSWORD is required to seed official accounts');
     }

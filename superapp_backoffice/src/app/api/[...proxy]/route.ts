@@ -3,50 +3,6 @@ import { cookies } from 'next/headers';
 
 const BACKEND_URL = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
-let cachedDevToken: { token: string; expiresAt: number } | null = null;
-
-async function getDevAuthToken(forceRefresh = false): Promise<string | null> {
-  if (process.env.NODE_ENV === 'production') {
-    return null;
-  }
-  const password = process.env.DEV_FALLBACK_USER_PASSWORD || process.env.SUPERADMIN_PASSWORD;
-  if (!password) {
-    return null;
-  }
-  if (!forceRefresh && cachedDevToken && Date.now() < cachedDevToken.expiresAt) {
-    return cachedDevToken.token;
-  }
-  const candidateEmails = [
-    process.env.DEV_FALLBACK_USER_EMAIL,
-    process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL,
-    'molikakhorn71@gmail.com',
-    'thavorac.chun@gmail.com',
-    'sea.hutmonineat@gmail.com',
-  ].filter(Boolean) as string[];
-
-  for (const email of candidateEmails) {
-    try {
-      const res = await fetch(`${BACKEND_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.access_token) {
-          cachedDevToken = {
-            token: data.access_token,
-            expiresAt: Date.now() + 1000 * 60 * 30, // 30 mins
-          };
-          return data.access_token;
-        }
-      }
-    } catch (err) {
-      console.error(`Failed to get dev auth token for ${email} in proxy:`, err);
-    }
-  }
-  return null;
-}
 
 // Allowlist of base routes allowed through the proxy
 const ALLOWED_ROUTES = [
@@ -146,14 +102,6 @@ async function handleProxy(request: Request, { params }: { params: Promise<{ pro
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // If still no token or stale, fallback to dev token so cold links / local dev never fail
-    if ((!token || isStale) && !clientAuth) {
-      const devToken = await getDevAuthToken(isStale);
-      if (devToken) {
-        token = devToken;
-        newRefreshedToken = devToken;
-      }
-    }
 
     // Prepare headers
     const headers = new Headers();
@@ -204,22 +152,36 @@ async function handleProxy(request: Request, { params }: { params: Promise<{ pro
       );
     }
 
-    // If unauthorized (stale cookie, token expired, or backend restarted with new RSA keys),
-    // automatically attempt a refresh with dev fallback and retry once
-    if (res.status === 401 && !clientAuth) {
-      const devToken = await getDevAuthToken(true);
-      if (devToken) {
-        newRefreshedToken = devToken;
-        headers.set('Authorization', `Bearer ${devToken}`);
-        try {
-          res = await fetch(`${BACKEND_URL}/${path}${searchParams}`, {
-            method: request.method,
-            headers,
-            body,
-            signal: AbortSignal.timeout(10000),
-          });
-        } catch (_) {}
-      }
+    // If unauthorized and refreshToken exists, attempt a silent token refresh and retry once
+    if (res.status === 401 && !clientAuth && refreshToken && !newRefreshedToken) {
+      try {
+        const refreshRes = await fetch(`${BACKEND_URL}/auth/refresh`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Cookie: `refresh_token=${refreshToken}`,
+          },
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        });
+        if (refreshRes.ok) {
+          const refreshData = await refreshRes.json();
+          if (refreshData?.access_token) {
+            newRefreshedToken = refreshData.access_token;
+            if (refreshData?.refresh_token) {
+              newRefreshToken = refreshData.refresh_token;
+            }
+            headers.set('Authorization', `Bearer ${refreshData.access_token}`);
+            try {
+              res = await fetch(`${BACKEND_URL}/${path}${searchParams}`, {
+                method: request.method,
+                headers,
+                body,
+                signal: AbortSignal.timeout(10000),
+              });
+            } catch (_) {}
+          }
+        }
+      } catch (_) {}
     }
 
     const applyAuthCookie = (response: NextResponse) => {

@@ -270,6 +270,13 @@ export class NotificationsService {
     return createPaginatedResponse(items, totalItems, page, limit);
   }
 
+  async findById(id: string): Promise<Notification | null> {
+    return this.notificationRepository.findOne({
+      where: { id },
+      relations: { miniApp: true },
+    });
+  }
+
   async markAsRead(id: string): Promise<{ success: boolean }> {
     await this.notificationRepository.update(id, { isRead: true });
     return { success: true };

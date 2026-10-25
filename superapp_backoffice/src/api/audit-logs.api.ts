@@ -3,6 +3,9 @@ import { apiClient, PaginatedResponse } from './client';
 export interface AuditLog {
   id: string;
   actorId?: string;
+  actorName?: string;
+  actorEmail?: string;
+  actorRole?: string;
   action: string;
   resourceType: string;
   resourceId?: string;

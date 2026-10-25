@@ -2,15 +2,35 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { notificationsApi, NotificationItem } from '@/api';
 import { useNotificationSocket } from '@/hooks/useNotificationSocket';
 import { toast } from '@/components/ui/Toast';
+import {
+  getNotificationTarget,
+  getNotificationTypeStyle,
+  formatNotificationRelativeTime,
+} from '@/lib/notification-target.helper';
+import {
+  NotificationFilterModal,
+} from '@/components/notifications/NotificationFilterModal';
+import {
+  NotificationCategory,
+  NotificationFiltersState,
+  NotificationReadStatus,
+  DEFAULT_FILTERS,
+  matchNotification,
+  getNotificationCategory,
+  countActiveFilters,
+} from '@/components/notifications/notification-filter.types';
 
 export default function NotificationsPage() {
+  const router = useRouter();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'all' | 'unread' | 'security' | 'testing' | 'review'>('all');
+  const [filters, setFilters] = useState<NotificationFiltersState>(DEFAULT_FILTERS);
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const fetchNotifications = useCallback(async () => {
@@ -25,9 +45,9 @@ export default function NotificationsPage() {
   }, []);
 
   const handleNewNotification = useCallback((newNotif: any) => {
-    setNotifications(prev => {
-      if (prev.some(n => n.id === newNotif.id)) {
-        return prev.map(n => (n.id === newNotif.id ? newNotif : n));
+    setNotifications((prev) => {
+      if (prev.some((n) => n.id === newNotif.id)) {
+        return prev.map((n) => (n.id === newNotif.id ? newNotif : n));
       }
       return [newNotif, ...prev];
     });
@@ -41,8 +61,8 @@ export default function NotificationsPage() {
 
   const handleMarkAsRead = async (id: string) => {
     try {
-      setNotifications(prev =>
-        prev.map(n => (n.id === id ? { ...n, isRead: true } : n))
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
       );
       await notificationsApi.markAsRead(id);
     } catch (err) {
@@ -54,7 +74,7 @@ export default function NotificationsPage() {
     if (isProcessing) return;
     setIsProcessing(true);
     try {
-      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       await notificationsApi.markAllAsRead();
       toast.success('All notifications marked as read.', 'Notifications');
     } catch (err) {
@@ -67,7 +87,7 @@ export default function NotificationsPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      setNotifications(prev => prev.filter(n => n.id !== id));
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
       await notificationsApi.delete(id);
       toast.info('Notification dismissed.', 'Removed');
     } catch (err) {
@@ -76,121 +96,57 @@ export default function NotificationsPage() {
     }
   };
 
-  // Classify notification into tabs
+  const handleCardClick = (e: React.MouseEvent, item: NotificationItem) => {
+    // If clicked on an interactive button or action, don't trigger card navigation
+    if ((e.target as HTMLElement).closest('button, a')) {
+      return;
+    }
+    if (!item.isRead) {
+      handleMarkAsRead(item.id);
+    }
+    router.push(`/notifications/${item.id}`);
+  };
+
+  // Live filter evaluation
   const filteredNotifications = useMemo(() => {
-    return notifications.filter(n => {
-      // Tab filter
-      if (activeFilter === 'unread' && n.isRead) return false;
-      if (activeFilter === 'security') {
-        const isSec =
-          n.type === 'SCAN_STARTED' ||
-          n.type === 'ISSUE_CREATED' ||
-          n.type?.includes('SECURITY') ||
-          n.title?.toLowerCase().includes('validation') ||
-          n.title?.toLowerCase().includes('security');
-        if (!isSec) return false;
-      }
-      if (activeFilter === 'testing') {
-        const isTest =
-          n.type === 'TESTING_STARTED' ||
-          n.type === 'BUILD_COMPLETED' ||
-          n.title?.toLowerCase().includes('test') ||
-          n.title?.toLowerCase().includes('apk') ||
-          n.title?.toLowerCase().includes('build');
-        if (!isTest) return false;
-      }
-      if (activeFilter === 'review') {
-        const isRev =
-          n.type === 'REVIEW_STARTED' ||
-          n.type === 'PROPOSAL_CREATED' ||
-          n.title?.toLowerCase().includes('review') ||
-          n.title?.toLowerCase().includes('approved') ||
-          n.title?.toLowerCase().includes('proposal');
-        if (!isRev) return false;
-      }
-
-      // Search query
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchesTitle = n.title?.toLowerCase().includes(q);
-        const matchesMsg = n.message?.toLowerCase().includes(q);
-        const matchesApp = n.miniApp?.name?.toLowerCase().includes(q);
-        if (!matchesTitle && !matchesMsg && !matchesApp) return false;
-      }
-
-      return true;
-    });
-  }, [notifications, activeFilter, searchQuery]);
-
-  const unreadCount = notifications.filter(n => !n.isRead).length;
-
-  const getTypeStyle = (type?: string, title?: string) => {
-    const text = `${type || ''} ${title || ''}`.toLowerCase();
-    if (text.includes('passed') || text.includes('approved') || text.includes('activated') || text.includes('success')) {
-      return {
-        bg: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50',
-        icon: (
-          <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        ),
-      };
-    }
-    if (text.includes('failed') || text.includes('issue') || text.includes('rejected') || text.includes('unreachable')) {
-      return {
-        bg: 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800/50',
-        icon: (
-          <svg className="w-5 h-5 text-rose-600 dark:text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-        ),
-      };
-    }
-    if (text.includes('test') || text.includes('apk') || text.includes('build')) {
-      return {
-        bg: 'bg-accent-50 dark:bg-accent-950/40 text-accent-800 dark:text-accent-300 border-accent-200 dark:border-accent-800/50',
-        icon: (
-          <svg className="w-5 h-5 text-accent-600 dark:text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-          </svg>
-        ),
-      };
-    }
-    if (text.includes('scan') || text.includes('security')) {
-      return {
-        bg: 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800/50',
-        icon: (
-          <svg className="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-          </svg>
-        ),
-      };
-    }
-    return {
-      bg: 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/50',
-      icon: (
-        <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-        </svg>
-      ),
+    const activeFiltersWithSearch: NotificationFiltersState = {
+      ...filters,
+      searchQuery,
     };
+    return notifications.filter((n) => matchNotification(n, activeFiltersWithSearch));
+  }, [notifications, filters, searchQuery]);
+
+  // Status counts
+  const unreadCount = useMemo(() => notifications.filter((n) => !n.isRead).length, [notifications]);
+  const readCount = useMemo(() => notifications.filter((n) => n.isRead).length, [notifications]);
+
+  // Active filters count for deep filter button badge
+  const activeFilterCount = useMemo(() => countActiveFilters(filters), [filters]);
+
+  // Handlers for Quick Status Tabs
+  const handleSetReadStatus = (status: NotificationReadStatus) => {
+    setFilters((prev) => ({ ...prev, readStatus: status }));
   };
 
-  const formatRelativeTime = (isoString?: string) => {
-    if (!isoString) return 'recently';
-    const date = new Date(isoString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffMins < 1) return 'just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
+  // Remove a specific category from active filters
+  const handleRemoveCategory = (cat: NotificationCategory) => {
+    setFilters((prev) => ({
+      ...prev,
+      categories: prev.categories.filter((c) => c !== cat),
+    }));
   };
+
+  const handleClearAllFilters = () => {
+    setFilters(DEFAULT_FILTERS);
+    setSearchQuery('');
+  };
+
+  const hasAnyActiveFilters =
+    filters.readStatus !== 'ALL' ||
+    filters.categories.length > 0 ||
+    filters.severity !== 'ALL' ||
+    filters.timeframe !== 'ALL' ||
+    searchQuery.trim().length > 0;
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out space-y-6">
@@ -237,55 +193,187 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      {/* Filter Tabs & Search Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5 p-1 bg-slate-200/70 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-x-auto">
-          {[
-            { id: 'all', label: 'All', count: notifications.length },
-            { id: 'unread', label: 'Unread', count: unreadCount },
-            { id: 'security', label: 'Security', count: notifications.filter(n => n.title?.toLowerCase().includes('validation') || n.title?.toLowerCase().includes('security')).length },
-            { id: 'testing', label: 'Testing & Builds', count: notifications.filter(n => n.title?.toLowerCase().includes('test') || n.title?.toLowerCase().includes('apk')).length },
-            { id: 'review', label: 'Review', count: notifications.filter(n => n.title?.toLowerCase().includes('review') || n.title?.toLowerCase().includes('proposal')).length },
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveFilter(tab.id as any)}
-              className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
-                activeFilter === tab.id
-                  ? 'bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              <span>{tab.label}</span>
-              {tab.count > 0 && (
-                <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                    activeFilter === tab.id
-                      ? 'bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400'
-                      : 'bg-slate-300/60 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+      {/* Filter Toolbar & Search Bar */}
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          {/* Status Segment Control: All / Unread / Read */}
+          <div className="flex items-center gap-1 p-1 bg-slate-200/70 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-x-auto">
+            {[
+              { id: 'ALL' as NotificationReadStatus, label: 'All', count: notifications.length },
+              { id: 'UNREAD' as NotificationReadStatus, label: 'Unread', count: unreadCount },
+              { id: 'READ' as NotificationReadStatus, label: 'Read', count: readCount },
+            ].map((tab) => {
+              const isActive = filters.readStatus === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => handleSetReadStatus(tab.id)}
+                  className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                    isActive
+                      ? 'bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  {tab.count}
+                  <span>{tab.label}</span>
+                  {tab.count > 0 && (
+                    <span
+                      className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                        isActive
+                          ? 'bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400'
+                          : 'bg-slate-300/60 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Deep Filter Trigger & Search Bar */}
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            {/* Deep Filter Modal Button */}
+            <button
+              onClick={() => setIsFilterModalOpen(true)}
+              className={`px-3.5 py-2 text-xs font-bold rounded-xl border transition-all flex items-center gap-2 cursor-pointer shadow-xs whitespace-nowrap ${
+                activeFilterCount > 0
+                  ? 'bg-brand-50 dark:bg-brand-950/50 border-brand-500 text-brand-600 dark:text-brand-400 ring-2 ring-brand-500/20'
+                  : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60'
+              }`}
+            >
+              <svg className="w-4 h-4 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+              <span>Deep Filter</span>
+              {activeFilterCount > 0 && (
+                <span className="w-5 h-5 rounded-full bg-brand-600 text-white text-[10px] flex items-center justify-center font-bold">
+                  {activeFilterCount}
                 </span>
               )}
             </button>
-          ))}
+
+            {/* Real-time Search */}
+            <div className="relative flex-1 lg:w-72">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search title, mini app, message..."
+                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 pl-9 pr-8 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 shadow-xs"
+              />
+              <svg className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-2.5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Real-time Search */}
-        <div className="relative w-full md:w-80">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search by title, mini app, or message..."
-            className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 pl-9 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 shadow-xs"
-          />
-          <svg className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-2.5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </div>
+        {/* Active Filter Chips / Indicators Row */}
+        {hasAnyActiveFilters && (
+          <div className="flex items-center gap-2 flex-wrap pt-1 text-xs">
+            <span className="text-slate-400 dark:text-slate-500 text-[11px] font-semibold uppercase tracking-wider">
+              Active:
+            </span>
+
+            {/* Read Status Chip */}
+            {filters.readStatus !== 'ALL' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-brand-50 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-800/60">
+                <span>Status: {filters.readStatus === 'UNREAD' ? 'Unread' : 'Read'}</span>
+                <button
+                  onClick={() => handleSetReadStatus('ALL')}
+                  className="hover:text-rose-500 cursor-pointer ml-0.5"
+                >
+                  ✕
+                </button>
+              </span>
+            )}
+
+            {/* Categories Chips */}
+            {filters.categories.map((cat) => (
+              <span
+                key={cat}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60"
+              >
+                <span>Category: {cat}</span>
+                <button
+                  onClick={() => handleRemoveCategory(cat)}
+                  className="hover:text-rose-500 cursor-pointer ml-0.5"
+                >
+                  ✕
+                </button>
+              </span>
+            ))}
+
+            {/* Severity Chip */}
+            {filters.severity !== 'ALL' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
+                <span>Severity: {filters.severity}</span>
+                <button
+                  onClick={() => setFilters((prev) => ({ ...prev, severity: 'ALL' }))}
+                  className="hover:text-rose-500 cursor-pointer ml-0.5"
+                >
+                  ✕
+                </button>
+              </span>
+            )}
+
+            {/* Timeframe Chip */}
+            {filters.timeframe !== 'ALL' && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
+                <span>Time: {filters.timeframe}</span>
+                <button
+                  onClick={() => setFilters((prev) => ({ ...prev, timeframe: 'ALL' }))}
+                  className="hover:text-rose-500 cursor-pointer ml-0.5"
+                >
+                  ✕
+                </button>
+              </span>
+            )}
+
+            {/* Search query chip */}
+            {searchQuery.trim() && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                <span>Query: &quot;{searchQuery}&quot;</span>
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="hover:text-rose-500 cursor-pointer ml-0.5"
+                >
+                  ✕
+                </button>
+              </span>
+            )}
+
+            {/* Clear All Button */}
+            <button
+              onClick={handleClearAllFilters}
+              className="text-xs font-semibold text-rose-600 dark:text-rose-400 hover:underline cursor-pointer ml-1 inline-flex items-center gap-1"
+            >
+              <span>Reset all</span>
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Deep Filter Modal Dialog */}
+      <NotificationFilterModal
+        isOpen={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        filters={filters}
+        onApply={(newFilters) => setFilters(newFilters)}
+        notifications={notifications}
+      />
 
       {/* Notifications Feed */}
       {isLoading ? (
@@ -304,82 +392,82 @@ export default function NotificationsPage() {
             </svg>
           </div>
           <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
-            {searchQuery ? 'No matching notifications found' : 'No notifications'}
+            {hasAnyActiveFilters ? 'No matching notifications found' : 'No notifications'}
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
-            {searchQuery
-              ? `Try adjusting your search query "${searchQuery}".`
+            {hasAnyActiveFilters
+              ? 'No notifications match the active filter criteria. Try resetting your filters or search query.'
               : "You're all caught up! New platform alerts and pipeline events will appear here in real time."}
           </p>
+          {hasAnyActiveFilters && (
+            <button
+              onClick={handleClearAllFilters}
+              className="mt-4 px-4 py-2 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer inline-flex items-center gap-1.5"
+            >
+              <span>Reset all filters</span>
+            </button>
+          )}
         </div>
       ) : (
         <div className="bg-white dark:bg-slate-800/50 rounded-2xl shadow-xs border border-slate-200 dark:border-slate-700/50 overflow-hidden divide-y divide-slate-100 dark:divide-slate-700/40">
-          {filteredNotifications.map(item => {
-            const style = getTypeStyle(item.type, item.title);
+          {filteredNotifications.map((item) => {
+            const style = getNotificationTypeStyle(item.type, item.title);
+
             return (
               <div
                 key={item.id}
-                className={`p-4 sm:p-5 transition-all duration-150 flex flex-col sm:flex-row sm:items-start justify-between gap-4 ${
+                onClick={(e) => handleCardClick(e, item)}
+                className={`group relative px-4 py-3 sm:px-5 sm:py-3.5 transition-all duration-150 flex items-center justify-between gap-3.5 cursor-pointer ${
                   !item.isRead
-                    ? 'bg-blue-50/40 dark:bg-slate-800/90'
-                    : 'bg-white dark:bg-slate-800/40 hover:bg-slate-50/80 dark:hover:bg-slate-800/70'
+                    ? 'bg-blue-50/40 dark:bg-slate-800/90 hover:bg-blue-50/70 dark:hover:bg-slate-800'
+                    : 'bg-white dark:bg-slate-800/40 hover:bg-slate-50/90 dark:hover:bg-slate-800/70'
                 }`}
               >
-                {/* Left Notification Content */}
-                <div className="flex items-start gap-3.5 min-w-0 flex-1">
-                  {/* Category Indicator Icon */}
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 border ${style.bg} shadow-2xs`}>
+                {/* Left: Indicator Icon & Clean Content */}
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  {/* Compact Category Icon */}
+                  <div
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 border ${style.bg} shadow-2xs group-hover:scale-105 transition-transform [&_svg]:w-4 [&_svg]:h-4`}
+                  >
                     {style.icon}
                   </div>
 
                   <div className="min-w-0 flex-1">
+                    {/* Title Row with Relative Time & Unread Dot */}
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className={`text-sm font-bold ${!item.isRead ? 'text-slate-900 dark:text-white' : 'text-slate-700 dark:text-slate-300'}`}>
+                      {!item.isRead && (
+                        <span className="w-2 h-2 rounded-full bg-brand-500 ring-2 ring-brand-500/20 flex-shrink-0" />
+                      )}
+                      <h4
+                        className={`text-xs sm:text-sm font-semibold truncate group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors ${
+                          !item.isRead
+                            ? 'text-slate-900 dark:text-white font-bold'
+                            : 'text-slate-700 dark:text-slate-200'
+                        }`}
+                      >
                         {item.title}
                       </h4>
 
-                      {!item.isRead && (
-                        <span className="w-2 h-2 rounded-full bg-brand-600 dark:bg-brand-400 ring-4 ring-brand-500/20"></span>
-                      )}
-
-                      <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono ml-auto sm:ml-0">
-                        • {formatRelativeTime(item.createdAt)}
+                      <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono flex-shrink-0">
+                        • {formatNotificationRelativeTime(item.createdAt)}
                       </span>
+
+                      {item.miniApp?.name && (
+                        <span className="hidden sm:inline-flex text-[10px] px-2 py-0.5 rounded-full font-medium bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700">
+                          {item.miniApp.name}
+                        </span>
+                      )}
                     </div>
 
-                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                    {/* Clean Message Subtitle */}
+                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
                       {item.message}
                     </p>
-
-                    {/* Associated MiniApp pill & shortcut link */}
-                    {(item.miniApp || item.miniAppId) && (
-                      <div className="mt-2.5 flex items-center gap-2 flex-wrap">
-                        <Link
-                          href={`/miniapps/${item.miniApp?.id || item.miniAppId}`}
-                          onClick={() => !item.isRead && handleMarkAsRead(item.id)}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-brand-50 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-800/60 hover:bg-brand-100 dark:hover:bg-brand-900/50 transition-colors shadow-2xs"
-                        >
-                          <svg className="w-3 h-3 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                          </svg>
-                          <span>{item.miniApp?.name || 'View MiniApp Details'}</span>
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                          </svg>
-                        </Link>
-
-                        {item.miniApp?.status && (
-                          <span className="text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600">
-                            {item.miniApp.status}
-                          </span>
-                        )}
-                      </div>
-                    )}
                   </div>
                 </div>
 
-                {/* Right Actions */}
-                <div className="flex items-center gap-2 sm:self-center flex-shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-700/40">
+                {/* Right: Quick Actions & Chevron hint */}
+                <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                   {!item.isRead ? (
                     <button
                       onClick={() => handleMarkAsRead(item.id)}
@@ -389,7 +477,7 @@ export default function NotificationsPage() {
                       Mark read
                     </button>
                   ) : (
-                    <span className="text-xs text-slate-400 dark:text-slate-500 px-2 py-1">Read</span>
+                    <span className="text-[11px] text-slate-400 dark:text-slate-500 px-1.5 py-0.5">Read</span>
                   )}
 
                   <button
@@ -397,10 +485,16 @@ export default function NotificationsPage() {
                     className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
                     title="Delete notification"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                   </button>
+
+                  <div className="text-slate-400 group-hover:text-brand-500 group-hover:translate-x-0.5 transition-all pl-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
                 </div>
               </div>
             );
