@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { BackButton } from '@/components/ui/BackButton';
 import { Button } from '@/components/ui/inputs';
 import { IntegrationMethod } from '@/types/miniapp.types';
 import { BuildingIcon } from '@/components/ui/Icons';
@@ -65,7 +64,6 @@ export default function MiniAppDetailHeader({
   return (
     <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm transition-all">
       <div className="flex items-center space-x-4">
-        <BackButton href="/miniapps" />
         <AppLogoAvatar logo={formData.logo} name={formData.name} size="lg" />
         <div>
           <div className="flex items-center gap-3">
