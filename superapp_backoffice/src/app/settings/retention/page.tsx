@@ -7,7 +7,7 @@ import { ArtifactRetentionCard } from '@/components/settings';
 export default function StorageRetentionPage() {
   return (
     <ProtectedRoute requiredRole="SUPER_ADMIN">
-      <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out space-y-6 pb-16">
+      <div className="w-full min-w-0 space-y-6 pb-16 animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out">
         {/* Page Breadcrumb & Header */}
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 pb-4 border-b border-slate-200/70 dark:border-slate-800/80">
           <div className="space-y-1">

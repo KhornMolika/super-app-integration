@@ -380,7 +380,7 @@ function AuditLogsContent() {
 
   return (
     <ProtectedRoute permission="audit_log:read">
-      <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out space-y-6">
+      <div className="w-full min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
         {/* Page Header */}
         <div>
           <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">

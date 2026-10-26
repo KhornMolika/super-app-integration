@@ -51,7 +51,7 @@ function RegisterMiniAppContent() {
 
   return (
     <>
-      <div className="w-full mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out pb-12">
+      <div className="w-full min-w-0 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out pb-12">
         <RegisterWizardHeader
           step={step}
           stepTitle={STEP_TITLES[step - 1]}

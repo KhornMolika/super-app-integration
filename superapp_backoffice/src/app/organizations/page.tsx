@@ -330,7 +330,7 @@ function OrganizationsContent() {
   };
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out space-y-6">
+    <div className="w-full min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">

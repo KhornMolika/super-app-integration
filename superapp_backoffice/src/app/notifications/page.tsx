@@ -157,7 +157,7 @@ export default function NotificationsPage() {
     searchQuery.trim().length > 0;
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out space-y-6">
+    <div className="w-full min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
       {/* Top Header Section matching other pages */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800">
         <div>

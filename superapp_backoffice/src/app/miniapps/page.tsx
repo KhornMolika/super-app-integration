@@ -337,7 +337,7 @@ function MiniAppsContent() {
   };
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out space-y-6">
+    <div className="w-full min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
       {/* Top Header */}
       <div className="flex justify-between items-end flex-wrap gap-4">
         <div>

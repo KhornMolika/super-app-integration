@@ -240,7 +240,7 @@ export default function OrganizationDetailPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-16">
+    <div className="w-full min-w-0 space-y-6 pb-16 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
       {/* Header & Status Actions */}
       <OrganizationDetailHeader
         organization={organization}

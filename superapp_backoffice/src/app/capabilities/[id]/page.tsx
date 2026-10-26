@@ -98,7 +98,7 @@ export default function CapabilityDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <ProtectedRoute permission="permission:read">
-      <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out w-full mx-auto pb-12">
+      <div className="w-full min-w-0 pb-12 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
         <div className="mb-8 flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <BackButton href="/capabilities" />

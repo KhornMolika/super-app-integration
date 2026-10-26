@@ -142,7 +142,7 @@ function CapabilitiesContent() {
 
   return (
     <ProtectedRoute permission="permission:read">
-      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
+      <div className="w-full min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
         {/* Sleek Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>

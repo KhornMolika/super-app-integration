@@ -215,7 +215,7 @@ export default function NotificationDetailPage() {
   const showTargetButton = target.href !== '/notifications' || target.isExternal;
 
   return (
-    <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out pb-12">
+    <div className="w-full min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out pb-12">
       {/* 1. Header Section matching other backoffice pages */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
         <div className="flex items-center gap-4">

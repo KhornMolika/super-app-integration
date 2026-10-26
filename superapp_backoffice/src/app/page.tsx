@@ -33,7 +33,7 @@ export default function Dashboard() {
   } = useDashboardData();
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out space-y-8">
+    <div className="w-full min-w-0 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
       {isBackendDown && (
         <BackendServiceOfflineNotice
           mode="banner"

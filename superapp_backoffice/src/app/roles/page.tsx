@@ -91,7 +91,7 @@ export default function RolesPage() {
 
   return (
     <ProtectedRoute requiredPermission="role:read">
-      <div className="space-y-6">
+      <div className="w-full min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
         {/* Page Top Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">

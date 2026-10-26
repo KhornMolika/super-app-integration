@@ -136,7 +136,7 @@ function ManageMiniAppContent() {
 
   return (
     <>
-      <div className="w-full mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out pb-12">
+      <div className="w-full min-w-0 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out pb-12">
         {/* Breadcrumb Context */}
         <div className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400 mb-2 px-1">
           <Link href="/miniapps" className="hover:text-brand-600 dark:hover:text-brand-400 transition-colors">

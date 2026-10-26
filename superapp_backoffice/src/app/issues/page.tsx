@@ -163,7 +163,7 @@ export default function IssuesPage() {
   );
 
   return (
-    <div className="w-full py-6 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
+    <div className="w-full min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
       <div>
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
           Issues Management

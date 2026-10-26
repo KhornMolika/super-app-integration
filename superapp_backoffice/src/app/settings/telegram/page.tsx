@@ -269,7 +269,7 @@ export default function TelegramSettingsPage() {
 
   return (
     <ProtectedRoute>
-      <div className="animate-in fade-in slide-in-from-bottom-3 duration-500 ease-out space-y-6 pb-12">
+      <div className="w-full min-w-0 space-y-6 pb-12 animate-in fade-in slide-in-from-bottom-3 duration-500 ease-out">
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 pb-2 border-b border-slate-200/60 dark:border-slate-800/60">
           <div>

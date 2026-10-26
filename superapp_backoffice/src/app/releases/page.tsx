@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -81,7 +81,7 @@ export default function ReleasesPage() {
   const testVer = ecosystemStatus?.superAppVersion || releaseVersion || 'v0.0.1';
 
   return (
-    <div className="w-full py-6 space-y-8 animate-in fade-in duration-500">
+    <div className="w-full min-w-0 space-y-8 animate-in fade-in duration-500">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
