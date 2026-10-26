@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Button, Input, Label } from '@/components/ui/inputs';
-import { CleanDropdown } from '@/components/ui/CleanDropdown';
 import { CheckIcon, AlertTriangleIcon } from '@/components/ui/Icons';
 import { useToast } from '@/components/ui/Toast';
 import { usersApi, telegramApi, User, Role, TelegramBotChat } from '@/api';
@@ -15,6 +14,68 @@ export interface UserModalProps {
   roles: Role[];
   onSuccess: () => void;
 }
+
+interface RoleMetadata {
+  label: string;
+  badge: string;
+  description: string;
+  icon: (className: string) => React.ReactNode;
+}
+
+const ROLE_METADATA: Record<string, RoleMetadata> = {
+  MA_DEVELOPER: {
+    label: 'MiniApp Developer',
+    badge: 'Developer',
+    description: 'Build, submit, and configure mini-apps & inspect security reports',
+    icon: (className) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+      </svg>
+    ),
+  },
+  ADMIN: {
+    label: 'Administrator',
+    badge: 'Admin',
+    description: 'Manage agency operators, review submissions & configure notifications',
+    icon: (className) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+      </svg>
+    ),
+  },
+  SUPER_ADMIN: {
+    label: 'Super Admin',
+    badge: 'Super Admin',
+    description: 'Complete platform governance, security control, and tenant access',
+    icon: (className) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+      </svg>
+    ),
+  },
+};
+
+const getRoleMeta = (roleName: string): RoleMetadata => {
+  if (ROLE_METADATA[roleName]) {
+    return ROLE_METADATA[roleName];
+  }
+  return {
+    label: roleName.replace(/_/g, ' '),
+    badge: roleName,
+    description: 'Operator account with specific platform capabilities',
+    icon: (className) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+      </svg>
+    ),
+  };
+};
+
+const DEFAULT_ROLES: Role[] = [
+  { id: 'role-dev', name: 'MA_DEVELOPER', description: 'MiniApp Developer', isActive: true, permissions: [] },
+  { id: 'role-admin', name: 'ADMIN', description: 'Administrator', isActive: true, permissions: [] },
+  { id: 'role-superadmin', name: 'SUPER_ADMIN', description: 'Super Administrator', isActive: true, permissions: [] },
+];
 
 export function UserModal({
   isOpen,
@@ -30,7 +91,7 @@ export function UserModal({
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    roleNames: ['MA_DEVELOPER'] as string[],
+    selectedRole: 'MA_DEVELOPER',
     telegramChatId: '',
     telegramUsername: '',
     isActive: true,
@@ -67,16 +128,15 @@ export function UserModal({
       setChatValidationStatus(null);
 
       if (editingUser) {
-        const userRoles = editingUser.roles && editingUser.roles.length > 0
-          ? editingUser.roles
-          : editingUser.role
-            ? [editingUser.role]
-            : [];
+        const userRoleName =
+          editingUser.role?.name ||
+          (editingUser.roles && editingUser.roles.length > 0 ? editingUser.roles[0].name : '') ||
+          'MA_DEVELOPER';
 
         setFormData({
           name: editingUser.name || '',
           email: editingUser.email || '',
-          roleNames: userRoles.length > 0 ? userRoles.map((r) => r.name) : ['MA_DEVELOPER'],
+          selectedRole: userRoleName,
           telegramChatId: editingUser.telegramChatId || '',
           telegramUsername: editingUser.telegramUsername || '',
           isActive: editingUser.isActive !== undefined ? editingUser.isActive : true,
@@ -85,7 +145,7 @@ export function UserModal({
         setFormData({
           name: '',
           email: '',
-          roleNames: ['MA_DEVELOPER'],
+          selectedRole: 'MA_DEVELOPER',
           telegramChatId: '',
           telegramUsername: '',
           isActive: true,
@@ -93,6 +153,17 @@ export function UserModal({
       }
     }
   }, [isOpen, editingUser]);
+
+  // Normalized available roles list sorted logically
+  const availableRoles = useMemo(() => {
+    const list = roles && roles.length > 0 ? roles : DEFAULT_ROLES;
+    const orderMap: Record<string, number> = {
+      MA_DEVELOPER: 1,
+      ADMIN: 2,
+      SUPER_ADMIN: 3,
+    };
+    return [...list].sort((a, b) => (orderMap[a.name] || 99) - (orderMap[b.name] || 99));
+  }, [roles]);
 
   // Telegram Auto-Detection Handler
   const handleAutoDetectTelegram = async () => {
@@ -214,11 +285,21 @@ export function UserModal({
 
     setIsSubmitting(true);
     try {
+      // Backend expects roleNames as string[] with single role for the user
+      const payload = {
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        roleNames: [formData.selectedRole],
+        telegramChatId: formData.telegramChatId.trim() || undefined,
+        telegramUsername: formData.telegramUsername.trim() || undefined,
+        isActive: formData.isActive,
+      };
+
       if (editingUser) {
-        await usersApi.update(editingUser.id, formData);
+        await usersApi.update(editingUser.id, payload);
         toast.success(`User '${formData.name}' updated successfully!`);
       } else {
-        await usersApi.create(formData);
+        await usersApi.create(payload);
         toast.success(`User '${formData.name}' created successfully!`);
       }
       onSuccess();
@@ -238,16 +319,18 @@ export function UserModal({
         className="fixed inset-0"
         onClick={() => !isSubmitting && onClose()}
       />
-      <div className="relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 max-w-2xl w-full p-6 shadow-2xl my-auto max-h-[calc(100vh-3rem)] overflow-y-auto z-10 animate-in zoom-in-95 duration-200">
+      <div className="relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800/90 max-w-2xl w-full p-5 sm:p-6 shadow-2xl my-auto max-h-[calc(100vh-3rem)] overflow-y-auto z-10 animate-in zoom-in-95 duration-200">
+        
+        {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-5">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-100 dark:border-brand-500/20">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center shrink-0">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             </div>
             <div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-tight">
                 {editingUser ? 'Edit User Account' : 'Add New User'}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -258,7 +341,8 @@ export function UserModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            aria-label="Close modal"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -267,7 +351,9 @@ export function UserModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          
+          {/* Identity Fields: Full Name & Email */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
               <Label htmlFor="user-name" className="flex items-center gap-1.5 mb-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
                 <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -302,60 +388,94 @@ export function UserModal({
             </div>
           </div>
 
+          {/* Single Role Selection Section */}
           <div>
-            <Label className="flex items-center gap-1.5 mb-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
-              <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-              Assign Roles *
-            </Label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700">
-              {roles.map((r) => {
-                const checked = formData.roleNames.includes(r.name);
+            <div className="flex items-center justify-between mb-2">
+              <Label className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                Assign Role *
+              </Label>
+              <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+                Each user has exactly one assigned role
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              {availableRoles.map((r) => {
+                const isSelected = formData.selectedRole === r.name;
+                const meta = getRoleMeta(r.name);
                 return (
-                  <label
-                    key={r.id}
-                    className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors text-xs font-semibold ${checked
-                        ? 'bg-brand-50 dark:bg-brand-500/20 text-brand-800 dark:text-brand-300 border border-brand-200 dark:border-brand-500/30'
-                        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                      }`}
+                  <button
+                    key={r.id || r.name}
+                    type="button"
+                    onClick={() => setFormData((prev) => ({ ...prev, selectedRole: r.name }))}
+                    className={`group relative flex flex-col justify-between p-3.5 rounded-xl border text-left transition-all duration-200 cursor-pointer ${
+                      isSelected
+                        ? 'bg-brand-50/70 dark:bg-brand-500/10 border-brand-500 dark:border-brand-500 ring-2 ring-brand-500/20 dark:ring-brand-500/25'
+                        : 'bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50/60 dark:hover:bg-slate-800/40'
+                    }`}
                   >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => {
-                        setFormData((prev) => ({
-                          ...prev,
-                          roleNames: checked
-                            ? prev.roleNames.filter((n) => n !== r.name)
-                            : [...prev.roleNames, r.name],
-                        }));
-                      }}
-                      className="rounded text-brand-600 focus:ring-brand-500 w-4 h-4 shrink-0"
-                    />
-                    <span className="truncate">{r.name}</span>
-                  </label>
+                    <div>
+                      {/* Top Bar: Icon + Radio Indicator */}
+                      <div className="flex items-center justify-between mb-2">
+                        <div
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                            isSelected
+                              ? 'bg-brand-600 text-white shadow-xs'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200'
+                          }`}
+                        >
+                          {meta.icon('w-4 h-4')}
+                        </div>
+
+                        <div
+                          className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${
+                            isSelected
+                              ? 'border-brand-600 bg-brand-600 text-white shadow-2xs'
+                              : 'border-slate-300 dark:border-slate-600 bg-transparent group-hover:border-slate-400'
+                          }`}
+                        >
+                          {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                        </div>
+                      </div>
+
+                      {/* Role Info */}
+                      <div className="text-xs font-bold text-slate-900 dark:text-white leading-tight">
+                        {meta.label}
+                      </div>
+                      <div className="font-mono text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+                        {r.name}
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
+                        {r.description || meta.description}
+                      </p>
+                    </div>
+                  </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Telegram Alert Channel Auto-Detect Section */}
-          <div className="p-4 rounded-xl bg-sky-50/60 dark:bg-sky-950/30 border border-sky-200/80 dark:border-sky-800/60 space-y-3">
+          {/* Telegram Alert Channel Section */}
+          <div className="p-4 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-sky-500 text-white shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-[#229ED9]/10 text-[#229ED9] border border-[#229ED9]/20 flex items-center justify-center shrink-0">
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z" />
                   </svg>
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                    <span>Telegram Alert Channel</span>
-                    <span className="text-[10px] font-semibold text-sky-600 dark:text-sky-400 bg-sky-100 dark:bg-sky-900/50 px-2 py-0.5 rounded-full">
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                      Telegram Alert Channel
+                    </h4>
+                    <span className="text-[10px] font-semibold text-sky-600 dark:text-sky-400 bg-sky-100/80 dark:bg-sky-950/60 border border-sky-200/50 dark:border-sky-800/50 px-2 py-0.5 rounded-full">
                       Auto-Detect Ready
                     </span>
-                  </h4>
+                  </div>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">
                     Receive instant push notifications for approvals, review tasks, and alerts
                   </p>
@@ -367,7 +487,7 @@ export function UserModal({
                   href={`https://t.me/${botUsername || 'superapp_notification_bot'}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-800 hover:bg-sky-50 dark:hover:bg-sky-900/40 transition-colors shadow-2xs"
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-800/80 hover:bg-sky-50 dark:hover:bg-sky-900/40 transition-colors shadow-2xs"
                 >
                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z" />
@@ -382,7 +502,7 @@ export function UserModal({
                   type="button"
                   onClick={handleAutoDetectTelegram}
                   disabled={detectingTelegram}
-                  className="inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white shadow-xs transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {detectingTelegram ? (
                     <>
@@ -417,7 +537,7 @@ export function UserModal({
                   <button
                     type="button"
                     onClick={() => setShowTelegramPicker(false)}
-                    className="text-slate-400 hover:text-slate-600 text-[10px] font-semibold"
+                    className="text-slate-400 hover:text-slate-600 text-[10px] font-semibold cursor-pointer"
                   >
                     Close
                   </button>
@@ -463,6 +583,7 @@ export function UserModal({
               </div>
             )}
 
+            {/* Inputs: Chat ID and Username */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <div className="flex items-center justify-between mb-1.5">
@@ -493,8 +614,9 @@ export function UserModal({
                   placeholder="e.g. 1193078022"
                 />
                 {chatValidationStatus && (
-                  <div className={`text-[10px] font-semibold mt-1 flex items-center gap-1 ${chatValidationStatus.valid ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
-                    }`}>
+                  <div className={`text-[10px] font-semibold mt-1 flex items-center gap-1 ${
+                    chatValidationStatus.valid ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
+                  }`}>
                     {chatValidationStatus.valid ? (
                       <CheckIcon className="w-3.5 h-3.5 text-emerald-500" />
                     ) : (
@@ -525,55 +647,65 @@ export function UserModal({
               </div>
             </div>
 
-            <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed flex items-center gap-1">
-              <svg className="w-3 h-3 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed flex items-center gap-1.5">
+              <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span>To auto-detect: Have operator open @{botUsername || 'the bot'} and tap /start.</span>
             </p>
           </div>
 
+          {/* Account Status Field */}
           <div>
             <Label className="flex items-center gap-1.5 mb-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
               <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               Account Status
             </Label>
-            <CleanDropdown
-              label="Account Status"
-              icon={
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              }
-              value={formData.isActive ? 'ACTIVE' : 'INACTIVE'}
-              options={[
-                { value: 'ACTIVE', label: 'Active (Can Login & receive alerts)', dotColor: 'bg-emerald-500' },
-                { value: 'INACTIVE', label: 'Inactive / Suspended', dotColor: 'bg-slate-400' },
-              ]}
-              onChange={(val) => setFormData({ ...formData, isActive: val === 'ACTIVE' })}
-              className="w-full"
-              buttonClassName="w-full justify-between"
-              dropdownWidth="w-full"
-              align="left"
-            />
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => setFormData((prev) => ({ ...prev, isActive: true }))}
+                className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                  formData.isActive
+                    ? 'bg-emerald-50/70 dark:bg-emerald-500/10 border-emerald-500 text-emerald-800 dark:text-emerald-300 ring-2 ring-emerald-500/20 shadow-2xs'
+                    : 'bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                <span className="truncate">Active (Can Login & Access)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData((prev) => ({ ...prev, isActive: false }))}
+                className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                  !formData.isActive
+                    ? 'bg-amber-50/70 dark:bg-amber-500/10 border-amber-500 text-amber-800 dark:text-amber-300 ring-2 ring-amber-500/20 shadow-2xs'
+                    : 'bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-slate-400 shrink-0" />
+                <span className="truncate">Inactive / Suspended</span>
+              </button>
+            </div>
           </div>
 
+          {/* Modal Actions */}
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
               disabled={isSubmitting}
-              className="gap-1.5"
+              className="gap-1.5 cursor-pointer"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="gap-1.5">
+            <Button type="submit" disabled={isSubmitting} className="gap-1.5 cursor-pointer">
               {isSubmitting ? (
                 <>
                   <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
