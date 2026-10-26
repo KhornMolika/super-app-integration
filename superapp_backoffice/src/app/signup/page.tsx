@@ -16,6 +16,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [organization, setOrganization] = useState('');
   const [dbOrganizations, setDbOrganizations] = useState<Organization[]>([]);
+  const [loadingOrgs, setLoadingOrgs] = useState(false);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -26,14 +27,19 @@ export default function SignupPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
+    setLoadingOrgs(true);
     organizationsApi.getAll({ status: 'ACTIVE', limit: 100 })
       .then((res) => {
         const orgs = unwrapData<Organization>(res);
         if (Array.isArray(orgs) && orgs.length > 0) {
-          setDbOrganizations(orgs);
+          const sorted = [...orgs].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+          setDbOrganizations(sorted);
         }
       })
-      .catch(() => { });
+      .catch(() => { })
+      .finally(() => {
+        setLoadingOrgs(false);
+      });
   }, []);
 
   const validate = (): boolean => {
@@ -190,38 +196,52 @@ export default function SignupPage() {
           )}
         </div>
 
-        {/* 3. Organization */}
+        {/* 3. Organization Dropdown */}
         <div>
-          <label
-            htmlFor="organization"
-            className={`block text-xs font-semibold mb-1.5 transition-colors ${errors.organization ? 'text-rose-400' : 'text-slate-300'
-              }`}
-          >
-            Organization
-          </label>
-          <input
-            id="organization"
-            type="text"
-            list="db-organizations-list"
-            value={organization}
-            onChange={(e) => {
-              setOrganization(e.target.value);
-              if (errors.organization) setErrors((prev) => ({ ...prev, organization: '' }));
-            }}
-            placeholder="Select regulator or type entity (e.g. FTC, IRC, SERC)"
-            disabled={loading}
-            className={`w-full px-4 py-2.5 rounded-xl text-sm text-white placeholder-slate-500 bg-slate-900/80 border transition-all duration-200 outline-none ${errors.organization
-                ? 'border-rose-500/80 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 text-rose-100'
-                : 'border-slate-800 hover:border-slate-700 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15'
-              } disabled:opacity-50`}
-          />
-          <datalist id="db-organizations-list">
-            {dbOrganizations.map((org) => (
-              <option key={org.id} value={org.name}>
-                {org.code ? `${org.code} — ` : ''}{org.name}
+          <div className="flex items-center justify-between mb-1.5">
+            <label
+              htmlFor="organization"
+              className={`block text-xs font-semibold transition-colors ${errors.organization ? 'text-rose-400' : 'text-slate-300'
+                }`}
+            >
+              Organization
+            </label>
+            {loadingOrgs && (
+              <span className="text-[11px] text-slate-400 animate-pulse">Loading organizations...</span>
+            )}
+          </div>
+          <div className="relative">
+            <select
+              id="organization"
+              value={organization}
+              onChange={(e) => {
+                setOrganization(e.target.value);
+                if (errors.organization) setErrors((prev) => ({ ...prev, organization: '' }));
+              }}
+              disabled={loading || loadingOrgs}
+              className={`w-full px-4 py-2.5 rounded-xl text-sm appearance-none bg-slate-900/80 border transition-all duration-200 outline-none pr-10 cursor-pointer ${
+                organization ? 'text-white' : 'text-slate-400'
+              } ${
+                errors.organization
+                  ? 'border-rose-500/80 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 text-rose-100'
+                  : 'border-slate-800 hover:border-slate-700 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15'
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              <option value="" disabled className="text-slate-500 bg-slate-900">
+                {loadingOrgs ? 'Loading organizations...' : 'Select regulator or organization'}
               </option>
-            ))}
-          </datalist>
+              {dbOrganizations.map((org) => (
+                <option key={org.id} value={org.name} className="text-white bg-slate-900 py-1.5">
+                  {org.code ? `${org.code} — ` : ''}{org.name}
+                </option>
+              ))}
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
           {errors.organization && (
             <p className="mt-1 text-xs text-rose-400 flex items-center gap-1">
               <span>•</span> {errors.organization}

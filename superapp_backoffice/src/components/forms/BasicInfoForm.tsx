@@ -47,9 +47,12 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
     };
   }, []);
 
-  // Filter out any INACTIVE organizations (safeguard)
+  // Filter out any INACTIVE organizations and sort in Ascending (ASC) order from A to Z
   const activeDbOrgs = useMemo(
-    () => dbOrganizations.filter((o) => (o.status || 'ACTIVE').toUpperCase() === 'ACTIVE'),
+    () =>
+      dbOrganizations
+        .filter((o) => (o.status || 'ACTIVE').toUpperCase() === 'ACTIVE')
+        .sort((a, b) => (a.name || '').localeCompare(b.name || '')),
     [dbOrganizations]
   );
 
@@ -60,6 +63,10 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
       const parent = org.parentAuthority || 'Non-Bank Financial Services Authority';
       if (!groups[parent]) groups[parent] = [];
       groups[parent].push(org);
+    });
+    // Ensure each group's items are sorted ASC A to Z
+    Object.keys(groups).forEach((key) => {
+      groups[key].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     });
     return groups;
   }, [activeDbOrgs]);
