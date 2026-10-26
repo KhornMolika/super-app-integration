@@ -56,6 +56,9 @@ function RegisterMiniAppContent() {
           stepTitle={STEP_TITLES[step - 1]}
           stepDescription={STEP_DESCRIPTIONS[step - 1]}
           miniAppName={formData.name}
+          isSubmitting={isSubmitting}
+          onCancel={() => router.push('/miniapps')}
+          onSaveDraft={handleSaveDraft}
         />
 
         <form
@@ -88,8 +91,7 @@ function RegisterMiniAppContent() {
           <RegisterWizardBottomBar
             step={step}
             isSubmitting={isSubmitting}
-            onCancelOrBack={step === 1 ? () => router.push('/miniapps') : prevStep}
-            onSaveDraft={handleSaveDraft}
+            onPrevStep={prevStep}
             onNextStep={nextStep}
           />
         </form>

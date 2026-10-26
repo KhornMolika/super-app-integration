@@ -13,13 +13,15 @@ export interface RegisterWizardHeaderProps {
   stepTitle: string;
   stepDescription: string;
   miniAppName?: string;
+  isSubmitting?: boolean;
+  onCancel: () => void;
+  onSaveDraft: () => void;
 }
 
 export interface RegisterWizardBottomBarProps {
   step: number;
   isSubmitting: boolean;
-  onCancelOrBack: () => void;
-  onSaveDraft: () => void;
+  onPrevStep: () => void;
   onNextStep: () => void;
 }
 

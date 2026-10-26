@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { Button } from '@/components/ui/inputs';
 import { RegisterWizardHeaderProps } from './types';
 
 export function RegisterWizardHeader({
@@ -9,6 +10,9 @@ export function RegisterWizardHeader({
   stepTitle,
   stepDescription,
   miniAppName,
+  isSubmitting = false,
+  onCancel,
+  onSaveDraft,
 }: RegisterWizardHeaderProps) {
   return (
     <>
@@ -29,7 +33,7 @@ export function RegisterWizardHeader({
       </div>
 
       {/* Header Card */}
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm transition-all">
+      <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm transition-all">
         <div className="flex items-center space-x-4">
           <div>
             <div className="flex items-center gap-3">
@@ -47,13 +51,47 @@ export function RegisterWizardHeader({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 self-end sm:self-auto">
-          <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">
+        {/* Header Action Buttons & Progress */}
+        <div className="flex items-center gap-3 self-end md:self-auto flex-wrap">
+          <span className="text-xs text-slate-400 dark:text-slate-500 font-medium hidden lg:inline-block mr-1">
             Progress:{' '}
             <strong className="text-slate-700 dark:text-slate-300 font-mono">
               {Math.round((step / 6) * 100)}%
             </strong>
           </span>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="h-9 px-4 text-xs sm:text-sm font-semibold border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-50"
+            onClick={onCancel}
+            disabled={isSubmitting}
+          >
+            Cancel
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="h-9 px-4 text-xs sm:text-sm font-semibold border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-1.5 text-slate-700 dark:text-slate-300 disabled:opacity-50"
+            onClick={onSaveDraft}
+            disabled={isSubmitting}
+          >
+            <svg
+              className="w-4 h-4 text-slate-500 dark:text-slate-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
+              />
+            </svg>
+            <span>Save as Draft</span>
+          </Button>
         </div>
       </div>
     </>

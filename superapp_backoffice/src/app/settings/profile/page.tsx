@@ -57,7 +57,7 @@ export default function ProfileSettingsPage() {
 
   return (
     <ProtectedRoute>
-      <div className="animate-in fade-in slide-in-from-bottom-3 duration-500 ease-out space-y-6 w-full max-w-7xl mx-auto pb-12">
+      <div className="animate-in fade-in slide-in-from-bottom-3 duration-500 ease-out space-y-6 pb-12">
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 pb-2 border-b border-slate-200/60 dark:border-slate-800/60">
           <div>

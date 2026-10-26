@@ -4,8 +4,10 @@ import { LogoUploadInput } from '@/components/ui/LogoUploadInput';
 import { LockIcon, BuildingIcon } from '@/components/ui/Icons';
 import { organizationsApi, Organization } from '@/api/organizations.api';
 import { unwrapData } from '@/api';
+import { useAuth } from '@/lib/auth';
 
 export default function BasicInfoForm({ formData, handleChange, allErrors = {}, isEditable = true }: any) {
+  const { user } = useAuth();
   const [dbOrganizations, setDbOrganizations] = useState<Organization[]>([]);
   const [loadingOrgs, setLoadingOrgs] = useState(false);
 
@@ -19,18 +21,41 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
         if (mounted && Array.isArray(data) && data.length > 0) {
           setDbOrganizations(data);
 
-          // If no organization is currently selected, default to the first active organization from the database
-          if (!formData.organization && data[0] && handleChange) {
+          // Find organization that the current user belongs to
+          const userOrg = user?.organization;
+          const userOrgId = user?.organizationId || (typeof userOrg === 'object' ? userOrg?.id : null);
+          const userOrgName = typeof userOrg === 'string' ? userOrg : userOrg?.name;
+          const userOrgCode = typeof userOrg === 'object' ? userOrg?.code : null;
+
+          const matchedUserOrg = data.find((org) => {
+            if (userOrgId && org.id === userOrgId) return true;
+            if (
+              userOrgName &&
+              (org.name?.toLowerCase() === userOrgName.toLowerCase() ||
+                (org.code && org.code.toLowerCase() === userOrgName.toLowerCase()))
+            ) {
+              return true;
+            }
+            if (userOrgCode && org.code && org.code.toLowerCase() === userOrgCode.toLowerCase()) {
+              return true;
+            }
+            return false;
+          });
+
+          // Auto-select user's organization, or fallback to first if no selection
+          const targetOrg = matchedUserOrg || (!formData.organization ? data[0] : null);
+
+          if (targetOrg && handleChange && (!formData.organization || (!formData.id && matchedUserOrg))) {
             handleChange({
-              target: { name: 'organization', value: data[0].name },
+              target: { name: 'organization', value: targetOrg.name },
             } as any);
-            if (data[0].code) {
+            if (targetOrg.code) {
               handleChange({
-                target: { name: 'organizationCode', value: data[0].code },
+                target: { name: 'organizationCode', value: targetOrg.code },
               } as any);
             }
             handleChange({
-              target: { name: 'category', value: data[0].name },
+              target: { name: 'category', value: targetOrg.name },
             } as any);
           }
         }
@@ -45,7 +70,47 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [user]);
+
+  // Sync user organization when user or organizations finish loading
+  useEffect(() => {
+    if (!user || dbOrganizations.length === 0 || !handleChange) return;
+    if (formData.id) return; // Do not overwrite existing miniapp organization
+
+    const userOrg = user.organization;
+    const userOrgId = user.organizationId || (typeof userOrg === 'object' ? userOrg?.id : null);
+    const userOrgName = typeof userOrg === 'string' ? userOrg : userOrg?.name;
+    const userOrgCode = typeof userOrg === 'object' ? userOrg?.code : null;
+
+    const matchedUserOrg = dbOrganizations.find((org) => {
+      if (userOrgId && org.id === userOrgId) return true;
+      if (
+        userOrgName &&
+        (org.name?.toLowerCase() === userOrgName.toLowerCase() ||
+          (org.code && org.code.toLowerCase() === userOrgName.toLowerCase()))
+      ) {
+        return true;
+      }
+      if (userOrgCode && org.code && org.code.toLowerCase() === userOrgCode.toLowerCase()) {
+        return true;
+      }
+      return false;
+    });
+
+    if (matchedUserOrg && formData.organization !== matchedUserOrg.name) {
+      handleChange({
+        target: { name: 'organization', value: matchedUserOrg.name },
+      } as any);
+      if (matchedUserOrg.code) {
+        handleChange({
+          target: { name: 'organizationCode', value: matchedUserOrg.code },
+        } as any);
+      }
+      handleChange({
+        target: { name: 'category', value: matchedUserOrg.name },
+      } as any);
+    }
+  }, [user, dbOrganizations, formData.id]);
 
   // Filter out any INACTIVE organizations and sort in Ascending (ASC) order from A to Z
   const activeDbOrgs = useMemo(

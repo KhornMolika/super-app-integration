@@ -110,11 +110,18 @@ export function useMiniAppRegister() {
 
   useEffect(() => {
     if (user) {
+      const userOrg = user.organization;
+      const userOrgName = typeof userOrg === 'string' ? userOrg : userOrg?.name || '';
+      const userOrgCode = typeof userOrg === 'object' ? userOrg?.code || '' : '';
+
       setFormData((prev) => ({
         ...prev,
         ownerName: prev.ownerName || user.name || '',
         ownerEmail: prev.ownerEmail || user.email || '',
         supportEmail: prev.supportEmail || user.email || '',
+        organization: prev.organization || userOrgName,
+        organizationCode: prev.organizationCode || userOrgCode,
+        category: prev.category || userOrgName,
       }));
     }
   }, [user]);
