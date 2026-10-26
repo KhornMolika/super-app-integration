@@ -43,14 +43,14 @@ export function SidebarGuidelines() {
         {!isCollapsed && (
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-white tracking-wide truncate">
+              <span className="text-sm font-bold text-white tracking-wide truncate">
                 Guidelines
               </span>
-              <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded bg-brand-800/80 dark:bg-slate-800 text-brand-300 border border-brand-700/50">
+              <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-brand-800/80 dark:bg-slate-800 text-brand-300 border border-brand-700/50">
                 Docs
               </span>
             </div>
-            <p className="text-[11px] text-brand-300 dark:text-slate-400 truncate mt-0.5">
+            <p className="text-xs text-brand-300 dark:text-slate-400 truncate mt-0.5">
               Standards &amp; Policies
             </p>
           </div>
