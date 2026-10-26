@@ -4,16 +4,9 @@ import React from 'react';
 import Link from 'next/link';
 import { Organization, getOrganizationCode } from '@/api/organizations.api';
 
-interface OrgStatItem {
-  id: string;
-  name: string;
-  code?: string;
-  parentAuthority?: string;
-  status: 'ACTIVE' | 'INACTIVE';
-  miniAppsCount: number;
-}
+import { OrgStatItem } from './types';
 
-interface OrganizationsOverviewCardProps {
+export interface OrganizationsOverviewCardProps {
   organizations: OrgStatItem[];
   totalOrganizations: number;
   isManager?: boolean;
