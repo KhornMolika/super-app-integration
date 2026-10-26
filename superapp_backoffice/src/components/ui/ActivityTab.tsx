@@ -22,10 +22,18 @@ export default function ActivityTab({ miniAppId }: ActivityTabProps) {
   useEffect(() => {
     async function fetchActivities() {
       try {
-        const data = await miniappsApi.getActivities(miniAppId);
-        setActivities(data);
+        const res: any = await miniappsApi.getActivities(miniAppId);
+        const list = Array.isArray(res)
+          ? res
+          : Array.isArray(res?.data)
+          ? res.data
+          : Array.isArray(res?.activities)
+          ? res.activities
+          : [];
+        setActivities(list);
       } catch (err) {
         console.error('Failed to fetch activities', err);
+        setActivities([]);
       } finally {
         setLoading(false);
       }
@@ -46,7 +54,7 @@ export default function ActivityTab({ miniAppId }: ActivityTabProps) {
     );
   }
 
-  if (activities.length === 0) {
+  if (!Array.isArray(activities) || activities.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
         <svg className="w-10 h-10 text-slate-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -62,12 +70,13 @@ export default function ActivityTab({ miniAppId }: ActivityTabProps) {
     return new Date(str);
   };
 
-  const groupActivitiesByDate = (acts: MiniAppActivity[]) => {
+  const groupActivitiesByDate = (acts: MiniAppActivity[] = []) => {
+    const list = Array.isArray(acts) ? acts : [];
     const groups: { [date: string]: MiniAppActivity[] } = {};
     const today = new Date().toDateString();
     const yesterday = new Date(Date.now() - 86400000).toDateString();
 
-    acts.forEach(act => {
+    list.forEach(act => {
       const d = parseDate(act.createdAt).toDateString();
       let groupName = d;
       if (d === today) groupName = 'Today';

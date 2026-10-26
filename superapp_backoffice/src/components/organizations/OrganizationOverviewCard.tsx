@@ -9,8 +9,15 @@ export interface OrganizationOverviewCardProps {
   organization: Organization;
 }
 
-export function OrganizationOverviewCard({ organization }: OrganizationOverviewCardProps) {
+export function OrganizationOverviewCard({ organization: rawOrg }: OrganizationOverviewCardProps) {
+  const organization = (rawOrg && typeof rawOrg === 'object' && 'data' in rawOrg && (rawOrg as any).data?.id)
+    ? (rawOrg as any).data
+    : rawOrg;
+
+  if (!organization) return null;
+
   const isActive = organization.status === 'ACTIVE';
+  const orgId = typeof organization.id === 'string' ? organization.id : '';
 
   return (
     <Card className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800/80 shadow-sm space-y-5 bg-white dark:bg-slate-900">
@@ -25,7 +32,7 @@ export function OrganizationOverviewCard({ organization }: OrganizationOverviewC
           </h3>
         </div>
         <span className="text-xs font-mono text-slate-400">
-          ID: {organization.id.substring(0, 8)}...
+          {orgId ? `ID: ${orgId.substring(0, 8)}...` : ''}
         </span>
       </div>
 

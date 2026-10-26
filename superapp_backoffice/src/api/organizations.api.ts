@@ -1,4 +1,4 @@
-import { apiClient, PaginatedResponse } from './client';
+import { apiClient, PaginatedResponse, unwrapItem } from './client';
 
 export interface OrganizationUser {
   id: string;
@@ -51,7 +51,7 @@ export const organizationsApi = {
     apiClient<PaginatedResponse<Organization> | Organization[]>('/api/organizations', { params }),
 
   getById: (id: string) =>
-    apiClient<Organization>(`/api/organizations/${id}`),
+    apiClient<any>(`/api/organizations/${id}`).then((res) => unwrapItem<Organization>(res)),
 
   create: (data: Partial<Organization>) =>
     apiClient<Organization>('/api/organizations', {

@@ -192,7 +192,7 @@ async function handleProxy(request: Request, { params }: { params: Promise<{ pro
           process.env.NODE_ENV ||
           ''
         ).toUpperCase();
-        const isProd = envVal === 'PROD';
+        const isProd = envVal === 'PROD' || envVal === 'PRODUCTION';
         response.cookies.set('auth_token', newRefreshedToken, {
           httpOnly: true,
           secure: isProd,
@@ -246,7 +246,7 @@ async function handleProxy(request: Request, { params }: { params: Promise<{ pro
 
     // Try to get response as JSON, fallback to text
     if (contentTypeHeader && contentTypeHeader.includes('application/json')) {
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
       return applyAuthCookie(NextResponse.json(data, { status: res.status }));
     } else {
       const text = await res.text();

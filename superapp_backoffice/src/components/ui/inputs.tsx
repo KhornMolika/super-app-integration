@@ -9,9 +9,10 @@ export const Label = ({ className = '', children, ...props }: React.LabelHTMLAtt
 );
 
 export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
-  ({ className = '', ...props }, ref) => (
+  ({ className = '', value, ...props }, ref) => (
     <input
       ref={ref}
+      value={value === null ? '' : value}
       className={`text-base text-slate-800 dark:text-slate-100 w-full px-4 py-3 bg-slate-100/80 hover:bg-slate-100 focus:bg-white dark:bg-slate-900/90 dark:hover:bg-slate-900 dark:focus:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-slate-400 disabled:opacity-50 disabled:bg-slate-200/50 dark:disabled:bg-slate-900/40 ${className}`}
       {...props}
     />
@@ -20,9 +21,10 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
 Input.displayName = 'Input';
 
 export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(
-  ({ className = '', ...props }, ref) => (
+  ({ className = '', value, ...props }, ref) => (
     <textarea
       ref={ref}
+      value={value === null ? '' : value}
       className={`text-base text-slate-800 dark:text-slate-100 w-full px-4 py-3 bg-slate-100/80 hover:bg-slate-100 focus:bg-white dark:bg-slate-900/90 dark:hover:bg-slate-900 dark:focus:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-slate-400 disabled:opacity-50 resize-none disabled:bg-slate-200/50 dark:disabled:bg-slate-900/40 ${className}`}
       {...props}
     />

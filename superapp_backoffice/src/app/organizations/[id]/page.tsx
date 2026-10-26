@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { organizationsApi, Organization, isRootOrganization } from '@/api';
+import { organizationsApi, Organization, isRootOrganization, unwrapItem } from '@/api';
 import { Button } from '@/components/ui/inputs';
 import { useConfirm } from '@/components/ui/ConfirmationProvider';
 import { toast } from '@/components/ui/Toast';
@@ -37,7 +37,8 @@ export default function OrganizationDetailPage() {
     if (!id) return;
     try {
       setLoading(true);
-      const data = await organizationsApi.getById(id);
+      const res = await organizationsApi.getById(id);
+      const data = unwrapItem<Organization>(res);
       setOrganization(data);
     } catch (err: any) {
       console.error('Failed to load organization:', err);

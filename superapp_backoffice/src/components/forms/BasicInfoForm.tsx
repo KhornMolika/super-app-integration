@@ -183,7 +183,7 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
           </div>
           <Input
             name="tagline"
-            value={formData.tagline !== undefined ? formData.tagline : (formData.shortDescription || '')}
+            value={formData.tagline ?? formData.shortDescription ?? ''}
             onChange={(e) => {
               handleChange(e);
               handleChange({ target: { name: 'shortDescription', value: e.target.value } } as any);
@@ -201,7 +201,7 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
           <Textarea
             name="description"
             rows={3}
-            value={formData.description !== undefined ? formData.description : (formData.fullDescription || '')}
+            value={formData.description ?? formData.fullDescription ?? ''}
             onChange={(e) => {
               handleChange(e);
               handleChange({ target: { name: 'fullDescription', value: e.target.value } } as any);
