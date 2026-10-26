@@ -100,7 +100,7 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
               });
             }
           }
-        } catch (_) {}
+        } catch (_) { }
       }, 600);
       return () => clearTimeout(timeoutId);
     }
@@ -184,7 +184,7 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
           if (eco && (eco.superAppTestVersion || eco.superAppVersion)) {
             setLatestTestVersion(eco.superAppTestVersion || eco.superAppVersion);
           }
-        } catch (_) {}
+        } catch (_) { }
 
         // Auto-open Sandbox Preview if query param indicates
         if (typeof window !== 'undefined') {
@@ -201,8 +201,8 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
             } else if (activeOrRev.integrationMethod === IntegrationMethod.DEEP_LINK) {
               setPreviewUrl(
                 activeOrRev.integrationConfig?.urlScheme ||
-                  (activeOrRev as any).integrationConfig?.urlScheme ||
-                  'app://open',
+                (activeOrRev as any).integrationConfig?.urlScheme ||
+                'app://open',
               );
             } else {
               const conf = activeOrRev.integrationConfig;
@@ -295,7 +295,7 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
             };
           });
         }
-      } catch (_) {}
+      } catch (_) { }
     }, 2500);
 
     return () => clearInterval(pollInterval);
@@ -469,11 +469,11 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
       const nextPermissions =
         extraData?.detectedPermissions && extraData.detectedPermissions.length > 0
           ? [
-              ...(prev.permissions || []).filter(
-                (p: any) => !extraData.detectedPermissions!.some((dp) => dp.type === p.type),
-              ),
-              ...extraData.detectedPermissions,
-            ]
+            ...(prev.permissions || []).filter(
+              (p: any) => !extraData.detectedPermissions!.some((dp) => dp.type === p.type),
+            ),
+            ...extraData.detectedPermissions,
+          ]
           : prev.permissions;
 
       return {
@@ -702,7 +702,7 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
                 fetchApp();
               }
             }
-          } catch (_) {}
+          } catch (_) { }
 
           if (attempts >= 15) {
             clearInterval(pollTimer);
@@ -733,8 +733,19 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
     }
   };
 
+  const handleCancelEdit = useCallback(() => {
+    setIsEditingUnlocked(false);
+    fetchApp(false, true);
+    toast.info('Editing cancelled. Unsaved changes reverted.', 'Configuration Locked');
+  }, [fetchApp]);
+
   const handleSave = async (e: React.FormEvent, isDraftOnly = false) => {
     if (e && e.preventDefault) e.preventDefault();
+
+    if (!isEditingUnlocked) {
+      toast.warning('Please click ... > Edit Configuration to unlock editing before saving.', 'Configuration Locked');
+      return;
+    }
 
     if (formData.termsUrl && formData.termsUrl.trim()) {
       const v = validateUrlFormat(formData.termsUrl, 'Terms of Service URL', true);
@@ -822,6 +833,7 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
     handleDomainVerified,
     handlePermissionFieldChange,
     handleSave,
+    handleCancelEdit,
     executeSave,
     openSandboxPreview,
   };

@@ -101,6 +101,7 @@ function ManageMiniAppContent() {
     handleDomainVerified,
     handlePermissionFieldChange,
     handleSave,
+    handleCancelEdit,
     executeSave,
     openSandboxPreview,
   } = useMiniAppDetail(id, can);
@@ -157,9 +158,13 @@ function ManageMiniAppContent() {
           latestTestVersion={latestTestVersion}
           isEditingUnlocked={isEditingUnlocked}
           onToggleEditing={() => {
-            setIsEditingUnlocked((prev) => !prev);
-            const el = document.querySelector('form') || document.querySelector('input');
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (isEditingUnlocked) {
+              handleCancelEdit();
+            } else {
+              setIsEditingUnlocked(true);
+              const el = document.querySelector('form') || document.querySelector('input');
+              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
           }}
           onOpenSandbox={openSandboxPreview}
           onLifecycleAction={handleLifecycleAction}
@@ -230,6 +235,7 @@ function ManageMiniAppContent() {
           canEdit={can('miniapp:update')}
           activeTab={activeTab}
           isSubmitting={isSubmitting}
+          onCancelEdit={handleCancelEdit}
           onSaveDraft={(e) => handleSave(e, true)}
           onSaveAndSubmit={(e) => handleSave(e, false)}
         />

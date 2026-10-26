@@ -9,6 +9,7 @@ interface MiniAppDetailBottomBarProps {
   canEdit?: boolean;
   activeTab: MiniAppTabType;
   isSubmitting: boolean;
+  onCancelEdit?: () => void;
   onSaveDraft: (e: React.FormEvent) => void;
   onSaveAndSubmit: (e: React.FormEvent) => void;
 }
@@ -18,6 +19,7 @@ export function MiniAppDetailBottomBar({
   canEdit = true,
   activeTab,
   isSubmitting,
+  onCancelEdit,
   onSaveDraft,
   onSaveAndSubmit,
 }: MiniAppDetailBottomBarProps) {
@@ -44,6 +46,17 @@ export function MiniAppDetailBottomBar({
       )}
 
       <div className="flex items-center gap-2.5">
+        {isEditingUnlocked && onCancelEdit && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancelEdit}
+            disabled={isSubmitting}
+            className="h-10 px-4 text-sm font-semibold border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition-colors"
+          >
+            Cancel
+          </Button>
+        )}
         <Button
           type="button"
           variant="outline"
