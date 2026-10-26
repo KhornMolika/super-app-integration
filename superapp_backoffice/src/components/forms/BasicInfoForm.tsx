@@ -3,6 +3,7 @@ import { Input, Label, Select, Textarea } from '@/components/ui/inputs';
 import { LogoUploadInput } from '@/components/ui/LogoUploadInput';
 import { LockIcon, BuildingIcon } from '@/components/ui/Icons';
 import { organizationsApi, Organization } from '@/api/organizations.api';
+import { unwrapData } from '@/api';
 
 export default function BasicInfoForm({ formData, handleChange, allErrors = {}, isEditable = true }: any) {
   const [dbOrganizations, setDbOrganizations] = useState<Organization[]>([]);
@@ -13,7 +14,8 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
     const loadOrgs = async () => {
       try {
         setLoadingOrgs(true);
-        const data = await organizationsApi.getAll({ status: 'ACTIVE' });
+        const res = await organizationsApi.getAll({ status: 'ACTIVE', limit: 100 });
+        const data = unwrapData<Organization>(res);
         if (mounted && Array.isArray(data) && data.length > 0) {
           setDbOrganizations(data);
 
@@ -152,15 +154,18 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
                 {loadingOrgs ? 'Loading organizations from database...' : 'No active organizations found'}
               </option>
             ) : (
-              Object.entries(groupedByParent).map(([parent, orgs]) => (
-                <optgroup key={parent} label={parent} className="font-semibold text-slate-700 dark:text-slate-200">
-                  {orgs.map((org) => (
-                    <option key={org.id} value={org.name} className="font-normal text-slate-800 dark:text-slate-300">
-                      {org.code ? `${org.code} — ` : ''}{org.name}
-                    </option>
-                  ))}
-                </optgroup>
-              ))
+              <>
+                <option value="">Select an organization</option>
+                {Object.entries(groupedByParent).map(([parent, orgs]) => (
+                  <optgroup key={parent} label={parent} className="font-semibold text-slate-700 dark:text-slate-200">
+                    {orgs.map((org) => (
+                      <option key={org.id} value={org.name} className="font-normal text-slate-800 dark:text-slate-300">
+                        {org.code ? `${org.code} — ` : ''}{org.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </>
             )}
           </Select>
         </div>

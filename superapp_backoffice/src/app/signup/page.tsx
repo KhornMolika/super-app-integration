@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { authApi } from '@/api/auth.api';
 import { organizationsApi, Organization } from '@/api/organizations.api';
+import { unwrapData } from '@/api';
 import { toast } from '@/components/ui/Toast';
 import { AuthSplitLayout } from '@/components/auth/AuthSplitLayout';
 import { PasswordStrengthMeter, getPasswordStrength } from '@/components/auth/PasswordStrengthMeter';
@@ -25,9 +26,10 @@ export default function SignupPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    organizationsApi.getAll()
-      .then((orgs) => {
-        if (Array.isArray(orgs)) {
+    organizationsApi.getAll({ status: 'ACTIVE', limit: 100 })
+      .then((res) => {
+        const orgs = unwrapData<Organization>(res);
+        if (Array.isArray(orgs) && orgs.length > 0) {
           setDbOrganizations(orgs);
         }
       })
