@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { Button } from '@/components/ui/inputs';
 import { Card, CardHeader } from '@/components/ui/card';
 import PreviewModal from '@/components/ui/PreviewModal';
@@ -15,7 +15,6 @@ import CapabilitiesForm, { formatCompliantPurpose, WHITELISTED_HOST_CAPABILITIES
 import UnsupportedCapabilitiesModal from '@/components/forms/UnsupportedCapabilitiesModal';
 import SecurityForm from '@/components/forms/SecurityForm';
 import ReviewSummaryStep from '@/components/forms/ReviewSummaryStep';
-import RegistrationWizardSteps from '@/components/forms/RegistrationWizardSteps';
 import { validateMiniAppStep } from '@/lib/miniapp-form.validator';
 import { validateUrlFormat } from '@/components/ui/ValidatedUrlInput';
 import { CreateMiniAppDto, FlutterPackageConfigDto, NativeSdkConfigDto, IntegrationMethod, SourceType } from '@/types/miniapp.types';
@@ -23,7 +22,25 @@ import { miniappsApi, telegramApi } from '@/api';
 import { permissionsApi } from '@/api/permissions.api';
 import { toast } from '@/components/ui/Toast';
 
-export default function RegisterMiniAppPage() {
+const STEP_TITLES = [
+  'General Information',
+  'Team & Support',
+  'Technical Integration',
+  'Capabilities & Scopes',
+  'Security & Compliance Profile',
+  'Review Registration',
+];
+
+const STEP_DESCRIPTIONS = [
+  'Provide app identity, catalog details, display name, organization, and icon.',
+  'Assign technical ownership, maintainers, and emergency support channels.',
+  'Configure your runtime architecture: WebView, Flutter Package, Native SDK, or Deep Link.',
+  'Declare native host device permissions with user privacy justifications.',
+  'Automated TLS verification, domain checks, and compliance validation.',
+  'Inspect all registration parameters before submitting for platform audit.',
+];
+
+function RegisterMiniAppContent() {
   const router = useRouter();
   const { can, user } = useAuth();
 
@@ -114,7 +131,30 @@ export default function RegisterMiniAppPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalState, setModalState] = useState<SubmissionModalState>({ isOpen: false, status: 'loading' });
   const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
-  const [step, setStep] = useState(1);
+
+  const searchParams = useSearchParams();
+  const stepQuery = searchParams?.get('step');
+  const parsedStep = stepQuery ? parseInt(stepQuery, 10) : 1;
+  const initialStep = !isNaN(parsedStep) && parsedStep >= 1 && parsedStep <= 6 ? parsedStep : 1;
+  const [step, setStepState] = useState(initialStep);
+
+  const setStep = (newStep: number | ((prev: number) => number)) => {
+    setStepState((prev) => {
+      const resolved = typeof newStep === 'function' ? newStep(prev) : newStep;
+      const clamped = Math.max(1, Math.min(6, resolved));
+      router.replace(`/miniapps/register?step=${clamped}`, { scroll: false });
+      return clamped;
+    });
+  };
+
+  useEffect(() => {
+    if (stepQuery) {
+      const p = parseInt(stepQuery, 10);
+      if (!isNaN(p) && p >= 1 && p <= 6 && p !== step) {
+        setStepState(p);
+      }
+    }
+  }, [stepQuery]);
   const [customPermission, setCustomPermission] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const [previewUrl, setPreviewUrl] = useState('');
@@ -780,23 +820,53 @@ export default function RegisterMiniAppPage() {
   return (
     <>
       <div className="w-full mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out pb-12">
-        <div className="mb-8 flex items-center space-x-4">
-          <Link
-            href="/miniapps"
-            className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 hover:text-brand-600 hover:border-brand-200 transition-all shadow-sm"
-          >
-            <svg className="w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
+        {/* Top Breadcrumb */}
+        <div className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400 mb-2 px-1">
+          <Link href="/miniapps" className="hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
+            MiniApps
           </Link>
-          <div>
-            <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Register MiniApp</h2>
-            <p className="text-slate-500 dark:text-slate-400 mt-1 text-base">Deploy a new service to the FSA SuperApp Platform</p>
-          </div>
+          <span>/</span>
+          <span className="text-slate-700 dark:text-slate-300 font-semibold">Register MiniApp</span>
+          <span>/</span>
+          <span className="text-brand-600 dark:text-brand-400 font-bold">
+            Step {step} of 6: {STEP_TITLES[step - 1]}
+          </span>
         </div>
 
-        {/* Wizard Step Progress */}
-        <RegistrationWizardSteps currentStep={step} />
+        {/* Header Card */}
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm transition-all">
+          <div className="flex items-center space-x-4">
+            <Link
+              href="/miniapps"
+              title="Back to MiniApps"
+              className="w-10 h-10 shrink-0 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 hover:text-brand-600 hover:border-brand-200 transition-all shadow-sm"
+            >
+              <svg className="w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </Link>
+            <div>
+              <div className="flex items-center gap-3">
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+                  {formData.name || 'Register MiniApp'}
+                </h2>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-brand-50 text-brand-700 border border-brand-200 dark:bg-brand-950/40 dark:text-brand-300 dark:border-brand-800">
+                  <span className="w-2 h-2 rounded-full bg-brand-500 animate-pulse" />
+                  <span>Step {step} of 6</span>
+                </span>
+              </div>
+              <p className="text-slate-500 dark:text-slate-400 mt-1 text-xs sm:text-sm">
+                {STEP_DESCRIPTIONS[step - 1]}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-end sm:self-auto">
+            <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">
+              Progress: <strong className="text-slate-700 dark:text-slate-300 font-mono">{Math.round((step / 6) * 100)}%</strong>
+            </span>
+          </div>
+        </div>
 
         <form
           className="space-y-6"
@@ -943,29 +1013,57 @@ export default function RegisterMiniAppPage() {
             </Card>
           )}
 
-          <div className="flex justify-between space-x-4 border-t border-slate-200 dark:border-slate-800 pt-6">
-            <Button type="button" variant="outline" className="h-11 px-6 text-base font-medium" onClick={step === 1 ? () => router.push('/miniapps') : prevStep}>
+          {/* Sticky Floating Bottom Action Dock */}
+          <div className="sticky bottom-6 z-30 mt-8 p-4 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 shadow-xl flex items-center justify-between gap-4 animate-in slide-in-from-bottom-2 duration-200">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 px-5 text-sm font-semibold border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+              onClick={step === 1 ? () => router.push('/miniapps') : prevStep}
+              disabled={isSubmitting}
+            >
               {step === 1 ? 'Cancel' : 'Back'}
             </Button>
-            {step < 6 ? (
-              <div className="flex space-x-3">
-                <Button type="button" variant="outline" className="h-11 px-5 text-base font-medium" onClick={handleSaveDraft} disabled={isSubmitting}>
-                  Save as Draft
+
+            <div className="flex items-center gap-2.5">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 px-5 text-sm font-semibold border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-1.5"
+                onClick={handleSaveDraft}
+                disabled={isSubmitting}
+              >
+                <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                </svg>
+                <span>Save as Draft</span>
+              </Button>
+
+              {step < 6 ? (
+                <Button
+                  type="button"
+                  className="h-10 px-6 text-sm font-semibold bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20 flex items-center gap-1.5"
+                  onClick={nextStep}
+                  disabled={isSubmitting}
+                >
+                  <span>{isSubmitting ? 'Validating...' : 'Next Step'}</span>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                  </svg>
                 </Button>
-                <Button type="button" className="h-11 px-6 text-base font-semibold" onClick={nextStep} disabled={isSubmitting}>
-                  Next Step
+              ) : (
+                <Button
+                  type="submit"
+                  className="h-10 px-6 text-sm font-semibold bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20 flex items-center gap-1.5"
+                  disabled={isSubmitting}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>{isSubmitting ? 'Submitting...' : 'Register MiniApp'}</span>
                 </Button>
-              </div>
-            ) : (
-              <div className="flex space-x-3">
-                <Button type="button" variant="outline" className="h-11 px-5 text-base font-medium" onClick={handleSaveDraft} disabled={isSubmitting}>
-                  Save as Draft
-                </Button>
-                <Button type="submit" className="h-11 px-6 text-base font-semibold" disabled={isSubmitting}>
-                  {isSubmitting ? 'Submitting...' : 'Register MiniApp'}
-                </Button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </form>
 
@@ -1048,5 +1146,17 @@ export default function RegisterMiniAppPage() {
         onSuccessContinue={() => { }}
       />
     </>
+  );
+}
+
+export default function RegisterMiniAppPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
+      </div>
+    }>
+      <RegisterMiniAppContent />
+    </Suspense>
   );
 }

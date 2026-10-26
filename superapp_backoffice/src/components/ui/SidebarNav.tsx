@@ -167,12 +167,63 @@ import { useSearchParams } from 'next/navigation';
 
 type NavItemWithTab = NavItem & {
   tabKey?: string;
+  stepNumber?: number;
 };
 
 type NavGroupWithTab = {
   label: string;
   items: NavItemWithTab[];
 };
+
+const miniAppRegisterNavGroups: NavGroupWithTab[] = [
+  {
+    label: 'REGISTRATION WIZARD',
+    items: [
+      {
+        name: 'Basic Information',
+        href: '/miniapps/register?step=1',
+        tabKey: '1',
+        stepNumber: 1,
+        icon: null as any,
+      },
+      {
+        name: 'Team & Support',
+        href: '/miniapps/register?step=2',
+        tabKey: '2',
+        stepNumber: 2,
+        icon: null as any,
+      },
+      {
+        name: 'Technical Integration',
+        href: '/miniapps/register?step=3',
+        tabKey: '3',
+        stepNumber: 3,
+        icon: null as any,
+      },
+      {
+        name: 'Capabilities & Scopes',
+        href: '/miniapps/register?step=4',
+        tabKey: '4',
+        stepNumber: 4,
+        icon: null as any,
+      },
+      {
+        name: 'Security Profile',
+        href: '/miniapps/register?step=5',
+        tabKey: '5',
+        stepNumber: 5,
+        icon: null as any,
+      },
+      {
+        name: 'Review & Submit',
+        href: '/miniapps/register?step=6',
+        tabKey: '6',
+        stepNumber: 6,
+        icon: null as any,
+      },
+    ],
+  },
+];
 
 const getMiniAppNavGroups = (miniAppId: string): NavGroupWithTab[] => [
   {
@@ -265,17 +316,21 @@ function SidebarNavContent() {
   const { isCollapsed } = useSidebar();
 
   const isSettingsMode = pathname.startsWith('/settings');
+  const isMiniAppRegisterMode = pathname.startsWith('/miniapps/register');
   const isMiniAppDetailMode =
+    !isMiniAppRegisterMode &&
     pathname.startsWith('/miniapps/') &&
-    pathname !== '/miniapps' &&
-    !pathname.startsWith('/miniapps/register');
+    pathname !== '/miniapps';
 
   const miniAppId = isMiniAppDetailMode ? pathname.split('/')[2] || '' : '';
   const currentTab = searchParams?.get('tab') || 'overview';
+  const currentStep = parseInt(searchParams?.get('step') || '1', 10);
 
   let activeNavGroups: (NavGroup | NavGroupWithTab)[] = mainNavGroups;
   if (isSettingsMode) {
     activeNavGroups = settingsNavGroups;
+  } else if (isMiniAppRegisterMode) {
+    activeNavGroups = miniAppRegisterNavGroups;
   } else if (isMiniAppDetailMode) {
     activeNavGroups = getMiniAppNavGroups(miniAppId);
   }
@@ -305,8 +360,8 @@ function SidebarNavContent() {
         </div>
       )}
 
-      {/* Contextual Back Button when inside MiniApp Detail */}
-      {isMiniAppDetailMode && (
+      {/* Contextual Back Button when inside MiniApp Detail or Register */}
+      {(isMiniAppDetailMode || isMiniAppRegisterMode) && (
         <div className="mb-2 pb-2 border-b border-brand-900/60 dark:border-slate-800/80">
           <Link
             href="/miniapps"
@@ -325,6 +380,22 @@ function SidebarNavContent() {
             </svg>
             {!isCollapsed && <span className="tracking-wide">Back to MiniApps</span>}
           </Link>
+        </div>
+      )}
+
+      {/* Registration Progress Summary (Expanded sidebar only) */}
+      {isMiniAppRegisterMode && !isCollapsed && (
+        <div className="mb-3 px-3 py-2.5 rounded-xl bg-brand-900/40 dark:bg-slate-900/60 border border-brand-800/40 dark:border-slate-800">
+          <div className="flex items-center justify-between text-[11px] mb-1.5">
+            <span className="font-semibold text-brand-200">Wizard Progress</span>
+            <span className="font-mono text-brand-400 font-bold">{Math.round((currentStep / 6) * 100)}%</span>
+          </div>
+          <div className="h-1.5 w-full bg-brand-950 dark:bg-slate-800 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-brand-500 rounded-full transition-all duration-300 ease-out"
+              style={{ width: `${(currentStep / 6) * 100}%` }}
+            />
+          </div>
         </div>
       )}
 
@@ -358,7 +429,29 @@ function SidebarNavContent() {
                 }
 
                 let isActive = false;
-                if (isMiniAppDetailMode) {
+                let itemIcon = item.icon;
+
+                if (isMiniAppRegisterMode) {
+                  const stepNum = item.stepNumber || 1;
+                  isActive = currentStep === stepNum;
+                  const isCompleted = stepNum < currentStep;
+
+                  itemIcon = isCompleted ? (
+                    <span className="w-5 h-5 flex items-center justify-center rounded-md text-[11px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </span>
+                  ) : isActive ? (
+                    <span className="w-5 h-5 flex items-center justify-center rounded-md text-[11px] font-bold bg-brand-500 text-white shadow-sm border border-brand-400">
+                      {stepNum}
+                    </span>
+                  ) : (
+                    <span className="w-5 h-5 flex items-center justify-center rounded-md text-[11px] font-medium text-brand-300/70 border border-brand-800/80">
+                      {stepNum}
+                    </span>
+                  );
+                } else if (isMiniAppDetailMode) {
                   isActive = item.tabKey ? currentTab === item.tabKey : false;
                 } else {
                   isActive = pathname === targetHref || (targetHref !== '/' && pathname.startsWith(targetHref));
@@ -368,17 +461,17 @@ function SidebarNavContent() {
                   <Link 
                     key={item.href} 
                     href={targetHref} 
-                    title={isCollapsed ? displayName : undefined}
+                    title={isCollapsed ? (isMiniAppRegisterMode ? `Step ${item.stepNumber}: ${displayName}` : displayName) : undefined}
                     className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 group relative ${
                       isActive 
                         ? 'bg-brand-500/10 text-white font-bold border-l-2 border-brand-400 pl-[10px]' 
                         : 'text-brand-100 hover:text-white hover:bg-white/5'
                     }`}
                   >
-                    <span className={`shrink-0 transition-transform duration-200 group-hover:scale-110 ${
+                    <span className={`shrink-0 transition-transform duration-200 group-hover:scale-105 ${
                       isActive ? 'text-brand-400' : 'text-brand-300 group-hover:text-white'
                     }`}>
-                      {item.icon}
+                      {itemIcon}
                     </span>
                     {!isCollapsed && (
                       <span className="truncate tracking-wide">{displayName}</span>
