@@ -187,7 +187,7 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
               name="slug"
               value={formData.slug || ''}
               placeholder="e.g. staff-portal-attendance"
-              className={`font-mono text-base !bg-slate-200/70 dark:!bg-slate-800/90 !border-slate-300/80 dark:!border-slate-700 !text-slate-500 dark:!text-slate-400 placeholder:!text-slate-400 dark:placeholder:!text-slate-500 cursor-not-allowed select-all pr-10 ${allErrors.slug ? '!border-rose-500 ring-1 ring-rose-500 bg-rose-50/50' : ''}`}
+              className={`font-mono text-base !bg-slate-200/70 dark:!bg-slate-800/90 !border-slate-300/80 dark:!border-slate-700 !text-slate-600 dark:!text-slate-200 placeholder:!text-slate-400 dark:placeholder:!text-slate-400 cursor-not-allowed select-all pr-10 ${allErrors.slug ? '!border-rose-500 ring-1 ring-rose-500 bg-rose-50/50' : ''}`}
             />
             <div className="absolute right-3.5 pointer-events-none flex items-center text-slate-400 dark:text-slate-500">
               <LockIcon className="w-4 h-4" />

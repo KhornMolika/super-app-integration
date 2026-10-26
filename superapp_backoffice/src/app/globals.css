@@ -34,7 +34,15 @@
 
 .dark {
   --background: #090b0a;
-  --foreground: #fafafa;
+  --foreground: #f8fafc;
+
+  /* Brighten body & secondary slate typography in dark mode */
+  --color-slate-100: #ffffff;
+  --color-slate-200: #f8fafc;
+  --color-slate-300: #e2e8f0;
+  --color-slate-400: #cbd5e1;
+  --color-slate-500: #94a3b8;
+  --color-slate-600: #64748b;
 }
 
 @variant dark (&:where(.dark, .dark *));
@@ -52,6 +60,47 @@ body {
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.dark body {
+  color: #f8fafc;
+}
+
+/* Elevate body text & slate typography brightness in dark mode */
+.dark .dark\:text-slate-400,
+.dark .text-slate-400 {
+  color: #cbd5e1;
+}
+
+.dark .dark\:text-slate-500,
+.dark .text-slate-500 {
+  color: #94a3b8;
+}
+
+.dark .dark\:text-slate-300,
+.dark .text-slate-300 {
+  color: #e2e8f0;
+}
+
+.dark .dark\:text-slate-200,
+.dark .text-slate-200 {
+  color: #f8fafc;
+}
+
+/* Ensure disabled inputs and readonly text in dark mode remain comfortably readable */
+.dark input:disabled,
+.dark textarea:disabled,
+.dark button:disabled {
+  opacity: 0.85;
+}
+
+/* Ensure paragraph, body copy, and form elements are crisp in dark mode */
+.dark p,
+.dark span,
+.dark label,
+.dark input,
+.dark textarea {
+  color-scheme: dark;
 }
 
 /* Animations */

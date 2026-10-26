@@ -13,7 +13,7 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
     <input
       ref={ref}
       value={value === null ? '' : value}
-      className={`text-base text-slate-800 dark:text-slate-100 w-full px-4 py-3 bg-slate-100/80 hover:bg-slate-100 focus:bg-white dark:bg-slate-900/90 dark:hover:bg-slate-900 dark:focus:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-slate-400 disabled:opacity-50 disabled:bg-slate-200/50 dark:disabled:bg-slate-900/40 ${className}`}
+      className={`text-base text-slate-800 dark:text-slate-100 w-full px-4 py-3 bg-slate-100/80 hover:bg-slate-100 focus:bg-white dark:bg-slate-900/90 dark:hover:bg-slate-900 dark:focus:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 disabled:opacity-50 dark:disabled:opacity-85 disabled:bg-slate-200/50 dark:disabled:bg-slate-900/60 dark:disabled:text-slate-200 ${className}`}
       {...props}
     />
   )
@@ -25,7 +25,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTML
     <textarea
       ref={ref}
       value={value === null ? '' : value}
-      className={`text-base text-slate-800 dark:text-slate-100 w-full px-4 py-3 bg-slate-100/80 hover:bg-slate-100 focus:bg-white dark:bg-slate-900/90 dark:hover:bg-slate-900 dark:focus:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-slate-400 disabled:opacity-50 resize-none disabled:bg-slate-200/50 dark:disabled:bg-slate-900/40 ${className}`}
+      className={`text-base text-slate-800 dark:text-slate-100 w-full px-4 py-3 bg-slate-100/80 hover:bg-slate-100 focus:bg-white dark:bg-slate-900/90 dark:hover:bg-slate-900 dark:focus:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 disabled:opacity-50 dark:disabled:opacity-85 resize-none disabled:bg-slate-200/50 dark:disabled:bg-slate-900/60 dark:disabled:text-slate-200 ${className}`}
       {...props}
     />
   )
@@ -210,7 +210,7 @@ export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttrib
             isOpen
               ? 'ring-2 ring-brand-500/25 border-brand-500 bg-white dark:bg-slate-950 shadow-sm'
               : 'focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500'
-          } ${disabled ? 'opacity-50 cursor-not-allowed bg-slate-200/50 dark:bg-slate-900/40' : ''} ${className}`}
+          } ${disabled ? 'opacity-50 dark:opacity-85 cursor-not-allowed bg-slate-200/50 dark:bg-slate-900/60 dark:text-slate-100' : ''} ${className}`}
           aria-haspopup="listbox"
           aria-expanded={isOpen}
         >
