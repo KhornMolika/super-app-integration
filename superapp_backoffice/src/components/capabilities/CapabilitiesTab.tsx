@@ -9,10 +9,19 @@ import { getCapabilityVisual } from '@/lib/capability-visuals';
 
 interface CapabilitiesTabProps {
   capabilities: CapabilityItem[];
+  loading?: boolean;
+  onSyncGitLab?: () => void;
+  isSyncingGitLab?: boolean;
   getPermissionIcon?: (key?: string) => React.ReactNode;
 }
 
-export function CapabilitiesTab({ capabilities = [], getPermissionIcon }: CapabilitiesTabProps) {
+export function CapabilitiesTab({
+  capabilities = [],
+  loading = false,
+  onSyncGitLab,
+  isSyncingGitLab = false,
+  getPermissionIcon,
+}: CapabilitiesTabProps) {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const safeCapabilities = Array.isArray(capabilities) ? capabilities : [];
@@ -24,11 +33,37 @@ export function CapabilitiesTab({ capabilities = [], getPermissionIcon }: Capabi
     setTimeout(() => setCopiedKey(null), 1500);
   };
 
-  if (safeCapabilities.length === 0) {
+  if (loading) {
     return (
       <Card className="p-12 text-center text-slate-400 dark:text-slate-500">
-        <Smartphone className="w-8 h-8 mx-auto mb-2 text-slate-300 dark:text-slate-600 animate-pulse" />
-        <p className="text-sm font-medium">Scanning shell for active capabilities...</p>
+        <Smartphone className="w-8 h-8 mx-auto mb-2 text-brand-500 animate-pulse" />
+        <p className="text-sm font-medium">Loading platform capabilities...</p>
+      </Card>
+    );
+  }
+
+  if (safeCapabilities.length === 0) {
+    return (
+      <Card className="p-12 text-center text-slate-400 dark:text-slate-500 space-y-3">
+        <Smartphone className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-600" />
+        <div>
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+            No active capabilities found in registry
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Synchronize host shell capabilities directly from GitLab repository to populate the directory.
+          </p>
+        </div>
+        {onSyncGitLab && (
+          <button
+            type="button"
+            onClick={onSyncGitLab}
+            disabled={isSyncingGitLab}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 border border-brand-200 dark:border-brand-800 hover:bg-brand-100 transition-colors"
+          >
+            {isSyncingGitLab ? 'Syncing...' : 'Sync from GitLab'}
+          </button>
+        )}
       </Card>
     );
   }

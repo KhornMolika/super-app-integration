@@ -89,7 +89,9 @@ export const permissionsApi = {
     ).then((res) => unwrapData<Permission>(res)),
 
   getCapabilities: (refresh?: boolean) =>
-    apiClient<CapabilityItem[]>(`/api/permissions/capabilities${refresh ? '?refresh=true' : ''}`),
+    apiClient<PaginatedResponse<CapabilityItem> | CapabilityItem[]>(
+      `/api/permissions/capabilities${refresh ? '?refresh=true' : ''}`
+    ).then((res) => unwrapData<CapabilityItem>(res)),
 
   syncGitLab: () =>
     apiClient<{

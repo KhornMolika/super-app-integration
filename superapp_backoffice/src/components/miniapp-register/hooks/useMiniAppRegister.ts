@@ -9,6 +9,7 @@ import {
   FlutterPackageConfigDto,
   NativeSdkConfigDto,
   IntegrationMethod,
+  SourceType,
 } from '@/types/miniapp.types';
 import { miniappsApi, telegramApi } from '@/api';
 import { permissionsApi } from '@/api/permissions.api';

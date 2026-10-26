@@ -10,6 +10,7 @@ import {
   PermissionProposal,
   CapabilityItem,
 } from '@/api/permissions.api';
+import { unwrapData } from '@/api';
 import { CapabilitiesTab } from '@/components/capabilities/CapabilitiesTab';
 import { ProposalsTab } from '@/components/capabilities/ProposalsTab';
 import { ProposalReviewModal } from '@/components/capabilities/ProposalReviewModal';
@@ -49,8 +50,8 @@ function CapabilitiesContent() {
         permissionsApi.getCapabilities().catch(() => []),
         permissionsApi.getProposals().catch(() => []),
       ]);
-      setCapabilities(capData);
-      setProposals(propData);
+      setCapabilities(unwrapData(capData));
+      setProposals(unwrapData(propData));
     } catch (err: any) {
       console.error('Failed to load capabilities data:', err);
     } finally {
@@ -62,9 +63,13 @@ function CapabilitiesContent() {
     try {
       setIsSyncingGitLab(true);
       toast.info('Fetching SuperApp capabilities strictly from GitLab (branch: main)...');
-      const res = await permissionsApi.syncGitLab();
+      const res: any = await permissionsApi.syncGitLab();
+      const count =
+        res?.syncedCount ??
+        res?.data?.syncedCount ??
+        (Array.isArray(res?.capabilities) ? res.capabilities.length : 0);
       toast.success(
-        `Synced ${res.syncedCount} capabilities from GitLab main directly into database registry!`,
+        `Synced ${count} capabilities from GitLab main directly into database registry!`,
       );
       await loadData();
     } catch (err: any) {
@@ -153,21 +158,6 @@ function CapabilitiesContent() {
           </div>
 
           <div className="flex items-center gap-2.5">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Shell Synced
-            </span>
-            {pendingProposalsCount > 0 && (
-              <button
-                type="button"
-                onClick={() => setActiveTab('PROPOSALS')}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/60 border border-amber-200 dark:border-amber-800 text-[11px] font-semibold text-amber-700 dark:text-amber-300 transition-colors"
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                {pendingProposalsCount} Pending
-              </button>
-            )}
-
             <Button
               type="button"
               variant="outline"
@@ -208,7 +198,7 @@ function CapabilitiesContent() {
             <Zap className="w-4 h-4" />
             Capabilities
             <span className="ml-1 px-1.5 py-0.5 rounded-md text-[11px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium">
-              {capabilities.length}
+              {Array.isArray(capabilities) ? capabilities.length : 0}
             </span>
           </button>
 
@@ -239,6 +229,9 @@ function CapabilitiesContent() {
         {activeTab === 'CAPABILITIES' && (
           <CapabilitiesTab
             capabilities={capabilities}
+            loading={loading}
+            onSyncGitLab={handleSyncGitLab}
+            isSyncingGitLab={isSyncingGitLab}
             getPermissionIcon={getPermissionIcon}
           />
         )}
