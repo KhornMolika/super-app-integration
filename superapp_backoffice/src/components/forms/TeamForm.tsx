@@ -381,95 +381,114 @@ export default function TeamForm({
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <Label>Team Name</Label>
-            <span className="text-xs text-slate-400 font-medium">Optional</span>
+      <div className="space-y-6">
+        {/* Card 1: Team & Ownership Details */}
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 p-5 bg-white dark:bg-slate-900/60 shadow-xs space-y-4">
+          <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div className="w-8 h-8 rounded-lg bg-brand-500/10 text-brand-500 flex items-center justify-center">
+              <BuildingIcon className="w-4 h-4 text-brand-500 shrink-0" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                Team &amp; Support Contacts
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Primary agency contacts responsible for administrative ownership, support, and notifications.
+              </p>
+            </div>
           </div>
-          <Input
-            name="teamName"
-            value={formData.teamName || ''}
-            onChange={handleChange}
-            placeholder="e.g. Core Banking Team"
-            disabled={!isEditable}
-          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <Label>Team Name</Label>
+                <span className="text-xs text-slate-400 font-medium">Optional</span>
+              </div>
+              <Input
+                name="teamName"
+                value={formData.teamName || ''}
+                onChange={handleChange}
+                placeholder="e.g. Core Banking Team"
+                disabled={!isEditable}
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <Label>Owner Name</Label>
+                {telegramStatus?.user?.name && isEditable && (
+                  <button
+                    type="button"
+                    onClick={handleAutofillOwner}
+                    className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+                  >
+                    <ZapIcon className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Fill from Profile ({telegramStatus.user.name})</span>
+                  </button>
+                )}
+              </div>
+              <Input
+                name="ownerName"
+                value={formData.ownerName || ''}
+                onChange={handleChange}
+                placeholder="e.g. John Doe"
+                disabled={!isEditable}
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <Label>Owner Email <span className="text-rose-500">*</span></Label>
+                {formData.ownerEmail && (
+                  <button
+                    type="button"
+                    onClick={handleTestEmail}
+                    disabled={isTestingEmail}
+                    className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+                  >
+                    <svg className={`w-3.5 h-3.5 ${isTestingEmail ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    <span>{isTestingEmail ? 'Sending...' : 'Send Test Email'}</span>
+                  </button>
+                )}
+              </div>
+              <Input 
+                required 
+                name="ownerEmail" 
+                value={formData.ownerEmail || ''} 
+                onChange={handleChange} 
+                type="email" 
+                placeholder="e.g. john.doe@fsa.gov" 
+                disabled={!isEditable}
+                className={allErrors.ownerEmail ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
+              />
+              {allErrors.ownerEmail && <p className="mt-1.5 text-sm text-rose-600 font-medium">{allErrors.ownerEmail}</p>}
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <Label>Support Email</Label>
+                <span className="text-xs text-slate-400 font-medium">Optional</span>
+              </div>
+              <Input 
+                name="supportEmail" 
+                value={formData.supportEmail || ''} 
+                onChange={handleChange} 
+                type="email" 
+                placeholder="e.g. support@fsa.gov" 
+                disabled={!isEditable}
+                className={allErrors.supportEmail ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
+              />
+              {allErrors.supportEmail && <p className="mt-1.5 text-sm text-rose-600 font-medium">{allErrors.supportEmail}</p>}
+            </div>
+          </div>
         </div>
 
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <Label>Owner Name</Label>
-            {telegramStatus?.user?.name && isEditable && (
-              <button
-                type="button"
-                onClick={handleAutofillOwner}
-                className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-semibold flex items-center gap-1"
-              >
-                <ZapIcon className="w-3.5 h-3.5 text-amber-500" />
-                <span>Fill from Profile ({telegramStatus.user.name})</span>
-              </button>
-            )}
-          </div>
-          <Input
-            name="ownerName"
-            value={formData.ownerName || ''}
-            onChange={handleChange}
-            placeholder="e.g. John Doe"
-            disabled={!isEditable}
-          />
-        </div>
-
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <Label>Owner Email <span className="text-rose-500">*</span></Label>
-            {formData.ownerEmail && (
-              <button
-                type="button"
-                onClick={handleTestEmail}
-                disabled={isTestingEmail}
-                className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-semibold flex items-center gap-1"
-              >
-                <svg className={`w-3.5 h-3.5 ${isTestingEmail ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                <span>{isTestingEmail ? 'Sending...' : 'Send Test Email'}</span>
-              </button>
-            )}
-          </div>
-          <Input 
-            required 
-            name="ownerEmail" 
-            value={formData.ownerEmail || ''} 
-            onChange={handleChange} 
-            type="email" 
-            placeholder="e.g. john.doe@fsa.gov" 
-            disabled={!isEditable}
-            className={allErrors.ownerEmail ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
-          />
-          {allErrors.ownerEmail && <p className="mt-1.5 text-sm text-rose-600 font-medium">{allErrors.ownerEmail}</p>}
-        </div>
-
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <Label>Support Email</Label>
-            <span className="text-xs text-slate-400 font-medium">Optional</span>
-          </div>
-          <Input 
-            name="supportEmail" 
-            value={formData.supportEmail || ''} 
-            onChange={handleChange} 
-            type="email" 
-            placeholder="e.g. support@fsa.gov" 
-            disabled={!isEditable}
-            className={allErrors.supportEmail ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
-          />
-          {allErrors.supportEmail && <p className="mt-1.5 text-sm text-rose-600 font-medium">{allErrors.supportEmail}</p>}
-        </div>
-
-        {/* Team Collaborators & Role-Based Access Card */}
+        {/* Card 2: MiniApp Collaborators & Roles */}
         {formData.id && (
-          <div className="md:col-span-2 space-y-4 rounded-xl border border-slate-200 dark:border-slate-800 p-4 bg-slate-50/50 dark:bg-slate-900/40">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/80 dark:border-slate-800">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 p-5 bg-white dark:bg-slate-900/60 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
                   <UserGroupIcon className="w-4 h-4 text-indigo-500 shrink-0" />
@@ -487,46 +506,45 @@ export default function TeamForm({
                 </div>
               </div>
 
-              {isEditable && (
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setIsAddModalOpen(true);
-                    setSearchQuery('');
-                    setSelectedUser(null);
-                    setSelectedRole('DEVELOPER');
-                    setIsSearchDropdownOpen(false);
-                  }}
-                  className="inline-flex items-center gap-1.5 text-xs px-3.5 py-1.5 font-semibold bg-brand-600 hover:bg-brand-700 text-white rounded-lg shadow-xs shrink-0 transition-all cursor-pointer"
-                >
-                  <PlusCircleIcon className="w-4 h-4" />
-                  <span>+ Add Collaborator</span>
-                </Button>
-              )}
+              {/* + Add Collaborator Button - ALWAYS VISIBLE */}
+              <Button
+                type="button"
+                onClick={() => {
+                  setIsAddModalOpen(true);
+                  setSearchQuery('');
+                  setSelectedUser(null);
+                  setSelectedRole('DEVELOPER');
+                  setIsSearchDropdownOpen(false);
+                }}
+                className="inline-flex items-center gap-1.5 text-xs px-3.5 py-1.5 font-semibold bg-brand-600 hover:bg-brand-700 text-white rounded-xl shadow-xs shrink-0 transition-all cursor-pointer"
+              >
+                <PlusCircleIcon className="w-4 h-4" />
+                <span>+ Add Collaborator</span>
+              </Button>
             </div>
 
             {/* Members List */}
             <div className="space-y-2.5">
               {/* Primary Owner / Maintainer Row */}
-              <div className="p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 shadow-xs">
+              <div className="p-3.5 rounded-xl bg-slate-50/70 dark:bg-slate-800/80 border border-slate-200/90 dark:border-slate-700/80 flex items-center justify-between gap-3 shadow-xs">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 shadow-2xs ${getAvatarColor(formData.ownerName || formData.owner?.name || 'O')}`}>
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 shadow-xs ${getAvatarColor(formData.ownerName || formData.owner?.name || 'O')}`}>
                     {(formData.ownerName || formData.owner?.name || 'O').charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                       <span className="truncate">{formData.ownerName || formData.owner?.name || 'Lead Maintainer'}</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold uppercase tracking-wider">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 font-bold uppercase tracking-wider border border-amber-200 dark:border-amber-900/60">
                         Primary Owner
                       </span>
                     </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
                       {formData.ownerEmail || formData.owner?.email || 'Registered Creator'}
                     </div>
                   </div>
                 </div>
                 <div className="text-right shrink-0">
-                  <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">
+                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-700 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-650 hidden sm:inline">
                     Full Administrative Authority
                   </span>
                 </div>
@@ -534,37 +552,40 @@ export default function TeamForm({
 
               {/* Collaborators Rows */}
               {loadingCollaborators ? (
-                <div className="py-4 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
-                  <svg className="w-3.5 h-3.5 animate-spin text-brand-500" fill="none" viewBox="0 0 24 24">
+                <div className="py-6 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+                  <svg className="w-4 h-4 animate-spin text-brand-500" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                   </svg>
                   <span>Loading collaborators...</span>
                 </div>
               ) : collaborators.length === 0 ? (
-                <div className="p-5 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-center space-y-2">
-                  <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                    No additional collaborators assigned yet
-                  </p>
-                  <p className="text-[11px] text-slate-400 max-w-sm mx-auto">
-                    Click &quot;+ Add Collaborator&quot; above to invite active agency colleagues directly.
-                  </p>
-                  {isEditable && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsAddModalOpen(true);
-                        setSearchQuery('');
-                        setSelectedUser(null);
-                        setSelectedRole('DEVELOPER');
-                        setIsSearchDropdownOpen(false);
-                      }}
-                      className="inline-flex items-center gap-1.5 text-xs text-brand-600 dark:text-brand-400 font-semibold hover:underline mt-1"
-                    >
-                      <PlusCircleIcon className="w-3.5 h-3.5" />
-                      <span>Invite team member</span>
-                    </button>
-                  )}
+                <div className="p-6 rounded-xl border border-dashed border-slate-300 dark:border-slate-750 text-center space-y-3 bg-slate-50/40 dark:bg-slate-850/40">
+                  <div className="w-10 h-10 mx-auto rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-xs">
+                    <UserGroupIcon className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      No additional collaborators assigned yet
+                    </p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+                      Invite active colleagues from your agency to co-develop, trigger test builds, and inspect compliance reports.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setIsAddModalOpen(true);
+                      setSearchQuery('');
+                      setSelectedUser(null);
+                      setSelectedRole('DEVELOPER');
+                      setIsSearchDropdownOpen(false);
+                    }}
+                    className="inline-flex items-center gap-1.5 text-xs px-4 py-2 font-semibold bg-brand-600 hover:bg-brand-700 text-white rounded-xl shadow-xs transition-all cursor-pointer mx-auto"
+                  >
+                    <PlusCircleIcon className="w-4 h-4" />
+                    <span>+ Add Collaborator</span>
+                  </Button>
                 </div>
               ) : (
                 collaborators.map((collab: any) => {
@@ -573,23 +594,23 @@ export default function TeamForm({
                   return (
                     <div
                       key={collab.id || collab.userId || userObj.id}
-                      className="p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 shadow-xs"
+                      className="p-3.5 rounded-xl bg-slate-50/70 dark:bg-slate-800/80 border border-slate-200/90 dark:border-slate-700/80 flex items-center justify-between gap-3 shadow-xs hover:border-slate-300 dark:hover:border-slate-650 transition-colors"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 shadow-2xs ${getAvatarColor(userObj.name || userObj.email || 'U')}`}>
+                        <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 shadow-xs ${getAvatarColor(userObj.name || userObj.email || 'U')}`}>
                           {(userObj.name || userObj.email || 'U').charAt(0).toUpperCase()}
                         </div>
                         <div className="min-w-0">
                           <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
                             {userObj.name || 'Teammate'}
                           </div>
-                          <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
                             {userObj.email || collab.userId}
                           </div>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center gap-2.5 shrink-0">
                         <span
                           className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-1 ${
                             collab.role === 'ADMIN'
@@ -605,19 +626,17 @@ export default function TeamForm({
                           <span>{collab.role || 'DEVELOPER'}</span>
                         </span>
 
-                        {isEditable && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveCollaborator(collab.userId || userObj.id)}
-                            disabled={isRemoving}
-                            className="p-1 rounded-md text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
-                            title="Remove collaborator"
-                          >
-                            <svg className={`w-4 h-4 ${isRemoving ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveCollaborator(collab.userId || userObj.id)}
+                          disabled={isRemoving}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 transition-colors cursor-pointer"
+                          title="Remove collaborator"
+                        >
+                          <svg className={`w-4 h-4 ${isRemoving ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
                       </div>
                     </div>
                   );
@@ -627,8 +646,8 @@ export default function TeamForm({
           </div>
         )}
 
-        {/* Telegram Channel / Group Integration */}
-        <div className="md:col-span-2 space-y-4 rounded-xl border border-slate-200 dark:border-slate-800 p-4 bg-slate-50/50 dark:bg-slate-900/40">
+        {/* Card 3: Telegram Channel / Group Integration */}
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 p-5 bg-white dark:bg-slate-900/60 shadow-xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-200/80 dark:border-slate-800">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-500 flex items-center justify-center">
