@@ -540,13 +540,49 @@ CREATE TABLE mini_app_collaborators (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "miniAppId" UUID NOT NULL REFERENCES mini_apps(id) ON DELETE CASCADE,
     "userId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    role VARCHAR(50) NOT NULL DEFAULT 'COLLABORATOR', -- 'COLLABORATOR' (build/test/edit), 'VIEWER' (read-only)
+    role VARCHAR(50) NOT NULL DEFAULT 'DEVELOPER', -- 'ADMIN' (co-maintainer), 'DEVELOPER' (build/test/push), 'VIEWER' (read-only QA)
     "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE("miniAppId", "userId")
 );
 ```
 
-#### Sharing Scope Resolution Rules:
+#### A. Authority Matrix: App Owner vs. Collaborator Roles
+
+There is a strict architectural boundary between **System Persona**, **App Ownership**, and **Collaborator Roles**:
+
+| Authority Scope | Entity Source | Permitted Actions |
+| :--- | :--- | :--- |
+| **Primary Owner** (Lead Maintainer) | `mini_apps.ownerId` | **Supreme project authority**: Only the Owner (or platform SuperAdmin) can **delete the MiniApp**, **transfer ownership**, or reassign collaborator permissions. |
+| **`ADMIN`** (Co-Maintainer) | `mini_app_collaborators.role = 'ADMIN'` | Can edit configuration, legal policies, invite/remove collaborators within agency, and submit revisions for review. *Cannot delete app or transfer ownership.* |
+| **`DEVELOPER`** (Core Contributor) | `mini_app_collaborators.role = 'DEVELOPER'` | Can push git code/packages, trigger Jenkins/Fastlane builds, run sandbox simulators, and inspect build stages. *Cannot modify governance legal policies or manage team members.* |
+| **`VIEWER`** (Auditor / QA) | `mini_app_collaborators.role = 'VIEWER'` | Read-only inspection. Can run sandbox simulators, download test APKs, and view audit & security logs. |
+
+---
+
+#### B. Zero-Trust Collaborator Invitation Protocol (Active Backoffice Users Only)
+
+> [!CAUTION]
+> **Security Requirement: No Public / External Auto-Approvals**
+> In compliance with FSA and central financial governance, **developers cannot bypass SuperAdmin vetting to create active accounts via invite links**. All collaborators must be verified backoffice identities.
+
+1. **Prerequisite for Collaboration**:
+   - A collaborator **must already possess an approved, active account** (`status = 'ACTIVE'`) in the backoffice.
+   - The user must belong to the **exact same agency/organization** (`user.organizationId === miniApp.organizationId`).
+2. **If an Engineer Does Not Have an Account Yet**:
+   - They must complete the official registration process (`/signup`).
+   - The account enters `status = 'PENDING_APPROVAL'`.
+   - The SuperAdmin or Organization Admin formally reviews and approves the account.
+   - Once `status = 'ACTIVE'`, the MiniApp Owner can immediately find and assign them in the **Team & Collaborators** tab.
+3. **Shareable Invite Link Token Verification Guard (`GET /api/mini-apps/:id/invite-token`)**:
+   - When a recipient opens an invite link (`/miniapps/:id/join?token=...`):
+     - **Auth Check**: Recipient must be logged in. If unauthenticated, redirect to `/login`.
+     - **Status Check**: Enforce `user.status === 'ACTIVE'`. Non-approved users are denied.
+     - **Agency Firewall**: Enforce `user.organizationId === miniApp.organizationId`. Users from other agencies are rejected with `403 Forbidden`.
+     - **Enrollment**: Only upon passing all three guards is the record written to `mini_app_collaborators`.
+
+---
+
+#### C. Sharing Scope Resolution Rules
 
 ```typescript
 // 1. Cross-Agency Strict Firewall (Enforced on all requests)
@@ -561,7 +597,7 @@ if (user.id === miniApp.ownerId || ['SUPER_ADMIN', 'ADMIN'].includes(user.role))
 
 // 3. Evaluate Sharing Scope for Teammates
 if (miniApp.sharingScope === 'ORGANIZATION') {
-  return true; // All teammates in same org can collaborate
+  return true; // All verified teammates in same org can view/collaborate
 }
 
 if (miniApp.sharingScope === 'CUSTOM') {
@@ -572,7 +608,7 @@ if (miniApp.sharingScope === 'CUSTOM') {
   return true;
 }
 
-// Default 'PRIVATE': Only ownerId and Admins can view/edit
+// Default 'PRIVATE': Only ownerId and Platform Admins can view/edit
 throw new ForbiddenException("This MiniApp is a Private Draft");
 ```
 
