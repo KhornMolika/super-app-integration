@@ -36,7 +36,9 @@ export default function NotificationsPage() {
   const fetchNotifications = useCallback(async () => {
     try {
       const data = await notificationsApi.getAll();
-      setNotifications(Array.isArray(data) ? data : (data as any)?.data || []);
+      const rawList = Array.isArray(data) ? data : (data as any)?.data || [];
+      const list = rawList.filter((n: any) => n && typeof n.id === 'string' && n.id !== 'undefined');
+      setNotifications(list);
     } catch (err) {
       console.error('Failed to load notifications:', err);
     } finally {
@@ -44,7 +46,10 @@ export default function NotificationsPage() {
     }
   }, []);
 
-  const handleNewNotification = useCallback((newNotif: any) => {
+  const handleNewNotification = useCallback((raw: any) => {
+    if (!raw) return;
+    const newNotif = raw?.data?.id ? raw.data : raw;
+    if (!newNotif?.id || newNotif.id === 'undefined') return;
     setNotifications((prev) => {
       if (prev.some((n) => n.id === newNotif.id)) {
         return prev.map((n) => (n.id === newNotif.id ? newNotif : n));
@@ -60,6 +65,7 @@ export default function NotificationsPage() {
   }, [fetchNotifications]);
 
   const handleMarkAsRead = async (id: string) => {
+    if (!id || id === 'undefined' || id === 'null') return;
     try {
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
@@ -86,6 +92,7 @@ export default function NotificationsPage() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!id || id === 'undefined' || id === 'null') return;
     try {
       setNotifications((prev) => prev.filter((n) => n.id !== id));
       await notificationsApi.delete(id);
@@ -101,6 +108,7 @@ export default function NotificationsPage() {
     if ((e.target as HTMLElement).closest('button, a')) {
       return;
     }
+    if (!item?.id || item.id === 'undefined') return;
     if (!item.isRead) {
       handleMarkAsRead(item.id);
     }
@@ -410,12 +418,13 @@ export default function NotificationsPage() {
         </div>
       ) : (
         <div className="bg-white dark:bg-slate-800/50 rounded-2xl shadow-xs border border-slate-200 dark:border-slate-700/50 overflow-hidden divide-y divide-slate-100 dark:divide-slate-700/40">
-          {filteredNotifications.map((item) => {
+          {filteredNotifications.map((item, idx) => {
             const style = getNotificationTypeStyle(item.type, item.title);
+            const itemKey = item.id || `notif-page-${idx}-${item.createdAt || ''}`;
 
             return (
               <div
-                key={item.id}
+                key={itemKey}
                 onClick={(e) => handleCardClick(e, item)}
                 className={`group relative px-4 py-3 sm:px-5 sm:py-3.5 transition-all duration-150 flex items-center justify-between gap-3.5 cursor-pointer ${
                   !item.isRead

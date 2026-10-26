@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient, unwrapData } from './client';
 
 export interface NotificationItem {
   id: string;
@@ -22,23 +22,35 @@ export interface NotificationItem {
 
 export const notificationsApi = {
   getAll: () =>
-    apiClient<NotificationItem[]>('/api/mini-apps/notifications'),
+    apiClient<any>('/api/mini-apps/notifications').then((res) => unwrapData<NotificationItem>(res)),
 
-  getById: (id: string) =>
-    apiClient<NotificationItem>(`/api/mini-apps/notifications/${id}`),
+  getById: (id: string) => {
+    if (!id || id === 'undefined' || id === 'null') {
+      return Promise.reject(new Error('Invalid notification ID'));
+    }
+    return apiClient<NotificationItem>(`/api/mini-apps/notifications/${id}`);
+  },
 
-  markAsRead: (id: string) =>
-    apiClient<{ success: boolean }>(`/api/mini-apps/notifications/${id}/mark-read`, {
+  markAsRead: (id: string) => {
+    if (!id || id === 'undefined' || id === 'null') {
+      return Promise.resolve({ success: false });
+    }
+    return apiClient<{ success: boolean }>(`/api/mini-apps/notifications/${id}/mark-read`, {
       method: 'POST',
-    }),
+    });
+  },
 
   markAllAsRead: () =>
     apiClient<{ success: boolean }>('/api/mini-apps/notifications/mark-all-read', {
       method: 'POST',
     }),
 
-  delete: (id: string) =>
-    apiClient<{ success: boolean }>(`/api/mini-apps/notifications/${id}`, {
+  delete: (id: string) => {
+    if (!id || id === 'undefined' || id === 'null') {
+      return Promise.resolve({ success: false });
+    }
+    return apiClient<{ success: boolean }>(`/api/mini-apps/notifications/${id}`, {
       method: 'DELETE',
-    }),
+    });
+  },
 };

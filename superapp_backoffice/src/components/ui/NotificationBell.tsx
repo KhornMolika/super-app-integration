@@ -23,7 +23,9 @@ export function NotificationBell() {
   const fetchNotifications = async () => {
     try {
       const data = await notificationsApi.getAll();
-      setNotifications(Array.isArray(data) ? data : (data as any)?.data || []);
+      const rawList = Array.isArray(data) ? data : (data as any)?.data || [];
+      const validList = rawList.filter((n: any) => n && typeof n === 'object' && n.id);
+      setNotifications(validList);
     } catch (error) {
       console.error('Failed to fetch initial notifications', error);
     } finally {
@@ -32,11 +34,19 @@ export function NotificationBell() {
   };
 
   const handleNewNotification = useCallback((notificationData: any) => {
+    // Normalize payload in case backend emitted { type: 'notification.created', data: saved }
+    const item: NotificationItem =
+      notificationData?.data && typeof notificationData.data === 'object' && notificationData.data.id
+        ? notificationData.data
+        : notificationData;
+
+    if (!item || !item.id || item.id === 'undefined') return;
+
     setNotifications((prev) => {
-      if (prev.some((n) => n.id === notificationData.id)) {
-        return prev.map((n) => (n.id === notificationData.id ? notificationData : n));
+      if (prev.some((n) => n.id === item.id)) {
+        return prev.map((n) => (n.id === item.id ? item : n));
       }
-      return [notificationData, ...prev];
+      return [item, ...prev];
     });
   }, []);
 
@@ -94,6 +104,7 @@ export function NotificationBell() {
   };
 
   const handleItemClick = (item: NotificationItem) => {
+    if (!item?.id || item.id === 'undefined') return;
     // 1. Mark as read immediately if unread
     if (!item.isRead) {
       setNotifications((prev) =>
@@ -109,6 +120,7 @@ export function NotificationBell() {
 
   const handleQuickNavigate = (e: React.MouseEvent, item: NotificationItem) => {
     e.stopPropagation();
+    if (!item?.id || item.id === 'undefined') return;
     if (!item.isRead) {
       setNotifications((prev) =>
         prev.map((n) => (n.id === item.id ? { ...n, isRead: true } : n))
@@ -210,14 +222,15 @@ export function NotificationBell() {
                 </p>
               </div>
             ) : (
-              displayedNotifications.map((item) => {
+              displayedNotifications.map((item, idx) => {
                 const style = getNotificationTypeStyle(item.type, item.title);
                 const target = getNotificationTarget(item);
                 const showQuickAction = target.href !== '/notifications' || target.isExternal;
+                const itemKey = item.id || `notif-bell-${idx}-${item.createdAt || ''}`;
 
                 return (
                   <div
-                    key={item.id}
+                    key={itemKey}
                     onClick={() => handleItemClick(item)}
                     className={`p-3 sm:p-3.5 transition-all duration-150 flex items-start gap-3 cursor-pointer group hover:bg-slate-50 dark:hover:bg-slate-800/70 ${
                       !item.isRead ? 'bg-brand-50/20 dark:bg-slate-800/40' : ''

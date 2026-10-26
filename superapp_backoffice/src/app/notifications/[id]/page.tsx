@@ -17,12 +17,13 @@ import {
 export default function NotificationDetailPage() {
   const router = useRouter();
   const routeParams = useParams();
-  const id =
+  const rawId =
     (typeof routeParams?.id === 'string'
       ? routeParams.id
       : Array.isArray(routeParams?.id)
       ? routeParams.id[0]
       : '') || '';
+  const id = rawId && rawId !== 'undefined' && rawId !== 'null' ? rawId : '';
 
   const [notification, setNotification] = useState<NotificationItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -31,13 +32,16 @@ export default function NotificationDetailPage() {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const fetchNotification = useCallback(async () => {
-    if (!id) return;
+    if (!id) {
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     try {
       // 1. Try single item endpoint
       try {
         const item = await notificationsApi.getById(id);
-        if (item && item.id) {
+        if (item && item.id && item.id !== 'undefined') {
           setNotification(item);
           // Auto-mark as read on open if currently unread
           if (!item.isRead) {
@@ -53,11 +57,11 @@ export default function NotificationDetailPage() {
       // 2. Fallback to searching getAll() list
       const all = await notificationsApi.getAll();
       const list = Array.isArray(all) ? all : (all as any)?.data || [];
-      const found = list.find((n: NotificationItem) => n.id === id);
+      const found = list.find((n: NotificationItem) => n && n.id === id);
 
       if (found) {
         setNotification(found);
-        if (!found.isRead) {
+        if (!found.isRead && found.id && found.id !== 'undefined') {
           notificationsApi.markAsRead(found.id).catch(() => {});
           setNotification((prev) => (prev ? { ...prev, isRead: true } : null));
         }
@@ -79,8 +83,9 @@ export default function NotificationDetailPage() {
   // Handle live WebSocket updates for this notification
   const handleLiveEvent = useCallback(
     (eventData: any) => {
-      if (eventData?.id === id) {
-        setNotification((prev) => (prev ? { ...prev, ...eventData } : eventData));
+      const payload = eventData?.data?.id ? eventData.data : eventData;
+      if (payload?.id && id && payload.id === id) {
+        setNotification((prev) => (prev ? { ...prev, ...payload } : payload));
       }
     },
     [id]
@@ -88,7 +93,7 @@ export default function NotificationDetailPage() {
   useNotificationSocket(handleLiveEvent);
 
   const handleToggleReadStatus = async () => {
-    if (!notification || isActionPending) return;
+    if (!notification || !notification.id || notification.id === 'undefined' || isActionPending) return;
     setIsActionPending(true);
     const newStatus = !notification.isRead;
     try {
@@ -109,7 +114,7 @@ export default function NotificationDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!notification || isActionPending) return;
+    if (!notification || !notification.id || notification.id === 'undefined' || isActionPending) return;
     setIsActionPending(true);
     try {
       await notificationsApi.delete(notification.id);

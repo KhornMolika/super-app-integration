@@ -1,8 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 
 export function useNotificationSocket(onNotification: (notification: any) => void) {
   const [isConnected, setIsConnected] = useState(false);
+  const callbackRef = useRef(onNotification);
+
+  useEffect(() => {
+    callbackRef.current = onNotification;
+  }, [onNotification]);
 
   useEffect(() => {
     let socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -34,13 +39,15 @@ export function useNotificationSocket(onNotification: (notification: any) => voi
     });
 
     socket.on('notification.created', (data) => {
-      onNotification(data);
+      if (callbackRef.current) {
+        callbackRef.current(data);
+      }
     });
 
     return () => {
       socket.disconnect();
     };
-  }, [onNotification]);
+  }, []);
 
   return { isConnected };
 }
