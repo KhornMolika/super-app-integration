@@ -64,6 +64,7 @@ export default function TeamForm({
   const [collaborators, setCollaborators] = useState<any[]>(formData.collaborators || []);
   const [loadingCollaborators, setLoadingCollaborators] = useState(false);
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
+  const [collaboratorToDelete, setCollaboratorToDelete] = useState<any | null>(null);
 
   // Method A: Direct In-Agency Selection Modal States
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -79,9 +80,9 @@ export default function TeamForm({
     setMounted(true);
   }, []);
 
-  // Prevent background scrolling when modal is open
+  // Prevent background scrolling when either modal is open
   useEffect(() => {
-    if (isAddModalOpen) {
+    if (isAddModalOpen || Boolean(collaboratorToDelete)) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'auto';
@@ -89,7 +90,7 @@ export default function TeamForm({
     return () => {
       document.body.style.overflow = 'auto';
     };
-  }, [isAddModalOpen]);
+  }, [isAddModalOpen, collaboratorToDelete]);
 
   const resolvedOrgId =
     formData.organizationId ||
@@ -171,34 +172,102 @@ export default function TeamForm({
   const handleInviteCollaborator = async () => {
     if (!formData.id || !selectedUser) return;
     setIsInviting(true);
+
+    const userToAdd = selectedUser;
+    const roleToAdd = selectedRole;
+
+    // 1. Immediately create optimistic collaborator entity
+    const newCollab = {
+      id: `collab-${userToAdd.id}`,
+      miniAppId: formData.id,
+      userId: userToAdd.id,
+      role: roleToAdd,
+      user: userToAdd,
+      createdAt: new Date().toISOString(),
+    };
+
+    // 2. Immediately close modal & reset selection
+    setIsAddModalOpen(false);
+    setSelectedUser(null);
+    setSearchQuery('');
+    setSelectedRole('DEVELOPER');
+
+    // 3. Immediately update local state so "No additional collaborators yet" vanishes instantly (0ms)
+    setCollaborators((prev) => {
+      const filtered = prev.filter((c) => c.userId !== userToAdd.id && c.user?.id !== userToAdd.id);
+      return [...filtered, newCollab];
+    });
+
+    if (setFormData) {
+      setFormData((prev: any) => ({
+        ...prev,
+        collaborators: [
+          ...(prev.collaborators || []).filter((c: any) => c.userId !== userToAdd.id && c.user?.id !== userToAdd.id),
+          newCollab,
+        ],
+      }));
+    }
+
+    // 4. Send persistent API request
     try {
-      await miniappsApi.addCollaborator(formData.id, selectedUser.id, selectedRole);
+      const res = await miniappsApi.addCollaborator(formData.id, userToAdd.id, roleToAdd);
       toast.success(
-        `${selectedUser.name || selectedUser.email} has been added as ${selectedRole}!`,
+        `${userToAdd.name || userToAdd.email} has been added as ${roleToAdd}!`,
         'Collaborator Added',
       );
-      const updated = await miniappsApi.getCollaborators(formData.id);
-      if (Array.isArray(updated)) {
-        setCollaborators(updated);
+
+      // If backend returned the persisted entity with real ID, update it
+      if (res && (res as any).id) {
+        setCollaborators((prev) =>
+          prev.map((c) => (c.userId === userToAdd.id ? { ...c, ...(res as any) } : c)),
+        );
       }
-      setIsAddModalOpen(false);
-      setSelectedUser(null);
-      setSearchQuery('');
-      setSelectedRole('DEVELOPER');
+
+      // Reconcile with latest server data in background
+      miniappsApi.getCollaborators(formData.id).then((updated) => {
+        if (Array.isArray(updated) && updated.length > 0) {
+          setCollaborators(updated);
+        }
+      }).catch(() => {});
     } catch (err: any) {
+      // Roll back optimistic state if API failed
+      setCollaborators((prev) => prev.filter((c) => c.userId !== userToAdd.id && c.user?.id !== userToAdd.id));
+      if (setFormData) {
+        setFormData((prev: any) => ({
+          ...prev,
+          collaborators: (prev.collaborators || []).filter(
+            (c: any) => c.userId !== userToAdd.id && c.user?.id !== userToAdd.id,
+          ),
+        }));
+      }
       toast.error(err?.message || 'Failed to add collaborator.', 'Error');
     } finally {
       setIsInviting(false);
     }
   };
 
-  const handleRemoveCollaborator = async (userId: string) => {
-    if (!formData.id) return;
-    setRemovingUserId(userId);
+  const handleConfirmDeleteCollaborator = async () => {
+    if (!formData.id || !collaboratorToDelete) return;
+    const targetUserId = collaboratorToDelete.userId || collaboratorToDelete.user?.id || collaboratorToDelete.id;
+    setRemovingUserId(targetUserId);
     try {
-      await miniappsApi.removeCollaborator(formData.id, userId);
-      toast.success('Collaborator removed.', 'Success');
-      setCollaborators((prev) => prev.filter((c) => c.userId !== userId && c.user?.id !== userId));
+      await miniappsApi.removeCollaborator(formData.id, targetUserId);
+      toast.success(
+        `${collaboratorToDelete.user?.name || collaboratorToDelete.user?.email || 'Collaborator'} removed.`,
+        'Collaborator Removed',
+      );
+      setCollaborators((prev) =>
+        prev.filter((c) => c.userId !== targetUserId && c.user?.id !== targetUserId && c.id !== targetUserId),
+      );
+      if (setFormData) {
+        setFormData((prev: any) => ({
+          ...prev,
+          collaborators: (prev.collaborators || []).filter(
+            (c: any) => c.userId !== targetUserId && c.user?.id !== targetUserId && c.id !== targetUserId,
+          ),
+        }));
+      }
+      setCollaboratorToDelete(null);
     } catch (err: any) {
       toast.error(err?.message || 'Failed to remove collaborator.', 'Error');
     } finally {
@@ -527,9 +596,8 @@ export default function TeamForm({
                     type="email"
                     placeholder="e.g. molika@agency.gov"
                     disabled={!isEditable}
-                    className={`mt-1 ${
-                      allErrors.ownerEmail ? 'border-rose-500 ring-1 ring-rose-500 bg-rose-50/50' : ''
-                    }`}
+                    className={`mt-1 ${allErrors.ownerEmail ? 'border-rose-500 ring-1 ring-rose-500 bg-rose-50/50' : ''
+                      }`}
                   />
                   {allErrors.ownerEmail && (
                     <p className="mt-1 text-xs text-rose-600 font-medium">{allErrors.ownerEmail}</p>
@@ -543,7 +611,7 @@ export default function TeamForm({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <Label>Team / Department Name</Label>
+                <Label>Organization Name</Label>
                 <span className="text-xs text-slate-400 font-medium">Optional</span>
               </div>
               <Input
@@ -712,7 +780,7 @@ export default function TeamForm({
 
                         <button
                           type="button"
-                          onClick={() => handleRemoveCollaborator(collab.userId || userObj.id)}
+                          onClick={() => setCollaboratorToDelete(collab)}
                           disabled={isRemoving}
                           className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 transition-colors cursor-pointer"
                           title="Remove collaborator"
@@ -862,11 +930,10 @@ export default function TeamForm({
                     <button
                       type="button"
                       onClick={() => updateField('teamTelegramChatId', telegramStatus.user.teamTelegramChatId)}
-                      className={`px-2.5 py-1 rounded-lg border text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
-                        currentChatId === telegramStatus.user.teamTelegramChatId
+                      className={`px-2.5 py-1 rounded-lg border text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${currentChatId === telegramStatus.user.teamTelegramChatId
                           ? 'bg-sky-50 dark:bg-sky-950/60 border-sky-400 text-sky-700 dark:text-sky-300 font-semibold'
                           : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-sky-300'
-                      }`}
+                        }`}
                     >
                       <BuildingIcon className="w-3 h-3 text-sky-500" />
                       <span>Profile Group ({telegramStatus.user.teamTelegramChatId})</span>
@@ -876,11 +943,10 @@ export default function TeamForm({
                     <button
                       type="button"
                       onClick={() => updateField('teamTelegramChatId', telegramStatus.user.telegramChatId)}
-                      className={`px-2.5 py-1 rounded-lg border text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
-                        currentChatId === telegramStatus.user.telegramChatId
+                      className={`px-2.5 py-1 rounded-lg border text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${currentChatId === telegramStatus.user.telegramChatId
                           ? 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-400 text-indigo-700 dark:text-indigo-300 font-semibold'
                           : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-300'
-                      }`}
+                        }`}
                     >
                       <UserIcon className="w-3 h-3 text-indigo-500" />
                       <span>Personal Chat ({telegramStatus.user.telegramChatId})</span>
@@ -944,11 +1010,10 @@ export default function TeamForm({
                           key={group.id}
                           type="button"
                           onClick={() => updateField('teamTelegramChatId', group.id)}
-                          className={`p-2.5 rounded-lg border text-left flex items-center justify-between gap-2 transition-all select-none cursor-pointer ${
-                            isSelected
+                          className={`p-2.5 rounded-lg border text-left flex items-center justify-between gap-2 transition-all select-none cursor-pointer ${isSelected
                               ? 'bg-sky-50 dark:bg-sky-950/40 border-sky-500 ring-2 ring-sky-500/20'
                               : 'bg-slate-50/70 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 hover:border-sky-300'
-                          }`}
+                            }`}
                         >
                           <div className="min-w-0 flex-1">
                             <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate flex items-center gap-1.5">
@@ -1374,6 +1439,100 @@ export default function TeamForm({
                   <>
                     <PlusCircleIcon className="w-3.5 h-3.5" />
                     <span>Invite</span>
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Deletion Confirmation Modal */}
+      {mounted && collaboratorToDelete && createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 bg-slate-950/75 backdrop-blur-sm animate-in fade-in duration-150">
+          <div
+            className="fixed inset-0"
+            onClick={() => !removingUserId && setCollaboratorToDelete(null)}
+          />
+
+          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-6 space-y-4 my-auto -translate-y-6 sm:-translate-y-10 transition-all">
+            {/* Modal Header */}
+            <div className="flex items-start gap-3.5">
+              <div className="w-11 h-11 rounded-2xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 shadow-xs border border-rose-200/80 dark:border-rose-900/60">
+                <svg className="w-5 h-5 text-rose-600 dark:text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                  Remove Collaborator?
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                  Are you sure you want to remove this collaborator from this MiniApp?
+                </p>
+              </div>
+            </div>
+
+            {/* Collaborator Card Preview */}
+            <div className="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-800/70 border border-slate-200/90 dark:border-slate-700/80 flex items-center justify-between gap-3 shadow-2xs">
+              <div className="flex items-center gap-3 min-w-0">
+                <div
+                  className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 shadow-xs ${getAvatarColor(
+                    collaboratorToDelete.user?.name || collaboratorToDelete.user?.email || 'U',
+                  )}`}
+                >
+                  {(collaboratorToDelete.user?.name || collaboratorToDelete.user?.email || 'U').charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                    {collaboratorToDelete.user?.name || 'Teammate'}
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                    {collaboratorToDelete.user?.email || collaboratorToDelete.userId}
+                  </div>
+                </div>
+              </div>
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 shrink-0">
+                {collaboratorToDelete.role || 'DEVELOPER'}
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              They will immediately lose access to co-develop, push revisions, trigger test builds, and inspect security telemetry.
+            </p>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={Boolean(removingUserId)}
+                onClick={() => setCollaboratorToDelete(null)}
+                className="text-xs px-4 h-9 font-medium cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                disabled={Boolean(removingUserId)}
+                onClick={handleConfirmDeleteCollaborator}
+                className="text-xs px-4 h-9 font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {removingUserId ? (
+                  <>
+                    <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                    <span>Removing...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <span>Remove Collaborator</span>
                   </>
                 )}
               </Button>
