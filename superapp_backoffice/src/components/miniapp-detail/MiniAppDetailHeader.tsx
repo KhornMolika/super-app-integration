@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Button } from '@/components/ui/inputs';
 import { IntegrationMethod } from '@/types/miniapp.types';
 import { BuildingIcon } from '@/components/ui/Icons';
 import { AppLogoAvatar } from '@/components/ui/AppLogoAvatar';
@@ -152,26 +151,6 @@ export default function MiniAppDetailHeader({
       </div>
       {/* Header Actions */}
       <div className="flex items-center space-x-2.5">
-        {/* Edit Configuration Action */}
-        {can('miniapp:update') && (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onToggleEditing}
-            className="h-10 px-4 text-sm font-medium transition-all border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
-          >
-            <svg className="w-3.5 h-3.5 mr-1.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-              />
-            </svg>
-            <span>Edit Configuration</span>
-          </Button>
-        )}
-
         {/* More Actions Dropdown (...) */}
         <div className="relative" ref={actionsMenuRef}>
           <button
@@ -193,7 +172,31 @@ export default function MiniAppDetailHeader({
 
           {showActionsMenu && (
             <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 divide-y divide-slate-100 dark:divide-slate-800/60">
-              {/* Section 1: Testing & Simulation Actions */}
+              {/* Section 1: Edit Configuration */}
+              {can('miniapp:update') && onToggleEditing && (
+                <div className="py-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowActionsMenu(false);
+                      onToggleEditing();
+                    }}
+                    className="w-full text-left px-3.5 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center space-x-2.5 font-medium transition-colors cursor-pointer"
+                  >
+                    <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                    <span>Edit Configuration</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Section 2: Testing & Simulation Actions */}
               {onOpenSandbox && (
                 <div className="py-1">
                   <div className="px-3.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
