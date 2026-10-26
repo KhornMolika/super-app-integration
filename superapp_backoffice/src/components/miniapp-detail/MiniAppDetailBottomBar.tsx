@@ -27,6 +27,8 @@ export function MiniAppDetailBottomBar({
     return null;
   }
 
+  const isActionDisabled = !isEditingUnlocked || isSubmitting;
+
   return (
     <div className="sticky bottom-6 z-30 mt-8 p-4 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 shadow-xl flex items-center justify-between gap-4 animate-in slide-in-from-bottom-2 duration-200">
       {isEditingUnlocked ? (
@@ -57,29 +59,50 @@ export function MiniAppDetailBottomBar({
             Cancel
           </Button>
         )}
-        <Button
+        <button
           type="button"
-          variant="outline"
           onClick={onSaveDraft}
-          disabled={!isEditingUnlocked || isSubmitting}
-          className="h-10 px-5 text-sm font-semibold flex items-center gap-2 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent text-slate-700 dark:text-slate-300"
+          disabled={isActionDisabled}
+          className={`h-10 px-5 text-sm font-semibold rounded-xl flex items-center gap-2 border transition-all ${
+            isActionDisabled
+              ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700/60 cursor-not-allowed shadow-none'
+              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-xs cursor-pointer'
+          }`}
         >
-          <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            className={`w-4 h-4 transition-colors ${
+              isActionDisabled ? 'text-slate-400 dark:text-slate-500' : 'text-slate-500 dark:text-slate-400'
+            }`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
           </svg>
           <span>Save as Draft</span>
-        </Button>
-        <Button
+        </button>
+        <button
           type="button"
           onClick={onSaveAndSubmit}
-          disabled={!isEditingUnlocked || isSubmitting}
-          className="h-10 px-5 text-sm font-semibold flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-brand-600 disabled:shadow-none"
+          disabled={isActionDisabled}
+          className={`h-10 px-5 text-sm font-semibold rounded-xl flex items-center gap-2 border transition-all ${
+            isActionDisabled
+              ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700/60 cursor-not-allowed shadow-none'
+              : 'bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white border-transparent shadow-md shadow-brand-500/20 cursor-pointer'
+          }`}
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            className={`w-4 h-4 transition-colors ${
+              isActionDisabled ? 'text-slate-400 dark:text-slate-500' : 'text-white'
+            }`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
           </svg>
           <span>{isSubmitting ? 'Saving...' : 'Save & Submit Changes'}</span>
-        </Button>
+        </button>
       </div>
     </div>
   );
