@@ -157,7 +157,7 @@ function ManageMiniAppContent() {
           latestTestVersion={latestTestVersion}
           isEditingUnlocked={isEditingUnlocked}
           onToggleEditing={() => {
-            setIsEditingUnlocked(true);
+            setIsEditingUnlocked((prev) => !prev);
             const el = document.querySelector('form') || document.querySelector('input');
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }}
@@ -226,7 +226,8 @@ function ManageMiniAppContent() {
 
         {/* Save Changes Floating Bottom Bar */}
         <MiniAppDetailBottomBar
-          isEditable={isEditable}
+          isEditingUnlocked={isEditingUnlocked}
+          canEdit={can('miniapp:update')}
           activeTab={activeTab}
           isSubmitting={isSubmitting}
           onSaveDraft={(e) => handleSave(e, true)}

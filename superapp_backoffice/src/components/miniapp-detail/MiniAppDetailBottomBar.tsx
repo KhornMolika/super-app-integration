@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/inputs';
 import type { MiniAppTabType } from '@/components/miniapp-detail/MiniAppDetailTabs';
 
 interface MiniAppDetailBottomBarProps {
-  isEditable: boolean;
+  isEditingUnlocked: boolean;
+  canEdit?: boolean;
   activeTab: MiniAppTabType;
   isSubmitting: boolean;
   onSaveDraft: (e: React.FormEvent) => void;
@@ -13,28 +14,42 @@ interface MiniAppDetailBottomBarProps {
 }
 
 export function MiniAppDetailBottomBar({
-  isEditable,
+  isEditingUnlocked,
+  canEdit = true,
   activeTab,
   isSubmitting,
   onSaveDraft,
   onSaveAndSubmit,
 }: MiniAppDetailBottomBarProps) {
-  if (!isEditable || activeTab === 'report' || activeTab === 'activity' || activeTab === 'versions') {
+  if (!canEdit || activeTab === 'report' || activeTab === 'activity' || activeTab === 'versions') {
     return null;
   }
 
   return (
     <div className="sticky bottom-6 z-30 mt-8 p-4 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 shadow-xl flex items-center justify-between gap-4 animate-in slide-in-from-bottom-2 duration-200">
-      <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-        Save changes when you are done
-      </div>
+      {isEditingUnlocked ? (
+        <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span>Editing configuration unlocked — save changes when you are done</span>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
+          <svg className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+          <span>
+            Configuration is locked. Click <span className="font-semibold text-slate-700 dark:text-slate-300">... &gt; Edit Configuration</span> to make changes.
+          </span>
+        </div>
+      )}
+
       <div className="flex items-center gap-2.5">
         <Button
           type="button"
           variant="outline"
           onClick={onSaveDraft}
-          disabled={isSubmitting}
-          className="h-10 px-5 text-sm font-semibold flex items-center gap-2 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+          disabled={!isEditingUnlocked || isSubmitting}
+          className="h-10 px-5 text-sm font-semibold flex items-center gap-2 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent text-slate-700 dark:text-slate-300"
         >
           <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
@@ -44,8 +59,8 @@ export function MiniAppDetailBottomBar({
         <Button
           type="button"
           onClick={onSaveAndSubmit}
-          disabled={isSubmitting}
-          className="h-10 px-5 text-sm font-semibold flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20"
+          disabled={!isEditingUnlocked || isSubmitting}
+          className="h-10 px-5 text-sm font-semibold flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-brand-600 disabled:shadow-none"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />

@@ -138,7 +138,7 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
   }, {} as Record<string, string>);
 
   const hasErrors = Object.keys(allErrors).length > 0;
-  const isEditable = can('miniapp:update') && (formData.status === 'DRAFT' || formData.status === 'REJECTED' || isEditingUnlocked);
+  const isEditable = can('miniapp:update') && isEditingUnlocked;
 
   // Fetch MiniApp Configuration
   const fetchApp = useCallback(async (isRetry = false, isSilent = false) => {
@@ -659,6 +659,7 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
         if (isDraftOnly) {
           toast.success('Draft saved successfully.', 'Draft Saved');
           setIsSubmitting(false);
+          setIsEditingUnlocked(false);
           fetchApp();
           return;
         }
@@ -667,6 +668,7 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
           toast.success('General information updated live instantly (Fast-Track applied).', 'Updated Live');
           setModalState({ isOpen: false, status: 'success' });
           setIsSubmitting(false);
+          setIsEditingUnlocked(false);
           fetchApp();
           return;
         }
@@ -696,6 +698,7 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
                 });
                 clearInterval(pollTimer);
                 setIsSubmitting(false);
+                setIsEditingUnlocked(false);
                 fetchApp();
               }
             }
@@ -705,6 +708,7 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
             clearInterval(pollTimer);
             setModalState({ isOpen: false, status: 'success' });
             setIsSubmitting(false);
+            setIsEditingUnlocked(false);
             fetchApp();
           }
         }, 1000);
