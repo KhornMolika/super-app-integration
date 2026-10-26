@@ -19,7 +19,7 @@ import VersionHistoryTab from '@/components/miniapp-detail/VersionHistoryTab';
 import MiniAppDetailHeader from '@/components/miniapp-detail/MiniAppDetailHeader';
 
 import MiniAppLifecycleBanners from '@/components/miniapp-detail/MiniAppLifecycleBanners';
-import MiniAppDetailTabs, { MiniAppTabType } from '@/components/miniapp-detail/MiniAppDetailTabs';
+import type { MiniAppTabType } from '@/components/miniapp-detail/MiniAppDetailTabs';
 import { RevisionReviewModal } from '@/components/review/RevisionReviewModal';
 import ReasonPromptModal from '@/components/ui/ReasonPromptModal';
 import BuildProgressModal, { BuildProgressModalState } from '@/components/ui/BuildProgressModal';
@@ -115,10 +115,6 @@ function ManageMiniAppContent({ params: _params }: { params?: Promise<{ id: stri
     }
   }, [tabQuery]);
 
-  const handleSelectTab = (tab: MiniAppTabType) => {
-    setActiveTab(tab);
-    router.replace(`/miniapps/${id}?tab=${tab}`, { scroll: false });
-  };
   const [customPermission, setCustomPermission] = useState('');
   const [isEditingUnlocked, setIsEditingUnlocked] = useState(false);
   const [latestTestVersion, setLatestTestVersion] = useState<string>('v0.0.1');
@@ -1253,16 +1249,8 @@ function ManageMiniAppContent({ params: _params }: { params?: Promise<{ id: stri
           }
         />
 
-        {/* Tab Navigation List */}
-        <MiniAppDetailTabs
-          activeTab={activeTab}
-          onSelectTab={handleSelectTab}
-          allErrors={allErrors}
-          validationStatus={formData.validationStatus}
-        />
-
-        {/* Tab Contents */}
-        <div className="mt-6">
+        {/* Section Contents */}
+        <div>
           {activeTab === 'overview' && (
             <Card>
               <CardHeader
