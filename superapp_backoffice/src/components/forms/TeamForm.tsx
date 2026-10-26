@@ -49,6 +49,8 @@ export default function TeamForm({
   const [isTesting, setIsTesting] = useState(false);
   const [isTestingEmail, setIsTestingEmail] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  const [isEditingOwner, setIsEditingOwner] = useState(false);
+  const [isEditingTelegram, setIsEditingTelegram] = useState(false);
 
   // Auto-Detect & User Profile Telegram states
   const [telegramStatus, setTelegramStatus] = useState<any>(null);
@@ -396,11 +398,13 @@ export default function TeamForm({
 
   const userHasTeamChat = Boolean(telegramStatus?.user?.teamTelegramChatId);
   const userHasDirectChat = Boolean(telegramStatus?.user?.telegramChatId);
+  const currentChatId = (formData.teamTelegramChatId || formData.alertTelegramChatId || '').trim();
+  const isConnected = Boolean(currentChatId);
 
   return (
     <>
       <div className="space-y-6">
-        {/* Card 1: Team & Ownership Details */}
+        {/* Card 1: Publisher & Support Contacts */}
         <div className="rounded-2xl border border-slate-200 dark:border-slate-800 p-5 bg-white dark:bg-slate-900/60 shadow-xs space-y-4">
           <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800">
             <div className="w-8 h-8 rounded-lg bg-brand-500/10 text-brand-500 flex items-center justify-center">
@@ -408,32 +412,86 @@ export default function TeamForm({
             </div>
             <div>
               <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                Team &amp; Support Contacts
+                Publisher &amp; Support Contacts
               </h4>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Primary agency contacts responsible for administrative ownership, support, and notifications.
+                Primary agency contacts responsible for administrative ownership, support, and public listing.
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <Label>Team Name</Label>
-                <span className="text-xs text-slate-400 font-medium">Optional</span>
+          {/* Administrative Owner & Creator Strip */}
+          <div className="p-3.5 rounded-xl bg-slate-50/70 dark:bg-slate-800/60 border border-slate-200/90 dark:border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-3 min-w-0">
+              <div
+                className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 shadow-xs ${getAvatarColor(
+                  formData.ownerName || formData.owner?.name || telegramStatus?.user?.name || 'O',
+                )}`}
+              >
+                {(formData.ownerName || formData.owner?.name || telegramStatus?.user?.name || 'O')
+                  .charAt(0)
+                  .toUpperCase()}
               </div>
-              <Input
-                name="teamName"
-                value={formData.teamName || ''}
-                onChange={handleChange}
-                placeholder="e.g. Core Banking Team"
-                disabled={!isEditable}
-              />
+              <div className="min-w-0">
+                <div className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 flex-wrap">
+                  <span className="truncate">
+                    {formData.ownerName || formData.owner?.name || telegramStatus?.user?.name || 'Administrative Owner'}
+                  </span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand-100 dark:bg-brand-950/70 text-brand-800 dark:text-brand-300 font-bold uppercase tracking-wider border border-brand-200 dark:border-brand-900/60">
+                    Primary Creator
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                  {formData.ownerEmail || formData.owner?.email || telegramStatus?.user?.email || 'No email configured'}
+                </div>
+              </div>
             </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <Label>Owner Name</Label>
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+              {formData.ownerEmail && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleTestEmail}
+                  disabled={isTestingEmail}
+                  className="text-xs px-2.5 py-1 h-7.5 flex items-center gap-1.5 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                  title="Send a verification test email to owner"
+                >
+                  <svg
+                    className={`w-3.5 h-3.5 ${isTestingEmail ? 'animate-spin' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                    />
+                  </svg>
+                  <span>{isTestingEmail ? 'Sending...' : 'Send Test Email'}</span>
+                </Button>
+              )}
+              {isEditable && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingOwner(!isEditingOwner)}
+                  className="text-xs text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 font-semibold px-2.5 py-1 rounded-lg border border-brand-200 dark:border-brand-800/80 bg-brand-50/60 dark:bg-brand-950/40 hover:bg-brand-100/60 transition-colors cursor-pointer"
+                >
+                  {isEditingOwner ? 'Done' : 'Edit Creator'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Edit Creator Details Form (Collapsible) */}
+          {(isEditingOwner || !formData.ownerEmail) && (
+            <div className="p-3.5 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/40 space-y-3 animate-in fade-in duration-150">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Update Creator Credentials
+                </span>
                 {telegramStatus?.user?.name && isEditable && (
                   <button
                     type="button"
@@ -445,60 +503,83 @@ export default function TeamForm({
                   </button>
                 )}
               </div>
-              <Input
-                name="ownerName"
-                value={formData.ownerName || ''}
-                onChange={handleChange}
-                placeholder="e.g. John Doe"
-                disabled={!isEditable}
-              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Owner Name</Label>
+                  <Input
+                    name="ownerName"
+                    value={formData.ownerName || ''}
+                    onChange={handleChange}
+                    placeholder="e.g. Molika Khorn"
+                    disabled={!isEditable}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">
+                    Owner Email <span className="text-rose-500">*</span>
+                  </Label>
+                  <Input
+                    required
+                    name="ownerEmail"
+                    value={formData.ownerEmail || ''}
+                    onChange={handleChange}
+                    type="email"
+                    placeholder="e.g. molika@agency.gov"
+                    disabled={!isEditable}
+                    className={`mt-1 ${
+                      allErrors.ownerEmail ? 'border-rose-500 ring-1 ring-rose-500 bg-rose-50/50' : ''
+                    }`}
+                  />
+                  {allErrors.ownerEmail && (
+                    <p className="mt-1 text-xs text-rose-600 font-medium">{allErrors.ownerEmail}</p>
+                  )}
+                </div>
+              </div>
             </div>
+          )}
 
+          {/* Team Name and Support Email */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <Label>Owner Email <span className="text-rose-500">*</span></Label>
-                {formData.ownerEmail && (
-                  <button
-                    type="button"
-                    onClick={handleTestEmail}
-                    disabled={isTestingEmail}
-                    className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-semibold flex items-center gap-1 cursor-pointer"
-                  >
-                    <svg className={`w-3.5 h-3.5 ${isTestingEmail ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                    <span>{isTestingEmail ? 'Sending...' : 'Send Test Email'}</span>
-                  </button>
-                )}
+                <Label>Team / Department Name</Label>
+                <span className="text-xs text-slate-400 font-medium">Optional</span>
               </div>
               <Input
-                required
-                name="ownerEmail"
-                value={formData.ownerEmail || ''}
+                name="teamName"
+                value={formData.teamName || ''}
                 onChange={handleChange}
-                type="email"
-                placeholder="e.g. john.doe@fsa.gov"
+                placeholder="e.g. Financial Technology Center"
                 disabled={!isEditable}
-                className={allErrors.ownerEmail ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
               />
-              {allErrors.ownerEmail && <p className="mt-1.5 text-sm text-rose-600 font-medium">{allErrors.ownerEmail}</p>}
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <Label>Support Email</Label>
-                <span className="text-xs text-slate-400 font-medium">Optional</span>
+                <Label>Public Support Email</Label>
+                {formData.ownerEmail && isEditable && (
+                  <button
+                    type="button"
+                    onClick={() => updateField('supportEmail', formData.ownerEmail)}
+                    className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-medium cursor-pointer"
+                  >
+                    Use Owner Email
+                  </button>
+                )}
               </div>
               <Input
                 name="supportEmail"
                 value={formData.supportEmail || ''}
                 onChange={handleChange}
                 type="email"
-                placeholder="e.g. support@fsa.gov"
+                placeholder="e.g. support@fintech.gov"
                 disabled={!isEditable}
                 className={allErrors.supportEmail ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
               />
-              {allErrors.supportEmail && <p className="mt-1.5 text-sm text-rose-600 font-medium">{allErrors.supportEmail}</p>}
+              {allErrors.supportEmail && (
+                <p className="mt-1.5 text-sm text-rose-600 font-medium">{allErrors.supportEmail}</p>
+              )}
             </div>
           </div>
         </div>
@@ -649,7 +730,7 @@ export default function TeamForm({
           </div>
         )}
 
-        {/* Card 3: Telegram Channel / Group Integration */}
+        {/* Card 3: Team Telegram Channel Alerts (Status-First) */}
         <div className="rounded-2xl border border-slate-200 dark:border-slate-800 p-5 bg-white dark:bg-slate-900/60 shadow-xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-200/80 dark:border-slate-800">
             <div className="flex items-center gap-2.5">
@@ -661,7 +742,9 @@ export default function TeamForm({
               <div>
                 <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                   <span>Team Telegram Channel Alerts</span>
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-medium">Persistent</span>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-medium">
+                    Persistent
+                  </span>
                 </h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   Receive real-time CI/CD test results, security audit alerts, and build reports.
@@ -673,7 +756,7 @@ export default function TeamForm({
               <button
                 type="button"
                 onClick={() => setShowGuide(!showGuide)}
-                className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:underline flex items-center gap-1"
+                className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:underline flex items-center gap-1 cursor-pointer"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -683,158 +766,130 @@ export default function TeamForm({
             </div>
           </div>
 
-          {/* User has team chat in profile: Show Choice Prompt */}
-          {userHasTeamChat && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  Do you want to use your existing team group or add a new one?
-                </span>
-                <span className="text-[11px] text-slate-400">Select an option below</span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Option 2 Card: Use Existing Group */}
-                <button
-                  type="button"
-                  disabled={!isEditable}
-                  onClick={() => {
-                    setGroupMode('EXISTING');
-                    updateField('teamTelegramChatId', telegramStatus.user.teamTelegramChatId);
-                  }}
-                  className={`p-3.5 rounded-xl border text-left transition-all relative flex flex-col justify-between ${groupMode === 'EXISTING'
-                    ? 'border-sky-500 bg-white dark:bg-slate-800 ring-2 ring-sky-500/20 shadow-sm'
-                    : 'border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60 hover:border-slate-300 dark:hover:border-slate-700'
-                    }`}
-                >
-                  <div className="flex items-start justify-between gap-2 w-full">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className={`p-2 rounded-lg shrink-0 ${groupMode === 'EXISTING'
-                        ? 'bg-sky-500 text-white shadow-sm'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                        }`}>
-                        <BuildingIcon className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 flex-wrap">
-                          <span>Use Existing Group</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 font-medium">
-                            Profile Saved
-                          </span>
-                        </div>
-                        <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                          {telegramStatus.user.teamTelegramChatId}
-                        </div>
-                      </div>
-                    </div>
-                    <div className={`w-4 h-4 rounded-full border shrink-0 flex items-center justify-center transition-all ${groupMode === 'EXISTING'
-                      ? 'border-sky-500 bg-sky-500 text-white'
-                      : 'border-slate-300 dark:border-slate-600'
-                      }`}>
-                      {groupMode === 'EXISTING' && <CheckIcon className="w-2.5 h-2.5 text-white" />}
-                    </div>
-                  </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2">
-                    Use your default team channel saved in your user profile.
-                  </p>
-                </button>
-
-                {/* Option 1 Card: Add New Group */}
-                <button
-                  type="button"
-                  disabled={!isEditable}
-                  onClick={() => {
-                    setGroupMode('NEW');
-                    if (formData.teamTelegramChatId === telegramStatus.user.teamTelegramChatId) {
-                      updateField('teamTelegramChatId', '');
-                    }
-                  }}
-                  className={`p-3.5 rounded-xl border text-left transition-all relative flex flex-col justify-between ${groupMode === 'NEW'
-                    ? 'border-sky-500 bg-white dark:bg-slate-800 ring-2 ring-sky-500/20 shadow-sm'
-                    : 'border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60 hover:border-slate-300 dark:hover:border-slate-700'
-                    }`}
-                >
-                  <div className="flex items-start justify-between gap-2 w-full">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className={`p-2 rounded-lg shrink-0 ${groupMode === 'NEW'
-                        ? 'bg-sky-500 text-white shadow-sm'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                        }`}>
-                        <PlusCircleIcon className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 flex-wrap">
-                          <span>Add New Group</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-medium">
-                            1-Click / Custom
-                          </span>
-                        </div>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                          Connect a separate group
-                        </div>
-                      </div>
-                    </div>
-                    <div className={`w-4 h-4 rounded-full border shrink-0 flex items-center justify-center transition-all ${groupMode === 'NEW'
-                      ? 'border-sky-500 bg-sky-500 text-white'
-                      : 'border-slate-300 dark:border-slate-600'
-                      }`}>
-                      {groupMode === 'NEW' && <CheckIcon className="w-2.5 h-2.5 text-white" />}
-                    </div>
-                  </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2">
-                    Add the bot to a new channel or auto-detect an active group.
-                  </p>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Body when groupMode === 'EXISTING' */}
-          {userHasTeamChat && groupMode === 'EXISTING' && (
-            <div className="p-3.5 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <CheckCircleIcon className="w-4 h-4 text-emerald-500 shrink-0" />
-                  <span className="text-xs font-medium text-slate-800 dark:text-slate-200">
-                    Routing alerts to saved group: <strong className="font-mono">{formData.teamTelegramChatId || telegramStatus.user.teamTelegramChatId}</strong>
-                  </span>
+          {/* Connected State (Status-First) */}
+          {isConnected && !isEditingTelegram && (
+            <div className="p-4 rounded-xl bg-gradient-to-r from-sky-500/5 via-emerald-500/5 to-transparent dark:from-sky-950/30 dark:via-emerald-950/20 dark:to-transparent border border-sky-200/80 dark:border-sky-800/60 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs">
+              <div className="flex items-start sm:items-center gap-3.5 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-sky-500 text-white flex items-center justify-center shrink-0 shadow-sm">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z" />
+                  </svg>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleTestTeamAlert}
-                    disabled={isTesting || !formData.teamTelegramChatId}
-                    className="text-xs px-3 py-1.5 h-8 flex items-center gap-1.5 text-sky-700 border-sky-300 hover:bg-sky-50 dark:text-sky-300 dark:border-sky-800"
-                  >
-                    <svg className={`w-3.5 h-3.5 ${isTesting ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                    </svg>
-                    <span>{isTesting ? 'Testing...' : 'Test Channel Alert'}</span>
-                  </Button>
+                <div className="min-w-0 space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                      Telegram Notification Channel
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/80 inline-flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span>Connected &amp; Active</span>
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-600 dark:text-slate-300 flex items-center gap-1.5 flex-wrap">
+                    <span className="text-slate-500 dark:text-slate-400">Destination:</span>
+                    <code className="px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-mono text-[11px] font-semibold">
+                      {currentChatId}
+                    </code>
+                    {currentChatId === telegramStatus?.user?.teamTelegramChatId ? (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 font-medium">
+                        Agency Profile Group
+                      </span>
+                    ) : currentChatId === telegramStatus?.user?.telegramChatId ? (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-medium">
+                        Personal Chat
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    CI/CD test runs, build reports, and security audit alerts are delivered here automatically.
+                  </p>
                 </div>
               </div>
 
-              {userHasDirectChat && (
-                <div className="pt-2 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-xs">
-                  <span className="text-slate-500">Need personal notifications instead?</span>
+              <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleTestTeamAlert}
+                  disabled={isTesting}
+                  className="text-xs px-3 py-1.5 h-8 flex items-center gap-1.5 text-sky-700 dark:text-sky-300 border-sky-300 dark:border-sky-800 hover:bg-sky-50 dark:hover:bg-sky-950/50 cursor-pointer"
+                >
+                  <svg className={`w-3.5 h-3.5 ${isTesting ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                  <span>{isTesting ? 'Testing...' : 'Test Channel Alert'}</span>
+                </Button>
+
+                {isEditable && (
                   <button
                     type="button"
-                    onClick={() => updateField('teamTelegramChatId', telegramStatus.user.telegramChatId)}
-                    className="text-sky-600 dark:text-sky-400 hover:underline font-medium flex items-center gap-1"
+                    onClick={() => setIsEditingTelegram(true)}
+                    className="text-xs px-3 py-1.5 h-8 font-semibold text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer"
                   >
-                    <UserIcon className="w-3.5 h-3.5 text-sky-500" />
-                    <span>Use Personal Chat ({telegramStatus.user.telegramChatId})</span>
+                    <svg className="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                    <span>Change Channel</span>
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           )}
 
-          {/* Body when groupMode === 'NEW' OR when user does not have a saved group */}
-          {(!userHasTeamChat || groupMode === 'NEW') && (
-            <div className="space-y-3">
-              {/* Action bar for New Group */}
+          {/* Configuration Drawer (When Not Connected or Editing) */}
+          {(!isConnected || isEditingTelegram) && (
+            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-3.5 animate-in fade-in duration-150">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                  {isConnected ? 'Change Notification Channel' : 'Connect Telegram Notification Channel'}
+                </span>
+                {isConnected && (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingTelegram(false)}
+                    className="text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+
+              {/* Quick Presets */}
+              {(userHasTeamChat || userHasDirectChat) && (
+                <div className="flex items-center gap-2 flex-wrap text-xs">
+                  <span className="text-slate-500 font-medium">Quick Presets:</span>
+                  {userHasTeamChat && (
+                    <button
+                      type="button"
+                      onClick={() => updateField('teamTelegramChatId', telegramStatus.user.teamTelegramChatId)}
+                      className={`px-2.5 py-1 rounded-lg border text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
+                        currentChatId === telegramStatus.user.teamTelegramChatId
+                          ? 'bg-sky-50 dark:bg-sky-950/60 border-sky-400 text-sky-700 dark:text-sky-300 font-semibold'
+                          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-sky-300'
+                      }`}
+                    >
+                      <BuildingIcon className="w-3 h-3 text-sky-500" />
+                      <span>Profile Group ({telegramStatus.user.teamTelegramChatId})</span>
+                    </button>
+                  )}
+                  {userHasDirectChat && (
+                    <button
+                      type="button"
+                      onClick={() => updateField('teamTelegramChatId', telegramStatus.user.telegramChatId)}
+                      className={`px-2.5 py-1 rounded-lg border text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
+                        currentChatId === telegramStatus.user.telegramChatId
+                          ? 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-400 text-indigo-700 dark:text-indigo-300 font-semibold'
+                          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-300'
+                      }`}
+                    >
+                      <UserIcon className="w-3 h-3 text-indigo-500" />
+                      <span>Personal Chat ({telegramStatus.user.telegramChatId})</span>
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* 1-Click Bot & Auto-Detect Actions */}
               <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-sky-50/70 dark:bg-sky-950/30 border border-sky-200/80 dark:border-sky-800/60 text-xs">
                 <span className="font-semibold text-sky-900 dark:text-sky-200 flex items-center gap-1.5">
                   <ZapIcon className="w-3.5 h-3.5 text-sky-500" />
@@ -860,7 +915,7 @@ export default function TeamForm({
                       type="button"
                       onClick={handleAutoDetectGroups}
                       disabled={detectingGroups}
-                      className="px-2.5 py-1 rounded-md bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300 font-semibold text-xs flex items-center gap-1 transition-all"
+                      className="px-2.5 py-1 rounded-md bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300 font-semibold text-xs flex items-center gap-1 transition-all cursor-pointer"
                     >
                       <svg className={`w-3.5 h-3.5 ${detectingGroups ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -871,7 +926,7 @@ export default function TeamForm({
                 </div>
               </div>
 
-              {/* Detected Groups Drawer */}
+              {/* Detected Groups */}
               {detectedGroups.length > 0 && (
                 <div className="p-3 rounded-xl bg-white dark:bg-slate-800 border border-sky-300 dark:border-sky-700 space-y-2 animate-in fade-in duration-200 shadow-sm">
                   <div className="flex items-center justify-between text-xs font-semibold text-sky-900 dark:text-sky-200">
@@ -889,10 +944,11 @@ export default function TeamForm({
                           key={group.id}
                           type="button"
                           onClick={() => updateField('teamTelegramChatId', group.id)}
-                          className={`p-2.5 rounded-lg border text-left flex items-center justify-between gap-2 transition-all select-none ${isSelected
-                            ? 'bg-sky-50 dark:bg-sky-950/40 border-sky-500 ring-2 ring-sky-500/20'
-                            : 'bg-slate-50/70 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 hover:border-sky-300'
-                            }`}
+                          className={`p-2.5 rounded-lg border text-left flex items-center justify-between gap-2 transition-all select-none cursor-pointer ${
+                            isSelected
+                              ? 'bg-sky-50 dark:bg-sky-950/40 border-sky-500 ring-2 ring-sky-500/20'
+                              : 'bg-slate-50/70 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 hover:border-sky-300'
+                          }`}
                         >
                           <div className="min-w-0 flex-1">
                             <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate flex items-center gap-1.5">
@@ -923,30 +979,42 @@ export default function TeamForm({
                 </div>
               )}
 
-              {/* Input row */}
-              <div className="flex gap-2">
-                <Input
-                  name="teamTelegramChatId"
-                  value={formData.teamTelegramChatId || ''}
-                  onChange={handleChange}
-                  placeholder="e.g. -1001234567890 or @my_team_channel"
-                  disabled={!isEditable}
-                  className="font-mono text-sm flex-1"
-                />
-                {formData.teamTelegramChatId && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleTestTeamAlert}
-                    disabled={isTesting}
-                    className="shrink-0 text-xs px-3 flex items-center gap-1.5"
-                  >
-                    <svg className={`w-3.5 h-3.5 ${isTesting ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                    </svg>
-                    <span>{isTesting ? 'Testing...' : 'Test Channel Alert'}</span>
-                  </Button>
-                )}
+              {/* Chat ID Input Row */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Telegram Group or Channel ID</Label>
+                <div className="flex gap-2">
+                  <Input
+                    name="teamTelegramChatId"
+                    value={formData.teamTelegramChatId || ''}
+                    onChange={handleChange}
+                    placeholder="e.g. -1001234567890 or @my_team_channel"
+                    disabled={!isEditable}
+                    className="font-mono text-sm flex-1"
+                  />
+                  {formData.teamTelegramChatId && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleTestTeamAlert}
+                      disabled={isTesting}
+                      className="shrink-0 text-xs px-3 flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <svg className={`w-3.5 h-3.5 ${isTesting ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                      </svg>
+                      <span>{isTesting ? 'Testing...' : 'Test Channel Alert'}</span>
+                    </Button>
+                  )}
+                  {isConnected && (
+                    <Button
+                      type="button"
+                      onClick={() => setIsEditingTelegram(false)}
+                      className="shrink-0 text-xs px-3.5 bg-brand-600 hover:bg-brand-700 text-white cursor-pointer"
+                    >
+                      Done
+                    </Button>
+                  )}
+                </div>
               </div>
 
               {/* Save As Default Checkbox */}
@@ -967,7 +1035,7 @@ export default function TeamForm({
                     <button
                       type="button"
                       onClick={handleSaveToProfile}
-                      className="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1 shrink-0 ml-2"
+                      className="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1 shrink-0 ml-2 cursor-pointer"
                     >
                       <BuildingIcon className="w-3 h-3 text-sky-500" />
                       <span>Save Now</span>
