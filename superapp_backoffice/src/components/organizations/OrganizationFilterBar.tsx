@@ -33,19 +33,17 @@ export function OrganizationFilterBar({
         <button
           type="button"
           onClick={() => onStatusFilterChange('ALL')}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-            statusFilter === 'ALL'
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${statusFilter === 'ALL'
               ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm border border-slate-200/60 dark:border-slate-700/60'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-          }`}
+            }`}
         >
           <span>All Entities</span>
           <span
-            className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-              statusFilter === 'ALL'
+            className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${statusFilter === 'ALL'
                 ? 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200'
                 : 'bg-slate-200/60 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-            }`}
+              }`}
           >
             {totalCount}
           </span>
@@ -54,20 +52,18 @@ export function OrganizationFilterBar({
         <button
           type="button"
           onClick={() => onStatusFilterChange('ACTIVE')}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-            statusFilter === 'ACTIVE'
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${statusFilter === 'ACTIVE'
               ? 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 shadow-sm border border-slate-200/60 dark:border-slate-700/60'
               : 'text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400'
-          }`}
+            }`}
         >
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
           <span>Active</span>
           <span
-            className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-              statusFilter === 'ACTIVE'
+            className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${statusFilter === 'ACTIVE'
                 ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300'
                 : 'bg-slate-200/60 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-            }`}
+              }`}
           >
             {activeCount}
           </span>
@@ -76,20 +72,18 @@ export function OrganizationFilterBar({
         <button
           type="button"
           onClick={() => onStatusFilterChange('INACTIVE')}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-            statusFilter === 'INACTIVE'
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${statusFilter === 'INACTIVE'
               ? 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 shadow-sm border border-slate-200/60 dark:border-slate-700/60'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-          }`}
+            }`}
         >
           <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
           <span>Inactive</span>
           <span
-            className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-              statusFilter === 'INACTIVE'
+            className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${statusFilter === 'INACTIVE'
                 ? 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200'
                 : 'bg-slate-200/60 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-            }`}
+              }`}
           >
             {inactiveCount}
           </span>
@@ -131,7 +125,7 @@ export function OrganizationFilterBar({
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          <span>Add Organization</span>
+          <span>Add MiniApp</span>
         </Button>
       </div>
     </div>

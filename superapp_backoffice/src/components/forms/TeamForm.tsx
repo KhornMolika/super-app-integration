@@ -1176,7 +1176,7 @@ export default function TeamForm({
                                 </div>
                               </div>
                             </div>
-                            <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-750 text-slate-600 dark:text-slate-300 font-medium shrink-0 group-hover:bg-brand-600 group-hover:text-white transition-colors">
+                            <span className="text-xs px-3 py-1 rounded-lg font-bold bg-brand-50 text-brand-700 dark:bg-brand-950/80 dark:text-brand-300 border border-brand-200 dark:border-brand-800/80 group-hover:bg-brand-600 group-hover:text-white group-hover:border-transparent transition-all shrink-0 shadow-2xs">
                               Select
                             </span>
                           </button>
@@ -1275,14 +1275,6 @@ export default function TeamForm({
                   </p>
                 </div>
               </div>
-            </div>
-
-            {/* Instant Access Notice */}
-            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 flex items-start gap-2.5">
-              <CheckCircleIcon className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
-              <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
-                <strong className="text-slate-800 dark:text-slate-100">Instant Access:</strong> As this MiniApp&apos;s verified Owner, adding this active agency colleague immediately inserts them into <code className="px-1 py-0.5 rounded bg-slate-200/80 dark:bg-slate-700 text-slate-800 dark:text-slate-200 text-[10px] font-mono">mini_app_collaborators</code> with immediate workspace authority.
-              </p>
             </div>
 
             {/* Modal Actions */}
