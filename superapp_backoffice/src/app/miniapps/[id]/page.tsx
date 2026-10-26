@@ -25,7 +25,8 @@ import {
 
 const TAB_TITLES: Record<MiniAppTabType, string> = {
   overview: 'General Information',
-  team: 'Team & Support',
+  legal: 'Legal & Compliance',
+  team: 'Team & Collaborators',
   integration: 'Technical Integration',
   permissions: 'Capabilities',
   versions: 'Versions & Releases',
@@ -49,6 +50,7 @@ function ManageMiniAppContent() {
   const rawTab = (searchParams?.get('tab') as MiniAppTabType) || 'overview';
   const validTabs: MiniAppTabType[] = [
     'overview',
+    'legal',
     'team',
     'integration',
     'permissions',

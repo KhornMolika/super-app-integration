@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Input, Label, Button } from '@/components/ui/inputs';
 import { toast } from '@/components/ui/Toast';
-import { telegramApi } from '@/api';
+import { telegramApi, miniappsApi, usersApi, User } from '@/api';
 import { ZapIcon, BuildingIcon, UserIcon, CheckIcon, CheckCircleIcon, AlertTriangleIcon, DevicePhoneIcon, PlusCircleIcon } from '@/components/ui/Icons';
 
 export default function TeamForm({
@@ -23,6 +23,68 @@ export default function TeamForm({
   const [detectedGroups, setDetectedGroups] = useState<Array<{ id: string; title: string; type?: string; [key: string]: any }>>([]);
   const [groupMode, setGroupMode] = useState<'EXISTING' | 'NEW'>('EXISTING');
   const [saveAsDefault, setSaveAsDefault] = useState(false);
+
+  // Collaborators management state
+  const [collaborators, setCollaborators] = useState<any[]>(formData.collaborators || []);
+  const [loadingCollaborators, setLoadingCollaborators] = useState(false);
+  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [selectedRole, setSelectedRole] = useState<'DEVELOPER' | 'ADMIN' | 'VIEWER'>('DEVELOPER');
+  const [isAddingCollaborator, setIsAddingCollaborator] = useState(false);
+  const [removingUserId, setRemovingUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!formData.id) return;
+    const loadCollaborators = async () => {
+      try {
+        setLoadingCollaborators(true);
+        const [collabs, usersRes] = await Promise.all([
+          miniappsApi.getCollaborators(formData.id),
+          usersApi.getAll({ limit: 100 }),
+        ]);
+        if (Array.isArray(collabs)) {
+          setCollaborators(collabs);
+        }
+        const userList = Array.isArray(usersRes) ? usersRes : (usersRes as any)?.data || [];
+        setAvailableUsers(userList);
+      } catch (err) {
+        console.warn('Failed to load collaborators', err);
+      } finally {
+        setLoadingCollaborators(false);
+      }
+    };
+    loadCollaborators();
+  }, [formData.id]);
+
+  const handleAddCollaborator = async () => {
+    if (!formData.id || !selectedUserId) return;
+    setIsAddingCollaborator(true);
+    try {
+      await miniappsApi.addCollaborator(formData.id, selectedUserId, selectedRole);
+      toast.success('Collaborator added successfully!', 'Collaborator Added');
+      const updated = await miniappsApi.getCollaborators(formData.id);
+      if (Array.isArray(updated)) setCollaborators(updated);
+      setSelectedUserId('');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to add collaborator.', 'Error');
+    } finally {
+      setIsAddingCollaborator(false);
+    }
+  };
+
+  const handleRemoveCollaborator = async (userId: string) => {
+    if (!formData.id) return;
+    setRemovingUserId(userId);
+    try {
+      await miniappsApi.removeCollaborator(formData.id, userId);
+      toast.success('Collaborator removed.', 'Success');
+      setCollaborators((prev) => prev.filter((c) => c.userId !== userId && c.user?.id !== userId));
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to remove collaborator.', 'Error');
+    } finally {
+      setRemovingUserId(null);
+    }
+  };
 
   const updateField = (name: string, value: string) => {
     if (setFormData) {
@@ -668,6 +730,173 @@ export default function TeamForm({
             Automated security scan reports, CI/CD test builds, and release updates for this MiniApp will be broadcast directly to your team channel. (Add <code>@{telegramStatus?.botUsername || 'superapp_notification_bot'}</code> to your group/channel first).
           </p>
         </div>
+
+        {/* Team Collaborators & Role-Based Access Card */}
+        {formData.id && (
+          <div className="md:col-span-2 space-y-4 rounded-xl border border-slate-200 dark:border-slate-800 p-4 bg-slate-50/50 dark:bg-slate-900/40">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-200/80 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
+                  <UserIcon className="w-4 h-4 text-indigo-500 shrink-0" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                    <span>MiniApp Collaborators &amp; Roles</span>
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-medium">
+                      {1 + (collaborators?.length || 0)} Members
+                    </span>
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Manage team members who can co-develop, trigger test builds, and inspect security reports for this MiniApp.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Members List */}
+            <div className="space-y-2.5">
+              {/* Primary Owner / Maintainer Row */}
+              <div className="p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-brand-600 to-indigo-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                    {(formData.ownerName || formData.owner?.name || 'O').charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                      <span className="truncate">{formData.ownerName || formData.owner?.name || 'Lead Maintainer'}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold uppercase tracking-wider">
+                        Primary Owner
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                      {formData.ownerEmail || formData.owner?.email || 'Registered Creator'}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">
+                    Full Administrative Authority
+                  </span>
+                </div>
+              </div>
+
+              {/* Collaborators Rows */}
+              {loadingCollaborators ? (
+                <div className="py-4 text-center text-xs text-slate-400">Loading collaborators...</div>
+              ) : collaborators.length === 0 ? (
+                <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-center space-y-1">
+                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                    No additional collaborators assigned yet
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    Add agency teammates below to grant them build and review access.
+                  </p>
+                </div>
+              ) : (
+                collaborators.map((collab: any) => {
+                  const userObj = collab.user || {};
+                  const isRemoving = removingUserId === (collab.userId || userObj.id);
+                  return (
+                    <div
+                      key={collab.id || collab.userId || userObj.id}
+                      className="p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 shadow-xs"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center justify-center text-xs font-bold shrink-0">
+                          {(userObj.name || userObj.email || 'U').charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                            {userObj.name || 'Teammate'}
+                          </div>
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                            {userObj.email || collab.userId}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span
+                          className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                            collab.role === 'ADMIN'
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                              : collab.role === 'VIEWER'
+                              ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                              : 'bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300'
+                          }`}
+                        >
+                          {collab.role || 'DEVELOPER'}
+                        </span>
+
+                        {isEditable && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveCollaborator(collab.userId || userObj.id)}
+                            disabled={isRemoving}
+                            className="p-1 rounded-md text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
+                            title="Remove collaborator"
+                          >
+                            <svg className={`w-4 h-4 ${isRemoving ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Add Teammate Form */}
+            {isEditable && (
+              <div className="pt-3 border-t border-slate-200/80 dark:border-slate-800">
+                <div className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-2">
+                  Add Collaborator
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <select
+                    value={selectedUserId}
+                    onChange={(e) => setSelectedUserId(e.target.value)}
+                    className="flex-1 px-3 py-2 rounded-xl text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  >
+                    <option value="">Select a user from agency...</option>
+                    {availableUsers
+                      .filter(
+                        (u) =>
+                          u.id !== formData.ownerId &&
+                          !collaborators.some((c) => c.userId === u.id || c.user?.id === u.id),
+                      )
+                      .map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name || u.email} ({u.email})
+                        </option>
+                      ))}
+                  </select>
+
+                  <select
+                    value={selectedRole}
+                    onChange={(e) => setSelectedRole(e.target.value as any)}
+                    className="px-3 py-2 rounded-xl text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 shrink-0"
+                  >
+                    <option value="DEVELOPER">DEVELOPER (Build &amp; Test)</option>
+                    <option value="ADMIN">ADMIN (Co-Maintainer)</option>
+                    <option value="VIEWER">VIEWER (Read-Only)</option>
+                  </select>
+
+                  <Button
+                    type="button"
+                    onClick={handleAddCollaborator}
+                    disabled={!selectedUserId || isAddingCollaborator}
+                    className="text-xs px-4 h-9 font-semibold shrink-0"
+                  >
+                    {isAddingCollaborator ? 'Adding...' : 'Add Member'}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </>
   );

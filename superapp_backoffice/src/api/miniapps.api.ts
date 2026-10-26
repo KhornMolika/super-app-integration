@@ -225,5 +225,19 @@ export const miniappsApi = {
       method: 'POST',
       body: { expiresIn },
     }),
+
+  getCollaborators: (id: string) =>
+    apiClient<any[]>(`/api/mini-apps/${id}/collaborators`),
+
+  addCollaborator: (id: string, userId: string, role?: string) =>
+    apiClient<any>(`/api/mini-apps/${id}/collaborators`, {
+      method: 'POST',
+      body: { userId, role: role || 'DEVELOPER' },
+    }),
+
+  removeCollaborator: (id: string, userId: string) =>
+    apiClient<{ success: boolean }>(`/api/mini-apps/${id}/collaborators/${userId}`, {
+      method: 'DELETE',
+    }),
 };
 
