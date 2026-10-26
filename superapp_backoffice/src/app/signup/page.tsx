@@ -9,6 +9,7 @@ import { unwrapData } from '@/api';
 import { toast } from '@/components/ui/Toast';
 import { AuthSplitLayout } from '@/components/auth/AuthSplitLayout';
 import { PasswordStrengthMeter, getPasswordStrength } from '@/components/auth/PasswordStrengthMeter';
+import { OrganizationSelect } from '@/components/auth/OrganizationSelect';
 
 const DEFAULT_FSA_ORGANIZATIONS: Partial<Organization>[] = [
   { id: 'fsa-ftc', name: 'Financial Technology Center', code: 'FTC', parentAuthority: 'Non-Bank Financial Services Authority' },
@@ -221,8 +222,9 @@ export default function SignupPage() {
           <div className="flex items-center justify-between mb-1.5">
             <label
               htmlFor="organization"
-              className={`block text-xs font-semibold transition-colors ${errors.organization ? 'text-rose-400' : 'text-slate-300'
-                }`}
+              className={`block text-xs font-semibold transition-colors ${
+                errors.organization ? 'text-rose-400' : 'text-slate-300'
+              }`}
             >
               Organization
             </label>
@@ -230,38 +232,18 @@ export default function SignupPage() {
               <span className="text-[11px] text-slate-400 animate-pulse">Loading organizations...</span>
             )}
           </div>
-          <div className="relative">
-            <select
-              id="organization"
-              value={organization}
-              onChange={(e) => {
-                setOrganization(e.target.value);
-                if (errors.organization) setErrors((prev) => ({ ...prev, organization: '' }));
-              }}
-              disabled={loading}
-              className={`w-full px-4 py-2.5 rounded-xl text-sm appearance-none bg-slate-900/80 border transition-all duration-200 outline-none pr-10 cursor-pointer ${
-                organization ? 'text-white' : 'text-slate-400'
-              } ${
-                errors.organization
-                  ? 'border-rose-500/80 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 text-rose-100'
-                  : 'border-slate-800 hover:border-slate-700 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15'
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              <option value="" disabled className="text-slate-500 bg-slate-900">
-                {loadingOrgs ? 'Loading organizations...' : 'Select regulator or organization'}
-              </option>
-              {dbOrganizations.map((org) => (
-                <option key={org.id || org.name} value={org.name} className="text-white bg-slate-900 py-1.5">
-                  {org.code ? `${org.code} — ` : ''}{org.name}
-                </option>
-              ))}
-            </select>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-          </div>
+          <OrganizationSelect
+            id="organization"
+            value={organization}
+            onChange={(val) => {
+              setOrganization(val);
+              if (errors.organization) setErrors((prev) => ({ ...prev, organization: '' }));
+            }}
+            organizations={dbOrganizations}
+            loading={loadingOrgs}
+            disabled={loading}
+            error={errors.organization}
+          />
           {errors.organization && (
             <p className="mt-1 text-xs text-rose-400 flex items-center gap-1">
               <span>•</span> {errors.organization}

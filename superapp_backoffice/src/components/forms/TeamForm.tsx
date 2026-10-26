@@ -19,6 +19,7 @@ import {
   ShieldIcon,
   EyeIcon,
   UserGroupIcon,
+  LockIcon,
 } from '@/components/ui/Icons';
 
 const getAvatarColor = (name: string) => {
@@ -99,7 +100,8 @@ export default function TeamForm({
     telegramStatus?.user?.organization?.id;
 
   const agencyName =
-    formData.organization?.name ||
+    (typeof formData.organization === 'string' ? formData.organization : formData.organization?.name) ||
+    formData.teamName ||
     telegramStatus?.user?.organization?.name ||
     'Your Agency';
 
@@ -228,7 +230,7 @@ export default function TeamForm({
         if (Array.isArray(updated) && updated.length > 0) {
           setCollaborators(updated);
         }
-      }).catch(() => {});
+      }).catch(() => { });
     } catch (err: any) {
       // Roll back optimistic state if API failed
       setCollaborators((prev) => prev.filter((c) => c.userId !== userToAdd.id && c.user?.id !== userToAdd.id));
@@ -611,16 +613,35 @@ export default function TeamForm({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <Label>Organization Name</Label>
-                <span className="text-xs text-slate-400 font-medium">Optional</span>
+                <Label className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  <BuildingIcon className="w-3.5 h-3.5 text-sky-500" />
+                  <span>Organization Name</span>
+                </Label>
+                <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium flex items-center gap-1">
+                  <LockIcon className="w-3 h-3 text-slate-400" />
+                  <span>Bound to Agency</span>
+                </span>
               </div>
-              <Input
-                name="teamName"
-                value={formData.teamName || ''}
-                onChange={handleChange}
-                placeholder="e.g. Financial Technology Center"
-                disabled={!isEditable}
-              />
+              <div className="relative">
+                <Input
+                  name="teamName"
+                  value={
+                    formData.teamName ||
+                    (typeof formData.organization === 'string' ? formData.organization : formData.organization?.name) ||
+                    telegramStatus?.user?.organization?.name ||
+                    'Financial Technology Center'
+                  }
+                  placeholder="e.g. Financial Technology Center"
+                  disabled={true}
+                  className="bg-slate-50/80 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-medium cursor-not-allowed pl-9"
+                />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <LockIcon className="w-3.5 h-3.5" />
+                </div>
+              </div>
+              <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+                Organization is locked to your registered agency ({agencyName}) to prevent cross-organization reassignment.
+              </p>
             </div>
 
             <div>
@@ -931,8 +952,8 @@ export default function TeamForm({
                       type="button"
                       onClick={() => updateField('teamTelegramChatId', telegramStatus.user.teamTelegramChatId)}
                       className={`px-2.5 py-1 rounded-lg border text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${currentChatId === telegramStatus.user.teamTelegramChatId
-                          ? 'bg-sky-50 dark:bg-sky-950/60 border-sky-400 text-sky-700 dark:text-sky-300 font-semibold'
-                          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-sky-300'
+                        ? 'bg-sky-50 dark:bg-sky-950/60 border-sky-400 text-sky-700 dark:text-sky-300 font-semibold'
+                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-sky-300'
                         }`}
                     >
                       <BuildingIcon className="w-3 h-3 text-sky-500" />
@@ -944,8 +965,8 @@ export default function TeamForm({
                       type="button"
                       onClick={() => updateField('teamTelegramChatId', telegramStatus.user.telegramChatId)}
                       className={`px-2.5 py-1 rounded-lg border text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${currentChatId === telegramStatus.user.telegramChatId
-                          ? 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-400 text-indigo-700 dark:text-indigo-300 font-semibold'
-                          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-300'
+                        ? 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-400 text-indigo-700 dark:text-indigo-300 font-semibold'
+                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-300'
                         }`}
                     >
                       <UserIcon className="w-3 h-3 text-indigo-500" />
@@ -1011,8 +1032,8 @@ export default function TeamForm({
                           type="button"
                           onClick={() => updateField('teamTelegramChatId', group.id)}
                           className={`p-2.5 rounded-lg border text-left flex items-center justify-between gap-2 transition-all select-none cursor-pointer ${isSelected
-                              ? 'bg-sky-50 dark:bg-sky-950/40 border-sky-500 ring-2 ring-sky-500/20'
-                              : 'bg-slate-50/70 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 hover:border-sky-300'
+                            ? 'bg-sky-50 dark:bg-sky-950/40 border-sky-500 ring-2 ring-sky-500/20'
+                            : 'bg-slate-50/70 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 hover:border-sky-300'
                             }`}
                         >
                           <div className="min-w-0 flex-1">
@@ -1194,23 +1215,26 @@ export default function TeamForm({
 
               {/* Selected User Highlight Card */}
               {selectedUser ? (
-                <div className="p-3 rounded-xl border border-brand-300 dark:border-brand-700/80 bg-brand-50/50 dark:bg-brand-950/30 flex items-center justify-between gap-3 animate-in fade-in duration-150">
-                  <div className="flex items-center gap-3 min-w-0">
+                <div className="p-3.5 rounded-xl border border-emerald-500/60 dark:border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/20 flex items-center justify-between gap-3 shadow-xs animate-in fade-in duration-150">
+                  <div className="flex items-center gap-3.5 min-w-0">
                     <div
-                      className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 shadow-xs ${getAvatarColor(
+                      className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm text-white shrink-0 shadow-xs ring-2 ring-white/20 dark:ring-slate-800 ${getAvatarColor(
                         selectedUser.name || selectedUser.email,
                       )}`}
                     >
                       {(selectedUser.name || selectedUser.email || 'U').charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0">
-                      <div className="text-xs font-bold text-slate-900 dark:text-slate-900 truncate flex items-center gap-2">
-                        <span>{selectedUser.name || 'Agency Teammate'}</span>
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-brand-200 dark:bg-brand-900/80 text-brand-700 dark:text-brand-300 font-semibold uppercase">
-                          Selected
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                          {selectedUser.name || 'Agency Teammate'}
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700/60 uppercase tracking-wide">
+                          <CheckIcon className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
+                          <span>Selected</span>
                         </span>
                       </div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                      <div className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5 font-medium">
                         {selectedUser.email}
                       </div>
                     </div>
@@ -1223,9 +1247,12 @@ export default function TeamForm({
                       setSearchQuery('');
                       setIsSearchDropdownOpen(true);
                     }}
-                    className="text-xs text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white font-semibold px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 shadow-xs shrink-0 transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white font-semibold px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/70 shadow-2xs shrink-0 transition-colors cursor-pointer"
                   >
-                    Change
+                    <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span>Change</span>
                   </button>
                 </div>
               ) : (

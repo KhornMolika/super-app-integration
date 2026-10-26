@@ -272,13 +272,28 @@ export class AccessControlService {
     const isSuperAdmin = this.isRequesterSuperAdmin(requester);
 
     let roles: Role[] = [];
-    if (dto.roleIds && dto.roleIds.length > 0) {
+    if (dto.roleId) {
+      const singleRole = await this.roleRepository.findOne({ where: { id: dto.roleId } });
+      if (singleRole) roles = [singleRole];
+    } else if (dto.roleIds && dto.roleIds.length > 0) {
       roles = await this.roleRepository.findBy({ id: In(dto.roleIds) });
     } else if (dto.roleNames && dto.roleNames.length > 0) {
       roles = await this.roleRepository.findBy({ name: In(dto.roleNames) });
-    } else if (dto.roleNames === undefined && dto.roleIds === undefined) {
+    }
+
+    // Always fallback to MA_DEVELOPER if no role was found or specified
+    if (roles.length === 0) {
       const defaultRole = await this.roleRepository.findOne({ where: { name: 'MA_DEVELOPER' } });
-      if (defaultRole) roles = [defaultRole];
+      if (defaultRole) {
+        roles = [defaultRole];
+      } else {
+        const anyRole = await this.roleRepository.findOne({ where: {} });
+        if (anyRole) roles = [anyRole];
+      }
+    }
+
+    if (roles.length === 0) {
+      throw new BadRequestException('No roles exist in the system to assign to user.');
     }
 
     if (!isSuperAdmin && roles.some((r) => r.name === 'SUPER_ADMIN')) {

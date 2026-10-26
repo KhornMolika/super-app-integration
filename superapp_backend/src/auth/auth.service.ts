@@ -450,7 +450,7 @@ export class AuthService implements OnModuleInit {
     await this.accessControlService.createUser({
       name,
       email,
-      roleNames: [],
+      roleNames: ['MA_DEVELOPER'],
       isActive: false,
       status: 'PENDING_EMAIL_VERIFICATION',
       passwordHash,
