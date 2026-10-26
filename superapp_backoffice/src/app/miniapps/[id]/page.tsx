@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import Link from 'next/link';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useConfirm } from '@/components/ui/ConfirmationProvider';
 import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/inputs';
@@ -28,9 +29,10 @@ import { toast } from '@/components/ui/Toast';
 import { miniappsApi, superAppApi, isBackendUnreachableError, unwrapItem } from '@/api';
 import { BackendServiceOfflineNotice } from '@/components/ui/BackendServiceOfflineNotice';
 
-export default function ManageMiniAppPage({ params: _params }: { params?: Promise<{ id: string }> | { id: string } }) {
+function ManageMiniAppContent({ params: _params }: { params?: Promise<{ id: string }> | { id: string } }) {
   const router = useRouter();
   const routeParams = useParams();
+  const searchParams = useSearchParams();
   const id = (typeof routeParams?.id === 'string' ? routeParams.id : (Array.isArray(routeParams?.id) ? routeParams.id[0] : '')) || '';
 
   const [formData, setFormData] = useState<Partial<CreateMiniAppDto & { id?: string; status: string; validationErrors?: Record<string, string>; validationStatus?: string; validationStages?: any; validationReport?: any; buildStages?: any; buildStatus?: string; buildError?: string; issues?: any[]; pendingRevision?: any; activeTestVersion?: string; currentReleaseVersion?: string; draftVersion?: string; version?: string; versionHistory?: any[]; integrationConfig?: any }>>({
@@ -101,7 +103,22 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
 
   const confirm = useConfirm();
   const { can, role } = useAuth();
-  const [activeTab, setActiveTab] = useState<MiniAppTabType>('overview');
+
+  const tabQuery = searchParams?.get('tab') as MiniAppTabType | null;
+  const validTabs: MiniAppTabType[] = ['overview', 'team', 'integration', 'permissions', 'versions', 'report', 'activity'];
+  const initialTab: MiniAppTabType = tabQuery && validTabs.includes(tabQuery) ? tabQuery : 'overview';
+  const [activeTab, setActiveTab] = useState<MiniAppTabType>(initialTab);
+
+  useEffect(() => {
+    if (tabQuery && validTabs.includes(tabQuery)) {
+      setActiveTab(tabQuery);
+    }
+  }, [tabQuery]);
+
+  const handleSelectTab = (tab: MiniAppTabType) => {
+    setActiveTab(tab);
+    router.replace(`/miniapps/${id}?tab=${tab}`, { scroll: false });
+  };
   const [customPermission, setCustomPermission] = useState('');
   const [isEditingUnlocked, setIsEditingUnlocked] = useState(false);
   const [latestTestVersion, setLatestTestVersion] = useState<string>('v0.0.1');
@@ -1175,6 +1192,19 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
   return (
     <>
       <div className="w-full mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out pb-12">
+        {/* Breadcrumb Context */}
+        <div className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400 mb-2 px-1">
+          <Link href="/miniapps" className="hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
+            MiniApps
+          </Link>
+          <span>/</span>
+          <span className="text-slate-700 dark:text-slate-300 font-semibold truncate max-w-xs">{formData.name || 'Manage MiniApp'}</span>
+          <span>/</span>
+          <span className="text-brand-600 dark:text-brand-400 font-bold capitalize">
+            {activeTab === 'overview' ? 'General Information' : activeTab === 'team' ? 'Team & Support' : activeTab === 'integration' ? 'Technical Integration' : activeTab === 'permissions' ? 'Capabilities' : activeTab === 'versions' ? 'Versions & Releases' : activeTab === 'report' ? 'Security & Compliance' : 'Activity & Audit'}
+          </span>
+        </div>
+
         {/* Top Header Card */}
         <MiniAppDetailHeader
           formData={formData}
@@ -1226,7 +1256,7 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
         {/* Tab Navigation List */}
         <MiniAppDetailTabs
           activeTab={activeTab}
-          onSelectTab={setActiveTab}
+          onSelectTab={handleSelectTab}
           allErrors={allErrors}
           validationStatus={formData.validationStatus}
         />
@@ -1333,30 +1363,37 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
 
         {/* Save Changes Bottom Toolbar for Editable Modes */}
         {isEditable && activeTab !== 'report' && activeTab !== 'activity' && activeTab !== 'versions' && (
-          <div className="mt-6 flex justify-end gap-3 border-t border-slate-200 dark:border-slate-800 pt-5">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={(e) => handleSave(e, true)}
-              disabled={isSubmitting}
-              className="h-11 px-6 text-base font-semibold flex items-center gap-2"
-            >
-              <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-              </svg>
-              <span>Save as Draft</span>
-            </Button>
-            <Button
-              type="button"
-              onClick={(e) => handleSave(e, false)}
-              disabled={isSubmitting}
-              className="h-11 px-6 text-base font-semibold flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-              </svg>
-              <span>{isSubmitting ? 'Saving...' : 'Save & Submit Changes'}</span>
-            </Button>
+          <div className="sticky bottom-6 z-30 mt-8 p-4 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 shadow-xl flex items-center justify-between gap-4 animate-in slide-in-from-bottom-2 duration-200">
+            <div className="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-300">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
+              <span className="font-bold">Configuration Unlocked</span>
+              <span className="text-slate-400 dark:text-slate-500 hidden sm:inline">• Save changes when you are done</span>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={(e) => handleSave(e, true)}
+                disabled={isSubmitting}
+                className="h-10 px-5 text-sm font-semibold flex items-center gap-2 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+              >
+                <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                </svg>
+                <span>Save as Draft</span>
+              </Button>
+              <Button
+                type="button"
+                onClick={(e) => handleSave(e, false)}
+                disabled={isSubmitting}
+                className="h-10 px-5 text-sm font-semibold flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>{isSubmitting ? 'Saving...' : 'Save & Submit Changes'}</span>
+              </Button>
+            </div>
           </div>
         )}
 
@@ -1555,5 +1592,17 @@ export default function ManageMiniAppPage({ params: _params }: { params?: Promis
         onOpenSandbox={openSandboxPreview}
       />
     </>
+  );
+}
+
+export default function ManageMiniAppPage(props: { params?: Promise<{ id: string }> | { id: string } }) {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
+      </div>
+    }>
+      <ManageMiniAppContent {...props} />
+    </Suspense>
   );
 }

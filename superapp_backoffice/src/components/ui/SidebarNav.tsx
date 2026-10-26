@@ -162,15 +162,123 @@ const settingsNavGroups: NavGroup[] = [
 ];
 
 import { useSidebar } from '@/components/ui/SidebarContext';
+import React, { Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 
-export function SidebarNav() {
+type NavItemWithTab = NavItem & {
+  tabKey?: string;
+};
+
+type NavGroupWithTab = {
+  label: string;
+  items: NavItemWithTab[];
+};
+
+const getMiniAppNavGroups = (miniAppId: string): NavGroupWithTab[] => [
+  {
+    label: 'CONFIGURATION',
+    items: [
+      {
+        name: 'General Information',
+        href: `/miniapps/${miniAppId}?tab=overview`,
+        tabKey: 'overview',
+        icon: (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        ),
+      },
+      {
+        name: 'Developer & Team',
+        href: `/miniapps/${miniAppId}?tab=team`,
+        tabKey: 'team',
+        icon: (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+        ),
+      },
+      {
+        name: 'Package & Integration',
+        href: `/miniapps/${miniAppId}?tab=integration`,
+        tabKey: 'integration',
+        icon: (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+          </svg>
+        ),
+      },
+      {
+        name: 'Capabilities & Scopes',
+        href: `/miniapps/${miniAppId}?tab=permissions`,
+        tabKey: 'permissions',
+        icon: (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" />
+          </svg>
+        ),
+      },
+    ],
+  },
+  {
+    label: 'OPERATIONS & RELEASES',
+    items: [
+      {
+        name: 'Version History',
+        href: `/miniapps/${miniAppId}?tab=versions`,
+        tabKey: 'versions',
+        icon: (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
+        ),
+      },
+      {
+        name: 'Security & Validation',
+        href: `/miniapps/${miniAppId}?tab=report`,
+        tabKey: 'report',
+        icon: (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+        ),
+      },
+      {
+        name: 'Activity History',
+        href: `/miniapps/${miniAppId}?tab=activity`,
+        tabKey: 'activity',
+        icon: (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        ),
+      },
+    ],
+  },
+];
+
+function SidebarNavContent() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { can, user, role } = useAuth();
   const isSuperOrAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN' || can('organization:manage');
   const { isCollapsed } = useSidebar();
 
   const isSettingsMode = pathname.startsWith('/settings');
-  const activeNavGroups = isSettingsMode ? settingsNavGroups : mainNavGroups;
+  const isMiniAppDetailMode =
+    pathname.startsWith('/miniapps/') &&
+    pathname !== '/miniapps' &&
+    !pathname.startsWith('/miniapps/register');
+
+  const miniAppId = isMiniAppDetailMode ? pathname.split('/')[2] || '' : '';
+  const currentTab = searchParams?.get('tab') || 'overview';
+
+  let activeNavGroups: (NavGroup | NavGroupWithTab)[] = mainNavGroups;
+  if (isSettingsMode) {
+    activeNavGroups = settingsNavGroups;
+  } else if (isMiniAppDetailMode) {
+    activeNavGroups = getMiniAppNavGroups(miniAppId);
+  }
 
   return (
     <nav className={`flex-1 ${isCollapsed ? 'px-2' : 'px-4'} mt-4 overflow-y-auto overflow-x-hidden no-scrollbar pb-6 space-y-4 transition-all duration-300`}>
@@ -197,9 +305,32 @@ export function SidebarNav() {
         </div>
       )}
 
+      {/* Contextual Back Button when inside MiniApp Detail */}
+      {isMiniAppDetailMode && (
+        <div className="mb-2 pb-2 border-b border-brand-900/60 dark:border-slate-800/80">
+          <Link
+            href="/miniapps"
+            title={isCollapsed ? 'Back to MiniApps' : undefined}
+            className={`flex items-center ${
+              isCollapsed ? 'justify-center p-2' : 'gap-2.5 px-3 py-2'
+            } rounded-lg text-xs font-semibold text-brand-200 hover:text-white hover:bg-white/10 transition-all duration-200 group`}
+          >
+            <svg
+              className="w-4 h-4 text-brand-400 group-hover:text-white transition-transform duration-200 group-hover:-translate-x-1 shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            {!isCollapsed && <span className="tracking-wide">Back to MiniApps</span>}
+          </Link>
+        </div>
+      )}
+
       {activeNavGroups.map((group) => {
         // Filter items based on permissions and roles
-        const visibleItems = group.items.filter(item => {
+        const visibleItems = group.items.filter((item: NavItemWithTab) => {
           if (item.requiredPermission && !can(item.requiredPermission)) return false;
           if (item.requiredRole && (!role || !item.requiredRole.includes(role))) return false;
           return true;
@@ -215,7 +346,7 @@ export function SidebarNav() {
               <div className="h-px bg-brand-900/60 dark:bg-slate-800/80 my-2 mx-2" />
             )}
             <div className="space-y-1">
-              {visibleItems.map((item) => {
+              {visibleItems.map((item: NavItemWithTab) => {
                 let targetHref = item.href;
                 let displayName = item.name;
 
@@ -226,7 +357,12 @@ export function SidebarNav() {
                   }
                 }
 
-                const isActive = pathname === targetHref || (targetHref !== '/' && pathname.startsWith(targetHref));
+                let isActive = false;
+                if (isMiniAppDetailMode) {
+                  isActive = item.tabKey ? currentTab === item.tabKey : false;
+                } else {
+                  isActive = pathname === targetHref || (targetHref !== '/' && pathname.startsWith(targetHref));
+                }
                 
                 return (
                   <Link 
@@ -255,5 +391,13 @@ export function SidebarNav() {
         );
       })}
     </nav>
+  );
+}
+
+export function SidebarNav() {
+  return (
+    <Suspense fallback={<nav className="flex-1 px-4 mt-4 overflow-y-auto" />}>
+      <SidebarNavContent />
+    </Suspense>
   );
 }

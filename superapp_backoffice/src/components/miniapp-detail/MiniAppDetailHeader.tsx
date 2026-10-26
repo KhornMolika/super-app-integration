@@ -34,7 +34,16 @@ export default function MiniAppDetailHeader({
   isSubmitting,
 }: MiniAppDetailHeaderProps) {
   const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [copiedAppId, setCopiedAppId] = useState(false);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
+
+  const copyAppId = () => {
+    if (formData.appId) {
+      navigator.clipboard.writeText(formData.appId);
+      setCopiedAppId(true);
+      setTimeout(() => setCopiedAppId(false), 2000);
+    }
+  };
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -54,7 +63,7 @@ export default function MiniAppDetailHeader({
     'v0.2.0';
 
   return (
-    <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+    <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm transition-all">
       <div className="flex items-center space-x-4">
         <BackButton href="/miniapps" />
         <AppLogoAvatar logo={formData.logo} name={formData.name} size="lg" />
@@ -65,7 +74,7 @@ export default function MiniAppDetailHeader({
             </h2>
             {/* Status Pill Badge */}
             <span
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs sm:text-sm font-semibold uppercase tracking-wider ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${
                 status === 'ACTIVE'
                   ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
                   : status === 'APPROVED'
@@ -97,10 +106,29 @@ export default function MiniAppDetailHeader({
               <span>{status}</span>
             </span>
           </div>
-          <div className="flex items-center gap-2 mt-1.5 text-sm text-slate-500 dark:text-slate-400">
-            <span className="font-mono text-slate-700 dark:text-slate-300 font-medium">{formData.appId || 'com.app'}</span>
-            <span>•</span>
-            <span>
+          <div className="flex flex-wrap items-center gap-2 mt-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+            {formData.appId && (
+              <button
+                type="button"
+                onClick={copyAppId}
+                title="Click to copy App ID"
+                className="group inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-300 font-mono text-xs transition-colors cursor-pointer"
+              >
+                <span>{formData.appId}</span>
+                {copiedAppId ? (
+                  <svg className="w-3.5 h-3.5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <svg className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                )}
+                {copiedAppId && <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">Copied!</span>}
+              </button>
+            )}
+            <span className="text-slate-300 dark:text-slate-700">•</span>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 font-medium text-xs">
               {formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE || formData.integrationMethod === 'FLUTTER_PACKAGE'
                 ? 'Flutter Package'
                 : formData.integrationMethod === IntegrationMethod.NATIVE_SDK || formData.integrationMethod === 'NATIVE_SDK'
@@ -111,7 +139,7 @@ export default function MiniAppDetailHeader({
             </span>
             {(formData.organization || formData.category) && (
               <>
-                <span>•</span>
+                <span className="text-slate-300 dark:text-slate-700">•</span>
                 <span 
                   className="inline-flex items-center gap-1 font-semibold text-sky-600 dark:text-sky-400"
                   title={getOrganizationFullName(formData.organization || formData.category)}
@@ -123,7 +151,8 @@ export default function MiniAppDetailHeader({
             )}
           </div>
         </div>
-      </div>      {/* Header Actions */}
+      </div>
+      {/* Header Actions */}
       <div className="flex items-center space-x-2.5">
         {/* Edit Configuration Toggle */}
         {can('miniapp:update') && (

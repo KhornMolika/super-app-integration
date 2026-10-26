@@ -107,7 +107,7 @@ export default function MiniAppDetailTabs({
 
 
   return (
-    <div className="flex border-b border-slate-200/80 dark:border-slate-800 space-x-2 overflow-x-auto pb-px mb-6 scrollbar-none">
+    <div className="bg-slate-100/90 dark:bg-slate-900/90 p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto no-scrollbar mb-6 shadow-xs">
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id;
         const hasIssue = hasErrorInTab(tab.id);
@@ -117,13 +117,13 @@ export default function MiniAppDetailTabs({
             key={tab.id}
             type="button"
             onClick={() => onSelectTab(tab.id)}
-            className={`flex items-center gap-2 py-3 px-4.5 font-semibold text-sm tracking-tight transition-all border-b-2 whitespace-nowrap rounded-t-xl ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-semibold text-xs sm:text-sm tracking-tight transition-all duration-200 whitespace-nowrap shrink-0 ${
               isActive
-                ? 'border-brand-600 text-brand-700 dark:text-brand-300 bg-brand-50/50 dark:bg-brand-950/20'
-                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-300 shadow-sm border border-slate-200/70 dark:border-slate-700/70 font-bold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/60 dark:hover:bg-slate-800/50 border border-transparent'
             }`}
           >
-            <span className={isActive ? 'text-brand-600 dark:text-brand-400' : 'text-slate-400'}>
+            <span className={`shrink-0 transition-colors ${isActive ? 'text-brand-600 dark:text-brand-400' : 'text-slate-400 dark:text-slate-500'}`}>
               {tab.icon}
             </span>
             <span>{tab.label}</span>
@@ -136,14 +136,14 @@ export default function MiniAppDetailTabs({
             {/* Tab specific badges */}
             {tab.id === 'report' && validationStatus && (
               <span
-                className={`text-xs px-2 py-0.5 rounded-full font-bold uppercase ${
+                className={`text-[10px] sm:text-xs px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
                   validationStatus === 'PASSED'
                     ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300'
                     : validationStatus === 'RUNNING'
                     ? 'bg-brand-100 text-brand-800 dark:bg-brand-900/50 dark:text-brand-300 animate-pulse'
                     : validationStatus === 'FAILED'
                     ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-300'
-                    : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                    : 'bg-slate-200/80 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
                 }`}
               >
                 {validationStatus === 'RUNNING' ? 'SCANNING' : validationStatus}
