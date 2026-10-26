@@ -187,7 +187,7 @@ const miniAppRegisterNavGroups: NavGroupWithTab[] = [
         icon: null as any,
       },
       {
-        name: 'Team & Support',
+        name: 'Legal & Compliance',
         href: '/miniapps/register?step=2',
         tabKey: '2',
         stepNumber: 2,

@@ -52,6 +52,42 @@ export function useMiniAppRegister() {
 
   const [formData, setFormData] = useState<Partial<CreateMiniAppDto>>(getInitialRegisterFormData());
 
+  // Auto-bind ownership and alert contacts directly from active authenticated user session
+  useEffect(() => {
+    if (user) {
+      setFormData((prev) => ({
+        ...prev,
+        ownerName: prev.ownerName || user.name || '',
+        ownerEmail: prev.ownerEmail || user.email || '',
+        supportEmail: prev.supportEmail || user.email || '',
+        teamName: prev.teamName || (user.organization?.name ? `${user.organization.name} Team` : 'MiniApp Development Team'),
+      }));
+    }
+  }, [user]);
+
+  useEffect(() => {
+    telegramApi
+      .getStatus()
+      .then((data) => {
+        if (data?.user) {
+          const defaultChat =
+            data.user.alertTelegramChatId ||
+            data.user.teamTelegramChatId ||
+            data.user.telegramChatId ||
+            '';
+          setFormData((prev) => ({
+            ...prev,
+            ownerName: prev.ownerName || data.user.name || '',
+            ownerEmail: prev.ownerEmail || data.user.email || '',
+            supportEmail: prev.supportEmail || data.user.email || '',
+            teamTelegramChatId: prev.teamTelegramChatId || defaultChat,
+            alertTelegramChatId: prev.alertTelegramChatId || defaultChat,
+          }));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // Step state with query parameter synchronization
   const stepQuery = searchParams?.get('step');
   const parsedStep = stepQuery ? parseInt(stepQuery, 10) : 1;

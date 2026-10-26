@@ -192,7 +192,57 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
         </div>
       </div>
 
-      {/* ─── Grid: Section 1 (Basic Info) & Section 2 (Team) ─── */}
+      {/* ─── Registrant & Ownership Banner (Auto-populated from User) ─── */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-5 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/60 dark:border-indigo-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <div>
+              <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+                App Registrant &amp; Technical Ownership
+              </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                  {formData.ownerName || 'Active User'}
+                </span>
+                {formData.ownerEmail && (
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                    ({formData.ownerEmail})
+                  </span>
+                )}
+                {formData.teamName && formData.teamName !== formData.ownerName && (
+                  <span className="text-xs text-slate-400 dark:text-slate-500">
+                    • {formData.teamName}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
+            {formData.supportEmail && (
+              <div className="px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 flex items-center gap-1.5">
+                <span className="text-slate-400">Support:</span>
+                <span className="font-medium text-slate-700 dark:text-slate-300">{formData.supportEmail}</span>
+              </div>
+            )}
+            {(formData.alertTelegramChatId || formData.teamTelegramChatId) && (
+              <div className="px-3 py-1.5 rounded-lg bg-sky-50/70 dark:bg-sky-950/40 border border-sky-200/60 dark:border-sky-800/60 text-sky-700 dark:text-sky-300 flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5 text-sky-500" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
+                </svg>
+                <span>Alerts Linked</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ─── Grid: Section 1 (Basic Info) & Section 2 (Legal Policies) ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 1. Basic Information Card */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-6 shadow-sm hover:shadow transition-shadow">
@@ -264,16 +314,14 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
           </div>
         </div>
 
-        {/* 2. Team & Contacts Card */}
+        {/* 2. Legal & Compliance Policies Card */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-6 shadow-sm hover:shadow transition-shadow">
           <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100 dark:border-slate-800/80">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-sky-50 dark:bg-sky-950/50 border border-sky-200/60 dark:border-sky-800 flex items-center justify-center text-sky-600 dark:text-sky-400">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
+                <ShieldCheckIcon className="w-4 h-4" />
               </div>
-              <h4 className="font-bold text-base text-slate-900 dark:text-white">2. Team & Ownership</h4>
+              <h4 className="font-bold text-base text-slate-900 dark:text-white">2. Legal &amp; Compliance Policies</h4>
             </div>
             {onEditStep && (
               <button
@@ -290,100 +338,66 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
           </div>
 
           <div className="space-y-4 text-sm">
-            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800 space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-800 flex items-center justify-center text-blue-600 shrink-0">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                </div>
-                <div>
-                  <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
-                    Team / Organization Name
-                  </span>
-                  <span className="font-semibold text-slate-900 dark:text-slate-100">
-                    {formData.teamName || 'Independent Developer'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/60 dark:border-emerald-800 flex items-center justify-center text-emerald-600 shrink-0">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </div>
-                <div>
-                  <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
-                    Owner Name
-                  </span>
-                  <span className="font-semibold text-slate-900 dark:text-slate-100">
-                    {formData.ownerName || '-'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/60 border border-amber-200/60 dark:border-amber-800 flex items-center justify-center text-amber-600 shrink-0">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <div className="overflow-hidden">
-                  <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
-                    Owner Email (Primary Account)
-                  </span>
-                  <span className="font-medium text-slate-800 dark:text-slate-200 truncate block">
-                    {formData.ownerEmail || '-'}
-                  </span>
-                </div>
-              </div>
-
-              {formData.supportEmail && (
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-brand-50 dark:bg-brand-950/60 border border-brand-200/60 dark:border-brand-800 flex items-center justify-center text-brand-600 shrink-0">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+            {/* Terms of Service */}
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                  <ShieldCheckIcon className="w-3.5 h-3.5 text-brand-600" />
+                  <span>Terms of Service</span>
+                </span>
+                {formData.termsUrl ? (
+                  <a
+                    href={formData.termsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-mono text-brand-600 dark:text-brand-400 hover:underline inline-flex items-center gap-1 truncate max-w-[200px]"
+                  >
+                    <span>{formData.termsUrl}</span>
+                    <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                     </svg>
-                  </div>
-                  <div className="overflow-hidden">
-                    <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
-                      Support Email
-                    </span>
-                    <span className="font-medium text-slate-800 dark:text-slate-200 truncate block">
-                      {formData.supportEmail}
-                    </span>
-                  </div>
+                  </a>
+                ) : formData.termsDescription ? (
+                  <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">Bundled Document</span>
+                ) : (
+                  <span className="text-[11px] text-slate-400">Default Container Terms</span>
+                )}
+              </div>
+              {formData.termsDescription && (
+                <div className="max-h-28 overflow-y-auto pr-1 pt-1 border-t border-slate-200/60 dark:border-slate-700/60 text-xs">
+                  <MarkdownRenderer content={formData.termsDescription} />
                 </div>
               )}
             </div>
 
-            {/* Telegram Channel Alerts */}
-            <div>
-              <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1.5">
-                Automated Alerts & CI/CD Channel
-              </span>
-              {formData.alertTelegramChatId || formData.teamTelegramChatId ? (
-                <div className="flex items-center justify-between p-3 rounded-xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 text-sky-900 dark:text-sky-200">
-                  <div className="flex items-center gap-2.5">
-                    <svg className="w-5 h-5 text-sky-500 shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
+            {/* Privacy Policy */}
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                  <ShieldCheckIcon className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Privacy Policy</span>
+                </span>
+                {formData.privacyPolicyUrl ? (
+                  <a
+                    href={formData.privacyPolicyUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-mono text-brand-600 dark:text-brand-400 hover:underline inline-flex items-center gap-1 truncate max-w-[200px]"
+                  >
+                    <span>{formData.privacyPolicyUrl}</span>
+                    <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                     </svg>
-                    <div>
-                      <span className="font-semibold text-xs text-sky-800 dark:text-sky-200 block">Telegram Group Channel</span>
-                      <code className="font-mono text-xs text-sky-700 dark:text-sky-300 font-bold">{formData.alertTelegramChatId || formData.teamTelegramChatId}</code>
-                    </div>
-                  </div>
-                  <span className="text-[11px] font-semibold bg-sky-200/70 dark:bg-sky-900/60 text-sky-800 dark:text-sky-300 px-2 py-0.5 rounded-full">
-                    Connected
-                  </span>
-                </div>
-              ) : (
-                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800 text-xs text-slate-500 flex items-center gap-2">
-                  <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>No team Telegram channel configured (personal alerts only).</span>
+                  </a>
+                ) : formData.privacyPolicyDescription ? (
+                  <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">Bundled Document</span>
+                ) : (
+                  <span className="text-[11px] text-slate-400">Default Container Privacy</span>
+                )}
+              </div>
+              {formData.privacyPolicyDescription && (
+                <div className="max-h-28 overflow-y-auto pr-1 pt-1 border-t border-slate-200/60 dark:border-slate-700/60 text-xs">
+                  <MarkdownRenderer content={formData.privacyPolicyDescription} />
                 </div>
               )}
             </div>
@@ -669,75 +683,6 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                     >
                       {formData.integrationConfigDeepLink.appStoreUrl}
                     </a>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Legal & Compliance Policies in Card 3 */}
-            {(formData.termsUrl || formData.termsDescription || formData.privacyPolicyUrl || formData.privacyPolicyDescription) && (
-              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
-                <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
-                  Legal &amp; Compliance Disclosures
-                </span>
-
-                {/* Terms of Service */}
-                {(formData.termsUrl || formData.termsDescription) && (
-                  <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                        <ShieldCheckIcon className="w-3.5 h-3.5 text-brand-600" />
-                        <span>Terms of Service</span>
-                      </span>
-                      {formData.termsUrl && (
-                        <a
-                          href={formData.termsUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[11px] font-mono text-brand-600 dark:text-brand-400 hover:underline inline-flex items-center gap-1 truncate max-w-[200px]"
-                        >
-                          <span>{formData.termsUrl}</span>
-                          <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                          </svg>
-                        </a>
-                      )}
-                    </div>
-                    {formData.termsDescription && (
-                      <div className="max-h-36 overflow-y-auto pr-1 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
-                        <MarkdownRenderer content={formData.termsDescription} />
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Privacy Policy */}
-                {(formData.privacyPolicyUrl || formData.privacyPolicyDescription) && (
-                  <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                        <ShieldCheckIcon className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Privacy Policy</span>
-                      </span>
-                      {formData.privacyPolicyUrl && (
-                        <a
-                          href={formData.privacyPolicyUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[11px] font-mono text-brand-600 dark:text-brand-400 hover:underline inline-flex items-center gap-1 truncate max-w-[200px]"
-                        >
-                          <span>{formData.privacyPolicyUrl}</span>
-                          <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                          </svg>
-                        </a>
-                      )}
-                    </div>
-                    {formData.privacyPolicyDescription && (
-                      <div className="max-h-36 overflow-y-auto pr-1 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
-                        <MarkdownRenderer content={formData.privacyPolicyDescription} />
-                      </div>
-                    )}
                   </div>
                 )}
               </div>

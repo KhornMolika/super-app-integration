@@ -3,7 +3,7 @@ import { generateClientVerificationToken } from '@/components/forms/IntegrationF
 
 export const STEP_TITLES = [
   'General Information',
-  'Team & Support',
+  'Legal & Compliance Policies',
   'Technical Integration',
   'Capabilities & Scopes',
   'Security & Compliance Profile',
@@ -12,7 +12,7 @@ export const STEP_TITLES = [
 
 export const STEP_DESCRIPTIONS = [
   'Provide app identity, catalog details, display name, organization, and icon.',
-  'Assign technical ownership, maintainers, and emergency support channels.',
+  'Configure official terms of service, privacy disclosures, and regulatory policies.',
   'Configure your runtime architecture: WebView, Flutter Package, Native SDK, or Deep Link.',
   'Declare native host device permissions with user privacy justifications.',
   'Automated TLS verification, domain checks, and compliance validation.',

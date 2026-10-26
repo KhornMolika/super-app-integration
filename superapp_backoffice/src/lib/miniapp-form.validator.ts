@@ -81,16 +81,19 @@ export async function validateMiniAppStep(
   }
 
   if (currentStep === 2) {
-    if (!formData.ownerEmail) {
-      errors.ownerEmail = 'Owner Email is required';
-      isValid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.ownerEmail)) {
-      errors.ownerEmail = 'Owner Email must be a valid email';
-      isValid = false;
+    if (formData.termsUrl && formData.termsUrl.trim()) {
+      const termsRes = validateUrlFormat(formData.termsUrl, 'Terms of Service URL', true);
+      if (!termsRes.valid && termsRes.error) {
+        errors.termsUrl = termsRes.error;
+        isValid = false;
+      }
     }
-    if (formData.supportEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.supportEmail)) {
-      errors.supportEmail = 'Support Email must be a valid email';
-      isValid = false;
+    if (formData.privacyPolicyUrl && formData.privacyPolicyUrl.trim()) {
+      const privacyRes = validateUrlFormat(formData.privacyPolicyUrl, 'Privacy Policy URL', true);
+      if (!privacyRes.valid && privacyRes.error) {
+        errors.privacyPolicyUrl = privacyRes.error;
+        isValid = false;
+      }
     }
   }
 
@@ -373,22 +376,6 @@ export async function validateMiniAppStep(
       );
       if (!hasAndroidFile) {
         errors['integrationConfigNativeSdk.androidArtifactFilename'] = 'Please upload an Android AAR (.aar)';
-        isValid = false;
-      }
-    }
-
-    // Step 3 Legal Policies Validation
-    if (formData.termsUrl && formData.termsUrl.trim()) {
-      const termsRes = validateUrlFormat(formData.termsUrl, 'Terms of Service URL', true);
-      if (!termsRes.valid && termsRes.error) {
-        errors.termsUrl = termsRes.error;
-        isValid = false;
-      }
-    }
-    if (formData.privacyPolicyUrl && formData.privacyPolicyUrl.trim()) {
-      const privacyRes = validateUrlFormat(formData.privacyPolicyUrl, 'Privacy Policy URL', true);
-      if (!privacyRes.valid && privacyRes.error) {
-        errors.privacyPolicyUrl = privacyRes.error;
         isValid = false;
       }
     }

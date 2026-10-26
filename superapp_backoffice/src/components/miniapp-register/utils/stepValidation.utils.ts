@@ -33,19 +33,20 @@ export function isStepRequiredInfoComplete(
     }
 
     case 2: {
-      // 1. Owner Email: required, valid format
-      const hasOwnerEmail = Boolean(
-        formData.ownerEmail &&
-        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.ownerEmail.trim())
-      );
+      // Step 2: Legal & Compliance Policies
+      // If Terms of Service URL is provided, validate URL format
+      const isTermsUrlValid =
+        !formData.termsUrl ||
+        formData.termsUrl.trim() === '' ||
+        /^https?:\/\/.+/i.test(formData.termsUrl.trim());
 
-      // 2. Support Email: optional, but if present must be valid format
-      const isSupportEmailValid =
-        !formData.supportEmail ||
-        formData.supportEmail.trim() === '' ||
-        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.supportEmail.trim());
+      // If Privacy Policy URL is provided, validate URL format
+      const isPrivacyUrlValid =
+        !formData.privacyPolicyUrl ||
+        formData.privacyPolicyUrl.trim() === '' ||
+        /^https?:\/\/.+/i.test(formData.privacyPolicyUrl.trim());
 
-      return hasOwnerEmail && isSupportEmailValid;
+      return isTermsUrlValid && isPrivacyUrlValid;
     }
 
     case 3: {

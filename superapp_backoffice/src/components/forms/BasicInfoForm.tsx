@@ -256,10 +256,20 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
         <div className="col-span-1 md:col-span-2">
           <div className="flex items-center justify-between mb-1">
             <Label>Tagline / Short Description</Label>
-            <span className="text-xs text-slate-400 font-medium">Optional</span>
+            <div className="flex items-center gap-2">
+              <span className={`text-[11px] font-mono ${
+                (formData.tagline ?? formData.shortDescription ?? '').length > 90
+                  ? 'text-amber-500 font-semibold'
+                  : 'text-slate-400 dark:text-slate-500'
+              }`}>
+                {(formData.tagline ?? formData.shortDescription ?? '').length} / 100 characters
+              </span>
+              <span className="text-xs text-slate-400 font-medium">Optional</span>
+            </div>
           </div>
           <Input
             name="tagline"
+            maxLength={100}
             value={formData.tagline ?? formData.shortDescription ?? ''}
             onChange={(e) => {
               handleChange(e);
@@ -267,17 +277,30 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
             }}
             placeholder="e.g. Instant payments and digital wallet for retail users"
           />
+          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+            Concise summary displayed on mobile app catalog tiles, search snippets, and notifications (max 100 characters).
+          </p>
         </div>
 
         {/* 6. Description */}
         <div className="col-span-1 md:col-span-2">
           <div className="flex items-center justify-between mb-1">
             <Label>Description</Label>
-            <span className="text-xs text-slate-400 font-medium">Optional</span>
+            <div className="flex items-center gap-2">
+              <span className={`text-[11px] font-mono ${
+                (formData.description ?? formData.fullDescription ?? '').length > 900
+                  ? 'text-amber-500 font-semibold'
+                  : 'text-slate-400 dark:text-slate-500'
+              }`}>
+                {(formData.description ?? formData.fullDescription ?? '').length} / 1000 characters
+              </span>
+              <span className="text-xs text-slate-400 font-medium">Optional</span>
+            </div>
           </div>
           <Textarea
             name="description"
             rows={3}
+            maxLength={1000}
             value={formData.description ?? formData.fullDescription ?? ''}
             onChange={(e) => {
               handleChange(e);
@@ -286,6 +309,9 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
             placeholder="e.g. Comprehensive details explaining the features, user flows, and core functionality of this MiniApp..."
             className={allErrors.description || allErrors.fullDescription ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
           />
+          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+            Comprehensive details explaining features, user flows, and capabilities for the MiniApp detail page (max 1,000 characters).
+          </p>
           {(allErrors.description || allErrors.fullDescription) && (
             <p className="mt-1.5 text-sm text-rose-600 font-medium">{allErrors.description || allErrors.fullDescription}</p>
           )}
