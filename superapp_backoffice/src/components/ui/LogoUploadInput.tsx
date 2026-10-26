@@ -1,9 +1,8 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Label } from './inputs';
-import { XCircleIcon } from '@/components/ui/Icons';
 import { normalizeAssetUrl } from '@/lib/asset-utils';
 
 interface LogoUploadInputProps {
@@ -36,8 +35,6 @@ export function LogoUploadInput({
   const [fileName, setFileName] = useState<string>('');
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [inputMode, setInputMode] = useState<'upload' | 'url'>('upload');
-  const [urlInput, setUrlInput] = useState<string>(value.startsWith('data:') ? '' : value);
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [shapePreview, setShapePreview] = useState<'squircle' | 'circle' | 'square'>('squircle');
   const [fitMode, setFitMode] = useState<'contain' | 'cover'>('contain');
@@ -46,12 +43,6 @@ export function LogoUploadInput({
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  useEffect(() => {
-    if (!value.startsWith('data:')) {
-      setUrlInput(value);
-    }
-  }, [value]);
 
   useEffect(() => {
     if (isPreviewOpen) {
@@ -68,20 +59,6 @@ export function LogoUploadInput({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isPreviewOpen]);
-
-  const handleApplyDefaultLogo = () => {
-    onChange('https://app.fintechcenterfsa.com/fsa-logo.png');
-    setUrlInput('https://app.fintechcenterfsa.com/fsa-logo.png');
-    setFileName('FSA Standard Logo');
-    setUploadError(null);
-  };
-
-  const handleUrlInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setUrlInput(val);
-    onChange(val);
-    setFileName('');
-  };
 
   const handleFile = (file: File) => {
     setUploadError(null);
@@ -186,7 +163,6 @@ export function LogoUploadInput({
   const handleRemove = (e: React.MouseEvent) => {
     e.stopPropagation();
     onChange('');
-    setUrlInput('');
     setFileName('');
     setUploadError(null);
     if (fileInputRef.current) {
@@ -202,38 +178,7 @@ export function LogoUploadInput({
         <Label>
           {label} {required && <span className="text-rose-500 font-bold">*</span>}
         </Label>
-        <div className="flex items-center gap-1.5 text-xs">
-          <button
-            type="button"
-            onClick={handleApplyDefaultLogo}
-            className="px-2 py-0.5 rounded-md font-medium text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 hover:bg-brand-100 dark:hover:bg-brand-900/50 transition-colors"
-          >
-            Use FSA Logo
-          </button>
-          <span className="text-slate-300 dark:text-slate-700">|</span>
-          <button
-            type="button"
-            onClick={() => setInputMode('upload')}
-            className={`px-2 py-0.5 rounded-md font-medium transition-colors ${
-              inputMode === 'upload'
-                ? 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100'
-                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-            }`}
-          >
-            Upload File
-          </button>
-          <button
-            type="button"
-            onClick={() => setInputMode('url')}
-            className={`px-2 py-0.5 rounded-md font-medium transition-colors ${
-              inputMode === 'url'
-                ? 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100'
-                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-            }`}
-          >
-            Paste URL
-          </button>
-        </div>
+        <span className="text-xs text-slate-400 font-medium">Upload File</span>
       </div>
 
       <input
@@ -245,32 +190,7 @@ export function LogoUploadInput({
         disabled={disabled}
       />
 
-      {inputMode === 'url' ? (
-        <div className="flex items-center gap-2">
-          <input
-            type="url"
-            value={urlInput}
-            onChange={handleUrlInputChange}
-            disabled={disabled}
-            placeholder="https://app.fintechcenterfsa.com/fsa-logo.png"
-            className={`flex-1 h-[46px] px-3 bg-slate-100/80 dark:bg-slate-900/90 border rounded-xl text-base text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all ${
-              displayError
-                ? 'border-rose-500 ring-1 ring-rose-500 bg-rose-50/30'
-                : 'border-slate-300 dark:border-slate-700'
-            }`}
-          />
-          {value && (
-            <button
-              type="button"
-              onClick={() => setIsPreviewOpen(true)}
-              className="px-3 h-[46px] text-sm font-medium text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/40 hover:bg-brand-100 dark:hover:bg-brand-900/40 rounded-xl transition-colors shrink-0"
-            >
-              Preview
-            </button>
-          )}
-        </div>
-      ) : (
-        <div
+      <div
           onClick={() => !disabled && fileInputRef.current?.click()}
           onDrop={handleDrop}
           onDragOver={(e) => {
@@ -400,24 +320,13 @@ export function LogoUploadInput({
             )}
           </div>
         </div>
-      )}
 
       {displayError ? (
-        <div className="mt-2 p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 flex items-start justify-between gap-3 text-sm animate-in fade-in duration-150">
-          <div className="flex items-start gap-2 text-rose-700 dark:text-rose-300">
-            <XCircleIcon className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
-            <span>{displayError}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="shrink-0 px-2.5 py-1 text-xs font-semibold rounded-lg bg-rose-600 hover:bg-rose-700 text-white transition-colors shadow-xs cursor-pointer"
-          >
-            Upload Again
-          </button>
-        </div>
+        <p className="mt-1.5 text-xs text-rose-500 font-medium animate-in fade-in duration-150">
+          {displayError}
+        </p>
       ) : (
-        <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
+        <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
           {helperText || 'PNG, JPG, SVG or WebP • 1:1 Squircle (512×512 px recommended, max 2MB)'}
         </p>
       )}

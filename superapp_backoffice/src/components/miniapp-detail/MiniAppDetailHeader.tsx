@@ -152,38 +152,23 @@ export default function MiniAppDetailHeader({
       </div>
       {/* Header Actions */}
       <div className="flex items-center space-x-2.5">
-        {/* Edit Configuration Toggle */}
+        {/* Edit Configuration Action */}
         {can('miniapp:update') && (
           <Button
             type="button"
-            variant={isEditingUnlocked ? 'primary' : 'outline'}
+            variant="outline"
             onClick={onToggleEditing}
-            className={`h-10 px-4 text-sm font-medium transition-all ${
-              isEditingUnlocked
-                ? 'bg-brand-600 text-white hover:bg-brand-700'
-                : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
-            }`}
+            className="h-10 px-4 text-sm font-medium transition-all border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
           >
-            {isEditingUnlocked ? (
-              <>
-                <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                </svg>
-                <span>Finish Editing</span>
-              </>
-            ) : (
-              <>
-                <svg className="w-3.5 h-3.5 mr-1.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                  />
-                </svg>
-                <span>Edit Configuration</span>
-              </>
-            )}
+            <svg className="w-3.5 h-3.5 mr-1.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+              />
+            </svg>
+            <span>Edit Configuration</span>
           </Button>
         )}
 

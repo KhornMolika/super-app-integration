@@ -1208,7 +1208,11 @@ function ManageMiniAppContent({ params: _params }: { params?: Promise<{ id: stri
           can={can}
           latestTestVersion={latestTestVersion}
           isEditingUnlocked={isEditingUnlocked}
-          onToggleEditing={() => setIsEditingUnlocked(!isEditingUnlocked)}
+          onToggleEditing={() => {
+            setIsEditingUnlocked(true);
+            const el = document.querySelector('form') || document.querySelector('input');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }}
           onOpenSandbox={openSandboxPreview}
           onLifecycleAction={handleLifecycleAction}
           onDelete={handleDelete}
@@ -1352,10 +1356,8 @@ function ManageMiniAppContent({ params: _params }: { params?: Promise<{ id: stri
         {/* Save Changes Bottom Toolbar for Editable Modes */}
         {isEditable && activeTab !== 'report' && activeTab !== 'activity' && activeTab !== 'versions' && (
           <div className="sticky bottom-6 z-30 mt-8 p-4 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 shadow-xl flex items-center justify-between gap-4 animate-in slide-in-from-bottom-2 duration-200">
-            <div className="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-300">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
-              <span className="font-bold">Configuration Unlocked</span>
-              <span className="text-slate-400 dark:text-slate-500 hidden sm:inline">• Save changes when you are done</span>
+            <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+              Save changes when you are done
             </div>
             <div className="flex items-center gap-2.5">
               <Button
