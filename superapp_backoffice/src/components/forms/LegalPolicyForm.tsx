@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ShieldCheckIcon, AlertTriangleIcon, CheckCircleIcon } from '@/components/ui/Icons';
+import { ShieldCheckIcon, CheckCircleIcon } from '@/components/ui/Icons';
 import LegalPolicyTabField from './LegalPolicyTabField';
 import { CreateMiniAppDto } from '@/types/miniapp.types';
 
