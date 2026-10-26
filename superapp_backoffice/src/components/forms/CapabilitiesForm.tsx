@@ -539,13 +539,12 @@ export default function CapabilitiesForm({
               <span>Capabilities</span>
             </h4>
             <span
-              className={`px-2 py-0.5 rounded-full text-[11px] font-semibold inline-flex items-center gap-1 transition-all ${
-                isLoadingHostCapas
+              className={`px-2 py-0.5 rounded-full text-[11px] font-semibold inline-flex items-center gap-1 transition-all ${isLoadingHostCapas
                   ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
                   : hasAutoDetected && !isManuallyModified
-                  ? 'bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
-                  : 'bg-brand-100 text-brand-800 dark:bg-brand-950/60 dark:text-brand-300 border border-brand-200 dark:border-brand-800'
-              }`}
+                    ? 'bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                    : 'bg-brand-100 text-brand-800 dark:bg-brand-950/60 dark:text-brand-300 border border-brand-200 dark:border-brand-800'
+                }`}
             >
               {isLoadingHostCapas ? (
                 <>
@@ -627,20 +626,18 @@ export default function CapabilitiesForm({
           return (
             <div
               key={type}
-              className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
-                isActive
+              className={`rounded-2xl border transition-all duration-200 overflow-hidden ${isActive
                   ? 'bg-white dark:bg-slate-900 border-brand-500/80 dark:border-brand-500/60 shadow-xs ring-1 ring-brand-500/20'
                   : 'bg-white/70 dark:bg-slate-900/40 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
-              }`}
+                }`}
             >
               {/* Header Row: Icon + Title + Status + Switch */}
               <div
                 onClick={() => {
                   if (isEditable) handleToggle(type);
                 }}
-                className={`p-3.5 flex items-center justify-between gap-3.5 select-none ${
-                  isEditable ? 'cursor-pointer' : 'cursor-default'
-                }`}
+                className={`p-3.5 flex items-center justify-between gap-3.5 select-none ${isEditable ? 'cursor-pointer' : 'cursor-default'
+                  }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border shadow-2xs ${visual.bg}`}>
@@ -678,11 +675,10 @@ export default function CapabilitiesForm({
                         type="button"
                         disabled={!isEditable}
                         onClick={() => handleFieldChange(type, 'required', true)}
-                        className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition ${
-                          isRequired
+                        className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition ${isRequired
                             ? 'bg-white dark:bg-slate-900 text-rose-700 dark:text-rose-400 shadow-2xs'
                             : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-                        }`}
+                          }`}
                       >
                         Required
                       </button>
@@ -690,11 +686,10 @@ export default function CapabilitiesForm({
                         type="button"
                         disabled={!isEditable}
                         onClick={() => handleFieldChange(type, 'required', false)}
-                        className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition ${
-                          !isRequired
+                        className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition ${!isRequired
                             ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-2xs'
                             : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-                        }`}
+                          }`}
                       >
                         Optional
                       </button>
@@ -702,14 +697,12 @@ export default function CapabilitiesForm({
                   )}
 
                   <div
-                    className={`w-10 h-5 rounded-full p-0.5 transition-colors ease-in-out duration-200 ${
-                      isActive ? 'bg-brand-600' : 'bg-slate-200 dark:bg-slate-700'
-                    }`}
+                    className={`w-10 h-5 rounded-full p-0.5 transition-colors ease-in-out duration-200 ${isActive ? 'bg-brand-600' : 'bg-slate-200 dark:bg-slate-700'
+                      }`}
                   >
                     <div
-                      className={`w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform duration-200 ${
-                        isActive ? 'translate-x-5' : 'translate-x-0'
-                      }`}
+                      className={`w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform duration-200 ${isActive ? 'translate-x-5' : 'translate-x-0'
+                        }`}
                     />
                   </div>
                 </div>
@@ -775,9 +768,8 @@ export default function CapabilitiesForm({
                       }
                     }}
                     placeholder={`e.g. ${formData.name || 'This MiniApp'} requires ${type.toLowerCase()} access to ${meta?.defaultAction || 'provide core application features'}.`}
-                    className={`h-8 text-xs ${
-                      purposeError ? 'border-rose-500 bg-rose-50/50' : 'bg-white dark:bg-slate-900'
-                    }`}
+                    className={`h-8 text-xs ${purposeError ? 'border-rose-500 bg-rose-50/50' : 'bg-white dark:bg-slate-900'
+                      }`}
                   />
                   {purposeError && (
                     <p className="text-[11px] text-rose-600 font-medium">{purposeError}</p>
@@ -821,22 +813,20 @@ export default function CapabilitiesForm({
                 <button
                   type="button"
                   onClick={() => setCustomRequired(true)}
-                  className={`flex-1 py-1 rounded-md text-[11px] font-semibold transition ${
-                    customRequired
+                  className={`flex-1 py-1 rounded-md text-[11px] font-semibold transition ${customRequired
                       ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-2xs'
                       : 'text-slate-400 hover:text-slate-600'
-                  }`}
+                    }`}
                 >
                   Required
                 </button>
                 <button
                   type="button"
                   onClick={() => setCustomRequired(false)}
-                  className={`flex-1 py-1 rounded-md text-[11px] font-semibold transition ${
-                    !customRequired
+                  className={`flex-1 py-1 rounded-md text-[11px] font-semibold transition ${!customRequired
                       ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-2xs'
                       : 'text-slate-400 hover:text-slate-600'
-                  }`}
+                    }`}
                 >
                   Optional
                 </button>
@@ -878,7 +868,7 @@ export default function CapabilitiesForm({
                 disabled={!customKey.trim()}
                 onClick={handleAddCustomCapability}
                 size="sm"
-                className="h-8 px-3 text-xs shrink-0 inline-flex items-center gap-1 font-semibold"
+                className="h-8 px-3 bg-brand-600 hover:bg-brand-700 text-white text-xs shrink-0 inline-flex items-center gap-1 font-semibold cursor-pointer"
               >
                 <PlusCircle className="w-3 h-3" />
                 <span>Add</span>

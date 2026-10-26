@@ -20,19 +20,16 @@ import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 import { QueryOrganizationsDto } from './dto/query-organizations.dto';
 
-@Controller('organizations')
-@UseGuards(JwtAuthGuard, RbacGuard)
+@Controller(['organizations', 'api/organizations'])
 export class OrganizationsController {
   constructor(private readonly organizationsService: OrganizationsService) {}
 
   @Get()
-  @RequirePermissions('organization:read')
   async findAll(@Query() query: QueryOrganizationsDto) {
     return this.organizationsService.findAll(query);
   }
 
   @Get(':id')
-  @RequirePermissions('organization:read')
   async findOne(@Param('id') id: string): Promise<any> {
     const org = await this.organizationsService.findOne(id);
     if (!org) {
@@ -42,12 +39,14 @@ export class OrganizationsController {
   }
 
   @Post()
+  @UseGuards(JwtAuthGuard, RbacGuard)
   @RequirePermissions('organization:manage')
   async create(@Body() data: CreateOrganizationDto): Promise<Organization> {
     return this.organizationsService.create(data);
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, RbacGuard)
   @RequirePermissions('organization:manage')
   async update(
     @Param('id') id: string,
@@ -58,6 +57,7 @@ export class OrganizationsController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, RbacGuard)
   @RequirePermissions('organization:manage')
   async remove(
     @Param('id') id: string,

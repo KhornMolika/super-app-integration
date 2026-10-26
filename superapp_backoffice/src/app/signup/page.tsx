@@ -10,12 +10,26 @@ import { toast } from '@/components/ui/Toast';
 import { AuthSplitLayout } from '@/components/auth/AuthSplitLayout';
 import { PasswordStrengthMeter, getPasswordStrength } from '@/components/auth/PasswordStrengthMeter';
 
+const DEFAULT_FSA_ORGANIZATIONS: Partial<Organization>[] = [
+  { id: 'fsa-ftc', name: 'Financial Technology Center', code: 'FTC', parentAuthority: 'Non-Bank Financial Services Authority' },
+  { id: 'fsa-serc', name: 'Securities and Exchange Regulator of Cambodia', code: 'SERC', parentAuthority: 'Non-Bank Financial Services Authority' },
+  { id: 'fsa-irc', name: 'Insurance Regulator of Cambodia', code: 'IRC', parentAuthority: 'Non-Bank Financial Services Authority' },
+  { id: 'fsa-tr', name: 'Trust Regulator', code: 'TR', parentAuthority: 'Non-Bank Financial Services Authority' },
+  { id: 'fsa-ssr', name: 'Social Security Regulator', code: 'SSR', parentAuthority: 'Non-Bank Financial Services Authority' },
+  { id: 'fsa-rpr', name: 'Real Estate Business and Pawnshop Regulator', code: 'RPR', parentAuthority: 'Non-Bank Financial Services Authority' },
+  { id: 'fsa-acar', name: 'Accounting and Auditing Regulator', code: 'ACAR', parentAuthority: 'Non-Bank Financial Services Authority' },
+  { id: 'fsa-gad', name: 'General Affairs Department', code: 'GAD', parentAuthority: 'Non-Bank Financial Services Authority' },
+  { id: 'fsa-pd', name: 'Policy Department', code: 'PD', parentAuthority: 'Non-Bank Financial Services Authority' },
+  { id: 'fsa-iau', name: 'Internal Audit Unit', code: 'IAU', parentAuthority: 'Non-Bank Financial Services Authority' },
+  { id: 'fsa-tlad', name: 'Technical and Legal Affairs Department', code: 'TLAD', parentAuthority: 'Non-Bank Financial Services Authority' },
+];
+
 export default function SignupPage() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [organization, setOrganization] = useState('');
-  const [dbOrganizations, setDbOrganizations] = useState<Organization[]>([]);
+  const [dbOrganizations, setDbOrganizations] = useState<Partial<Organization>[]>(DEFAULT_FSA_ORGANIZATIONS);
   const [loadingOrgs, setLoadingOrgs] = useState(false);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -27,19 +41,25 @@ export default function SignupPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
+    let mounted = true;
     setLoadingOrgs(true);
     organizationsApi.getAll({ status: 'ACTIVE', limit: 100 })
       .then((res) => {
         const orgs = unwrapData<Organization>(res);
-        if (Array.isArray(orgs) && orgs.length > 0) {
+        if (mounted && Array.isArray(orgs) && orgs.length > 0) {
           const sorted = [...orgs].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
           setDbOrganizations(sorted);
         }
       })
-      .catch(() => { })
+      .catch((err) => {
+        console.warn('Could not query live organizations, using fallback list', err);
+      })
       .finally(() => {
-        setLoadingOrgs(false);
+        if (mounted) setLoadingOrgs(false);
       });
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const validate = (): boolean => {
@@ -218,7 +238,7 @@ export default function SignupPage() {
                 setOrganization(e.target.value);
                 if (errors.organization) setErrors((prev) => ({ ...prev, organization: '' }));
               }}
-              disabled={loading || loadingOrgs}
+              disabled={loading}
               className={`w-full px-4 py-2.5 rounded-xl text-sm appearance-none bg-slate-900/80 border transition-all duration-200 outline-none pr-10 cursor-pointer ${
                 organization ? 'text-white' : 'text-slate-400'
               } ${
@@ -231,7 +251,7 @@ export default function SignupPage() {
                 {loadingOrgs ? 'Loading organizations...' : 'Select regulator or organization'}
               </option>
               {dbOrganizations.map((org) => (
-                <option key={org.id} value={org.name} className="text-white bg-slate-900 py-1.5">
+                <option key={org.id || org.name} value={org.name} className="text-white bg-slate-900 py-1.5">
                   {org.code ? `${org.code} — ` : ''}{org.name}
                 </option>
               ))}
