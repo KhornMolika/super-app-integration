@@ -3,7 +3,39 @@ import { useState, useEffect } from 'react';
 import { Input, Label, Button } from '@/components/ui/inputs';
 import { toast } from '@/components/ui/Toast';
 import { telegramApi, miniappsApi, usersApi, User } from '@/api';
-import { ZapIcon, BuildingIcon, UserIcon, CheckIcon, CheckCircleIcon, AlertTriangleIcon, DevicePhoneIcon, PlusCircleIcon } from '@/components/ui/Icons';
+import {
+  ZapIcon,
+  BuildingIcon,
+  UserIcon,
+  CheckIcon,
+  CheckCircleIcon,
+  AlertTriangleIcon,
+  DevicePhoneIcon,
+  PlusCircleIcon,
+  SearchIcon,
+  XIcon,
+  CodeIcon,
+  ShieldIcon,
+  EyeIcon,
+  UserGroupIcon,
+} from '@/components/ui/Icons';
+
+const getAvatarColor = (name: string) => {
+  const colors = [
+    'bg-indigo-600 text-white',
+    'bg-sky-600 text-white',
+    'bg-emerald-600 text-white',
+    'bg-amber-600 text-white',
+    'bg-purple-600 text-white',
+    'bg-rose-600 text-white',
+    'bg-teal-600 text-white',
+  ];
+  let hash = 0;
+  for (let i = 0; i < (name || '').length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+};
 
 export default function TeamForm({
   formData,
@@ -27,26 +59,39 @@ export default function TeamForm({
   // Collaborators management state
   const [collaborators, setCollaborators] = useState<any[]>(formData.collaborators || []);
   const [loadingCollaborators, setLoadingCollaborators] = useState(false);
-  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState('');
-  const [selectedRole, setSelectedRole] = useState<'DEVELOPER' | 'ADMIN' | 'VIEWER'>('DEVELOPER');
-  const [isAddingCollaborator, setIsAddingCollaborator] = useState(false);
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
 
+  // Method A: Direct In-Agency Selection Modal States
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+  const [agencyStaff, setAgencyStaff] = useState<User[]>([]);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedRole, setSelectedRole] = useState<'DEVELOPER' | 'ADMIN' | 'VIEWER'>('DEVELOPER');
+  const [isInviting, setIsInviting] = useState(false);
+  const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
+
+  const resolvedOrgId =
+    formData.organizationId ||
+    formData.organization?.id ||
+    telegramStatus?.user?.organizationId ||
+    telegramStatus?.user?.organization?.id;
+
+  const agencyName =
+    formData.organization?.name ||
+    telegramStatus?.user?.organization?.name ||
+    'Your Agency';
+
+  // Load existing collaborators on mount
   useEffect(() => {
     if (!formData.id) return;
     const loadCollaborators = async () => {
       try {
         setLoadingCollaborators(true);
-        const [collabs, usersRes] = await Promise.all([
-          miniappsApi.getCollaborators(formData.id),
-          usersApi.getAll({ limit: 100 }),
-        ]);
+        const collabs = await miniappsApi.getCollaborators(formData.id);
         if (Array.isArray(collabs)) {
           setCollaborators(collabs);
         }
-        const userList = Array.isArray(usersRes) ? usersRes : (usersRes as any)?.data || [];
-        setAvailableUsers(userList);
       } catch (err) {
         console.warn('Failed to load collaborators', err);
       } finally {
@@ -56,19 +101,74 @@ export default function TeamForm({
     loadCollaborators();
   }, [formData.id]);
 
-  const handleAddCollaborator = async () => {
-    if (!formData.id || !selectedUserId) return;
-    setIsAddingCollaborator(true);
+  // Load agency staff when Add Collaborator modal opens
+  useEffect(() => {
+    if (!isAddModalOpen) return;
+    const fetchAgencyStaff = async () => {
+      setIsSearchingUsers(true);
+      try {
+        const params: Record<string, any> = {
+          limit: 100,
+          status: 'ACTIVE',
+        };
+        if (resolvedOrgId) {
+          params.organizationId = resolvedOrgId;
+        }
+        const usersRes = await usersApi.getAll(params);
+        const userList = Array.isArray(usersRes) ? usersRes : (usersRes as any)?.data || [];
+        setAgencyStaff(userList);
+      } catch (err) {
+        console.warn('Failed to load agency staff', err);
+      } finally {
+        setIsSearchingUsers(false);
+      }
+    };
+    fetchAgencyStaff();
+  }, [isAddModalOpen, resolvedOrgId]);
+
+  // Filter candidate active staff: in agency, not owner, and not already a collaborator
+  const candidateStaff = agencyStaff.filter((u) => {
+    const isOwner =
+      u.id === formData.ownerId ||
+      u.email?.toLowerCase() === formData.ownerEmail?.toLowerCase() ||
+      u.id === formData.owner?.id ||
+      u.email?.toLowerCase() === formData.owner?.email?.toLowerCase();
+    if (isOwner) return false;
+
+    const isAlreadyCollab = collaborators.some(
+      (c) => c.userId === u.id || c.user?.id === u.id,
+    );
+    if (isAlreadyCollab) return false;
+
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    return (
+      (u.name && u.name.toLowerCase().includes(q)) ||
+      (u.email && u.email.toLowerCase().includes(q))
+    );
+  });
+
+  const handleInviteCollaborator = async () => {
+    if (!formData.id || !selectedUser) return;
+    setIsInviting(true);
     try {
-      await miniappsApi.addCollaborator(formData.id, selectedUserId, selectedRole);
-      toast.success('Collaborator added successfully!', 'Collaborator Added');
+      await miniappsApi.addCollaborator(formData.id, selectedUser.id, selectedRole);
+      toast.success(
+        `${selectedUser.name || selectedUser.email} has been added as ${selectedRole}!`,
+        'Collaborator Added',
+      );
       const updated = await miniappsApi.getCollaborators(formData.id);
-      if (Array.isArray(updated)) setCollaborators(updated);
-      setSelectedUserId('');
+      if (Array.isArray(updated)) {
+        setCollaborators(updated);
+      }
+      setIsAddModalOpen(false);
+      setSelectedUser(null);
+      setSearchQuery('');
+      setSelectedRole('DEVELOPER');
     } catch (err: any) {
       toast.error(err?.message || 'Failed to add collaborator.', 'Error');
     } finally {
-      setIsAddingCollaborator(false);
+      setIsInviting(false);
     }
   };
 
@@ -369,10 +469,10 @@ export default function TeamForm({
         {/* Team Collaborators & Role-Based Access Card */}
         {formData.id && (
           <div className="md:col-span-2 space-y-4 rounded-xl border border-slate-200 dark:border-slate-800 p-4 bg-slate-50/50 dark:bg-slate-900/40">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-200/80 dark:border-slate-800">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/80 dark:border-slate-800">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
-                  <UserIcon className="w-4 h-4 text-indigo-500 shrink-0" />
+                  <UserGroupIcon className="w-4 h-4 text-indigo-500 shrink-0" />
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
@@ -386,6 +486,23 @@ export default function TeamForm({
                   </p>
                 </div>
               </div>
+
+              {isEditable && (
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setIsAddModalOpen(true);
+                    setSearchQuery('');
+                    setSelectedUser(null);
+                    setSelectedRole('DEVELOPER');
+                    setIsSearchDropdownOpen(false);
+                  }}
+                  className="inline-flex items-center gap-1.5 text-xs px-3.5 py-1.5 font-semibold bg-brand-600 hover:bg-brand-700 text-white rounded-lg shadow-xs shrink-0 transition-all cursor-pointer"
+                >
+                  <PlusCircleIcon className="w-4 h-4" />
+                  <span>+ Add Collaborator</span>
+                </Button>
+              )}
             </div>
 
             {/* Members List */}
@@ -393,7 +510,7 @@ export default function TeamForm({
               {/* Primary Owner / Maintainer Row */}
               <div className="p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 shadow-xs">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-brand-600 to-indigo-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 shadow-2xs ${getAvatarColor(formData.ownerName || formData.owner?.name || 'O')}`}>
                     {(formData.ownerName || formData.owner?.name || 'O').charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0">
@@ -417,15 +534,37 @@ export default function TeamForm({
 
               {/* Collaborators Rows */}
               {loadingCollaborators ? (
-                <div className="py-4 text-center text-xs text-slate-400">Loading collaborators...</div>
+                <div className="py-4 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+                  <svg className="w-3.5 h-3.5 animate-spin text-brand-500" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  <span>Loading collaborators...</span>
+                </div>
               ) : collaborators.length === 0 ? (
-                <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-center space-y-1">
-                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                <div className="p-5 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-center space-y-2">
+                  <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                     No additional collaborators assigned yet
                   </p>
-                  <p className="text-[11px] text-slate-400">
-                    Add agency teammates below to grant them build and review access.
+                  <p className="text-[11px] text-slate-400 max-w-sm mx-auto">
+                    Click &quot;+ Add Collaborator&quot; above to invite active agency colleagues directly.
                   </p>
+                  {isEditable && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddModalOpen(true);
+                        setSearchQuery('');
+                        setSelectedUser(null);
+                        setSelectedRole('DEVELOPER');
+                        setIsSearchDropdownOpen(false);
+                      }}
+                      className="inline-flex items-center gap-1.5 text-xs text-brand-600 dark:text-brand-400 font-semibold hover:underline mt-1"
+                    >
+                      <PlusCircleIcon className="w-3.5 h-3.5" />
+                      <span>Invite team member</span>
+                    </button>
+                  )}
                 </div>
               ) : (
                 collaborators.map((collab: any) => {
@@ -437,7 +576,7 @@ export default function TeamForm({
                       className="p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 shadow-xs"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center justify-center text-xs font-bold shrink-0">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 shadow-2xs ${getAvatarColor(userObj.name || userObj.email || 'U')}`}>
                           {(userObj.name || userObj.email || 'U').charAt(0).toUpperCase()}
                         </div>
                         <div className="min-w-0">
@@ -452,15 +591,18 @@ export default function TeamForm({
 
                       <div className="flex items-center gap-2 shrink-0">
                         <span
-                          className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                          className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-1 ${
                             collab.role === 'ADMIN'
-                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
                               : collab.role === 'VIEWER'
-                              ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-                              : 'bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300'
+                              ? 'bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800'
+                              : 'bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300 border border-sky-200 dark:border-sky-800'
                           }`}
                         >
-                          {collab.role || 'DEVELOPER'}
+                          {collab.role === 'ADMIN' && <ShieldIcon className="w-2.5 h-2.5" />}
+                          {collab.role === 'DEVELOPER' && <CodeIcon className="w-2.5 h-2.5" />}
+                          {collab.role === 'VIEWER' && <EyeIcon className="w-2.5 h-2.5" />}
+                          <span>{collab.role || 'DEVELOPER'}</span>
                         </span>
 
                         {isEditable && (
@@ -482,54 +624,6 @@ export default function TeamForm({
                 })
               )}
             </div>
-
-            {/* Add Teammate Form */}
-            {isEditable && (
-              <div className="pt-3 border-t border-slate-200/80 dark:border-slate-800">
-                <div className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-2">
-                  Add Collaborator
-                </div>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <select
-                    value={selectedUserId}
-                    onChange={(e) => setSelectedUserId(e.target.value)}
-                    className="flex-1 px-3 py-2 rounded-xl text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500"
-                  >
-                    <option value="">Select a user from agency...</option>
-                    {availableUsers
-                      .filter(
-                        (u) =>
-                          u.id !== formData.ownerId &&
-                          !collaborators.some((c) => c.userId === u.id || c.user?.id === u.id),
-                      )
-                      .map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.name || u.email} ({u.email})
-                        </option>
-                      ))}
-                  </select>
-
-                  <select
-                    value={selectedRole}
-                    onChange={(e) => setSelectedRole(e.target.value as any)}
-                    className="px-3 py-2 rounded-xl text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 shrink-0"
-                  >
-                    <option value="DEVELOPER">DEVELOPER (Build &amp; Test)</option>
-                    <option value="ADMIN">ADMIN (Co-Maintainer)</option>
-                    <option value="VIEWER">VIEWER (Read-Only)</option>
-                  </select>
-
-                  <Button
-                    type="button"
-                    onClick={handleAddCollaborator}
-                    disabled={!selectedUserId || isAddingCollaborator}
-                    className="text-xs px-4 h-9 font-semibold shrink-0"
-                  >
-                    {isAddingCollaborator ? 'Adding...' : 'Add Member'}
-                  </Button>
-                </div>
-              </div>
-            )}
           </div>
         )}
 
@@ -898,6 +992,326 @@ export default function TeamForm({
           </p>
         </div>
       </div>
+
+      {/* Method A: Direct In-Agency Selection Modal */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
+          <div
+            className="fixed inset-0"
+            onClick={() => !isInviting && setIsAddModalOpen(false)}
+          />
+
+          <div className="relative w-full max-w-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-6 max-h-[92vh] overflow-y-auto space-y-4">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
+                  <UserGroupIcon className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                    <span>Add Agency Collaborator</span>
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-200 dark:border-emerald-800">
+                      Direct (1-Click)
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Select an active colleague from your agency to grant direct access to this MiniApp.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={isInviting}
+                onClick={() => setIsAddModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <XIcon className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Autocomplete Search Dropdown */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                  Agency Staff Member <span className="text-rose-500">*</span>
+                </Label>
+                {agencyName && (
+                  <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1">
+                    <BuildingIcon className="w-3 h-3 text-slate-400" />
+                    <span>Agency: {agencyName}</span>
+                  </span>
+                )}
+              </div>
+
+              {/* Selected User Highlight Card */}
+              {selectedUser ? (
+                <div className="p-3 rounded-xl border-2 border-brand-500/60 bg-brand-50/40 dark:bg-brand-950/20 flex items-center justify-between gap-3 animate-in fade-in duration-150">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-xs ${getAvatarColor(
+                        selectedUser.name || selectedUser.email,
+                      )}`}
+                    >
+                      {(selectedUser.name || selectedUser.email || 'U').charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate flex items-center gap-2">
+                        <span>{selectedUser.name || 'Agency Teammate'}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-brand-100 dark:bg-brand-900 text-brand-700 dark:text-brand-300 font-semibold uppercase">
+                          Selected
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                        {selectedUser.email}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isInviting}
+                    onClick={() => {
+                      setSelectedUser(null);
+                      setSearchQuery('');
+                      setIsSearchDropdownOpen(true);
+                    }}
+                    className="text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-semibold px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 shadow-xs shrink-0 transition-colors cursor-pointer"
+                  >
+                    Change
+                  </button>
+                </div>
+              ) : (
+                <div className="relative">
+                  {/* Search Input Box */}
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                      <SearchIcon className="w-4 h-4" />
+                    </div>
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setIsSearchDropdownOpen(true);
+                      }}
+                      onFocus={() => setIsSearchDropdownOpen(true)}
+                      placeholder="Type name or email to search active agency staff..."
+                      className="w-full pl-9 pr-9 py-2.5 text-xs rounded-xl bg-white dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all shadow-xs"
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery('')}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                      >
+                        <XIcon className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Dropdown Candidate Results */}
+                  {isSearchDropdownOpen && (
+                    <div className="absolute left-0 right-0 top-full mt-1.5 z-20 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl overflow-hidden max-h-56 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-750 animate-in fade-in slide-in-from-top-1 duration-150">
+                      {isSearchingUsers ? (
+                        <div className="py-6 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+                          <svg className="w-4 h-4 animate-spin text-brand-500" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                          </svg>
+                          <span>Searching active agency staff...</span>
+                        </div>
+                      ) : candidateStaff.length === 0 ? (
+                        <div className="py-6 text-center text-xs text-slate-400 px-4">
+                          {searchQuery.trim() ? (
+                            <>
+                              No active staff matching{' '}
+                              <span className="font-semibold text-slate-600 dark:text-slate-300">
+                                &quot;{searchQuery}&quot;
+                              </span>
+                            </>
+                          ) : (
+                            'No other active staff available in this agency'
+                          )}
+                        </div>
+                      ) : (
+                        candidateStaff.map((user) => (
+                          <button
+                            key={user.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setIsSearchDropdownOpen(false);
+                            }}
+                            className="w-full text-left p-2.5 flex items-center justify-between gap-3 hover:bg-brand-50/70 dark:hover:bg-slate-700/60 transition-colors group cursor-pointer"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div
+                                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 shadow-xs ${getAvatarColor(
+                                  user.name || user.email,
+                                )}`}
+                              >
+                                {(user.name || user.email || 'U').charAt(0).toUpperCase()}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="text-xs font-semibold text-slate-900 dark:text-slate-100 group-hover:text-brand-600 dark:group-hover:text-brand-400 truncate">
+                                  {user.name || 'Unnamed Staff'}
+                                </div>
+                                <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                                  {user.email}
+                                </div>
+                              </div>
+                            </div>
+                            <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium shrink-0 group-hover:bg-brand-600 group-hover:text-white transition-colors">
+                              Select
+                            </span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Role Selection Cards (ADMIN, DEVELOPER, VIEWER) */}
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                Collaborator Role <span className="text-rose-500">*</span>
+              </Label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                {/* DEVELOPER Card */}
+                <div
+                  onClick={() => setSelectedRole('DEVELOPER')}
+                  className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
+                    selectedRole === 'DEVELOPER'
+                      ? 'border-sky-500 bg-sky-50/60 dark:bg-sky-950/30 ring-2 ring-sky-500/30 shadow-xs'
+                      : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-850 hover:border-slate-300 dark:hover:border-slate-700'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-bold text-sky-700 dark:text-sky-300 px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-950/80 uppercase tracking-wider flex items-center gap-1">
+                      <CodeIcon className="w-3 h-3" />
+                      <span>DEVELOPER</span>
+                    </span>
+                    <div
+                      className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                        selectedRole === 'DEVELOPER'
+                          ? 'border-sky-500 bg-sky-500 text-white'
+                          : 'border-slate-300 dark:border-slate-600'
+                      }`}
+                    >
+                      {selectedRole === 'DEVELOPER' && <CheckIcon className="w-3 h-3 stroke-[3]" />}
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-snug">
+                    Push revisions, trigger test builds, and inspect test APK artifacts.
+                  </p>
+                </div>
+
+                {/* ADMIN Card */}
+                <div
+                  onClick={() => setSelectedRole('ADMIN')}
+                  className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
+                    selectedRole === 'ADMIN'
+                      ? 'border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/30 ring-2 ring-emerald-500/30 shadow-xs'
+                      : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-850 hover:border-slate-300 dark:hover:border-slate-700'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 uppercase tracking-wider flex items-center gap-1">
+                      <ShieldIcon className="w-3 h-3" />
+                      <span>ADMIN</span>
+                    </span>
+                    <div
+                      className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                        selectedRole === 'ADMIN'
+                          ? 'border-emerald-500 bg-emerald-500 text-white'
+                          : 'border-slate-300 dark:border-slate-600'
+                      }`}
+                    >
+                      {selectedRole === 'ADMIN' && <CheckIcon className="w-3 h-3 stroke-[3]" />}
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-snug">
+                    Co-maintainer. Manage collaborators, security, and integration secrets.
+                  </p>
+                </div>
+
+                {/* VIEWER Card */}
+                <div
+                  onClick={() => setSelectedRole('VIEWER')}
+                  className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
+                    selectedRole === 'VIEWER'
+                      ? 'border-purple-500 bg-purple-50/60 dark:bg-purple-950/30 ring-2 ring-purple-500/30 shadow-xs'
+                      : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-850 hover:border-slate-300 dark:hover:border-slate-700'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-bold text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/80 uppercase tracking-wider flex items-center gap-1">
+                      <EyeIcon className="w-3 h-3" />
+                      <span>VIEWER</span>
+                    </span>
+                    <div
+                      className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                        selectedRole === 'VIEWER'
+                          ? 'border-purple-500 bg-purple-500 text-white'
+                          : 'border-slate-300 dark:border-slate-600'
+                      }`}
+                    >
+                      {selectedRole === 'VIEWER' && <CheckIcon className="w-3 h-3 stroke-[3]" />}
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-snug">
+                    Read-only. Inspect build telemetry, issues, and audit records.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Instant Access Notice */}
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex items-start gap-2.5">
+              <CheckCircleIcon className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+              <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                <strong className="text-slate-800 dark:text-slate-100">Instant Access:</strong> As this MiniApp&apos;s verified Owner, adding this active agency colleague immediately inserts them into <code className="px-1 py-0.5 rounded bg-slate-200 dark:bg-slate-750 text-[10px] font-mono">mini_app_collaborators</code> with immediate workspace authority.
+              </p>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={isInviting}
+                onClick={() => setIsAddModalOpen(false)}
+                className="text-xs px-4 h-9 font-medium cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                disabled={!selectedUser || isInviting}
+                onClick={handleInviteCollaborator}
+                className="text-xs px-5 h-9 font-bold bg-brand-600 hover:bg-brand-700 text-white shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isInviting ? (
+                  <>
+                    <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                    <span>Inviting...</span>
+                  </>
+                ) : (
+                  <>
+                    <PlusCircleIcon className="w-3.5 h-3.5" />
+                    <span>Invite</span>
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

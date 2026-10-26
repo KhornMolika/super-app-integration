@@ -45,8 +45,29 @@ export class UsersController {
   }
 
   @Get()
-  @RequirePermissions('user:read')
-  async findAll(@Query() query: QueryUsersDto) {
+  @RequirePermissions('organization:read')
+  async findAll(@Query() query: QueryUsersDto, @Req() req: any) {
+    const requester = req?.user;
+    const userPerms = new Set<string>(Array.isArray(requester?.permissions) ? requester.permissions : []);
+    const isSuperOrAdmin =
+      requester?.email?.includes('superadmin') ||
+      requester?.email?.includes('admin') ||
+      (Array.isArray(requester?.roles) &&
+        requester.roles.some((r: any) =>
+          typeof r === 'string'
+            ? r === 'SUPER_ADMIN' || r === 'ADMIN'
+            : r?.name === 'SUPER_ADMIN' || r?.name === 'ADMIN',
+        ));
+
+    // If requester does not have user:read, enforce their own organizationId
+    if (!userPerms.has('user:read') && !isSuperOrAdmin) {
+      const orgId = requester?.organizationId || query.organizationId;
+      if (!orgId) {
+        throw new ForbiddenException('You must belong to an organization to list members');
+      }
+      query.organizationId = requester?.organizationId || orgId;
+    }
+
     return this.accessControlService.findAllUsers(query);
   }
 
