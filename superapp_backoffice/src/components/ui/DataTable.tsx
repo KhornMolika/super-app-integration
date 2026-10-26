@@ -1,10 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Input, Button } from '@/components/ui/inputs';
 import { CleanDropdown, CleanDropdownOption } from '@/components/ui/CleanDropdown';
 import { Pagination, PaginationProps } from '@/components/ui/Pagination';
+
+export type SortDirection = 'asc' | 'desc';
 
 export interface DataTableColumn<T> {
   key: string;
@@ -13,6 +15,11 @@ export interface DataTableColumn<T> {
   className?: string;
   headerClassName?: string;
   width?: string;
+  sortable?: boolean;
+  defaultSort?: boolean;
+  sortKey?: string;
+  sortValue?: (item: T) => string | number | boolean | Date | null | undefined;
+  sortComparator?: (a: T, b: T, direction: SortDirection) => number;
 }
 
 export interface DataTableFilter {
@@ -53,6 +60,110 @@ export interface DataTableProps<T> {
   tableClassName?: string;
   rowClassName?: string | ((item: T, index: number) => string);
   onRowClick?: (item: T, index: number) => void;
+
+  // Sorting
+  enableSorting?: boolean;
+  defaultSortKey?: string | null;
+  defaultSortDirection?: SortDirection;
+  sortBy?: string;
+  sortDirection?: SortDirection;
+  onSortChange?: (sortKey: string, direction: SortDirection) => void;
+  manualSorting?: boolean;
+  allowSortReset?: boolean;
+}
+
+function getSortValue<T>(item: T, col: DataTableColumn<T>): any {
+  if (!item) return '';
+
+  if (col.sortValue) {
+    try {
+      return col.sortValue(item);
+    } catch {
+      return '';
+    }
+  }
+
+  if (typeof item === 'object') {
+    const obj = item as any;
+    const lookupKey = col.sortKey || col.key;
+
+    // Direct property lookup
+    if (obj[lookupKey] !== undefined && obj[lookupKey] !== null) {
+      return obj[lookupKey];
+    }
+
+    // Common smart lookups for backoffice models
+    if (lookupKey === 'profile') {
+      return obj.name || obj.email || '';
+    }
+    if (lookupKey === 'app' || lookupKey === 'miniApp') {
+      return obj.name || obj.title || obj.slug || '';
+    }
+    if (lookupKey === 'timestamp') {
+      return obj.createdAt || obj.timestamp || obj.updatedAt || '';
+    }
+    if (lookupKey === 'actor') {
+      return obj.actorName || obj.actorEmail || '';
+    }
+    if (lookupKey === 'organization') {
+      return obj.organization?.name || obj.orgName || '';
+    }
+    if (lookupKey === 'roles') {
+      if (Array.isArray(obj.roles)) {
+        return obj.roles.map((r: any) => r?.name || r).join(', ');
+      }
+      return obj.role?.name || obj.roleName || '';
+    }
+    if (lookupKey === 'version') {
+      return obj.version || obj.currentReleaseVersion || '';
+    }
+    if (lookupKey === 'parentAuthority') {
+      return obj.parentAuthority || '';
+    }
+    if (lookupKey === 'capabilities') {
+      return Array.isArray(obj.capabilities)
+        ? obj.capabilities.length
+        : Array.isArray(obj.permissions)
+        ? obj.permissions.length
+        : 0;
+    }
+  }
+
+  return '';
+}
+
+function compareSortValues(valA: any, valB: any, direction: SortDirection): number {
+  if (valA === valB) return 0;
+  // Always sort nullish / empty values to the bottom regardless of direction
+  if (valA === null || valA === undefined || valA === '') return 1;
+  if (valB === null || valB === undefined || valB === '') return -1;
+
+  let result = 0;
+
+  if (typeof valA === 'number' && typeof valB === 'number') {
+    result = valA - valB;
+  } else if (typeof valA === 'boolean' && typeof valB === 'boolean') {
+    result = valA === valB ? 0 : valA ? 1 : -1;
+  } else if (valA instanceof Date && valB instanceof Date) {
+    result = valA.getTime() - valB.getTime();
+  } else {
+    const strA = String(valA);
+    const strB = String(valB);
+
+    // If both look like ISO dates or parseable timestamps
+    const dateA = Date.parse(strA);
+    const dateB = Date.parse(strB);
+    if (!isNaN(dateA) && !isNaN(dateB) && (strA.includes('-') || strA.includes('/'))) {
+      result = dateA - dateB;
+    } else {
+      result = strA.localeCompare(strB, undefined, {
+        numeric: true,
+        sensitivity: 'base',
+      });
+    }
+  }
+
+  return direction === 'asc' ? result : -result;
 }
 
 export function DataTable<T>({
@@ -77,10 +188,95 @@ export function DataTable<T>({
   tableClassName = '',
   rowClassName = '',
   onRowClick,
+  enableSorting = true,
+  defaultSortKey,
+  defaultSortDirection = 'asc',
+  sortBy: controlledSortBy,
+  sortDirection: controlledSortDirection,
+  onSortChange,
+  manualSorting = false,
+  allowSortReset = true,
 }: DataTableProps<T>) {
   const showToolbar = onSearchChange !== undefined || filters.length > 0 || actions !== undefined;
   const totalCount = totalItemsCount ?? data.length;
   const filteredCount = paginationProps?.totalItems ?? data.length;
+
+  // Sorting State: Controlled vs Uncontrolled
+  const isControlled = controlledSortBy !== undefined;
+  const initialSortKey =
+    defaultSortKey !== undefined
+      ? defaultSortKey
+      : (columns.find((c) => c.defaultSort)?.key ?? null);
+
+  const [internalSortKey, setInternalSortKey] = useState<string | null>(initialSortKey);
+  const [internalSortDirection, setInternalSortDirection] = useState<SortDirection>(
+    defaultSortDirection || 'asc'
+  );
+
+  const activeSortKey = isControlled ? controlledSortBy : internalSortKey;
+  const activeSortDirection =
+    (isControlled ? controlledSortDirection : internalSortDirection) || defaultSortDirection || 'asc';
+
+  const handleSort = (colKey: string) => {
+    if (!enableSorting) return;
+    const col = columns.find((c) => c.key === colKey);
+    if (!col) return;
+
+    const isSortable =
+      col.sortable !== undefined
+        ? col.sortable
+        : col.key !== 'actions' && col.key !== 'action' && col.key !== 'selection';
+    if (!isSortable) return;
+
+    let nextKey: string | null = colKey;
+    let nextDirection: SortDirection = defaultSortDirection || 'asc';
+
+    if (activeSortKey === colKey) {
+      if (activeSortDirection === 'asc') {
+        nextDirection = 'desc';
+      } else if (activeSortDirection === 'desc') {
+        if (allowSortReset) {
+          nextKey = null;
+          nextDirection = defaultSortDirection || 'asc';
+        } else {
+          nextDirection = 'asc';
+        }
+      }
+    } else {
+      // New column clicked: default is Ascending order!
+      nextDirection = defaultSortDirection || 'asc';
+      nextKey = colKey;
+    }
+
+    if (!isControlled) {
+      setInternalSortKey(nextKey);
+      setInternalSortDirection(nextDirection);
+    }
+
+    if (onSortChange && nextKey) {
+      onSortChange(nextKey, nextDirection);
+    }
+  };
+
+  // Memoized Sorted Data
+  const sortedData = useMemo(() => {
+    if (!enableSorting || manualSorting || !activeSortKey) {
+      return data;
+    }
+
+    const activeCol = columns.find((c) => c.key === activeSortKey);
+    if (!activeCol) return data;
+
+    const copy = [...data];
+    return copy.sort((a, b) => {
+      if (activeCol.sortComparator) {
+        return activeCol.sortComparator(a, b, activeSortDirection);
+      }
+      const valA = getSortValue(a, activeCol);
+      const valB = getSortValue(b, activeCol);
+      return compareSortValues(valA, valB, activeSortDirection);
+    });
+  }, [data, activeSortKey, activeSortDirection, enableSorting, manualSorting, columns]);
 
   return (
     <div className={`space-y-4 ${className}`}>
@@ -170,14 +366,113 @@ export function DataTable<T>({
             {/* Header */}
             <thead className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm border-b border-slate-200/80 dark:border-slate-800 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               <tr>
-                {columns.map((col) => (
-                  <th
-                    key={col.key}
-                    className={`px-6 py-4 ${col.width ? col.width : ''} ${col.headerClassName || ''}`}
-                  >
-                    {col.header}
-                  </th>
-                ))}
+                {columns.map((col) => {
+                  const isSortable =
+                    enableSorting &&
+                    (col.sortable !== undefined
+                      ? col.sortable
+                      : col.key !== 'actions' && col.key !== 'action' && col.key !== 'selection');
+
+                  const isSorted = activeSortKey === col.key;
+                  const ariaSort = isSorted
+                    ? activeSortDirection === 'asc'
+                      ? 'ascending'
+                      : 'descending'
+                    : isSortable
+                    ? 'none'
+                    : undefined;
+
+                  const sortTooltip = isSortable
+                    ? !isSorted
+                      ? 'Click to sort in Ascending order'
+                      : activeSortDirection === 'asc'
+                      ? 'Sorted Ascending. Click to sort Descending'
+                      : 'Sorted Descending. Click to clear sort'
+                    : undefined;
+
+                  const isRightAligned =
+                    col.headerClassName?.includes('text-right') || col.className?.includes('text-right');
+                  const isCenterAligned =
+                    col.headerClassName?.includes('text-center') || col.className?.includes('text-center');
+
+                  return (
+                    <th
+                      key={col.key}
+                      aria-sort={ariaSort}
+                      className={`px-6 py-4 ${col.width ? col.width : ''} ${col.headerClassName || ''}`}
+                    >
+                      {isSortable ? (
+                        <button
+                          type="button"
+                          onClick={() => handleSort(col.key)}
+                          title={sortTooltip}
+                          className={`group/sort inline-flex items-center gap-1.5 font-semibold transition-colors cursor-pointer select-none -m-1 p-1 rounded-md hover:text-slate-900 dark:hover:text-slate-100 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-500/50 ${
+                            isRightAligned
+                              ? 'w-full justify-end'
+                              : isCenterAligned
+                              ? 'w-full justify-center'
+                              : ''
+                          } ${
+                            isSorted
+                              ? 'text-brand-600 dark:text-brand-400 font-bold'
+                              : 'text-slate-500 dark:text-slate-400'
+                          }`}
+                        >
+                          <span>{col.header}</span>
+                          <span className="inline-flex items-center shrink-0">
+                            {isSorted ? (
+                              activeSortDirection === 'asc' ? (
+                                <svg
+                                  className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400 transition-transform duration-150"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2.5}
+                                    d="M5 15l7-7 7 7"
+                                  />
+                                </svg>
+                              ) : (
+                                <svg
+                                  className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400 transition-transform duration-150"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2.5}
+                                    d="M19 9l-7 7-7-7"
+                                  />
+                                </svg>
+                              )
+                            ) : (
+                              <svg
+                                className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600 group-hover/sort:text-slate-500 dark:group-hover/sort:text-slate-400 opacity-60 group-hover/sort:opacity-100 transition-all duration-150"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={1.75}
+                                  d="M8 9l4-4 4 4m0 6l-4 4-4-4"
+                                />
+                              </svg>
+                            )}
+                          </span>
+                        </button>
+                      ) : (
+                        col.header
+                      )}
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
 
@@ -194,7 +489,7 @@ export function DataTable<T>({
                     ))}
                   </tr>
                 ))
-              ) : data.length === 0 ? (
+              ) : sortedData.length === 0 ? (
                 // Clean Empty State
                 <tr>
                   <td colSpan={columns.length} className="px-6 py-16 text-center text-slate-500">
@@ -226,7 +521,7 @@ export function DataTable<T>({
                 </tr>
               ) : (
                 // Real Data Rows
-                data.map((item, index) => {
+                sortedData.map((item, index) => {
                   const key = keyExtractor(item, index);
                   const dynamicRowClass =
                     typeof rowClassName === 'function' ? rowClassName(item, index) : rowClassName;
@@ -251,7 +546,7 @@ export function DataTable<T>({
         </div>
 
         {/* 3. Integrated Pagination Footer */}
-        {paginationProps && !loading && data.length > 0 && (
+        {paginationProps && !loading && sortedData.length > 0 && (
           <div className="px-6 py-3.5 border-t border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
             <Pagination {...paginationProps} />
           </div>
