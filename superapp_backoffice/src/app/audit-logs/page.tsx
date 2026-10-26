@@ -200,6 +200,9 @@ function AuditLogsContent() {
         </div>
       ),
       width: 'w-[18%]',
+      sortable: true,
+      defaultSort: true,
+      sortValue: (log) => parseDate(log.createdAt).getTime(),
       cell: (log) => {
         const date = parseDate(log.createdAt);
         return (
@@ -231,6 +234,15 @@ function AuditLogsContent() {
         </div>
       ),
       width: 'w-[26%]',
+      sortable: true,
+      sortValue: (log) =>
+        log.actorName ||
+        log.newValue?.owner?.name ||
+        (log.actorId === 'admin'
+          ? 'System Administrator'
+          : log.actorId === 'system'
+          ? 'System Engine'
+          : 'Operator'),
       cell: (log) => {
         const actorName =
           log.actorName ||
@@ -291,6 +303,8 @@ function AuditLogsContent() {
         </div>
       ),
       width: 'w-[22%]',
+      sortable: true,
+      sortValue: (log) => log.action,
       cell: (log) => (
         <span
           className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border uppercase tracking-wider ${getActionBadgeClass(
@@ -311,6 +325,15 @@ function AuditLogsContent() {
         </div>
       ),
       width: 'w-[22%]',
+      sortable: true,
+      sortValue: (log) =>
+        `${log.resourceType || ''} ${
+          log.newValue?.name ||
+          log.oldValue?.name ||
+          log.metadata?.appName ||
+          log.metadata?.title ||
+          ''
+        }`.trim(),
       cell: (log) => {
         const targetName =
           log.newValue?.name ||
@@ -353,6 +376,8 @@ function AuditLogsContent() {
         </div>
       ),
       width: 'w-[12%]',
+      sortable: true,
+      sortValue: (log) => log.ipAddress || '127.0.0.1',
       cell: (log) => (
         <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-mono text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60">
           {log.ipAddress || '127.0.0.1'}
@@ -425,6 +450,8 @@ function AuditLogsContent() {
             setCurrentPage(1);
           }}
           totalItemsCount={paginationMeta.totalItems}
+          defaultSortKey="timestamp"
+          defaultSortDirection="asc"
           emptyMessage="No audit logs match your search or filter criteria"
           emptySubMessage="Try adjusting your keyword or action filter to locate system security events"
           paginationProps={paginationProps}

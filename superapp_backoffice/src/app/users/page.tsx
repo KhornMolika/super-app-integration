@@ -263,6 +263,9 @@ function UsersContent() {
         </div>
       ),
       width: 'w-[28%]',
+      sortable: true,
+      defaultSort: true,
+      sortValue: (user) => user.name || user.email || '',
       cell: (user) => {
         const initials = (user.name || 'U')
           .split(' ')
@@ -299,6 +302,8 @@ function UsersContent() {
         </div>
       ),
       width: 'w-[22%]',
+      sortable: true,
+      sortValue: (user) => getUserRoles(user).map((r) => r.name).join(', '),
       cell: (user) => {
         const userRoles = getUserRoles(user);
         if (userRoles.length === 0) {
@@ -342,6 +347,8 @@ function UsersContent() {
         </div>
       ),
       width: 'w-[18%]',
+      sortable: true,
+      sortValue: (user) => user.organization?.name || '',
       cell: (user) => {
         if (!user.organization && !user.organizationId) {
           return <span className="text-xs text-slate-400 italic">Independent</span>;
@@ -380,6 +387,8 @@ function UsersContent() {
         </div>
       ),
       width: 'w-[16%]',
+      sortable: true,
+      sortValue: (user) => user.telegramUsername || user.telegramChatId || '',
       cell: (user) => {
         if (!user.telegramUsername && !user.telegramChatId) {
           return <span className="text-xs text-slate-400 italic">Not Linked</span>;
@@ -416,6 +425,8 @@ function UsersContent() {
         </div>
       ),
       width: 'w-[14%]',
+      sortable: true,
+      sortValue: (user) => getUserEffectiveStatus(user),
       cell: (user) => {
         const effectiveStatus = getUserEffectiveStatus(user);
 
@@ -471,6 +482,7 @@ function UsersContent() {
       header: <span className="block text-right">Actions</span>,
       width: 'w-[16%]',
       className: 'text-right',
+      sortable: false,
       cell: (user) => {
         const effectiveStatus = getUserEffectiveStatus(user);
         const isPending = effectiveStatus === 'PENDING_APPROVAL';
@@ -618,6 +630,8 @@ function UsersContent() {
           isFiltered={roleFilter !== 'ALL' || statusFilter !== 'ALL' || !!userSearch}
           onResetFilters={handleResetFilters}
           totalItemsCount={paginationMeta.totalItems}
+          defaultSortKey="profile"
+          defaultSortDirection="asc"
           paginationProps={paginationProps}
           emptyMessage="No users match your filter criteria"
           emptySubMessage="Try adjusting your search query, role, or status filter"

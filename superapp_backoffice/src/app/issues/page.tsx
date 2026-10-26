@@ -76,6 +76,9 @@ export default function IssuesPage() {
         key: 'miniApp',
         header: 'MiniApp',
         width: 'w-[20%]',
+        sortable: true,
+        defaultSort: true,
+        sortValue: (issue) => issue.miniApp?.name || 'Unknown App',
         cell: (issue) => (
           <div>
             <Link
@@ -96,6 +99,8 @@ export default function IssuesPage() {
         key: 'classification',
         header: 'Classification',
         width: 'w-[16%]',
+        sortable: true,
+        sortValue: (issue) => issue.classification || 'MINI_APP_ISSUE',
         cell: (issue) => (
           <span className="inline-flex px-2.5 py-1 text-xs font-semibold rounded-md bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
             {issue.classification || 'MINI_APP_ISSUE'}
@@ -106,6 +111,8 @@ export default function IssuesPage() {
         key: 'description',
         header: 'Description',
         width: 'w-[36%]',
+        sortable: true,
+        sortValue: (issue) => issue.description || '',
         cell: (issue) => (
           <div
             className="text-sm text-slate-600 dark:text-slate-300 truncate max-w-md"
@@ -119,6 +126,8 @@ export default function IssuesPage() {
         key: 'severity',
         header: 'Severity',
         width: 'w-[10%]',
+        sortable: true,
+        sortValue: (issue) => issue.severity || 'LOW',
         cell: (issue) => {
           const isHigh = issue.severity === 'HIGH' || issue.severity === 'CRITICAL';
           return (
@@ -138,6 +147,8 @@ export default function IssuesPage() {
         key: 'status',
         header: 'Status',
         width: 'w-[10%]',
+        sortable: true,
+        sortValue: (issue) => issue.status || 'OPEN',
         cell: (issue) => (
           <span className="inline-flex px-2.5 py-0.5 text-xs font-semibold rounded-full border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800">
             {issue.status || 'OPEN'}
@@ -149,6 +160,7 @@ export default function IssuesPage() {
         header: <span className="block text-right">Actions</span>,
         width: 'w-[8%]',
         className: 'text-right',
+        sortable: false,
         cell: (issue) => (
           <Link
             href={`/miniapps/${issue.miniApp?.id}`}
@@ -217,6 +229,8 @@ export default function IssuesPage() {
           setStatusFilter('ALL');
         }}
         totalItemsCount={issues.length}
+        defaultSortKey="miniApp"
+        defaultSortDirection="asc"
         emptyMessage="No issues match your criteria"
         emptySubMessage="All validation and security checks are currently clear for this selection."
       />

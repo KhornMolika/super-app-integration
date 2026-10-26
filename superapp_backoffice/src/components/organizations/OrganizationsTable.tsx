@@ -32,6 +32,9 @@ export function OrganizationsTable({
         key: 'name',
         header: 'Organization Name',
         width: 'w-[40%]',
+        sortable: true,
+        defaultSort: true,
+        sortValue: (org) => org.name,
         cell: (org) => {
           const isRoot = isRootOrganization(org);
           return (
@@ -76,6 +79,8 @@ export function OrganizationsTable({
         key: 'code',
         header: 'Code',
         width: 'w-[15%]',
+        sortable: true,
+        sortValue: (org) => org.code || '',
         cell: (org) =>
           org.code ? (
             <span className="font-mono text-xs font-semibold px-2.5 py-1 rounded-lg bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-200/70 dark:border-sky-800/50">
@@ -89,6 +94,8 @@ export function OrganizationsTable({
         key: 'parentAuthority',
         header: 'Parent Authority',
         width: 'w-[25%]',
+        sortable: true,
+        sortValue: (org) => org.parentAuthority || 'Non-Bank Financial Services Authority',
         cell: (org) => (
           <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 font-medium">
             <ShieldCheckIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
@@ -102,6 +109,8 @@ export function OrganizationsTable({
         key: 'status',
         header: 'Status',
         width: 'w-[12%]',
+        sortable: true,
+        sortValue: (org) => org.status,
         cell: (org) => {
           const isActive = org.status === 'ACTIVE';
           return (
@@ -127,6 +136,7 @@ export function OrganizationsTable({
         header: <span className="block text-right">Actions</span>,
         width: 'w-[8%]',
         className: 'text-right',
+        sortable: false,
         cell: (org) => (
           <div onClick={(e) => e.stopPropagation()}>
             <OrganizationActionMenu
@@ -152,6 +162,8 @@ export function OrganizationsTable({
       loadingMessage="Loading regulatory bodies..."
       emptyMessage="No Organizations Found"
       emptySubMessage="No regulatory bodies match the selected filter or search keyword."
+      defaultSortKey="name"
+      defaultSortDirection="asc"
       paginationProps={paginationProps}
       onRowClick={(org) => onView(org)}
       rowClassName="group"

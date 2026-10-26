@@ -160,6 +160,9 @@ function MiniAppsContent() {
       key: 'name',
       header: 'App Name',
       width: 'w-[22%]',
+      sortable: true,
+      defaultSort: true,
+      sortValue: (app) => app.name || '',
       cell: (app) => (
         <div className="flex items-center space-x-3">
           <AppLogoAvatar logo={app.logo} name={app.name} size="md" />
@@ -176,6 +179,8 @@ function MiniAppsContent() {
       key: 'organization',
       header: 'Organization',
       width: 'w-[12%]',
+      sortable: true,
+      sortValue: (app) => app.organizationCode || getOrganizationCode(app.organization || app.category) || '',
       cell: (app) => {
         const orgCode = app.organizationCode || getOrganizationCode(app.organization || app.category);
         const orgFullName = getOrganizationFullName(app.organization || app.category);
@@ -194,6 +199,8 @@ function MiniAppsContent() {
       key: 'integration',
       header: 'Integration',
       width: 'w-[13%]',
+      sortable: true,
+      sortValue: (app) => app.integrationMethod || 'WEBVIEW',
       cell: (app) => (
         <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
           {app.integrationMethod || 'WEBVIEW'}
@@ -204,6 +211,8 @@ function MiniAppsContent() {
       key: 'version',
       header: 'Version',
       width: 'w-[9%]',
+      sortable: true,
+      sortValue: (app) => app.version || app.currentReleaseVersion || '0.1.0',
       cell: (app) => (
         <span className="text-xs font-mono text-slate-500">
           {app.version || app.currentReleaseVersion || '0.1.0'}
@@ -214,6 +223,13 @@ function MiniAppsContent() {
       key: 'capabilities',
       header: 'Capabilities',
       width: 'w-[12%]',
+      sortable: true,
+      sortValue: (app) =>
+        Array.isArray(app.capabilities)
+          ? app.capabilities.length
+          : Array.isArray(app.permissions)
+          ? app.permissions.length
+          : 0,
       cell: (app) => (
         <span className="inline-flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400">
           <TagIcon className="w-3.5 h-3.5" />
@@ -231,6 +247,8 @@ function MiniAppsContent() {
       key: 'status',
       header: 'Status',
       width: 'w-[18%]',
+      sortable: true,
+      sortValue: (app) => app.status || 'DRAFT',
       cell: (app) => {
         const isLiveProduction = app.status === 'ACTIVE' || app.status === 'Published';
         const hasProductionHistory = Boolean(
@@ -266,6 +284,7 @@ function MiniAppsContent() {
       header: <span className="block text-right whitespace-nowrap">Actions</span>,
       width: 'w-[14%]',
       className: 'text-right whitespace-nowrap',
+      sortable: false,
       cell: (app) => (
         <div onClick={(e) => e.stopPropagation()}>
           <ActionMenu
@@ -406,6 +425,8 @@ function MiniAppsContent() {
             setCurrentPage(1);
           }}
           totalItemsCount={paginationMeta.totalItems}
+          defaultSortKey="name"
+          defaultSortDirection="asc"
           emptyMessage="No MiniApps Found"
           emptySubMessage="Get started by registering a new mini app to join the ecosystem."
           emptyAction={
