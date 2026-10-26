@@ -313,7 +313,7 @@ function SidebarNavContent() {
   const searchParams = useSearchParams();
   const { can, user, role } = useAuth();
   const isSuperOrAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN' || can('organization:manage');
-  const { isCollapsed } = useSidebar();
+  const { isCollapsed, isWizardStepAllowed, completedWizardSteps } = useSidebar();
 
   const isSettingsMode = pathname.startsWith('/settings');
   const isMiniAppRegisterMode = pathname.startsWith('/miniapps/register');
@@ -434,23 +434,41 @@ function SidebarNavContent() {
                 if (isMiniAppRegisterMode) {
                   const stepNum = item.stepNumber || 1;
                   isActive = currentStep === stepNum;
-                  const isCompleted = stepNum < currentStep;
+                  const isCompleted = Boolean(completedWizardSteps[stepNum]);
+                  const isAllowed = isWizardStepAllowed(stepNum);
 
-                  itemIcon = isCompleted ? (
+                  itemIcon = isActive ? (
+                    <span className="w-5 h-5 flex items-center justify-center rounded-md text-xs font-bold bg-brand-500 text-white shadow-sm border border-brand-400">
+                      {stepNum}
+                    </span>
+                  ) : isCompleted ? (
                     <span className="w-5 h-5 flex items-center justify-center rounded-md text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
                     </span>
-                  ) : isActive ? (
-                    <span className="w-5 h-5 flex items-center justify-center rounded-md text-xs font-bold bg-brand-500 text-white shadow-sm border border-brand-400">
+                  ) : isAllowed ? (
+                    <span className="w-5 h-5 flex items-center justify-center rounded-md text-xs font-medium text-brand-300/80 border border-brand-700/80">
                       {stepNum}
                     </span>
                   ) : (
-                    <span className="w-5 h-5 flex items-center justify-center rounded-md text-xs font-medium text-brand-300/70 border border-brand-800/80">
+                    <span className="w-5 h-5 flex items-center justify-center rounded-md text-xs font-medium text-slate-500 border border-slate-700/50 bg-slate-900/30">
                       {stepNum}
                     </span>
                   );
+
+                  if (!isAllowed) {
+                    return (
+                      <div
+                        key={item.href}
+                        title={isCollapsed ? `Step ${stepNum}: Complete required info to unlock` : 'Complete required information to unlock this step'}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold opacity-35 cursor-not-allowed select-none text-slate-400"
+                      >
+                        <span className="shrink-0">{itemIcon}</span>
+                        {!isCollapsed && <span className="truncate tracking-wide">{displayName}</span>}
+                      </div>
+                    );
+                  }
                 } else if (isMiniAppDetailMode) {
                   isActive = item.tabKey ? currentTab === item.tabKey : false;
                 } else {

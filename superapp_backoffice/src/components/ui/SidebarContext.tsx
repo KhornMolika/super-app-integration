@@ -1,11 +1,14 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 
 interface SidebarContextType {
   isCollapsed: boolean;
   setIsCollapsed: (collapsed: boolean) => void;
   toggleSidebar: () => void;
+  completedWizardSteps: Record<number, boolean>;
+  setCompletedWizardSteps: (steps: Record<number, boolean>) => void;
+  isWizardStepAllowed: (step: number) => boolean;
 }
 
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
@@ -13,6 +16,7 @@ const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 export function SidebarProvider({ children }: { children: ReactNode }) {
   const [isCollapsed, setIsCollapsedState] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [completedWizardSteps, setCompletedWizardSteps] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     try {
@@ -39,8 +43,27 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
     setIsCollapsed(!isCollapsed);
   };
 
+  const isWizardStepAllowed = useCallback(
+    (stepNumber: number) => {
+      // Step 1 is always accessible
+      if (stepNumber <= 1) return true;
+      // Step N is accessible only if Step N-1 has all required information completed
+      return Boolean(completedWizardSteps[stepNumber - 1]);
+    },
+    [completedWizardSteps]
+  );
+
   return (
-    <SidebarContext.Provider value={{ isCollapsed: mounted ? isCollapsed : false, setIsCollapsed, toggleSidebar }}>
+    <SidebarContext.Provider
+      value={{
+        isCollapsed: mounted ? isCollapsed : false,
+        setIsCollapsed,
+        toggleSidebar,
+        completedWizardSteps,
+        setCompletedWizardSteps,
+        isWizardStepAllowed,
+      }}
+    >
       {children}
     </SidebarContext.Provider>
   );

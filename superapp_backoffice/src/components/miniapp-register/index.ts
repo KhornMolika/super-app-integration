@@ -1,6 +1,7 @@
 export * from './types';
 export * from './constants';
 export * from './utils/registerPayload.utils';
+export * from './utils/stepValidation.utils';
 export * from './hooks/useMiniAppRegister';
 export * from './RegisterWizardHeader';
 export * from './RegisterWizardBottomBar';

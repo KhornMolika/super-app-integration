@@ -21,6 +21,7 @@ export interface RegisterWizardHeaderProps {
 export interface RegisterWizardBottomBarProps {
   step: number;
   isSubmitting: boolean;
+  isCurrentStepComplete?: boolean;
   onPrevStep: () => void;
   onNextStep: () => void;
 }

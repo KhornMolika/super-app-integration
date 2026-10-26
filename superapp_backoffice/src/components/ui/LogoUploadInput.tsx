@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Label } from './inputs';
+import { Label, Input } from './inputs';
 import { normalizeAssetUrl } from '@/lib/asset-utils';
 
 interface LogoUploadInputProps {
@@ -29,6 +29,7 @@ export function LogoUploadInput({
   helperText,
 }: LogoUploadInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [mode, setMode] = useState<'upload' | 'url'>(value && value.startsWith('http') ? 'url' : 'upload');
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -178,7 +179,30 @@ export function LogoUploadInput({
         <Label>
           {label} {required && <span className="text-rose-500 font-bold">*</span>}
         </Label>
-        <span className="text-xs text-slate-400 font-medium">Upload File</span>
+        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700/60 text-xs">
+          <button
+            type="button"
+            onClick={() => setMode('upload')}
+            className={`px-2 py-0.5 rounded font-medium transition-all ${
+              mode === 'upload'
+                ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-300 shadow-xs'
+                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
+            }`}
+          >
+            Upload File
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('url')}
+            className={`px-2 py-0.5 rounded font-medium transition-all ${
+              mode === 'url'
+                ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-300 shadow-xs'
+                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
+            }`}
+          >
+            Image URL
+          </button>
+        </div>
       </div>
 
       <input
@@ -190,7 +214,41 @@ export function LogoUploadInput({
         disabled={disabled}
       />
 
-      <div
+      {mode === 'url' ? (
+        <div className="flex gap-2">
+          <Input
+            type="url"
+            disabled={disabled}
+            value={value && !value.startsWith('data:') ? value : ''}
+            onChange={(e) => {
+              const val = e.target.value.trim();
+              onChange(val);
+              setFileName(val ? val.split('/').pop() || 'logo.png' : '');
+            }}
+            placeholder="https://example.com/logo.png"
+            className={`flex-1 text-sm ${displayError ? 'border-rose-500 ring-1 ring-rose-500' : ''}`}
+          />
+          {value && (
+            <button
+              type="button"
+              onClick={() => setIsPreviewOpen(true)}
+              className="px-3 h-[42px] shrink-0 flex items-center gap-1.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-300 transition-colors"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={normalizeAssetUrl(value) || value}
+                alt="Preview"
+                className="w-5 h-5 rounded object-cover"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = 'none';
+                }}
+              />
+              Preview
+            </button>
+          )}
+        </div>
+      ) : (
+        <div
           onClick={() => !disabled && fileInputRef.current?.click()}
           onDrop={handleDrop}
           onDragOver={(e) => {
@@ -304,6 +362,7 @@ export function LogoUploadInput({
             )}
           </div>
         </div>
+      )}
 
       {displayError ? (
         <p className="mt-1.5 text-xs text-rose-500 font-medium animate-in fade-in duration-150">

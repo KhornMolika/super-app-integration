@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { useSidebar } from '@/components/ui/SidebarContext';
 import {
   CreateMiniAppDto,
   FlutterPackageConfigDto,
@@ -30,11 +31,16 @@ import {
   prepareSubmitPayload,
   extractValidationErrors,
 } from '../utils/registerPayload.utils';
+import {
+  isStepRequiredInfoComplete,
+  getStepsCompletionMap,
+} from '../utils/stepValidation.utils';
 
 export function useMiniAppRegister() {
   const router = useRouter();
   const { can, user } = useAuth();
   const searchParams = useSearchParams();
+  const { setCompletedWizardSteps } = useSidebar();
 
   // Permission guard
   useEffect(() => {
@@ -50,11 +56,25 @@ export function useMiniAppRegister() {
   const parsedStep = stepQuery ? parseInt(stepQuery, 10) : 1;
   const initialStep = !isNaN(parsedStep) && parsedStep >= 1 && parsedStep <= 6 ? parsedStep : 1;
   const [step, setStepState] = useState(initialStep);
+  const [maxVisitedStep, setMaxVisitedStep] = useState(initialStep);
 
   const setStep = (newStep: number | ((prev: number) => number)) => {
     setStepState((prev) => {
       const resolved = typeof newStep === 'function' ? newStep(prev) : newStep;
       const clamped = Math.max(1, Math.min(6, resolved));
+
+      // Guard: do not allow advancing if any previous step is incomplete
+      if (clamped > 1) {
+        for (let s = 1; s < clamped; s++) {
+          if (!isStepRequiredInfoComplete(s, formData, pendingArchiveFile)) {
+            toast.warning(`Please complete Step ${s} before proceeding.`, 'Required Info Missing');
+            router.replace(`/miniapps/register?step=${s}`, { scroll: false });
+            return s;
+          }
+        }
+      }
+
+      setMaxVisitedStep((oldMax) => Math.max(oldMax, clamped));
       router.replace(`/miniapps/register?step=${clamped}`, { scroll: false });
       return clamped;
     });
@@ -65,6 +85,7 @@ export function useMiniAppRegister() {
       const p = parseInt(stepQuery, 10);
       if (!isNaN(p) && p >= 1 && p <= 6 && p !== step) {
         setStepState(p);
+        setMaxVisitedStep((oldMax) => Math.max(oldMax, p));
       }
     }
   }, [stepQuery]);
@@ -83,6 +104,34 @@ export function useMiniAppRegister() {
   const [pendingIosFile, setPendingIosFile] = useState<File | null>(null);
   const [pendingAndroidFile, setPendingAndroidFile] = useState<File | null>(null);
   const [showUnsupportedModal, setShowUnsupportedModal] = useState(false);
+
+  // Step completion calculation
+  const completionMap = useMemo(() => {
+    return getStepsCompletionMap(formData, pendingArchiveFile, maxVisitedStep);
+  }, [formData, pendingArchiveFile, maxVisitedStep]);
+
+  // Check if all required info for current step is completed
+  const isCurrentStepComplete = useMemo(() => {
+    return isStepRequiredInfoComplete(step, formData, pendingArchiveFile);
+  }, [step, formData, pendingArchiveFile]);
+
+  // Synchronize completed steps to the sidebar navigation
+  useEffect(() => {
+    setCompletedWizardSteps(completionMap);
+  }, [completionMap, setCompletedWizardSteps]);
+
+  // Ensure user cannot stay on an advanced step if previous steps become incomplete
+  useEffect(() => {
+    if (step > 1) {
+      for (let s = 1; s < step; s++) {
+        if (!isStepRequiredInfoComplete(s, formData, pendingArchiveFile)) {
+          setStepState(s);
+          router.replace(`/miniapps/register?step=${s}`, { scroll: false });
+          break;
+        }
+      }
+    }
+  }, [step, formData, pendingArchiveFile, router]);
 
   // Auto-populate owner & Telegram details from telegram profile and auth user
   useEffect(() => {
@@ -604,6 +653,11 @@ export function useMiniAppRegister() {
   };
 
   const nextStep = async () => {
+    if (!isCurrentStepComplete) {
+      toast.warning('Please complete all required fields before proceeding to the next step.', 'Required Info Missing');
+      await validateStep(step);
+      return;
+    }
     setIsSubmitting(true);
     const valid = await validateStep(step);
     setIsSubmitting(false);
@@ -783,6 +837,9 @@ export function useMiniAppRegister() {
     setStep,
     nextStep,
     prevStep,
+    isCurrentStepComplete,
+    completionMap,
+    maxVisitedStep,
     isSubmitting,
     setIsSubmitting,
     modalState,

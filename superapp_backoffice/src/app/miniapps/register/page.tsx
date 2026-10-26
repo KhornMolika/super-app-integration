@@ -21,6 +21,7 @@ function RegisterMiniAppContent() {
     setStep,
     nextStep,
     prevStep,
+    isCurrentStepComplete,
     isSubmitting,
     modalState,
     setModalState,
@@ -91,6 +92,7 @@ function RegisterMiniAppContent() {
           <RegisterWizardBottomBar
             step={step}
             isSubmitting={isSubmitting}
+            isCurrentStepComplete={isCurrentStepComplete}
             onPrevStep={prevStep}
             onNextStep={nextStep}
           />
