@@ -246,18 +246,15 @@ export class SeederService implements OnApplicationBootstrap {
       }) || (await this.organizationRepository.find({ take: 1 }))[0] || null;
     }
 
-    // 4. Seed Password
-    const defaultPassword =
+    // 4. Seed Password (Strictly retrieved from environment secret; no hardcoded credentials in source code)
+    const configuredPassword =
       this.configService.get<string>('SUPERADMIN_PASSWORD') ||
-      process.env.SUPERADMIN_PASSWORD ||
-      'Password123!@#';
+      process.env.SUPERADMIN_PASSWORD;
 
-    if (!this.configService.get<string>('SUPERADMIN_PASSWORD') && !process.env.SUPERADMIN_PASSWORD) {
-      this.logger.warn(
-        'SUPERADMIN_PASSWORD is not explicitly configured in environment. Using standard default password for initial official accounts.',
-      );
+    let defaultPasswordHash: string | null = null;
+    if (configuredPassword) {
+      defaultPasswordHash = await hashPassword(configuredPassword);
     }
-    const defaultPasswordHash = await hashPassword(defaultPassword);
 
     // 5. Official Production & Governance Accounts
     const officialAccounts = [
@@ -293,6 +290,11 @@ export class SeederService implements OnApplicationBootstrap {
       });
 
       if (!user) {
+        if (!defaultPasswordHash) {
+          throw new Error(
+            'SUPERADMIN_PASSWORD environment variable is required to bootstrap official accounts. Please configure it in Kubernetes Secret "super-app-backend-secret".',
+          );
+        }
         user = this.userRepository.create({
           email,
           name: acc.name,
@@ -318,6 +320,11 @@ export class SeederService implements OnApplicationBootstrap {
           changed = true;
         }
         if (!user.passwordHash) {
+          if (!defaultPasswordHash) {
+            throw new Error(
+              `SUPERADMIN_PASSWORD is required to initialize password for official account ${email}. Please configure it in Kubernetes Secret "super-app-backend-secret".`,
+            );
+          }
           user.passwordHash = defaultPasswordHash;
           changed = true;
         }

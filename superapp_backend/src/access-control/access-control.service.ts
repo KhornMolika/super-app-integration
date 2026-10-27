@@ -124,7 +124,12 @@ export class AccessControlService {
       role = await this.roleRepository.save(role);
     }
 
-    const defaultPassword = process.env.SUPERADMIN_PASSWORD || 'Password123!@#';
+    const defaultPassword = process.env.SUPERADMIN_PASSWORD;
+    if (!defaultPassword) {
+      throw new Error(
+        'SUPERADMIN_PASSWORD environment variable is required to bootstrap seed accounts. Please configure it in super-app-backend-secret.',
+      );
+    }
     const passwordHash = await hashPassword(defaultPassword);
 
     let user = this.userRepository.create({
