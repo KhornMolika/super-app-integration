@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "skipLibCheck": true,
+    "types": []
+  },
+  "include": [],
+  "exclude": [
+    "node_modules",
+    "superapp_backend",
+    "superapp_backoffice",
+    "super-app"
+  ]
+}
