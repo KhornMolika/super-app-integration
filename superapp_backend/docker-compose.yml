@@ -25,6 +25,11 @@ services:
     restart: unless-stopped
     env_file:
       - .env.docker
+    environment:
+      # Nexus defaults every JVM pool to 2703m, which gets it OOM-killed in a 4 GB Colima VM.
+      JAVA_MIN_MEM: ${NEXUS_JAVA_MIN_MEM:-512m}
+      JAVA_MAX_MEM: ${NEXUS_JAVA_MAX_MEM:-1024m}
+      DIRECT_MAX_MEM: ${NEXUS_DIRECT_MAX_MEM:-512m}
     ports:
       - '${NEXUS_PORT:-8081}:8081'
     volumes:
@@ -54,7 +59,8 @@ services:
       - ci_network
 
   minio-init:
-    image: minio/mc:latest
+    # image: minio/mc:latest
+    image: ${MINIO_MC_IMAGE:-quay.io/minio/aistor/mc:RELEASE.2026-09-19T15-24-59Z}
     container_name: superapp-minio-init
     depends_on:
       - minio
@@ -90,8 +96,8 @@ services:
     restart: unless-stopped
     user: root
     ports:
-      - "8085:8080"
-      - "50000:50000"
+      - '8085:8080'
+      - '50000:50000'
     environment:
       - TZ=Asia/Phnom_Penh
       - DOCKER_HOST=tcp://docker:2376
@@ -137,7 +143,7 @@ services:
         aliases:
           - docker
     ports:
-      - "2376:2376"
+      - '2376:2376'
 
   # ==========================================
   # 3. SECURITY & VERIFICATION SCANNERS
@@ -148,7 +154,7 @@ services:
     restart: unless-stopped
     command: zap.sh -daemon -host 0.0.0.0 -port 8090 -config api.disablekey=true -config api.addrs.addr.name=.* -config api.addrs.addr.regex=true
     ports:
-      - "8090:8090"
+      - '8090:8090'
     volumes:
       - scan_reports:/zap/wrk
     networks:
@@ -158,7 +164,7 @@ services:
     image: drwetter/testssl.sh
     platform: linux/amd64
     container_name: superapp-testssl
-    entrypoint: ["tail", "-f", "/dev/null"]
+    entrypoint: ['tail', '-f', '/dev/null']
     restart: unless-stopped
     volumes:
       - scan_reports:/home/testssl/reports
@@ -168,7 +174,7 @@ services:
   nuclei:
     image: projectdiscovery/nuclei:latest
     container_name: superapp-nuclei
-    entrypoint: ["tail", "-f", "/dev/null"]
+    entrypoint: ['tail', '-f', '/dev/null']
     restart: unless-stopped
     volumes:
       - nuclei_templates:/root/nuclei-templates

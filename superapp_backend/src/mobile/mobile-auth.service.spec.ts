@@ -482,5 +482,123 @@ describe('MobileAuthService', () => {
       await expect(c.svc.logout('')).resolves.toBeUndefined();
       await expect(c.svc.refresh(t2.refresh_token)).rejects.toBeInstanceOf(UnauthorizedException);
     });
+
+    it('a refresh in flight when revokeAllSessions lands cannot keep its family alive', async () => {
+      const c = build();
+      await registerAndVerify(c);
+      const base = realNow();
+      Date.now = () => base;
+      const first = await c.svc.login({ email: 'jane@example.io', password: PW });
+
+      // Hold the refresh between its claim and the insert of the successor token.
+      let reached!: () => void;
+      const atInsert = new Promise<void>((r) => (reached = r));
+      let release!: () => void;
+      const gate = new Promise<void>((r) => (release = r));
+      const save = c.rTokens.save.bind(c.rTokens);
+      jest.spyOn(c.rTokens, 'save').mockImplementationOnce(async (row) => {
+        reached();
+        await gate;
+        return save(row);
+      });
+      const inFlight = c.svc.refresh(first.refresh_token);
+      await atInsert;
+      Date.now = () => base + 1000;
+      await c.svc.revokeAllSessions(c.users.rows[0].id);
+      release();
+      const raced = await inFlight; // accepted residual: this one response still succeeds
+      expect(c.rTokens.rows.find((r) => r.tokenHash === sha256Hex(raced.refresh_token))!.revokedAt).toBeNull();
+
+      await expect(c.svc.refresh(raced.refresh_token)).rejects.toThrow('Invalid refresh token');
+      expect(c.rTokens.rows.every((r) => r.revokedAt)).toBe(true);
+
+      // A family started after the revocation rotates normally and keeps its start time.
+      Date.now = () => base + 2000;
+      const fresh = await c.svc.login({ email: 'jane@example.io', password: PW });
+      const rotated = await c.svc.refresh(fresh.refresh_token);
+      expect((await c.svc.refresh(rotated.refresh_token)).access_token).toBeTruthy();
+      const family = c.rTokens.rows.filter((r) => r.familyId === c.rTokens.rows[c.rTokens.rows.length - 1].familyId);
+      expect(family).toHaveLength(3);
+      expect(family.every((r) => r.familyStartedAt?.getTime() === base + 2000)).toBe(true);
+    });
+
+    it('a legacy row without familyStartedAt falls back to createdAt and passes it on', async () => {
+      const c = build();
+      await registerAndVerify(c);
+      const base = realNow();
+      Date.now = () => base;
+      const legacy = await c.svc.login({ email: 'jane@example.io', password: PW });
+      Object.assign(c.rTokens.rows[0], { familyStartedAt: null, createdAt: new Date(base - 5000) });
+      const next = await c.svc.refresh(legacy.refresh_token);
+      expect(c.rTokens.rows[1].familyStartedAt).toEqual(new Date(base - 5000));
+      c.users.rows[0].sessionsRevokedAt = new Date(base - 1000); // revocation the family raced past
+      await expect(c.svc.refresh(next.refresh_token)).rejects.toThrow('Invalid refresh token');
+      expect(c.rTokens.rows.every((r) => r.revokedAt)).toBe(true);
+    });
+  });
+});
+
+describe('MobileAuthService login failure bookkeeping vs concurrent writes', () => {
+  /**
+   * Make the fake behave like TypeORM: reads hand out detached copies, and
+   * save() writes the whole entity back by id. A write that lands while the
+   * password is being verified (scrypt) is then visible in the row but not in
+   * the copy login holds.
+   */
+  function detach(users: FakeRepo<EndUser>) {
+    const findOne = users.findOne.bind(users);
+    const save = users.save.bind(users);
+    users.findOne = async (opts) => {
+      const row = await findOne(opts);
+      return row ? { ...row } : row;
+    };
+    users.save = async (entity) => {
+      const row = users.rows.find((r) => r.id === entity.id);
+      if (!row) return save(entity);
+      Object.assign(row, entity);
+      return entity;
+    };
+  }
+
+  /** Lands [patch] on the stored user while the password check is in flight. */
+  function concurrentWriteDuringVerify(c: ReturnType<typeof build>, patch: Partial<EndUser>) {
+    const verify = c.passwords.verify.bind(c.passwords);
+    jest.spyOn(c.passwords, 'verify').mockImplementationOnce(async (pw, hash) => {
+      const ok = await verify(pw, hash);
+      Object.assign(c.users.rows[0], patch);
+      return ok;
+    });
+  }
+
+  it('a wrong password does not write back a hash or revocation changed meanwhile', async () => {
+    const c = build();
+    await registerAndVerify(c);
+    detach(c.users);
+    const revokedAt = new Date();
+    concurrentWriteDuringVerify(c, { passwordHash: 'scrypt$new', sessionsRevokedAt: revokedAt });
+
+    await expect(c.svc.login({ email: 'jane@example.io', password: 'wrong-password-1' })).rejects.toThrow(
+      UnauthorizedException,
+    );
+
+    const row = c.users.rows[0];
+    expect(row.passwordHash).toBe('scrypt$new');
+    expect(row.sessionsRevokedAt).toBe(revokedAt);
+    expect(row.failedLoginCount).toBe(1);
+  });
+
+  it('a right password does not write back a status changed meanwhile when it clears the counter', async () => {
+    const c = build();
+    await registerAndVerify(c);
+    c.users.rows[0].failedLoginCount = 2;
+    detach(c.users);
+    concurrentWriteDuringVerify(c, { status: EndUserStatus.DISABLED });
+
+    await c.svc.login({ email: 'jane@example.io', password: PW });
+
+    const row = c.users.rows[0];
+    expect(row.status).toBe(EndUserStatus.DISABLED);
+    expect(row.failedLoginCount).toBe(0);
+    expect(row.lockedUntil).toBeNull();
   });
 });

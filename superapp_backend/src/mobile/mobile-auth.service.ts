@@ -16,14 +16,17 @@ import { EndUser, EndUserStatus } from './entities/end-user.entity';
 import { EmailVerificationToken } from './entities/email-verification-token.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { PasswordService } from './password.service';
+import { sha256Hex } from './crypto-util';
+import { failurePatch } from './lockout';
 import {
   AuthRateLimiter,
   FULL_RETRY_AFTER_SECONDS,
   RateLimitedException,
 } from './auth-rate-limiter';
 
-export const MAX_FAILED_LOGINS = 5;
-export const LOCKOUT_MS = 15 * 60 * 1000;
+export { sha256Hex } from './crypto-util';
+export { MAX_FAILED_LOGINS, LOCKOUT_MS } from './lockout';
+
 export const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
 /** Max registration/verification mails per email address per window (any IP). */
 export const REGISTER_MAIL_MAX_PER_EMAIL = 5;
@@ -43,6 +46,8 @@ export interface TokenResponse {
   refresh_token: string;
   expires_in: number;
   user: { id: string; email: string; name: string };
+  /** Set when this sign-in cancelled a pending account deletion. */
+  account_restored?: boolean;
 }
 
 /** Registration result: verification pending (202) or, with verification disabled, an instant session (201). */
@@ -51,12 +56,10 @@ export type RegisterResult = { message: string } | TokenResponse;
 export const isTokenResponse = (r: RegisterResult): r is TokenResponse =>
   'access_token' in r;
 
-export const sha256Hex = (value: string) =>
-  crypto.createHash('sha256').update(value).digest('hex');
 const newOpaqueToken = () => crypto.randomBytes(32).toString('base64url');
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
 
-function intEnv(name: string, fallback: number, min: number, max: number): number {
+export function intEnv(name: string, fallback: number, min: number, max: number): number {
   const n = Number(process.env[name]);
   const v = Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
   return Math.min(max, Math.max(min, v));
@@ -501,11 +504,16 @@ export class MobileAuthService implements OnModuleInit {
     }
 
     if (user.failedLoginCount || user.lockedUntil) {
+      // Patch only the counter: save() would write back fields read before the
+      // password check, undoing any concurrent change (status, hash, revocation).
+      await this.users.update({ id: user.id }, { failedLoginCount: 0, lockedUntil: null });
       user.failedLoginCount = 0;
       user.lockedUntil = null;
-      await this.users.save(user);
     }
-    return this.issueTokens(user, crypto.randomUUID(), userAgent);
+    const restore = this.isRestorable(user);
+    if (restore) await this.restoreAccount(user);
+    const tokens = await this.issueTokens(user, crypto.randomUUID(), userAgent);
+    return restore ? { ...tokens, account_restored: true } : tokens;
   }
 
   /** Timing-parity scrypt; an internal failure must not turn into a 500. */
@@ -518,14 +526,12 @@ export class MobileAuthService implements OnModuleInit {
   }
 
   // NOTE: read-modify-write; concurrent guesses can under-count by a few. The
-  // IP/email rate limiter bounds the burst, so this is acceptable.
+  // IP/email rate limiter bounds the burst, so this is acceptable. Patch only the
+  // counter fields so a concurrent change to the rest of the row survives.
   private async registerFailure(user: EndUser): Promise<void> {
-    user.failedLoginCount = (user.failedLoginCount ?? 0) + 1;
-    if (user.failedLoginCount >= MAX_FAILED_LOGINS) {
-      user.lockedUntil = new Date(Date.now() + LOCKOUT_MS);
-      user.failedLoginCount = 0;
-    }
-    await this.users.save(user);
+    const patch = failurePatch(user, Date.now());
+    await this.users.update({ id: user.id }, patch);
+    Object.assign(user, patch);
   }
 
   // ----------------------------------------------------------------- refresh
@@ -567,7 +573,20 @@ export class MobileAuthService implements OnModuleInit {
       await this.revokeFamily(record.familyId);
       throw fail();
     }
-    return this.issueTokens(user, record.familyId, userAgent);
+    // A family that began before the user's last global sign-out is dead, even
+    // when this refresh claimed its token before revokeAllSessions revoked the
+    // rows and inserts the successor after it. Accepted residual (no locking): a
+    // refresh already in flight when the revocation lands still returns one
+    // access token, valid until its TTL; the family dies on its next refresh.
+    const started = record.familyStartedAt ?? record.createdAt;
+    if (
+      user.sessionsRevokedAt &&
+      new Date(started).getTime() < new Date(user.sessionsRevokedAt).getTime()
+    ) {
+      await this.revokeFamily(record.familyId);
+      throw fail();
+    }
+    return this.issueTokens(user, record.familyId, userAgent, started);
   }
 
   // ------------------------------------------------------------------ logout
@@ -587,12 +606,60 @@ export class MobileAuthService implements OnModuleInit {
     );
   }
 
+  // ---------------------------------------------------------------- sessions
+
+  /** Starts a new refresh-token family for [user], e.g. this device after a password change. */
+  startSession(user: EndUser, userAgent?: string): Promise<TokenResponse> {
+    return this.issueTokens(user, crypto.randomUUID(), userAgent);
+  }
+
+  /**
+   * Signs the user out everywhere: every refresh family is revoked and
+   * EndUserAuthGuard refuses access tokens issued before [at].
+   */
+  async revokeAllSessions(userId: string, at = new Date(Date.now())): Promise<void> {
+    await this.refreshTokens.update({ userId, revokedAt: IsNull() }, { revokedAt: at });
+    await this.users.update({ id: userId }, { sessionsRevokedAt: at });
+  }
+
+  /** A PENDING_DELETION account inside its grace window is restored by signing in. */
+  isRestorable(user: EndUser, now = Date.now()): boolean {
+    return (
+      user.status === EndUserStatus.PENDING_DELETION &&
+      !!user.purgeAfter &&
+      new Date(user.purgeAfter).getTime() > now
+    );
+  }
+
+  /**
+   * Also moves `sessionsRevokedAt` to now: access tokens issued in the second of
+   * the deletion request would otherwise pass the guard again once ACTIVE. When
+   * the account is no longer pending deletion (purged, disabled, restored
+   * concurrently) the sign-in fails with the generic invalid-credentials error.
+   */
+  async restoreAccount(user: EndUser): Promise<void> {
+    const patch = {
+      status: EndUserStatus.ACTIVE,
+      deletionRequestedAt: null,
+      purgeAfter: null,
+      sessionsRevokedAt: new Date(Date.now()),
+    };
+    const res = await this.users.update(
+      { id: user.id, status: EndUserStatus.PENDING_DELETION },
+      patch,
+    );
+    if (!res.affected) throw new UnauthorizedException(INVALID_CREDENTIALS);
+    Object.assign(user, patch);
+  }
+
   // ------------------------------------------------------------------ tokens
 
+  /** [familyStartedAt] is passed on rotation; a new family starts now. */
   private async issueTokens(
     user: EndUser,
     familyId: string,
     userAgent?: string,
+    familyStartedAt?: Date,
   ): Promise<TokenResponse> {
     const refreshToken = newOpaqueToken();
     await this.refreshTokens.save(
@@ -604,6 +671,7 @@ export class MobileAuthService implements OnModuleInit {
         expiresAt: new Date(Date.now() + this.refreshTtlMs),
         rotatedAt: null,
         revokedAt: null,
+        familyStartedAt: familyStartedAt ?? new Date(Date.now()),
       }),
     );
     const expiresIn = this.accessTtlSeconds;

@@ -2,7 +2,8 @@ import 'reflect-metadata';
 import { DataSource, DataSourceOptions } from 'typeorm';
 import * as dotenv from 'dotenv';
 
-dotenv.config();
+// Same profile order as ConfigModule in src/app.module.ts: .env.<NODE_ENV> first, then .env.
+dotenv.config({ path: [`.env.${process.env.NODE_ENV || 'development'}`, '.env'] });
 
 export const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',

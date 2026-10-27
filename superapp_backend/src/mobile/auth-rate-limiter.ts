@@ -99,6 +99,11 @@ export interface RateLimitOptions {
   ipMax: number;
   /** Max attempts per IP+email pair (only when the body carries an email). */
   emailMax?: number;
+  /**
+   * Max attempts per authenticated end user, across IPs. Needs `req.endUser`,
+   * so list EndUserAuthGuard BEFORE AuthRateLimitGuard in @UseGuards.
+   */
+  userMax?: number;
 }
 
 export const RATE_LIMIT_KEY = 'mobile:rate-limit';
@@ -133,6 +138,10 @@ export class AuthRateLimitGuard implements CanActivate {
         `${opts.scope}|ipemail|${ip}|${email.trim().toLowerCase().slice(0, 254)}`,
         effectiveEmailMax,
       );
+    }
+    const userId = req.endUser?.id;
+    if (!wait && opts.userMax && userId) {
+      wait = this.limiter.consume(`${opts.scope}|user|${userId}`, opts.userMax);
     }
     if (wait) {
       res.setHeader('Retry-After', String(wait));

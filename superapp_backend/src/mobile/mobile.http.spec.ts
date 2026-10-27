@@ -1,4 +1,4 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication, Logger, ValidationPipe } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
@@ -7,18 +7,25 @@ import { AuthService } from '../auth/auth.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { MailService } from '../notifications/channels/mail.service';
 import { MiniApp } from '../miniapps/entities/miniapp.entity';
+import { SettingsService } from '../settings/settings.service';
+import { StorageService } from '../storage/storage.service';
 import { AuthRateLimitGuard, AuthRateLimiter } from './auth-rate-limiter';
 import { EndUserAuthGuard } from './end-user-auth.guard';
 import { EmailVerificationToken } from './entities/email-verification-token.entity';
 import { EndUser } from './entities/end-user.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
+import { MobileAccountService } from './mobile-account.service';
+import { MobileAppConfigService } from './mobile-app-config.service';
+import { MobileAvatarService } from './mobile-avatar.service';
 import { MobileAuthService } from './mobile-auth.service';
 import { MobileCatalogService } from './mobile-catalog.service';
+import { MobileProfileService } from './mobile-profile.service';
 import { MobileController } from './mobile.controller';
 import { PasswordService } from './password.service';
 import { FakeRepo } from './testing/fake-repo';
 import { User } from '../access-control/entities/user.entity';
 import { hashPassword } from '../common/utils/password.util';
+import { PNG, fakeStorage } from './testing/fake-storage';
 
 const PW = 'a-very-good-password';
 const ADMIN_PW = 'mock-admin-test-pw';
@@ -29,9 +36,11 @@ describe('Mobile HTTP (in-process)', () => {
   let sent: { url: string }[];
   let authService: AuthService;
   let users: FakeRepo<EndUser>;
+  let settingValue: unknown;
 
   beforeEach(async () => {
     sent = [];
+    settingValue = undefined;
     users = new FakeRepo<EndUser>(['email']);
     const miniRows = [
       {
@@ -65,8 +74,20 @@ describe('Mobile HTTP (in-process)', () => {
         EndUserAuthGuard,
         MobileAuthService,
         MobileCatalogService,
+        MobileAppConfigService,
+        MobileProfileService,
+        MobileAvatarService,
+        MobileAccountService,
+        { provide: StorageService, useValue: fakeStorage() },
+        { provide: SettingsService, useValue: { getSetting: async () => settingValue } },
         { provide: AuthService, useValue: authInstance },
-        { provide: MailService, useValue: { sendEmailVerification: async (_t: string, _n: string, url: string) => void sent.push({ url }) } },
+        {
+          provide: MailService,
+          useValue: {
+            sendEmailVerification: async (_t: string, _n: string, url: string) => void sent.push({ url }),
+            sendAccountDeletionScheduled: async () => undefined,
+          },
+        },
         { provide: getRepositoryToken(EndUser), useValue: users },
         { provide: getRepositoryToken(User), useValue: new FakeRepo() },
         { provide: getRepositoryToken(EmailVerificationToken), useValue: new FakeRepo() },
@@ -105,6 +126,41 @@ describe('Mobile HTTP (in-process)', () => {
     expect(refreshed.body.refresh_token).not.toBe(login.refresh_token);
     await request(server).post(`${prefix}/auth/logout`).send({ refresh_token: refreshed.body.refresh_token }).expect(204);
     await request(server).post(`${prefix}/auth/refresh`).send({ refresh_token: refreshed.body.refresh_token }).expect(401);
+  });
+
+  it.each(['/mobile', '/api/mobile'])('GET %s/app-config is public, cached and sanitized', async (prefix) => {
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    try {
+      settingValue = { android: { minVersion: '1.2.0', latestVersion: '1.3.0', storeUrl: 'http://bad' } };
+      const res = await request(server).get(`${prefix}/app-config`).expect(200);
+      expect(res.headers['cache-control']).toBe('public, max-age=300');
+      expect(res.body.android).toEqual({ minVersion: '1.2.0', latestVersion: '1.3.0', storeUrl: null });
+      expect(res.body.ios.minVersion).toBe('0.0.0');
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('android.storeUrl'));
+      expect(warn).not.toHaveBeenCalledWith(expect.stringContaining('http://bad'));
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('PATCH /mobile/me validates, trims, clears and never touches email/status', async () => {
+    const login = await fullFlow('/mobile');
+    const auth = { Authorization: `Bearer ${login.access_token}` };
+    const ok = await request(server)
+      .patch('/mobile/me')
+      .set(auth)
+      .send({ name: ' Jane D ', honorific: 'MRS', position: ' Officer ', staffId: '1870200369', email: 'evil@x.io', status: 'DISABLED' })
+      .expect(200);
+    expect(ok.body).toMatchObject({ name: 'Jane D', honorific: 'MRS', position: 'Officer', staffId: '1870200369', email: 'jane@example.io', status: 'ACTIVE' });
+    const cleared = await request(server).patch('/mobile/me').set(auth).send({ position: '' }).expect(200);
+    expect(cleared.body.position).toBeNull();
+    await request(server).patch('/mobile/me').set(auth).send({ staffId: 'has space' }).expect(400);
+    await request(server).patch('/mobile/me').set(auth).send({ honorific: 'KING' }).expect(400);
+    await request(server).patch('/mobile/me').set(auth).send({ name: '   ' }).expect(400);
+    await request(server).patch('/mobile/me').send({ name: 'x' }).expect(401);
+    const me = await request(server).get('/mobile/me').set(auth).expect(200);
+    expect(me.body).toMatchObject({ avatarVersion: null, status: 'ACTIVE' });
+    expect(JSON.stringify(me.body)).not.toMatch(/passwordHash|scrypt/);
   });
 
   it('register with MOBILE_REQUIRE_EMAIL_VERIFICATION=false answers 201 with a session; duplicate is 409', async () => {
@@ -174,5 +230,60 @@ describe('Mobile HTTP (in-process)', () => {
     // end-user token is refused by the back-office guard
     const boGuard = new JwtAuthGuard(authService);
     expect(() => boGuard.canActivate({ switchToHttp: () => ({ getRequest: () => ({ headers: { authorization: `Bearer ${login.access_token}` }, query: {} }) }) } as any)).toThrow();
+  });
+
+  it('avatar: upload (multipart), owner-only read with ETag/304, size+type limits, delete', async () => {
+    const jane = await fullFlow('/mobile');
+    const auth = { Authorization: `Bearer ${jane.access_token}` };
+    await request(server).get('/mobile/me/avatar').set(auth).expect(404);
+    const up = await request(server).post('/mobile/me/avatar').set(auth).attach('file', PNG, { filename: 'me.png', contentType: 'image/png' }).expect(200);
+    expect(up.body.avatarVersion).toBeTruthy();
+    expect(JSON.stringify(up.body)).not.toContain('avatars/');
+    const got = await request(server).get('/mobile/me/avatar').set(auth).buffer(true).parse((res, cb) => {
+      const chunks: Buffer[] = [];
+      res.on('data', (c: Buffer) => chunks.push(c));
+      res.on('end', () => cb(null, Buffer.concat(chunks)));
+    }).expect(200);
+    expect(got.headers['content-type']).toBe('image/png');
+    expect((got.body as Buffer).equals(PNG)).toBe(true);
+    await request(server).get('/mobile/me/avatar').set(auth).set('If-None-Match', got.headers.etag).expect(304);
+    const bob = await fullFlow('/mobile', 'bob@example.io');
+    await request(server).get('/mobile/me/avatar').set('Authorization', `Bearer ${bob.access_token}`).expect(404);
+    await request(server).post('/mobile/me/avatar').set(auth).attach('file', Buffer.from('not an image'), { filename: 'x.png', contentType: 'image/png' }).expect(400);
+    await request(server).post('/mobile/me/avatar').set(auth).attach('file', Buffer.alloc(2 * 1024 * 1024 + 1, 1), 'big.png').expect(413);
+    await request(server).delete('/mobile/me/avatar').set(auth).expect(204);
+    await request(server).get('/mobile/me/avatar').set(auth).expect(404);
+  });
+
+  it('change password: other sessions die immediately, the new pair works', async () => {
+    const realNow = Date.now;
+    try {
+      const base = realNow();
+      Date.now = () => base;
+      const a = await fullFlow('/mobile');
+      Date.now = () => base + 2000;
+      const res = await request(server)
+        .post('/mobile/me/password')
+        .set('Authorization', `Bearer ${a.access_token}`)
+        .send({ currentPassword: PW, newPassword: 'brand-new-password-1' })
+        .expect(200);
+      await request(server).get('/mobile/me').set('Authorization', `Bearer ${a.access_token}`).expect(401);
+      await request(server).post('/mobile/auth/refresh').send({ refresh_token: a.refresh_token }).expect(401);
+      await request(server).get('/mobile/me').set('Authorization', `Bearer ${res.body.access_token}`).expect(200);
+      await request(server).post('/mobile/auth/login').send({ email: 'jane@example.io', password: 'brand-new-password-1' }).expect(200);
+    } finally {
+      Date.now = realNow;
+    }
+  });
+
+  it('delete account: 202, immediate lock-out, sign-in restores with account_restored', async () => {
+    const a = await fullFlow('/mobile');
+    await request(server).post('/mobile/me/delete').set('Authorization', `Bearer ${a.access_token}`).send({ password: 'wrong-password-x' }).expect(400);
+    const del = await request(server).post('/mobile/me/delete').set('Authorization', `Bearer ${a.access_token}`).send({ password: PW }).expect(202);
+    expect(new Date(del.body.purgeAfter).getTime()).toBeGreaterThan(Date.now());
+    await request(server).get('/mobile/me').set('Authorization', `Bearer ${a.access_token}`).expect(401);
+    const back = await request(server).post('/mobile/auth/login').send({ email: 'jane@example.io', password: PW }).expect(200);
+    expect(back.body.account_restored).toBe(true);
+    await request(server).get('/mobile/me').set('Authorization', `Bearer ${back.body.access_token}`).expect(200);
   });
 });

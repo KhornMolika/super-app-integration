@@ -7,13 +7,23 @@ export class FakeRepo<T extends Record<string, any>> {
   constructor(private readonly uniqueKeys: string[] = []) {}
 
   private matches(row: T, criteria: Record<string, any>): boolean {
+    const num = (x: any) =>
+      x instanceof Date ? x.getTime() : typeof x === 'number' ? x : new Date(x).getTime();
     return Object.entries(criteria).every(([k, v]) => {
       if (v instanceof FindOperator) {
         if (v.type === 'isNull') return row[k] === null || row[k] === undefined;
+        if (v.type === 'lessThanOrEqual') {
+          return row[k] !== null && row[k] !== undefined && num(row[k]) <= num(v.value);
+        }
         throw new Error(`unsupported operator ${v.type}`);
       }
       return row[k] === v;
     });
+  }
+
+  async find(opts: { where?: Record<string, any>; take?: number } = {}): Promise<T[]> {
+    const found = this.rows.filter((r) => !opts.where || this.matches(r, opts.where));
+    return opts.take ? found.slice(0, opts.take) : found;
   }
 
   create(data: Partial<T>): T {

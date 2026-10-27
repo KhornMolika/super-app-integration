@@ -161,6 +161,37 @@ export class MailTemplateHelper {
     };
   }
 
+  public static renderAccountDeletionScheduled(
+    name: string,
+    purgeDate: string,
+  ): { subject: string; html: string } {
+    const escName = this.escapeHtml(name);
+    const escDate = this.escapeHtml(purgeDate);
+    const contentHtml = `
+      <p style="font-size: 14px; line-height: 1.6; margin-top: 0;">Hello <strong>${escName}</strong>,</p>
+      <p style="font-size: 14px; line-height: 1.6;">
+        We received a request to delete your Super App account. You have been signed out on all devices.
+        Your account and its data will be permanently deleted on <strong>${escDate}</strong>.
+      </p>
+      <p style="font-size: 14px; line-height: 1.6;">Changed your mind? Simply sign in to the app before that date and your account will be restored.</p>
+      <p style="font-size: 13px; color: #64748b; line-height: 1.5;">If you did not request this, sign in now to cancel it and change your password.</p>
+    `;
+    return {
+      subject: 'Your Super App account will be deleted',
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+          <div style="background: #0f172a; padding: 32px 24px; text-align: left; color: #ffffff; border-bottom: 3px solid #dc2626;">
+            <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #38bdf8; font-weight: 700;">Super App</span>
+            <h1 style="margin: 8px 0 0 0; font-size: 22px; font-weight: 700; color: #ffffff;">Account deletion scheduled</h1>
+          </div>
+          <div style="padding: 32px 24px;">
+            ${contentHtml}
+          </div>
+        </div>
+      `,
+    };
+  }
+
   public static renderRegistrationSuccessEmail(appName: string): {
     subject: string;
     html: string;

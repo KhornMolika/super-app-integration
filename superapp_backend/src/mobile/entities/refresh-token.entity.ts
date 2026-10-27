@@ -53,6 +53,14 @@ export class RefreshToken {
   @Column({ type: 'timestamptz', nullable: true })
   revokedAt!: Date | null;
 
+  /**
+   * When the family's first token was issued (sign-in); copied unchanged on
+   * every rotation. A family started before the user's `sessionsRevokedAt` is
+   * dead. Null on rows from before this column existed (`createdAt` stands in).
+   */
+  @Column({ type: 'timestamptz', nullable: true })
+  familyStartedAt!: Date | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 }

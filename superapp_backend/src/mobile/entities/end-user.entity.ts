@@ -11,6 +11,17 @@ import {
 export enum EndUserStatus {
   ACTIVE = 'ACTIVE',
   DISABLED = 'DISABLED',
+  /** Deletion requested; restorable by signing in until `purgeAfter`. */
+  PENDING_DELETION = 'PENDING_DELETION',
+}
+
+export enum EndUserHonorific {
+  MR = 'MR',
+  MRS = 'MRS',
+  MISS = 'MISS',
+  HE = 'HE',
+  LOK_CHUMTEAV = 'LOK_CHUMTEAV',
+  DR = 'DR',
 }
 
 /**
@@ -50,6 +61,36 @@ export class EndUser {
 
   @Column({ type: 'timestamptz', nullable: true })
   lockedUntil!: Date | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  honorific!: EndUserHonorific | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  position!: string | null;
+
+  @Column({ type: 'varchar', length: 150, nullable: true })
+  organizationUnit!: string | null;
+
+  @Column({ type: 'varchar', length: 32, nullable: true })
+  staffId!: string | null;
+
+  /** Object key in the PRIVATE end-user media bucket. Never a public URL. */
+  @Column({ type: 'varchar', nullable: true })
+  avatarKey!: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  avatarUpdatedAt!: Date | null;
+
+  /** Access tokens whose `iat` is before this instant are refused by EndUserAuthGuard. */
+  @Column({ type: 'timestamptz', nullable: true })
+  sessionsRevokedAt!: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  deletionRequestedAt!: Date | null;
+
+  /** PENDING_DELETION accounts are hard-deleted by AccountPurgeService after this. */
+  @Column({ type: 'timestamptz', nullable: true })
+  purgeAfter!: Date | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;

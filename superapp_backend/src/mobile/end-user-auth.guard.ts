@@ -31,7 +31,8 @@ declare global {
 /**
  * Guards /mobile/* resources. Bearer header ONLY (never query params), real
  * signature verification, aud=super-app-mobile and typ=end_user, and the user
- * must still be ACTIVE so a disabled account loses access immediately.
+ * must still be ACTIVE so a disabled account loses access immediately, and the
+ * token must have been issued after the user's last global sign-out.
  */
 @Injectable()
 export class EndUserAuthGuard implements CanActivate {
@@ -57,7 +58,7 @@ export class EndUserAuthGuard implements CanActivate {
     try {
       user = await this.users.findOne({
         where: { id: payload.sub },
-        select: { id: true, email: true, status: true },
+        select: { id: true, email: true, status: true, sessionsRevokedAt: true },
       });
     } catch {
       // Malformed sub etc. -> treat as unauthenticated.
@@ -65,6 +66,14 @@ export class EndUserAuthGuard implements CanActivate {
     }
     if (!user || user.status !== EndUserStatus.ACTIVE) {
       throw new UnauthorizedException();
+    }
+    // Password change / deletion sign the user out everywhere:
+    // access tokens issued before that instant stop working immediately.
+    if (user.sessionsRevokedAt) {
+      const revokedAtSec = Math.floor(new Date(user.sessionsRevokedAt).getTime() / 1000);
+      if (typeof payload.iat !== 'number' || payload.iat < revokedAtSec) {
+        throw new UnauthorizedException();
+      }
     }
     request.endUser = { id: user.id, email: user.email };
     return true;

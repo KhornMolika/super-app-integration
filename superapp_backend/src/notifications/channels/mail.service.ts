@@ -100,6 +100,45 @@ export class MailService {
     });
   }
 
+  async sendAccountDeletionScheduled(
+    toEmail: string,
+    name: string,
+    purgeAfter: Date,
+  ): Promise<void> {
+    if (!this.resend) {
+      this.logger.log(
+        `[DUMMY] Would have sent account deletion notice to ${toEmail} (mail is not configured)`,
+      );
+      return;
+    }
+    if (!this.isDeliverableEmail(toEmail)) {
+      this.logger.debug(
+        `[SKIPPED] Skipped account deletion notice to mock/test address: ${toEmail}`,
+      );
+      return;
+    }
+    const template = MailTemplateHelper.renderAccountDeletionScheduled(
+      name,
+      `${purgeAfter.toISOString().slice(0, 10)} (UTC)`,
+    );
+    try {
+      const result = await this.resend.emails.send({
+        from: `Super App <${this.fromEmail}>`,
+        to: toEmail,
+        subject: template.subject,
+        html: template.html,
+      });
+      if (result.error) {
+        this.logger.error(
+          `Resend API error sending account deletion notice: ${result.error.message}`,
+        );
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Failed to send account deletion notice: ${message}`);
+    }
+  }
+
   async sendRegistrationSuccessEmail(
     toEmail: string,
     appName: string,

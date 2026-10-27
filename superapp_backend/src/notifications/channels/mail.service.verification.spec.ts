@@ -47,3 +47,17 @@ describe('MailService.sendEmailVerification', () => {
     expect(logs).toHaveLength(1);
   });
 });
+
+describe('MailService.sendAccountDeletionScheduled', () => {
+  it('escapes the name and states the purge date', async () => {
+    const svc = new MailService();
+    const send = jest.fn().mockResolvedValue({ data: { id: '1' } });
+    (svc as unknown as { resend: unknown }).resend = { emails: { send } };
+    await svc.sendAccountDeletionScheduled('jane@gmail.com', '<b>Jane</b>', new Date('2026-11-01T10:00:00Z'));
+    const arg = send.mock.calls[0][0];
+    expect(arg.to).toBe('jane@gmail.com');
+    expect(arg.html).toContain('&lt;b&gt;Jane&lt;/b&gt;');
+    expect(arg.html).toContain('2026-11-01');
+    expect(arg.subject).toMatch(/deleted/i);
+  });
+});

@@ -88,4 +88,23 @@ describe('AuthRateLimitGuard', () => {
     expect(guard.canActivate(ctx('1.1.1.1', 'b@x.io'))).toBe(true);
     expect(guard.canActivate(ctx('9.9.9.9', 'a@x.io'))).toBe(true);
   });
+
+  it('limits per authenticated user when userMax is set', () => {
+    const limiter = new AuthRateLimiter();
+    const reflector = { get: () => ({ scope: 'pw', ipMax: 100, userMax: 2 }) } as unknown as Reflector;
+    const guard = new AuthRateLimitGuard(limiter, reflector);
+    const ctx = (ip: string, userId?: string) =>
+      ({
+        getHandler: () => () => undefined,
+        switchToHttp: () => ({
+          getRequest: () => ({ ip, body: {}, endUser: userId ? { id: userId, email: 'x@y.io' } : undefined }),
+          getResponse: () => ({ setHeader: () => undefined }),
+        }),
+      }) as any;
+    expect(guard.canActivate(ctx('1.1.1.1', 'u1'))).toBe(true);
+    expect(guard.canActivate(ctx('2.2.2.2', 'u1'))).toBe(true);
+    expect(() => guard.canActivate(ctx('3.3.3.3', 'u1'))).toThrow(HttpException); // across IPs
+    expect(guard.canActivate(ctx('1.1.1.1', 'u2'))).toBe(true);
+    expect(guard.canActivate(ctx('1.1.1.1'))).toBe(true); // no endUser: user bucket skipped
+  });
 });

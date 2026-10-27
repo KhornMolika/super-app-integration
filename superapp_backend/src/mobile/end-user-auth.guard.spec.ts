@@ -9,6 +9,7 @@ import { hashPassword } from '../common/utils/password.util';
 describe('EndUserAuthGuard', () => {
   let authService: AuthService;
   let status: EndUserStatus | null;
+  let revokedAt: Date | null;
   let guard: EndUserAuthGuard;
   const jwt = new JwtService({});
 
@@ -29,9 +30,12 @@ describe('EndUserAuthGuard', () => {
     } as any);
     authService.onModuleInit();
     status = EndUserStatus.ACTIVE;
+    revokedAt = null;
     const users = {
       findOne: async ({ where }: any) =>
-        status === null ? null : { id: where.id, email: 'jane@example.io', status },
+        status === null
+          ? null
+          : { id: where.id, email: 'jane@example.io', status, sessionsRevokedAt: revokedAt },
     };
     guard = new EndUserAuthGuard(authService, users as any);
   });
@@ -102,5 +106,21 @@ describe('EndUserAuthGuard', () => {
     await expect(guard.canActivate(ctx(bearer(t)).ctx)).rejects.toBeInstanceOf(UnauthorizedException);
     status = null;
     await expect(guard.canActivate(ctx(bearer(t)).ctx)).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('rejects access tokens issued before sessionsRevokedAt and accepts newer ones', async () => {
+    const realNow = Date.now;
+    try {
+      const base = realNow();
+      Date.now = () => base;
+      const old = endUserToken();
+      revokedAt = new Date(base + 2000);
+      Date.now = () => base + 3000;
+      const fresh = endUserToken();
+      await expect(guard.canActivate(ctx(bearer(old)).ctx)).rejects.toBeInstanceOf(UnauthorizedException);
+      await expect(guard.canActivate(ctx(bearer(fresh)).ctx)).resolves.toBe(true);
+    } finally {
+      Date.now = realNow;
+    }
   });
 });

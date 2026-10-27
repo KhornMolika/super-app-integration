@@ -21,6 +21,7 @@ export class StorageService implements OnModuleInit {
   readonly assetsBucket: string;
   readonly packageSubmissionsBucket: string;
   readonly sdkSubmissionsBucket: string;
+  readonly endUserMediaBucket: string;
   private publicUrl: string;
   private apiBaseUrl: string;
   private aistorLicenseKey: string;
@@ -63,6 +64,10 @@ export class StorageService implements OnModuleInit {
       'MINIO_SDK_SUBMISSIONS_BUCKET',
       'sdk-submissions',
     );
+    this.endUserMediaBucket = this.configService.get<string>(
+      'MINIO_END_USER_MEDIA_BUCKET',
+      'end-user-media',
+    );
 
     this.publicUrl = this.configService
       .get<string>('MINIO_PUBLIC_URL', `http://${endPoint}:${port}`)
@@ -102,7 +107,11 @@ export class StorageService implements OnModuleInit {
   }
 
   /**
-   * Provisions standard buckets and applies legacy migrations
+   * Ensure standardized 3-bucket architecture exists with proper access policies:
+   * 1. mini-app-assets: Public Read Policy (logos, icons, banner images)
+   * 2. package-submissions: Strictly Private Quarantine (Flutter .zip packages)
+   * 3. sdk-submissions: Strictly Private Quarantine (Native .aar / .xcframework)
+   * 4. end-user-media: Strictly Private (end-user avatars; served only through the authenticated API)
    */
   private async ensureBucketsAndPolicies(): Promise<void> {
     await this.bucketLifecycleHelper.ensureBucketsAndPolicies(
@@ -111,6 +120,7 @@ export class StorageService implements OnModuleInit {
         this.assetsBucket,
         this.packageSubmissionsBucket,
         this.sdkSubmissionsBucket,
+        this.endUserMediaBucket,
       ],
     );
     await this.bucketLifecycleHelper.migrateLegacyBuckets(
@@ -248,6 +258,22 @@ export class StorageService implements OnModuleInit {
       miniAppId,
       versionHint,
     );
+  }
+
+  /** Stores an object in a bucket WITHOUT returning or implying a public URL. */
+  async putPrivateObject(
+    bucket: string,
+    key: string,
+    body: Buffer,
+    contentType: string,
+  ): Promise<void> {
+    await this.minioClient.putObject(bucket, key, body, body.length, {
+      'Content-Type': contentType,
+    });
+  }
+
+  async removeObject(bucket: string, key: string): Promise<void> {
+    await this.minioClient.removeObject(bucket, key);
   }
 
   /**
