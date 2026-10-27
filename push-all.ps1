@@ -18,7 +18,10 @@ param(
     [string]$RemoteOption,
 
     [Parameter(Position=3)]
-    [string]$CommitMessage
+    [string]$CommitMessage,
+
+    [Parameter(Position=4)]
+    [switch]$Yes
 )
 
 $ErrorActionPreference = "Stop"
@@ -181,10 +184,12 @@ switch ($RemoteOption) {
 }
 Write-Host "------------------------------------------------------`n" -ForegroundColor Yellow
 
-$confirm = Read-Host "Proceed with push? [Y/n]"
-if ($confirm -match "^[nN]") {
-    Write-Host "Push cancelled." -ForegroundColor Yellow
-    exit 0
+if (-not $Yes) {
+    $confirm = Read-Host "Proceed with push? [Y/n]"
+    if ($confirm -match "^[nN]") {
+        Write-Host "Push cancelled." -ForegroundColor Yellow
+        exit 0
+    }
 }
 
 Write-Host ""
