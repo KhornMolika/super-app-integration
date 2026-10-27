@@ -70,6 +70,30 @@ function UsersContent() {
     hasPreviousPage: false,
   });
 
+  // Persistent Global KPI Status Counts (Independent of active table filters)
+  const [globalCounts, setGlobalCounts] = useState({
+    total: 0,
+    active: 0,
+    pending: 0,
+    inactive: 0,
+  });
+
+  const fetchGlobalCounts = useCallback(async () => {
+    if (!can('user:read')) return;
+    try {
+      const res = await usersApi.getAll({ limit: 500 });
+      const list = unwrapData<User>(res);
+      setGlobalCounts({
+        total: list.length,
+        active: list.filter((u) => getUserEffectiveStatus(u) === 'ACTIVE').length,
+        pending: list.filter((u) => getUserEffectiveStatus(u) === 'PENDING_APPROVAL').length,
+        inactive: list.filter((u) => getUserEffectiveStatus(u) === 'INACTIVE').length,
+      });
+    } catch {
+      // fallback silently
+    }
+  }, [can]);
+
   // Modals State
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -170,8 +194,9 @@ function UsersContent() {
   useEffect(() => {
     if (hasUserRead) {
       fetchRoles();
+      fetchGlobalCounts();
     }
-  }, [hasUserRead, fetchRoles]);
+  }, [hasUserRead, fetchRoles, fetchGlobalCounts]);
 
   // User Actions
   const handleOpenCreateUser = () => {
@@ -201,10 +226,11 @@ function UsersContent() {
       await usersApi.delete(user.id);
       toast.success(`User '${user.name}' deleted successfully.`);
       fetchUsers();
+      fetchGlobalCounts();
     } catch (err: any) {
       toast.error(err.message || 'Failed to delete user.');
     }
-  }, [confirm, toast, fetchUsers]);
+  }, [confirm, toast, fetchUsers, fetchGlobalCounts]);
 
   // Derived filter options for Users tab
   const availableRolesForFilter = useMemo(() => {
@@ -516,6 +542,7 @@ function UsersContent() {
                     await usersApi.approve(user.id, 'MA_DEVELOPER');
                     toast.success(`${user.name} approved as MiniApp Developer!`);
                     fetchUsers();
+                    fetchGlobalCounts();
                   } catch (err: any) {
                     toast.error(err.message || 'Failed to approve user');
                   }
@@ -616,7 +643,7 @@ function UsersContent() {
               Total Accounts
             </span>
             <span className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-0.5 block">
-              {paginationMeta.totalItems}
+              {globalCounts.total || (statusFilter === 'ALL' ? paginationMeta.totalItems : 0)}
             </span>
           </button>
 
@@ -634,7 +661,7 @@ function UsersContent() {
               <span>Active</span>
             </div>
             <span className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-0.5 block">
-              {users.filter((u) => getUserEffectiveStatus(u) === 'ACTIVE').length}
+              {globalCounts.active}
             </span>
           </button>
 
@@ -652,7 +679,7 @@ function UsersContent() {
               <span>Pending Review</span>
             </div>
             <span className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-0.5 block">
-              {users.filter((u) => getUserEffectiveStatus(u) === 'PENDING_APPROVAL').length}
+              {globalCounts.pending}
             </span>
           </button>
 
@@ -670,7 +697,7 @@ function UsersContent() {
               <span>Deactivated</span>
             </div>
             <span className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-0.5 block">
-              {users.filter((u) => getUserEffectiveStatus(u) === 'INACTIVE').length}
+              {globalCounts.inactive}
             </span>
           </button>
         </div>
@@ -730,7 +757,10 @@ function UsersContent() {
           onClose={() => setIsUserModalOpen(false)}
           editingUser={editingUser}
           roles={roles}
-          onSuccess={fetchUsers}
+          onSuccess={() => {
+            fetchUsers();
+            fetchGlobalCounts();
+          }}
         />
       </div>
     </ProtectedRoute>
