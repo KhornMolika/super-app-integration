@@ -24,7 +24,7 @@ param(
     [switch]$Yes
 )
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 
 Write-Host "======================================================" -ForegroundColor Cyan
 Write-Host " Super App - Multi-Remote Push Automation" -ForegroundColor Cyan
@@ -208,7 +208,7 @@ function Push-ToSuperAppManager {
     Write-Host "[2/4] Splitting and Pushing superapp_backoffice to superapp-manager ($TargetBranch)..." -ForegroundColor Blue
     Write-Host "  -> Computing subtree split for superapp_backoffice..." -ForegroundColor Cyan
     $rawCommit = git subtree split --prefix=superapp_backoffice "$SourceBranch" 2>$null
-    $splitCommit = if ($rawCommit) { ([string]$rawCommit).Trim() } else { "" }
+    $splitCommit = if ($rawCommit) { ([string]($rawCommit | Select-Object -Last 1)).Trim() } else { "" }
     if (-not $splitCommit) {
         Write-Host "[INFO] No new changes found in superapp_backoffice (already up to date).`n" -ForegroundColor Yellow
         return
@@ -226,7 +226,7 @@ function Push-ToSuperAppBackend {
     Write-Host "[3/4] Splitting and Pushing superapp_backend to superapp-backend ($TargetBranch)..." -ForegroundColor Blue
     Write-Host "  -> Computing subtree split for superapp_backend..." -ForegroundColor Cyan
     $rawCommit = git subtree split --prefix=superapp_backend "$SourceBranch" 2>$null
-    $splitCommit = if ($rawCommit) { ([string]$rawCommit).Trim() } else { "" }
+    $splitCommit = if ($rawCommit) { ([string]($rawCommit | Select-Object -Last 1)).Trim() } else { "" }
     if (-not $splitCommit) {
         Write-Host "[INFO] No new changes found in superapp_backend (already up to date).`n" -ForegroundColor Yellow
         return
@@ -244,7 +244,7 @@ function Push-ToSuperAppMobile {
     Write-Host "[4/4] Splitting and Pushing super-app to superapp-mobile ($TargetBranch)..." -ForegroundColor Blue
     Write-Host "  -> Computing subtree split for super-app..." -ForegroundColor Cyan
     $rawCommit = git subtree split --prefix=super-app "$SourceBranch" 2>$null
-    $splitCommit = if ($rawCommit) { ([string]$rawCommit).Trim() } else { "" }
+    $splitCommit = if ($rawCommit) { ([string]($rawCommit | Select-Object -Last 1)).Trim() } else { "" }
     if (-not $splitCommit) {
         Write-Host "[INFO] No separate subtree changes found in super-app.`n" -ForegroundColor Yellow
         return
