@@ -71,6 +71,12 @@ export class UsersController {
     return this.accessControlService.findAllUsers(query);
   }
 
+  @Get('stats')
+  @RequirePermissions('organization:read')
+  async getStats(@Req() req: any) {
+    return this.accessControlService.getUserStats(req?.user);
+  }
+
   @Get(':id')
   async findOne(@Param('id') id: string, @Req() req: any) {
     const requester = req?.user;

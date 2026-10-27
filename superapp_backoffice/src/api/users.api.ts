@@ -55,6 +55,9 @@ export const usersApi = {
   getAll: (params?: Record<string, any>) =>
     apiClient<PaginatedResponse<User> | User[]>('/api/users', { params }),
 
+  getStats: () =>
+    apiClient<{ total: number; active: number; pending: number; inactive: number }>('/api/users/stats'),
+
   getById: (id: string) =>
     apiClient<User>(`/api/users/${id}`),
 

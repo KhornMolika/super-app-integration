@@ -14,6 +14,7 @@ import {
   Role,
   unwrapData,
   unwrapMeta,
+  unwrapItem,
   PaginationMeta,
 } from '@/api';
 import { useToast } from '@/components/ui/Toast';
@@ -81,7 +82,23 @@ function UsersContent() {
   const fetchGlobalCounts = useCallback(async () => {
     if (!can('user:read')) return;
     try {
-      const res = await usersApi.getAll({ limit: 500 });
+      const res = await usersApi.getStats();
+      const stats = unwrapItem(res);
+      if (stats && typeof stats.total === 'number') {
+        setGlobalCounts({
+          total: stats.total,
+          active: stats.active,
+          pending: stats.pending,
+          inactive: stats.inactive,
+        });
+        return;
+      }
+    } catch {
+      // fallback to getAll({ limit: 10 })
+    }
+
+    try {
+      const res = await usersApi.getAll({ limit: 100 });
       const list = unwrapData<User>(res);
       setGlobalCounts({
         total: list.length,
@@ -89,8 +106,8 @@ function UsersContent() {
         pending: list.filter((u) => getUserEffectiveStatus(u) === 'PENDING_APPROVAL').length,
         inactive: list.filter((u) => getUserEffectiveStatus(u) === 'INACTIVE').length,
       });
-    } catch {
-      // fallback silently
+    } catch (err) {
+      console.error('Failed to fetch user counts', err);
     }
   }, [can]);
 
@@ -158,6 +175,23 @@ function UsersContent() {
           hasNextPage: false,
           hasPreviousPage: currentPage > 1,
         });
+      }
+
+      // Auto-populate globalCounts when on the default view or specific status views
+      if (statusFilter === 'ALL' && roleFilter === 'ALL' && !debouncedSearch.trim()) {
+        setGlobalCounts({
+          total: meta?.totalItems ?? userList.length,
+          active: userList.filter((u) => getUserEffectiveStatus(u) === 'ACTIVE').length,
+          pending: userList.filter((u) => getUserEffectiveStatus(u) === 'PENDING_APPROVAL').length,
+          inactive: userList.filter((u) => getUserEffectiveStatus(u) === 'INACTIVE').length,
+        });
+      } else if (statusFilter === 'ACTIVE' && !debouncedSearch.trim() && roleFilter === 'ALL') {
+        const activeCount = meta?.totalItems ?? userList.length;
+        setGlobalCounts((prev) => ({
+          ...prev,
+          active: prev.active || activeCount,
+          total: prev.total || activeCount,
+        }));
       }
     } catch (err: any) {
       if (err?.status !== 403 && err?.statusCode !== 403) {
@@ -643,7 +677,7 @@ function UsersContent() {
               Total Accounts
             </span>
             <span className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-0.5 block">
-              {globalCounts.total || (statusFilter === 'ALL' ? paginationMeta.totalItems : 0)}
+              {globalCounts.total || (statusFilter === 'ALL' ? paginationMeta.totalItems : globalCounts.active || (statusFilter === 'ACTIVE' ? paginationMeta.totalItems : 0))}
             </span>
           </button>
 
@@ -661,7 +695,7 @@ function UsersContent() {
               <span>Active</span>
             </div>
             <span className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-0.5 block">
-              {globalCounts.active}
+              {globalCounts.active || (statusFilter === 'ACTIVE' ? (paginationMeta.totalItems || users.length) : 0)}
             </span>
           </button>
 
@@ -679,7 +713,7 @@ function UsersContent() {
               <span>Pending Review</span>
             </div>
             <span className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-0.5 block">
-              {globalCounts.pending}
+              {globalCounts.pending || (statusFilter === 'PENDING_APPROVAL' ? (paginationMeta.totalItems || users.length) : 0)}
             </span>
           </button>
 
@@ -697,7 +731,7 @@ function UsersContent() {
               <span>Deactivated</span>
             </div>
             <span className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-0.5 block">
-              {globalCounts.inactive}
+              {globalCounts.inactive || (statusFilter === 'INACTIVE' ? (paginationMeta.totalItems || users.length) : 0)}
             </span>
           </button>
         </div>

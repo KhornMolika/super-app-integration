@@ -240,6 +240,61 @@ export class AccessControlService {
     return createPaginatedResponse(formatted, totalItems, page, limit);
   }
 
+  async getUserStats(requester?: any): Promise<{
+    total: number;
+    active: number;
+    pending: number;
+    inactive: number;
+  }> {
+    const qb = this.userRepository.createQueryBuilder('user');
+
+    qb.where('user.status != :unverifiedStatus', {
+      unverifiedStatus: 'PENDING_EMAIL_VERIFICATION',
+    });
+
+    const userPerms = new Set<string>(Array.isArray(requester?.permissions) ? requester.permissions : []);
+    const isSuperOrAdmin =
+      requester?.email?.includes('superadmin') ||
+      requester?.email?.includes('admin') ||
+      (Array.isArray(requester?.roles) &&
+        requester.roles.some((r: any) =>
+          typeof r === 'string'
+            ? r === 'SUPER_ADMIN' || r === 'ADMIN'
+            : r?.name === 'SUPER_ADMIN' || r?.name === 'ADMIN',
+        ));
+
+    if (!userPerms.has('user:read') && !isSuperOrAdmin && requester?.organizationId) {
+      qb.andWhere('user.organizationId = :orgId', { orgId: requester.organizationId });
+    }
+
+    const rawCounts = await qb
+      .select('user.status', 'status')
+      .addSelect('COUNT(user.id)', 'count')
+      .groupBy('user.status')
+      .getRawMany();
+
+    let active = 0;
+    let pending = 0;
+    let inactive = 0;
+    let total = 0;
+
+    for (const row of rawCounts) {
+      const c = parseInt(row.count, 10) || 0;
+      total += c;
+      if (row.status === 'ACTIVE') {
+        active += c;
+      } else if (row.status === 'PENDING_APPROVAL' || row.status === 'PENDING') {
+        pending += c;
+      } else if (row.status === 'INACTIVE' || row.status === 'DEACTIVATED' || row.status === 'SUSPENDED') {
+        inactive += c;
+      } else {
+        active += c;
+      }
+    }
+
+    return { total, active, pending, inactive };
+  }
+
   async findUserById(id: string): Promise<User> {
     const user = await this.userRepository.findOne({
       where: { id },
