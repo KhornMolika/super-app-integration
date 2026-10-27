@@ -618,7 +618,7 @@ export class MobileAuthService implements OnModuleInit {
    * EndUserAuthGuard refuses access tokens issued before [at].
    */
   async revokeAllSessions(userId: string, at = new Date(Date.now())): Promise<void> {
-    await this.refreshTokens.update({ userId, revokedAt: IsNull() }, { revokedAt: at });
+    await this.refreshTokens.update({ endUserId: userId, revokedAt: IsNull() }, { revokedAt: at });
     await this.users.update({ id: userId }, { sessionsRevokedAt: at });
   }
 
