@@ -214,7 +214,7 @@ function Push-ToSuperAppManager {
         return
     }
     Write-Host "  -> Split commit: $splitCommit" -ForegroundColor Cyan
-    git push superapp-manager ("{0}:{1}" -f $splitCommit, $TargetBranch) --force
+    git push superapp-manager ("{0}:refs/heads/{1}" -f $splitCommit, $TargetBranch) --force
     if ($LASTEXITCODE -eq 0) {
         Write-Host "[OK] Backoffice successfully pushed to superapp-manager/$TargetBranch!`n" -ForegroundColor Green
     } else {
@@ -232,7 +232,7 @@ function Push-ToSuperAppBackend {
         return
     }
     Write-Host "  -> Split commit: $splitCommit" -ForegroundColor Cyan
-    git push superapp-backend ("{0}:{1}" -f $splitCommit, $TargetBranch) --force
+    git push superapp-backend ("{0}:refs/heads/{1}" -f $splitCommit, $TargetBranch) --force
     if ($LASTEXITCODE -eq 0) {
         Write-Host "[OK] Backend successfully pushed to superapp-backend/$TargetBranch!`n" -ForegroundColor Green
     } else {
@@ -250,7 +250,7 @@ function Push-ToSuperAppMobile {
         return
     }
     Write-Host "  -> Split commit: $splitCommit" -ForegroundColor Cyan
-    git push superapp-mobile ("{0}:{1}" -f $splitCommit, $TargetBranch) --force
+    git push superapp-mobile ("{0}:refs/heads/{1}" -f $splitCommit, $TargetBranch) --force
     if ($LASTEXITCODE -eq 0) {
         Write-Host "[OK] Mobile SuperApp successfully pushed to superapp-mobile/$TargetBranch!`n" -ForegroundColor Green
     } else {

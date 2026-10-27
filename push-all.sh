@@ -214,7 +214,7 @@ push_superapp_manager() {
     return 1
   fi
   echo -e "  ${CYAN}➜ Split commit: $SPLIT_COMMIT${RESET}"
-  if git push superapp-manager "$SPLIT_COMMIT":"$TARGET_BRANCH" --force; then
+  if git push superapp-manager "$SPLIT_COMMIT":"refs/heads/$TARGET_BRANCH" --force; then
     echo -e "${GREEN}✔ Backoffice successfully pushed to superapp-manager/$TARGET_BRANCH!${RESET}\n"
   else
     echo -e "${RED}❌ Failed to push to superapp-manager/$TARGET_BRANCH.${RESET}\n"
@@ -231,7 +231,7 @@ push_superapp_backend() {
     return 1
   fi
   echo -e "  ${CYAN}➜ Split commit: $SPLIT_COMMIT${RESET}"
-  if git push superapp-backend "$SPLIT_COMMIT":"$TARGET_BRANCH" --force; then
+  if git push superapp-backend "$SPLIT_COMMIT":"refs/heads/$TARGET_BRANCH" --force; then
     echo -e "${GREEN}✔ Backend successfully pushed to superapp-backend/$TARGET_BRANCH!${RESET}\n"
   else
     echo -e "${RED}❌ Failed to push to superapp-backend/$TARGET_BRANCH.${RESET}\n"
@@ -248,7 +248,7 @@ push_superapp_mobile() {
     return 0
   fi
   echo -e "  ${CYAN}➜ Split commit: $SPLIT_COMMIT${RESET}"
-  if git push superapp-mobile "$SPLIT_COMMIT":"$TARGET_BRANCH" --force; then
+  if git push superapp-mobile "$SPLIT_COMMIT":"refs/heads/$TARGET_BRANCH" --force; then
     echo -e "${GREEN}✔ Mobile SuperApp successfully pushed to superapp-mobile/$TARGET_BRANCH!${RESET}\n"
   else
     echo -e "${RED}❌ Failed to push to superapp-mobile/$TARGET_BRANCH.${RESET}\n"
