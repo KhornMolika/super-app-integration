@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Label, Input } from './inputs';
+import { Label } from './inputs';
 import { normalizeAssetUrl } from '@/lib/asset-utils';
 
 interface LogoUploadInputProps {
@@ -29,7 +29,6 @@ export function LogoUploadInput({
   helperText,
 }: LogoUploadInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [mode, setMode] = useState<'upload' | 'url'>(value && value.startsWith('http') ? 'url' : 'upload');
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -179,30 +178,9 @@ export function LogoUploadInput({
         <Label>
           {label} {required && <span className="text-rose-500 font-bold">*</span>}
         </Label>
-        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700/60 text-xs">
-          <button
-            type="button"
-            onClick={() => setMode('upload')}
-            className={`px-2 py-0.5 rounded font-medium transition-all ${
-              mode === 'upload'
-                ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-300 shadow-xs'
-                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
-            }`}
-          >
-            Upload File
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode('url')}
-            className={`px-2 py-0.5 rounded font-medium transition-all ${
-              mode === 'url'
-                ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-300 shadow-xs'
-                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
-            }`}
-          >
-            Image URL
-          </button>
-        </div>
+        <span className="text-xs text-slate-400 dark:text-slate-500">
+          PNG, JPG, SVG, WebP
+        </span>
       </div>
 
       <input
@@ -214,55 +192,20 @@ export function LogoUploadInput({
         disabled={disabled}
       />
 
-      {mode === 'url' ? (
-        <div className="flex gap-2">
-          <Input
-            type="url"
-            disabled={disabled}
-            value={value && !value.startsWith('data:') ? value : ''}
-            onChange={(e) => {
-              const val = e.target.value.trim();
-              onChange(val);
-              setFileName(val ? val.split('/').pop() || 'logo.png' : '');
-            }}
-            placeholder="https://example.com/logo.png"
-            className={`flex-1 text-sm ${displayError ? 'border-rose-500 ring-1 ring-rose-500' : ''}`}
-          />
-          {value && (
-            <button
-              type="button"
-              onClick={() => setIsPreviewOpen(true)}
-              className="px-3 h-[42px] shrink-0 flex items-center gap-1.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-300 transition-colors"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={normalizeAssetUrl(value) || value}
-                alt="Preview"
-                className="w-5 h-5 rounded object-cover"
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = 'none';
-                }}
-              />
-              Preview
-            </button>
-          )}
-        </div>
-      ) : (
-        <div
-          onClick={() => !disabled && fileInputRef.current?.click()}
+      <div
+        onClick={() => !disabled && fileInputRef.current?.click()}
           onDrop={handleDrop}
           onDragOver={(e) => {
             e.preventDefault();
             if (!disabled) setIsDragging(true);
           }}
           onDragLeave={() => setIsDragging(false)}
-          className={`relative w-full h-[46px] px-3 bg-slate-100/80 hover:bg-slate-100 dark:bg-slate-900/90 dark:hover:bg-slate-900 border rounded-xl flex items-center justify-between transition-all cursor-pointer select-none ${
-            displayError
+          className={`relative w-full h-[46px] px-3 bg-slate-100/80 hover:bg-slate-100 dark:bg-slate-900/90 dark:hover:bg-slate-900 border rounded-xl flex items-center justify-between transition-all cursor-pointer select-none ${displayError
               ? 'border-rose-500 ring-1 ring-rose-500 bg-rose-50/30 dark:bg-rose-950/20'
               : isDragging
-              ? 'border-brand-500 ring-1 ring-brand-500 bg-brand-50/20 dark:bg-brand-950/20'
-              : 'border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600'
-          } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                ? 'border-brand-500 ring-1 ring-brand-500 bg-brand-50/20 dark:bg-brand-950/20'
+                : 'border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600'
+            } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           {isUploading ? (
             <div className="flex items-center gap-2 text-brand-600 dark:text-brand-400 min-w-0 flex-1 pr-2">
@@ -360,9 +303,8 @@ export function LogoUploadInput({
                 Browse
               </span>
             )}
-          </div>
         </div>
-      )}
+      </div>
 
       {displayError ? (
         <p className="mt-1.5 text-xs text-rose-500 font-medium animate-in fade-in duration-150">
@@ -415,7 +357,7 @@ export function LogoUploadInput({
 
             {/* Modal Body */}
             <div className="p-6 flex flex-col items-center bg-slate-50 dark:bg-slate-950/50 space-y-4">
-              
+
               {/* Controls Bar: Shape Selector & Zoom Controls */}
               <div className="w-full flex items-center justify-between gap-2 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm text-xs">
                 {/* Shape Selector */}
@@ -424,33 +366,30 @@ export function LogoUploadInput({
                   <button
                     type="button"
                     onClick={() => setShapePreview('squircle')}
-                    className={`px-2 py-1 rounded-lg font-medium transition-colors ${
-                      shapePreview === 'squircle'
+                    className={`px-2 py-1 rounded-lg font-medium transition-colors ${shapePreview === 'squircle'
                         ? 'bg-brand-600 text-white shadow-xs'
                         : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                    }`}
+                      }`}
                   >
                     Squircle
                   </button>
                   <button
                     type="button"
                     onClick={() => setShapePreview('circle')}
-                    className={`px-2 py-1 rounded-lg font-medium transition-colors ${
-                      shapePreview === 'circle'
+                    className={`px-2 py-1 rounded-lg font-medium transition-colors ${shapePreview === 'circle'
                         ? 'bg-brand-600 text-white shadow-xs'
                         : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                    }`}
+                      }`}
                   >
                     Circle
                   </button>
                   <button
                     type="button"
                     onClick={() => setShapePreview('square')}
-                    className={`px-2 py-1 rounded-lg font-medium transition-colors ${
-                      shapePreview === 'square'
+                    className={`px-2 py-1 rounded-lg font-medium transition-colors ${shapePreview === 'square'
                         ? 'bg-brand-600 text-white shadow-xs'
                         : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                    }`}
+                      }`}
                   >
                     Square
                   </button>
@@ -490,13 +429,12 @@ export function LogoUploadInput({
               {/* Main Interactive Preview Canvas */}
               <div className="relative w-56 h-56 flex items-center justify-center border border-slate-200 dark:border-slate-800 shadow-inner bg-[repeating-conic-gradient(#f1f5f9_0%_25%,#ffffff_0%_50%)] dark:bg-[repeating-conic-gradient(#1e293b_0%_25%,#0f172a_0%_50%)] bg-[length:16px_16px] rounded-2xl overflow-hidden p-2">
                 <div
-                  className={`w-48 h-48 overflow-hidden transition-all duration-200 border border-slate-300/80 dark:border-slate-700/80 bg-white/40 dark:bg-slate-900/40 shadow-md flex items-center justify-center ${
-                    shapePreview === 'circle'
+                  className={`w-48 h-48 overflow-hidden transition-all duration-200 border border-slate-300/80 dark:border-slate-700/80 bg-white/40 dark:bg-slate-900/40 shadow-md flex items-center justify-center ${shapePreview === 'circle'
                       ? 'rounded-full'
                       : shapePreview === 'squircle'
-                      ? 'rounded-3xl'
-                      : 'rounded-none'
-                  }`}
+                        ? 'rounded-3xl'
+                        : 'rounded-none'
+                    }`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={normalizeAssetUrl(value) || value}
@@ -505,9 +443,8 @@ export function LogoUploadInput({
                       transform: `scale(${zoomLevel})`,
                       transition: 'transform 0.15s ease-out',
                     }}
-                    className={`w-full h-full ${
-                      fitMode === 'cover' ? 'object-cover' : 'object-contain'
-                    } drop-shadow-xs`}
+                    className={`w-full h-full ${fitMode === 'cover' ? 'object-cover' : 'object-contain'
+                      } drop-shadow-xs`}
                     onLoad={(e) => {
                       const img = e.currentTarget;
                       setImageDimensions({ width: img.naturalWidth, height: img.naturalHeight });
@@ -526,22 +463,20 @@ export function LogoUploadInput({
                   <button
                     type="button"
                     onClick={() => setFitMode('contain')}
-                    className={`px-2 py-0.5 rounded font-medium ${
-                      fitMode === 'contain'
+                    className={`px-2 py-0.5 rounded font-medium ${fitMode === 'contain'
                         ? 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-100 font-semibold'
                         : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                    }`}
+                      }`}
                   >
                     Contain (Full)
                   </button>
                   <button
                     type="button"
                     onClick={() => setFitMode('cover')}
-                    className={`px-2 py-0.5 rounded font-medium ${
-                      fitMode === 'cover'
+                    className={`px-2 py-0.5 rounded font-medium ${fitMode === 'cover'
                         ? 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-100 font-semibold'
                         : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                    }`}
+                      }`}
                   >
                     Cover (Fill)
                   </button>
@@ -549,11 +484,10 @@ export function LogoUploadInput({
 
                 {imageDimensions && (
                   <span
-                    className={`px-2 py-0.5 rounded font-mono font-medium ${
-                      Math.abs(imageDimensions.width - imageDimensions.height) <= 2
+                    className={`px-2 py-0.5 rounded font-mono font-medium ${Math.abs(imageDimensions.width - imageDimensions.height) <= 2
                         ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
                         : 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
-                    }`}
+                      }`}
                   >
                     {imageDimensions.width}x{imageDimensions.height} px{' '}
                     {Math.abs(imageDimensions.width - imageDimensions.height) <= 2

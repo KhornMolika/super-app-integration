@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
+import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/inputs';
+import { ArrowRightIcon } from '@/components/ui/Icons';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/lib/auth';
 import {
@@ -281,7 +283,12 @@ function UsersContent() {
             </div>
             <div className="min-w-0">
               <div className="font-semibold text-slate-900 dark:text-white truncate flex items-center gap-1.5">
-                <span>{user.name}</span>
+                <Link
+                  href={`/users/${user.id}`}
+                  className="hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
+                >
+                  {user.name}
+                </Link>
               </div>
               <div className="text-xs text-slate-500 dark:text-slate-400 truncate font-mono">
                 {user.email}
@@ -491,6 +498,11 @@ function UsersContent() {
             ariaLabel={`Actions for ${user.name}`}
             items={[
               {
+                label: 'View Details',
+                href: `/users/${user.id}`,
+                icon: <ArrowRightIcon className="w-4 h-4 text-slate-400" />,
+              },
+              {
                 label: 'Approve',
                 variant: 'primary',
                 hidden: !isPending || !canManageUsers,
@@ -589,11 +601,86 @@ function UsersContent() {
           )}
         </div>
 
+        {/* KPI Quick Status Filters Strip */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <button
+            type="button"
+            onClick={() => handleStatusFilterChange('ALL')}
+            className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+              statusFilter === 'ALL'
+                ? 'bg-brand-50/50 dark:bg-brand-500/10 border-brand-300 dark:border-brand-500/30 ring-2 ring-brand-500/20 shadow-xs'
+                : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-xs'
+            }`}
+          >
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+              Total Accounts
+            </span>
+            <span className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-0.5 block">
+              {paginationMeta.totalItems}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleStatusFilterChange('ACTIVE')}
+            className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+              statusFilter === 'ACTIVE'
+                ? 'bg-emerald-50/50 dark:bg-emerald-500/10 border-emerald-300 dark:border-emerald-500/30 ring-2 ring-emerald-500/20 shadow-xs'
+                : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-xs'
+            }`}
+          >
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span>Active</span>
+            </div>
+            <span className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-0.5 block">
+              {users.filter((u) => getUserEffectiveStatus(u) === 'ACTIVE').length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleStatusFilterChange('PENDING_APPROVAL')}
+            className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+              statusFilter === 'PENDING_APPROVAL'
+                ? 'bg-amber-50/50 dark:bg-amber-500/10 border-amber-300 dark:border-amber-500/30 ring-2 ring-amber-500/20 shadow-xs'
+                : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-xs'
+            }`}
+          >
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+              <span>Pending Review</span>
+            </div>
+            <span className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-0.5 block">
+              {users.filter((u) => getUserEffectiveStatus(u) === 'PENDING_APPROVAL').length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleStatusFilterChange('INACTIVE')}
+            className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+              statusFilter === 'INACTIVE'
+                ? 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 ring-2 ring-slate-400/20 shadow-xs'
+                : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-xs'
+            }`}
+          >
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+              <span>Deactivated</span>
+            </div>
+            <span className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-0.5 block">
+              {users.filter((u) => getUserEffectiveStatus(u) === 'INACTIVE').length}
+            </span>
+          </button>
+        </div>
+
         {/* USERS DIRECTORY (POWERED BY SERVER-DRIVEN GENERIC DATATABLE) */}
         <DataTable<User>
           data={users}
           columns={userColumns}
           keyExtractor={(u) => u.id}
+          onRowClick={(u) => router.push(`/users/${u.id}`)}
           loading={loadingUsers}
           loadingMessage="Fetching accounts from database..."
           searchValue={userSearch}

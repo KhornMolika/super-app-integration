@@ -99,9 +99,13 @@ export class CapabilitiesService implements OnApplicationBootstrap {
   }
 
   async findOne(id: string): Promise<CapabilityDefinition> {
-    const perm = await this.capabilityDefinitionRepository.findOne({
-      where: { id },
-    });
+    const isUuid = /^[0-9a-fA-F-]{36}$/.test(id);
+    let perm = isUuid
+      ? await this.capabilityDefinitionRepository.findOne({ where: { id } })
+      : null;
+    if (!perm) {
+      perm = await this.findByKey(id);
+    }
     if (!perm) throw new NotFoundException('Capability definition not found');
     return perm;
   }

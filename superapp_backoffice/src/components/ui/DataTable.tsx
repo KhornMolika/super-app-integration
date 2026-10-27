@@ -406,7 +406,7 @@ export function DataTable<T>({
                           type="button"
                           onClick={() => handleSort(col.key)}
                           title={sortTooltip}
-                          className={`group/sort inline-flex items-center gap-1.5 font-semibold transition-colors cursor-pointer select-none -m-1 p-1 rounded-md hover:text-slate-900 dark:hover:text-slate-100 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-500/50 ${
+                          className={`group/sort inline-flex items-center gap-2 font-semibold transition-all cursor-pointer select-none -m-1.5 px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/80 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-500/50 ${
                             isRightAligned
                               ? 'w-full justify-end'
                               : isCenterAligned
@@ -415,60 +415,80 @@ export function DataTable<T>({
                           } ${
                             isSorted
                               ? 'text-brand-600 dark:text-brand-400 font-bold'
-                              : 'text-slate-500 dark:text-slate-400'
+                              : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                           }`}
                         >
                           <span>{col.header}</span>
                           <span className="inline-flex items-center shrink-0">
                             {isSorted ? (
-                              activeSortDirection === 'asc' ? (
-                                <svg
-                                  className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400 transition-transform duration-150"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2.5}
-                                    d="M5 15l7-7 7 7"
-                                  />
-                                </svg>
-                              ) : (
-                                <svg
-                                  className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400 transition-transform duration-150"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2.5}
-                                    d="M19 9l-7 7-7-7"
-                                  />
-                                </svg>
-                              )
-                            ) : (
-                              <svg
-                                className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600 group-hover/sort:text-slate-500 dark:group-hover/sort:text-slate-400 opacity-60 group-hover/sort:opacity-100 transition-all duration-150"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
+                              <span
+                                className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-brand-50 dark:bg-brand-950/70 text-brand-600 dark:text-brand-400 border border-brand-200 dark:border-brand-500/40 shadow-xs transition-transform duration-150"
+                                aria-label={activeSortDirection === 'asc' ? 'Sorted Ascending' : 'Sorted Descending'}
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={1.75}
-                                  d="M8 9l4-4 4 4m0 6l-4 4-4-4"
-                                />
-                              </svg>
+                                {activeSortDirection === 'asc' ? (
+                                  <svg
+                                    className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth={3}
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      d="M5 15l7-7 7 7"
+                                    />
+                                  </svg>
+                                ) : (
+                                  <svg
+                                    className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth={3}
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      d="M19 9l-7 7-7-7"
+                                    />
+                                  </svg>
+                                )}
+                              </span>
+                            ) : (
+                              <span
+                                className="inline-flex items-center justify-center w-5 h-5 rounded-md text-slate-400 dark:text-slate-400 group-hover/sort:text-slate-700 dark:group-hover/sort:text-slate-200 group-hover/sort:bg-slate-200/60 dark:group-hover/sort:bg-slate-800 transition-all"
+                                aria-label="Sortable column"
+                              >
+                                <svg
+                                  className="w-3.5 h-3.5"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                  strokeWidth={2}
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M8 9l4-4 4 4m0 6l-4 4-4-4"
+                                  />
+                                </svg>
+                              </span>
                             )}
                           </span>
                         </button>
                       ) : (
-                        col.header
+                        <div
+                          className={`font-semibold text-slate-500 dark:text-slate-400 select-none ${
+                            isRightAligned
+                              ? 'text-right'
+                              : isCenterAligned
+                              ? 'text-center'
+                              : ''
+                          }`}
+                        >
+                          {col.header}
+                        </div>
                       )}
                     </th>
                   );

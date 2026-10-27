@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'reac
 import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { RegisterMiniAppButton } from '@/components/ui/RegisterMiniAppButton';
-import { TagIcon, SettingsIcon, ArrowRightIcon, BuildingIcon, DevicePhoneIcon } from '@/components/ui/Icons';
+import { ClockIcon, SettingsIcon, ArrowRightIcon, BuildingIcon, DevicePhoneIcon } from '@/components/ui/Icons';
 import DownloadApkModal from '@/components/ui/DownloadApkModal';
 import { AppLogoAvatar } from '@/components/ui/AppLogoAvatar';
 import {
@@ -159,7 +159,7 @@ function MiniAppsContent() {
     {
       key: 'name',
       header: 'App Name',
-      width: 'w-[22%]',
+      width: 'w-[23%]',
       sortable: true,
       defaultSort: true,
       sortValue: (app) => app.name || '',
@@ -178,7 +178,7 @@ function MiniAppsContent() {
     {
       key: 'organization',
       header: 'Organization',
-      width: 'w-[12%]',
+      width: 'w-[13%]',
       sortable: true,
       sortValue: (app) => app.organizationCode || getOrganizationCode(app.organization || app.category) || '',
       cell: (app) => {
@@ -198,7 +198,7 @@ function MiniAppsContent() {
     {
       key: 'integration',
       header: 'Integration',
-      width: 'w-[13%]',
+      width: 'w-[12%]',
       sortable: true,
       sortValue: (app) => app.integrationMethod || 'WEBVIEW',
       cell: (app) => (
@@ -220,33 +220,9 @@ function MiniAppsContent() {
       ),
     },
     {
-      key: 'capabilities',
-      header: 'Capabilities',
-      width: 'w-[12%]',
-      sortable: true,
-      sortValue: (app) =>
-        Array.isArray(app.capabilities)
-          ? app.capabilities.length
-          : Array.isArray(app.permissions)
-          ? app.permissions.length
-          : 0,
-      cell: (app) => (
-        <span className="inline-flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400">
-          <TagIcon className="w-3.5 h-3.5" />
-          <span>
-            {Array.isArray(app.capabilities)
-              ? app.capabilities.length
-              : Array.isArray(app.permissions)
-              ? app.permissions.length
-              : 0}
-          </span>
-        </span>
-      ),
-    },
-    {
       key: 'status',
       header: 'Status',
-      width: 'w-[18%]',
+      width: 'w-[15%]',
       sortable: true,
       sortValue: (app) => app.status || 'DRAFT',
       cell: (app) => {
@@ -280,15 +256,59 @@ function MiniAppsContent() {
       },
     },
     {
+      key: 'updatedAt',
+      header: (
+        <div className="flex items-center gap-1.5">
+          <ClockIcon className="w-3.5 h-3.5 text-slate-400" />
+          <span>Last Updated</span>
+        </div>
+      ),
+      width: 'w-[16%]',
+      sortable: true,
+      sortValue: (app) =>
+        app.updatedAt
+          ? new Date(app.updatedAt).getTime()
+          : app.createdAt
+          ? new Date(app.createdAt).getTime()
+          : 0,
+      cell: (app) => {
+        const rawDate = app.updatedAt || app.createdAt;
+        if (!rawDate) {
+          return <span className="text-xs text-slate-400 italic">Never</span>;
+        }
+        const d = new Date(rawDate);
+        if (isNaN(d.getTime())) {
+          return <span className="text-xs text-slate-400 italic">Unknown</span>;
+        }
+        return (
+          <div className="flex flex-col" title={`Updated: ${d.toLocaleString()}`}>
+            <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+              {d.toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              })}
+            </span>
+            <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500 mt-0.5">
+              {d.toLocaleTimeString(undefined, {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
       key: 'actions',
       header: <span className="block text-right whitespace-nowrap">Actions</span>,
-      width: 'w-[14%]',
+      width: 'w-[12%]',
       className: 'text-right whitespace-nowrap',
       sortable: false,
       cell: (app) => (
-        <div onClick={(e) => e.stopPropagation()}>
+        <div onClick={(e) => e.stopPropagation()} className="flex justify-end">
           <ActionMenu
-            trigger="ellipsis"
+            ariaLabel={`Actions for ${app.name || 'MiniApp'}`}
             items={[
               {
                 label: 'View Details',

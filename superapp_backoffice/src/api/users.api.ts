@@ -16,16 +16,22 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  avatarUrl?: string | null;
+  externalId?: string | null;
   telegramChatId?: string | null;
   telegramUsername?: string | null;
+  telegramConnectedAt?: string | null;
   isActive?: boolean;
   status?: string;
+  roleId?: string;
   role?: UserRole;
   roles?: UserRole[];
   organizationId?: string | null;
   organization?: UserOrganization | null;
+  permissions?: string[];
   createdAt?: string;
   updatedAt?: string;
+  [key: string]: any;
 }
 
 export const usersApi = {
