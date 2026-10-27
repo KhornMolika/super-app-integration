@@ -172,43 +172,78 @@ export class SeederService implements OnApplicationBootstrap {
 
     let ftcOrg: Organization | null = null;
     for (const orgData of fsaOrganizations) {
-      let org = await this.organizationRepository.findOne({
-        where: [{ code: orgData.code }, { name: orgData.name }],
-      });
-
-      if (!org) {
-        org = this.organizationRepository.create({
-          name: orgData.name,
-          code: orgData.code,
-          parentAuthority,
-          description: orgData.description,
-          status: OrganizationStatus.ACTIVE,
+      let org: Organization | null = null;
+      try {
+        // Priority 1: Match by exact name first (primary unique key)
+        org = await this.organizationRepository.findOne({
+          where: { name: orgData.name },
         });
-        org = await this.organizationRepository.save(org);
-        this.logger.log(`Created organization: ${org.name} [${org.code}]`);
-      } else {
-        let changed = false;
-        if (org.name !== orgData.name) {
-          org.name = orgData.name;
-          changed = true;
+
+        // Priority 2: Match by code if not found by name
+        if (!org && orgData.code) {
+          org = await this.organizationRepository.findOne({
+            where: { code: orgData.code },
+          });
         }
-        if (org.code !== orgData.code) {
-          org.code = orgData.code;
-          changed = true;
+
+        // Priority 3: Case-insensitive / trimmed match
+        if (!org) {
+          org = await this.organizationRepository
+            .createQueryBuilder('org')
+            .where('LOWER(TRIM(org.name)) = LOWER(:name)', { name: orgData.name.trim() })
+            .orWhere('org.code = :code', { code: orgData.code })
+            .getOne();
         }
-        if (org.parentAuthority !== parentAuthority) {
-          org.parentAuthority = parentAuthority;
-          changed = true;
-        }
-        if (changed) {
+
+        if (!org) {
+          org = this.organizationRepository.create({
+            name: orgData.name,
+            code: orgData.code,
+            parentAuthority,
+            description: orgData.description,
+            status: OrganizationStatus.ACTIVE,
+          });
           org = await this.organizationRepository.save(org);
-          this.logger.log(`Updated organization: ${org.name} [${org.code}]`);
+          this.logger.log(`Created organization: ${org.name} [${org.code}]`);
+        } else {
+          let changed = false;
+          if (orgData.code && org.code !== orgData.code) {
+            org.code = orgData.code;
+            changed = true;
+          }
+          if (org.parentAuthority !== parentAuthority) {
+            org.parentAuthority = parentAuthority;
+            changed = true;
+          }
+          if (orgData.description && !org.description) {
+            org.description = orgData.description;
+            changed = true;
+          }
+          if (changed) {
+            org = await this.organizationRepository.save(org);
+            this.logger.log(`Updated organization: ${org.name} [${org.code}]`);
+          }
         }
+      } catch (err: any) {
+        // Idempotent recovery: if duplicate key or conflict, adopt existing DB record
+        this.logger.warn(`Organization seed conflict for "${orgData.name}": ${err?.message}. Adopting existing database record.`);
+        org = await this.organizationRepository.findOne({
+          where: [{ name: orgData.name }, { code: orgData.code }],
+        }) || (await this.organizationRepository
+          .createQueryBuilder('org')
+          .where('org.name ILIKE :name', { name: `%${orgData.name}%` })
+          .getOne());
       }
 
-      if (orgData.code === 'FTC') {
+      if (orgData.code === 'FTC' || orgData.name.includes('Financial Technology Center')) {
         ftcOrg = org;
       }
+    }
+
+    if (!ftcOrg) {
+      ftcOrg = await this.organizationRepository.findOne({
+        where: [{ code: 'FTC' }, { name: 'Financial Technology Center' }],
+      }) || (await this.organizationRepository.find({ take: 1 }))[0] || null;
     }
 
     // 4. Seed Password
