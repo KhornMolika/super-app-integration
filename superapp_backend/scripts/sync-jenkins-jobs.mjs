@@ -48,7 +48,7 @@ const isPipelineFlag = process.argv.includes('--pipeline');
 const useScmPipeline = isScmFlag || isPipelineFlag;
 
 const gitToken = (process.env.GIT_REPO_TOKEN || process.env.GIT_TOKEN || process.env.GITLAB_TOKEN || '').trim();
-const gitCredentialsId = (process.env.JENKINS_GIT_CREDENTIALS_ID || process.env.GIT_CREDENTIALS_ID || 'git-token').trim();
+const gitCredentialsId = (process.env.JENKINS_GIT_CREDENTIALS_ID || process.env.GIT_CREDENTIALS_ID || 'git-action').trim();
 const defaultBranch = (process.env.SUPERAPP_GIT_BRANCH || process.env.GIT_BRANCH || 'molika').trim();
 const defaultBackendRepo = (process.env.BACKEND_GIT_REPO_URL || 'https://git.fintechcenterfsa.com/backend/super-app.git').trim();
 const defaultMobileRepo = (process.env.SUPERAPP_GIT_REPO_URL || 'https://git.fintechcenterfsa.com/frontend/super-app.git').trim();
@@ -110,11 +110,11 @@ function escapeXmlScript(jenkinsfile) {
 }
 
 function buildScmGitBlock(repoUrl, branch = defaultBranch, token = gitToken, credentialsId = gitCredentialsId) {
-  const authRepoUrl = token
+  const authRepoUrl = token && !credentialsId
     ? repoUrl.replace(/^https?:\/\//, `https://oauth2:${escapeXmlScript(token)}@`)
     : repoUrl;
 
-  const credXml = credentialsId && !token
+  const credXml = credentialsId
     ? `\n        <credentialsId>${escapeXmlScript(credentialsId)}</credentialsId>`
     : '';
 
