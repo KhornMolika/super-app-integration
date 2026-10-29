@@ -831,16 +831,46 @@ export class AccessControlService {
 
   async deleteRole(id: string): Promise<{ success: boolean; message: string }> {
     const role = await this.findRoleById(id);
-    if (['SUPER_ADMIN', 'ADMIN'].includes(role.name)) {
+    const systemRoles = ['SUPER_ADMIN', 'ADMIN', 'MA_DEVELOPER'];
+    if (systemRoles.includes(role.name.toUpperCase())) {
       throw new BadRequestException(
-        `System role '${role.name}' cannot be deleted.`,
+        `System role '${role.name}' is a core system role and cannot be deleted.`,
       );
     }
-    await this.roleRepository.remove(role);
-    return {
-      success: true,
-      message: `Role ${role.name} removed successfully.`,
-    };
+
+    const assignedUsersCount = await this.userRepository.count({
+      where: { roleId: id },
+    });
+    if (assignedUsersCount > 0) {
+      throw new BadRequestException(
+        `Role '${role.name}' cannot be deleted because it is currently assigned to ${assignedUsersCount} active user(s). Please reassign them first.`,
+      );
+    }
+
+    try {
+      await this.roleRepository.manager.transaction(async (manager) => {
+        // Clean up legacy user_roles join table if it exists
+        await manager
+          .query(`DELETE FROM "user_roles" WHERE "roleId" = $1`, [id])
+          .catch(() => {});
+
+        // Clean up role_permissions join table
+        await manager
+          .query(`DELETE FROM "role_permissions" WHERE "roleId" = $1`, [id])
+          .catch(() => {});
+
+        await manager.delete(Role, id);
+      });
+
+      return {
+        success: true,
+        message: `Role ${role.name} removed successfully.`,
+      };
+    } catch (err: any) {
+      throw new BadRequestException(
+        `Failed to delete role '${role.name}': ${err?.message || 'Database dependency constraint'}`,
+      );
+    }
   }
 
   async findAllPermissions(): Promise<Permission[]> {

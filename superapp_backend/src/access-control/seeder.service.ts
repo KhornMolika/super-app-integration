@@ -6,7 +6,6 @@ import { User } from './entities/user.entity';
 import { Role } from './entities/role.entity';
 import { Permission } from './entities/permission.entity';
 import { AccessToken, DeveloperToken } from './entities/access-token.entity';
-import { RefreshToken } from '../mobile/entities/refresh-token.entity';
 import {
   Organization,
   OrganizationStatus,
@@ -558,21 +557,21 @@ export class SeederService implements OnApplicationBootstrap {
             .createQueryBuilder()
             .delete()
             .from(MiniAppIssue)
-            .where('"miniappId" IN (:...mockAppIds)', { mockAppIds })
+            .where('"miniAppId" IN (:...mockAppIds)', { mockAppIds })
             .execute();
 
           await manager
             .createQueryBuilder()
             .delete()
             .from(MiniAppBuild)
-            .where('"miniappId" IN (:...mockAppIds)', { mockAppIds })
+            .where('"miniAppId" IN (:...mockAppIds)', { mockAppIds })
             .execute();
 
           await manager
             .createQueryBuilder()
             .delete()
             .from(MiniAppVersion)
-            .where('"miniappId" IN (:...mockAppIds)', { mockAppIds })
+            .where('"miniAppId" IN (:...mockAppIds)', { mockAppIds })
             .execute();
 
           await manager
@@ -580,7 +579,7 @@ export class SeederService implements OnApplicationBootstrap {
             .delete()
             .from(MiniAppCollaborator)
             .where(
-              '"miniappId" IN (:...mockAppIds) OR "userId" IN (:...mockUserIds)',
+              '"miniAppId" IN (:...mockAppIds) OR "userId" IN (:...mockUserIds)',
               {
                 mockAppIds,
                 mockUserIds,
@@ -608,13 +607,6 @@ export class SeederService implements OnApplicationBootstrap {
         await manager
           .createQueryBuilder()
           .delete()
-          .from(RefreshToken)
-          .where('"userId" IN (:...mockUserIds)', { mockUserIds })
-          .execute();
-
-        await manager
-          .createQueryBuilder()
-          .delete()
           .from(DeveloperToken)
           .where('"userId" IN (:...mockUserIds)', { mockUserIds })
           .execute();
@@ -632,14 +624,14 @@ export class SeederService implements OnApplicationBootstrap {
           .delete()
           .from(AuditLog)
           .where(
-            '(actorEmail ILIKE :govPattern OR actorEmail ILIKE :examplePattern OR actorEmail ILIKE :testPattern)',
+            '("actorEmail" ILIKE :govPattern OR "actorEmail" ILIKE :examplePattern OR "actorEmail" ILIKE :testPattern)',
             {
               govPattern: '%@superapp.gov.kh',
               examplePattern: '%@example.com',
               testPattern: '%@test.com',
             },
           )
-          .andWhere('actorEmail NOT IN (:...officialEmails)', {
+          .andWhere('"actorEmail" NOT IN (:...officialEmails)', {
             officialEmails,
           })
           .execute();

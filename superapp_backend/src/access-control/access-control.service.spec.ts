@@ -44,7 +44,13 @@ describe('AccessControlService - User Organization Updates & Creation', () => {
       }),
     };
 
+    const mockManager = {
+      query: jest.fn().mockResolvedValue([]),
+      delete: jest.fn().mockResolvedValue({ affected: 1 }),
+    };
+
     mockUserRepo = {
+      count: jest.fn().mockResolvedValue(0),
       findOne: jest.fn().mockImplementation(({ where }) => {
         if (where.email) return Promise.resolve(null); // No existing email conflict for creation
         return Promise.resolve({ ...mockUserEntity });
@@ -69,6 +75,9 @@ describe('AccessControlService - User Organization Updates & Creation', () => {
       findBy: jest
         .fn()
         .mockResolvedValue([{ id: 'role-dev-id', name: 'MA_DEVELOPER' }]),
+      manager: {
+        transaction: jest.fn().mockImplementation(async (cb) => cb(mockManager)),
+      },
     };
 
     mockPermRepo = {
@@ -173,6 +182,60 @@ describe('AccessControlService - User Organization Updates & Creation', () => {
         }),
       );
       expect(created).toBeDefined();
+    });
+  });
+
+  describe('deleteRole', () => {
+    it('should throw BadRequestException when attempting to delete system roles', async () => {
+      mockRoleRepo.findOne.mockResolvedValueOnce({
+        id: 'role-sa-id',
+        name: 'SUPER_ADMIN',
+      });
+      await expect(service.deleteRole('role-sa-id')).rejects.toThrow(
+        /core system role and cannot be deleted/,
+      );
+
+      mockRoleRepo.findOne.mockResolvedValueOnce({
+        id: 'role-admin-id',
+        name: 'ADMIN',
+      });
+      await expect(service.deleteRole('role-admin-id')).rejects.toThrow(
+        /core system role and cannot be deleted/,
+      );
+
+      mockRoleRepo.findOne.mockResolvedValueOnce({
+        id: 'role-dev-id',
+        name: 'MA_DEVELOPER',
+      });
+      await expect(service.deleteRole('role-dev-id')).rejects.toThrow(
+        /core system role and cannot be deleted/,
+      );
+    });
+
+    it('should throw BadRequestException if users are currently assigned to the role', async () => {
+      mockRoleRepo.findOne.mockResolvedValueOnce({
+        id: 'custom-role-id',
+        name: 'CUSTOM_AUDITOR',
+      });
+      mockUserRepo.count.mockResolvedValueOnce(3);
+
+      await expect(service.deleteRole('custom-role-id')).rejects.toThrow(
+        /currently assigned to 3 active user\(s\)/,
+      );
+    });
+
+    it('should successfully delete an unassigned custom role cleanly', async () => {
+      mockRoleRepo.findOne.mockResolvedValueOnce({
+        id: 'custom-role-id',
+        name: 'CUSTOM_AUDITOR',
+      });
+      mockUserRepo.count.mockResolvedValueOnce(0);
+
+      const result = await service.deleteRole('custom-role-id');
+      expect(result).toEqual({
+        success: true,
+        message: 'Role CUSTOM_AUDITOR removed successfully.',
+      });
     });
   });
 });
