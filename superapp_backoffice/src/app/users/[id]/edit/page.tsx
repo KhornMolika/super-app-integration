@@ -100,7 +100,6 @@ function EditUserContent() {
   const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
   const [pendingAvatarRemove, setPendingAvatarRemove] = useState(false);
-  const [headerAvatarError, setHeaderAvatarError] = useState(false);
 
   const handleAvatarSelect = (file: File) => {
     if (avatarPreviewUrl && avatarPreviewUrl.startsWith('blob:')) {
@@ -110,7 +109,6 @@ function EditUserContent() {
     setPendingAvatarFile(file);
     setAvatarPreviewUrl(objectUrl);
     setPendingAvatarRemove(false);
-    setHeaderAvatarError(false);
 
     // Sync topbar HeaderProfile in real time if editing current authenticated user
     if (currentUser?.id === id) {
@@ -125,7 +123,6 @@ function EditUserContent() {
     setPendingAvatarFile(null);
     setAvatarPreviewUrl(null);
     setPendingAvatarRemove(true);
-    setHeaderAvatarError(false);
 
     // Sync topbar HeaderProfile in real time if editing current authenticated user
     if (currentUser?.id === id) {
@@ -174,7 +171,6 @@ function EditUserContent() {
       setPendingAvatarFile(null);
       setAvatarPreviewUrl(null);
       setPendingAvatarRemove(false);
-      setHeaderAvatarError(false);
     } catch (err: any) {
       console.error('Failed to load user details:', err);
       toast.error('Failed to load user details');
@@ -407,58 +403,6 @@ function EditUserContent() {
           <span className="text-brand-600 dark:text-brand-400 font-bold">
             Edit Profile
           </span>
-        </div>
-      </div>
-
-      {/* Top Profile Summary Header Card */}
-      <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm p-6">
-        <div className="flex items-center gap-4 min-w-0">
-          <div className="relative w-14 h-14 rounded-full overflow-hidden shrink-0 shadow-md border border-slate-200/80 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 ring-2 ring-white dark:ring-slate-900">
-            {effectiveAvatarUrl && !headerAvatarError ? (
-              <img
-                src={effectiveAvatarUrl}
-                alt={name || user.name}
-                className="w-full h-full object-cover rounded-full"
-                onError={() => setHeaderAvatarError(true)}
-              />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-tr from-brand-600 to-brand-400 flex items-center justify-center font-bold text-white text-xl rounded-full">
-                {initials}
-              </div>
-            )}
-            {pendingAvatarFile && (
-              <span
-                className="absolute top-0 right-0 w-3 h-3 rounded-full bg-brand-500 ring-2 ring-white dark:ring-slate-900 animate-pulse"
-                title="Avatar changed (pending save)"
-              />
-            )}
-          </div>
-          <div className="min-w-0 space-y-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate">
-                Edit Profile: {name || user.name}
-              </h1>
-              <span
-                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${roleTheme.badge}`}
-              >
-                <ShieldCheckIcon className="w-3 h-3" />
-                <span>{roleTheme.label}</span>
-              </span>
-              <span
-                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
-                  isActive
-                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
-                    : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border-rose-200 dark:border-rose-800'
-                }`}
-              >
-                <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                <span>{isActive ? 'Active' : 'Inactive'}</span>
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Modify administrative parameters, tenancy assignments, credentials, and account status.
-            </p>
-          </div>
         </div>
       </div>
 
