@@ -6,15 +6,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const isProdFlag = process.argv.includes('--prod') || process.argv.includes('--production') || process.env.NODE_ENV === 'production';
-const isScmFlag = process.argv.includes('--scm') || process.env.JENKINS_USE_SCM === 'true';
-const isPipelineFlag = process.argv.includes('--pipeline');
-
-// Git SCM & Token Configuration
-const gitToken = (process.env.GIT_REPO_TOKEN || process.env.GIT_TOKEN || process.env.GITLAB_TOKEN || '').trim();
-const gitCredentialsId = (process.env.JENKINS_GIT_CREDENTIALS_ID || process.env.GIT_CREDENTIALS_ID || 'git-token').trim();
-const defaultBranch = (process.env.SUPERAPP_GIT_BRANCH || process.env.GIT_BRANCH || 'molika').trim();
-const defaultBackendRepo = (process.env.BACKEND_GIT_REPO_URL || 'https://git.fintechcenterfsa.com/backend/super-app.git').trim();
-const defaultMobileRepo = (process.env.SUPERAPP_GIT_REPO_URL || 'https://git.fintechcenterfsa.com/frontend/super-app.git').trim();
 
 function loadEnv() {
   const envPaths = isProdFlag
@@ -48,7 +39,19 @@ function loadEnv() {
   }
 }
 
+// 1. Load environment first
 loadEnv();
+
+// 2. Resolve SCM flags and Git configuration
+const isScmFlag = process.argv.includes('--scm') || process.env.JENKINS_USE_SCM === 'true' || process.env.JENKINS_USE_SCM === '1';
+const isPipelineFlag = process.argv.includes('--pipeline');
+const useScmPipeline = isScmFlag || isPipelineFlag;
+
+const gitToken = (process.env.GIT_REPO_TOKEN || process.env.GIT_TOKEN || process.env.GITLAB_TOKEN || '').trim();
+const gitCredentialsId = (process.env.JENKINS_GIT_CREDENTIALS_ID || process.env.GIT_CREDENTIALS_ID || 'git-token').trim();
+const defaultBranch = (process.env.SUPERAPP_GIT_BRANCH || process.env.GIT_BRANCH || 'molika').trim();
+const defaultBackendRepo = (process.env.BACKEND_GIT_REPO_URL || 'https://git.fintechcenterfsa.com/backend/super-app.git').trim();
+const defaultMobileRepo = (process.env.SUPERAPP_GIT_REPO_URL || 'https://git.fintechcenterfsa.com/frontend/super-app.git').trim();
 
 const jenkinsUrl = (process.env.JENKINS_URL || 'http://localhost:8085').replace(/\/+$/, '');
 const jenkinsUser = process.env.JENKINS_USER || 'admin';
@@ -106,33 +109,6 @@ function escapeXmlScript(jenkinsfile) {
     .replace(/>/g, '&gt;');
 }
 
-function buildDefaultJobXml(jobName, escapedScript) {
-  return `<?xml version="1.1" encoding="UTF-8"?>
-<flow-definition plugin="workflow-job@1600.v6f36ed83529d">
-  <actions>
-    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobAction plugin="pipeline-model-definition@2.2293.v6e7193cec599"/>
-    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction plugin="pipeline-model-definition@2.2293.v6e7193cec599">
-      <jobProperties/>
-      <triggers/>
-      <parameters/>
-    </org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction>
-  </actions>
-  <description>Automated CI Pipeline for ${jobName}</description>
-  <keepDependencies>false</keepDependencies>
-  <properties>
-    <org.jenkinsci.plugins.workflow.job.properties.DisableConcurrentBuildsJobProperty>
-      <abortPrevious>false</abortPrevious>
-    </org.jenkinsci.plugins.workflow.job.properties.DisableConcurrentBuildsJobProperty>
-  </properties>
-  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@4267.v39e0eb_f7e1b_2">
-    <script>${escapedScript}</script>
-    <sandbox>true</sandbox>
-  </definition>
-  <triggers/>
-  <disabled>false</disabled>
-</flow-definition>`;
-}
-
 function buildScmGitBlock(repoUrl, branch = defaultBranch, token = gitToken, credentialsId = gitCredentialsId) {
   const authRepoUrl = token
     ? repoUrl.replace(/^https?:\/\//, `https://oauth2:${escapeXmlScript(token)}@`)
@@ -160,8 +136,120 @@ function buildScmGitBlock(repoUrl, branch = defaultBranch, token = gitToken, cre
   </scm>`;
 }
 
+function buildJobParametersXml(jobName, branch = defaultBranch) {
+  const isValidation = jobName.includes('validation');
+  const scmTokenParam = `
+        <hudson.model.PasswordParameterDefinition>
+          <name>GIT_TOKEN</name>
+          <description>Git Personal Access Token for SCM repository access</description>
+          <defaultValue>${escapeXmlScript(gitToken)}</defaultValue>
+        </hudson.model.PasswordParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>GIT_BRANCH</name>
+          <defaultValue>${escapeXmlScript(branch)}</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>`;
+
+  if (isValidation) {
+    return `${scmTokenParam}
+        <hudson.model.StringParameterDefinition>
+          <name>MINIAPP_ID</name>
+          <defaultValue></defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>INTEGRATION_METHOD</name>
+          <defaultValue>FLUTTER_PACKAGE</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>PACKAGE_NAME</name>
+          <defaultValue></defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>VERSION</name>
+          <defaultValue>1.0.0</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>CHECKS</name>
+          <defaultValue></defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>CALLBACK_URL</name>
+          <defaultValue>https://app.fintechcenterfsa.com/api/integrations/validation/callback</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>TARGET_URL</name>
+          <defaultValue></defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>URL_SCHEME</name>
+          <defaultValue></defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>ALLOWED_CAPABILITIES</name>
+          <defaultValue>camera,geolocator,location,local_auth,biometrics</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>REQUIRED_CAPABILITIES</name>
+          <defaultValue></defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>REPO_URL</name>
+          <defaultValue></defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>COMMIT_SHA</name>
+          <defaultValue>main</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>`;
+  }
+
+  return `${scmTokenParam}
+        <hudson.model.StringParameterDefinition>
+          <name>APP_NAME</name>
+          <defaultValue>superapp</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>RELEASE_VERSION</name>
+          <defaultValue>v0.3.3</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>NEXUS_URL</name>
+          <defaultValue>https://app.fintechcenterfsa.com/nexus</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>CALLBACK_URL</name>
+          <defaultValue>https://app.fintechcenterfsa.com/api/release-assembly/build-callback</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>CALLBACK_TOKEN</name>
+          <defaultValue>${escapeXmlScript(releaseCallbackToken)}</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>BUILD_MODE</name>
+          <defaultValue>release</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>`;
+}
+
 function buildPipelineScmJobXml(jobName, scriptRelativePath, repoUrl = defaultBackendRepo, branch = defaultBranch) {
   const scmBlock = buildScmGitBlock(repoUrl, branch);
+  const paramsXml = buildJobParametersXml(jobName, branch);
 
   return `<?xml version="1.1" encoding="UTF-8"?>
 <flow-definition plugin="workflow-job@1600.v6f36ed83529d">
@@ -179,11 +267,42 @@ function buildPipelineScmJobXml(jobName, scriptRelativePath, repoUrl = defaultBa
     <org.jenkinsci.plugins.workflow.job.properties.DisableConcurrentBuildsJobProperty>
       <abortPrevious>false</abortPrevious>
     </org.jenkinsci.plugins.workflow.job.properties.DisableConcurrentBuildsJobProperty>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>${paramsXml}
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
   </properties>
   <definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition" plugin="workflow-cps@4267.v39e0eb_f7e1b_2">
 ${scmBlock}
     <scriptPath>${escapeXmlScript(scriptRelativePath)}</scriptPath>
     <lightweight>true</lightweight>
+  </definition>
+  <triggers/>
+  <disabled>false</disabled>
+</flow-definition>`;
+}
+
+function buildDefaultJobXml(jobName, escapedScript) {
+  return `<?xml version="1.1" encoding="UTF-8"?>
+<flow-definition plugin="workflow-job@1600.v6f36ed83529d">
+  <actions>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobAction plugin="pipeline-model-definition@2.2293.v6e7193cec599"/>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction plugin="pipeline-model-definition@2.2293.v6e7193cec599">
+      <jobProperties/>
+      <triggers/>
+      <parameters/>
+    </org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction>
+  </actions>
+  <description>Automated CI Pipeline for ${jobName}</description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <org.jenkinsci.plugins.workflow.job.properties.DisableConcurrentBuildsJobProperty>
+      <abortPrevious>false</abortPrevious>
+    </org.jenkinsci.plugins.workflow.job.properties.DisableConcurrentBuildsJobProperty>
+  </properties>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@4267.v39e0eb_f7e1b_2">
+    <script>${escapedScript}</script>
+    <sandbox>true</sandbox>
   </definition>
   <triggers/>
   <disabled>false</disabled>
@@ -418,116 +537,11 @@ echo "=== Sandbox Build Complete ==="`;
 }
 
 function buildFreestyleJobXml(jobName, shellCommand, repoUrl = defaultBackendRepo, branch = defaultBranch) {
-  const scmTokenParam = isScmFlag ? `
-        <hudson.model.PasswordParameterDefinition>
-          <name>GIT_TOKEN</name>
-          <description>Git Personal Access Token for SCM repository access</description>
-          <defaultValue>${escapeXmlScript(gitToken)}</defaultValue>
-        </hudson.model.PasswordParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>GIT_BRANCH</name>
-          <defaultValue>${escapeXmlScript(branch)}</defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>` : '';
   const escapedCmd = escapeXmlScript(shellCommand);
-  const isValidation = jobName.includes('validation');
-
-  let paramsXml = '';
-  if (isValidation) {
-    paramsXml = `${scmTokenParam}
-        <hudson.model.StringParameterDefinition>
-          <name>MINIAPP_ID</name>
-          <defaultValue></defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>INTEGRATION_METHOD</name>
-          <defaultValue>FLUTTER_PACKAGE</defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>PACKAGE_NAME</name>
-          <defaultValue></defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>VERSION</name>
-          <defaultValue>1.0.0</defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>CHECKS</name>
-          <defaultValue></defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>CALLBACK_URL</name>
-          <defaultValue>https://app.fintechcenterfsa.com/api/integrations/validation/callback</defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>TARGET_URL</name>
-          <defaultValue></defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>URL_SCHEME</name>
-          <defaultValue></defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>ALLOWED_CAPABILITIES</name>
-          <defaultValue>camera,geolocator,location,local_auth,biometrics</defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>REQUIRED_CAPABILITIES</name>
-          <defaultValue></defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>REPO_URL</name>
-          <defaultValue></defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>COMMIT_SHA</name>
-          <defaultValue>main</defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>`;
-  } else {
-    paramsXml = `${scmTokenParam}
-        <hudson.model.StringParameterDefinition>
-          <name>APP_NAME</name>
-          <defaultValue>superapp</defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>RELEASE_VERSION</name>
-          <defaultValue>v0.3.3</defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>NEXUS_URL</name>
-          <defaultValue>https://app.fintechcenterfsa.com/nexus</defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>CALLBACK_URL</name>
-          <defaultValue>https://app.fintechcenterfsa.com/api/release-assembly/build-callback</defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>CALLBACK_TOKEN</name>
-          <defaultValue>${escapeXmlScript(releaseCallbackToken)}</defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>BUILD_MODE</name>
-          <defaultValue>release</defaultValue>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>`;
-  }
+  const paramsXml = buildJobParametersXml(jobName, branch);
+  const scmBlock = isScmFlag
+    ? buildScmGitBlock(repoUrl, branch)
+    : '  <scm class="hudson.scm.NullSCM"/>';
 
   return `<?xml version='1.1' encoding='UTF-8'?>
 <project>
@@ -540,7 +554,7 @@ function buildFreestyleJobXml(jobName, shellCommand, repoUrl = defaultBackendRep
       </parameterDefinitions>
     </hudson.model.ParametersDefinitionProperty>
   </properties>
-  ${isScmFlag ? buildScmGitBlock(repoUrl, branch) : '<scm class="hudson.scm.NullSCM"/>'}
+${scmBlock}
   <canRoam>true</canRoam>
   <disabled>false</disabled>
   <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
@@ -596,14 +610,42 @@ async function syncJob(jobName, scriptFile, repoUrl = defaultBackendRepo, branch
     let configXml = await getRes.text();
     const isFreestyle = configXml.includes('<project>') || configXml.includes('hudson.model.FreeStyleProject');
 
-    if (isPipelineFlag || (isScmFlag && !isProdFlag)) {
-      configXml = buildPipelineScmJobXml(jobName, relativeScriptPath, repoUrl, branch);
+    if (useScmPipeline) {
+      if (isFreestyle) {
+        // Converting from legacy Freestyle project to Git SCM Pipeline:
+        // Delete the legacy Freestyle project to prevent Jenkins 500 class mismatch
+        // and completely remove the old shell script from Jenkins
+        console.log(`🗑️ Removing old shell script pipeline job for ${jobName}...`);
+        const delRes = await fetch(`${jenkinsUrl}/job/${jobName}/doDelete`, {
+          method: 'POST',
+          headers: postHeaders,
+        });
+        saveCookies(delRes);
+
+        // Recreate as fresh Declarative Git SCM Pipeline
+        const newXml = buildPipelineScmJobXml(jobName, relativeScriptPath, repoUrl, branch);
+        const createRes = await fetch(`${jenkinsUrl}/createItem?name=${jobName}`, {
+          method: 'POST',
+          headers: postHeaders,
+          body: newXml,
+        });
+        saveCookies(createRes);
+        if (createRes.ok) {
+          console.log(`✅ Successfully migrated ${jobName} to Git SCM Pipeline (old script removed)`);
+        } else {
+          console.error(`❌ Failed to recreate ${jobName} as SCM Pipeline:`, createRes.status, await createRes.text());
+        }
+        return;
+      } else {
+        // Already a Pipeline job -> update with fresh Git SCM definition, stripping away any old inline scripts
+        configXml = buildPipelineScmJobXml(jobName, relativeScriptPath, repoUrl, branch);
+      }
     } else if (isFreestyle) {
       const escapedCmd = escapeXmlScript(shellScript);
       if (configXml.includes('<hudson.tasks.Shell>')) {
         configXml = configXml.replace(/<command>[\s\S]*?<\/command>/, () => `<command>${escapedCmd}</command>`);
       } else {
-        configXml = buildFreestyleJobXml(jobName, shellScript);
+        configXml = buildFreestyleJobXml(jobName, shellScript, repoUrl, branch);
       }
       if (configXml.includes('<name>CALLBACK_TOKEN</name>')) {
         configXml = configXml.replace(
@@ -623,13 +665,12 @@ async function syncJob(jobName, scriptFile, repoUrl = defaultBackendRepo, branch
     saveCookies(postRes);
 
     if (postRes.ok) {
-      console.log(`✅ Successfully updated ${isFreestyle ? 'Freestyle' : 'Pipeline'} job: ${jobName}`);
+      console.log(`✅ Successfully updated ${useScmPipeline ? 'Git SCM Pipeline' : (isFreestyle ? 'Freestyle' : 'Pipeline')} job: ${jobName}`);
     } else {
-      console.error(`❌ Failed to update ${jobName} (isFreestyle: ${isFreestyle}) config.xml:`, postRes.status, (await postRes.text()).substring(0, 400));
+      console.error(`❌ Failed to update ${jobName} config.xml:`, postRes.status, (await postRes.text()).substring(0, 400));
     }
   } else if (getRes.status === 404) {
-    // Job does not exist -> create Freestyle job by default on prod
-    const configXml = (isPipelineFlag || (isScmFlag && !isProdFlag))
+    const configXml = useScmPipeline
       ? buildPipelineScmJobXml(jobName, relativeScriptPath, repoUrl, branch)
       : (isProdFlag ? buildFreestyleJobXml(jobName, shellScript, repoUrl, branch) : buildDefaultJobXml(jobName, escapedScript));
 
@@ -641,7 +682,7 @@ async function syncJob(jobName, scriptFile, repoUrl = defaultBackendRepo, branch
     saveCookies(createRes);
 
     if (createRes.ok) {
-      console.log(`✅ Successfully created new job: ${jobName}`);
+      console.log(`✅ Successfully created new ${useScmPipeline ? 'Git SCM Pipeline' : (isProdFlag ? 'Freestyle' : 'Pipeline')} job: ${jobName}`);
     } else {
       console.error(`❌ Failed to create ${jobName}:`, createRes.status, await createRes.text());
     }
@@ -653,6 +694,10 @@ async function syncJob(jobName, scriptFile, repoUrl = defaultBackendRepo, branch
 async function main() {
   console.log('🔄 Synchronizing declarative pipelines with Jenkins controller...');
   console.log(`Connecting to: ${jenkinsUrl}`);
+  console.log(`Mode: ${useScmPipeline ? 'Git SCM Pipeline (token-authenticated)' : (isProdFlag ? 'Freestyle (legacy script)' : 'Inline Pipeline')}`);
+  if (useScmPipeline) {
+    console.log(`SCM Repository: ${defaultBackendRepo} (Branch: ${defaultBranch}, Token configured: ${Boolean(gitToken)})`);
+  }
   await fetchCrumb();
 
   const resolveScript = (filename) => {

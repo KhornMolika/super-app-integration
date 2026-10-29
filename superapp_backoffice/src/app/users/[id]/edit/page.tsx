@@ -171,7 +171,6 @@ function EditUserContent() {
       setPendingAvatarFile(null);
       setAvatarPreviewUrl(null);
       setPendingAvatarRemove(false);
-      setHeaderAvatarError(false);
     } catch (err: any) {
       console.error('Failed to load user details:', err);
       toast.error('Failed to load user details');
