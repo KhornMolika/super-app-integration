@@ -19,7 +19,7 @@ export class GitLabProvider implements GitProvider {
   constructor(private readonly configService: ConfigService) {}
 
   private getDefaultToken(): string | undefined {
-    return this.configService.get<string>('GITLAB_TOKEN');
+    return this.configService.get<string>('MOBILE_GIT_TOKEN') || this.configService.get<string>('GITLAB_TOKEN');
   }
 
   private getConfiguredBaseUrl(): string {
