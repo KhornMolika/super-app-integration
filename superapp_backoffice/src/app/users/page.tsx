@@ -386,7 +386,7 @@ function UsersContent() {
           .toUpperCase();
         return (
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 shadow-sm ring-2 ring-white dark:ring-slate-900">
+            <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 shadow-sm ring-2 ring-white dark:ring-slate-900">
               {user.avatarUrl ? (
                 <img
                   src={user.avatarUrl}

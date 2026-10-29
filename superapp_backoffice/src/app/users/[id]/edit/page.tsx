@@ -100,7 +100,6 @@ function EditUserContent() {
   const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
   const [pendingAvatarRemove, setPendingAvatarRemove] = useState(false);
-  const [headerAvatarError, setHeaderAvatarError] = useState(false);
 
   const handleAvatarSelect = (file: File) => {
     if (avatarPreviewUrl && avatarPreviewUrl.startsWith('blob:')) {
@@ -110,7 +109,6 @@ function EditUserContent() {
     setPendingAvatarFile(file);
     setAvatarPreviewUrl(objectUrl);
     setPendingAvatarRemove(false);
-    setHeaderAvatarError(false);
 
     // Sync topbar HeaderProfile in real time if editing current authenticated user
     if (currentUser?.id === id) {
@@ -125,7 +123,6 @@ function EditUserContent() {
     setPendingAvatarFile(null);
     setAvatarPreviewUrl(null);
     setPendingAvatarRemove(true);
-    setHeaderAvatarError(false);
 
     // Sync topbar HeaderProfile in real time if editing current authenticated user
     if (currentUser?.id === id) {
@@ -409,97 +406,6 @@ function EditUserContent() {
           </span>
         </div>
       </div>
-
-
-      {/* Top Profile Summary Header Card */}
-      <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm p-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4 min-w-0">
-            <div className="relative w-14 h-14 rounded-2xl overflow-hidden shrink-0 shadow-md border border-slate-200/80 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
-              {effectiveAvatarUrl && !headerAvatarError ? (
-                <img
-                  src={effectiveAvatarUrl}
-                  alt={name || user.name}
-                  className="w-full h-full object-cover"
-                  onError={() => setHeaderAvatarError(true)}
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-tr from-brand-600 to-brand-400 flex items-center justify-center font-bold text-white text-xl">
-                  {initials}
-                </div>
-              )}
-              {pendingAvatarFile && (
-                <span
-                  className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-brand-500 ring-2 ring-white dark:ring-slate-900 animate-pulse"
-                  title="Avatar changed (pending save)"
-                />
-              )}
-            </div>
-            <div className="min-w-0 space-y-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate">
-                  Edit Profile: {name || user.name}
-                </h1>
-                <span
-                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${roleTheme.badge}`}
-                >
-                  <ShieldCheckIcon className="w-3 h-3" />
-                  <span>{roleTheme.label}</span>
-                </span>
-                <span
-                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
-                    isActive
-                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
-                      : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border-rose-200 dark:border-rose-800'
-                  }`}
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                  <span>{isActive ? 'Active' : 'Inactive'}</span>
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Modify administrative parameters, tenancy assignments, credentials, and account status.
-              </p>
-            </div>
-          </div>
-
-          {/* Action Buttons in Header Card (as seen in mockup / UI screenshot) */}
-          <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.push(`/users/${id}`)}
-              disabled={saving}
-              className="text-xs font-semibold py-2 px-4 rounded-xl cursor-pointer"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              form="edit-user-form"
-              variant="primary"
-              disabled={saving}
-              className="text-xs font-semibold py-2 px-5 rounded-xl shadow-sm bg-brand-600 hover:bg-brand-700 text-white flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-            >
-              {saving ? (
-                <>
-                  <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  <span>Saving Changes...</span>
-                </>
-              ) : (
-                <>
-                  <CheckIcon className="w-3.5 h-3.5" />
-                  <span>Save Changes</span>
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-      </div>
-
 
       {/* Main Edit Form Grid */}
       <form id="edit-user-form" onSubmit={handleSubmit} className="space-y-6">

@@ -174,13 +174,13 @@ export function UserProfileCard({
                 <img
                   src={user.avatarUrl}
                   alt={userDisplayName}
-                  className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl object-cover shadow-lg ring-4 ring-white/10 dark:ring-slate-800"
+                  className="w-20 h-20 sm:w-22 sm:h-22 rounded-full object-cover shadow-lg ring-4 ring-white/10 dark:ring-slate-800"
                   onError={(e) => {
                     (e.target as HTMLElement).style.display = 'none';
                   }}
                 />
               ) : (
-                <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl bg-gradient-to-tr from-brand-600 via-indigo-600 to-violet-500 text-white flex items-center justify-center font-extrabold text-2xl sm:text-3xl shadow-lg ring-4 ring-white/10 dark:ring-slate-800">
+                <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-full bg-gradient-to-tr from-brand-600 via-indigo-600 to-violet-500 text-white flex items-center justify-center font-extrabold text-2xl sm:text-3xl shadow-lg ring-4 ring-white/10 dark:ring-slate-800">
                   {initials || 'MK'}
                 </div>
               )}
