@@ -6,6 +6,15 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const isProdFlag = process.argv.includes('--prod') || process.argv.includes('--production') || process.env.NODE_ENV === 'production';
+const isScmFlag = process.argv.includes('--scm') || process.env.JENKINS_USE_SCM === 'true';
+const isPipelineFlag = process.argv.includes('--pipeline');
+
+// Git SCM & Token Configuration
+const gitToken = (process.env.GIT_REPO_TOKEN || process.env.GIT_TOKEN || process.env.GITLAB_TOKEN || '').trim();
+const gitCredentialsId = (process.env.JENKINS_GIT_CREDENTIALS_ID || process.env.GIT_CREDENTIALS_ID || 'git-token').trim();
+const defaultBranch = (process.env.SUPERAPP_GIT_BRANCH || process.env.GIT_BRANCH || 'molika').trim();
+const defaultBackendRepo = (process.env.BACKEND_GIT_REPO_URL || 'https://git.fintechcenterfsa.com/backend/super-app.git').trim();
+const defaultMobileRepo = (process.env.SUPERAPP_GIT_REPO_URL || 'https://git.fintechcenterfsa.com/frontend/super-app.git').trim();
 
 function loadEnv() {
   const envPaths = isProdFlag
@@ -118,6 +127,63 @@ function buildDefaultJobXml(jobName, escapedScript) {
   <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@4267.v39e0eb_f7e1b_2">
     <script>${escapedScript}</script>
     <sandbox>true</sandbox>
+  </definition>
+  <triggers/>
+  <disabled>false</disabled>
+</flow-definition>`;
+}
+
+function buildScmGitBlock(repoUrl, branch = defaultBranch, token = gitToken, credentialsId = gitCredentialsId) {
+  const authRepoUrl = token
+    ? repoUrl.replace(/^https?:\/\//, `https://oauth2:${escapeXmlScript(token)}@`)
+    : repoUrl;
+
+  const credXml = credentialsId && !token
+    ? `\n        <credentialsId>${escapeXmlScript(credentialsId)}</credentialsId>`
+    : '';
+
+  return `  <scm class="hudson.plugins.git.GitSCM" plugin="git@5.2.1">
+    <configVersion>2</configVersion>
+    <userRemoteConfigs>
+      <hudson.plugins.git.UserRemoteConfig>
+        <url>${authRepoUrl}</url>${credXml}
+      </hudson.plugins.git.UserRemoteConfig>
+    </userRemoteConfigs>
+    <branches>
+      <hudson.plugins.git.BranchSpec>
+        <name>*/${escapeXmlScript(branch)}</name>
+      </hudson.plugins.git.BranchSpec>
+    </branches>
+    <doGenerateSubmoduleConfigurations>false</doGenerateSubmoduleConfigurations>
+    <submoduleCfg class="empty-list"/>
+    <extensions/>
+  </scm>`;
+}
+
+function buildPipelineScmJobXml(jobName, scriptRelativePath, repoUrl = defaultBackendRepo, branch = defaultBranch) {
+  const scmBlock = buildScmGitBlock(repoUrl, branch);
+
+  return `<?xml version="1.1" encoding="UTF-8"?>
+<flow-definition plugin="workflow-job@1600.v6f36ed83529d">
+  <actions>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobAction plugin="pipeline-model-definition@2.2293.v6e7193cec599"/>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction plugin="pipeline-model-definition@2.2293.v6e7193cec599">
+      <jobProperties/>
+      <triggers/>
+      <parameters/>
+    </org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction>
+  </actions>
+  <description>Automated Git SCM CI Pipeline for ${jobName}</description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <org.jenkinsci.plugins.workflow.job.properties.DisableConcurrentBuildsJobProperty>
+      <abortPrevious>false</abortPrevious>
+    </org.jenkinsci.plugins.workflow.job.properties.DisableConcurrentBuildsJobProperty>
+  </properties>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition" plugin="workflow-cps@4267.v39e0eb_f7e1b_2">
+${scmBlock}
+    <scriptPath>${escapeXmlScript(scriptRelativePath)}</scriptPath>
+    <lightweight>true</lightweight>
   </definition>
   <triggers/>
   <disabled>false</disabled>
@@ -351,13 +417,24 @@ echo "=== Sandbox Build Complete ==="`;
   return generateValidationShellScript(jobName);
 }
 
-function buildFreestyleJobXml(jobName, shellCommand) {
+function buildFreestyleJobXml(jobName, shellCommand, repoUrl = defaultBackendRepo, branch = defaultBranch) {
+  const scmTokenParam = isScmFlag ? `
+        <hudson.model.PasswordParameterDefinition>
+          <name>GIT_TOKEN</name>
+          <description>Git Personal Access Token for SCM repository access</description>
+          <defaultValue>${escapeXmlScript(gitToken)}</defaultValue>
+        </hudson.model.PasswordParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>GIT_BRANCH</name>
+          <defaultValue>${escapeXmlScript(branch)}</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>` : '';
   const escapedCmd = escapeXmlScript(shellCommand);
   const isValidation = jobName.includes('validation');
 
   let paramsXml = '';
   if (isValidation) {
-    paramsXml = `
+    paramsXml = `${scmTokenParam}
         <hudson.model.StringParameterDefinition>
           <name>MINIAPP_ID</name>
           <defaultValue></defaultValue>
@@ -419,7 +496,7 @@ function buildFreestyleJobXml(jobName, shellCommand) {
           <trim>true</trim>
         </hudson.model.StringParameterDefinition>`;
   } else {
-    paramsXml = `
+    paramsXml = `${scmTokenParam}
         <hudson.model.StringParameterDefinition>
           <name>APP_NAME</name>
           <defaultValue>superapp</defaultValue>
@@ -463,7 +540,7 @@ function buildFreestyleJobXml(jobName, shellCommand) {
       </parameterDefinitions>
     </hudson.model.ParametersDefinitionProperty>
   </properties>
-  <scm class="hudson.scm.NullSCM"/>
+  ${isScmFlag ? buildScmGitBlock(repoUrl, branch) : '<scm class="hudson.scm.NullSCM"/>'}
   <canRoam>true</canRoam>
   <disabled>false</disabled>
   <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
@@ -481,7 +558,7 @@ function buildFreestyleJobXml(jobName, shellCommand) {
 </project>`;
 }
 
-async function syncJob(jobName, scriptFile) {
+async function syncJob(jobName, scriptFile, repoUrl = defaultBackendRepo, branch = defaultBranch, relativeScriptPath = '') {
   if (!fs.existsSync(scriptFile)) {
     console.warn(`⚠️ Script file ${scriptFile} not found for job ${jobName}`);
     return;
@@ -519,7 +596,9 @@ async function syncJob(jobName, scriptFile) {
     let configXml = await getRes.text();
     const isFreestyle = configXml.includes('<project>') || configXml.includes('hudson.model.FreeStyleProject');
 
-    if (isFreestyle) {
+    if (isPipelineFlag || (isScmFlag && !isProdFlag)) {
+      configXml = buildPipelineScmJobXml(jobName, relativeScriptPath, repoUrl, branch);
+    } else if (isFreestyle) {
       const escapedCmd = escapeXmlScript(shellScript);
       if (configXml.includes('<hudson.tasks.Shell>')) {
         configXml = configXml.replace(/<command>[\s\S]*?<\/command>/, () => `<command>${escapedCmd}</command>`);
@@ -550,9 +629,9 @@ async function syncJob(jobName, scriptFile) {
     }
   } else if (getRes.status === 404) {
     // Job does not exist -> create Freestyle job by default on prod
-    const configXml = isProdFlag
-      ? buildFreestyleJobXml(jobName, shellScript)
-      : buildDefaultJobXml(jobName, escapedScript);
+    const configXml = (isPipelineFlag || (isScmFlag && !isProdFlag))
+      ? buildPipelineScmJobXml(jobName, relativeScriptPath, repoUrl, branch)
+      : (isProdFlag ? buildFreestyleJobXml(jobName, shellScript, repoUrl, branch) : buildDefaultJobXml(jobName, escapedScript));
 
     const createRes = await fetch(`${jenkinsUrl}/createItem?name=${jobName}`, {
       method: 'POST',
@@ -592,13 +671,13 @@ async function main() {
     return filename;
   };
 
-  await syncJob('miniapp-validation', resolveScript('Jenkinsfile.miniapp-validation'));
-  await syncJob('miniapp-validation-webview', resolveScript('Jenkinsfile.webview-validation'));
-  await syncJob('miniapp-validation-flutter-package', resolveScript('Jenkinsfile.package-validation'));
-  await syncJob('miniapp-validation-native-sdk', resolveScript('Jenkinsfile.nativesdk-validation'));
-  await syncJob('miniapp-validation-deep-link', resolveScript('Jenkinsfile.deeplink-validation'));
-  await syncJob('superapp-sandbox-build', resolveScript('Jenkinsfile.superapp-sandbox-build'));
-  await syncJob('superapp-test-build', resolveScript('Jenkinsfile.superapp-test-build'));
+  await syncJob('miniapp-validation', resolveScript('Jenkinsfile.miniapp-validation'), defaultBackendRepo, defaultBranch, 'ci/jenkins/Jenkinsfile.miniapp-validation');
+  await syncJob('miniapp-validation-webview', resolveScript('Jenkinsfile.webview-validation'), defaultBackendRepo, defaultBranch, 'ci/jenkins/Jenkinsfile.webview-validation');
+  await syncJob('miniapp-validation-flutter-package', resolveScript('Jenkinsfile.package-validation'), defaultBackendRepo, defaultBranch, 'ci/jenkins/Jenkinsfile.package-validation');
+  await syncJob('miniapp-validation-native-sdk', resolveScript('Jenkinsfile.nativesdk-validation'), defaultBackendRepo, defaultBranch, 'ci/jenkins/Jenkinsfile.nativesdk-validation');
+  await syncJob('miniapp-validation-deep-link', resolveScript('Jenkinsfile.deeplink-validation'), defaultBackendRepo, defaultBranch, 'ci/jenkins/Jenkinsfile.deeplink-validation');
+  await syncJob('superapp-sandbox-build', resolveScript('Jenkinsfile.superapp-sandbox-build'), defaultBackendRepo, defaultBranch, 'ci/jenkins/Jenkinsfile.superapp-sandbox-build');
+  await syncJob('superapp-test-build', resolveScript('Jenkinsfile.superapp-test-build'), defaultBackendRepo, defaultBranch, 'ci/jenkins/Jenkinsfile.superapp-test-build');
   console.log('✨ All Jenkins jobs processed successfully.');
 }
 
