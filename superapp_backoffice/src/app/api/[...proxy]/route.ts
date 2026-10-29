@@ -20,6 +20,8 @@ const ALLOWED_ROUTES = [
   'release-assembly',
   'security',
   'storage',
+  'backoffice-user-media',
+  'mini-app-assets',
   'telegram',
   'mail',
   'settings',
@@ -54,14 +56,14 @@ async function handleProxy(request: Request, { params }: { params: Promise<{ pro
     let newRefreshedToken: string | null = null;
     let newRefreshToken: string | null = null;
 
-    // Check if current cookie token is expired
+    // Check if current cookie token is expired or missing
     let isStale = false;
     if (token) {
       try {
         const parts = token.split('.');
         if (parts.length === 3) {
           const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
-          if (payload.exp && Math.floor(Date.now() / 1000) >= payload.exp - 10) {
+          if (payload.exp && Math.floor(Date.now() / 1000) >= payload.exp - 30) {
             isStale = true;
           }
         } else {
@@ -70,9 +72,11 @@ async function handleProxy(request: Request, { params }: { params: Promise<{ pro
       } catch {
         isStale = true;
       }
+    } else {
+      isStale = true;
     }
 
-    // If token is stale and refresh token exists, attempt silent refresh with backend first
+    // If token is stale/missing and refresh token exists, attempt silent refresh with backend first
     if (isStale && refreshToken && !clientAuth) {
       try {
         const refreshRes = await fetch(`${BACKEND_URL}/auth/refresh`, {
@@ -93,13 +97,23 @@ async function handleProxy(request: Request, { params }: { params: Promise<{ pro
             }
             isStale = false;
           }
+        } else if (refreshRes.status === 401) {
+          if (path === 'users/me') {
+            const unauth = NextResponse.json({ error: 'Session expired' }, { status: 401 });
+            unauth.cookies.delete('auth_token');
+            unauth.cookies.delete('refresh_token');
+            return unauth;
+          }
         }
       } catch (_) {}
     }
 
-    // For session identification (/users/me), immediately return 401 if unauthenticated
+    // For session identification (/users/me), return 401 with cleared cookies if still unauthenticated
     if (path === 'users/me' && !token && !clientAuth) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      const unauth = NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      unauth.cookies.delete('auth_token');
+      unauth.cookies.delete('refresh_token');
+      return unauth;
     }
 
 
@@ -180,8 +194,21 @@ async function handleProxy(request: Request, { params }: { params: Promise<{ pro
               });
             } catch (_) {}
           }
+        } else {
+          const unauth = NextResponse.json({ error: 'Session expired' }, { status: 401 });
+          unauth.cookies.delete('auth_token');
+          unauth.cookies.delete('refresh_token');
+          return unauth;
         }
       } catch (_) {}
+    }
+
+    // If still 401 after retry or without refresh token, clear dead cookies
+    if (res.status === 401 && !clientAuth) {
+      const unauth = NextResponse.json({ error: 'Session expired' }, { status: 401 });
+      unauth.cookies.delete('auth_token');
+      unauth.cookies.delete('refresh_token');
+      return unauth;
     }
 
     const applyAuthCookie = (response: NextResponse) => {

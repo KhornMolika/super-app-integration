@@ -37,7 +37,7 @@ describe('OrganizationsService', () => {
   });
 
   describe('update status & security guards', () => {
-    it('should throw BadRequestException when attempting to deactivate root system anchor (FTC)', async () => {
+    it('should throw BadRequestException when attempting to deactivate primary regulatory authority (FTC)', async () => {
       const ftcOrg = {
         id: 'ftc-id-123',
         name: 'Financial Technology Center',
@@ -55,7 +55,7 @@ describe('OrganizationsService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should throw BadRequestException when attempting to deactivate root system anchor (FSA)', async () => {
+    it('should throw BadRequestException when attempting to deactivate primary regulatory authority (FSA)', async () => {
       const fsaOrg = {
         id: 'fsa-id-456',
         name: 'Non-Bank Financial Services Authority',
@@ -89,7 +89,7 @@ describe('OrganizationsService', () => {
           { organizationId: 'serc-id-789' }, // current user belongs to SERC
         ),
       ).rejects.toThrow(
-        /Self-deactivation guard: You cannot deactivate your own assigned organization/,
+        /Self-deactivation guard: You cannot set your own assigned organization to inactive/,
       );
     });
 
@@ -99,6 +99,7 @@ describe('OrganizationsService', () => {
         name: 'Securities and Exchange Regulator of Cambodia',
         code: 'SERC',
         status: OrganizationStatus.ACTIVE,
+        children: [],
       };
       mockOrgRepo.findOne.mockResolvedValue(sercOrg);
 
@@ -111,10 +112,37 @@ describe('OrganizationsService', () => {
       expect(result.status).toBe(OrganizationStatus.INACTIVE);
       expect(mockOrgRepo.save).toHaveBeenCalled();
     });
+
+    it('should throw BadRequestException when attempting to deactivate parent organization with active children', async () => {
+      const parentOrg = {
+        id: 'parent-123',
+        name: 'Parent Regulator',
+        code: 'PR',
+        status: OrganizationStatus.ACTIVE,
+        children: [
+          {
+            id: 'child-1',
+            name: 'Subordinate Unit A',
+            status: OrganizationStatus.ACTIVE,
+          },
+        ],
+      };
+      mockOrgRepo.findOne.mockResolvedValue(parentOrg);
+
+      await expect(
+        service.update(
+          'parent-123',
+          { status: OrganizationStatus.INACTIVE },
+          { organizationId: 'other-user' },
+        ),
+      ).rejects.toThrow(
+        /Cannot disable parent authority .* because it governs .* active subordinate organization/,
+      );
+    });
   });
 
   describe('remove & root anchor guards', () => {
-    it('should reject deleting a root system anchor organization', async () => {
+    it('should reject deleting a primary regulatory authority organization', async () => {
       const ftcOrg = {
         id: 'ftc-id-123',
         name: 'Financial Technology Center',
@@ -124,7 +152,24 @@ describe('OrganizationsService', () => {
       mockOrgRepo.findOne.mockResolvedValue(ftcOrg);
 
       await expect(service.remove('ftc-id-123')).rejects.toThrow(
-        /Regulatory system anchor .* cannot be deleted/,
+        /Primary regulatory authority .* cannot be deleted/,
+      );
+    });
+
+    it('should reject deleting a parent organization that has linked subordinate children', async () => {
+      const parentOrg = {
+        id: 'parent-456',
+        name: 'Department Head Org',
+        code: 'DHO',
+        status: OrganizationStatus.ACTIVE,
+        users: [],
+        miniApps: [],
+        children: [{ id: 'sub-1', name: 'Sub Department' }],
+      };
+      mockOrgRepo.findOne.mockResolvedValue(parentOrg);
+
+      await expect(service.remove('parent-456')).rejects.toThrow(
+        /cannot be deleted because subordinate organization/,
       );
     });
   });

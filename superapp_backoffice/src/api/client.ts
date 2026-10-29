@@ -154,12 +154,19 @@ export async function apiClient<T = any>(endpoint: string, options: RequestOptio
           onTokenRefreshed(false);
           // Redirect to login if on client side
           if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/signup')) {
-            window.location.href = '/login?expired=true';
+            const currentPath = window.location.pathname;
+            const redirectParam = currentPath && currentPath !== '/' ? `?redirect=${encodeURIComponent(currentPath)}&expired=true` : '?expired=true';
+            window.location.href = `/login${redirectParam}`;
           }
         }
       } catch {
         isRefreshing = false;
         onTokenRefreshed(false);
+        if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/signup')) {
+          const currentPath = window.location.pathname;
+          const redirectParam = currentPath && currentPath !== '/' ? `?redirect=${encodeURIComponent(currentPath)}&expired=true` : '?expired=true';
+          window.location.href = `/login${redirectParam}`;
+        }
       }
     } else {
       // Wait for ongoing refresh to complete
@@ -201,6 +208,12 @@ export async function apiClient<T = any>(endpoint: string, options: RequestOptio
       } else {
         errorMessage = `Server Error (${response.status}): Upstream service returned an error.`;
       }
+    }
+
+    if (response.status === 401 && !isAuthPage && typeof window !== 'undefined' && !window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/signup')) {
+      const currentPath = window.location.pathname;
+      const redirectParam = currentPath && currentPath !== '/' ? `?redirect=${encodeURIComponent(currentPath)}&expired=true` : '?expired=true';
+      window.location.href = `/login${redirectParam}`;
     }
 
     throw new ApiError(errorMessage, response.status, data);

@@ -5,6 +5,8 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { User } from '../../access-control/entities/user.entity';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
@@ -25,11 +27,25 @@ export class Organization {
   @Column({ nullable: true })
   code?: string;
 
+  @Column({ type: 'uuid', nullable: true })
+  parentId?: string | null;
+
+  @ManyToOne(() => Organization, (org) => org.children, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'parentId' })
+  parent?: Organization | null;
+
+  @OneToMany(() => Organization, (org) => org.parent)
+  children?: Organization[];
+
   @Column({
     type: 'varchar',
-    default: 'Non-Bank Financial Services Authority',
+    nullable: true,
+    default: null,
   })
-  parentAuthority!: string;
+  parentAuthority?: string | null;
 
   @Column({ type: 'text', nullable: true })
   description?: string;
@@ -46,7 +62,6 @@ export class Organization {
 
   @OneToMany(() => MiniApp, (miniApp) => miniApp.organizationRelation)
   miniApps!: MiniApp[];
-
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;

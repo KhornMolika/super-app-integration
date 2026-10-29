@@ -14,6 +14,7 @@ interface OrganizationFilterBarProps {
   activeCount: number;
   inactiveCount: number;
   onAddClick: () => void;
+  isSearching?: boolean;
 }
 
 export function OrganizationFilterBar({
@@ -25,6 +26,7 @@ export function OrganizationFilterBar({
   activeCount,
   inactiveCount,
   onAddClick,
+  isSearching = false,
 }: OrganizationFilterBarProps) {
   return (
     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
@@ -93,14 +95,25 @@ export function OrganizationFilterBar({
       {/* 2. Search & Create Button Controls */}
       <div className="flex items-center gap-3 w-full lg:w-auto">
         <div className="relative flex-1 lg:w-72">
-          <svg
-            className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+          {isSearching ? (
+            <svg
+              className="w-4 h-4 text-brand-600 dark:text-brand-400 animate-spin absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+            </svg>
+          ) : (
+            <svg
+              className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          )}
           <Input
             placeholder="Search by name, code, or authority..."
             value={searchQuery}
@@ -125,7 +138,7 @@ export function OrganizationFilterBar({
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          <span>Add MiniApp</span>
+          <span>Create Organization</span>
         </Button>
       </div>
     </div>

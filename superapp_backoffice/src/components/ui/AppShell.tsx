@@ -1,7 +1,8 @@
 "use client";
 
-import React from 'react';
-import { usePathname } from 'next/navigation';
+import React, { useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth';
 import { AppSidebar } from '@/components/ui/AppSidebar';
 import { HeaderProfile } from '@/components/ui/HeaderProfile';
 import { NotificationBell } from '@/components/ui/NotificationBell';
@@ -20,10 +21,20 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { isAuthenticated, isLoading } = useAuth();
 
   const isStandalone = STANDALONE_ROUTES.some(
     (route) => pathname === route || pathname?.startsWith(`${route}/`) || pathname?.startsWith(`${route}?`)
   );
+
+  // Client-side route protection: redirect unauthenticated users to login
+  useEffect(() => {
+    if (!isStandalone && !isLoading && !isAuthenticated) {
+      const redirectParam = pathname && pathname !== '/' ? `?redirect=${encodeURIComponent(pathname)}&expired=true` : '?expired=true';
+      router.replace(`/login${redirectParam}`);
+    }
+  }, [isStandalone, isLoading, isAuthenticated, pathname, router]);
 
   // Unauthenticated / Auth / Standalone Pages (Login, Sign-Up, Guidelines, Legal)
   if (isStandalone) {
@@ -32,6 +43,28 @@ export function AppShell({ children }: AppShellProps) {
         {children}
       </div>
     );
+  }
+
+  // Loading state while verifying session on protected routes
+  if (isLoading) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-slate-950 text-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center animate-pulse">
+            <span className="font-bold text-brand-400 text-lg">FSA</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
+            <div className="w-2 h-2 rounded-full bg-brand-500 animate-ping" />
+            <span>Verifying session authorization...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Guard against flash of protected dashboard content before redirect completes
+  if (!isAuthenticated) {
+    return <div className="h-screen w-full bg-slate-950" />;
   }
 
   // Authenticated Dashboard Layout with Sidebar and Navigation Header

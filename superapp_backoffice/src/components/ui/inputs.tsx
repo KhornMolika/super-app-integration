@@ -236,7 +236,7 @@ export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttrib
         {/* Modern Floating Popover Menu */}
         {isOpen && (
           <div
-            className="absolute left-0 right-0 z-50 mt-1.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/90 dark:border-slate-800 rounded-2xl shadow-2xl shadow-slate-900/15 dark:shadow-black/50 p-1.5 max-h-64 overflow-y-auto animate-in fade-in-0 zoom-in-95 duration-150"
+            className="absolute left-0 right-0 z-[9999] mt-1.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/90 dark:border-slate-800 rounded-2xl shadow-2xl shadow-slate-900/15 dark:shadow-black/50 p-1.5 max-h-64 overflow-y-auto animate-in fade-in-0 zoom-in-95 duration-150"
             role="listbox"
           >
             {/* Quick Search if more than 6 options */}

@@ -10,6 +10,7 @@ export interface UserOrganization {
   name: string;
   code?: string;
   parentAuthority?: string;
+  status?: string;
 }
 
 export interface User {
@@ -66,6 +67,8 @@ export const usersApi = {
     email: string;
     roleNames?: string[];
     roleIds?: string[];
+    organizationId: string;
+    password?: string;
     telegramChatId?: string;
     telegramUsername?: string;
     isActive?: boolean;
@@ -82,6 +85,8 @@ export const usersApi = {
       email?: string;
       roleNames?: string[];
       roleIds?: string[];
+      organizationId?: string;
+      password?: string;
       telegramChatId?: string;
       telegramUsername?: string;
       isActive?: boolean;
@@ -101,5 +106,33 @@ export const usersApi = {
     apiClient<User>(`/api/users/${id}/approve`, {
       method: 'POST',
       body: { roleName },
+    }),
+
+  uploadMyAvatar: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiClient<User>('/api/users/me/avatar', {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
+  deleteMyAvatar: () =>
+    apiClient<User>('/api/users/me/avatar', {
+      method: 'DELETE',
+    }),
+
+  uploadAvatar: (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiClient<User>(`/api/users/${id}/avatar`, {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
+  deleteAvatar: (id: string) =>
+    apiClient<User>(`/api/users/${id}/avatar`, {
+      method: 'DELETE',
     }),
 };

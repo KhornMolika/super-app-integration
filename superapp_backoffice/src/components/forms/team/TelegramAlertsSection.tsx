@@ -118,7 +118,7 @@ export function TelegramAlertsSection({
                 </code>
                 {currentChatId === telegramStatus?.user?.teamTelegramChatId ? (
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 font-medium">
-                    Agency Profile Group
+                    Organization Profile Group
                   </span>
                 ) : currentChatId === telegramStatus?.user?.telegramChatId ? (
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-medium">

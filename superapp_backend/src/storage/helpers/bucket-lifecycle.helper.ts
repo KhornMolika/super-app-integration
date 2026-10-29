@@ -30,7 +30,7 @@ export class BucketLifecycleHelper {
           await minioClient.makeBucket(bucketName, 'us-east-1');
           this.logger.log(`Created MinIO bucket "${bucketName}"`);
         }
-        if (bucketName === 'mini-app-assets') {
+        if (bucketName === 'mini-app-assets' || bucketName === 'backoffice-user-media') {
           const policy = {
             Version: '2012-10-17',
             Statement: [

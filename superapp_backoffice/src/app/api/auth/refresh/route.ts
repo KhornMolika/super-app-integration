@@ -24,13 +24,17 @@ export async function POST() {
     const data = await res.json().catch(() => null);
 
     if (!res.ok || !data?.success || !data?.access_token) {
-      cookieStore.delete('auth_token');
-      cookieStore.delete('refresh_token');
-      return NextResponse.json({ error: 'Session expired' }, { status: 401 });
+      const errorResponse = NextResponse.json({ error: 'Session expired' }, { status: 401 });
+      errorResponse.cookies.delete('auth_token');
+      errorResponse.cookies.delete('refresh_token');
+      return errorResponse;
     }
 
     const isProd = process.env.NODE_ENV === 'production';
-    cookieStore.set('auth_token', data.access_token, {
+    const { access_token, refresh_token, ...userPayload } = data;
+    const response = NextResponse.json(userPayload);
+
+    response.cookies.set('auth_token', data.access_token, {
       httpOnly: true,
       secure: isProd,
       sameSite: 'lax',
@@ -40,7 +44,7 @@ export async function POST() {
 
     // Sliding rotation: update refresh_token cookie if new token or TTL returned
     if (data.refresh_token) {
-      cookieStore.set('refresh_token', data.refresh_token, {
+      response.cookies.set('refresh_token', data.refresh_token, {
         httpOnly: true,
         secure: isProd,
         sameSite: 'lax',
@@ -49,8 +53,7 @@ export async function POST() {
       });
     }
 
-    const { access_token, refresh_token, ...userPayload } = data;
-    return NextResponse.json(userPayload);
+    return response;
   } catch {
     return NextResponse.json({ error: 'Refresh failed' }, { status: 503 });
   }

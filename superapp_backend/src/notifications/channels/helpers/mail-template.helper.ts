@@ -128,14 +128,14 @@ export class MailTemplateHelper {
 
       ${otpSectionHtml}
 
-      <div style="text-align: center; margin: 24px 0;">
-        <a href="${escUrl}" style="display: inline-block; background: #16a34a; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-size: 14px; font-weight: 700; box-shadow: 0 4px 6px -1px rgba(22, 163, 74, 0.25);">
-          Open in SuperApp &rarr;
-        </a>
-        <p style="font-size: 12px; color: #64748b; margin: 8px 0 0 0;">
-          Tap to open the SuperApp and verify automatically on your mobile device.
-        </p>
-      </div>
+     <div style="text-align: center; margin: 24px 0;">
+       <a href="${escUrl}" style="display: inline-block; background: #16a34a; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-size: 14px; font-weight: 700; box-shadow: 0 4px 6px -1px rgba(22, 163, 74, 0.25);">
+         Open in SuperApp &rarr;
+       </a>
+       <p style="font-size: 12px; color: #64748b; margin: 8px 0 0 0;">
+         Tap to open the SuperApp and verify automatically on your mobile device.
+       </p>
+     </div>
 
       <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
         <p style="font-size: 11px; color: #94a3b8; margin-bottom: 4px;">Direct Deep Link / Legacy Token (for copy-pasting if needed):</p>
@@ -158,6 +158,73 @@ export class MailTemplateHelper {
           </div>
         </div>
       `,
+    };
+  }
+
+  public static renderBackofficeEmailVerification(
+    name: string,
+    otpCode: string,
+    verifyUrl?: string,
+    expiresInMinutes: number = 5,
+  ): { subject: string; html: string } {
+    const escName = this.escapeHtml(name || 'Developer');
+    const escCode = this.escapeHtml(otpCode.trim());
+    const escUrl = verifyUrl ? this.escapeHtml(verifyUrl) : '';
+
+    const webLinkHtml = escUrl
+      ? `
+      <div style="text-align: center; margin: 24px 0;">
+        <a href="${escUrl}" style="display: inline-block; background: #0284c7; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-size: 14px; font-weight: 700; box-shadow: 0 4px 6px -1px rgba(2, 132, 199, 0.25);">
+          Verify in Backoffice Portal &rarr;
+        </a>
+        <p style="font-size: 12px; color: #64748b; margin: 8px 0 0 0;">
+          Or navigate to the verification page and enter the code above.
+        </p>
+      </div>
+      `
+      : '';
+
+    const contentHtml = `
+      <p style="font-size: 14px; line-height: 1.6; margin-top: 0; color: #1e293b;">Hello <strong>${escName}</strong>,</p>
+      <p style="font-size: 14px; line-height: 1.6; color: #334155;">
+        Thank you for registering with the <strong>FSA SuperApp Backoffice Portal</strong>. Please verify your email address to confirm your administrative and developer account access.
+      </p>
+
+      <div style="background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0;">
+        <div style="font-size: 11px; text-transform: uppercase; color: #94a3b8; letter-spacing: 1.5px; font-weight: 700; margin-bottom: 8px;">
+          Your 6-Digit Verification Code
+        </div>
+        <div style="font-size: 36px; font-weight: 800; letter-spacing: 10px; color: #38bdf8; font-family: 'Courier New', Courier, monospace; padding: 6px 0;">
+          ${escCode}
+        </div>
+        <div style="font-size: 12px; color: #f59e0b; margin-top: 8px; font-weight: 600;">
+          ⏱️ Valid for ${expiresInMinutes} minutes &bull; Single-use only
+        </div>
+      </div>
+
+      ${webLinkHtml}
+
+      <div style="background: #f8fafc; border-left: 4px solid #0284c7; padding: 12px 16px; border-radius: 4px; margin-top: 24px;">
+        <p style="font-size: 12px; color: #475569; margin: 0; line-height: 1.5;">
+          <strong>Security Notice:</strong> Do not share this verification code with anyone. Once verified, developer accounts undergo review by a Platform Super Administrator before access is granted.
+        </p>
+      </div>
+
+      <p style="font-size: 12px; color: #94a3b8; line-height: 1.5; margin-top: 20px;">
+        If you did not request this verification code or register for an account, please safely ignore this email.
+      </p>
+    `;
+
+    return {
+      subject: `FSA Backoffice — Email Verification Code: ${otpCode.trim()}`,
+      html: this.renderEmailLayout({
+        category: 'FSA Backoffice Portal',
+        categoryColor: '#38bdf8',
+        title: 'Verify Your Backoffice Account',
+        borderAccentColor: '#0284c7',
+        contentHtml,
+        signatureTeam: 'FSA Platform Governance Team',
+      }),
     };
   }
 

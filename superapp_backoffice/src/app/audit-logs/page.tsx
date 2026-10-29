@@ -91,15 +91,36 @@ function AuditLogsContent() {
   // Synchronize state with browser URL search params
   useEffect(() => {
     const params = new URLSearchParams();
-    if (currentPage > 1) params.set('page', String(currentPage));
-    if (pageSize !== 10) params.set('limit', String(pageSize));
-    if (debouncedSearch) params.set('search', debouncedSearch);
+    params.set('page', String(currentPage));
+    params.set('limit', String(pageSize));
+    if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
     if (actionFilter !== 'ALL') params.set('action', actionFilter);
 
     const queryStr = params.toString();
     const targetUrl = queryStr ? `${pathname}?${queryStr}` : pathname;
-    router.replace(targetUrl, { scroll: false });
-  }, [currentPage, pageSize, debouncedSearch, actionFilter, pathname, router]);
+    const currentQueryStr = searchParams.toString();
+    const currentUrl = currentQueryStr ? `${pathname}?${currentQueryStr}` : pathname;
+
+    if (targetUrl !== currentUrl) {
+      router.replace(targetUrl, { scroll: false });
+    }
+  }, [currentPage, pageSize, debouncedSearch, actionFilter, pathname, router, searchParams]);
+
+  // Sync state from URL searchParams (e.g. browser back/forward or pasting a bookmark URL)
+  useEffect(() => {
+    const pageFromUrl = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const limitFromUrl = Math.max(1, parseInt(searchParams.get('limit') || '10', 10));
+    const searchFromUrl = searchParams.get('search') || '';
+    const actionFromUrl = searchParams.get('action') || 'ALL';
+
+    setCurrentPage((prev) => (prev !== pageFromUrl ? pageFromUrl : prev));
+    setPageSize((prev) => (prev !== limitFromUrl ? limitFromUrl : prev));
+    setActionFilter((prev) => (prev !== actionFromUrl ? actionFromUrl : prev));
+    if (searchFromUrl !== debouncedSearch) {
+      setSearchQuery(searchFromUrl);
+      setDebouncedSearch(searchFromUrl);
+    }
+  }, [searchParams, debouncedSearch]);
 
   // Fetch audit logs via Server-Driven Query API
   const fetchLogs = useCallback(async () => {

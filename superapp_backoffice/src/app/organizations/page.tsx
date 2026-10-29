@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import {
@@ -9,6 +9,7 @@ import {
   isRootOrganization,
   unwrapData,
   unwrapMeta,
+  unwrapItem,
   PaginationMeta,
 } from '@/api';
 import { useConfirm } from '@/components/ui/ConfirmationProvider';
@@ -39,6 +40,8 @@ function OrganizationsContent() {
 
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isFetching, setIsFetching] = useState(false);
+  const lastPushedUrlRef = useRef<string>('');
 
   // Server-Driven Pagination & Filter State
   const [currentPage, setCurrentPage] = useState<number>(initialPage);
@@ -56,11 +59,64 @@ function OrganizationsContent() {
     hasPreviousPage: false,
   });
 
+  // Persistent Global KPI Status Counts (Independent of active table filters)
+  const [globalCounts, setGlobalCounts] = useState({
+    total: 0,
+    active: 0,
+    inactive: 0,
+    isLoaded: false,
+  });
+
+  const fetchGlobalCounts = useCallback(async () => {
+    try {
+      const res = await organizationsApi.getStats();
+      const stats = unwrapItem(res);
+      if (stats && typeof stats.total === 'number') {
+        setGlobalCounts({
+          total: stats.total,
+          active: stats.active,
+          inactive: stats.inactive,
+          isLoaded: true,
+        });
+        return;
+      }
+    } catch {
+      // fallback: fetch all organizations to compute counts
+      try {
+        const res = await organizationsApi.getAll({ limit: 100 });
+        const list = unwrapData<Organization>(res);
+        setGlobalCounts({
+          total: list.length,
+          active: list.filter((o) => o.status === 'ACTIVE').length,
+          inactive: list.filter((o) => o.status === 'INACTIVE').length,
+          isLoaded: true,
+        });
+      } catch (_) {}
+    }
+  }, []);
+
   // Modal states
   const [isCreateEditModalOpen, setIsCreateEditModalOpen] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [parentOptions, setParentOptions] = useState<Organization[]>([]);
+
+  const fetchParentOptions = useCallback(async () => {
+    try {
+      const res = await organizationsApi.getAll({ limit: 100, status: 'ACTIVE' });
+      const items = unwrapData<Organization>(res);
+      setParentOptions(items);
+    } catch (e) {
+      console.error('Failed to load parent organizations for selector:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isSuperOrAdmin) {
+      fetchParentOptions();
+    }
+  }, [isSuperOrAdmin, fetchParentOptions]);
 
   const confirm = useConfirm();
 
@@ -76,32 +132,65 @@ function OrganizationsContent() {
   // Debounce search input to avoid hitting API on every keystroke
   useEffect(() => {
     const handler = setTimeout(() => {
-      if (debouncedSearch !== searchQuery) {
-        setDebouncedSearch(searchQuery);
-        setCurrentPage(1);
-      }
+      setDebouncedSearch((prev) => {
+        if (prev !== searchQuery) {
+          setCurrentPage(1);
+          return searchQuery;
+        }
+        return prev;
+      });
     }, 300);
     return () => clearTimeout(handler);
-  }, [searchQuery, debouncedSearch]);
+  }, [searchQuery]);
 
   // Synchronize state with browser URL search params
   useEffect(() => {
     const params = new URLSearchParams();
-    if (currentPage > 1) params.set('page', String(currentPage));
-    if (pageSize !== 10) params.set('limit', String(pageSize));
-    if (debouncedSearch) params.set('search', debouncedSearch);
+    params.set('page', String(currentPage));
+    params.set('limit', String(pageSize));
+    if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
     if (statusFilter !== 'ALL') params.set('status', statusFilter);
 
     const queryStr = params.toString();
     const targetUrl = queryStr ? `${pathname}?${queryStr}` : pathname;
-    router.replace(targetUrl, { scroll: false });
-  }, [currentPage, pageSize, debouncedSearch, statusFilter, pathname, router]);
+    const currentQueryStr = searchParams.toString();
+    const currentUrl = currentQueryStr ? `${pathname}?${currentQueryStr}` : pathname;
+
+    if (targetUrl !== currentUrl) {
+      lastPushedUrlRef.current = targetUrl;
+      router.replace(targetUrl, { scroll: false });
+    }
+  }, [currentPage, pageSize, debouncedSearch, statusFilter, pathname, router, searchParams]);
+
+  // Sync state from URL searchParams (e.g. browser back/forward or navigation)
+  useEffect(() => {
+    const currentQueryStr = searchParams.toString();
+    const currentUrl = currentQueryStr ? `${pathname}?${currentQueryStr}` : pathname;
+
+    // Ignore if this searchParams change was dispatched by our own router.replace above
+    if (currentUrl === lastPushedUrlRef.current) {
+      return;
+    }
+
+    const pageFromUrl = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const limitFromUrl = Math.max(1, parseInt(searchParams.get('limit') || '10', 10));
+    const searchFromUrl = searchParams.get('search') || '';
+    const statusFromUrl = (searchParams.get('status') as OrganizationStatusFilter) || 'ALL';
+
+    setCurrentPage((prev) => (prev !== pageFromUrl ? pageFromUrl : prev));
+    setPageSize((prev) => (prev !== limitFromUrl ? limitFromUrl : prev));
+    setStatusFilter((prev) => (prev !== statusFromUrl ? statusFromUrl : prev));
+    if (searchFromUrl !== searchQuery) {
+      setSearchQuery(searchFromUrl);
+      setDebouncedSearch(searchFromUrl);
+    }
+  }, [searchParams, pathname]);
 
   // 1. Fetch organizations from database via Server-Driven Query API
   const fetchOrganizations = useCallback(async () => {
     if (!isSuperOrAdmin) return;
     try {
-      setLoading(true);
+      setIsFetching(true);
       const queryParams: Record<string, any> = {
         page: currentPage,
         limit: pageSize,
@@ -134,15 +223,24 @@ function OrganizationsContent() {
       console.error('Failed to fetch organizations:', err);
       toast.error('Failed to load organizations from database.');
     } finally {
+      setIsFetching(false);
       setLoading(false);
     }
   }, [isSuperOrAdmin, currentPage, pageSize, debouncedSearch, statusFilter]);
 
+  // Load global KPI stats once on mount
+  useEffect(() => {
+    if (!isAuthLoading && isSuperOrAdmin) {
+      fetchGlobalCounts();
+    }
+  }, [isAuthLoading, isSuperOrAdmin, fetchGlobalCounts]);
+
+  // Fetch table data when page, limit, search, or status change
   useEffect(() => {
     if (!isAuthLoading && isSuperOrAdmin) {
       fetchOrganizations();
     }
-  }, [fetchOrganizations, isAuthLoading, isSuperOrAdmin]);
+  }, [isAuthLoading, isSuperOrAdmin, fetchOrganizations]);
 
   // Status Filter change handler
   const handleStatusFilterChange = (filter: OrganizationStatusFilter) => {
@@ -154,12 +252,14 @@ function OrganizationsContent() {
   const handleOpenCreate = () => {
     setSelectedOrg(null);
     setErrorMessage(null);
+    fetchParentOptions();
     setIsCreateEditModalOpen(true);
   };
 
   const handleOpenEdit = (org: Organization) => {
     setSelectedOrg(org);
     setErrorMessage(null);
+    fetchParentOptions();
     setIsCreateEditModalOpen(true);
   };
 
@@ -178,7 +278,7 @@ function OrganizationsContent() {
     // Disabling guard 1: Root system anchor cannot be disabled
     if (isCurrentlyActive && isRoot) {
       toast.error(
-        'The root regulatory system anchor (FTC/FSA) cannot be disabled because it operates the SuperApp core infrastructure.',
+        'The primary regulatory authority (FTC/FSA) cannot be disabled because it operates the SuperApp core infrastructure.',
       );
       return;
     }
@@ -188,6 +288,63 @@ function OrganizationsContent() {
       toast.error(
         'Self-deactivation guard: You cannot disable your own assigned organization.',
       );
+      return;
+    }
+
+    // Disabling guard 3: Cannot disable parent authority while active subordinate children exist
+    const activeChildren = (org.children || []).filter((c) => c.status === 'ACTIVE');
+    if (isCurrentlyActive && activeChildren.length > 0) {
+      await confirm({
+        title: 'Cannot Disable Parent Authority',
+        confirmText: 'I Understand',
+        confirmVariant: 'warning',
+        cancelText: '',
+        message: (
+          <div className="space-y-3.5">
+            <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 text-xs text-amber-900 dark:text-amber-200 space-y-1.5">
+              <span className="font-bold flex items-center gap-1.5">
+                <svg className="w-4 h-4 text-amber-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                Active Subordinate Hierarchy Protection
+              </span>
+              <p className="leading-relaxed">
+                <strong>{org.name}</strong> operates as the parent authority for <strong>{activeChildren.length} active subordinate organization(s)</strong>. Disabling this authority would leave active subordinate regulators without a valid governing body.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                Active Subordinate Organizations ({activeChildren.length})
+              </span>
+              <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
+                {activeChildren.map((child) => (
+                  <div key={child.id} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 text-xs">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-mono font-bold text-[10px] px-1.5 py-0.5 rounded bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/60">
+                        {child.code || 'ORG'}
+                      </span>
+                      <span className="font-medium text-slate-800 dark:text-slate-200 truncate">{child.name}</span>
+                    </div>
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      Active
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 text-xs text-slate-600 dark:text-slate-300 space-y-1">
+              <span className="font-semibold text-slate-700 dark:text-slate-200">Required Next Steps:</span>
+              <ol className="list-decimal list-inside space-y-1 text-[11.5px] text-slate-500 dark:text-slate-400">
+                <li>Reassign each subordinate entity to another parent authority, or</li>
+                <li>Disable each subordinate organization first.</li>
+              </ol>
+            </div>
+          </div>
+        ),
+      });
       return;
     }
 
@@ -205,7 +362,7 @@ function OrganizationsContent() {
                 {org.name}
               </h4>
               <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                {org.parentAuthority || 'Non-Bank Financial Services Authority'}
+                {org.parent?.name || org.parentAuthority || 'None (Independent)'}
               </p>
             </div>
             <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
@@ -213,6 +370,12 @@ function OrganizationsContent() {
               Active
             </span>
           </div>
+
+          {org.children && org.children.length > 0 && (
+            <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300">
+              Note: All {org.children.length} subordinate organization(s) under this authority are already inactive. Disabling this parent authority is permitted.
+            </div>
+          )}
 
           <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
             Are you sure you want to disable this organization? Active operations and mini-app reviews will be temporarily suspended until re-enabled.
@@ -229,7 +392,7 @@ function OrganizationsContent() {
                 {org.name}
               </h4>
               <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                {org.parentAuthority || 'Non-Bank Financial Services Authority'}
+                {org.parent?.name || org.parentAuthority || 'None (Independent)'}
               </p>
             </div>
             <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
@@ -253,9 +416,142 @@ function OrganizationsContent() {
       await organizationsApi.toggleStatus(org.id, newStatus);
       toast.success(`Organization ${org.name} has been ${actionLabel.toLowerCase()}d.`);
       await fetchOrganizations();
+      fetchGlobalCounts();
     } catch (err: any) {
       console.error('Error toggling status:', err);
       toast.error(err.response?.data?.message || err.message || 'Failed to update organization status.');
+    }
+  };
+
+  // Delete Organization
+  const handleDelete = async (org: Organization) => {
+    const isRoot = isRootOrganization(org);
+    if (isRoot) {
+      toast.error('The primary regulatory authority (FTC/FSA) cannot be deleted.');
+      return;
+    }
+
+    if (user?.organizationId === org.id) {
+      toast.error('Self-deletion guard: You cannot delete your own assigned organization.');
+      return;
+    }
+
+    // Guard 1: Linked subordinate entities
+    if ((org.children?.length ?? 0) > 0) {
+      await confirm({
+        title: 'Cannot Delete Parent Authority',
+        confirmText: 'I Understand',
+        confirmVariant: 'warning',
+        cancelText: '',
+        message: (
+          <div className="space-y-3.5">
+            <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 text-xs text-amber-900 dark:text-amber-200 space-y-1.5">
+              <span className="font-bold flex items-center gap-1.5">
+                <svg className="w-4 h-4 text-amber-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                Relational Integrity Guard
+              </span>
+              <p className="leading-relaxed">
+                <strong>{org.name}</strong> cannot be deleted because <strong>{org.children?.length} subordinate organization(s)</strong> are linked to it as their governing parent authority.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                Linked Subordinate Organizations ({org.children?.length})
+              </span>
+              <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
+                {org.children?.map((child) => (
+                  <div key={child.id} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 text-xs">
+                    <span className="font-medium text-slate-800 dark:text-slate-200 truncate">{child.name}</span>
+                    <span className="font-mono text-[10px] text-slate-400">{child.code || 'ORG'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              To delete this organization, you must first edit its subordinate entities to assign a different parent authority or delete them.
+            </p>
+          </div>
+        ),
+      });
+      return;
+    }
+
+    // Guard 2: Historical records (users or mini-apps)
+    const usersCount = org.users?.length || 0;
+    const miniAppsCount = org.miniApps?.length || 0;
+    if (usersCount > 0 || miniAppsCount > 0) {
+      const wantDisable = await confirm({
+        title: 'Cannot Delete Active Regulatory Body',
+        confirmText: 'Disable Organization Instead',
+        cancelText: 'Cancel',
+        confirmVariant: 'warning',
+        message: (
+          <div className="space-y-3.5">
+            <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 text-xs text-amber-900 dark:text-amber-200 space-y-1.5">
+              <span className="font-bold flex items-center gap-1.5">
+                <svg className="w-4 h-4 text-amber-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Compliance Audit Trail Protection
+              </span>
+              <p className="leading-relaxed">
+                <strong>{org.name}</strong> contains historical activity ({usersCount} assigned user(s) and {miniAppsCount} registered mini-app(s)). Under regulatory compliance standards, organizations with historical records cannot be permanently purged from the system.
+              </p>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              You can <strong>Disable</strong> this organization instead. This will suspend its active operations while keeping historical records and audit logs intact.
+            </p>
+          </div>
+        ),
+      });
+      if (wantDisable) {
+        handleToggleStatus(org);
+      }
+      return;
+    }
+
+    // Guard 3: Clean draft / test organization -> allow permanent deletion
+    const isConfirmed = await confirm({
+      title: 'Delete Organization',
+      message: (
+        <div className="space-y-3">
+          <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-xs text-rose-800 dark:text-rose-300 space-y-1">
+            <span className="font-bold flex items-center gap-1.5 text-rose-900 dark:text-rose-200">
+              <svg className="w-4 h-4 text-rose-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              Permanent Deletion Warning
+            </span>
+            <p className="leading-relaxed">
+              Are you sure you want to permanently delete <strong>{org.name}</strong> ({org.code || 'ORG'})? This operation cannot be reversed.
+            </p>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            This organization has no linked users, mini-apps, or subordinate entities and will be permanently removed.
+          </p>
+        </div>
+      ),
+      confirmText: 'Delete Permanently',
+      confirmVariant: 'danger',
+    });
+
+    if (!isConfirmed) return;
+
+    try {
+      await organizationsApi.delete(org.id);
+      toast.success(`Organization "${org.name}" has been deleted successfully.`);
+      await fetchOrganizations();
+      fetchGlobalCounts();
+      fetchParentOptions();
+    } catch (err: any) {
+      console.error('Failed to delete organization:', err);
+      toast.error(
+        err.response?.data?.message || err.message || 'Failed to delete organization.'
+      );
     }
   };
 
@@ -264,16 +560,26 @@ function OrganizationsContent() {
     setIsSubmitting(true);
     setErrorMessage(null);
     try {
+      const payload: Partial<Organization> = {
+        name: formData.name.trim(),
+        code: formData.code.trim().toUpperCase() || undefined,
+        parentId: formData.parentId || null,
+        parentAuthority: formData.parentId ? formData.parentAuthority?.trim() : null,
+        description: formData.description?.trim() || undefined,
+        status: formData.status,
+      };
       if (selectedOrg) {
-        await organizationsApi.update(selectedOrg.id, formData);
+        await organizationsApi.update(selectedOrg.id, payload);
         toast.success(`Organization "${formData.name}" updated successfully.`);
       } else {
-        await organizationsApi.create(formData);
+        await organizationsApi.create(payload);
         toast.success(`Organization "${formData.name}" registered successfully.`);
       }
       setIsCreateEditModalOpen(false);
       setSelectedOrg(null);
       await fetchOrganizations();
+      fetchGlobalCounts();
+      fetchParentOptions();
     } catch (err: any) {
       console.error('Error saving organization:', err);
       setErrorMessage(
@@ -348,19 +654,21 @@ function OrganizationsContent() {
         onSearchChange={setSearchQuery}
         statusFilter={statusFilter}
         onStatusFilterChange={handleStatusFilterChange}
-        totalCount={paginationMeta.totalItems}
-        activeCount={organizations.filter((o) => o.status === 'ACTIVE').length}
-        inactiveCount={organizations.filter((o) => o.status === 'INACTIVE').length}
+        totalCount={globalCounts.isLoaded ? globalCounts.total : (statusFilter === 'ALL' ? (paginationMeta.totalItems || organizations.length) : globalCounts.total)}
+        activeCount={globalCounts.isLoaded ? globalCounts.active : (statusFilter === 'ACTIVE' ? (paginationMeta.totalItems || organizations.length) : globalCounts.active)}
+        inactiveCount={globalCounts.isLoaded ? globalCounts.inactive : (statusFilter === 'INACTIVE' ? (paginationMeta.totalItems || organizations.length) : globalCounts.inactive)}
         onAddClick={handleOpenCreate}
+        isSearching={isFetching || searchQuery !== debouncedSearch}
       />
 
       {/* Organizations Table with Server-Driven Pagination */}
       <OrganizationsTable
         organizations={organizations}
-        loading={loading}
+        loading={loading && organizations.length === 0}
         onView={handleOpenView}
         onEdit={handleOpenEdit}
         onToggleStatus={handleToggleStatus}
+        onDelete={handleDelete}
         paginationProps={paginationProps}
         userOrganizationId={user?.organizationId}
       />
@@ -369,6 +677,7 @@ function OrganizationsContent() {
       <OrganizationModal
         isOpen={isCreateEditModalOpen}
         editingOrg={selectedOrg}
+        availableOrganizations={parentOptions.length > 0 ? parentOptions : organizations}
         isSubmitting={isSubmitting}
         errorMessage={errorMessage}
         onClose={() => {

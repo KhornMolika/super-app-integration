@@ -5,9 +5,18 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 
 export function HeaderProfile() {
-  const { user, role, logout } = useAuth();
+  const { user, role, logout, avatarUrl: sharedAvatarUrl } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Active avatar from shared real-time state, falling back to user entity
+  const activeAvatarUrl = sharedAvatarUrl !== undefined ? sharedAvatarUrl : (user?.avatarUrl || null);
+
+  // Reset image error state whenever active avatar changes
+  useEffect(() => {
+    setImageError(false);
+  }, [activeAvatarUrl]);
 
   const userName = user?.name || 'Authenticated User';
   const userEmail = user?.email || 'user@platform.local';
@@ -19,7 +28,7 @@ export function HeaderProfile() {
     .substring(0, 2)
     .toUpperCase() || 'U';
 
-  const avatarUrl = user?.avatarUrl;
+  const hasAvatar = Boolean(activeAvatarUrl) && !imageError;
 
   // Close on outside click
   useEffect(() => {
@@ -57,14 +66,13 @@ export function HeaderProfile() {
         aria-expanded={isOpen}
       >
         <div className="relative">
-          {avatarUrl ? (
+          {hasAvatar ? (
             <img
-              src={avatarUrl}
+              key={activeAvatarUrl!}
+              src={activeAvatarUrl!}
               alt={userName}
               className="w-9 h-9 rounded-full object-cover shadow-sm ring-1 ring-slate-200/80 dark:ring-slate-700/80"
-              onError={(e) => {
-                (e.target as HTMLElement).style.display = 'none';
-              }}
+              onError={() => setImageError(true)}
             />
           ) : (
             <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-600 to-accent-600 flex items-center justify-center text-white font-bold text-xs shadow-xs shrink-0 ring-1 ring-slate-200/60 dark:ring-slate-700/60">
@@ -81,8 +89,20 @@ export function HeaderProfile() {
           {/* User Identity Card with Name & Email (No role label) */}
           <div className="p-3 bg-slate-50/90 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-700/50">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-600 to-accent-600 flex items-center justify-center text-white font-bold text-sm shadow-xs shrink-0">
-                {initials}
+              <div className="relative w-10 h-10 rounded-full overflow-hidden shrink-0 shadow-xs ring-1 ring-slate-200/60 dark:ring-slate-700/60 bg-slate-100 dark:bg-slate-800">
+                {hasAvatar ? (
+                  <img
+                    key={`dropdown-${activeAvatarUrl}`}
+                    src={activeAvatarUrl!}
+                    alt={userName}
+                    className="w-full h-full object-cover"
+                    onError={() => setImageError(true)}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-brand-600 to-accent-600 flex items-center justify-center text-white font-bold text-sm">
+                    {initials}
+                  </div>
+                )}
               </div>
               <div className="min-w-0 flex-1">
                 <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">

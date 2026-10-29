@@ -80,6 +80,20 @@ describe('MailService & Helper Modules', () => {
       expect(rendered.html).toContain('Hardcoded Secret');
       expect(rendered.html).toContain('Remediation:');
     });
+
+    it('renders backoffice email verification template with web-oriented copy', () => {
+      const rendered = MailTemplateHelper.renderBackofficeEmailVerification(
+        'Developer Bob',
+        '889900',
+        'http://localhost:3002/verify-otp?email=bob%40example.com',
+        5,
+      );
+      expect(rendered.subject).toContain('889900');
+      expect(rendered.html).toContain('FSA SuperApp Backoffice Portal');
+      expect(rendered.html).toContain('889900');
+      expect(rendered.html).toContain('Verify in Backoffice Portal');
+      expect(rendered.html).not.toContain('mobile account');
+    });
   });
 
   describe('MailService orchestration', () => {

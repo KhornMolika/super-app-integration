@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Organization } from '@/api';
+import { Organization, isRootOrganization } from '@/api';
 import { Card } from '@/components/ui/card';
 import { DocumentTextIcon, ShieldCheckIcon } from '@/components/ui/Icons';
 
@@ -53,8 +53,21 @@ export function OrganizationOverviewCard({ organization: rawOrg }: OrganizationO
             <ShieldCheckIcon className="w-3.5 h-3.5 text-slate-400" />
             <span>Parent Authority</span>
           </div>
-          <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 mt-1 truncate" title={organization.parentAuthority || 'Non-Bank Financial Services Authority'}>
-            {organization.parentAuthority || 'Non-Bank Financial Services Authority'}
+          <p
+            className="text-xs font-semibold text-slate-900 dark:text-slate-100 mt-1 truncate"
+            title={
+              isRootOrganization(organization)
+                ? 'Primary Authority Root'
+                : organization.parent?.name || organization.parentAuthority || 'None (Independent)'
+            }
+          >
+            {isRootOrganization(organization) ? (
+              'Primary Authority Root'
+            ) : organization.parent?.name || organization.parentAuthority ? (
+              organization.parent?.name || organization.parentAuthority
+            ) : (
+              <span className="italic font-normal text-slate-400">None (Independent)</span>
+            )}
           </p>
         </div>
 

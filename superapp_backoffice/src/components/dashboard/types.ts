@@ -1,5 +1,3 @@
-import { Organization } from '@/api/organizations.api';
-import { User } from '@/api/users.api';
 import { ActivityDataPoint } from './ActivityTrendChart';
 import { DonutTab, DonutSegment } from './DistributionDonutChart';
 
@@ -9,7 +7,7 @@ export interface OrgStatItem {
   id: string;
   name: string;
   code?: string;
-  parentAuthority?: string;
+  parentAuthority?: string | null;
   status: 'ACTIVE' | 'INACTIVE';
   miniAppsCount: number;
 }

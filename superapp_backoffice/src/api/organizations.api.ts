@@ -30,7 +30,10 @@ export interface Organization {
   id: string;
   name: string;
   code?: string;
-  parentAuthority?: string;
+  parentId?: string | null;
+  parent?: Organization | null;
+  children?: Organization[];
+  parentAuthority?: string | null | null;
   description?: string;
   status: 'ACTIVE' | 'INACTIVE';
   users?: OrganizationUser[];
@@ -40,6 +43,9 @@ export interface Organization {
 }
 
 export const organizationsApi = {
+  getStats: () =>
+    apiClient<{ total: number; active: number; inactive: number }>('/api/organizations/stats'),
+
   getAll: (params?: {
     page?: number;
     limit?: number;
@@ -105,10 +111,10 @@ export function getOrganizationFullName(input?: string): string {
 /**
  * Detects if an organization is the root regulatory authority or central executive secretariat
  * (e.g. Non-Bank Financial Services Authority (FSA) or Financial Technology Center (FTC)).
- * Root authorities are System Anchors that cannot be disabled because they operate the SuperApp platform.
+ * Root authorities are Primary Authorities that cannot be disabled because they operate the SuperApp platform.
  */
 export function isRootOrganization(
-  org: { name?: string; code?: string; parentAuthority?: string } | null | undefined,
+  org: { name?: string; code?: string; parentAuthority?: string | null } | null | undefined,
 ): boolean {
   if (!org) return false;
   const code = (org.code || '').trim().toUpperCase();
@@ -121,4 +127,5 @@ export function isRootOrganization(
   );
 }
 
+export const isPrimaryAuthorityOrganization = isRootOrganization;
 export const isSystemAnchorOrganization = isRootOrganization;

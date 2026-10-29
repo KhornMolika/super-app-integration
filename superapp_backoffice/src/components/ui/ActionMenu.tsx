@@ -34,7 +34,21 @@ export function ActionMenu({
   ariaLabel = 'Actions menu',
 }: ActionMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [openUpward, setOpenUpward] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Check available space below to decide if opening upward
+  useEffect(() => {
+    if (isOpen && menuRef.current) {
+      const rect = menuRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      if (spaceBelow < 180 && rect.top > 180) {
+        setOpenUpward(true);
+      } else {
+        setOpenUpward(false);
+      }
+    }
+  }, [isOpen]);
 
   // Close dropdown on click outside or when Escape is pressed
   useEffect(() => {
@@ -99,7 +113,7 @@ export function ActionMenu({
 
   return (
     <div
-      className={`relative inline-block text-left ${className}`}
+      className={`relative inline-block text-left ${isOpen ? 'z-[9999]' : ''} ${className}`}
       ref={menuRef}
       onClick={(e) => e.stopPropagation()}
     >
@@ -129,8 +143,10 @@ export function ActionMenu({
       {isOpen && (
         <div
           className={`absolute ${
-            align === 'left' ? 'left-0 origin-top-left' : 'right-0 origin-top-right'
-          } mt-1 min-w-[140px] max-w-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl py-1 z-50 animate-in fade-in zoom-in-95 duration-100 ${menuClassName}`}
+            openUpward
+              ? align === 'left' ? 'left-0 bottom-full mb-1 origin-bottom-left' : 'right-0 bottom-full mb-1 origin-bottom-right'
+              : align === 'left' ? 'left-0 top-full mt-1 origin-top-left' : 'right-0 top-full mt-1 origin-top-right'
+          } min-w-[140px] max-w-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl py-1 z-[9999] animate-in fade-in zoom-in-95 duration-100 ${menuClassName}`}
           role="menu"
         >
           {visibleItems.map((item, index) => {

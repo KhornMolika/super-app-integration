@@ -116,7 +116,7 @@ export function CollaboratorsSection({
                 No additional collaborators yet
               </p>
               <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-                Use <span className="font-semibold text-slate-700 dark:text-slate-300">&quot;Add Collaborator&quot;</span> above to grant agency teammates build, test, and review privileges.
+                Use <span className="font-semibold text-slate-700 dark:text-slate-300">&quot;Add Collaborator&quot;</span> above to grant organization teammates build, test, and review privileges.
               </p>
             </div>
           </div>

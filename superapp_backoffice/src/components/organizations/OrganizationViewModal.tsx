@@ -76,7 +76,9 @@ export function OrganizationViewModal({
                 <span>Parent Authority</span>
               </div>
               <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                {organization.parentAuthority || 'Non-Bank Financial Services Authority'}
+                {organization.parent?.name || organization.parentAuthority || (
+                  <span className="italic font-normal text-slate-400">None (Independent)</span>
+                )}
               </div>
             </div>
 

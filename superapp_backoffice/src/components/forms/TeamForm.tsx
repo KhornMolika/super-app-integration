@@ -73,7 +73,7 @@ export default function TeamForm({
       : formData.organization?.name) ||
     formData.teamName ||
     telegramStatus?.user?.organization?.name ||
-    'Your Agency';
+    'Your Organization';
 
   const updateField = (name: string, value: string) => {
     if (setFormData) {

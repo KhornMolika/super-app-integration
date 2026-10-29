@@ -10,6 +10,7 @@ import { AccessControlService } from './access-control.service';
 import { SeederService } from './seeder.service';
 import { UsersController } from './users.controller';
 import { RolesController } from './roles.controller';
+import { StorageModule } from '../storage/storage.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { RolesController } from './roles.controller';
       Organization,
     ]),
     forwardRef(() => AuthModule),
+    StorageModule,
   ],
   controllers: [UsersController, RolesController],
   providers: [AccessControlService, SeederService],

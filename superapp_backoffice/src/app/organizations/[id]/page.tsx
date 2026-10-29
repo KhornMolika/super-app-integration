@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { organizationsApi, Organization, isRootOrganization, unwrapItem } from '@/api';
+import { organizationsApi, Organization, isRootOrganization, unwrapItem, unwrapData } from '@/api';
 import { Button } from '@/components/ui/inputs';
 import { useConfirm } from '@/components/ui/ConfirmationProvider';
 import { toast } from '@/components/ui/Toast';
@@ -17,7 +17,7 @@ import {
 } from '@/components/organizations';
 
 
-export default function OrganizationDetailPage() {
+function OrganizationDetailContent() {
   const params = useParams();
   const router = useRouter();
   const id = (typeof params?.id === 'string' ? params.id : Array.isArray(params?.id) ? params.id[0] : '') || '';
@@ -30,6 +30,23 @@ export default function OrganizationDetailPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [parentOptions, setParentOptions] = useState<Organization[]>([]);
+
+  const fetchParentOptions = useCallback(async () => {
+    try {
+      const res = await organizationsApi.getAll({ limit: 100, status: 'ACTIVE' });
+      const items = unwrapData<Organization>(res);
+      setParentOptions(items);
+    } catch (e) {
+      console.error('Failed to load parent options:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isSuperOrAdmin) {
+      fetchParentOptions();
+    }
+  }, [isSuperOrAdmin, fetchParentOptions]);
 
   const confirm = useConfirm();
 
@@ -64,7 +81,7 @@ export default function OrganizationDetailPage() {
     // Disabling guard 1: Root system anchor cannot be disabled
     if (isCurrentlyActive && isRoot) {
       toast.error(
-        'The root regulatory system anchor (FTC/FSA) cannot be disabled because it operates the SuperApp core infrastructure.',
+        'The primary regulatory authority (FTC/FSA) cannot be disabled because it operates the SuperApp core infrastructure.',
       );
       return;
     }
@@ -74,6 +91,63 @@ export default function OrganizationDetailPage() {
       toast.error(
         'Self-deactivation guard: You cannot disable your own assigned organization.',
       );
+      return;
+    }
+
+    // Disabling guard 3: Cannot disable parent authority while active subordinate children exist
+    const activeChildren = (organization.children || []).filter((c) => c.status === 'ACTIVE');
+    if (isCurrentlyActive && activeChildren.length > 0) {
+      await confirm({
+        title: 'Cannot Disable Parent Authority',
+        confirmText: 'I Understand',
+        confirmVariant: 'warning',
+        cancelText: '',
+        message: (
+          <div className="space-y-3.5">
+            <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 text-xs text-amber-900 dark:text-amber-200 space-y-1.5">
+              <span className="font-bold flex items-center gap-1.5">
+                <svg className="w-4 h-4 text-amber-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                Active Subordinate Hierarchy Protection
+              </span>
+              <p className="leading-relaxed">
+                <strong>{organization.name}</strong> operates as the parent authority for <strong>{activeChildren.length} active subordinate organization(s)</strong>. Disabling this authority would leave active subordinate regulators without a valid governing body.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                Active Subordinate Organizations ({activeChildren.length})
+              </span>
+              <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
+                {activeChildren.map((child) => (
+                  <div key={child.id} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 text-xs">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-mono font-bold text-[10px] px-1.5 py-0.5 rounded bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/60">
+                        {child.code || 'ORG'}
+                      </span>
+                      <span className="font-medium text-slate-800 dark:text-slate-200 truncate">{child.name}</span>
+                    </div>
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      Active
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 text-xs text-slate-600 dark:text-slate-300 space-y-1">
+              <span className="font-semibold text-slate-700 dark:text-slate-200">Required Next Steps:</span>
+              <ol className="list-decimal list-inside space-y-1 text-[11.5px] text-slate-500 dark:text-slate-400">
+                <li>Reassign each subordinate entity to another parent authority, or</li>
+                <li>Disable each subordinate organization first.</li>
+              </ol>
+            </div>
+          </div>
+        ),
+      });
       return;
     }
 
@@ -91,7 +165,7 @@ export default function OrganizationDetailPage() {
                 {organization.name}
               </h4>
               <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                {organization.parentAuthority || 'Non-Bank Financial Services Authority'}
+                {organization.parent?.name || organization.parentAuthority || 'None (Independent)'}
               </p>
             </div>
             <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
@@ -134,7 +208,7 @@ export default function OrganizationDetailPage() {
                 {organization.name}
               </h4>
               <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                {organization.parentAuthority || 'Non-Bank Financial Services Authority'}
+                {organization.parent?.name || organization.parentAuthority || 'None (Independent)'}
               </p>
             </div>
             <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
@@ -175,6 +249,139 @@ export default function OrganizationDetailPage() {
     }
   };
 
+  // Delete organization
+  const handleDeleteOrganization = async () => {
+    if (!organization || !isSuperOrAdmin) return;
+    const isRoot = isRootOrganization(organization);
+    const isOwnOrg = user?.organizationId === organization.id;
+
+    if (isRoot) {
+      toast.error('The primary regulatory authority (FTC/FSA) cannot be deleted.');
+      return;
+    }
+
+    if (isOwnOrg) {
+      toast.error('Self-deletion guard: You cannot delete your own assigned organization.');
+      return;
+    }
+
+    // Guard 1: Linked subordinate entities
+    if ((organization.children?.length ?? 0) > 0) {
+      await confirm({
+        title: 'Cannot Delete Parent Authority',
+        confirmText: 'I Understand',
+        confirmVariant: 'warning',
+        cancelText: '',
+        message: (
+          <div className="space-y-3.5">
+            <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 text-xs text-amber-900 dark:text-amber-200 space-y-1.5">
+              <span className="font-bold flex items-center gap-1.5">
+                <svg className="w-4 h-4 text-amber-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                Relational Integrity Guard
+              </span>
+              <p className="leading-relaxed">
+                <strong>{organization.name}</strong> cannot be deleted because <strong>{organization.children?.length} subordinate organization(s)</strong> are linked to it as their governing parent authority.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                Linked Subordinate Organizations ({organization.children?.length})
+              </span>
+              <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
+                {organization.children?.map((child) => (
+                  <div key={child.id} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 text-xs">
+                    <span className="font-medium text-slate-800 dark:text-slate-200 truncate">{child.name}</span>
+                    <span className="font-mono text-[10px] text-slate-400">{child.code || 'ORG'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              To delete this organization, you must first edit its subordinate entities to assign a different parent authority or delete them.
+            </p>
+          </div>
+        ),
+      });
+      return;
+    }
+
+    // Guard 2: Historical records (users or mini-apps)
+    const usersCount = organization.users?.length || 0;
+    const miniAppsCount = organization.miniApps?.length || 0;
+    if (usersCount > 0 || miniAppsCount > 0) {
+      const wantDisable = await confirm({
+        title: 'Cannot Delete Active Regulatory Body',
+        confirmText: 'Disable Organization Instead',
+        cancelText: 'Cancel',
+        confirmVariant: 'warning',
+        message: (
+          <div className="space-y-3.5">
+            <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 text-xs text-amber-900 dark:text-amber-200 space-y-1.5">
+              <span className="font-bold flex items-center gap-1.5">
+                <svg className="w-4 h-4 text-amber-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Compliance Audit Trail Protection
+              </span>
+              <p className="leading-relaxed">
+                <strong>{organization.name}</strong> contains historical activity ({usersCount} assigned user(s) and {miniAppsCount} registered mini-app(s)). Under regulatory compliance standards, organizations with historical records cannot be permanently purged from the system.
+              </p>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              You can <strong>Disable</strong> this organization instead. This will suspend its active operations while keeping historical records and audit logs intact.
+            </p>
+          </div>
+        ),
+      });
+      if (wantDisable) {
+        handleToggleStatus();
+      }
+      return;
+    }
+
+    // Guard 3: Clean draft / test organization -> allow permanent deletion
+    const isConfirmed = await confirm({
+      title: 'Delete Organization',
+      message: (
+        <div className="space-y-3">
+          <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-xs text-rose-800 dark:text-rose-300 space-y-1">
+            <span className="font-bold flex items-center gap-1.5 text-rose-900 dark:text-rose-200">
+              <svg className="w-4 h-4 text-rose-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              Permanent Deletion Warning
+            </span>
+            <p className="leading-relaxed">
+              Are you sure you want to permanently delete <strong>{organization.name}</strong> ({organization.code || 'ORG'})? This operation cannot be reversed.
+            </p>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            This organization has no linked users, mini-apps, or subordinate entities and will be permanently removed.
+          </p>
+        </div>
+      ),
+      confirmText: 'Delete Permanently',
+      confirmVariant: 'danger',
+    });
+
+    if (!isConfirmed) return;
+
+    try {
+      await organizationsApi.delete(organization.id);
+      toast.success(`Organization "${organization.name}" has been deleted successfully.`);
+      router.push('/organizations');
+    } catch (err: any) {
+      console.error('Failed to delete organization:', err);
+      toast.error(
+        err.response?.data?.message || err.message || 'Failed to delete organization.'
+      );
+    }
+  };
+
   // Edit organization (Super Admin / Admin only)
   const handleSaveEdit = async (formData: OrganizationFormData) => {
     if (!organization || !isSuperOrAdmin) return;
@@ -185,8 +392,8 @@ export default function OrganizationDetailPage() {
       await organizationsApi.update(organization.id, {
         name: formData.name.trim(),
         code: formData.code.trim().toUpperCase() || undefined,
-        parentAuthority:
-          formData.parentAuthority.trim() || 'Non-Bank Financial Services Authority',
+        parentId: formData.parentId || null,
+        parentAuthority: formData.parentId ? (formData.parentAuthority?.trim() || undefined) : null,
         description: formData.description.trim() || undefined,
         status: formData.status,
       });
@@ -247,6 +454,7 @@ export default function OrganizationDetailPage() {
         isSuperOrAdmin={isSuperOrAdmin}
         onToggleStatus={handleToggleStatus}
         onEdit={() => setIsEditModalOpen(true)}
+        onDelete={isSuperOrAdmin ? handleDeleteOrganization : undefined}
         isOwnOrg={user?.organizationId === organization.id}
       />
 
@@ -264,6 +472,7 @@ export default function OrganizationDetailPage() {
         <OrganizationModal
           isOpen={isEditModalOpen}
           editingOrg={organization}
+          availableOrganizations={parentOptions}
           isSubmitting={isSubmitting}
           errorMessage={errorMessage}
           onClose={() => {
@@ -274,5 +483,14 @@ export default function OrganizationDetailPage() {
         />
       )}
     </div>
+  );
+}
+
+
+export default function OrganizationDetailPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-[50vh]"><span className="text-sm text-slate-400 animate-pulse">Loading organization...</span></div>}>
+      <OrganizationDetailContent />
+    </Suspense>
   );
 }

@@ -31,7 +31,7 @@ export class SeederService implements OnApplicationBootstrap {
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>,
     private configService: ConfigService,
-  ) {}
+  ) { }
 
   async onApplicationBootstrap() {
     await this.seed();
@@ -154,9 +154,71 @@ export class SeederService implements OnApplicationBootstrap {
     const superAdminRole = rolesMap.get('SUPER_ADMIN')!;
     const adminRole = rolesMap.get('ADMIN')!;
 
-    // 3. Seed 11 Non-Bank Financial Services Authority (FSA) Organizations
-    const parentAuthority = 'Non-Bank Financial Services Authority';
-    const fsaOrganizations = [
+    // 3. Seed Root Authority: Non-Bank Financial Services Authority (FSA) with null parent
+    const rootFsaData = {
+      name: 'Non-Bank Financial Services Authority',
+      code: 'FSA',
+      description: 'Non-Bank Financial Services Authority of Cambodia (Central Governing Authority)',
+    };
+
+    let fsaRoot: Organization | null = null;
+    try {
+      fsaRoot = await this.organizationRepository.findOne({
+        where: [{ name: rootFsaData.name }, { code: rootFsaData.code }],
+      });
+      if (!fsaRoot) {
+        fsaRoot = await this.organizationRepository
+          .createQueryBuilder('org')
+          .where('LOWER(TRIM(org.name)) = LOWER(:name)', { name: rootFsaData.name.trim() })
+          .orWhere('org.code = :code', { code: rootFsaData.code })
+          .getOne();
+      }
+
+      if (!fsaRoot) {
+        fsaRoot = this.organizationRepository.create({
+          name: rootFsaData.name,
+          code: rootFsaData.code,
+          parentId: null,
+          parent: null,
+          parentAuthority: null,
+          description: rootFsaData.description,
+          status: OrganizationStatus.ACTIVE,
+        });
+        fsaRoot = await this.organizationRepository.save(fsaRoot);
+        this.logger.log(`Created root authority: ${fsaRoot.name} [${fsaRoot.code}]`);
+      } else {
+        let rootChanged = false;
+        if (fsaRoot.code !== rootFsaData.code) {
+          fsaRoot.code = rootFsaData.code;
+          rootChanged = true;
+        }
+        if (fsaRoot.parentId !== null) {
+          fsaRoot.parentId = null;
+          fsaRoot.parent = null;
+          rootChanged = true;
+        }
+        if (fsaRoot.parentAuthority !== null) {
+          fsaRoot.parentAuthority = null;
+          rootChanged = true;
+        }
+        if (rootFsaData.description && !fsaRoot.description) {
+          fsaRoot.description = rootFsaData.description;
+          rootChanged = true;
+        }
+        if (rootChanged) {
+          fsaRoot = await this.organizationRepository.save(fsaRoot);
+          this.logger.log(`Updated root authority: ${fsaRoot.name} [${fsaRoot.code}]`);
+        }
+      }
+    } catch (err: any) {
+      this.logger.warn(`Root FSA organization seed warning: ${err?.message}. Adopting existing database record.`);
+      fsaRoot = await this.organizationRepository.findOne({
+        where: [{ name: rootFsaData.name }, { code: rootFsaData.code }],
+      });
+    }
+
+    // 4. Seed 11 Subordinate FSA Organizations under root Non-Bank Financial Services Authority
+    const subordinateFsaOrganizations = [
       { name: 'Financial Technology Center', code: 'FTC', description: 'Financial Technology Center of FSA' },
       { name: 'General Affairs Department', code: 'GAD', description: 'General Affairs Department of FSA' },
       { name: 'Policy Department', code: 'PD', description: 'Policy Department of FSA' },
@@ -171,7 +233,7 @@ export class SeederService implements OnApplicationBootstrap {
     ];
 
     let ftcOrg: Organization | null = null;
-    for (const orgData of fsaOrganizations) {
+    for (const orgData of subordinateFsaOrganizations) {
       let org: Organization | null = null;
       try {
         // Priority 1: Match by exact name first (primary unique key)
@@ -199,20 +261,27 @@ export class SeederService implements OnApplicationBootstrap {
           org = this.organizationRepository.create({
             name: orgData.name,
             code: orgData.code,
-            parentAuthority,
+            parentId: fsaRoot?.id ?? null,
+            parent: fsaRoot ?? null,
+            parentAuthority: fsaRoot?.name ?? null,
             description: orgData.description,
             status: OrganizationStatus.ACTIVE,
           });
           org = await this.organizationRepository.save(org);
-          this.logger.log(`Created organization: ${org.name} [${org.code}]`);
+          this.logger.log(`Created subordinate organization: ${org.name} [${org.code}] under ${fsaRoot?.name || 'FSA'}`);
         } else {
           let changed = false;
           if (orgData.code && org.code !== orgData.code) {
             org.code = orgData.code;
             changed = true;
           }
-          if (org.parentAuthority !== parentAuthority) {
-            org.parentAuthority = parentAuthority;
+          if (fsaRoot?.id && org.parentId !== fsaRoot.id) {
+            org.parentId = fsaRoot.id;
+            org.parent = fsaRoot;
+            changed = true;
+          }
+          if (fsaRoot?.name && org.parentAuthority !== fsaRoot.name) {
+            org.parentAuthority = fsaRoot.name;
             changed = true;
           }
           if (orgData.description && !org.description) {
@@ -221,7 +290,7 @@ export class SeederService implements OnApplicationBootstrap {
           }
           if (changed) {
             org = await this.organizationRepository.save(org);
-            this.logger.log(`Updated organization: ${org.name} [${org.code}]`);
+            this.logger.log(`Updated organization hierarchy: ${org.name} [${org.code}] -> parent ${fsaRoot?.name}`);
           }
         }
       } catch (err: any) {
@@ -351,7 +420,7 @@ export class SeederService implements OnApplicationBootstrap {
     const officialEmails = officialAccounts.map((a) => a.email.toLowerCase().trim());
     await this.purgeMockData(officialEmails);
 
-    this.logger.log('Database successfully seeded with official Super Admin & Admin accounts and 11 FSA organizations.');
+    this.logger.log('Database successfully seeded with official Super Admin & Admin accounts, 1 root FSA authority, and 11 subordinate organizations.');
   }
 
   /**

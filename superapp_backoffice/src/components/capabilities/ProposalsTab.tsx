@@ -457,7 +457,7 @@ export function ProposalsTab({
                           <span>Review &amp; Decide</span>
                         </>
                       ) : (
-                        <span>View Details</span>
+                        <span>View</span>
                       )}
                     </Button>
                   )}

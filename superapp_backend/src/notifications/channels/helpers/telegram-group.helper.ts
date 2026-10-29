@@ -290,6 +290,7 @@ export class TelegramGroupHelper {
     settingsService?: SettingsService,
     botToken?: string,
     logger?: TelegramLogger,
+    defaultChatId?: string,
   ): Promise<TelegramRecentChat[]> {
     const contactsMap = new Map<string, TelegramRecentChat>();
 
@@ -307,7 +308,7 @@ export class TelegramGroupHelper {
                 name: g.title || 'Saved Telegram Group',
                 lastActive:
                   g.lastDiscoveredAt || g.savedAt || new Date().toISOString(),
-                isDirectUser: false,
+                isDirectUser: g.type === 'private',
               });
             }
           }
@@ -358,6 +359,17 @@ export class TelegramGroupHelper {
           err,
         );
       }
+    }
+
+    // Include platform default operations channel if configured
+    if (defaultChatId && defaultChatId.trim() && !contactsMap.has(defaultChatId.trim())) {
+      contactsMap.set(defaultChatId.trim(), {
+        chatId: defaultChatId.trim(),
+        type: 'group',
+        name: 'Platform Operations Channel (Default)',
+        lastActive: new Date().toISOString(),
+        isDirectUser: false,
+      });
     }
 
     // Also include existing users with saved Telegram credentials

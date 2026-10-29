@@ -38,7 +38,7 @@ erDiagram
         varchar email UK
         varchar name
         varchar avatarUrl
-        varchar status "ACTIVE, PENDING_APPROVAL, DEACTIVATED"
+        varchar status "ACTIVE, PENDING_APPROVAL, INACTIVE"
         varchar passwordHash
         uuid roleId FK "1 User = 1 Role (SUPER_ADMIN, ADMIN, MA_DEVELOPER)"
         uuid organizationId FK "Agency Scope (ON DELETE SET NULL, nullable for SuperAdmin)"

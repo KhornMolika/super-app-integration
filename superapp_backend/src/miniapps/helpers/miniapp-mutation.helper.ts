@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
@@ -11,7 +11,8 @@ import { MiniappValidationHelper } from './miniapp-validation.helper';
 import { PermissionDetectorHelper } from './permission-detector.helper';
 import { VersionDiffHelper } from './version-diff.helper';
 import { inferPackageNameFromGitUrl } from '../../integrations/git/git-integration.service';
-import { resolveOrganizationDetails } from '../../common/constants/fsa-organizations';
+import { resolveOrganizationDetails } from '../../organizations/helpers/organization-resolver.helper';
+import { OrganizationsService } from '../../organizations/organizations.service';
 import { secureFlutterIntegrationConfig } from './flutter-credential.helper';
 
 @Injectable()
@@ -27,6 +28,8 @@ export class MiniappMutationHelper {
     private notificationsService: NotificationsService,
     private validationHelper: MiniappValidationHelper,
     private permissionDetectorHelper: PermissionDetectorHelper,
+    @Optional()
+    private organizationsService?: OrganizationsService,
   ) { }
 
   async create(
@@ -70,7 +73,9 @@ export class MiniappMutationHelper {
     }
 
     // Resolve & normalize organization name and short code (e.g. FTC, IRC, etc.)
-    const orgInfo = await resolveOrganizationDetails(data.organization || (data as any).category);
+    const orgInfo = this.organizationsService
+      ? await this.organizationsService.resolveOrganization(data.organization || (data as any).category)
+      : await resolveOrganizationDetails(data.organization || (data as any).category);
     data.organization = orgInfo.name;
     data.organizationCode = orgInfo.code;
     if (orgInfo.id && !data.organizationId) {
@@ -581,7 +586,9 @@ export class MiniappMutationHelper {
       merged.alertTelegramChatId = data.alertTelegramChatId || (data as any).teamTelegramChatId;
     }
     if ((data as any).organization || (data as any).category) {
-      const orgInfo = await resolveOrganizationDetails((data as any).organization || (data as any).category);
+      const orgInfo = this.organizationsService
+        ? await this.organizationsService.resolveOrganization((data as any).organization || (data as any).category)
+        : await resolveOrganizationDetails((data as any).organization || (data as any).category);
       if (orgInfo?.id) merged.organizationId = orgInfo.id;
     }
 

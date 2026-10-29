@@ -13,6 +13,7 @@ interface OrganizationsTableProps {
   onView: (org: Organization) => void;
   onEdit: (org: Organization) => void;
   onToggleStatus: (org: Organization) => void;
+  onDelete?: (org: Organization) => void;
   paginationProps?: PaginationProps;
   userOrganizationId?: string | null;
 }
@@ -23,6 +24,7 @@ export function OrganizationsTable({
   onView,
   onEdit,
   onToggleStatus,
+  onDelete,
   paginationProps,
   userOrganizationId,
 }: OrganizationsTableProps) {
@@ -66,7 +68,7 @@ export function OrganizationsTable({
                           d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                         />
                       </svg>
-                      System Anchor
+                      Primary Authority
                     </span>
                   )}
                 </div>
@@ -95,15 +97,27 @@ export function OrganizationsTable({
         header: 'Parent Authority',
         width: 'w-[25%]',
         sortable: true,
-        sortValue: (org) => org.parentAuthority || 'Non-Bank Financial Services Authority',
-        cell: (org) => (
-          <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 font-medium">
-            <ShieldCheckIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            <span className="truncate max-w-xs">
-              {org.parentAuthority || 'Non-Bank Financial Services Authority'}
-            </span>
-          </div>
-        ),
+        sortValue: (org) => org.parent?.name || org.parentAuthority || 'None (Primary Authority)',
+        cell: (org) => {
+          const isRoot = isRootOrganization(org);
+          const parentName = org.parent?.name || org.parentAuthority;
+          return (
+            <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 font-medium">
+              <ShieldCheckIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              {isRoot ? (
+                <span className="italic text-slate-400 dark:text-slate-500">
+                  Primary Authority (Root)
+                </span>
+              ) : parentName ? (
+                <span className="truncate max-w-xs">{parentName}</span>
+              ) : (
+                <span className="italic text-slate-400 dark:text-slate-500">
+                  None (Independent)
+                </span>
+              )}
+            </div>
+          );
+        },
       },
       {
         key: 'status',
@@ -144,13 +158,14 @@ export function OrganizationsTable({
               onView={onView}
               onEdit={onEdit}
               onToggleStatus={onToggleStatus}
+              onDelete={onDelete}
               isOwnOrg={userOrganizationId === org.id}
             />
           </div>
         ),
       },
     ],
-    [onView, onEdit, onToggleStatus, userOrganizationId],
+    [onView, onEdit, onToggleStatus, onDelete, userOrganizationId],
   );
 
   return (

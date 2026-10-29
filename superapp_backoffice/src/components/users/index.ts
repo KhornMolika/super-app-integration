@@ -8,3 +8,5 @@ export * from './tabs/UserOverviewTab';
 export * from './tabs/UserPermissionsTab';
 export * from './tabs/UserMiniAppsTab';
 export * from './tabs/UserAuditTab';
+export * from './TelegramConfigModal';
+export * from './AvatarUpload';

@@ -1,8 +1,10 @@
 import {
   IsString,
+  ValidateIf,
   IsNotEmpty,
   IsOptional,
   IsEnum,
+  IsUUID,
 } from 'class-validator';
 import { OrganizationStatus } from '../entities/organization.entity';
 
@@ -15,9 +17,14 @@ export class CreateOrganizationDto {
   @IsOptional()
   code?: string;
 
+  @ValidateIf((o) => o.parentId !== null && o.parentId !== '' && o.parentId !== undefined)
+  @IsUUID('4', { message: 'parentId must be a valid UUID' })
+  @IsOptional()
+  parentId?: string | null;
+
   @IsString()
   @IsOptional()
-  parentAuthority?: string;
+  parentAuthority?: string | null;
 
   @IsString()
   @IsOptional()

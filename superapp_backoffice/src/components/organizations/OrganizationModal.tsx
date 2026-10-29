@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Organization, isRootOrganization } from '@/api/organizations.api';
 import { Button, Input, Label, Select } from '@/components/ui/inputs';
@@ -9,7 +9,8 @@ import { BuildingIcon, ShieldCheckIcon, DocumentTextIcon, CheckIcon, XIcon } fro
 export interface OrganizationFormData {
   name: string;
   code: string;
-  parentAuthority: string;
+  parentId?: string | null;
+  parentAuthority?: string;
   description: string;
   status: 'ACTIVE' | 'INACTIVE';
 }
@@ -17,6 +18,7 @@ export interface OrganizationFormData {
 interface OrganizationModalProps {
   isOpen: boolean;
   editingOrg: Organization | null;
+  availableOrganizations?: Organization[];
   isSubmitting: boolean;
   errorMessage: string | null;
   onClose: () => void;
@@ -26,6 +28,7 @@ interface OrganizationModalProps {
 export function OrganizationModal({
   isOpen,
   editingOrg,
+  availableOrganizations = [],
   isSubmitting,
   errorMessage,
   onClose,
@@ -34,27 +37,39 @@ export function OrganizationModal({
   const [formData, setFormData] = useState<OrganizationFormData>({
     name: '',
     code: '',
-    parentAuthority: 'Non-Bank Financial Services Authority',
+    parentId: null,
+    parentAuthority: '',
     description: '',
     status: 'ACTIVE',
   });
 
   const isRoot = isRootOrganization(editingOrg);
 
+  const availableParents = useMemo(() => {
+    return availableOrganizations.filter(
+      (org) => (!editingOrg || org.id !== editingOrg.id) && org.status === 'ACTIVE'
+    );
+  }, [availableOrganizations, editingOrg]);
+
   useEffect(() => {
+    if (!isOpen) return;
+
     if (editingOrg) {
       setFormData({
         name: editingOrg.name || '',
         code: editingOrg.code || '',
-        parentAuthority: editingOrg.parentAuthority || 'Non-Bank Financial Services Authority',
+        parentId: editingOrg.parentId ?? (editingOrg.parent?.id || null),
+        parentAuthority: editingOrg.parent?.name || editingOrg.parentAuthority || '',
         description: editingOrg.description || '',
         status: editingOrg.status || 'ACTIVE',
       });
     } else {
+      // Do not auto-assign any parent organization unless intentionally selected
       setFormData({
         name: '',
         code: '',
-        parentAuthority: 'Non-Bank Financial Services Authority',
+        parentId: null,
+        parentAuthority: '',
         description: '',
         status: 'ACTIVE',
       });
@@ -82,11 +97,8 @@ export function OrganizationModal({
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
-                {editingOrg ? 'Edit Organization' : 'Register Subordinate Entity'}
+                {editingOrg ? 'Edit Organization' : 'Create Organization'}
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Non-Bank Financial Services Authority (FSA)
-              </p>
             </div>
           </div>
           <button
@@ -146,12 +158,33 @@ export function OrganizationModal({
                 <ShieldCheckIcon className="w-3.5 h-3.5 text-slate-400" />
                 Parent Authority
               </Label>
-              <Input
-                id="org-parent"
-                value={formData.parentAuthority}
-                onChange={(e) => setFormData({ ...formData, parentAuthority: e.target.value })}
-                placeholder="Non-Bank Financial Services Authority"
-              />
+              {isRoot ? (
+                <div className="h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-800/60 text-slate-500 text-xs flex items-center font-medium select-none">
+                  None (Primary Authority Root)
+                </div>
+              ) : (
+                <Select
+                  id="org-parent"
+                  value={formData.parentId || ''}
+                  onChange={(e) => {
+                    const selId = e.target.value;
+                    const matchedParent = availableParents.find((p) => p.id === selId);
+                    setFormData({
+                      ...formData,
+                      parentId: selId || null,
+                      parentAuthority: matchedParent?.name || '',
+                    });
+                  }}
+                  className="w-full text-xs"
+                >
+                  <option value="">None (No Parent / Independent)</option>
+                  {availableParents.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} {p.code ? `(${p.code})` : ''}
+                    </option>
+                  ))}
+                </Select>
+              )}
             </div>
           </div>
 
@@ -197,7 +230,7 @@ export function OrganizationModal({
                 <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
-                <span>Regulatory system anchor organization must remain ACTIVE.</span>
+                <span>Primary regulatory authority must remain ACTIVE.</span>
               </p>
             )}
           </div>

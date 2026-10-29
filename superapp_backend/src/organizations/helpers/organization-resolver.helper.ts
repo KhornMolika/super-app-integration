@@ -1,25 +1,15 @@
 import { DataSource, Repository } from 'typeorm';
-import { Organization, OrganizationStatus } from '../../organizations/entities/organization.entity';
+import { Organization, OrganizationStatus } from '../entities/organization.entity';
 
-/**
- * Resolved Organization representation matching the real PostgreSQL `organizations` table columns:
- * - id
- * - name
- * - code
- * - parentAuthority
- * - description
- * - status
- */
 export interface ResolvedOrganization {
   id?: string;
   name: string;
   code: string;
-  parentAuthority?: string;
+  parentAuthority?: string | null;
   description?: string;
   status?: OrganizationStatus;
 }
 
-// Global active DataSource or Repository holder for database queries
 let activeOrganizationSource: Repository<Organization> | DataSource | null = null;
 
 export function setOrganizationDataSource(source: Repository<Organization> | DataSource | null) {
@@ -37,9 +27,6 @@ export function getOrganizationRepository(
   return src as Repository<Organization>;
 }
 
-/**
- * Queries all real organizations directly from the database `organizations` table.
- */
 export async function queryRealOrganizationsFromDb(
   source?: Repository<Organization> | DataSource | null,
   status: OrganizationStatus = OrganizationStatus.ACTIVE,
@@ -53,7 +40,7 @@ export async function queryRealOrganizationsFromDb(
 }
 
 /**
- * Resolves organization name and code by querying real records from the database `organizations` table.
+ * Resolves organization details by querying the database `organizations` table.
  * Matches by exact code, exact name, or partial match against real database records.
  */
 export async function resolveOrganizationDetails(
@@ -66,7 +53,6 @@ export async function resolveOrganizationDetails(
   if (repo) {
     try {
       if (!clean) {
-        // Default to the first active organization in DB (e.g., Financial Technology Center)
         const defaultOrg = await repo.findOne({
           where: { status: OrganizationStatus.ACTIVE },
           order: { name: 'ASC' },
@@ -98,7 +84,7 @@ export async function resolveOrganizationDetails(
             .getOne();
         }
 
-        // 3. Partial or substring match on code or name
+        // 3. Partial / substring match on code or name
         if (!matched) {
           matched = await repo
             .createQueryBuilder('org')
@@ -107,19 +93,6 @@ export async function resolveOrganizationDetails(
             })
             .orderBy('org.name', 'ASC')
             .getOne();
-        }
-
-        // 4. Reverse substring: input contains the org's code as a word or name
-        if (!matched) {
-          const allOrgs = await repo.find({ where: { status: OrganizationStatus.ACTIVE } });
-          matched =
-            allOrgs.find((o) => {
-              const orgCode = (o.code || '').toLowerCase().trim();
-              const orgName = (o.name || '').toLowerCase().trim();
-              if (orgCode && new RegExp(`\\b${orgCode}\\b`, 'i').test(clean)) return true;
-              if (orgName && clean.toLowerCase().includes(orgName)) return true;
-              return false;
-            }) || null;
         }
 
         if (matched) {
@@ -134,15 +107,15 @@ export async function resolveOrganizationDetails(
         }
       }
     } catch {
-      // Fall through to input-based fallback if DB query encounters an unexpected error
+      // Fall through to fallback
     }
   }
 
-  // Fallback when DB is unreachable or no match is found
   return {
     name: clean || 'Financial Technology Center',
     code: clean ? clean.slice(0, 4).toUpperCase() : 'FTC',
-    parentAuthority: 'Non-Bank Financial Services Authority',
+    parentAuthority: null,
     status: OrganizationStatus.ACTIVE,
   };
 }
+

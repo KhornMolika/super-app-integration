@@ -85,16 +85,39 @@ function MiniAppsContent() {
   // Synchronize state with browser URL search params
   useEffect(() => {
     const params = new URLSearchParams();
-    if (currentPage > 1) params.set('page', String(currentPage));
-    if (pageSize !== 10) params.set('limit', String(pageSize));
-    if (debouncedSearch) params.set('search', debouncedSearch);
+    params.set('page', String(currentPage));
+    params.set('limit', String(pageSize));
+    if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
     if (methodFilter !== 'ALL') params.set('method', methodFilter);
     if (scope !== (isSuper ? 'all' : 'mine')) params.set('scope', scope);
 
     const queryStr = params.toString();
     const targetUrl = queryStr ? `${pathname}?${queryStr}` : pathname;
-    router.replace(targetUrl, { scroll: false });
-  }, [currentPage, pageSize, debouncedSearch, methodFilter, scope, isSuper, pathname, router]);
+    const currentQueryStr = searchParams.toString();
+    const currentUrl = currentQueryStr ? `${pathname}?${currentQueryStr}` : pathname;
+
+    if (targetUrl !== currentUrl) {
+      router.replace(targetUrl, { scroll: false });
+    }
+  }, [currentPage, pageSize, debouncedSearch, methodFilter, scope, isSuper, pathname, router, searchParams]);
+
+  // Sync state from URL searchParams (e.g. browser back/forward or pasting a bookmark URL)
+  useEffect(() => {
+    const pageFromUrl = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const limitFromUrl = Math.max(1, parseInt(searchParams.get('limit') || '10', 10));
+    const searchFromUrl = searchParams.get('search') || '';
+    const methodFromUrl = searchParams.get('method') || 'ALL';
+    const scopeFromUrl = (searchParams.get('scope') as 'all' | 'mine') || (isSuper ? 'all' : 'mine');
+
+    setCurrentPage((prev) => (prev !== pageFromUrl ? pageFromUrl : prev));
+    setPageSize((prev) => (prev !== limitFromUrl ? limitFromUrl : prev));
+    setMethodFilter((prev) => (prev !== methodFromUrl ? methodFromUrl : prev));
+    setScope((prev) => (prev !== scopeFromUrl ? scopeFromUrl : prev));
+    if (searchFromUrl !== debouncedSearch) {
+      setSearchQuery(searchFromUrl);
+      setDebouncedSearch(searchFromUrl);
+    }
+  }, [searchParams, isSuper, debouncedSearch]);
 
   // Fetch MiniApps via Server-Driven Query API
   const fetchMiniApps = useCallback(async () => {
@@ -311,7 +334,7 @@ function MiniAppsContent() {
             ariaLabel={`Actions for ${app.name || 'MiniApp'}`}
             items={[
               {
-                label: 'View Details',
+                label: 'View',
                 href: `/miniapps/${app.id}`,
                 icon: <ArrowRightIcon className="w-4 h-4 text-slate-400" />,
               },

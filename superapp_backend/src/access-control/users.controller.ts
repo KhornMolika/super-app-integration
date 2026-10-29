@@ -10,7 +10,10 @@ import {
   Req,
   UseGuards,
   ForbiddenException,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RbacGuard } from './guards/rbac.guard';
 import { RequirePermissions } from './decorators/require-permissions.decorator';
@@ -42,6 +45,36 @@ export class UsersController {
       throw new ForbiddenException('User record not found');
     }
     return this.accessControlService.updateUser(user.id, dto, req?.user);
+  }
+
+  @Post('me/avatar')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 2 * 1024 * 1024 } }))
+  async uploadMyAvatar(
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: any,
+  ) {
+    const userEmail = req?.user?.email;
+    if (!userEmail) {
+      throw new ForbiddenException('User session not found');
+    }
+    const user = await this.accessControlService.findByEmailWithPermissions(userEmail);
+    if (!user) {
+      throw new ForbiddenException('User record not found');
+    }
+    return this.accessControlService.uploadUserAvatar(user.id, file, req?.user);
+  }
+
+  @Delete('me/avatar')
+  async deleteMyAvatar(@Req() req: any) {
+    const userEmail = req?.user?.email;
+    if (!userEmail) {
+      throw new ForbiddenException('User session not found');
+    }
+    const user = await this.accessControlService.findByEmailWithPermissions(userEmail);
+    if (!user) {
+      throw new ForbiddenException('User record not found');
+    }
+    return this.accessControlService.deleteUserAvatar(user.id, req?.user);
   }
 
   @Get()
@@ -159,5 +192,45 @@ export class UsersController {
   @RequirePermissions('user:manage')
   async remove(@Param('id') id: string, @Req() req: any) {
     return this.accessControlService.deleteUser(id, req?.user);
+  }
+
+  @Post(':id/avatar')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 2 * 1024 * 1024 } }))
+  async uploadUserAvatar(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: any,
+  ) {
+    await this.assertCanManageTargetUser(id, req?.user);
+    return this.accessControlService.uploadUserAvatar(id, file, req?.user);
+  }
+
+  @Delete(':id/avatar')
+  async deleteUserAvatar(@Param('id') id: string, @Req() req: any) {
+    await this.assertCanManageTargetUser(id, req?.user);
+    return this.accessControlService.deleteUserAvatar(id, req?.user);
+  }
+
+  private async assertCanManageTargetUser(targetId: string, requester: any): Promise<void> {
+    if (!requester) {
+      throw new ForbiddenException('Authentication required');
+    }
+    const isSelf = requester.id === targetId || requester.sub === targetId;
+    if (isSelf) return;
+
+    const userPerms = new Set<string>(requester?.permissions || []);
+    const isSuperOrAdmin =
+      requester?.email?.includes('superadmin') ||
+      requester?.email?.includes('admin') ||
+      (Array.isArray(requester?.roles) &&
+        requester.roles.some((r: any) =>
+          typeof r === 'string'
+            ? r === 'SUPER_ADMIN' || r === 'ADMIN'
+            : r?.name === 'SUPER_ADMIN' || r?.name === 'ADMIN',
+        ));
+
+    if (!userPerms.has('user:manage') && !isSuperOrAdmin) {
+      throw new ForbiddenException('Insufficient permissions to manage user media');
+    }
   }
 }

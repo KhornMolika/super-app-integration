@@ -27,8 +27,8 @@ async function pipeAssetHelper(
     return res.status(HttpStatus.BAD_REQUEST).json({ message: 'Key is required' });
   }
 
-  // We exclusively use mini-app-assets bucket
-  const targetBucket = storageService.assetsBucket || 'mini-app-assets';
+  // Use provided bucket or fallback to mini-app-assets
+  const targetBucket = rawBucket || storageService.assetsBucket || 'mini-app-assets';
 
   const cleanKey = decodeURIComponent(rawKey)
     .replace(/^https?:\/\/[^\/]+\//, '')
@@ -176,15 +176,27 @@ export class StorageController {
   }
 }
 
-@Controller(['mini-app-assets', 'mini-app-logos', 'logos'])
+@Controller([
+  'mini-app-assets',
+  'mini-app-logos',
+  'logos',
+  'backoffice-user-media',
+  'api/mini-app-assets',
+  'api/mini-app-logos',
+  'api/logos',
+  'api/backoffice-user-media',
+])
 export class PublicAssetProxyController {
   constructor(private readonly storageService: StorageService) {}
 
   @Get('*path')
   async serveAsset(@Req() req: Request, @Res() res: Response) {
     const rawUrl = req.originalUrl || req.url || '';
-    const key = rawUrl.replace(/^\/(?:api\/)?(?:mini-app-assets|mini-app-logos|logos)\/?/, '');
-    const bucket = 'mini-app-assets';
+    const isBackofficeMedia = rawUrl.includes('backoffice-user-media');
+    const bucket = isBackofficeMedia
+      ? (this.storageService.backofficeUserMediaBucket || 'backoffice-user-media')
+      : (this.storageService.assetsBucket || 'mini-app-assets');
+    const key = rawUrl.replace(/^\/(?:api\/)?(?:mini-app-assets|mini-app-logos|logos|backoffice-user-media)\/?/, '');
     return pipeAssetHelper(this.storageService, key, bucket, res);
   }
 }

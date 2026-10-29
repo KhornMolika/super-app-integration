@@ -26,7 +26,8 @@ import { MiniappMutationHelper } from './helpers/miniapp-mutation.helper';
 import { NativeSdkCodegenService } from '../native-sdk-codegen/native-sdk-codegen.service';
 import { SdkArtifactUploadService } from '../sdk-artifacts/sdk-artifact-upload.service';
 import { CapabilitiesService } from '../capabilities/capabilities.service';
-import { resolveOrganizationDetails } from '../common/constants/fsa-organizations';
+import { resolveOrganizationDetails } from '../organizations/helpers/organization-resolver.helper';
+import { OrganizationsService } from '../organizations/organizations.service';
 import { QueryMiniAppsDto } from './dto/query-miniapps.dto';
 import { QueryIssuesDto } from './dto/query-issues.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
@@ -71,6 +72,9 @@ export class MiniappsService implements OnApplicationBootstrap {
     @Optional()
     @InjectRepository(MiniAppLegal)
     private legalRepository?: Repository<MiniAppLegal>,
+
+    @Optional()
+    private organizationsService?: OrganizationsService,
   ) {}
 
   async onApplicationBootstrap() {
@@ -85,7 +89,9 @@ export class MiniappsService implements OnApplicationBootstrap {
         if (!app.organizationId) {
           const rawOrg = (app as any).organization || (app as any).category;
           if (rawOrg) {
-            const resolved = await resolveOrganizationDetails(rawOrg);
+            const resolved = this.organizationsService
+              ? await this.organizationsService.resolveOrganization(rawOrg)
+              : await resolveOrganizationDetails(rawOrg);
             if (resolved?.id) {
               app.organizationId = resolved.id;
               changed = true;

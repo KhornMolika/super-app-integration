@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/lib/auth';
 import { toast } from '@/components/ui/Toast';
@@ -25,8 +25,11 @@ import {
 import { renderCapabilityIcon } from '@/lib/capability-visuals';
 
 function CapabilitiesContent() {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const initialTab = searchParams.get('tab') === 'proposals' ? 'PROPOSALS' : 'CAPABILITIES';
+  const initialFilter = searchParams.get('filter') === 'all' ? 'ALL' : 'PENDING';
 
   const { can } = useAuth();
   const [activeTab, setActiveTab] = useState<'CAPABILITIES' | 'PROPOSALS'>(
@@ -35,7 +38,36 @@ function CapabilitiesContent() {
   const [loading, setLoading] = useState(true);
   const [capabilities, setCapabilities] = useState<CapabilityItem[]>([]);
   const [proposals, setProposals] = useState<PermissionProposal[]>([]);
-  const [proposalSubFilter, setProposalSubFilter] = useState<'PENDING' | 'ALL'>('PENDING');
+  const [proposalSubFilter, setProposalSubFilter] = useState<'PENDING' | 'ALL'>(initialFilter);
+
+  // Synchronize state with URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (activeTab === 'PROPOSALS') {
+      params.set('tab', 'proposals');
+      if (proposalSubFilter !== 'PENDING') {
+        params.set('filter', proposalSubFilter.toLowerCase());
+      }
+    }
+
+    const queryStr = params.toString();
+    const targetUrl = queryStr ? `${pathname}?${queryStr}` : pathname;
+    const currentQueryStr = searchParams.toString();
+    const currentUrl = currentQueryStr ? `${pathname}?${currentQueryStr}` : pathname;
+
+    if (targetUrl !== currentUrl) {
+      router.replace(targetUrl, { scroll: false });
+    }
+  }, [activeTab, proposalSubFilter, pathname, router, searchParams]);
+
+  // Sync state from URL
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab') === 'proposals' ? 'PROPOSALS' : 'CAPABILITIES';
+    const filterFromUrl = searchParams.get('filter') === 'all' ? 'ALL' : 'PENDING';
+
+    setActiveTab((prev) => (prev !== tabFromUrl ? tabFromUrl : prev));
+    setProposalSubFilter((prev) => (prev !== filterFromUrl ? filterFromUrl : prev));
+  }, [searchParams]);
 
   // Review Modal State
   const [selectedProposal, setSelectedProposal] = useState<PermissionProposal | null>(null);

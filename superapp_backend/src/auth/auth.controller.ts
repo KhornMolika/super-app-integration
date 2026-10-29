@@ -89,6 +89,15 @@ export class AuthController {
         path: '/',
         maxAge: result.expires_in * 1000,
       });
+      if (result.refresh_token) {
+        res.cookie('refresh_token', result.refresh_token, {
+          httpOnly: true,
+          secure: isProd,
+          sameSite: 'lax',
+          path: '/',
+          maxAge: (result.refresh_expires_in || 7 * 24 * 60 * 60) * 1000,
+        });
+      }
     }
     return result;
   }

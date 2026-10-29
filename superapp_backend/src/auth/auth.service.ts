@@ -6,6 +6,8 @@ import {
   BadRequestException,
   NotFoundException,
   Optional,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -24,7 +26,8 @@ import {
   VerifyOtpDto,
   ResetPasswordDto,
 } from './dto';
-import { resolveOrganizationDetails } from '../common/constants/fsa-organizations';
+import { resolveOrganizationDetails } from '../organizations/helpers/organization-resolver.helper';
+import { OrganizationsService } from '../organizations/organizations.service';
 
 export const END_USER_TYP = 'end_user';
 export const BACK_OFFICE_TYP = 'back_office';
@@ -58,6 +61,9 @@ export class AuthService implements OnModuleInit {
     private otpRepo?: Repository<AuthOtp>,
     @Optional()
     private mailService?: MailService,
+    @Optional()
+    @Inject(forwardRef(() => OrganizationsService))
+    private organizationsService?: OrganizationsService,
   ) { }
 
   private get developerTokenRepo(): Repository<AccessToken> | undefined {
@@ -409,18 +415,11 @@ export class AuthService implements OnModuleInit {
       throw new BadRequestException('Name and email are required for registration');
     }
 
-    // Resolve organization ID if organization provided
-    let organizationId: string | undefined;
-    if (organizationInput) {
-      try {
-        const resolvedOrg = await resolveOrganizationDetails(organizationInput);
-        if (resolvedOrg?.id) {
-          organizationId = resolvedOrg.id;
-        }
-      } catch (err: any) {
-        this.logger.warn(`Could not resolve organization for ${organizationInput}: ${err.message}`);
-      }
-    }
+    // Resolve organization ID (falls back to default authority if not provided)
+    const resolvedOrg = this.organizationsService
+      ? await this.organizationsService.resolveOrganization(organizationInput)
+      : await resolveOrganizationDetails(organizationInput);
+    const organizationId = resolvedOrg?.id || '';
 
     const existing = await this.accessControlService.findByEmailWithPermissions(email);
     const passwordHash = password ? await hashPassword(password) : undefined;
@@ -756,11 +755,17 @@ export class AuthService implements OnModuleInit {
     if (this.mailService) {
       try {
         if (purpose === 'EMAIL_VERIFICATION') {
-          await this.mailService.sendEmailVerification(
+          const backofficeBase =
+            process.env.BACKOFFICE_BASE_URL ||
+            process.env.WEBAPP_URL ||
+            'http://localhost:3002';
+          const verifyUrl = `${backofficeBase}/verify-otp?email=${encodeURIComponent(rawEmail)}`;
+          await this.mailService.sendBackofficeEmailVerification(
             rawEmail,
             user?.name || 'Developer',
-            '', // No legacy token needed for backoffice OTP
             code,
+            verifyUrl,
+            5,
           );
         } else {
           await this.mailService.sendPasswordResetOtp(

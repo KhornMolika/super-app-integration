@@ -144,22 +144,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         if (update.update_id >= this.lastUpdateOffset) {
           this.lastUpdateOffset = update.update_id + 1;
         }
-
-        const chat =
-          update.message?.chat ||
-          update.my_chat_member?.chat ||
-          update.channel_post?.chat;
-
-        if (
-          chat &&
-          (chat.type === 'group' ||
-            chat.type === 'supergroup' ||
-            chat.type === 'channel')
-        ) {
-          const chatId = chat.id.toString();
-          const title = chat.title || 'Discovered Telegram Group';
-          await this.persistDiscoveredGroup(chatId, title, chat.type);
-        }
+        await this.processIncomingUpdate(update);
       }
     } catch {
       // Ignore polling errors
@@ -169,25 +154,67 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   async handleWebhookUpdate(update: TelegramUpdate): Promise<{ ok: boolean }> {
     if (!update) return { ok: true };
     try {
-      const chat =
-        update.message?.chat ||
-        update.my_chat_member?.chat ||
-        update.channel_post?.chat;
-
-      if (
-        chat &&
-        (chat.type === 'group' ||
-          chat.type === 'supergroup' ||
-          chat.type === 'channel')
-      ) {
-        const chatId = chat.id.toString();
-        const title = chat.title || 'Discovered Telegram Group';
-        await this.persistDiscoveredGroup(chatId, title, chat.type);
-      }
+      await this.processIncomingUpdate(update);
     } catch {
       // Ignore webhook processing errors
     }
     return { ok: true };
+  }
+
+  private async processIncomingUpdate(update: TelegramUpdate): Promise<void> {
+    const chat =
+      update.message?.chat ||
+      update.my_chat_member?.chat ||
+      update.channel_post?.chat;
+
+    if (!chat || !chat.id) return;
+    const chatId = chat.id.toString();
+
+    if (
+      chat.type === 'group' ||
+      chat.type === 'supergroup' ||
+      chat.type === 'channel'
+    ) {
+      const title = chat.title || 'Discovered Telegram Group';
+      await this.persistDiscoveredGroup(chatId, title, chat.type);
+    } else if (chat.type === 'private') {
+      const displayName =
+        [chat.first_name, chat.last_name].filter(Boolean).join(' ') ||
+        chat.username ||
+        'Telegram Operator';
+
+      await this.persistDiscoveredGroup(
+        chatId,
+        displayName,
+        'private',
+      );
+
+      const text = update.message?.text?.trim() || '';
+      if (text.startsWith('/start')) {
+        const parts = text.split(' ');
+        if (parts.length > 1 && parts[1]) {
+          const targetUserId = parts[1].trim();
+          await this.linkTelegramAccount(
+            targetUserId,
+            chatId,
+            chat.username,
+            displayName,
+          );
+        } else {
+          void this.sendMessage(
+            `👋 <b>Hello ${displayName}!</b>\n\nWelcome to <b>FSA SuperApp Notification Bot</b>.\n\nYour personal Telegram Chat ID is: <code>${chatId}</code>\n${chat.username ? `Your handle: <code>@${chat.username}</code>\n` : ''}\nYou can copy this Chat ID into SuperApp BackOffice or use Auto-Detect to configure your delivery channels.`,
+            chatId,
+            'HTML',
+          ).catch(() => {});
+        }
+      } else if (text === '/myid' || text === '/id') {
+        void this.sendMessage(
+          `🆔 <b>Telegram Identity</b>\n\nChat ID: <code>${chatId}</code>\n${chat.username ? `Username: <code>@${chat.username}</code>\n` : ''}`,
+          chatId,
+          'HTML',
+        ).catch(() => {});
+      }
+    }
   }
 
   async sendMessage(
@@ -406,6 +433,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       this.settingsService,
       this.botToken,
       this.logger,
+      this.defaultChatId,
     );
   }
 

@@ -122,7 +122,7 @@ export class MiniappsController {
     const isDeveloper = req.user?.roles?.includes('MA_DEVELOPER');
     if (userOrgId) {
       if (isDeveloper && dataToSave.organizationId && dataToSave.organizationId !== userOrgId) {
-        throw new ForbiddenException("Access Denied: You cannot create a MiniApp under another agency");
+        throw new ForbiddenException("Access Denied: You cannot create a MiniApp under another organization");
       }
       dataToSave.organizationId = userOrgId;
       if (req.user?.organization) dataToSave.organization = req.user.organization;
@@ -148,7 +148,7 @@ export class MiniappsController {
     const isDeveloper = req.user?.roles?.includes('MA_DEVELOPER');
     if (userOrgId) {
       if (isDeveloper && dataToSave.organizationId && dataToSave.organizationId !== userOrgId) {
-        throw new ForbiddenException("Access Denied: You cannot create a MiniApp under another agency");
+        throw new ForbiddenException("Access Denied: You cannot create a MiniApp under another organization");
       }
       dataToSave.organizationId = userOrgId;
       if (req.user?.organization) dataToSave.organization = req.user.organization;
@@ -280,7 +280,7 @@ export class MiniappsController {
 
     // Step 2: Cross-Agency Strict Isolation
     if (!isElevated && user?.organizationId && app.organizationId && user.organizationId !== app.organizationId) {
-      throw new ForbiddenException("Access Denied: You cannot access another agency's MiniApp");
+      throw new ForbiddenException("Access Denied: You cannot access another organization's MiniApp");
     }
 
     // Step 3: Sensitive Governance Gate (Option C: Only Lead Developer or SuperAdmin/Admin can submit for review)
@@ -419,7 +419,7 @@ export class MiniappsController {
       user?.roles?.includes('COMPLIANCE_OFFICER');
 
     if (!isElevated && user?.organizationId && app.organizationId && user.organizationId !== app.organizationId) {
-      throw new ForbiddenException("Access Denied: You cannot access another agency's MiniApp");
+      throw new ForbiddenException("Access Denied: You cannot access another organization's MiniApp");
     }
 
     return maskMiniAppCredentials(app);
@@ -443,7 +443,7 @@ export class MiniappsController {
       user?.roles?.includes('COMPLIANCE_OFFICER');
 
     if (!isElevated && user?.organizationId && app.organizationId && user.organizationId !== app.organizationId) {
-      throw new ForbiddenException("Access Denied: You cannot access another agency's MiniApp");
+      throw new ForbiddenException("Access Denied: You cannot access another organization's MiniApp");
     }
 
     const dataToSave = this.extractIntegrationConfig(updateData);

@@ -52,13 +52,13 @@ export const PERMISSION_GROUPS: PermissionCategoryGroup[] = [
   {
     category: 'SuperApp & Ecosystem',
     icon: 'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z',
-    description: 'Host shell release pipeline orchestration, sandbox verification, and agency tenants',
+    description: 'Host shell release pipeline orchestration, sandbox verification, and organization tenants',
     color: 'amber',
     permissions: [
       { key: 'super_app:read', label: 'View SuperApp Status', desc: 'Inspect release assembly, health digest, and license status', level: 'STANDARD' },
       { key: 'super_app:manage', label: 'Manage Host Releases', desc: 'Trigger Jenkins sandbox builds and release bundle publishing', level: 'CRITICAL' },
-      { key: 'organization:read', label: 'View Organizations', desc: 'Browse registered partner agencies and tenant directory', level: 'STANDARD' },
-      { key: 'organization:manage', label: 'Manage Organizations', desc: 'Create, onboard, and verify partner agencies', level: 'ELEVATED' },
+      { key: 'organization:read', label: 'View Organizations', desc: 'Browse registered partner organizations and tenant directory', level: 'STANDARD' },
+      { key: 'organization:manage', label: 'Manage Organizations', desc: 'Create, onboard, and verify partner organizations', level: 'ELEVATED' },
     ],
   },
   {
@@ -85,10 +85,10 @@ export const getRoleTheme = (roleName: string) => {
   switch (roleName) {
     case 'SUPER_ADMIN':
       return {
-        badge: 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400 border-rose-200 dark:border-rose-500/30',
-        gradient: 'from-rose-500/10 via-rose-500/5 to-transparent border-rose-200/80 dark:border-rose-500/30',
-        iconBg: 'bg-rose-50 text-rose-600 dark:bg-rose-500/20 dark:text-rose-300',
-        bar: 'bg-rose-500',
+        badge: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30',
+        gradient: 'from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-200/80 dark:border-emerald-500/30',
+        iconBg: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300',
+        bar: 'bg-emerald-500',
         label: 'Super Admin',
       };
     case 'ADMIN':
@@ -129,9 +129,16 @@ export const getUserRoles = (user: User): { id?: string; name: string }[] => {
 
 // Pure helper: Determine effective status directly from database record
 export const getUserEffectiveStatus = (user: User): 'ACTIVE' | 'PENDING_APPROVAL' | 'INACTIVE' => {
-  if (user.status === 'PENDING_APPROVAL') return 'PENDING_APPROVAL';
-  const isUserActive = user.status === 'ACTIVE' || user.isActive !== false;
-  return isUserActive ? 'ACTIVE' : 'INACTIVE';
+  if (user.status === 'PENDING_APPROVAL' || user.status === 'PENDING') return 'PENDING_APPROVAL';
+  if (
+    user.status === 'DEACTIVATED' ||
+    user.status === 'INACTIVE' ||
+    user.status === 'SUSPENDED' ||
+    user.isActive === false
+  ) {
+    return 'INACTIVE';
+  }
+  return 'ACTIVE';
 };
 
 // Sensitivity badge renderer for permissions
@@ -171,4 +178,25 @@ export const getSensitivityBadge = (level: 'CRITICAL' | 'ELEVATED' | 'STANDARD' 
         </span>
       );
   }
+};
+
+// Helper: Determine administrative access scope description from primary role
+export const getUserAccessScope = (roleName?: string): string => {
+  const normalized = (roleName || '').toUpperCase();
+  if (normalized.includes('SUPER_ADMIN') || normalized.includes('SUPER ADMIN')) {
+    return 'SuperApp Global Administration & Root Governance';
+  }
+  if (normalized.includes('ADMIN')) {
+    return 'Platform Administration & Ecosystem Governance';
+  }
+  if (normalized.includes('DEVELOPER') || normalized.includes('MINIAPP')) {
+    return 'MiniApp Development, Sandbox & Deployment Scope';
+  }
+  if (normalized.includes('AUDITOR') || normalized.includes('COMPLIANCE') || normalized.includes('REGULATOR')) {
+    return 'Regulatory Compliance, Audit Inspection & Oversight';
+  }
+  if (normalized.includes('OPERATOR')) {
+    return 'Platform Operational Workflows & Support Services';
+  }
+  return 'Standard Operational Access & User Services';
 };

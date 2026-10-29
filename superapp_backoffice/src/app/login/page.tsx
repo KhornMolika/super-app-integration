@@ -69,7 +69,8 @@ function LoginForm() {
 
     if (res.success) {
       toast.success('Signed in successfully! Redirecting...', 'Welcome Back');
-      router.push('/miniapps');
+      const redirectUrl = searchParams?.get('redirect');
+      router.push(redirectUrl && redirectUrl.startsWith('/') && !redirectUrl.startsWith('/login') ? redirectUrl : '/miniapps');
     } else {
       if (res.pendingApproval || res.error?.toLowerCase().includes('pending approval')) {
         setEmailError('Account registered but pending Super Administrator approval.');

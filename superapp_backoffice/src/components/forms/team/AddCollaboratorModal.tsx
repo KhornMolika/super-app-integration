@@ -216,7 +216,7 @@ export function AddCollaboratorModal({
                 </span>
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Select an active colleague from your agency to grant direct access to this MiniApp.
+                Select an active colleague from your organization to grant direct access to this MiniApp.
               </p>
             </div>
           </div>
@@ -258,7 +258,7 @@ export function AddCollaboratorModal({
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                      {selectedUser.name || 'Agency Teammate'}
+                      {selectedUser.name || 'Organization Teammate'}
                     </span>
                     <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700/60 uppercase tracking-wide">
                       <CheckIcon className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
@@ -301,7 +301,7 @@ export function AddCollaboratorModal({
                     setIsSearchDropdownOpen(true);
                   }}
                   onFocus={() => setIsSearchDropdownOpen(true)}
-                  placeholder="Type name or email to search active agency staff..."
+                  placeholder="Type name or email to search active organization staff..."
                   className="w-full pl-9 pr-9 py-2.5 text-xs rounded-xl bg-white dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all shadow-xs"
                 />
                 {searchQuery && (
@@ -324,7 +324,7 @@ export function AddCollaboratorModal({
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                       </svg>
-                      <span>Searching active agency staff...</span>
+                      <span>Searching active organization staff...</span>
                     </div>
                   ) : candidateStaff.length === 0 ? (
                     <div className="py-6 text-center text-xs text-slate-400 px-4">
@@ -336,7 +336,7 @@ export function AddCollaboratorModal({
                           </span>
                         </>
                       ) : (
-                        'No other active staff available in this agency'
+                        'No other active staff available in this organization'
                       )}
                     </div>
                   ) : (

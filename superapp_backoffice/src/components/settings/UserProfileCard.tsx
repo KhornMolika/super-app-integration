@@ -3,10 +3,12 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { createPortal } from 'react-dom';
+import { useAuth } from '@/lib/auth';
 import { Card } from '@/components/ui/card';
 import { Button, Input, Label } from '@/components/ui/inputs';
 import { usersApi } from '@/api/users.api';
 import { toast } from '@/components/ui/Toast';
+import { AvatarUpload } from '@/components/users/AvatarUpload';
 import {
   ShieldCheckIcon,
   BuildingIcon,
@@ -43,6 +45,7 @@ export function UserProfileCard({
   sendingTestEmail,
   onProfileUpdated,
 }: UserProfileCardProps) {
+  const { refreshSession, updateUserAvatar } = useAuth();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [testEmailAddress, setTestEmailAddress] = useState(user?.email || '');
@@ -52,6 +55,22 @@ export function UserProfileCard({
     name: user?.name || '',
     avatarUrl: user?.avatarUrl || '',
   });
+
+  const handleAvatarUpload = async (file: File) => {
+    const res = await usersApi.uploadMyAvatar(file);
+    if (res?.avatarUrl) {
+      updateUserAvatar(res.avatarUrl);
+    }
+    if (refreshSession) await refreshSession();
+    if (onProfileUpdated) onProfileUpdated();
+  };
+
+  const handleAvatarDelete = async () => {
+    await usersApi.deleteMyAvatar();
+    updateUserAvatar(null);
+    if (refreshSession) await refreshSession();
+    if (onProfileUpdated) onProfileUpdated();
+  };
 
   const userDisplayName = user?.name || 'Authorized User';
   const userEmail = user?.email || '';
@@ -151,9 +170,20 @@ export function UserProfileCard({
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-6 min-w-0">
             {/* Vibrant Avatar with Online Dot */}
             <div className="relative shrink-0">
-              <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl bg-gradient-to-tr from-brand-600 via-indigo-600 to-violet-500 text-white flex items-center justify-center font-extrabold text-2xl sm:text-3xl shadow-lg ring-4 ring-white/10 dark:ring-slate-800">
-                {initials || 'MK'}
-              </div>
+              {user?.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt={userDisplayName}
+                  className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl object-cover shadow-lg ring-4 ring-white/10 dark:ring-slate-800"
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = 'none';
+                  }}
+                />
+              ) : (
+                <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl bg-gradient-to-tr from-brand-600 via-indigo-600 to-violet-500 text-white flex items-center justify-center font-extrabold text-2xl sm:text-3xl shadow-lg ring-4 ring-white/10 dark:ring-slate-800">
+                  {initials || 'MK'}
+                </div>
+              )}
               <span
                 className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 ring-4 ring-white dark:ring-slate-900 flex items-center justify-center shadow-xs"
                 title="Account Active & Verified"
@@ -417,6 +447,18 @@ export function UserProfileCard({
             </div>
 
             <form onSubmit={handleSaveProfile} className="space-y-4">
+              <div>
+                <Label className="mb-2 block">Profile Picture</Label>
+                <AvatarUpload
+                  currentAvatarUrl={user?.avatarUrl}
+                  name={userDisplayName}
+                  onUpload={handleAvatarUpload}
+                  onDelete={handleAvatarDelete}
+                  disabled={saving}
+                  size="md"
+                />
+              </div>
+
               <div>
                 <Label htmlFor="edit-name">Full Name / Display Name</Label>
                 <Input

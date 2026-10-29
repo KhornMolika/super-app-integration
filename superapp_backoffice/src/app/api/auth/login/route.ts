@@ -23,11 +23,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const cookieStore = await cookies();
     const isProd = process.env.NODE_ENV === 'production';
+    const { access_token, refresh_token, ...userPayload } = data;
+    const response = NextResponse.json(userPayload);
 
     // 1. Short-lived Access Token (15 mins)
-    cookieStore.set('auth_token', data.access_token, {
+    response.cookies.set('auth_token', data.access_token, {
       httpOnly: true,
       secure: isProd,
       sameSite: 'lax',
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
 
     // 2. Long-lived Refresh Token (7 days)
     if (data.refresh_token) {
-      cookieStore.set('refresh_token', data.refresh_token, {
+      response.cookies.set('refresh_token', data.refresh_token, {
         httpOnly: true,
         secure: isProd,
         sameSite: 'lax',
@@ -46,8 +47,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const { access_token, refresh_token, ...userPayload } = data;
-    return NextResponse.json(userPayload);
+    return response;
   } catch (error: any) {
     console.error('[DEBUG /api/auth/login ERROR]', error);
     return NextResponse.json(

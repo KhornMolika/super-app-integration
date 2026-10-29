@@ -445,7 +445,7 @@ export function CapabilitiesTab({
                           href={detailHref}
                           className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-brand-600 dark:hover:text-brand-400 transition-colors group-hover:border-brand-500/30"
                         >
-                          <span>View Details</span>
+                          <span>View</span>
                           <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
                         </Link>
                       </td>
@@ -594,7 +594,7 @@ export function CapabilitiesTab({
                     href={detailHref}
                     className="inline-flex items-center gap-1 font-semibold text-xs text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 group-hover:translate-x-0.5 transition-transform"
                   >
-                    <span>View Details</span>
+                    <span>View</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>

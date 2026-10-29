@@ -54,9 +54,13 @@ export class CreateUserDto {
   @IsOptional()
   status?: string;
 
+  @IsString({ message: 'Organization ID must be a string' })
+  @IsNotEmpty({ message: 'Organization is required' })
+  organizationId!: string;
+
   @IsString()
   @IsOptional()
-  organizationId?: string;
+  password?: string;
 
   @IsString()
   @IsOptional()

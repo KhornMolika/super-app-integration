@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import Link from 'next/link';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { miniappsApi, unwrapData } from '@/api';
 import { DataTable, DataTableColumn } from '@/components/ui/DataTable';
+import { PaginationProps } from '@/components/ui/Pagination';
 
 interface MiniAppIssueItem {
   id: string;
@@ -18,12 +20,28 @@ interface MiniAppIssueItem {
   };
 }
 
-export default function IssuesPage() {
+function IssuesContent() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Read initial query params from URL
+  const initialPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+  const initialLimit = Math.max(1, parseInt(searchParams.get('limit') || '10', 10));
+  const initialSearch = searchParams.get('search') || '';
+  const initialSeverity = searchParams.get('severity') || 'ALL';
+  const initialStatus = searchParams.get('status') || 'ALL';
+
   const [issues, setIssues] = useState<MiniAppIssueItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [severityFilter, setSeverityFilter] = useState('ALL');
-  const [statusFilter, setStatusFilter] = useState('ALL');
+
+  // Pagination & Filter State
+  const [currentPage, setCurrentPage] = useState<number>(initialPage);
+  const [pageSize, setPageSize] = useState<number>(initialLimit);
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
+  const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
+  const [severityFilter, setSeverityFilter] = useState(initialSeverity);
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
 
   useEffect(() => {
     miniappsApi
@@ -36,12 +54,59 @@ export default function IssuesPage() {
       .catch(() => setIsLoading(false));
   }, []);
 
+  // Debounce search input
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (debouncedSearch !== searchQuery) {
+        setDebouncedSearch(searchQuery);
+        setCurrentPage(1);
+      }
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery, debouncedSearch]);
+
+  // Synchronize state with browser URL search params
+  useEffect(() => {
+    const params = new URLSearchParams();
+    params.set('page', String(currentPage));
+    params.set('limit', String(pageSize));
+    if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
+    if (severityFilter !== 'ALL') params.set('severity', severityFilter);
+    if (statusFilter !== 'ALL') params.set('status', statusFilter);
+
+    const queryStr = params.toString();
+    const targetUrl = queryStr ? `${pathname}?${queryStr}` : pathname;
+    const currentQueryStr = searchParams.toString();
+    const currentUrl = currentQueryStr ? `${pathname}?${currentQueryStr}` : pathname;
+
+    if (targetUrl !== currentUrl) {
+      router.replace(targetUrl, { scroll: false });
+    }
+  }, [currentPage, pageSize, debouncedSearch, severityFilter, statusFilter, pathname, router, searchParams]);
+
+  // Sync state from URL searchParams
+  useEffect(() => {
+    const pageFromUrl = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const limitFromUrl = Math.max(1, parseInt(searchParams.get('limit') || '10', 10));
+    const searchFromUrl = searchParams.get('search') || '';
+    const severityFromUrl = searchParams.get('severity') || 'ALL';
+    const statusFromUrl = searchParams.get('status') || 'ALL';
+
+    setCurrentPage((prev) => (prev !== pageFromUrl ? pageFromUrl : prev));
+    setPageSize((prev) => (prev !== limitFromUrl ? limitFromUrl : prev));
+    setSeverityFilter((prev) => (prev !== severityFromUrl ? severityFromUrl : prev));
+    setStatusFilter((prev) => (prev !== statusFromUrl ? statusFromUrl : prev));
+    if (searchFromUrl !== debouncedSearch) {
+      setSearchQuery(searchFromUrl);
+      setDebouncedSearch(searchFromUrl);
+    }
+  }, [searchParams, debouncedSearch]);
+
   // Filtered Issues (Client-side search & filtering)
   const filteredIssues = useMemo(() => {
     return issues.filter((issue) => {
-      // 1. Search Query
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
+      if (debouncedSearch.trim()) {
+        const q = debouncedSearch.toLowerCase();
         const appName = issue.miniApp?.name?.toLowerCase() || '';
         const appId = issue.miniApp?.appId?.toLowerCase() || '';
         const desc = issue.description?.toLowerCase() || '';
@@ -56,19 +121,23 @@ export default function IssuesPage() {
         }
       }
 
-      // 2. Severity Filter
       if (severityFilter !== 'ALL' && issue.severity !== severityFilter) {
         return false;
       }
 
-      // 3. Status Filter
       if (statusFilter !== 'ALL' && issue.status !== statusFilter) {
         return false;
       }
 
       return true;
     });
-  }, [issues, searchQuery, severityFilter, statusFilter]);
+  }, [issues, debouncedSearch, severityFilter, statusFilter]);
+
+  // Paginate filtered issues
+  const paginatedIssues = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredIssues.slice(start, start + pageSize);
+  }, [filteredIssues, currentPage, pageSize]);
 
   const columns: DataTableColumn<MiniAppIssueItem>[] = useMemo(
     () => [
@@ -174,6 +243,20 @@ export default function IssuesPage() {
     [],
   );
 
+  const paginationProps: PaginationProps = {
+    currentPage,
+    totalPages: Math.max(1, Math.ceil(filteredIssues.length / pageSize)),
+    totalItems: filteredIssues.length,
+    pageSize,
+    onPageChange: (newPage: number) => setCurrentPage(newPage),
+    onPageSizeChange: (newPageSize: number) => {
+      setPageSize(newPageSize);
+      setCurrentPage(1);
+    },
+    showPageSizeSelector: true,
+    showTotal: true,
+  };
+
   return (
     <div className="w-full min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
       <div>
@@ -186,7 +269,7 @@ export default function IssuesPage() {
       </div>
 
       <DataTable<MiniAppIssueItem>
-        data={filteredIssues}
+        data={paginatedIssues}
         columns={columns}
         keyExtractor={(item) => item.id}
         loading={isLoading}
@@ -205,7 +288,10 @@ export default function IssuesPage() {
               { label: 'Medium', value: 'MEDIUM' },
               { label: 'Low', value: 'LOW' },
             ],
-            onChange: setSeverityFilter,
+            onChange: (val) => {
+              setSeverityFilter(val);
+              setCurrentPage(1);
+            },
             dropdownWidth: 'w-48',
           },
           {
@@ -218,22 +304,36 @@ export default function IssuesPage() {
               { label: 'Resolved', value: 'RESOLVED' },
               { label: 'Dismissed', value: 'DISMISSED' },
             ],
-            onChange: setStatusFilter,
+            onChange: (val) => {
+              setStatusFilter(val);
+              setCurrentPage(1);
+            },
             dropdownWidth: 'w-48',
           },
         ]}
         isFiltered={searchQuery.trim() !== '' || severityFilter !== 'ALL' || statusFilter !== 'ALL'}
         onResetFilters={() => {
           setSearchQuery('');
+          setDebouncedSearch('');
           setSeverityFilter('ALL');
           setStatusFilter('ALL');
+          setCurrentPage(1);
         }}
-        totalItemsCount={issues.length}
+        totalItemsCount={filteredIssues.length}
         defaultSortKey="miniApp"
         defaultSortDirection="asc"
+        paginationProps={paginationProps}
         emptyMessage="No issues match your criteria"
         emptySubMessage="All validation and security checks are currently clear for this selection."
       />
     </div>
+  );
+}
+
+export default function IssuesPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-xs text-slate-400">Loading Issues...</div>}>
+      <IssuesContent />
+    </Suspense>
   );
 }

@@ -66,7 +66,7 @@ export function PublisherContactsSection({
             Publisher &amp; Support Contacts
           </h4>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Primary agency contacts responsible for administrative ownership, support, and public listing.
+            Primary organization contacts responsible for administrative ownership, support, and public listing.
           </p>
         </div>
       </div>
@@ -172,7 +172,7 @@ export function PublisherContactsSection({
                 value={formData.ownerEmail || ''}
                 onChange={handleChange}
                 type="email"
-                placeholder="e.g. molika@agency.gov"
+                placeholder="e.g. molika@org.gov"
                 disabled={!isEditable}
                 className={`mt-1 ${
                   allErrors.ownerEmail
@@ -200,7 +200,7 @@ export function PublisherContactsSection({
             </Label>
             <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium flex items-center gap-1">
               <LockIcon className="w-3 h-3 text-slate-400" />
-              <span>Bound to Agency</span>
+              <span>Bound to Organization</span>
             </span>
           </div>
           <div className="relative">
@@ -216,7 +216,7 @@ export function PublisherContactsSection({
             </div>
           </div>
           <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
-            Organization is locked to your registered agency ({agencyName}) to prevent cross-organization reassignment.
+            Organization is locked to your registered organization ({agencyName}) to prevent cross-organization reassignment.
           </p>
         </div>
 

@@ -22,7 +22,6 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import {
   UserDetailHeader,
   UserDetailTabs,
-  UserModal,
   getUserEffectiveStatus,
 } from '@/components/users';
 
@@ -43,7 +42,6 @@ function UserDetailContent() {
   const [loadingUser, setLoadingUser] = useState(true);
 
   const [roles, setRoles] = useState<Role[]>([]);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const [miniApps, setMiniApps] = useState<MiniApp[]>([]);
   const [loadingMiniApps, setLoadingMiniApps] = useState(false);
@@ -104,11 +102,22 @@ function UserDetailContent() {
   const fetchAuditLogs = useCallback(async (targetUser: User) => {
     try {
       setLoadingAuditLogs(true);
-      const res = await auditLogsApi.getAll({
+      let logs: AuditLog[] = [];
+      const resById = await auditLogsApi.getAll({
         actorId: targetUser.id,
         limit: 20,
       });
-      const logs = unwrapData<AuditLog>(res);
+      logs = unwrapData<AuditLog>(resById);
+
+      // If actorId query returned 0, search by email to capture all actor activity
+      if (logs.length === 0 && targetUser.email) {
+        const resByEmail = await auditLogsApi.getAll({
+          search: targetUser.email,
+          limit: 20,
+        });
+        logs = unwrapData<AuditLog>(resByEmail);
+      }
+
       setAuditLogs(logs);
     } catch (err) {
       console.error('Failed to load user audit activity:', err);
@@ -137,9 +146,18 @@ function UserDetailContent() {
     const isCurrentlyActive = effectiveStatus === 'ACTIVE';
     const actionLabel = isCurrentlyActive ? 'Deactivate' : 'Activate';
 
+    // Super Admin protection guard: Super Admin accounts cannot be deactivated
+    const targetRoles = (user as any).roles || (user.role ? [user.role] : []);
+    const isTargetSuperAdmin = targetRoles.some((r: any) => (typeof r === 'string' ? r : r?.name) === 'SUPER_ADMIN') || user.role?.name === 'SUPER_ADMIN';
+
+    if (isTargetSuperAdmin && isCurrentlyActive) {
+      toast.error('Protected Account Guard: Super Admin accounts cannot be set to inactive.');
+      return;
+    }
+
     // Prevent self-deactivation
     if (currentUser?.id === user.id) {
-      toast.error('Self-deactivation guard: You cannot deactivate your own account.');
+      toast.error('Self-deactivation guard: You cannot set your own account to inactive.');
       return;
     }
 
@@ -150,7 +168,7 @@ function UserDetailContent() {
           Are you sure you want to {actionLabel.toLowerCase()} user{' '}
           <strong className="text-slate-800 dark:text-slate-200">{user.name}</strong>?
           {isCurrentlyActive
-            ? ' Deactivated accounts cannot sign in or access developer credentials.'
+            ? ' Inactive accounts cannot sign in or access developer credentials.'
             : ' Activated accounts will immediately regain system access.'}
         </span>
       ),
@@ -165,7 +183,7 @@ function UserDetailContent() {
         isActive: !isCurrentlyActive,
       });
       setUser(unwrapItem<User>(updated));
-      toast.success(`User ${user.name} ${isCurrentlyActive ? 'deactivated' : 'activated'} successfully.`);
+      toast.success(`User ${user.name} ${isCurrentlyActive ? 'marked as inactive' : 'activated'} successfully.`);
     } catch (err: any) {
       toast.error(err.message || `Failed to ${actionLabel.toLowerCase()} user`);
     }
@@ -186,6 +204,15 @@ function UserDetailContent() {
   // Delete User Handler
   const handleDelete = async () => {
     if (!user || !canManage) return;
+
+    // Super Admin protection guard: Super Admin accounts cannot be deleted
+    const targetRoles = (user as any).roles || (user.role ? [user.role] : []);
+    const isTargetSuperAdmin = targetRoles.some((r: any) => (typeof r === 'string' ? r : r?.name) === 'SUPER_ADMIN') || user.role?.name === 'SUPER_ADMIN';
+
+    if (isTargetSuperAdmin) {
+      toast.error('Protected Account Guard: Super Admin accounts cannot be deleted by any operator.');
+      return;
+    }
 
     if (currentUser?.id === user.id) {
       toast.error('Self-deletion guard: You cannot delete your own account.');
@@ -261,10 +288,13 @@ function UserDetailContent() {
       <UserDetailHeader
         user={user}
         canManage={canManage}
-        onEdit={() => setIsEditModalOpen(true)}
+        miniAppsCount={miniApps.length}
+        auditLogsCount={auditLogs.length}
+        onEdit={() => router.push(`/users/${user.id}/edit`)}
         onToggleStatus={handleToggleStatus}
         onApprove={handleApprove}
         onDelete={handleDelete}
+        onUserUpdated={(updated) => setUser(updated)}
       />
 
       {/* Tabs & Content Navigation */}
@@ -277,19 +307,7 @@ function UserDetailContent() {
         loadingAuditLogs={loadingAuditLogs}
       />
 
-      {/* Edit User Modal */}
-      {isEditModalOpen && (
-        <UserModal
-          isOpen={isEditModalOpen}
-          onClose={() => setIsEditModalOpen(false)}
-          editingUser={user}
-          roles={roles}
-          onSuccess={() => {
-            setIsEditModalOpen(false);
-            fetchUser();
-          }}
-        />
-      )}
+
     </div>
   );
 }

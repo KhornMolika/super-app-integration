@@ -100,6 +100,30 @@ export class MailService {
     });
   }
 
+  /**
+   * Backoffice developer/operator email verification OTP.
+   */
+  async sendBackofficeEmailVerification(
+    toEmail: string,
+    name: string,
+    otpCode: string,
+    verifyUrl?: string,
+    expiresInMinutes: number = 5,
+  ): Promise<void> {
+    const template = MailTemplateHelper.renderBackofficeEmailVerification(
+      name,
+      otpCode,
+      verifyUrl,
+      expiresInMinutes,
+    );
+    return this.dispatchLifecycleNotification(toEmail, template, {
+      dummyLog: `[DUMMY] Would have sent backoffice email verification OTP (${otpCode}) to ${toEmail}`,
+      skippedLog: `[SKIPPED] Skipped backoffice email verification to mock/test address: ${toEmail}`,
+      successLog: `Backoffice email verification OTP dispatched successfully to ${toEmail}`,
+      errorLog: `Failed to send backoffice email verification OTP to ${toEmail}`,
+    });
+  }
+
   async sendAccountDeletionScheduled(
     toEmail: string,
     name: string,

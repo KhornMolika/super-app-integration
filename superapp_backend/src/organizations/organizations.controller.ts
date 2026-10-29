@@ -29,6 +29,11 @@ export class OrganizationsController {
     return this.organizationsService.findAll(query);
   }
 
+  @Get('stats')
+  async getStats() {
+    return this.organizationsService.getStats();
+  }
+
   @Get(':id')
   async findOne(@Param('id') id: string): Promise<any> {
     const org = await this.organizationsService.findOne(id);

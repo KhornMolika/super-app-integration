@@ -47,7 +47,7 @@ export interface AuthUser {
   permissions?: string[];
   status?: string;
   isActive?: boolean;
-  avatarUrl?: string;
+  avatarUrl?: string | null;
   organizationId?: string | null;
   organization?: {
     id: string;
@@ -62,6 +62,12 @@ interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  // Shared Real-Time Avatar State
+  avatarUrl: string | null;
+  setAvatarPreview: (url: string | null) => void;
+  clearAvatarPreview: () => void;
+  updateUserAvatar: (avatarUrl?: string | null) => void;
+  updateCurrentUser: (updates: Partial<AuthUser>) => void;
   loginWithEmail: (email: string, password?: string) => Promise<{ success: boolean; error?: string; pendingApproval?: boolean }>;
   can: (permission: string) => boolean;
   hasRole: (role: Role) => boolean;
@@ -76,6 +82,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [previewAvatarUrl, setPreviewAvatarUrl] = useState<string | null>(null);
+
+  // Dynamic shared avatar URL: preview overrides saved avatar if active
+  const effectiveAvatarUrl =
+    previewAvatarUrl !== null
+      ? (previewAvatarUrl || null)
+      : (currentUser?.avatarUrl || null);
+
+  const setAvatarPreview = (url: string | null) => {
+    setPreviewAvatarUrl(url);
+  };
+
+  const clearAvatarPreview = () => {
+    setPreviewAvatarUrl(null);
+  };
+
+  const updateUserAvatar = (newAvatarUrl?: string | null) => {
+    setPreviewAvatarUrl(null);
+    setCurrentUser((prev) => (prev ? { ...prev, avatarUrl: newAvatarUrl || null } : null));
+  };
+
+  const updateCurrentUser = (updates: Partial<AuthUser>) => {
+    setCurrentUser((prev) => (prev ? { ...prev, ...updates } : null));
+  };
 
   const fetchSession = async () => {
     try {
@@ -108,6 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           role: primaryRole,
           roles: userRoles,
           isActive: profile.isActive,
+          avatarUrl: profile.avatarUrl || null,
           organizationId: profile.organizationId || profile.organization?.id || null,
           organization: profile.organization || null,
         });
@@ -126,19 +157,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Skip session checks on login/signup pages to avoid redundant 401 calls and refresh loops
-    if (
+    const isPublicPage =
       typeof window !== 'undefined' &&
       (window.location.pathname.startsWith('/login') ||
         window.location.pathname.startsWith('/signup') ||
         window.location.pathname.startsWith('/verify-otp') ||
         window.location.pathname.startsWith('/forgot-password') ||
-        window.location.pathname.startsWith('/legal'))
-    ) {
+        window.location.pathname.startsWith('/legal'));
+
+    if (isPublicPage) {
       setIsLoading(false);
       return;
     }
 
     fetchSession();
+
+    // 1. Proactive Keep-Alive: Ping refresh endpoint every 4 minutes (tokens last 15 mins)
+    // Ensures uninterrupted continuous session without sudden logouts
+    const refreshInterval = setInterval(async () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        try {
+          const res = await fetch('/api/auth/refresh', { method: 'POST' });
+          if (!res.ok && res.status === 401) {
+            setIsAuthenticated(false);
+            setCurrentUser(null);
+            if (typeof window !== 'undefined') {
+              const currentPath = window.location.pathname;
+              const redirectParam = currentPath && currentPath !== '/' ? `?redirect=${encodeURIComponent(currentPath)}&expired=true` : '?expired=true';
+              window.location.href = `/login${redirectParam}`;
+            }
+          }
+        } catch (_) {}
+      }
+    }, 4 * 60 * 1000); // 4 minutes
+
+    // 2. On window focus / tab visibility change: re-verify session when returning to tab
+    const handleVisibilityChange = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        fetchSession();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(refreshInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   const loginWithEmail = async (email: string, password?: string) => {
@@ -159,6 +223,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           role: primaryRole,
           roles: userRoles,
           permissions: res.user.permissions,
+          avatarUrl: res.user.avatarUrl || null,
         });
         setIsAuthenticated(true);
         return { success: true };
@@ -204,6 +269,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: currentUser,
         isAuthenticated,
         isLoading,
+        avatarUrl: effectiveAvatarUrl,
+        setAvatarPreview,
+        clearAvatarPreview,
+        updateUserAvatar,
+        updateCurrentUser,
         loginWithEmail,
         can,
         hasRole,
@@ -222,4 +292,14 @@ export function useAuth() {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
+}
+
+export function useHeaderAvatar() {
+  const { avatarUrl, setAvatarPreview, clearAvatarPreview, updateUserAvatar } = useAuth();
+  return {
+    avatarUrl,
+    setAvatarPreview,
+    clearAvatarPreview,
+    updateUserAvatar,
+  };
 }

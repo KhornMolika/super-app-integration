@@ -1,7 +1,15 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  BadRequestException,
+  PayloadTooLargeException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Client as MinioClient } from 'minio';
+import { randomUUID } from 'crypto';
 import type { Multer } from 'multer';
+import { detectImageFileType } from '../common/utils/image-type.util';
 import {
   ArchiveSanitizerHelper,
   BucketLifecycleHelper,
@@ -22,6 +30,7 @@ export class StorageService implements OnModuleInit {
   readonly packageSubmissionsBucket: string;
   readonly sdkSubmissionsBucket: string;
   readonly endUserMediaBucket: string;
+  readonly backofficeUserMediaBucket: string;
   private publicUrl: string;
   private apiBaseUrl: string;
   private aistorLicenseKey: string;
@@ -68,6 +77,10 @@ export class StorageService implements OnModuleInit {
       'MINIO_END_USER_MEDIA_BUCKET',
       'end-user-media',
     );
+    this.backofficeUserMediaBucket = this.configService.get<string>(
+      'MINIO_BACKOFFICE_USER_MEDIA_BUCKET',
+      'backoffice-user-media',
+    );
 
     this.publicUrl = this.configService
       .get<string>('MINIO_PUBLIC_URL', `http://${endPoint}:${port}`)
@@ -107,11 +120,12 @@ export class StorageService implements OnModuleInit {
   }
 
   /**
-   * Ensure standardized 3-bucket architecture exists with proper access policies:
+   * Ensure standardized architecture exists with proper access policies:
    * 1. mini-app-assets: Public Read Policy (logos, icons, banner images)
    * 2. package-submissions: Strictly Private Quarantine (Flutter .zip packages)
    * 3. sdk-submissions: Strictly Private Quarantine (Native .aar / .xcframework)
    * 4. end-user-media: Strictly Private (end-user avatars; served only through the authenticated API)
+   * 5. backoffice-user-media: Public Read Policy (backoffice operator and admin profile avatars)
    */
   private async ensureBucketsAndPolicies(): Promise<void> {
     await this.bucketLifecycleHelper.ensureBucketsAndPolicies(
@@ -121,6 +135,7 @@ export class StorageService implements OnModuleInit {
         this.packageSubmissionsBucket,
         this.sdkSubmissionsBucket,
         this.endUserMediaBucket,
+        this.backofficeUserMediaBucket,
       ],
     );
     await this.bucketLifecycleHelper.migrateLegacyBuckets(
@@ -270,6 +285,85 @@ export class StorageService implements OnModuleInit {
     await this.minioClient.putObject(bucket, key, body, body.length, {
       'Content-Type': contentType,
     });
+  }
+
+  /**
+   * Upload an avatar for a backoffice user to the public backoffice-user-media bucket
+   */
+  async uploadBackofficeUserAvatar(
+    userId: string,
+    file: { buffer?: Buffer; size?: number; originalname?: string; mimetype?: string } | undefined,
+  ): Promise<{ url: string; key: string }> {
+    const buf = file?.buffer;
+    if (!buf || buf.length === 0) {
+      throw new BadRequestException('Choose an image to upload');
+    }
+    if (buf.length > 2 * 1024 * 1024) {
+      throw new PayloadTooLargeException('Avatar image must not exceed 2 MB');
+    }
+    const detected = detectImageFileType(buf);
+    if (!detected) {
+      throw new BadRequestException('Only JPEG, PNG, or WebP images are permitted');
+    }
+
+    const key = `avatars/${userId}/${randomUUID().slice(0, 8)}.${detected.ext}`;
+    const bucket = this.backofficeUserMediaBucket || 'backoffice-user-media';
+
+    // Prune existing avatar(s) in this user's dedicated folder (avatars/${userId}/)
+    try {
+      if (typeof this.minioClient?.listObjectsV2 === 'function') {
+        const stream = this.minioClient.listObjectsV2(bucket, `avatars/${userId}/`, true);
+        if (stream && typeof stream.on === 'function') {
+          const oldKeys: string[] = [];
+          await new Promise<void>((resolve) => {
+            stream.on('data', (obj: any) => {
+              if (obj?.name) oldKeys.push(obj.name);
+            });
+            stream.on('end', () => resolve());
+            stream.on('error', () => resolve());
+          });
+          for (const oldKey of oldKeys) {
+            await this.minioClient.removeObject(bucket, oldKey).catch(() => {});
+          }
+        }
+      }
+    } catch (err: any) {
+      this.logger.debug(`Could not prune existing user avatars for user ${userId}: ${err?.message}`);
+    }
+
+    await this.minioClient.putObject(
+      bucket,
+      key,
+      buf,
+      buf.length,
+      { 'Content-Type': detected.contentType },
+    );
+
+    const url = `/api/backoffice-user-media/${key}`;
+
+    this.logger.log(`Uploaded backoffice avatar for user ${userId}: ${key}`);
+    return { url, key };
+  }
+
+  /**
+   * Delete an avatar object for a backoffice user from the backoffice-user-media bucket
+   */
+  async deleteBackofficeUserAvatar(avatarUrlOrKey?: string | null): Promise<void> {
+    if (!avatarUrlOrKey) return;
+    const bucket = this.backofficeUserMediaBucket || 'backoffice-user-media';
+    let key = avatarUrlOrKey.split('?')[0];
+    key = decodeURIComponent(key)
+      .replace(/^https?:\/\/[^\/]+\//, '')
+      .replace(/^\/+/, '')
+      .replace(/^(?:api\/)?(?:storage\/asset\?key=|backoffice-user-media\/)/, '')
+      .replace(/^\/+/, '');
+
+    try {
+      await this.minioClient.removeObject(bucket, key);
+      this.logger.log(`Deleted backoffice avatar from ${bucket}: ${key}`);
+    } catch (err: any) {
+      this.logger.warn(`Could not delete backoffice avatar ${key}: ${err?.message}`);
+    }
   }
 
   async removeObject(bucket: string, key: string): Promise<void> {

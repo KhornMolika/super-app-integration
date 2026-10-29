@@ -12,7 +12,7 @@ import {
   setOrganizationDataSource,
   resolveOrganizationDetails,
   ResolvedOrganization,
-} from '../common/constants/fsa-organizations';
+} from './helpers/organization-resolver.helper';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 import { User } from '../access-control/entities/user.entity';
@@ -37,6 +37,30 @@ export class OrganizationsService implements OnApplicationBootstrap {
     setOrganizationDataSource(this.organizationRepository);
     const count = await this.organizationRepository.count();
     this.logger.log(`Initialized OrganizationsService with ${count} real database records`);
+    await this.backfillPrimaryAuthorityRelationships();
+  }
+
+  private async backfillPrimaryAuthorityRelationships() {
+    try {
+      // Find Primary Root Authority (FSA or FTC)
+      const root = await this.organizationRepository
+        .createQueryBuilder('org')
+        .where("org.code IN ('FSA', 'FTC') OR LOWER(org.name) LIKE :term", {
+          term: '%financial technology center%',
+        })
+        .getOne();
+
+      if (root?.id) {
+        await this.organizationRepository
+          .createQueryBuilder()
+          .update(Organization)
+          .set({ parentId: root.id, parentAuthority: root.name })
+          .where('"parentId" IS NULL AND id != :rootId', { rootId: root.id })
+          .execute();
+      }
+    } catch (err: any) {
+      this.logger.debug(`Parent relationship backfill skipped: ${err?.message || err}`);
+    }
   }
 
   async resolveOrganization(input?: string): Promise<ResolvedOrganization> {
@@ -49,6 +73,7 @@ export class OrganizationsService implements OnApplicationBootstrap {
     if (typeof queryOrStatus === 'string') {
       return this.organizationRepository.find({
         where: { status: queryOrStatus as OrganizationStatus },
+        relations: { parent: true },
         order: { name: 'ASC' },
       });
     }
@@ -63,7 +88,10 @@ export class OrganizationsService implements OnApplicationBootstrap {
       sortOrder = SortOrder.ASC,
     } = query;
 
-    const qb = this.organizationRepository.createQueryBuilder('org');
+    const qb = this.organizationRepository
+      .createQueryBuilder('org')
+      .leftJoinAndSelect('org.parent', 'parent')
+      .leftJoinAndSelect('org.children', 'children');
 
     if (status && (status as any) !== 'ALL') {
       qb.andWhere('org.status = :status', { status });
@@ -72,7 +100,7 @@ export class OrganizationsService implements OnApplicationBootstrap {
     if (search?.trim()) {
       const sanitized = escapeLikeString(search.trim());
       qb.andWhere(
-        '(org.name ILIKE :search OR org.code ILIKE :search OR org.parentAuthority ILIKE :search OR org.description ILIKE :search)',
+        '(org.name ILIKE :search OR org.code ILIKE :search OR org.parentAuthority ILIKE :search OR parent.name ILIKE :search OR org.description ILIKE :search)',
         { search: `%${sanitized}%` },
       );
     }
@@ -93,8 +121,36 @@ export class OrganizationsService implements OnApplicationBootstrap {
     return createPaginatedResponse(items, totalItems, page, limit);
   }
 
+  async getStats(): Promise<{ total: number; active: number; inactive: number }> {
+    const rawCounts = await this.organizationRepository
+      .createQueryBuilder('org')
+      .select('org.status', 'status')
+      .addSelect('COUNT(org.id)', 'count')
+      .groupBy('org.status')
+      .getRawMany();
+
+    let total = 0;
+    let active = 0;
+    let inactive = 0;
+
+    for (const row of rawCounts) {
+      const c = parseInt(row.count, 10) || 0;
+      total += c;
+      if (row.status === 'ACTIVE') {
+        active += c;
+      } else {
+        inactive += c;
+      }
+    }
+
+    return { total, active, inactive };
+  }
+
   async findOne(id: string): Promise<Organization | null> {
-    const org = await this.organizationRepository.findOne({ where: { id } });
+    const org = await this.organizationRepository.findOne({
+      where: { id },
+      relations: { parent: true, children: true },
+    });
     if (!org) return null;
 
     const users = await this.organizationRepository.manager.getRepository(User).find({
@@ -125,19 +181,50 @@ export class OrganizationsService implements OnApplicationBootstrap {
     } as Organization;
   }
 
-  async findByCodeOrName(codeOrName: string): Promise<Organization | null> {
-    const clean = codeOrName.trim().toLowerCase();
-    return this.organizationRepository
+  async findByNameOrCode(term?: string): Promise<Organization | null> {
+    if (!term?.trim()) return null;
+    const clean = term.trim().toLowerCase();
+    let org = await this.organizationRepository
       .createQueryBuilder('org')
+      .leftJoinAndSelect('org.parent', 'parent')
       .where('LOWER(TRIM(org.code)) = :term OR LOWER(TRIM(org.name)) = :term', {
         term: clean,
       })
       .getOne();
+
+    if (!org) {
+      org = await this.organizationRepository
+        .createQueryBuilder('org')
+        .leftJoinAndSelect('org.parent', 'parent')
+        .where('LOWER(org.name) ILIKE :likeTerm OR LOWER(org.code) ILIKE :likeTerm', {
+          likeTerm: `%${clean}%`,
+        })
+        .orderBy('org.name', 'ASC')
+        .getOne();
+    }
+    return org;
+  }
+
+  async findByCodeOrName(codeOrName: string): Promise<Organization | null> {
+    return this.findByNameOrCode(codeOrName);
   }
 
   async create(data: CreateOrganizationDto): Promise<Organization> {
+    let parentAuthority = data.parentAuthority;
+    if (data.parentId) {
+      const parent = await this.organizationRepository.findOne({
+        where: { id: data.parentId },
+      });
+      if (!parent) {
+        throw new BadRequestException(`Parent organization ${data.parentId} not found`);
+      }
+      parentAuthority = parent.name;
+    }
+
     const org = this.organizationRepository.create({
       ...data,
+      parentId: data.parentId || null,
+      parentAuthority: parentAuthority || null,
       status: data.status || OrganizationStatus.ACTIVE,
     });
     return this.organizationRepository.save(org);
@@ -153,7 +240,30 @@ export class OrganizationsService implements OnApplicationBootstrap {
       throw new NotFoundException(`Organization ${id} not found`);
     }
 
-    // Guard: Prevent deactivating Root System Anchors (FTC, FSA)
+    // Guard: Prevent self-parenting
+    if (data.parentId && data.parentId === id) {
+      throw new BadRequestException('An organization cannot be its own parent authority.');
+    }
+
+    if (data.parentId) {
+      const parent = await this.organizationRepository.findOne({
+        where: { id: data.parentId },
+      });
+      if (!parent) {
+        throw new BadRequestException(`Parent organization ${data.parentId} not found`);
+      }
+      org.parent = parent;
+      org.parentId = parent.id;
+      data.parentAuthority = parent.name;
+    } else if (data.parentId === null || (data.parentId as any) === '') {
+      data.parentId = null;
+      org.parent = null;
+      org.parentId = null;
+      data.parentAuthority = null as any;
+      org.parentAuthority = null as any;
+    }
+
+    // Guard: Prevent deactivating Primary Authority (FTC, FSA)
     if (
       data.status === OrganizationStatus.INACTIVE ||
       (data.status as any) === 'INACTIVE'
@@ -168,7 +278,7 @@ export class OrganizationsService implements OnApplicationBootstrap {
 
       if (isRootAnchor) {
         throw new BadRequestException(
-          `Regulatory system anchor "${org.name}" (${org.code || 'ROOT'}) cannot be deactivated. It hosts the SuperApp core platform and active system governance.`,
+          `Primary regulatory authority "${org.name}" (${org.code || 'ROOT'}) cannot be set to inactive. It hosts the SuperApp core platform and active system governance.`,
         );
       }
 
@@ -176,7 +286,19 @@ export class OrganizationsService implements OnApplicationBootstrap {
       const currentOrgId = currentUser?.organizationId || currentUser?.orgId;
       if (currentOrgId && currentOrgId === org.id) {
         throw new BadRequestException(
-          `Self-deactivation guard: You cannot deactivate your own assigned organization ("${org.name}").`,
+          `Self-deactivation guard: You cannot set your own assigned organization to inactive ("${org.name}").`,
+        );
+      }
+
+      // Guard: Cannot disable a parent organization while active subordinate children exist
+      const activeChildren = (org.children || []).filter(
+        (c) => c.status === OrganizationStatus.ACTIVE || (c.status as any) === 'ACTIVE',
+      );
+      if (activeChildren.length > 0) {
+        const childNames = activeChildren.map((c) => c.name).slice(0, 3).join(', ');
+        const extra = activeChildren.length > 3 ? ` and ${activeChildren.length - 3} more` : '';
+        throw new BadRequestException(
+          `Cannot disable parent authority "${org.name}" because it governs ${activeChildren.length} active subordinate organization(s) (${childNames}${extra}). Please disable or reassign all subordinate entities first.`,
         );
       }
     }
@@ -201,15 +323,18 @@ export class OrganizationsService implements OnApplicationBootstrap {
 
     if (isRootAnchor) {
       throw new BadRequestException(
-        `Regulatory system anchor "${org.name}" (${org.code || 'ROOT'}) cannot be deleted. It hosts the SuperApp core platform and active system governance.`,
+        `Primary regulatory authority "${org.name}" (${org.code || 'ROOT'}) cannot be deleted. It hosts the SuperApp core platform and active system governance.`,
       );
     }
 
     const hasUsers = (org.users?.length ?? 0) > 0;
     const hasMiniApps = (org.miniApps?.length ?? 0) > 0;
-    if (hasUsers || hasMiniApps) {
+    const hasChildren = (org.children?.length ?? 0) > 0;
+    if (hasUsers || hasMiniApps || hasChildren) {
       throw new BadRequestException(
-        `Regulatory organizations cannot be deleted because historical records (users or mini-apps) are associated with it. Please set its status to INACTIVE to disable instead.`,
+        hasChildren
+          ? `Organization "${org.name}" cannot be deleted because subordinate organization(s) are linked to it as their parent authority. Please reassign or delete its subordinate entities first.`
+          : `Regulatory organizations cannot be deleted because historical records (users or mini-apps) are associated with it. Please set its status to INACTIVE to disable instead.`,
       );
     }
     const result = await this.organizationRepository.delete(id);

@@ -11,26 +11,12 @@ import { AuthSplitLayout } from '@/components/auth/AuthSplitLayout';
 import { PasswordStrengthMeter, getPasswordStrength } from '@/components/auth/PasswordStrengthMeter';
 import { OrganizationSelect } from '@/components/auth/OrganizationSelect';
 
-const DEFAULT_FSA_ORGANIZATIONS: Partial<Organization>[] = [
-  { id: 'fsa-ftc', name: 'Financial Technology Center', code: 'FTC', parentAuthority: 'Non-Bank Financial Services Authority' },
-  { id: 'fsa-serc', name: 'Securities and Exchange Regulator of Cambodia', code: 'SERC', parentAuthority: 'Non-Bank Financial Services Authority' },
-  { id: 'fsa-irc', name: 'Insurance Regulator of Cambodia', code: 'IRC', parentAuthority: 'Non-Bank Financial Services Authority' },
-  { id: 'fsa-tr', name: 'Trust Regulator', code: 'TR', parentAuthority: 'Non-Bank Financial Services Authority' },
-  { id: 'fsa-ssr', name: 'Social Security Regulator', code: 'SSR', parentAuthority: 'Non-Bank Financial Services Authority' },
-  { id: 'fsa-rpr', name: 'Real Estate Business and Pawnshop Regulator', code: 'RPR', parentAuthority: 'Non-Bank Financial Services Authority' },
-  { id: 'fsa-acar', name: 'Accounting and Auditing Regulator', code: 'ACAR', parentAuthority: 'Non-Bank Financial Services Authority' },
-  { id: 'fsa-gad', name: 'General Affairs Department', code: 'GAD', parentAuthority: 'Non-Bank Financial Services Authority' },
-  { id: 'fsa-pd', name: 'Policy Department', code: 'PD', parentAuthority: 'Non-Bank Financial Services Authority' },
-  { id: 'fsa-iau', name: 'Internal Audit Unit', code: 'IAU', parentAuthority: 'Non-Bank Financial Services Authority' },
-  { id: 'fsa-tlad', name: 'Technical and Legal Affairs Department', code: 'TLAD', parentAuthority: 'Non-Bank Financial Services Authority' },
-];
-
 export default function SignupPage() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [organization, setOrganization] = useState('');
-  const [dbOrganizations, setDbOrganizations] = useState<Partial<Organization>[]>(DEFAULT_FSA_ORGANIZATIONS);
+  const [dbOrganizations, setDbOrganizations] = useState<Partial<Organization>[]>([]);
   const [loadingOrgs, setLoadingOrgs] = useState(false);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -53,7 +39,7 @@ export default function SignupPage() {
         }
       })
       .catch((err) => {
-        console.warn('Could not query live organizations, using fallback list', err);
+        console.warn('Could not query live organizations', err);
       })
       .finally(() => {
         if (mounted) setLoadingOrgs(false);
