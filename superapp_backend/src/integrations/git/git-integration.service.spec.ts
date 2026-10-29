@@ -14,7 +14,7 @@ describe('GitIntegrationService & Providers', () => {
     GITHUB_BASE_URL: 'https://api.github.com',
     GITHUB_TOKEN: 'mock-gh-token',
     GITLAB_BASE_URL: 'https://gitlab.company.com',
-    GITLAB_TOKEN: 'mock-gl-token',
+    MOBILE_GIT_TOKEN: 'mock-gl-token',
   };
 
   beforeEach(async () => {

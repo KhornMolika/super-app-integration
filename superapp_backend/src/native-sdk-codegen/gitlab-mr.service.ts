@@ -62,10 +62,10 @@ export class GitlabMrService {
   }
 
   private token(): string {
-    const token = this.configService.get<string>('MOBILE_GIT_TOKEN') || this.configService.get<string>('GITLAB_TOKEN');
+    const token = this.configService.get<string>('MOBILE_GIT_TOKEN');
     if (!token) {
       throw new Error(
-        'MOBILE_GIT_TOKEN (or GITLAB_TOKEN) must be set (scope: api) to open a codegen merge request',
+        'MOBILE_GIT_TOKEN must be set (scope: api) to open a codegen merge request',
       );
     }
     return token;

@@ -319,7 +319,7 @@ export class CapabilityCodeGeneratorService {
       const gitlabBaseUrl =
         this.configService.get<string>('GITLAB_BASE_URL') ||
         'https://git.fintechcenterfsa.com';
-      const gitlabToken = this.configService.get<string>('MOBILE_GIT_TOKEN') || this.configService.get<string>('GITLAB_TOKEN');
+      const gitlabToken = this.configService.get<string>('MOBILE_GIT_TOKEN');
       const projectSlug = 'frontend/super-app';
 
       if (gitlabToken) {

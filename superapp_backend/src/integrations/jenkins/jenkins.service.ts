@@ -35,13 +35,9 @@ export class JenkinsService {
 
     this.superAppRepoUrl =
       this.configService.get<string>('MOBILE_GIT_REPO_URL') ||
-      this.configService.get<string>(
-        'SUPERAPP_GIT_REPO_URL',
-        'https://git.fintechcenterfsa.com/frontend/super-app.git',
-      );
+      'https://git.fintechcenterfsa.com/frontend/super-app.git';
     this.superAppBranch =
-      this.configService.get<string>('MOBILE_GIT_BRANCH') ||
-      this.configService.get<string>('SUPERAPP_GIT_BRANCH', 'main');
+      this.configService.get<string>('MOBILE_GIT_BRANCH') || 'main';
     this.sandboxBaseHref = this.configService.get<string>(
       'SUPERAPP_SANDBOX_BASE_HREF',
       '/superapp-sandbox/',

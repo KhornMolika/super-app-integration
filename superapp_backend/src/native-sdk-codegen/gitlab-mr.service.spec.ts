@@ -30,7 +30,7 @@ describe('GitlabMrService', () => {
       CODEGEN_REPO_SLUG: 'acme/mobile-super-app',
       CODEGEN_BASE_BRANCH: 'main',
       CODEGEN_AUTO_PR: 'true',
-      GITLAB_TOKEN: TOKEN,
+      MOBILE_GIT_TOKEN: TOKEN,
       GITLAB_BASE_URL: 'https://gitlab.test',
       ...config,
     };
@@ -108,10 +108,10 @@ describe('GitlabMrService', () => {
     expect(svc.isEnabled()).toBe(true);
   });
 
-  it('errors clearly when GITLAB_TOKEN is unset, before any call', async () => {
-    const svc = build({ GITLAB_TOKEN: '' });
+  it('errors clearly when MOBILE_GIT_TOKEN is unset, before any call', async () => {
+    const svc = build({ MOBILE_GIT_TOKEN: '' });
     await expect(svc.openMrForChanges(files, 'sha')).rejects.toThrow(
-      /GITLAB_TOKEN must be set/,
+      /MOBILE_GIT_TOKEN must be set/,
     );
     expect(calls).toHaveLength(0);
   });

@@ -136,7 +136,7 @@ export class CapabilitiesService implements OnApplicationBootstrap {
     capabilities: any[];
   }> {
     const superAppRepoUrl =
-      this.configService.get<string>('MOBILE_GIT_REPO_URL') || this.configService.get<string>('SUPERAPP_GIT_REPO_URL') ||
+      this.configService.get<string>('MOBILE_GIT_REPO_URL') ||
       'https://git.fintechcenterfsa.com/frontend/super-app.git';
     const targetBranch = 'main';
 
