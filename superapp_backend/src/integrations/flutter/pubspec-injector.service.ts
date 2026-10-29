@@ -759,8 +759,8 @@ ${registrations.join('\n\n')}
         ? ['-NoProfile', '-Command', command]
         : ['-c', command];
 
-      let stdout = '';
-      let stderr = '';
+      let stdout: string = '';
+      let stderr: string = '';
       let hasFinished = false;
 
       const proc = child_process.spawn(shell, shellArgs, {
@@ -836,7 +836,7 @@ ${registrations.join('\n\n')}
             }
           }
           if (conflicts.length === 0 && stderr) {
-            conflicts.push(stderr.trim());
+            conflicts.push(String(stderr).trim());
           }
         }
 

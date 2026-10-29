@@ -791,7 +791,7 @@ describe('MobileAuthService login failure bookkeeping vs concurrent writes', () 
       return row ? { ...row } : row;
     };
     users.save = async (entity) => {
-      const row = users.rows.find((r) => r.id === entity.id);
+      const row = users.rows.find((r) => r.id === (entity as any).id);
       if (!row) return save(entity);
       Object.assign(row, entity);
       return entity;
