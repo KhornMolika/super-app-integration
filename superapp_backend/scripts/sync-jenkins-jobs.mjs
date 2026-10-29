@@ -118,7 +118,7 @@ function buildScmGitBlock(repoUrl, branch = defaultBranch, token = gitToken, cre
     ? `\n        <credentialsId>${escapeXmlScript(credentialsId)}</credentialsId>`
     : '';
 
-  return `  <scm class="hudson.plugins.git.GitSCM" plugin="git@5.2.1">
+  return `  <scm class="hudson.plugins.git.GitSCM" plugin="git@5.11.0">
     <configVersion>2</configVersion>
     <userRemoteConfigs>
       <hudson.plugins.git.UserRemoteConfig>
