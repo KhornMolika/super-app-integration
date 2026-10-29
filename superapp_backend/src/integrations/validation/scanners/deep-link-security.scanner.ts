@@ -2,7 +2,10 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MiniApp } from '../../../miniapps/entities/miniapp.entity';
-import { NotificationsService, PipelinePacerService } from '../../../notifications';
+import {
+  NotificationsService,
+  PipelinePacerService,
+} from '../../../notifications';
 import { ValidationFindingDto } from '../validation-callback.controller';
 import {
   getDefaultChecksForMethod,
@@ -77,7 +80,8 @@ export class DeepLinkSecurityScanner {
 
     if (stages.ssrf) {
       stages.ssrf.status = 'RUNNING';
-      stages.ssrf.details = 'Verifying URL scheme syntax & universal link routing...';
+      stages.ssrf.details =
+        'Verifying URL scheme syntax & universal link routing...';
       await emitUpdate('ssrf');
       await this.delay(400);
       stages.ssrf.status = 'COMPLETED';
@@ -88,37 +92,59 @@ export class DeepLinkSecurityScanner {
 
     if (stages.domain_tls_audit) {
       stages.domain_tls_audit.status = 'RUNNING';
-      stages.domain_tls_audit.details = 'Verifying App Store fallback URL and TLS security...';
+      stages.domain_tls_audit.details =
+        'Verifying App Store fallback URL and TLS security...';
       await emitUpdate('domain_tls_audit');
       await this.delay(400);
       stages.domain_tls_audit.status = 'COMPLETED';
-      stages.domain_tls_audit.details = 'Fallback store URL uses secure HTTPS transport.';
-      checks.domain_tls_audit = { passed: true, details: stages.domain_tls_audit.details };
+      stages.domain_tls_audit.details =
+        'Fallback store URL uses secure HTTPS transport.';
+      checks.domain_tls_audit = {
+        passed: true,
+        details: stages.domain_tls_audit.details,
+      };
       await emitUpdate('domain_tls_audit');
     }
 
     if (stages.secret_scan) {
       stages.secret_scan.status = 'RUNNING';
-      stages.secret_scan.details = 'Auditing deep link template parameters for cleartext token leakage...';
+      stages.secret_scan.details =
+        'Auditing deep link template parameters for cleartext token leakage...';
       await emitUpdate('secret_scan');
       await this.delay(400);
       stages.secret_scan.status = 'COMPLETED';
-      stages.secret_scan.details = 'No exposed auth secrets in URI scheme template.';
-      checks.secret_scan = { passed: true, details: stages.secret_scan.details };
+      stages.secret_scan.details =
+        'No exposed auth secrets in URI scheme template.';
+      checks.secret_scan = {
+        passed: true,
+        details: stages.secret_scan.details,
+      };
       await emitUpdate('secret_scan');
     }
 
     if (stages.capability_gate) {
       stages.capability_gate.status = 'RUNNING';
-      stages.capability_gate.details = 'Auditing deep link scheme collision against registered platforms...';
+      stages.capability_gate.details =
+        'Auditing deep link scheme collision against registered platforms...';
       await emitUpdate('capability_gate');
       await this.delay(400);
       stages.capability_gate.status = 'COMPLETED';
-      stages.capability_gate.details = 'Unique scheme registered without platform collision.';
-      checks.capability_gate = { passed: true, details: stages.capability_gate.details };
+      stages.capability_gate.details =
+        'Unique scheme registered without platform collision.';
+      checks.capability_gate = {
+        passed: true,
+        details: stages.capability_gate.details,
+      };
       await emitUpdate('capability_gate');
     }
 
-    await this.scanFinalizer.finalizeScan(app, 'WEBVIEW', 100, checks, findings, options?.fallbackReason);
+    await this.scanFinalizer.finalizeScan(
+      app,
+      'WEBVIEW',
+      100,
+      checks,
+      findings,
+      options?.fallbackReason,
+    );
   }
 }

@@ -4,7 +4,10 @@ import { AuthModule } from '../auth/auth.module';
 import { MiniApp } from '../miniapps/entities/miniapp.entity';
 import { StorageModule } from '../storage/storage.module';
 import { AuthRateLimitGuard, AuthRateLimiter } from './auth-rate-limiter';
-import { EndUserAuthGuard, OptionalEndUserAuthGuard } from './end-user-auth.guard';
+import {
+  EndUserAuthGuard,
+  OptionalEndUserAuthGuard,
+} from './end-user-auth.guard';
 import { AccountPurgeService } from './account-purge.service';
 import { DemoUserSeeder } from './demo-user.seeder';
 import { EmailVerificationToken } from './entities/email-verification-token.entity';
@@ -50,4 +53,4 @@ import { PasswordService } from './password.service';
     DemoUserSeeder,
   ],
 })
-export class MobileModule { }
+export class MobileModule {}

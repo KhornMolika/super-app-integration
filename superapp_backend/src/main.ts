@@ -13,7 +13,11 @@ import {
 // Parse PostgreSQL TIMESTAMP without time zone (OID 1114) as UTC Date objects
 types.setTypeParser(1114, (stringValue: string) => {
   if (!stringValue) return null;
-  return new Date(stringValue.endsWith('Z') || stringValue.includes('+') ? stringValue : `${stringValue.replace(' ', 'T')}Z`);
+  return new Date(
+    stringValue.endsWith('Z') || stringValue.includes('+')
+      ? stringValue
+      : `${stringValue.replace(' ', 'T')}Z`,
+  );
 });
 
 // Parse PostgreSQL TIMESTAMPTZ with time zone (OID 1184) as Date objects
@@ -43,8 +47,11 @@ async function bootstrap() {
 
   const localIp = getLocalIpAddress();
   const backofficeUrl = resolveBackofficeBaseUrl();
-  logger.log(`Backend API listening on: http://0.0.0.0:${port} (LAN: http://${localIp}:${port})`);
-  logger.log(`Auto-detected Backoffice URL for notifications: ${backofficeUrl}`);
+  logger.log(
+    `Backend API listening on: http://0.0.0.0:${port} (LAN: http://${localIp}:${port})`,
+  );
+  logger.log(
+    `Auto-detected Backoffice URL for notifications: ${backofficeUrl}`,
+  );
 }
 bootstrap();
-

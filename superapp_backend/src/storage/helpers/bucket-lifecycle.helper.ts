@@ -30,7 +30,10 @@ export class BucketLifecycleHelper {
           await minioClient.makeBucket(bucketName, 'us-east-1');
           this.logger.log(`Created MinIO bucket "${bucketName}"`);
         }
-        if (bucketName === 'mini-app-assets' || bucketName === 'backoffice-user-media') {
+        if (
+          bucketName === 'mini-app-assets' ||
+          bucketName === 'backoffice-user-media'
+        ) {
           const policy = {
             Version: '2012-10-17',
             Statement: [
@@ -48,7 +51,9 @@ export class BucketLifecycleHelper {
               },
             ],
           };
-          await minioClient.setBucketPolicy(bucketName, JSON.stringify(policy)).catch(() => {});
+          await minioClient
+            .setBucketPolicy(bucketName, JSON.stringify(policy))
+            .catch(() => {});
         }
       } catch (err: any) {
         this.logger.warn(
@@ -68,10 +73,18 @@ export class BucketLifecycleHelper {
   ): Promise<void> {
     try {
       // 1. Migrate & delete legacy mini-app-logos
-      await this.drainAndRemoveBucket(minioClient, 'mini-app-logos', assetsBucket);
+      await this.drainAndRemoveBucket(
+        minioClient,
+        'mini-app-logos',
+        assetsBucket,
+      );
 
       // 2. Migrate & delete legacy submissions
-      await this.drainAndRemoveBucket(minioClient, 'submissions', packageSubmissionsBucket);
+      await this.drainAndRemoveBucket(
+        minioClient,
+        'submissions',
+        packageSubmissionsBucket,
+      );
     } catch (err: any) {
       this.logger.warn(`Legacy bucket migration check skipped: ${err.message}`);
     }
@@ -83,10 +96,14 @@ export class BucketLifecycleHelper {
     targetBucket: string,
   ): Promise<void> {
     try {
-      const exists = await minioClient.bucketExists(sourceBucket).catch(() => false);
+      const exists = await minioClient
+        .bucketExists(sourceBucket)
+        .catch(() => false);
       if (!exists || sourceBucket === targetBucket) return;
 
-      this.logger.log(`Found legacy MinIO bucket "${sourceBucket}". Migrating to "${targetBucket}"...`);
+      this.logger.log(
+        `Found legacy MinIO bucket "${sourceBucket}". Migrating to "${targetBucket}"...`,
+      );
 
       const objects: string[] = [];
       const stream = minioClient.listObjectsV2(sourceBucket, '', true);
@@ -99,7 +116,7 @@ export class BucketLifecycleHelper {
         stream.on('error', () => resolve());
       });
 
-      const CopyConditions = (require('minio') as any).CopyConditions;
+      const CopyConditions = require('minio').CopyConditions;
       for (const objName of objects) {
         try {
           const conds = new CopyConditions();
@@ -110,21 +127,31 @@ export class BucketLifecycleHelper {
             conds,
           );
           await minioClient.removeObject(sourceBucket, objName).catch(() => {});
-          this.logger.log(`Migrated ${objName} from ${sourceBucket} to ${targetBucket}`);
+          this.logger.log(
+            `Migrated ${objName} from ${sourceBucket} to ${targetBucket}`,
+          );
         } catch (copyErr: any) {
-          this.logger.warn(`Could not copy ${objName} from ${sourceBucket}: ${copyErr.message}`);
+          this.logger.warn(
+            `Could not copy ${objName} from ${sourceBucket}: ${copyErr.message}`,
+          );
         }
       }
 
       // Once drained, remove the legacy bucket
       try {
         await minioClient.removeBucket(sourceBucket);
-        this.logger.log(`Successfully removed legacy MinIO bucket "${sourceBucket}".`);
+        this.logger.log(
+          `Successfully removed legacy MinIO bucket "${sourceBucket}".`,
+        );
       } catch (rmErr: any) {
-        this.logger.warn(`Could not remove empty legacy bucket "${sourceBucket}": ${rmErr.message}`);
+        this.logger.warn(
+          `Could not remove empty legacy bucket "${sourceBucket}": ${rmErr.message}`,
+        );
       }
     } catch (err: any) {
-      this.logger.warn(`Legacy bucket processing failed for "${sourceBucket}": ${err.message}`);
+      this.logger.warn(
+        `Legacy bucket processing failed for "${sourceBucket}": ${err.message}`,
+      );
     }
   }
 
@@ -136,9 +163,7 @@ export class BucketLifecycleHelper {
     endpoint: string,
     assetsBucket: string,
   ): LicenseStatusResult {
-    const hasLicense = Boolean(
-      aistorLicenseKey && aistorLicenseKey.trim(),
-    );
+    const hasLicense = Boolean(aistorLicenseKey && aistorLicenseKey.trim());
     return {
       configured: hasLicense,
       maskedKey: hasLicense

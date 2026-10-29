@@ -90,7 +90,9 @@ export function resolveBackofficeBaseUrl(
     customUrl ||
     process.env.BACKOFFICE_BASE_URL ||
     process.env.WEBAPP_URL ||
-    (isProduction ? 'https://app.fintechcenterfsa.com' : 'http://localhost:3002');
+    (isProduction
+      ? 'https://app.fintechcenterfsa.com'
+      : 'http://localhost:3002');
 
   if (isProduction || !autoDetectEnabled) {
     return rawUrl.replace(/\/+$/, '');
@@ -116,7 +118,10 @@ export function resolveBackofficeBaseUrl(
       const localIp = getLocalIpAddress(customInterfaces);
       if (localIp && localIp !== 'localhost') {
         urlObj.hostname = localIp;
-        return urlObj.origin.replace(/\/+$/, '') + (urlObj.pathname !== '/' ? urlObj.pathname : '');
+        return (
+          urlObj.origin.replace(/\/+$/, '') +
+          (urlObj.pathname !== '/' ? urlObj.pathname : '')
+        );
       }
     }
 

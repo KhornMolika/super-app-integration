@@ -4,7 +4,10 @@ import { Repository } from 'typeorm';
 import * as dns from 'dns';
 import * as net from 'net';
 import { MiniApp } from '../../../miniapps/entities/miniapp.entity';
-import { NotificationsService, PipelinePacerService } from '../../../notifications';
+import {
+  NotificationsService,
+  PipelinePacerService,
+} from '../../../notifications';
 import { ValidationFindingDto } from '../validation-callback.controller';
 import {
   getDefaultChecksForMethod,
@@ -81,7 +84,11 @@ export class WebViewSecurityScanner {
       return;
     }
 
-    const envVal = (process.env.ENVIRONMENT || process.env.NODE_ENV || '').toUpperCase();
+    const envVal = (
+      process.env.ENVIRONMENT ||
+      process.env.NODE_ENV ||
+      ''
+    ).toUpperCase();
     const isDev = envVal !== 'PROD';
 
     const findings: ValidationFindingDto[] = [];
@@ -143,7 +150,10 @@ export class WebViewSecurityScanner {
       let resolvedIp = '127.0.0.1';
       let isPrivate = true;
       try {
-        if (parsedUrl.hostname === 'localhost' || parsedUrl.hostname === '127.0.0.1') {
+        if (
+          parsedUrl.hostname === 'localhost' ||
+          parsedUrl.hostname === '127.0.0.1'
+        ) {
           resolvedIp = '127.0.0.1';
           isPrivate = true;
         } else {
@@ -152,7 +162,9 @@ export class WebViewSecurityScanner {
           isPrivate = this.isPrivateIp(resolvedIp);
         }
       } catch (dnsErr: any) {
-        this.logger.warn(`DNS lookup failed for ${parsedUrl.hostname}: ${dnsErr.message}`);
+        this.logger.warn(
+          `DNS lookup failed for ${parsedUrl.hostname}: ${dnsErr.message}`,
+        );
       }
 
       if (isPrivate && !isDev) {
@@ -165,13 +177,15 @@ export class WebViewSecurityScanner {
           category: 'SSRF',
           title: 'Server-Side Request Forgery (SSRF) Risk',
           description: `Target domain ${parsedUrl.hostname} resolves to internal IP ${resolvedIp}. SuperApp prohibits routing to intranet subnets in PROD.`,
-          recommendation: 'Ensure your MiniApp is hosted on a public fully qualified domain name (FQDN).',
+          recommendation:
+            'Ensure your MiniApp is hosted on a public fully qualified domain name (FQDN).',
         });
       } else {
         stages.ssrf.status = 'COMPLETED';
-        stages.ssrf.details = isDev && isPrivate
-          ? `DNS resolved to ${resolvedIp} (Loopback / local route permitted in DEV mode).`
-          : `DNS resolved to ${resolvedIp}. RFC 1918 & cloud metadata protection verified.`;
+        stages.ssrf.details =
+          isDev && isPrivate
+            ? `DNS resolved to ${resolvedIp} (Loopback / local route permitted in DEV mode).`
+            : `DNS resolved to ${resolvedIp}. RFC 1918 & cloud metadata protection verified.`;
         checks.ssrf = { passed: true, details: stages.ssrf.details };
       }
       await emitUpdate('ssrf');
@@ -180,35 +194,45 @@ export class WebViewSecurityScanner {
     // --- STAGE: Domain TLS / SSL ---
     if (stages.domain_tls_audit) {
       stages.domain_tls_audit.status = 'RUNNING';
-      stages.domain_tls_audit.details = 'Verifying transport layer encryption & cipher suites...';
+      stages.domain_tls_audit.details =
+        'Verifying transport layer encryption & cipher suites...';
       await emitUpdate('domain_tls_audit');
       await this.delay(500);
 
       const isHttps = parsedUrl.protocol === 'https:';
       if (!isHttps && !isDev) {
         stages.domain_tls_audit.status = 'FAILED';
-        stages.domain_tls_audit.details = 'Insecure HTTP transport rejected in PROD environment.';
-        checks.domain_tls_audit = { passed: false, details: stages.domain_tls_audit.details };
+        stages.domain_tls_audit.details =
+          'Insecure HTTP transport rejected in PROD environment.';
+        checks.domain_tls_audit = {
+          passed: false,
+          details: stages.domain_tls_audit.details,
+        };
         findings.push({
           id: 'TLS_INSECURE_HTTP',
           severity: 'CRITICAL',
           category: 'Transport Security',
           title: 'Insecure Cleartext HTTP Protocol',
-          description: 'Target endpoint uses plain HTTP. All SuperApp MiniApps must enforce HTTPS with TLS 1.2+ encryption.',
-          recommendation: 'Obtain an SSL/TLS certificate and enforce HTTPS on your server.',
+          description:
+            'Target endpoint uses plain HTTP. All SuperApp MiniApps must enforce HTTPS with TLS 1.2+ encryption.',
+          recommendation:
+            'Obtain an SSL/TLS certificate and enforce HTTPS on your server.',
         });
       } else {
         stages.domain_tls_audit.status = 'COMPLETED';
         stages.domain_tls_audit.details = isHttps
           ? 'TLS 1.2+ encryption & secure modern cipher suites enforced.'
           : 'Cleartext HTTP accepted for development in DEV mode.';
-        checks.domain_tls_audit = { passed: true, details: stages.domain_tls_audit.details };
+        checks.domain_tls_audit = {
+          passed: true,
+          details: stages.domain_tls_audit.details,
+        };
       }
       await emitUpdate('domain_tls_audit');
     }
 
     // Probe Endpoint for Header / DAST checks
-    let responseHeaders: Record<string, string> = {};
+    const responseHeaders: Record<string, string> = {};
     let isEndpointAlive = false;
     try {
       const controller = new AbortController();
@@ -224,18 +248,22 @@ export class WebViewSecurityScanner {
         responseHeaders[key.toLowerCase()] = val;
       });
     } catch (fetchErr: any) {
-      this.logger.warn(`Could not probe target endpoint ${targetUrl}: ${fetchErr.message}`);
+      this.logger.warn(
+        `Could not probe target endpoint ${targetUrl}: ${fetchErr.message}`,
+      );
     }
 
     // --- STAGE: CSP & Security Headers ---
     if (stages.csp_headers_audit) {
       stages.csp_headers_audit.status = 'RUNNING';
-      stages.csp_headers_audit.details = 'Auditing HTTP response headers, CSP, and X-Frame-Options...';
+      stages.csp_headers_audit.details =
+        'Auditing HTTP response headers, CSP, and X-Frame-Options...';
       await emitUpdate('csp_headers_audit');
       await this.delay(500);
 
       const hasCsp = Boolean(responseHeaders['content-security-policy']);
-      const hasContentTypeOptions = responseHeaders['x-content-type-options'] === 'nosniff';
+      const hasContentTypeOptions =
+        responseHeaders['x-content-type-options'] === 'nosniff';
 
       if (!hasCsp) {
         findings.push({
@@ -243,8 +271,10 @@ export class WebViewSecurityScanner {
           severity: 'MEDIUM',
           category: 'Security Headers',
           title: 'Missing Content-Security-Policy (CSP)',
-          description: 'The endpoint does not return a Content-Security-Policy header. CSP restricts unauthorized script execution and mitigates XSS.',
-          recommendation: 'Configure your web server to return a strict "Content-Security-Policy" header.',
+          description:
+            'The endpoint does not return a Content-Security-Policy header. CSP restricts unauthorized script execution and mitigates XSS.',
+          recommendation:
+            'Configure your web server to return a strict "Content-Security-Policy" header.',
         });
       }
 
@@ -254,8 +284,10 @@ export class WebViewSecurityScanner {
           severity: 'LOW',
           category: 'Security Headers',
           title: 'Missing X-Content-Type-Options Header',
-          description: 'The "X-Content-Type-Options: nosniff" header is missing.',
-          recommendation: 'Add "X-Content-Type-Options: nosniff" to your response headers.',
+          description:
+            'The "X-Content-Type-Options: nosniff" header is missing.',
+          recommendation:
+            'Add "X-Content-Type-Options: nosniff" to your response headers.',
         });
       }
 
@@ -263,19 +295,24 @@ export class WebViewSecurityScanner {
       stages.csp_headers_audit.details = hasCsp
         ? 'Content-Security-Policy and framing defenses verified.'
         : 'Headers audited. Advisory recommendations generated for CSP.';
-      checks.csp_headers_audit = { passed: true, details: stages.csp_headers_audit.details };
+      checks.csp_headers_audit = {
+        passed: true,
+        details: stages.csp_headers_audit.details,
+      };
       await emitUpdate('csp_headers_audit');
     }
 
     // --- STAGE: DAST Probing ---
     if (stages.dast_zap) {
       stages.dast_zap.status = 'RUNNING';
-      stages.dast_zap.details = 'Dynamic vulnerability probing (XSS, CSRF, Clickjacking)...';
+      stages.dast_zap.details =
+        'Dynamic vulnerability probing (XSS, CSRF, Clickjacking)...';
       await emitUpdate('dast_zap');
       await this.delay(500);
 
       stages.dast_zap.status = 'COMPLETED';
-      stages.dast_zap.details = 'Dynamic application security test completed. No critical XSS/CSRF injection vectors found.';
+      stages.dast_zap.details =
+        'Dynamic application security test completed. No critical XSS/CSRF injection vectors found.';
       checks.dast_zap = { passed: true, details: stages.dast_zap.details };
       await emitUpdate('dast_zap');
     }
@@ -283,7 +320,8 @@ export class WebViewSecurityScanner {
     // --- STAGE: Secret & Endpoint Exposure Scan ---
     if (stages.secret_scan) {
       stages.secret_scan.status = 'RUNNING';
-      stages.secret_scan.details = 'Scanning for exposed configuration files (.env, .git, API secrets)...';
+      stages.secret_scan.details =
+        'Scanning for exposed configuration files (.env, .git, API secrets)...';
       await emitUpdate('secret_scan');
       await this.delay(500);
 
@@ -293,12 +331,19 @@ export class WebViewSecurityScanner {
         const envProbeUrl = `${origin}/.env`;
         const envController = new AbortController();
         const envTimeout = setTimeout(() => envController.abort(), 2000);
-        const envRes = await fetch(envProbeUrl, { method: 'GET', signal: envController.signal });
+        const envRes = await fetch(envProbeUrl, {
+          method: 'GET',
+          signal: envController.signal,
+        });
         clearTimeout(envTimeout);
 
         if (envRes.ok) {
           const text = await envRes.text();
-          if (text.includes('DB_') || text.includes('SECRET') || text.includes('KEY=')) {
+          if (
+            text.includes('DB_') ||
+            text.includes('SECRET') ||
+            text.includes('KEY=')
+          ) {
             hasExposedSecrets = true;
             findings.push({
               id: 'SECRET_DOTENV_EXPOSED',
@@ -306,7 +351,8 @@ export class WebViewSecurityScanner {
               category: 'Secret Leakage',
               title: 'Exposed Environment File (.env)',
               description: `A publicly accessible .env file was discovered at ${envProbeUrl}, leaking configuration secrets.`,
-              recommendation: 'Block public web access to dotfiles in your web server configuration.',
+              recommendation:
+                'Block public web access to dotfiles in your web server configuration.',
             });
           }
         }
@@ -318,20 +364,28 @@ export class WebViewSecurityScanner {
       stages.secret_scan.details = hasExposedSecrets
         ? 'Critical secret leak detected on target endpoint.'
         : 'Gitleaks & endpoint scan passed. No exposed dotfiles or API keys.';
-      checks.secret_scan = { passed: !hasExposedSecrets, details: stages.secret_scan.details };
+      checks.secret_scan = {
+        passed: !hasExposedSecrets,
+        details: stages.secret_scan.details,
+      };
       await emitUpdate('secret_scan');
     }
 
     // --- STAGE: Dependency Vulnerability Scan (SCA) ---
     if (stages.dependency_scan) {
       stages.dependency_scan.status = 'RUNNING';
-      stages.dependency_scan.details = 'Scanning client-side JavaScript packages for known CVEs...';
+      stages.dependency_scan.details =
+        'Scanning client-side JavaScript packages for known CVEs...';
       await emitUpdate('dependency_scan');
       await this.delay(500);
 
       stages.dependency_scan.status = 'COMPLETED';
-      stages.dependency_scan.details = 'Dependency audit passed with 0 known high/critical CVEs.';
-      checks.dependency_scan = { passed: true, details: stages.dependency_scan.details };
+      stages.dependency_scan.details =
+        'Dependency audit passed with 0 known high/critical CVEs.';
+      checks.dependency_scan = {
+        passed: true,
+        details: stages.dependency_scan.details,
+      };
       await emitUpdate('dependency_scan');
     }
 

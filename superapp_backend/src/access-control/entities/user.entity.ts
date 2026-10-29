@@ -33,7 +33,6 @@ export class User {
   @Column({ default: 'ACTIVE' })
   status!: string;
 
-
   @Column({ nullable: true })
   passwordHash?: string;
 
@@ -46,7 +45,6 @@ export class User {
   @Column({ nullable: true, type: 'timestamp' })
   telegramConnectedAt?: Date;
 
-
   // Direct 1-to-1 Role Association
   @Column({ type: 'uuid' })
   roleId!: string;
@@ -54,7 +52,6 @@ export class User {
   @ManyToOne(() => Role, (role) => role.users, { eager: true })
   @JoinColumn({ name: 'roleId' })
   role!: Role;
-
 
   // Direct 1-to-1 Organization Association
   @Column({ type: 'uuid', nullable: true })

@@ -32,10 +32,15 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(@Body() body: LoginDto, @Res({ passthrough: true }) res: Response) {
+  async login(
+    @Body() body: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const result = await this.authService.login(body);
     if (!result.success) {
-      throw new UnauthorizedException(result.message || 'Invalid credentials or user not found');
+      throw new UnauthorizedException(
+        result.message || 'Invalid credentials or user not found',
+      );
     }
     if ('access_token' in result && result.access_token) {
       const isProd = process.env.NODE_ENV === 'production';
@@ -152,10 +157,7 @@ export class AuthController {
     'developer-tokens/:id',
   ])
   @UseGuards(JwtAuthGuard)
-  async revokeAccessToken(
-    @Req() req: Request,
-    @Param('id') tokenId: string,
-  ) {
+  async revokeAccessToken(@Req() req: Request, @Param('id') tokenId: string) {
     const user = (req as any).user;
     const userId = user?.sub || user?.id;
     if (!userId) throw new UnauthorizedException();
@@ -164,10 +166,7 @@ export class AuthController {
 
   @Post('change-password')
   @UseGuards(JwtAuthGuard)
-  async changePassword(
-    @Req() req: Request,
-    @Body() body: ChangePasswordDto,
-  ) {
+  async changePassword(@Req() req: Request, @Body() body: ChangePasswordDto) {
     const user = (req as any).user;
     const userId = user?.sub || user?.id;
     if (!userId) throw new UnauthorizedException('Authentication required');
@@ -192,4 +191,3 @@ export class AuthController {
     return this.authService.resetPassword(body);
   }
 }
-

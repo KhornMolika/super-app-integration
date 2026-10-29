@@ -30,14 +30,18 @@ describe('CallbackTokenGuard', () => {
   });
 
   it('allows a matching token', () => {
-    expect(make('s3cret').canActivate(ctx({ 'x-callback-token': 's3cret' }))).toBe(true);
+    expect(
+      make('s3cret').canActivate(ctx({ 'x-callback-token': 's3cret' })),
+    ).toBe(true);
   });
 
   it('logs an actionable warning (never the secret) when rejecting', () => {
     const g = make('s3cret');
     const warn = jest.spyOn((g as any).logger, 'warn').mockImplementation();
     expect(() => g.canActivate(ctx({}))).toThrow(UnauthorizedException);
-    expect(() => g.canActivate(ctx({ 'x-callback-token': 'wrong-value' }))).toThrow(UnauthorizedException);
+    expect(() =>
+      g.canActivate(ctx({ 'x-callback-token': 'wrong-value' })),
+    ).toThrow(UnauthorizedException);
     expect(warn).toHaveBeenCalledTimes(2);
     const text = warn.mock.calls.map((c) => String(c[0])).join('\n');
     expect(text).toContain('release-callback-token');
@@ -48,7 +52,11 @@ describe('CallbackTokenGuard', () => {
   it('rejects missing or wrong token with 401', () => {
     const g = make('s3cret');
     expect(() => g.canActivate(ctx({}))).toThrow(UnauthorizedException);
-    expect(() => g.canActivate(ctx({ 'x-callback-token': 'nope' }))).toThrow(UnauthorizedException);
-    expect(() => g.canActivate(ctx({ 'x-callback-token': 's3cret-longer' }))).toThrow(UnauthorizedException);
+    expect(() => g.canActivate(ctx({ 'x-callback-token': 'nope' }))).toThrow(
+      UnauthorizedException,
+    );
+    expect(() =>
+      g.canActivate(ctx({ 'x-callback-token': 's3cret-longer' })),
+    ).toThrow(UnauthorizedException);
   });
 });

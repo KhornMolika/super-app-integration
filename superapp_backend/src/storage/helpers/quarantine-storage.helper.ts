@@ -36,9 +36,7 @@ export interface UploadSdkArchiveResult {
 export class QuarantineStorageHelper {
   private readonly logger = new Logger(QuarantineStorageHelper.name);
 
-  constructor(
-    private readonly sanitizerHelper: ArchiveSanitizerHelper,
-  ) {}
+  constructor(private readonly sanitizerHelper: ArchiveSanitizerHelper) {}
 
   /**
    * Uploads and inspects a Flutter package archive (.zip / .tar.gz) into package-submissions.
@@ -134,13 +132,9 @@ export class QuarantineStorageHelper {
     );
     const minioKey = `pending/${miniAppId}/${versionHint}/${cleanOrigName}`;
 
-    await minioClient.putObject(
-      bucket,
-      minioKey,
-      file.buffer,
-      file.size,
-      { 'Content-Type': file.mimetype || 'application/octet-stream' },
-    );
+    await minioClient.putObject(bucket, minioKey, file.buffer, file.size, {
+      'Content-Type': file.mimetype || 'application/octet-stream',
+    });
 
     const minioUrl = `${publicUrl}/${bucket}/${minioKey}`;
 

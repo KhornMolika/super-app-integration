@@ -18,7 +18,12 @@ import {
 } from './dto/pubspec-injector.dto';
 import { BypassTransform } from '../../common/decorators/bypass-transform.decorator';
 
-@Controller(['pubspec', 'api/pubspec', 'integrations/pubspec', 'api/integrations/pubspec'])
+@Controller([
+  'pubspec',
+  'api/pubspec',
+  'integrations/pubspec',
+  'api/integrations/pubspec',
+])
 export class PubspecInjectorController {
   constructor(
     private readonly pubspecService: PubspecInjectorService,
@@ -81,7 +86,8 @@ export class PubspecInjectorController {
   @Post(['sandbox-build/trigger', 'trigger-sandbox-build'])
   @HttpCode(HttpStatus.OK)
   async triggerSandboxBuild(@Req() req?: any) {
-    const actor = req?.user?.email || req?.user?.name || 'SuperApp Administrator';
+    const actor =
+      req?.user?.email || req?.user?.name || 'SuperApp Administrator';
     return this.sandboxBuildManager.triggerBuild(actor);
   }
 }

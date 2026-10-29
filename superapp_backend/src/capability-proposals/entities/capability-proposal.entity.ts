@@ -20,7 +20,6 @@ export class CapabilityProposal {
   @Column({ nullable: true })
   capabilityName!: string;
 
-
   @Column({ type: 'text', nullable: true })
   description!: string;
 

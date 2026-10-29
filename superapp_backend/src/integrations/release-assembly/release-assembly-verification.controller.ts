@@ -54,12 +54,15 @@ export class ReleaseAssemblyVerificationController {
 
   @Post('compile-apk')
   @HttpCode(HttpStatus.OK)
-  async compileApk(@Body() body: {
-    releaseVersion?: string;
-    buildType?: string;
-    appName?: string;
-    apiBaseUrl?: string;
-  }) {
+  async compileApk(
+    @Body()
+    body: {
+      releaseVersion?: string;
+      buildType?: string;
+      appName?: string;
+      apiBaseUrl?: string;
+    },
+  ) {
     return this.apkBuildManager.triggerBuild({
       releaseVersion: body.releaseVersion || 'v0.0.5',
       buildType: body.buildType || 'debug',

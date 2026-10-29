@@ -40,19 +40,28 @@ export class CapabilityProposalsController {
 
   @Post()
   @RequirePermissions('permission_proposal:read')
-  async createProposal(@Request() req: any, @Body() body: CreateCapabilityProposalDto) {
+  async createProposal(
+    @Request() req: any,
+    @Body() body: CreateCapabilityProposalDto,
+  ) {
     const rawKey = body.capabilityKey || body.permissionKey;
     const rawName = body.capabilityName || body.permissionName;
     const { description, miniAppId, metadata } = body;
-    
+
     if (!rawKey || typeof rawKey !== 'string' || !rawKey.trim()) {
-      throw new BadRequestException('Capability key (capabilityKey/permissionKey) is required');
+      throw new BadRequestException(
+        'Capability key (capabilityKey/permissionKey) is required',
+      );
     }
 
-    const cleanKey = rawKey.toLowerCase().trim().replace(/[^a-z0-9_]/g, '_');
+    const cleanKey = rawKey
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9_]/g, '_');
 
     // Check if there is already a pending proposal for this key
-    const existing = await this.capabilityProposalsService.findPendingByKey(cleanKey);
+    const existing =
+      await this.capabilityProposalsService.findPendingByKey(cleanKey);
     if (existing.length > 0) {
       return existing[0];
     }
@@ -102,7 +111,12 @@ export class CapabilityProposalsController {
 
     const { decision, reason, targetVersion, targetBranch, createMr } = body;
 
-    let mrResult: { mrUrl?: string; branchName?: string; targetBranch?: string; message?: string } | null = null;
+    let mrResult: {
+      mrUrl?: string;
+      branchName?: string;
+      targetBranch?: string;
+      message?: string;
+    } | null = null;
 
     if (decision === 'APPROVED' && createMr !== false) {
       try {
@@ -130,7 +144,9 @@ export class CapabilityProposalsController {
       ...(proposal.metadata || {}),
       ...(mrResult?.mrUrl ? { mrUrl: mrResult.mrUrl } : {}),
       ...(mrResult?.branchName ? { branchName: mrResult.branchName } : {}),
-      ...(mrResult?.targetBranch ? { targetBranch: mrResult.targetBranch } : {}),
+      ...(mrResult?.targetBranch
+        ? { targetBranch: mrResult.targetBranch }
+        : {}),
     };
 
     await this.capabilityProposalsService.update(id, {

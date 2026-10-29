@@ -58,7 +58,12 @@ export class EndUserAuthGuard implements CanActivate {
     try {
       user = await this.users.findOne({
         where: { id: payload.sub },
-        select: { id: true, email: true, status: true, sessionsRevokedAt: true },
+        select: {
+          id: true,
+          email: true,
+          status: true,
+          sessionsRevokedAt: true,
+        },
       });
     } catch {
       // Malformed sub etc. -> treat as unauthenticated.
@@ -70,7 +75,9 @@ export class EndUserAuthGuard implements CanActivate {
     // Password change / deletion sign the user out everywhere:
     // access tokens issued before that instant stop working immediately.
     if (user.sessionsRevokedAt) {
-      const revokedAtSec = Math.floor(new Date(user.sessionsRevokedAt).getTime() / 1000);
+      const revokedAtSec = Math.floor(
+        new Date(user.sessionsRevokedAt).getTime() / 1000,
+      );
       if (typeof payload.iat !== 'number' || payload.iat < revokedAtSec) {
         throw new UnauthorizedException();
       }
@@ -125,4 +132,3 @@ export class OptionalEndUserAuthGuard implements CanActivate {
     return true;
   }
 }
-

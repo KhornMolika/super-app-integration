@@ -95,7 +95,11 @@ export class MailTemplateHelper {
       tokenCode = '';
     }
     const escToken = this.escapeHtml(tokenCode || verifyUrl);
-    const displayOtp = otpCode ? otpCode.trim() : (tokenCode && tokenCode.length === 6 ? tokenCode : '');
+    const displayOtp = otpCode
+      ? otpCode.trim()
+      : tokenCode && tokenCode.length === 6
+        ? tokenCode
+        : '';
 
     const otpSectionHtml = displayOtp
       ? `
@@ -655,7 +659,7 @@ export class MailTemplateHelper {
     const escAppName = this.escapeHtml(appName);
     const escReason = this.escapeHtml(
       reason ||
-      'Please review the requested changes and submit a new revision.',
+        'Please review the requested changes and submit a new revision.',
     );
     const escUrl = this.escapeHtml(detailsUrl);
 

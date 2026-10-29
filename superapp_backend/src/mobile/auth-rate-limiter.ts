@@ -31,10 +31,7 @@ export const FULL_RETRY_AFTER_SECONDS = 60;
  */
 @Injectable()
 export class AuthRateLimiter {
-  private readonly hits = new Map<
-    string,
-    { count: number; resetAt: number }
-  >();
+  private readonly hits = new Map<string, { count: number; resetAt: number }>();
 
   /** Public so tests can shrink it (a ctor param would confuse Nest DI). */
   maxKeys = DEFAULT_MAX_KEYS;
@@ -90,7 +87,10 @@ export class AuthRateLimiter {
 /** 429 raised by services (controller copies retryAfterSeconds to Retry-After). */
 export class RateLimitedException extends HttpException {
   constructor(readonly retryAfterSeconds: number) {
-    super('Too many attempts. Please try again later.', HttpStatus.TOO_MANY_REQUESTS);
+    super(
+      'Too many attempts. Please try again later.',
+      HttpStatus.TOO_MANY_REQUESTS,
+    );
   }
 }
 
@@ -127,9 +127,12 @@ export class AuthRateLimitGuard implements CanActivate {
     const res = context.switchToHttp().getResponse<Response>();
     const ip = req.ip || req.socket?.remoteAddress || 'unknown';
 
-    const isDev = process.env.NODE_ENV === 'development' || process.env.ENVIRONMENT === 'DEV';
+    const isDev =
+      process.env.NODE_ENV === 'development' ||
+      process.env.ENVIRONMENT === 'DEV';
     const effectiveIpMax = isDev ? Math.max(opts.ipMax, 200) : opts.ipMax;
-    const effectiveEmailMax = opts.emailMax && (isDev ? Math.max(opts.emailMax, 100) : opts.emailMax);
+    const effectiveEmailMax =
+      opts.emailMax && (isDev ? Math.max(opts.emailMax, 100) : opts.emailMax);
 
     let wait = this.limiter.consume(`${opts.scope}|ip|${ip}`, effectiveIpMax);
     const email = (req.body as { email?: unknown } | undefined)?.email;

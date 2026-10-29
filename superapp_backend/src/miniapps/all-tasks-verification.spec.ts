@@ -11,7 +11,10 @@ describe('All Tasks Verification - Multi-Method MiniApps & Enterprise Plan', () 
     let mockCodegen: any;
     let mockSdkUpload: any;
 
-    const createSpaNativeApp = (configOverwrites: Record<string, any> = {}, status = 'IN_REVIEW') => ({
+    const createSpaNativeApp = (
+      configOverwrites: Record<string, any> = {},
+      status = 'IN_REVIEW',
+    ) => ({
       id: 'ma-native-spa-001',
       appId: 'kh.gov.fsa.spa',
       name: 'Lotus Spa & Wellness',
@@ -40,15 +43,21 @@ describe('All Tasks Verification - Multi-Method MiniApps & Enterprise Plan', () 
         })),
       };
       mockLifecycle = {
-        approve: jest.fn().mockImplementation(async (app) => ({ ...app, lifecycleStatus: 'APPROVED', status: 'APPROVED' })),
+        approve: jest.fn().mockImplementation(async (app) => ({
+          ...app,
+          lifecycleStatus: 'APPROVED',
+          status: 'APPROVED',
+        })),
       };
       mockCodegen = {
         regenerate: jest.fn(),
       };
       mockSdkUpload = {
         publishToNexus: jest.fn().mockResolvedValue({
-          androidNexusMavenUrl: 'http://nexus:8081/repository/maven-releases/com/fintech/vendor/spa/1.0.0/spa-1.0.0.aar',
-          iosNexusZipUrl: 'http://nexus:8081/repository/raw-sdk-artifacts/SpaBookingSDK/1.0.0/SpaBookingSDK.xcframework.zip',
+          androidNexusMavenUrl:
+            'http://nexus:8081/repository/maven-releases/com/fintech/vendor/spa/1.0.0/spa-1.0.0.aar',
+          iosNexusZipUrl:
+            'http://nexus:8081/repository/raw-sdk-artifacts/SpaBookingSDK/1.0.0/SpaBookingSDK.xcframework.zip',
         }),
       };
 
@@ -79,9 +88,9 @@ describe('All Tasks Verification - Multi-Method MiniApps & Enterprise Plan', () 
       const incompleteApp = createSpaNativeApp({ androidMinioKey: null });
       mockRepo.findOne.mockResolvedValue(incompleteApp);
 
-      await expect(service.approve('ma-native-spa-001', 'admin-1')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.approve('ma-native-spa-001', 'admin-1'),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('successfully approves ma_nativesdk_spa and publishes to Nexus without mutating mobile git or opening GitLab MRs', async () => {
@@ -90,8 +99,12 @@ describe('All Tasks Verification - Multi-Method MiniApps & Enterprise Plan', () 
 
       const approved = await service.approve('ma-native-spa-001', 'admin-1');
 
-      expect((approved as any).lifecycleStatus || (approved as any).status).toBe('APPROVED');
-      expect(mockSdkUpload.publishToNexus).toHaveBeenCalledWith('ma-native-spa-001');
+      expect(
+        (approved as any).lifecycleStatus || (approved as any).status,
+      ).toBe('APPROVED');
+      expect(mockSdkUpload.publishToNexus).toHaveBeenCalledWith(
+        'ma-native-spa-001',
+      );
       // Zero calls to codegen service or GitLab MRs
       expect(mockCodegen.regenerate).not.toHaveBeenCalled();
     });
@@ -106,11 +119,16 @@ describe('All Tasks Verification - Multi-Method MiniApps & Enterprise Plan', () 
       );
       mockRepo.findOne.mockResolvedValue(app);
 
-      const result = await service.rerunNativeSdkCodegen('ma-native-spa-001', 'admin-1');
+      const result = await service.rerunNativeSdkCodegen(
+        'ma-native-spa-001',
+        'admin-1',
+      );
       expect(result.upToDate).toBe(true);
       expect(result.changedFiles).toBe(0);
       expect(result.prUrl).toBeNull();
-      expect(result.message).toContain('Universal Native MiniApp Launcher is active');
+      expect(result.message).toContain(
+        'Universal Native MiniApp Launcher is active',
+      );
     });
   });
 
@@ -123,16 +141,25 @@ describe('All Tasks Verification - Multi-Method MiniApps & Enterprise Plan', () 
           urlScheme: 'cambodia-tax://declarations/new',
           fallbackUrl: 'https://tax.gov.kh/download',
           appStoreUrl: 'https://apps.apple.com/app/cambodia-tax/id123456',
-          playStoreUrl: 'https://play.google.com/store/apps/details?id=kh.gov.tax',
+          playStoreUrl:
+            'https://play.google.com/store/apps/details?id=kh.gov.tax',
           allowedDomains: ['tax.gov.kh', 'mef.gov.kh'],
         },
       };
 
-      expect(deepLinkApp.integrationConfig.urlScheme).toMatch(/^[a-z0-9\-]+:\/\//i);
+      expect(deepLinkApp.integrationConfig.urlScheme).toMatch(
+        /^[a-z0-9\-]+:\/\//i,
+      );
       expect(deepLinkApp.integrationConfig.fallbackUrl).toBeTruthy();
-      expect(deepLinkApp.integrationConfig.appStoreUrl).toContain('apps.apple.com');
-      expect(deepLinkApp.integrationConfig.playStoreUrl).toContain('play.google.com');
-      expect(deepLinkApp.integrationConfig.allowedDomains).toContain('tax.gov.kh');
+      expect(deepLinkApp.integrationConfig.appStoreUrl).toContain(
+        'apps.apple.com',
+      );
+      expect(deepLinkApp.integrationConfig.playStoreUrl).toContain(
+        'play.google.com',
+      );
+      expect(deepLinkApp.integrationConfig.allowedDomains).toContain(
+        'tax.gov.kh',
+      );
     });
   });
 
@@ -143,15 +170,22 @@ describe('All Tasks Verification - Multi-Method MiniApps & Enterprise Plan', () 
         integrationMethod: 'WEBVIEW',
         integrationConfig: {
           url: 'https://banking.fintechcenterfsa.com/app',
-          allowedDomains: ['banking.fintechcenterfsa.com', 'auth.fintechcenterfsa.com'],
+          allowedDomains: [
+            'banking.fintechcenterfsa.com',
+            'auth.fintechcenterfsa.com',
+          ],
           isDomainVerified: true,
           supportsSso: true,
         },
       };
 
-      expect(webviewApp.integrationConfig.url.startsWith('https://')).toBe(true);
+      expect(webviewApp.integrationConfig.url.startsWith('https://')).toBe(
+        true,
+      );
       expect(webviewApp.integrationConfig.isDomainVerified).toBe(true);
-      expect(webviewApp.integrationConfig.allowedDomains.length).toBeGreaterThan(0);
+      expect(
+        webviewApp.integrationConfig.allowedDomains.length,
+      ).toBeGreaterThan(0);
     });
   });
 
@@ -161,10 +195,15 @@ describe('All Tasks Verification - Multi-Method MiniApps & Enterprise Plan', () 
 
     beforeEach(() => {
       mockPubspecService = {
-        readPubspecDocument: jest.fn().mockReturnValue({ document: { get: () => null } }),
+        readPubspecDocument: jest
+          .fn()
+          .mockReturnValue({ document: { get: () => null } }),
         getMobileAppDir: jest.fn().mockReturnValue('super-app'),
       };
-      pubspecPrecheck = new PubspecPrecheckService({} as any, mockPubspecService as any);
+      pubspecPrecheck = new PubspecPrecheckService(
+        {} as any,
+        mockPubspecService,
+      );
     });
 
     it('rejects partner packages attempting to claim reserved core packages superapp_core or dps_core_package', async () => {
@@ -173,7 +212,9 @@ describe('All Tasks Verification - Multi-Method MiniApps & Enterprise Plan', () 
         version: '1.0.0',
       });
       expect(coreResult.compatible).toBe(false);
-      expect(coreResult.directConflicts[0]).toContain('conflicts directly with a reserved SuperApp core framework package');
+      expect(coreResult.directConflicts[0]).toContain(
+        'conflicts directly with a reserved SuperApp core framework package',
+      );
 
       const legacyCoreResult = await pubspecPrecheck.simulateCandidate({
         packageName: 'dps_core_package',
@@ -196,7 +237,10 @@ describe('All Tasks Verification - Multi-Method MiniApps & Enterprise Plan', () 
       mockHost = {
         switchToHttp: () => ({
           getResponse: () => mockResponse,
-          getRequest: () => ({ url: '/api/v1/miniapps/verify', method: 'POST' }),
+          getRequest: () => ({
+            url: '/api/v1/miniapps/verify',
+            method: 'POST',
+          }),
         }),
       };
     });
@@ -206,7 +250,9 @@ describe('All Tasks Verification - Multi-Method MiniApps & Enterprise Plan', () 
 
       filter.catch(connectionError, mockHost);
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.SERVICE_UNAVAILABLE);
+      expect(mockResponse.status).toHaveBeenCalledWith(
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
           statusCode: 503,
@@ -218,7 +264,10 @@ describe('All Tasks Verification - Multi-Method MiniApps & Enterprise Plan', () 
     });
 
     it('formats standard HttpExceptions with timestamp and request path', () => {
-      const httpError = new HttpException('Invalid mini app configuration', HttpStatus.BAD_REQUEST);
+      const httpError = new HttpException(
+        'Invalid mini app configuration',
+        HttpStatus.BAD_REQUEST,
+      );
 
       filter.catch(httpError, mockHost);
 

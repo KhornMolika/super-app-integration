@@ -258,7 +258,7 @@ export class GitlabMrService {
   ): Promise<void> {
     try {
       const apps = await this.miniappRepository.find({
-        where: { integrationMethod: 'NATIVE_SDK' } as any,
+        where: { integrationMethod: 'NATIVE_SDK' },
       });
       const affected = apps.filter((app) =>
         String(app.integrationConfig?.codegenPrUrl ?? '').endsWith(

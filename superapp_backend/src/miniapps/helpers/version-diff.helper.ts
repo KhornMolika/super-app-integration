@@ -41,12 +41,24 @@ export interface VersionDiffResult {
         unchanged: string[];
       };
       flutterPackageName?: { base: string; target: string; changed: boolean };
-      flutterVersionConstraint?: { base: string; target: string; changed: boolean };
+      flutterVersionConstraint?: {
+        base: string;
+        target: string;
+        changed: boolean;
+      };
     };
     permissions: {
-      added: Array<{ type: string; purpose?: string; riskLevel: 'HIGH' | 'MEDIUM' | 'LOW' }>;
+      added: Array<{
+        type: string;
+        purpose?: string;
+        riskLevel: 'HIGH' | 'MEDIUM' | 'LOW';
+      }>;
       removed: Array<{ type: string; purpose?: string }>;
-      modified: Array<{ type: string; oldPurpose?: string; newPurpose?: string }>;
+      modified: Array<{
+        type: string;
+        oldPurpose?: string;
+        newPurpose?: string;
+      }>;
       unchanged: Array<{ type: string; purpose?: string }>;
     };
     security: {
@@ -102,15 +114,25 @@ export class VersionDiffHelper {
       'versionConstraint',
       'packageName',
     ];
-    return securityFields.some((f) => field.toLowerCase().includes(f.toLowerCase()));
+    return securityFields.some((f) =>
+      field.toLowerCase().includes(f.toLowerCase()),
+    );
   }
 
   static hasSecurityChanges(base: any, target: any): boolean {
     // 1. Permissions check
-    const basePerms: any[] = Array.isArray(base.permissions) ? base.permissions : [];
-    const targetPerms: any[] = Array.isArray(target.permissions) ? target.permissions : [];
-    const basePermTypes = new Set(basePerms.map((p) => (typeof p === 'string' ? p : p.type)));
-    const targetPermTypes = new Set(targetPerms.map((p) => (typeof p === 'string' ? p : p.type)));
+    const basePerms: any[] = Array.isArray(base.permissions)
+      ? base.permissions
+      : [];
+    const targetPerms: any[] = Array.isArray(target.permissions)
+      ? target.permissions
+      : [];
+    const basePermTypes = new Set(
+      basePerms.map((p) => (typeof p === 'string' ? p : p.type)),
+    );
+    const targetPermTypes = new Set(
+      targetPerms.map((p) => (typeof p === 'string' ? p : p.type)),
+    );
 
     if (basePermTypes.size !== targetPermTypes.size) return true;
     for (const p of targetPermTypes) {
@@ -129,23 +151,49 @@ export class VersionDiffHelper {
       target.integrationConfigDeepLink ||
       {};
 
-    if (baseConfig.productionUrl !== targetConfig.productionUrl && targetConfig.productionUrl !== undefined) return true;
-    if (baseConfig.stagingUrl !== targetConfig.stagingUrl && targetConfig.stagingUrl !== undefined) return true;
-    if (baseConfig.urlScheme !== targetConfig.urlScheme && targetConfig.urlScheme !== undefined) return true;
-    if (baseConfig.packageName !== targetConfig.packageName && targetConfig.packageName !== undefined) return true;
-    if (baseConfig.versionConstraint !== targetConfig.versionConstraint && targetConfig.versionConstraint !== undefined) return true;
+    if (
+      baseConfig.productionUrl !== targetConfig.productionUrl &&
+      targetConfig.productionUrl !== undefined
+    )
+      return true;
+    if (
+      baseConfig.stagingUrl !== targetConfig.stagingUrl &&
+      targetConfig.stagingUrl !== undefined
+    )
+      return true;
+    if (
+      baseConfig.urlScheme !== targetConfig.urlScheme &&
+      targetConfig.urlScheme !== undefined
+    )
+      return true;
+    if (
+      baseConfig.packageName !== targetConfig.packageName &&
+      targetConfig.packageName !== undefined
+    )
+      return true;
+    if (
+      baseConfig.versionConstraint !== targetConfig.versionConstraint &&
+      targetConfig.versionConstraint !== undefined
+    )
+      return true;
 
     // Allowed domains check
     const baseDomains: string[] = Array.isArray(baseConfig.allowedDomains)
       ? baseConfig.allowedDomains
       : typeof baseConfig.allowedDomains === 'string'
-      ? baseConfig.allowedDomains.split(',').map((s: string) => s.trim()).filter(Boolean)
-      : [];
+        ? baseConfig.allowedDomains
+            .split(',')
+            .map((s: string) => s.trim())
+            .filter(Boolean)
+        : [];
     const targetDomains: string[] = Array.isArray(targetConfig.allowedDomains)
       ? targetConfig.allowedDomains
       : typeof targetConfig.allowedDomains === 'string'
-      ? targetConfig.allowedDomains.split(',').map((s: string) => s.trim()).filter(Boolean)
-      : [];
+        ? targetConfig.allowedDomains
+            .split(',')
+            .map((s: string) => s.trim())
+            .filter(Boolean)
+        : [];
 
     if (baseDomains.length !== targetDomains.length) return true;
     for (const d of targetDomains) {
@@ -180,7 +228,8 @@ export class VersionDiffHelper {
 
     for (const field of metaFields) {
       const baseVal = baseApp[field] || '';
-      const targetVal = targetRev[field] !== undefined ? targetRev[field] || '' : baseVal;
+      const targetVal =
+        targetRev[field] !== undefined ? targetRev[field] || '' : baseVal;
       if (baseVal !== targetVal) {
         metadataDiff[field] = {
           base: baseVal,
@@ -194,8 +243,12 @@ export class VersionDiffHelper {
     const integrationDiff: any = {
       method: {
         base: baseApp.integrationMethod || 'WEBVIEW',
-        target: targetRev.integrationMethod || baseApp.integrationMethod || 'WEBVIEW',
-        changed: (targetRev.integrationMethod && targetRev.integrationMethod !== baseApp.integrationMethod) || false,
+        target:
+          targetRev.integrationMethod || baseApp.integrationMethod || 'WEBVIEW',
+        changed:
+          (targetRev.integrationMethod &&
+            targetRev.integrationMethod !== baseApp.integrationMethod) ||
+          false,
       },
       allowedDomains: {
         added: [],
@@ -204,7 +257,10 @@ export class VersionDiffHelper {
       },
     };
 
-    if (baseConfig.productionUrl !== targetConfig.productionUrl && targetConfig.productionUrl !== undefined) {
+    if (
+      baseConfig.productionUrl !== targetConfig.productionUrl &&
+      targetConfig.productionUrl !== undefined
+    ) {
       integrationDiff.productionUrl = {
         base: baseConfig.productionUrl || '',
         target: targetConfig.productionUrl || '',
@@ -212,7 +268,10 @@ export class VersionDiffHelper {
       };
     }
 
-    if (baseConfig.stagingUrl !== targetConfig.stagingUrl && targetConfig.stagingUrl !== undefined) {
+    if (
+      baseConfig.stagingUrl !== targetConfig.stagingUrl &&
+      targetConfig.stagingUrl !== undefined
+    ) {
       integrationDiff.stagingUrl = {
         base: baseConfig.stagingUrl || '',
         target: targetConfig.stagingUrl || '',
@@ -220,7 +279,10 @@ export class VersionDiffHelper {
       };
     }
 
-    if (baseConfig.urlScheme !== targetConfig.urlScheme && targetConfig.urlScheme !== undefined) {
+    if (
+      baseConfig.urlScheme !== targetConfig.urlScheme &&
+      targetConfig.urlScheme !== undefined
+    ) {
       integrationDiff.urlScheme = {
         base: baseConfig.urlScheme || '',
         target: targetConfig.urlScheme || '',
@@ -228,7 +290,10 @@ export class VersionDiffHelper {
       };
     }
 
-    if (baseConfig.packageName !== targetConfig.packageName && targetConfig.packageName !== undefined) {
+    if (
+      baseConfig.packageName !== targetConfig.packageName &&
+      targetConfig.packageName !== undefined
+    ) {
       integrationDiff.flutterPackageName = {
         base: baseConfig.packageName || '',
         target: targetConfig.packageName || '',
@@ -236,7 +301,10 @@ export class VersionDiffHelper {
       };
     }
 
-    if (baseConfig.versionConstraint !== targetConfig.versionConstraint && targetConfig.versionConstraint !== undefined) {
+    if (
+      baseConfig.versionConstraint !== targetConfig.versionConstraint &&
+      targetConfig.versionConstraint !== undefined
+    ) {
       integrationDiff.flutterVersionConstraint = {
         base: baseConfig.versionConstraint || '',
         target: targetConfig.versionConstraint || '',
@@ -246,14 +314,21 @@ export class VersionDiffHelper {
 
     // Allowed Domains Diff
     const normalizeDomains = (domains: any): string[] => {
-      if (Array.isArray(domains)) return domains.map((d) => d.trim()).filter(Boolean);
-      if (typeof domains === 'string') return domains.split(',').map((d) => d.trim()).filter(Boolean);
+      if (Array.isArray(domains))
+        return domains.map((d) => d.trim()).filter(Boolean);
+      if (typeof domains === 'string')
+        return domains
+          .split(',')
+          .map((d) => d.trim())
+          .filter(Boolean);
       return [];
     };
 
     const baseDomains = normalizeDomains(baseConfig.allowedDomains);
     const targetDomains = normalizeDomains(
-      targetConfig.allowedDomains !== undefined ? targetConfig.allowedDomains : baseConfig.allowedDomains,
+      targetConfig.allowedDomains !== undefined
+        ? targetConfig.allowedDomains
+        : baseConfig.allowedDomains,
     );
 
     for (const td of targetDomains) {
@@ -270,11 +345,19 @@ export class VersionDiffHelper {
     }
 
     // Permissions Diff
-    const basePerms: any[] = Array.isArray(baseApp.permissions) ? baseApp.permissions : [];
-    const targetPerms: any[] = Array.isArray(targetRev.permissions) ? targetRev.permissions : basePerms;
+    const basePerms: any[] = Array.isArray(baseApp.permissions)
+      ? baseApp.permissions
+      : [];
+    const targetPerms: any[] = Array.isArray(targetRev.permissions)
+      ? targetRev.permissions
+      : basePerms;
 
-    const baseMap = new Map<string, any>(basePerms.map((p) => [typeof p === 'string' ? p : p.type, p]));
-    const targetMap = new Map<string, any>(targetPerms.map((p) => [typeof p === 'string' ? p : p.type, p]));
+    const baseMap = new Map<string, any>(
+      basePerms.map((p) => [typeof p === 'string' ? p : p.type, p]),
+    );
+    const targetMap = new Map<string, any>(
+      targetPerms.map((p) => [typeof p === 'string' ? p : p.type, p]),
+    );
 
     const permissionsDiff: any = {
       added: [],
@@ -329,7 +412,8 @@ export class VersionDiffHelper {
 
     // Security Diff
     const baseScore = baseApp.validationReport?.score ?? 100;
-    const targetScore = targetRev.validationReport?.score ?? targetRev.score ?? baseScore;
+    const targetScore =
+      targetRev.validationReport?.score ?? targetRev.score ?? baseScore;
 
     const securityDiff = {
       scoreDiff: {
@@ -339,8 +423,14 @@ export class VersionDiffHelper {
       },
       domainVerification: {
         base: Boolean(baseApp.isDomainVerified),
-        target: Boolean(targetRev.isDomainVerified !== undefined ? targetRev.isDomainVerified : baseApp.isDomainVerified),
-        changed: targetRev.isDomainVerified !== undefined && targetRev.isDomainVerified !== baseApp.isDomainVerified,
+        target: Boolean(
+          targetRev.isDomainVerified !== undefined
+            ? targetRev.isDomainVerified
+            : baseApp.isDomainVerified,
+        ),
+        changed:
+          targetRev.isDomainVerified !== undefined &&
+          targetRev.isDomainVerified !== baseApp.isDomainVerified,
       },
       validationStatus: {
         base: baseApp.validationStatus || 'PASSED',
@@ -363,7 +453,10 @@ export class VersionDiffHelper {
       permissionsDiff.modified.length > 0;
 
     const baseVersionStr = baseApp.currentReleaseVersion || '1.0.0';
-    const targetVersionStr = targetRev.version || targetRev.draftVersion || (hasChanges ? 'v1.1.0-draft' : baseVersionStr);
+    const targetVersionStr =
+      targetRev.version ||
+      targetRev.draftVersion ||
+      (hasChanges ? 'v1.1.0-draft' : baseVersionStr);
 
     return {
       miniAppId: baseApp.id,
@@ -373,7 +466,9 @@ export class VersionDiffHelper {
         version: baseVersionStr,
         type: baseApp.status === 'ACTIVE' ? 'PRODUCTION' : 'LIVE',
         status: baseApp.status,
-        releasedAt: baseApp.createdAt?.toISOString ? baseApp.createdAt.toISOString() : baseApp.createdAt,
+        releasedAt: baseApp.createdAt?.toISOString
+          ? baseApp.createdAt.toISOString()
+          : baseApp.createdAt,
       },
       targetVersion: {
         version: targetVersionStr,
@@ -381,7 +476,9 @@ export class VersionDiffHelper {
         status: targetRev.revisionStatus || 'IN_REVIEW',
         submittedAt: targetRev.submittedAt || new Date().toISOString(),
         changelog: targetRev.changelog || 'Feature updates and improvements',
-        justification: targetRev.justification || 'Updated configuration for platform integration',
+        justification:
+          targetRev.justification ||
+          'Updated configuration for platform integration',
       },
       hasChanges,
       isHighRiskChange: isHighRisk,

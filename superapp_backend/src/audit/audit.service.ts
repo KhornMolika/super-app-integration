@@ -41,16 +41,19 @@ export class AuditService implements OnApplicationBootstrap {
         new Set(
           logsWithoutActorName
             .map((l) => l.actorId)
-            .filter((id): id is string => Boolean(id && /^[0-9a-fA-F-]{36}$/.test(id))),
+            .filter((id): id is string =>
+              Boolean(id && /^[0-9a-fA-F-]{36}$/.test(id)),
+            ),
         ),
       );
 
-      const users = actorIds.length > 0
-        ? await this.userRepository.find({
-            where: { id: In(actorIds) },
-            relations: { role: true },
-          })
-        : [];
+      const users =
+        actorIds.length > 0
+          ? await this.userRepository.find({
+              where: { id: In(actorIds) },
+              relations: { role: true },
+            })
+          : [];
 
       const userMap = new Map(users.map((u) => [u.id, u]));
 
@@ -135,7 +138,14 @@ export class AuditService implements OnApplicationBootstrap {
         resourceId: 'local-security-scanner',
         metadata: {
           engine: 'Local Security Engine / Jenkins Pipeline',
-          checks: ['domain_tls_audit', 'csp_headers_audit', 'dast_zap', 'secret_scan', 'sast', 'dependency_scan'],
+          checks: [
+            'domain_tls_audit',
+            'csp_headers_audit',
+            'dast_zap',
+            'secret_scan',
+            'sast',
+            'dependency_scan',
+          ],
           status: 'READY',
         },
         ipAddress: '127.0.0.1',
@@ -192,7 +202,9 @@ export class AuditService implements OnApplicationBootstrap {
     return this.auditLogRepository.save(entry);
   }
 
-  async findAll(query?: QueryAuditLogDto): Promise<PaginatedResult<AuditLog> | AuditLog[]> {
+  async findAll(
+    query?: QueryAuditLogDto,
+  ): Promise<PaginatedResult<AuditLog> | AuditLog[]> {
     if (!query) {
       const all = await this.auditLogRepository.find({
         order: { createdAt: 'DESC' },
@@ -260,7 +272,10 @@ export class AuditService implements OnApplicationBootstrap {
     const unresolvedActorIds = Array.from(
       new Set(
         items
-          .filter((i) => !i.actorName && i.actorId && /^[0-9a-fA-F-]{36}$/.test(i.actorId))
+          .filter(
+            (i) =>
+              !i.actorName && i.actorId && /^[0-9a-fA-F-]{36}$/.test(i.actorId),
+          )
           .map((i) => i.actorId),
       ),
     );
@@ -308,7 +323,10 @@ export class AuditService implements OnApplicationBootstrap {
     return this.auditLogRepository.findOne({ where: { id } });
   }
 
-  async findByResource(resourceType: string, resourceId: string): Promise<AuditLog[]> {
+  async findByResource(
+    resourceType: string,
+    resourceId: string,
+  ): Promise<AuditLog[]> {
     return this.auditLogRepository.find({
       where: { resourceType, resourceId },
       order: { createdAt: 'DESC' },

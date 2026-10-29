@@ -14,17 +14,25 @@ describe('parseTrustProxy', () => {
 
   it('accepts named subnets and IP/CIDR lists', () => {
     expect(parseTrustProxy('loopback')).toEqual(['loopback']);
-    expect(parseTrustProxy('loopback, 10.0.0.0/8,2001:db8::/32,192.168.1.5')).toEqual([
-      'loopback', '10.0.0.0/8', '2001:db8::/32', '192.168.1.5',
-    ]);
+    expect(
+      parseTrustProxy('loopback, 10.0.0.0/8,2001:db8::/32,192.168.1.5'),
+    ).toEqual(['loopback', '10.0.0.0/8', '2001:db8::/32', '192.168.1.5']);
   });
 
-  it.each(['true', 'TRUE', ' true ', '0', '-1', 'yes', '10.0.0.0/33', '1.2.3.4/x', 'loopback,,', 'nonsense'])(
-    'rejects %p',
-    (input) => {
-      expect(() => parseTrustProxy(input)).toThrow();
-    },
-  );
+  it.each([
+    'true',
+    'TRUE',
+    ' true ',
+    '0',
+    '-1',
+    'yes',
+    '10.0.0.0/33',
+    '1.2.3.4/x',
+    'loopback,,',
+    'nonsense',
+  ])('rejects %p', (input) => {
+    expect(() => parseTrustProxy(input)).toThrow();
+  });
 
   it('explains why true is unsafe', () => {
     expect(() => parseTrustProxy('true')).toThrow(/spoof/);

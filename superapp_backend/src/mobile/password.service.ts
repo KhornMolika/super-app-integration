@@ -54,7 +54,8 @@ export class PasswordService {
     }
     if (
       email &&
-      password.trim().toLowerCase() === email.normalize('NFKC').trim().toLowerCase()
+      password.trim().toLowerCase() ===
+        email.normalize('NFKC').trim().toLowerCase()
     ) {
       return 'Password must not be the same as your email';
     }

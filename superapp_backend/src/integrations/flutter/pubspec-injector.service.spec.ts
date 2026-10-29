@@ -99,7 +99,9 @@ dev_dependencies:
 
     const updatedContent = fs.readFileSync(tempPubspecPath, 'utf-8');
     expect(updatedContent).toContain('sc_public_miniapp:');
-    expect(updatedContent).toContain('url: https://github.com/fintech/sc-public-miniapp.git');
+    expect(updatedContent).toContain(
+      'url: https://github.com/fintech/sc-public-miniapp.git',
+    );
     expect(updatedContent).toContain('ref: v1.0.0');
     expect(updatedContent).toContain('cupertino_icons: ^1.0.8'); // Existing deps preserved
   });
@@ -115,7 +117,9 @@ dev_dependencies:
     const updatedContent = fs.readFileSync(tempPubspecPath, 'utf-8');
     expect(updatedContent).toContain('dps_core_package:');
     expect(updatedContent).toContain('hosted:');
-    expect(updatedContent).toContain('http://localhost:8081/repository/pub-group');
+    expect(updatedContent).toContain(
+      'http://localhost:8081/repository/pub-group',
+    );
   });
 
   it('should remove a dependency cleanly and create backup', async () => {
@@ -174,9 +178,11 @@ dev_dependencies:
 
   it('should prioritize Git repository over local workspace path in injectMiniApp', async () => {
     // Spy on discoverWorkspacePackages to simulate a local monorepo directory match
-    jest.spyOn(service, 'discoverWorkspacePackages').mockReturnValue(
-      new Map([['sc_public_miniapp', '../sc-public-miniapp']]),
-    );
+    jest
+      .spyOn(service, 'discoverWorkspacePackages')
+      .mockReturnValue(
+        new Map([['sc_public_miniapp', '../sc-public-miniapp']]),
+      );
 
     const miniApp: any = {
       id: 'ma-git-priority',

@@ -32,7 +32,7 @@ interface AuthenticatedRequest {
 
 @Controller(['telegram', 'api/telegram'])
 export class TelegramController {
-  constructor(private readonly telegramService: TelegramService) { }
+  constructor(private readonly telegramService: TelegramService) {}
 
   @Get('status')
   @UseGuards(JwtAuthGuard)

@@ -12,13 +12,15 @@ describe('TransformInterceptor (Unified Enterprise Envelope)', () => {
     interceptor = new TransformInterceptor(reflector);
   });
 
-  function createMockContext(opts: {
-    url?: string;
-    statusCode?: number;
-    headersSent?: boolean;
-    isHttp?: boolean;
-    isBypassed?: boolean;
-  } = {}): ExecutionContext {
+  function createMockContext(
+    opts: {
+      url?: string;
+      statusCode?: number;
+      headersSent?: boolean;
+      isHttp?: boolean;
+      isBypassed?: boolean;
+    } = {},
+  ): ExecutionContext {
     const {
       url = '/api/users',
       statusCode = 200,
@@ -53,7 +55,10 @@ describe('TransformInterceptor (Unified Enterprise Envelope)', () => {
     const context = createMockContext({ url: '/users?page=1&limit=2' });
     const paginatedInput = {
       success: true,
-      data: [{ id: '1', name: 'Alice' }, { id: '2', name: 'Bob' }],
+      data: [
+        { id: '1', name: 'Alice' },
+        { id: '2', name: 'Bob' },
+      ],
       meta: {
         page: 1,
         limit: 2,
@@ -64,19 +69,21 @@ describe('TransformInterceptor (Unified Enterprise Envelope)', () => {
       },
     };
 
-    interceptor.intercept(context, createCallHandler(paginatedInput)).subscribe({
-      next: (result) => {
-        expect(result.success).toBe(true);
-        expect(result.statusCode).toBe(200);
-        expect(result.message).toBe('Success');
-        expect(result.path).toBe('/users?page=1&limit=2');
-        expect(typeof result.timestamp).toBe('string');
-        expect(result.data).toEqual(paginatedInput.data);
-        expect(result.meta).toEqual(paginatedInput.meta);
-        done();
-      },
-      error: done,
-    });
+    interceptor
+      .intercept(context, createCallHandler(paginatedInput))
+      .subscribe({
+        next: (result) => {
+          expect(result.success).toBe(true);
+          expect(result.statusCode).toBe(200);
+          expect(result.message).toBe('Success');
+          expect(result.path).toBe('/users?page=1&limit=2');
+          expect(typeof result.timestamp).toBe('string');
+          expect(result.data).toEqual(paginatedInput.data);
+          expect(result.meta).toEqual(paginatedInput.meta);
+          done();
+        },
+        error: done,
+      });
   });
 
   it('should wrap a plain entity or object into the Unified Enterprise Envelope', (done) => {

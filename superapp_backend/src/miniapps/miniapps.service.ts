@@ -31,9 +31,15 @@ import { OrganizationsService } from '../organizations/organizations.service';
 import { QueryMiniAppsDto } from './dto/query-miniapps.dto';
 import { QueryIssuesDto } from './dto/query-issues.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
-import { createPaginatedResponse, buildPaginationMeta } from '../common/utils/pagination.util';
+import {
+  createPaginatedResponse,
+  buildPaginationMeta,
+} from '../common/utils/pagination.util';
 import { escapeLikeString } from '../common/utils/sql.util';
-import { SortOrder, PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import {
+  SortOrder,
+  PaginationQueryDto,
+} from '../common/dto/pagination-query.dto';
 import { maskMiniAppCredentials } from './helpers/flutter-credential.helper';
 
 @Injectable()
@@ -107,7 +113,9 @@ export class MiniappsService implements OnApplicationBootstrap {
         }
       }
     } catch (err: any) {
-      this.logger.warn(`Could not backfill mini app organizations: ${err.message}`);
+      this.logger.warn(
+        `Could not backfill mini app organizations: ${err.message}`,
+      );
     }
   }
 
@@ -167,7 +175,9 @@ export class MiniappsService implements OnApplicationBootstrap {
     );
   }
 
-  async findAllIssues(query?: QueryIssuesDto): Promise<PaginatedResult<any> | any[]> {
+  async findAllIssues(
+    query?: QueryIssuesDto,
+  ): Promise<PaginatedResult<any> | any[]> {
     if (!query) {
       const issues = await this.issueRepository.find({
         relations: { miniApp: true },
@@ -268,7 +278,8 @@ export class MiniappsService implements OnApplicationBootstrap {
       actorName: l.actorName,
       type: l.action,
       title: l.metadata?.title || l.action,
-      description: l.metadata?.description || `${l.action} performed on MiniApp`,
+      description:
+        l.metadata?.description || `${l.action} performed on MiniApp`,
       createdAt: l.createdAt,
     }));
   }
@@ -288,7 +299,11 @@ export class MiniappsService implements OnApplicationBootstrap {
       existing.role = role;
       return this.collaboratorRepository.save(existing);
     }
-    const collab = this.collaboratorRepository.create({ miniAppId, userId, role });
+    const collab = this.collaboratorRepository.create({
+      miniAppId,
+      userId,
+      role,
+    });
     return this.collaboratorRepository.save(collab);
   }
 
@@ -333,7 +348,8 @@ export class MiniappsService implements OnApplicationBootstrap {
   }
 
   async findAll(
-    queryOrOwnerId?: QueryMiniAppsDto | { status?: string; mine?: boolean | string } | string,
+    queryOrOwnerId?:
+      QueryMiniAppsDto | { status?: string; mine?: boolean | string } | string,
     roles?: string[],
     user?: any,
   ): Promise<PaginatedResult<MiniApp> | MiniApp[]> {
@@ -357,7 +373,9 @@ export class MiniappsService implements OnApplicationBootstrap {
       return apps.map((a) => maskMiniAppCredentials(a));
     }
 
-    const query: QueryMiniAppsDto = (typeof queryOrOwnerId === 'object' ? queryOrOwnerId : {}) as QueryMiniAppsDto;
+    const query: QueryMiniAppsDto = (
+      typeof queryOrOwnerId === 'object' ? queryOrOwnerId : {}
+    ) as QueryMiniAppsDto;
     const {
       page = 1,
       limit = 20,
@@ -415,7 +433,9 @@ export class MiniappsService implements OnApplicationBootstrap {
 
     // Filter Integration Method
     if (integrationMethod && integrationMethod !== 'ALL') {
-      qb.andWhere('app.integrationMethod = :integrationMethod', { integrationMethod });
+      qb.andWhere('app.integrationMethod = :integrationMethod', {
+        integrationMethod,
+      });
     }
 
     // Filter Organization
@@ -507,7 +527,12 @@ export class MiniappsService implements OnApplicationBootstrap {
     if (!app) throw new BadRequestException('App not found');
 
     const rawCaps = (app as any).capabilities || (app as any).permissions;
-    if (this.capabilitiesService && rawCaps && Array.isArray(rawCaps) && rawCaps.length > 0) {
+    if (
+      this.capabilitiesService &&
+      rawCaps &&
+      Array.isArray(rawCaps) &&
+      rawCaps.length > 0
+    ) {
       const capabilityCheck =
         await this.capabilitiesService.validateMiniAppCapabilities(rawCaps);
       if (!capabilityCheck.isValid) {
@@ -660,7 +685,11 @@ export class MiniappsService implements OnApplicationBootstrap {
         'Codegen only applies to NATIVE_SDK mini apps.',
       );
     }
-    if (!['APPROVED', 'ACTIVE'].includes((app.lifecycleStatus || (app as any).status)?.toUpperCase())) {
+    if (
+      !['APPROVED', 'ACTIVE'].includes(
+        (app.lifecycleStatus || (app as any).status)?.toUpperCase(),
+      )
+    ) {
       throw new BadRequestException(
         'Approve the mini app before verifying native launcher configuration.',
       );
@@ -691,7 +720,12 @@ export class MiniappsService implements OnApplicationBootstrap {
     if (!app) throw new BadRequestException('App not found');
 
     const rawCaps = (app as any).capabilities || (app as any).permissions;
-    if (this.capabilitiesService && rawCaps && Array.isArray(rawCaps) && rawCaps.length > 0) {
+    if (
+      this.capabilitiesService &&
+      rawCaps &&
+      Array.isArray(rawCaps) &&
+      rawCaps.length > 0
+    ) {
       const capabilityCheck =
         await this.capabilitiesService.validateMiniAppCapabilities(rawCaps);
       if (!capabilityCheck.isValid) {
@@ -819,7 +853,7 @@ export class MiniappsService implements OnApplicationBootstrap {
       try {
         const app = await this.findOne(body.appId);
         if (app?.integrationConfig) {
-          const cfg = app.integrationConfig as any;
+          const cfg = app.integrationConfig;
           body.gitUrl = cfg.gitUrl || cfg.repoUrl;
           body.gitBranch = cfg.gitBranch || cfg.ref || 'main';
           body.gitPath = cfg.gitPath || cfg.packagePath;
@@ -920,16 +954,23 @@ export class MiniappsService implements OnApplicationBootstrap {
 
     const history = Array.isArray((app as any).versionHistory)
       ? (app as any).versionHistory
-      : (app.versions || []);
+      : app.versions || [];
     const baseRecord = history.find((h) => h.version === baseVer) || app;
     const targetRecord =
       history.find((h) => h.version === targetVer) ||
-      (app.pendingRevision ? { ...app, ...app.pendingRevision, version: targetVer } : app);
+      (app.pendingRevision
+        ? { ...app, ...app.pendingRevision, version: targetVer }
+        : app);
 
     return VersionDiffHelper.computeDiff(baseRecord, targetRecord);
   }
 
-  async rollback(id: string, targetVersion: string, actorId: string, reason?: string) {
+  async rollback(
+    id: string,
+    targetVersion: string,
+    actorId: string,
+    reason?: string,
+  ) {
     const app = await this.findOne(id);
     if (!app) throw new NotFoundException('MiniApp not found');
     return this.lifecycleHelper.rollbackToVersion(
@@ -937,7 +978,16 @@ export class MiniappsService implements OnApplicationBootstrap {
       targetVersion,
       actorId,
       (miniAppId, actor, actionType, title, desc, auditAction, oldV, newV) =>
-        this.logActivity(miniAppId, actor, actionType, title, desc, auditAction, oldV, newV),
+        this.logActivity(
+          miniAppId,
+          actor,
+          actionType,
+          title,
+          desc,
+          auditAction,
+          oldV,
+          newV,
+        ),
       reason,
     );
   }

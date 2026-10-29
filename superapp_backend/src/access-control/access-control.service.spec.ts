@@ -49,16 +49,26 @@ describe('AccessControlService - User Organization Updates & Creation', () => {
         if (where.email) return Promise.resolve(null); // No existing email conflict for creation
         return Promise.resolve({ ...mockUserEntity });
       }),
-      create: jest.fn().mockImplementation((dto) => ({ ...dto, id: 'user-created-1' })),
-      save: jest.fn().mockImplementation((entity) => Promise.resolve({ ...entity, id: entity.id || 'user-saved-1' })),
+      create: jest
+        .fn()
+        .mockImplementation((dto) => ({ ...dto, id: 'user-created-1' })),
+      save: jest
+        .fn()
+        .mockImplementation((entity) =>
+          Promise.resolve({ ...entity, id: entity.id || 'user-saved-1' }),
+        ),
       manager: {
         getRepository: jest.fn().mockReturnValue(mockOrgRepo),
       },
     };
 
     mockRoleRepo = {
-      findOne: jest.fn().mockResolvedValue({ id: 'role-dev-id', name: 'MA_DEVELOPER' }),
-      findBy: jest.fn().mockResolvedValue([{ id: 'role-dev-id', name: 'MA_DEVELOPER' }]),
+      findOne: jest
+        .fn()
+        .mockResolvedValue({ id: 'role-dev-id', name: 'MA_DEVELOPER' }),
+      findBy: jest
+        .fn()
+        .mockResolvedValue([{ id: 'role-dev-id', name: 'MA_DEVELOPER' }]),
     };
 
     mockPermRepo = {
@@ -92,7 +102,9 @@ describe('AccessControlService - User Organization Updates & Creation', () => {
         organizationId: 'org-new-222',
       });
 
-      expect(mockOrgRepo.findOne).toHaveBeenCalledWith({ where: { id: 'org-new-222' } });
+      expect(mockOrgRepo.findOne).toHaveBeenCalledWith({
+        where: { id: 'org-new-222' },
+      });
       expect(mockUserRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({
           organizationId: 'org-new-222',
@@ -150,7 +162,7 @@ describe('AccessControlService - User Organization Updates & Creation', () => {
         email: 'alice@example.com',
         organizationId: 'org-new-222',
         roleNames: ['MA_DEVELOPER'],
-      } as any);
+      });
 
       expect(mockUserRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({

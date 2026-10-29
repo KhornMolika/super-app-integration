@@ -36,13 +36,15 @@ describe('SdkArtifactUploadService (MinIO Quarantine & Nexus Flow)', () => {
       uploadMavenAar: jest.fn().mockResolvedValue('http://n/maven/url.aar'),
     };
     storage = {
-      uploadSdkArchive: jest.fn().mockImplementation(async (file, appId, version) => ({
-        minioKey: `pending/${appId}/${version || 'draft'}/test-${file.originalname}`,
-        minioUrl: `http://localhost:9000/sdk-submissions/pending/${appId}/${version || 'draft'}/test-${file.originalname}`,
-        sha256: sha,
-        filename: file.originalname,
-        size: file.buffer.length,
-      })),
+      uploadSdkArchive: jest
+        .fn()
+        .mockImplementation(async (file, appId, version) => ({
+          minioKey: `pending/${appId}/${version || 'draft'}/test-${file.originalname}`,
+          minioUrl: `http://localhost:9000/sdk-submissions/pending/${appId}/${version || 'draft'}/test-${file.originalname}`,
+          sha256: sha,
+          filename: file.originalname,
+          size: file.buffer.length,
+        })),
       getObjectBuffer: jest.fn().mockResolvedValue(buffer),
       deleteObject: jest.fn().mockResolvedValue(undefined),
       sdkSubmissionsBucket: 'sdk-submissions',
@@ -214,7 +216,9 @@ describe('SdkArtifactUploadService (MinIO Quarantine & Nexus Flow)', () => {
         androidMavenVersion: '1.0.0',
       };
       repo.findOne.mockResolvedValue(miniApp);
-      nexus.uploadMavenAar.mockRejectedValue(new Error('Nexus connection timeout'));
+      nexus.uploadMavenAar.mockRejectedValue(
+        new Error('Nexus connection timeout'),
+      );
 
       await expect(service.publishToNexus('m1')).rejects.toBeInstanceOf(
         BadGatewayException,

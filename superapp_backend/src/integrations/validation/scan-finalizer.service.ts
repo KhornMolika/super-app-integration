@@ -3,7 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 import { MiniAppIssue } from '../../miniapps/entities/miniapp-issue.entity';
-import { NotificationsService, MailService, PipelinePacerService } from '../../notifications';
+import {
+  NotificationsService,
+  MailService,
+  PipelinePacerService,
+} from '../../notifications';
 import { AuditService } from '../../audit/audit.service';
 import { ValidationFindingDto } from './validation-callback.controller';
 import { resolveBackofficeBaseUrl } from '../../common/utils/network.utils';
@@ -47,7 +51,9 @@ export class ScanFinalizerService {
     const hasCriticalOrHigh = findings.some(
       (f) => f.severity === 'CRITICAL' || f.severity === 'HIGH',
     );
-    const overallStatus: 'PASSED' | 'FAILED' = hasCriticalOrHigh ? 'FAILED' : 'PASSED';
+    const overallStatus: 'PASSED' | 'FAILED' = hasCriticalOrHigh
+      ? 'FAILED'
+      : 'PASSED';
 
     app.validationReport = {
       score,
@@ -80,7 +86,10 @@ export class ScanFinalizerService {
       await this.pipelinePacerService.paceValidationPass(app.name || app.appId);
       app.validationStatus = 'PASSED';
       const initialStatuses = ['DRAFT', 'SUBMITTED'];
-      if (!hasPendingRevision && initialStatuses.includes(app.lifecycleStatus)) {
+      if (
+        !hasPendingRevision &&
+        initialStatuses.includes(app.lifecycleStatus)
+      ) {
         app.lifecycleStatus = 'IN_REVIEW';
       }
       app.validationErrors = null;
@@ -95,17 +104,20 @@ export class ScanFinalizerService {
 
       await this.notificationsService.createNotification(
         app.ownerId || '',
-        hasPendingRevision ? 'Revision Validation Passed' : 'Automated Validation Passed',
+        hasPendingRevision
+          ? 'Revision Validation Passed'
+          : 'Automated Validation Passed',
         hasPendingRevision
           ? `All configured ${method} security checks for pending revision passed (${score}/100). Live version remains active.`
           : initialStatuses.includes(app.lifecycleStatus)
-          ? `All configured ${method} security checks passed successfully (${score}/100). Status updated to IN_REVIEW.`
-          : `All configured ${method} security checks passed (${score}/100). Status remains ${app.lifecycleStatus}.`,
+            ? `All configured ${method} security checks passed successfully (${score}/100). Status updated to IN_REVIEW.`
+            : `All configured ${method} security checks passed (${score}/100). Status remains ${app.lifecycleStatus}.`,
         'VALIDATION_SUCCESS',
         app.id,
       );
 
-      const targetPassedEmail = app.supportEmail || app.owner?.email || (app as any).ownerEmail;
+      const targetPassedEmail =
+        app.supportEmail || app.owner?.email || (app as any).ownerEmail;
       if (targetPassedEmail) {
         await this.mailService.sendValidationPassedEmail(
           targetPassedEmail,
@@ -130,13 +142,19 @@ export class ScanFinalizerService {
     } else {
       app.validationStatus = 'FAILED';
       const resetToDraftStatuses = ['DRAFT', 'SUBMITTED', 'IN_REVIEW'];
-      if (!hasPendingRevision && resetToDraftStatuses.includes(app.lifecycleStatus)) {
+      if (
+        !hasPendingRevision &&
+        resetToDraftStatuses.includes(app.lifecycleStatus)
+      ) {
         app.lifecycleStatus = 'DRAFT';
       }
 
       const issuesToCreate: MiniAppIssue[] = [];
       const actionableFindings = findings.filter(
-        (f) => f.severity === 'CRITICAL' || f.severity === 'HIGH' || f.severity === 'MEDIUM',
+        (f) =>
+          f.severity === 'CRITICAL' ||
+          f.severity === 'HIGH' ||
+          f.severity === 'MEDIUM',
       );
 
       for (const finding of actionableFindings) {
@@ -181,7 +199,8 @@ export class ScanFinalizerService {
         app.id,
       );
 
-      const targetFailedEmail = app.supportEmail || app.owner?.email || (app as any).ownerEmail;
+      const targetFailedEmail =
+        app.supportEmail || app.owner?.email || (app as any).ownerEmail;
       if (targetFailedEmail) {
         await this.mailService.sendValidationFailedEmail(
           targetFailedEmail,

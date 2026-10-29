@@ -1,11 +1,11 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class SplitMiniAppGodEntity1792610000000 implements MigrationInterface {
-    name = 'SplitMiniAppGodEntity1792610000000';
+  name = 'SplitMiniAppGodEntity1792610000000';
 
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        // 1. Create miniapp_versions table
-        await queryRunner.query(`
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    // 1. Create miniapp_versions table
+    await queryRunner.query(`
             CREATE TABLE IF NOT EXISTS "miniapp_versions" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "miniAppId" uuid NOT NULL,
@@ -32,10 +32,12 @@ export class SplitMiniAppGodEntity1792610000000 implements MigrationInterface {
                 CONSTRAINT "FK_miniapp_versions_miniAppId" FOREIGN KEY ("miniAppId") REFERENCES "mini_apps"("id") ON DELETE CASCADE
             )
         `);
-        await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_miniapp_versions_miniAppId" ON "miniapp_versions" ("miniAppId")`);
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "IDX_miniapp_versions_miniAppId" ON "miniapp_versions" ("miniAppId")`,
+    );
 
-        // 2. Create miniapp_builds table
-        await queryRunner.query(`
+    // 2. Create miniapp_builds table
+    await queryRunner.query(`
             CREATE TABLE IF NOT EXISTS "miniapp_builds" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "miniAppId" uuid NOT NULL,
@@ -57,10 +59,12 @@ export class SplitMiniAppGodEntity1792610000000 implements MigrationInterface {
                 CONSTRAINT "FK_miniapp_builds_miniAppId" FOREIGN KEY ("miniAppId") REFERENCES "mini_apps"("id") ON DELETE CASCADE
             )
         `);
-        await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_miniapp_builds_miniAppId" ON "miniapp_builds" ("miniAppId")`);
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "IDX_miniapp_builds_miniAppId" ON "miniapp_builds" ("miniAppId")`,
+    );
 
-        // 3. Create miniapp_legal table
-        await queryRunner.query(`
+    // 3. Create miniapp_legal table
+    await queryRunner.query(`
             CREATE TABLE IF NOT EXISTS "miniapp_legal" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "miniAppId" uuid NOT NULL,
@@ -75,10 +79,12 @@ export class SplitMiniAppGodEntity1792610000000 implements MigrationInterface {
                 CONSTRAINT "FK_miniapp_legal_miniAppId" FOREIGN KEY ("miniAppId") REFERENCES "mini_apps"("id") ON DELETE CASCADE
             )
         `);
-        await queryRunner.query(`CREATE UNIQUE INDEX IF NOT EXISTS "IDX_miniapp_legal_miniAppId" ON "miniapp_legal" ("miniAppId")`);
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "IDX_miniapp_legal_miniAppId" ON "miniapp_legal" ("miniAppId")`,
+    );
 
-        // 4. Data Migration: Copy legal compliance records into miniapp_legal
-        await queryRunner.query(`
+    // 4. Data Migration: Copy legal compliance records into miniapp_legal
+    await queryRunner.query(`
             INSERT INTO "miniapp_legal" ("id", "miniAppId", "termsUrl", "termsDescription", "privacyPolicyUrl", "privacyPolicyDescription", "createdAt", "updatedAt")
             SELECT 
                 uuid_generate_v4(),
@@ -94,8 +100,8 @@ export class SplitMiniAppGodEntity1792610000000 implements MigrationInterface {
               AND (m."termsUrl" IS NOT NULL OR m."privacyPolicyUrl" IS NOT NULL OR m."termsDescription" IS NOT NULL OR m."privacyPolicyDescription" IS NOT NULL)
         `);
 
-        // 5. Data Migration: Unpack versionHistory JSON array elements into miniapp_versions
-        await queryRunner.query(`
+    // 5. Data Migration: Unpack versionHistory JSON array elements into miniapp_versions
+    await queryRunner.query(`
             INSERT INTO "miniapp_versions" (
                 "id",
                 "miniAppId",
@@ -168,8 +174,8 @@ export class SplitMiniAppGodEntity1792610000000 implements MigrationInterface {
             WHERE NOT EXISTS (SELECT 1 FROM "miniapp_versions" v WHERE v."miniAppId" = m."id")
         `);
 
-        // 6. Data Migration: Copy initial build state into miniapp_builds
-        await queryRunner.query(`
+    // 6. Data Migration: Copy initial build state into miniapp_builds
+    await queryRunner.query(`
             INSERT INTO "miniapp_builds" (
                 "id",
                 "miniAppId",
@@ -207,21 +213,37 @@ export class SplitMiniAppGodEntity1792610000000 implements MigrationInterface {
             WHERE NOT EXISTS (SELECT 1 FROM "miniapp_builds" b WHERE b."miniAppId" = m."id")
         `);
 
-        // 7. Drop extracted columns from mini_apps
-        await queryRunner.query(`ALTER TABLE "mini_apps" DROP COLUMN IF EXISTS "termsUrl"`);
-        await queryRunner.query(`ALTER TABLE "mini_apps" DROP COLUMN IF EXISTS "termsDescription"`);
-        await queryRunner.query(`ALTER TABLE "mini_apps" DROP COLUMN IF EXISTS "privacyPolicyUrl"`);
-        await queryRunner.query(`ALTER TABLE "mini_apps" DROP COLUMN IF EXISTS "privacyPolicyDescription"`);
-    }
+    // 7. Drop extracted columns from mini_apps
+    await queryRunner.query(
+      `ALTER TABLE "mini_apps" DROP COLUMN IF EXISTS "termsUrl"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "mini_apps" DROP COLUMN IF EXISTS "termsDescription"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "mini_apps" DROP COLUMN IF EXISTS "privacyPolicyUrl"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "mini_apps" DROP COLUMN IF EXISTS "privacyPolicyDescription"`,
+    );
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`ALTER TABLE "mini_apps" ADD COLUMN IF NOT EXISTS "termsUrl" character varying`);
-        await queryRunner.query(`ALTER TABLE "mini_apps" ADD COLUMN IF NOT EXISTS "termsDescription" text`);
-        await queryRunner.query(`ALTER TABLE "mini_apps" ADD COLUMN IF NOT EXISTS "privacyPolicyUrl" character varying`);
-        await queryRunner.query(`ALTER TABLE "mini_apps" ADD COLUMN IF NOT EXISTS "privacyPolicyDescription" text`);
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(
+      `ALTER TABLE "mini_apps" ADD COLUMN IF NOT EXISTS "termsUrl" character varying`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "mini_apps" ADD COLUMN IF NOT EXISTS "termsDescription" text`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "mini_apps" ADD COLUMN IF NOT EXISTS "privacyPolicyUrl" character varying`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "mini_apps" ADD COLUMN IF NOT EXISTS "privacyPolicyDescription" text`,
+    );
 
-        await queryRunner.query(`DROP TABLE IF EXISTS "miniapp_legal"`);
-        await queryRunner.query(`DROP TABLE IF EXISTS "miniapp_builds"`);
-        await queryRunner.query(`DROP TABLE IF EXISTS "miniapp_versions"`);
-    }
+    await queryRunner.query(`DROP TABLE IF EXISTS "miniapp_legal"`);
+    await queryRunner.query(`DROP TABLE IF EXISTS "miniapp_builds"`);
+    await queryRunner.query(`DROP TABLE IF EXISTS "miniapp_versions"`);
+  }
 }

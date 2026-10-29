@@ -46,17 +46,37 @@ export function toCatalogItem(app: MiniApp, clientHost?: string): CatalogItem {
   let config = app.integrationConfig;
   if (config && typeof config === 'object') {
     config = JSON.parse(JSON.stringify(config));
-    const urlKeys = ['webUrl', 'productionUrl', 'testingUrl', 'url', 'bundleUrl'];
+    const urlKeys = [
+      'webUrl',
+      'productionUrl',
+      'testingUrl',
+      'url',
+      'bundleUrl',
+    ];
     for (const key of urlKeys) {
       if (typeof config[key] === 'string') {
         if (isProduction) {
           config[key] = config[key]
-            .replace(/http:\/\/localhost(?::\d+)?/g, 'https://app.fintechcenterfsa.com')
-            .replace(/http:\/\/127\.0\.0\.1(?::\d+)?/g, 'https://app.fintechcenterfsa.com');
+            .replace(
+              /http:\/\/localhost(?::\d+)?/g,
+              'https://app.fintechcenterfsa.com',
+            )
+            .replace(
+              /http:\/\/127\.0\.0\.1(?::\d+)?/g,
+              'https://app.fintechcenterfsa.com',
+            );
         } else {
           config[key] = config[key]
-            .replace(/http:\/\/localhost(?::(\d+))?/g, (_: string, port?: string) => `http://${host}${port ? `:${port}` : ''}`)
-            .replace(/http:\/\/127\.0\.0\.1(?::(\d+))?/g, (_: string, port?: string) => `http://${host}${port ? `:${port}` : ''}`);
+            .replace(
+              /http:\/\/localhost(?::(\d+))?/g,
+              (_: string, port?: string) =>
+                `http://${host}${port ? `:${port}` : ''}`,
+            )
+            .replace(
+              /http:\/\/127\.0\.0\.1(?::(\d+))?/g,
+              (_: string, port?: string) =>
+                `http://${host}${port ? `:${port}` : ''}`,
+            );
         }
       }
     }
@@ -86,12 +106,26 @@ export function toCatalogItem(app: MiniApp, clientHost?: string): CatalogItem {
     } else {
       if (isProduction) {
         logo = logo
-          .replace(/http:\/\/localhost(?::\d+)?/g, 'https://app.fintechcenterfsa.com')
-          .replace(/http:\/\/127\.0\.0\.1(?::\d+)?/g, 'https://app.fintechcenterfsa.com');
+          .replace(
+            /http:\/\/localhost(?::\d+)?/g,
+            'https://app.fintechcenterfsa.com',
+          )
+          .replace(
+            /http:\/\/127\.0\.0\.1(?::\d+)?/g,
+            'https://app.fintechcenterfsa.com',
+          );
       } else {
         logo = logo
-          .replace(/http:\/\/localhost(?::(\d+))?/g, (_: string, port?: string) => `http://${host}${port ? `:${port}` : ''}`)
-          .replace(/http:\/\/127\.0\.0\.1(?::(\d+))?/g, (_: string, port?: string) => `http://${host}${port ? `:${port}` : ''}`);
+          .replace(
+            /http:\/\/localhost(?::(\d+))?/g,
+            (_: string, port?: string) =>
+              `http://${host}${port ? `:${port}` : ''}`,
+          )
+          .replace(
+            /http:\/\/127\.0\.0\.1(?::(\d+))?/g,
+            (_: string, port?: string) =>
+              `http://${host}${port ? `:${port}` : ''}`,
+          );
       }
     }
   }
@@ -104,12 +138,20 @@ export function toCatalogItem(app: MiniApp, clientHost?: string): CatalogItem {
     description: app.tagline ?? raw.shortDescription ?? null,
     fullDescription: app.description ?? raw.fullDescription ?? null,
     logo,
-    category: app.organizationRelation?.name ?? raw.category ?? raw.organization ?? null,
+    category:
+      app.organizationRelation?.name ??
+      raw.category ??
+      raw.organization ??
+      null,
     integrationMethod: app.integrationMethod,
     integrationConfig: config ?? null,
     permissions: app.capabilities ?? raw.permissions ?? [],
-    termsAndConditions: app.legal?.termsDescription ?? raw.termsDescription ?? null,
-    privacyPolicy: app.legal?.privacyPolicyDescription ?? raw.privacyPolicyDescription ?? null,
+    termsAndConditions:
+      app.legal?.termsDescription ?? raw.termsDescription ?? null,
+    privacyPolicy:
+      app.legal?.privacyPolicyDescription ??
+      raw.privacyPolicyDescription ??
+      null,
     status: app.lifecycleStatus ?? raw.status ?? 'ACTIVE',
   };
   if (app.integrationMethod === 'NATIVE_SDK') {
@@ -141,7 +183,8 @@ export class MobileCatalogService {
       limit = queryOrQ.limit || 20;
       offset = queryOrQ.offset || 0;
       page = queryOrQ.page;
-      clientHost = typeof limitOrClientHost === 'string' ? limitOrClientHost : undefined;
+      clientHost =
+        typeof limitOrClientHost === 'string' ? limitOrClientHost : undefined;
     } else {
       q = queryOrQ;
       limit = typeof limitOrClientHost === 'number' ? limitOrClientHost : 20;
@@ -199,7 +242,9 @@ export class MobileCatalogService {
     const effectivePage = page || Math.floor(offset / limit) + 1;
     const baseMeta = buildPaginationMeta(total, effectivePage, limit);
     const nextCursor = baseMeta.hasNextPage
-      ? Buffer.from(JSON.stringify({ offset: offset + limit })).toString('base64')
+      ? Buffer.from(JSON.stringify({ offset: offset + limit })).toString(
+          'base64',
+        )
       : null;
 
     const meta = {
@@ -216,4 +261,3 @@ export class MobileCatalogService {
     };
   }
 }
-

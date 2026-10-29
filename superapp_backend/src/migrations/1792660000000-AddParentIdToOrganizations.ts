@@ -48,4 +48,3 @@ export class AddParentIdToOrganizations1792660000000 implements MigrationInterfa
     );
   }
 }
-

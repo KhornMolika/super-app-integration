@@ -33,7 +33,6 @@ export class RefreshToken {
   @Column({ name: 'endUserId', type: 'uuid' })
   endUserId!: string;
 
-
   @ManyToOne(() => EndUser, { onDelete: 'CASCADE', nullable: false })
   @JoinColumn({
     name: 'endUserId',

@@ -112,7 +112,9 @@ describe('TelegramService & Helper Modules', () => {
       expect(text).toContain('v1.0.0');
       expect(buttons).toBeDefined();
       expect(buttons?.[0][0].text).toContain('superapp-test-v1.0.0.apk');
-      expect(buttons?.[0][0].url).toContain('/api/download-apk?type=test&version=v1.0.0&appName=superapp');
+      expect(buttons?.[0][0].url).toContain(
+        '/api/download-apk?type=test&version=v1.0.0&appName=superapp',
+      );
       expect(buttons?.[0][1].text).toContain('Launch Sandbox');
     });
 

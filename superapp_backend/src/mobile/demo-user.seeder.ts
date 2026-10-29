@@ -1,7 +1,11 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { EndUser, EndUserHonorific, EndUserStatus } from './entities/end-user.entity';
+import {
+  EndUser,
+  EndUserHonorific,
+  EndUserStatus,
+} from './entities/end-user.entity';
 import { PasswordService } from './password.service';
 
 /** Override with MOBILE_DEMO_USER_EMAIL / MOBILE_DEMO_USER_PASSWORD (see .env.example). */
@@ -28,17 +32,22 @@ export class DemoUserSeeder implements OnApplicationBootstrap {
       await this.seed();
     } catch (err) {
       // A convenience must never stop the backend from starting.
-      this.logger.warn(`Mobile demo user not seeded: ${(err as Error).message}`);
+      this.logger.warn(
+        `Mobile demo user not seeded: ${(err as Error).message}`,
+      );
     }
   }
 
   /** Returns true when it created the account. */
   async seed(env: NodeJS.ProcessEnv = process.env): Promise<boolean> {
     if (env.NODE_ENV !== 'development') return false;
-    const email = (env.MOBILE_DEMO_USER_EMAIL || DEFAULT_DEMO_USER_EMAIL).trim().toLowerCase();
+    const email = (env.MOBILE_DEMO_USER_EMAIL || DEFAULT_DEMO_USER_EMAIL)
+      .trim()
+      .toLowerCase();
     if (await this.users.findOne({ where: { email } })) return false;
 
-    const password = env.MOBILE_DEMO_USER_PASSWORD || DEFAULT_DEMO_USER_PASSWORD;
+    const password =
+      env.MOBILE_DEMO_USER_PASSWORD || DEFAULT_DEMO_USER_PASSWORD;
     const violation = this.passwords.validatePolicy(password, email);
     if (violation) throw new Error(`MOBILE_DEMO_USER_PASSWORD: ${violation}`);
 

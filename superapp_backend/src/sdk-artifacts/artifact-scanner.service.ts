@@ -70,14 +70,18 @@ export class ArtifactScannerService {
     const name = values.CFBundleName;
     if (name) {
       result.iosModuleName = name;
-      result.iosTypeName = values.CFBundleExecutable || (name.endsWith('View') ? name : `${name}View`);
+      result.iosTypeName =
+        values.CFBundleExecutable ||
+        (name.endsWith('View') ? name : `${name}View`);
     } else if (values.CFBundleExecutable) {
       result.iosModuleName = values.CFBundleExecutable;
       result.iosTypeName = values.CFBundleExecutable;
     }
 
     if (values.CFBundleShortVersionString || values.CFBundleVersion) {
-      result.iosVersion = (values.CFBundleShortVersionString || values.CFBundleVersion).trim();
+      result.iosVersion = (
+        values.CFBundleShortVersionString || values.CFBundleVersion
+      ).trim();
     }
 
     // Detect iOS privacy permissions
@@ -156,27 +160,48 @@ export class ArtifactScannerService {
     let pkg: string | undefined;
     let activityOrClass: string | undefined;
     const detected = new Set<string>();
-    const manifest = zip.getEntries().find(
-      (e) => e.entryName.replace(/\\/g, '/') === 'AndroidManifest.xml',
-    );
+    const manifest = zip
+      .getEntries()
+      .find((e) => e.entryName.replace(/\\/g, '/') === 'AndroidManifest.xml');
     if (manifest) {
       try {
         const data = this.readEntry(manifest, filename);
         if (data) {
           pkg = this.extractPackage(data);
           const manifestStr = data.toString('utf8');
-          if (/android\.permission\.CAMERA/i.test(manifestStr)) detected.add('camera');
-          if (/android\.permission\.ACCESS_(FINE|COARSE)_LOCATION/i.test(manifestStr)) detected.add('location');
-          if (/android\.permission\.(READ|WRITE)_EXTERNAL_STORAGE|READ_MEDIA/i.test(manifestStr)) detected.add('storage');
-          if (/android\.permission\.RECORD_AUDIO/i.test(manifestStr)) detected.add('microphone');
-          if (/android\.permission\.(USE_BIOMETRIC|USE_FINGERPRINT)/i.test(manifestStr)) detected.add('biometrics');
+          if (/android\.permission\.CAMERA/i.test(manifestStr))
+            detected.add('camera');
+          if (
+            /android\.permission\.ACCESS_(FINE|COARSE)_LOCATION/i.test(
+              manifestStr,
+            )
+          )
+            detected.add('location');
+          if (
+            /android\.permission\.(READ|WRITE)_EXTERNAL_STORAGE|READ_MEDIA/i.test(
+              manifestStr,
+            )
+          )
+            detected.add('storage');
+          if (/android\.permission\.RECORD_AUDIO/i.test(manifestStr))
+            detected.add('microphone');
+          if (
+            /android\.permission\.(USE_BIOMETRIC|USE_FINGERPRINT)/i.test(
+              manifestStr,
+            )
+          )
+            detected.add('biometrics');
 
-          const minSdkMatch = manifestStr.match(/minSdkVersion\s*=\s*["']?(\d+)["']?/i);
+          const minSdkMatch = manifestStr.match(
+            /minSdkVersion\s*=\s*["']?(\d+)["']?/i,
+          );
           if (minSdkMatch) {
             result.minSdkVersion = parseInt(minSdkMatch[1], 10);
           }
 
-          const actMatch = manifestStr.match(/<activity[^>]*?android:name\s*=\s*["']([^"']+)["']/i);
+          const actMatch = manifestStr.match(
+            /<activity[^>]*?android:name\s*=\s*["']([^"']+)["']/i,
+          );
           if (actMatch) {
             const rawAct = actMatch[1];
             activityOrClass = rawAct.split('.').filter(Boolean).pop();
@@ -192,9 +217,11 @@ export class ArtifactScannerService {
       result.detectedPermissions = Array.from(detected);
     }
     if (!pkg) {
-      const mf = zip.getEntries().find(
-        (e) => e.entryName.replace(/\\/g, '/') === 'META-INF/MANIFEST.MF',
-      );
+      const mf = zip
+        .getEntries()
+        .find(
+          (e) => e.entryName.replace(/\\/g, '/') === 'META-INF/MANIFEST.MF',
+        );
       if (mf) {
         const data = this.readEntry(mf, filename);
         if (data) {
@@ -211,9 +238,9 @@ export class ArtifactScannerService {
 
       // Check classes.jar for direct matching entry class (e.g. SpaBooking, SpaBookingSDK)
       try {
-        const jarEntry = zip.getEntries().find(
-          (e) => e.entryName.replace(/\\/g, '/') === 'classes.jar',
-        );
+        const jarEntry = zip
+          .getEntries()
+          .find((e) => e.entryName.replace(/\\/g, '/') === 'classes.jar');
         if (jarEntry) {
           const jarData = this.readEntry(jarEntry, filename);
           if (jarData) {
@@ -222,7 +249,12 @@ export class ArtifactScannerService {
               .getEntries()
               .map((e) => e.entryName.replace(/\\/g, '/'))
               .filter((n) => n.endsWith('.class') && !n.includes('$'))
-              .map((n) => n.replace(/\.class$/, '').split('/').pop())
+              .map((n) =>
+                n
+                  .replace(/\.class$/, '')
+                  .split('/')
+                  .pop(),
+              )
               .filter(Boolean) as string[];
 
             // Look for class matching base package or ending with SDK
@@ -231,7 +263,9 @@ export class ArtifactScannerService {
                 c.toLowerCase().endsWith('sdk') ||
                 (result.androidMavenArtifactId &&
                   c.toLowerCase() ===
-                    result.androidMavenArtifactId.replace(/[^a-z0-9]/gi, '').toLowerCase()),
+                    result.androidMavenArtifactId
+                      .replace(/[^a-z0-9]/gi, '')
+                      .toLowerCase()),
             );
             if (sdkClass) {
               activityOrClass = sdkClass;
@@ -258,8 +292,6 @@ export class ArtifactScannerService {
 
     return result;
   }
-
-
 
   /** Reads an entry, refusing oversized (zip bomb) or corrupt entries. */
   private readEntry(entry: AdmZip.IZipEntry, filename: string): Buffer | null {

@@ -7,7 +7,7 @@ export function formatUserResponse<T extends Partial<User>>(
   roles: any[];
   teamTelegramChatId?: string;
 } {
-  if (!user) return user as any;
+  if (!user) return user;
   const role = user.role;
   const roles = (user as any).roles || (role ? [role] : []);
   const status = user.status || 'ACTIVE';

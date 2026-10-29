@@ -111,7 +111,8 @@ describe('NetworkUtils', () => {
     });
 
     it('should preserve custom non-localhost domain/IP', () => {
-      process.env.BACKOFFICE_BASE_URL = 'https://backoffice.fintechcenterfsa.com';
+      process.env.BACKOFFICE_BASE_URL =
+        'https://backoffice.fintechcenterfsa.com';
       const resolved = resolveBackofficeBaseUrl();
       expect(resolved).toBe('https://backoffice.fintechcenterfsa.com');
     });

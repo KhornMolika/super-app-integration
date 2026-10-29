@@ -1,4 +1,7 @@
-import { buildPaginationMeta, createPaginatedResponse } from './pagination.util';
+import {
+  buildPaginationMeta,
+  createPaginatedResponse,
+} from './pagination.util';
 
 describe('Pagination Utilities', () => {
   describe('buildPaginationMeta', () => {

@@ -10,8 +10,7 @@ const AUTH_TAG_LENGTH = 16; // 128-bit authentication tag
  */
 function getEncryptionKey(): Buffer {
   const rawKey =
-    process.env.CREDENTIAL_ENCRYPTION_KEY ||
-    process.env.JWT_SECRET;
+    process.env.CREDENTIAL_ENCRYPTION_KEY || process.env.JWT_SECRET;
   if (!rawKey) {
     if (process.env.NODE_ENV === 'production') {
       throw new Error(

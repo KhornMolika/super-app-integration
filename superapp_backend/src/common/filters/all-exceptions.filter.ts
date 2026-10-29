@@ -37,7 +37,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
     } else if (exception instanceof Error) {
       const err = exception as any;
       // Handle third-party upstream connection errors (Jenkins, Nexus, MinIO, GitLab)
-      if (err.code === 'ECONNREFUSED' || err.message?.includes('ECONNREFUSED')) {
+      if (
+        err.code === 'ECONNREFUSED' ||
+        err.message?.includes('ECONNREFUSED')
+      ) {
         status = HttpStatus.SERVICE_UNAVAILABLE;
         error = 'Service Unavailable';
         message = `Upstream service connection refused (${err.address || 'remote'}:${err.port || ''}). Verify supporting services are running.`;
@@ -63,7 +66,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
         exception instanceof Error ? exception.stack : undefined,
       );
     } else {
-      this.logger.warn(`[${request.method}] ${request.url} - ${status} ${error}: ${message}`);
+      this.logger.warn(
+        `[${request.method}] ${request.url} - ${status} ${error}: ${message}`,
+      );
     }
 
     response.status(status).json({

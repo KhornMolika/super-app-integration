@@ -1,6 +1,14 @@
-import { BadRequestException, ConflictException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { AuthService, END_USER_AUDIENCE, END_USER_TYP } from '../auth/auth.service';
+import {
+  AuthService,
+  END_USER_AUDIENCE,
+  END_USER_TYP,
+} from '../auth/auth.service';
 import { FakeRepo } from './testing/fake-repo';
 import { EndUser, EndUserStatus } from './entities/end-user.entity';
 import { EmailVerificationToken } from './entities/email-verification-token.entity';
@@ -24,9 +32,11 @@ function build() {
   const rTokens = new FakeRepo<RefreshToken>();
   const sent: { to: string; name: string; url: string }[] = [];
   const mail = {
-    sendEmailVerification: jest.fn(async (to: string, name: string, url: string) => {
-      sent.push({ to, name, url });
-    }),
+    sendEmailVerification: jest.fn(
+      async (to: string, name: string, url: string) => {
+        sent.push({ to, name, url });
+      },
+    ),
   };
   const authService = new AuthService(new JwtService({}), {} as any);
   authService.onModuleInit();
@@ -43,12 +53,30 @@ function build() {
     limiter,
   );
   const tokenFromUrl = (url: string) => new URL(url).searchParams.get('token')!;
-  return { svc, limiter, users, backofficeUsers, vTokens, rTokens, sent, mail, authService, passwords, tokenFromUrl };
+  return {
+    svc,
+    limiter,
+    users,
+    backofficeUsers,
+    vTokens,
+    rTokens,
+    sent,
+    mail,
+    authService,
+    passwords,
+    tokenFromUrl,
+  };
 }
 
-async function registerAndVerify(ctx: ReturnType<typeof build>, email = 'Jane@Example.io') {
+async function registerAndVerify(
+  ctx: ReturnType<typeof build>,
+  email = 'Jane@Example.io',
+) {
   await ctx.svc.register({ email, password: PW, name: 'Jane' });
-  await ctx.svc.verifyEmail(ctx.tokenFromUrl(ctx.sent[ctx.sent.length - 1].url), PW);
+  await ctx.svc.verifyEmail(
+    ctx.tokenFromUrl(ctx.sent[ctx.sent.length - 1].url),
+    PW,
+  );
 }
 
 describe('MobileAuthService', () => {
@@ -66,8 +94,14 @@ describe('MobileAuthService', () => {
 
     it('creates a verified account, sends no mail and returns a working session', async () => {
       const c = build();
-      const res: any = await c.svc.register({ email: ' Jane@Example.io ', password: PW, name: ' Jane ' }, 'ua');
-      expect(res).toMatchObject({ expires_in: 900, user: { email: 'jane@example.io', name: 'Jane' } });
+      const res: any = await c.svc.register(
+        { email: ' Jane@Example.io ', password: PW, name: ' Jane ' },
+        'ua',
+      );
+      expect(res).toMatchObject({
+        expires_in: 900,
+        user: { email: 'jane@example.io', name: 'Jane' },
+      });
       expect(res.access_token).toBeTruthy();
       expect(res.refresh_token).toBeTruthy();
       expect(c.users.rows[0].emailVerifiedAt).toBeInstanceOf(Date);
@@ -75,17 +109,30 @@ describe('MobileAuthService', () => {
       expect(c.mail.sendEmailVerification).not.toHaveBeenCalled();
       expect(c.vTokens.rows).toHaveLength(0);
       // The issued access token is a real end-user token; the password works for login too.
-      const claims = c.authService.verifyToken(res.access_token, { audience: END_USER_AUDIENCE, typ: END_USER_TYP });
+      const claims = c.authService.verifyToken(res.access_token, {
+        audience: END_USER_AUDIENCE,
+        typ: END_USER_TYP,
+      });
       expect(claims.sub).toBe(res.user.id);
-      await expect(c.svc.login({ email: 'jane@example.io', password: PW })).resolves.toBeDefined();
+      await expect(
+        c.svc.login({ email: 'jane@example.io', password: PW }),
+      ).resolves.toBeDefined();
     });
 
     it('409 when the email is already registered (verified) and leaves the account untouched', async () => {
       const c = build();
-      await c.svc.register({ email: 'a@example.io', password: PW, name: 'Original' });
+      await c.svc.register({
+        email: 'a@example.io',
+        password: PW,
+        name: 'Original',
+      });
       const before = { ...c.users.rows[0] };
       await expect(
-        c.svc.register({ email: 'A@example.io', password: 'another-good-password', name: 'Attacker' }),
+        c.svc.register({
+          email: 'A@example.io',
+          password: 'another-good-password',
+          name: 'Attacker',
+        }),
       ).rejects.toThrow(ConflictException);
       expect(c.users.rows[0].name).toBe('Original');
       expect(c.users.rows[0].passwordHash).toBe(before.passwordHash);
@@ -95,17 +142,27 @@ describe('MobileAuthService', () => {
       const c = build();
       await c.svc.register({ email: 'a@example.io', password: PW, name: 'A' });
       c.users.rows[0].status = EndUserStatus.DISABLED;
-      await expect(c.svc.register({ email: 'a@example.io', password: PW, name: 'B' })).rejects.toThrow(ConflictException);
+      await expect(
+        c.svc.register({ email: 'a@example.io', password: PW, name: 'B' }),
+      ).rejects.toThrow(ConflictException);
       expect(c.users.rows[0].status).toBe(EndUserStatus.DISABLED);
     });
 
     it('claims a leftover UNVERIFIED row from the verification era', async () => {
       delete process.env.MOBILE_REQUIRE_EMAIL_VERIFICATION;
       const c = build();
-      await c.svc.register({ email: 'a@example.io', password: PW, name: 'Old' }); // pending verification
+      await c.svc.register({
+        email: 'a@example.io',
+        password: PW,
+        name: 'Old',
+      }); // pending verification
       expect(c.users.rows[0].emailVerifiedAt).toBeNull();
       process.env.MOBILE_REQUIRE_EMAIL_VERIFICATION = 'false';
-      const res: any = await c.svc.register({ email: 'a@example.io', password: 'new-good-password', name: 'New' });
+      const res: any = await c.svc.register({
+        email: 'a@example.io',
+        password: 'new-good-password',
+        name: 'New',
+      });
       expect(res.access_token).toBeTruthy();
       expect(c.users.rows).toHaveLength(1);
       expect(c.users.rows[0].name).toBe('New');
@@ -114,16 +171,23 @@ describe('MobileAuthService', () => {
 
     it('still enforces the password policy and stores nothing on violation', async () => {
       const c = build();
-      await expect(c.svc.register({ email: 'a@example.io', password: 'short', name: 'A' })).rejects.toThrow(BadRequestException);
+      await expect(
+        c.svc.register({ email: 'a@example.io', password: 'short', name: 'A' }),
+      ).rejects.toThrow(BadRequestException);
       expect(c.users.rows).toHaveLength(0);
     });
 
     it('is off by default: unset or any value other than "false" keeps verification on', async () => {
       for (const v of [undefined, 'true', '', '0', 'no']) {
         const c = build();
-        if (v === undefined) delete process.env.MOBILE_REQUIRE_EMAIL_VERIFICATION;
+        if (v === undefined)
+          delete process.env.MOBILE_REQUIRE_EMAIL_VERIFICATION;
         else process.env.MOBILE_REQUIRE_EMAIL_VERIFICATION = v;
-        const res = await c.svc.register({ email: 'a@example.io', password: PW, name: 'A' });
+        const res = await c.svc.register({
+          email: 'a@example.io',
+          password: PW,
+          name: 'A',
+        });
         expect(res).toEqual({ message: REGISTER_MESSAGE });
         expect(c.mail.sendEmailVerification).toHaveBeenCalled();
       }
@@ -133,7 +197,11 @@ describe('MobileAuthService', () => {
   describe('register', () => {
     it('stores lowercased email, hashed password, sends link with default deep-link base', async () => {
       const c = build();
-      const res = await c.svc.register({ email: ' Jane@Example.io ', password: PW, name: ' Jane ' });
+      const res = await c.svc.register({
+        email: ' Jane@Example.io ',
+        password: PW,
+        name: ' Jane ',
+      });
       expect(res).toEqual({ message: REGISTER_MESSAGE });
       expect(c.users.rows).toHaveLength(1);
       expect(c.users.rows[0].email).toBe('jane@example.io');
@@ -151,15 +219,29 @@ describe('MobileAuthService', () => {
       process.env.MOBILE_VERIFY_URL_BASE = 'https://app.example.io/verify';
       const c = build();
       await c.svc.register({ email: 'a@example.io', password: PW, name: 'A' });
-      expect(c.sent[0].url).toMatch(/^https:\/\/app\.example\.io\/verify\?token=/);
+      expect(c.sent[0].url).toMatch(
+        /^https:\/\/app\.example\.io\/verify\?token=/,
+      );
     });
 
     it('returns the identical response for new, unverified-existing and verified-existing emails', async () => {
       const c = build();
-      const first = await c.svc.register({ email: 'a@example.io', password: PW, name: 'A' });
-      const again = await c.svc.register({ email: 'a@example.io', password: PW, name: 'A' });
+      const first = await c.svc.register({
+        email: 'a@example.io',
+        password: PW,
+        name: 'A',
+      });
+      const again = await c.svc.register({
+        email: 'a@example.io',
+        password: PW,
+        name: 'A',
+      });
       await c.svc.verifyEmail(c.tokenFromUrl(c.sent[1].url), PW);
-      const verified = await c.svc.register({ email: 'a@example.io', password: 'other-password-1', name: 'B' });
+      const verified = await c.svc.register({
+        email: 'a@example.io',
+        password: 'other-password-1',
+        name: 'B',
+      });
       expect(again).toEqual(first);
       expect(verified).toEqual(first);
       expect(c.users.rows).toHaveLength(1);
@@ -169,7 +251,11 @@ describe('MobileAuthService', () => {
       const c = build();
       await registerAndVerify(c, 'a@example.io');
       const hash = c.users.rows[0].passwordHash;
-      await c.svc.register({ email: 'a@example.io', password: 'attacker-pass-1', name: 'Evil' });
+      await c.svc.register({
+        email: 'a@example.io',
+        password: 'attacker-pass-1',
+        name: 'Evil',
+      });
       expect(c.users.rows[0].passwordHash).toBe(hash);
       expect(c.users.rows[0].name).toBe('Jane');
       expect(c.sent).toHaveLength(1);
@@ -177,28 +263,53 @@ describe('MobileAuthService', () => {
 
     it('re-registering an UNVERIFIED email replaces name+hash, kills older tokens, issues a fresh one', async () => {
       const c = build();
-      await c.svc.register({ email: 'a@example.io', password: 'attacker-pass-1', name: 'Evil' });
-      await c.svc.register({ email: 'a@example.io', password: PW, name: 'Victim' });
+      await c.svc.register({
+        email: 'a@example.io',
+        password: 'attacker-pass-1',
+        name: 'Evil',
+      });
+      await c.svc.register({
+        email: 'a@example.io',
+        password: PW,
+        name: 'Victim',
+      });
       expect(c.sent).toHaveLength(2);
       expect(c.users.rows[0].name).toBe('Victim');
-      expect(await c.passwords.verify(PW, c.users.rows[0].passwordHash)).toBe(true);
+      expect(await c.passwords.verify(PW, c.users.rows[0].passwordHash)).toBe(
+        true,
+      );
       expect(c.vTokens.rows.filter((t) => !t.usedAt)).toHaveLength(2);
-      await expect(c.svc.verifyEmail(c.tokenFromUrl(c.sent[0].url), 'attacker-pass-1')).rejects.toBeInstanceOf(BadRequestException);
-      await expect(c.svc.verifyEmail(c.tokenFromUrl(c.sent[0].url), PW)).rejects.toBeInstanceOf(BadRequestException);
+      await expect(
+        c.svc.verifyEmail(c.tokenFromUrl(c.sent[0].url), 'attacker-pass-1'),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(
+        c.svc.verifyEmail(c.tokenFromUrl(c.sent[0].url), PW),
+      ).rejects.toBeInstanceOf(BadRequestException);
       await c.svc.verifyEmail(c.tokenFromUrl(c.sent[1].url), PW);
       expect(c.users.rows[0].emailVerifiedAt).toBeInstanceOf(Date);
     });
 
     it('squatting: attacker registers victim email with pw A; victim clicking the link with any other password fails, token+A succeeds only if supplied', async () => {
       const c = build();
-      await c.svc.register({ email: 'victim@example.io', password: 'attacker-pass-A', name: 'Evil' });
+      await c.svc.register({
+        email: 'victim@example.io',
+        password: 'attacker-pass-A',
+        name: 'Evil',
+      });
       const token = c.tokenFromUrl(c.sent[0].url); // lands in the victim's mailbox
       for (const wrong of ['victim-own-pass-1', 'attacker-pass-a', PW]) {
-        await expect(c.svc.verifyEmail(token, wrong)).rejects.toThrow('Invalid or expired token');
+        await expect(c.svc.verifyEmail(token, wrong)).rejects.toThrow(
+          'Invalid or expired token',
+        );
       }
       expect(c.users.rows[0].emailVerifiedAt).toBeNull();
       // Attacker cannot log in either (unverified).
-      await expect(c.svc.login({ email: 'victim@example.io', password: 'attacker-pass-A' })).rejects.toThrow('Invalid credentials');
+      await expect(
+        c.svc.login({
+          email: 'victim@example.io',
+          password: 'attacker-pass-A',
+        }),
+      ).rejects.toThrow('Invalid credentials');
       // Token was not burnt by the failures; mailbox owner supplying A activates.
       await c.svc.verifyEmail(token, 'attacker-pass-A');
       expect(c.users.rows[0].emailVerifiedAt).toBeInstanceOf(Date);
@@ -208,28 +319,51 @@ describe('MobileAuthService', () => {
       const c = build();
       const results: unknown[] = [];
       for (let i = 0; i < 6; i++) {
-        results.push(await c.svc.register({ email: 'bomb@example.io', password: `password-num-${i}x`, name: `N${i}` }));
+        results.push(
+          await c.svc.register({
+            email: 'bomb@example.io',
+            password: `password-num-${i}x`,
+            name: `N${i}`,
+          }),
+        );
       }
       expect(new Set(results.map((r) => JSON.stringify(r))).size).toBe(1);
       expect(c.sent).toHaveLength(5);
       expect(c.users.rows[0].name).toBe('N4'); // 6th attempt changed nothing
       const base = Date.now();
       Date.now = () => base + 3_600_001;
-      await c.svc.register({ email: 'bomb@example.io', password: PW, name: 'Later' });
+      await c.svc.register({
+        email: 'bomb@example.io',
+        password: PW,
+        name: 'Later',
+      });
       expect(c.sent).toHaveLength(6);
     });
 
     it('bucket is per address, not global', async () => {
       const c = build();
-      for (let i = 0; i < 6; i++) await c.svc.register({ email: 'x@example.io', password: PW, name: 'X' });
+      for (let i = 0; i < 6; i++)
+        await c.svc.register({
+          email: 'x@example.io',
+          password: PW,
+          name: 'X',
+        });
       await c.svc.register({ email: 'y@example.io', password: PW, name: 'Y' });
       expect(c.sent.filter((m) => m.to === 'y@example.io')).toHaveLength(1);
     });
 
     it('rejects policy violations without touching storage', async () => {
       const c = build();
-      await expect(c.svc.register({ email: 'a@example.io', password: 'short', name: 'A' })).rejects.toBeInstanceOf(BadRequestException);
-      await expect(c.svc.register({ email: 'a@example.io', password: 'a@example.io', name: 'A' })).rejects.toBeInstanceOf(BadRequestException);
+      await expect(
+        c.svc.register({ email: 'a@example.io', password: 'short', name: 'A' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(
+        c.svc.register({
+          email: 'a@example.io',
+          password: 'a@example.io',
+          name: 'A',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
       // 10 fullwidth chars normalise to 10 ASCII -> ok; a decomposed 9-char string is not.
       expect(c.users.rows).toHaveLength(0);
     });
@@ -241,9 +375,13 @@ describe('MobileAuthService', () => {
       await c.svc.register({ email: 'a@example.io', password: PW, name: 'A' });
       const token = c.tokenFromUrl(c.sent[0].url);
       const errs: string[] = [];
-      await c.svc.verifyEmail(token, 'not-the-password').catch((e) => errs.push(e.message));
+      await c.svc
+        .verifyEmail(token, 'not-the-password')
+        .catch((e) => errs.push(e.message));
       expect(c.users.rows[0].emailVerifiedAt).toBeNull();
-      expect(await c.svc.verifyEmail(token, PW)).toEqual({ message: 'Email verified' });
+      expect(await c.svc.verifyEmail(token, PW)).toEqual({
+        message: 'Email verified',
+      });
       expect(c.users.rows[0].emailVerifiedAt).toBeInstanceOf(Date);
       await c.svc.verifyEmail(token, PW).catch((e) => errs.push(e.message));
       await c.svc.verifyEmail('nope', PW).catch((e) => errs.push(e.message));
@@ -251,7 +389,9 @@ describe('MobileAuthService', () => {
       await d.svc.register({ email: 'b@example.io', password: PW, name: 'B' });
       const base = Date.now();
       Date.now = () => base + 25 * 3600 * 1000;
-      await d.svc.verifyEmail(d.tokenFromUrl(d.sent[0].url), PW).catch((e) => errs.push(e.message));
+      await d.svc
+        .verifyEmail(d.tokenFromUrl(d.sent[0].url), PW)
+        .catch((e) => errs.push(e.message));
       expect(errs).toEqual(Array(4).fill('Invalid or expired token'));
       expect(d.users.rows[0].emailVerifiedAt).toBeNull();
     });
@@ -261,12 +401,16 @@ describe('MobileAuthService', () => {
       await c.svc.register({ email: 'a@example.io', password: PW, name: 'A' });
       const token = c.tokenFromUrl(c.sent[0].url);
       for (let i = 0; i < 5; i++) {
-        await expect(c.svc.verifyEmail(token, `guess-number-${i}x`)).rejects.toThrow('Invalid or expired token');
+        await expect(
+          c.svc.verifyEmail(token, `guess-number-${i}x`),
+        ).rejects.toThrow('Invalid or expired token');
       }
       expect(c.vTokens.rows[0].failedAttempts).toBe(5);
       expect(c.vTokens.rows[0].usedAt).toBeInstanceOf(Date);
       // Even the correct password is now refused, same generic error.
-      await expect(c.svc.verifyEmail(token, PW)).rejects.toThrow('Invalid or expired token');
+      await expect(c.svc.verifyEmail(token, PW)).rejects.toThrow(
+        'Invalid or expired token',
+      );
       expect(c.users.rows[0].emailVerifiedAt).toBeNull();
       // A fresh registration issues a fresh token that works.
       await c.svc.register({ email: 'a@example.io', password: PW, name: 'A' });
@@ -278,21 +422,34 @@ describe('MobileAuthService', () => {
       const c = build();
       await c.svc.register({ email: 'a@example.io', password: PW, name: 'A' });
       const token = c.tokenFromUrl(c.sent[0].url);
-      for (let i = 0; i < 4; i++) await c.svc.verifyEmail(token, `guess-number-${i}x`).catch(() => undefined);
-      await expect(c.svc.verifyEmail(token, PW)).resolves.toEqual({ message: 'Email verified' });
+      for (let i = 0; i < 4; i++)
+        await c.svc
+          .verifyEmail(token, `guess-number-${i}x`)
+          .catch(() => undefined);
+      await expect(c.svc.verifyEmail(token, PW)).resolves.toEqual({
+        message: 'Email verified',
+      });
     });
 
     it('a failing dummy scrypt never becomes a 500 (login -> 401, verify -> 400)', async () => {
       const c = build();
-      jest.spyOn(c.passwords, 'verifyDummy').mockRejectedValue(new Error('boom'));
-      await expect(c.svc.login({ email: 'ghost@example.io', password: PW })).rejects.toBeInstanceOf(UnauthorizedException);
-      await expect(c.svc.verifyEmail('nope', PW)).rejects.toBeInstanceOf(BadRequestException);
+      jest
+        .spyOn(c.passwords, 'verifyDummy')
+        .mockRejectedValue(new Error('boom'));
+      await expect(
+        c.svc.login({ email: 'ghost@example.io', password: PW }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+      await expect(c.svc.verifyEmail('nope', PW)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
     });
 
     it('register throws a 429 RateLimitedException (not a silent 202) when the limiter is out of capacity', async () => {
       const c = build();
       c.limiter.maxKeys = 0;
-      const err: any = await c.svc.register({ email: 'a@example.io', password: PW, name: 'A' }).catch((e) => e);
+      const err: any = await c.svc
+        .register({ email: 'a@example.io', password: PW, name: 'A' })
+        .catch((e) => e);
       expect(err).toBeInstanceOf(RateLimitedException);
       expect(err.getStatus()).toBe(429);
       expect(err.retryAfterSeconds).toBeGreaterThan(0);
@@ -311,10 +468,20 @@ describe('MobileAuthService', () => {
     it('succeeds for a verified user and returns tokens + profile', async () => {
       const c = build();
       await registerAndVerify(c);
-      const res = await c.svc.login({ email: 'JANE@example.io', password: PW }, 'UA/1');
+      const res = await c.svc.login(
+        { email: 'JANE@example.io', password: PW },
+        'UA/1',
+      );
       expect(res.expires_in).toBe(900);
-      expect(res.user).toEqual({ id: c.users.rows[0].id, email: 'jane@example.io', name: 'Jane' });
-      const payload = c.authService.verifyToken(res.access_token, { audience: END_USER_AUDIENCE, typ: END_USER_TYP });
+      expect(res.user).toEqual({
+        id: c.users.rows[0].id,
+        email: 'jane@example.io',
+        name: 'Jane',
+      });
+      const payload = c.authService.verifyToken(res.access_token, {
+        audience: END_USER_AUDIENCE,
+        typ: END_USER_TYP,
+      });
       expect(payload.sub).toBe(res.user.id);
       expect(JSON.stringify(res)).not.toMatch(/passwordHash|scrypt/);
       // Refresh token is opaque, stored hashed only.
@@ -329,7 +496,10 @@ describe('MobileAuthService', () => {
       try {
         const c = build();
         await registerAndVerify(c);
-        const res = await c.svc.login({ email: 'jane@example.io', password: PW });
+        const res = await c.svc.login({
+          email: 'jane@example.io',
+          password: PW,
+        });
         expect(res.expires_in).toBe(60);
         const ttl = c.rTokens.rows[0].expiresAt.getTime() - Date.now();
         expect(ttl).toBeLessThanOrEqual(86_400_000);
@@ -357,9 +527,14 @@ describe('MobileAuthService', () => {
     it('gives the identical generic 401 for unknown, wrong password, unverified and disabled', async () => {
       const c = build();
       await registerAndVerify(c);
-      await c.svc.register({ email: 'unv@example.io', password: PW, name: 'U' });
+      await c.svc.register({
+        email: 'unv@example.io',
+        password: PW,
+        name: 'U',
+      });
       await registerAndVerify(c, 'dis@example.io');
-      c.users.rows.find((u) => u.email === 'dis@example.io')!.status = EndUserStatus.DISABLED;
+      c.users.rows.find((u) => u.email === 'dis@example.io')!.status =
+        EndUserStatus.DISABLED;
       const dummy = jest.spyOn(c.passwords, 'verifyDummy');
 
       const attempts = [
@@ -380,11 +555,18 @@ describe('MobileAuthService', () => {
       const c = build();
       await registerAndVerify(c);
       for (let i = 0; i < 5; i++) {
-        await expect(c.svc.login({ email: 'jane@example.io', password: 'wrong-password-x' })).rejects.toThrow('Invalid credentials');
+        await expect(
+          c.svc.login({
+            email: 'jane@example.io',
+            password: 'wrong-password-x',
+          }),
+        ).rejects.toThrow('Invalid credentials');
       }
       expect(c.users.rows[0].lockedUntil).toBeInstanceOf(Date);
       // Correct password is still refused while locked, with the same message.
-      await expect(c.svc.login({ email: 'jane@example.io', password: PW })).rejects.toThrow('Invalid credentials');
+      await expect(
+        c.svc.login({ email: 'jane@example.io', password: PW }),
+      ).rejects.toThrow('Invalid credentials');
       const base = Date.now();
       Date.now = () => base + LOCKOUT_MS + 1000;
       const ok = await c.svc.login({ email: 'jane@example.io', password: PW });
@@ -397,10 +579,14 @@ describe('MobileAuthService', () => {
       const c = build();
       await registerAndVerify(c);
       for (let i = 0; i < 4; i++) {
-        await c.svc.login({ email: 'jane@example.io', password: 'wrong-password-x' }).catch(() => undefined);
+        await c.svc
+          .login({ email: 'jane@example.io', password: 'wrong-password-x' })
+          .catch(() => undefined);
       }
       await c.svc.login({ email: 'jane@example.io', password: PW });
-      await c.svc.login({ email: 'jane@example.io', password: 'wrong-password-x' }).catch(() => undefined);
+      await c.svc
+        .login({ email: 'jane@example.io', password: 'wrong-password-x' })
+        .catch(() => undefined);
       expect(c.users.rows[0].failedLoginCount).toBe(1);
       expect(c.users.rows[0].lockedUntil).toBeNull();
     });
@@ -410,7 +596,10 @@ describe('MobileAuthService', () => {
     it('rotates: new pair works, old token is single-use', async () => {
       const c = build();
       await registerAndVerify(c);
-      const first = await c.svc.login({ email: 'jane@example.io', password: PW });
+      const first = await c.svc.login({
+        email: 'jane@example.io',
+        password: PW,
+      });
       const second = await c.svc.refresh(first.refresh_token);
       expect(second.refresh_token).not.toBe(first.refresh_token);
       expect(second.access_token).toBeTruthy();
@@ -423,23 +612,37 @@ describe('MobileAuthService', () => {
     it('replay within the 10s grace window: plain 401, family NOT revoked', async () => {
       const c = build();
       await registerAndVerify(c);
-      const first = await c.svc.login({ email: 'jane@example.io', password: PW });
+      const first = await c.svc.login({
+        email: 'jane@example.io',
+        password: PW,
+      });
       const second = await c.svc.refresh(first.refresh_token);
-      await expect(c.svc.refresh(first.refresh_token)).rejects.toBeInstanceOf(UnauthorizedException);
+      await expect(c.svc.refresh(first.refresh_token)).rejects.toBeInstanceOf(
+        UnauthorizedException,
+      );
       expect(c.rTokens.rows.some((r) => r.revokedAt)).toBe(false);
-      expect((await c.svc.refresh(second.refresh_token)).access_token).toBeTruthy();
+      expect(
+        (await c.svc.refresh(second.refresh_token)).access_token,
+      ).toBeTruthy();
     });
 
     it('reuse of a rotated token older than the grace window revokes the whole family (including the newest token)', async () => {
       const c = build();
       await registerAndVerify(c);
-      const first = await c.svc.login({ email: 'jane@example.io', password: PW });
+      const first = await c.svc.login({
+        email: 'jane@example.io',
+        password: PW,
+      });
       const second = await c.svc.refresh(first.refresh_token);
       const base = Date.now();
       Date.now = () => base + 11_000;
-      await expect(c.svc.refresh(first.refresh_token)).rejects.toBeInstanceOf(UnauthorizedException);
+      await expect(c.svc.refresh(first.refresh_token)).rejects.toBeInstanceOf(
+        UnauthorizedException,
+      );
       expect(c.rTokens.rows.every((r) => r.revokedAt)).toBe(true);
-      await expect(c.svc.refresh(second.refresh_token)).rejects.toBeInstanceOf(UnauthorizedException);
+      await expect(c.svc.refresh(second.refresh_token)).rejects.toBeInstanceOf(
+        UnauthorizedException,
+      );
     });
 
     it('does not touch other families (other devices)', async () => {
@@ -459,15 +662,21 @@ describe('MobileAuthService', () => {
       const c = build();
       await registerAndVerify(c);
       const t = await c.svc.login({ email: 'jane@example.io', password: PW });
-      await expect(c.svc.refresh('unknown')).rejects.toThrow('Invalid refresh token');
+      await expect(c.svc.refresh('unknown')).rejects.toThrow(
+        'Invalid refresh token',
+      );
       c.users.rows[0].status = EndUserStatus.DISABLED;
-      await expect(c.svc.refresh(t.refresh_token)).rejects.toThrow('Invalid refresh token');
+      await expect(c.svc.refresh(t.refresh_token)).rejects.toThrow(
+        'Invalid refresh token',
+      );
       c.users.rows[0].status = EndUserStatus.ACTIVE;
       await expect(c.svc.refresh(t.refresh_token)).rejects.toThrow(); // family already revoked
       const u = await c.svc.login({ email: 'jane@example.io', password: PW });
       const base = Date.now();
       Date.now = () => base + 31 * 86_400_000;
-      await expect(c.svc.refresh(u.refresh_token)).rejects.toThrow('Invalid refresh token');
+      await expect(c.svc.refresh(u.refresh_token)).rejects.toThrow(
+        'Invalid refresh token',
+      );
     });
 
     it('logout revokes the family, is idempotent and silent for unknown tokens', async () => {
@@ -480,7 +689,9 @@ describe('MobileAuthService', () => {
       await expect(c.svc.logout('never-issued')).resolves.toBeUndefined();
       await expect(c.svc.logout(undefined)).resolves.toBeUndefined();
       await expect(c.svc.logout('')).resolves.toBeUndefined();
-      await expect(c.svc.refresh(t2.refresh_token)).rejects.toBeInstanceOf(UnauthorizedException);
+      await expect(c.svc.refresh(t2.refresh_token)).rejects.toBeInstanceOf(
+        UnauthorizedException,
+      );
     });
 
     it('a refresh in flight when revokeAllSessions lands cannot keep its family alive', async () => {
@@ -488,7 +699,10 @@ describe('MobileAuthService', () => {
       await registerAndVerify(c);
       const base = realNow();
       Date.now = () => base;
-      const first = await c.svc.login({ email: 'jane@example.io', password: PW });
+      const first = await c.svc.login({
+        email: 'jane@example.io',
+        password: PW,
+      });
 
       // Hold the refresh between its claim and the insert of the successor token.
       let reached!: () => void;
@@ -507,19 +721,35 @@ describe('MobileAuthService', () => {
       await c.svc.revokeAllSessions(c.users.rows[0].id);
       release();
       const raced = await inFlight; // accepted residual: this one response still succeeds
-      expect(c.rTokens.rows.find((r) => r.tokenHash === sha256Hex(raced.refresh_token))!.revokedAt).toBeNull();
+      expect(
+        c.rTokens.rows.find(
+          (r) => r.tokenHash === sha256Hex(raced.refresh_token),
+        )!.revokedAt,
+      ).toBeNull();
 
-      await expect(c.svc.refresh(raced.refresh_token)).rejects.toThrow('Invalid refresh token');
+      await expect(c.svc.refresh(raced.refresh_token)).rejects.toThrow(
+        'Invalid refresh token',
+      );
       expect(c.rTokens.rows.every((r) => r.revokedAt)).toBe(true);
 
       // A family started after the revocation rotates normally and keeps its start time.
       Date.now = () => base + 2000;
-      const fresh = await c.svc.login({ email: 'jane@example.io', password: PW });
+      const fresh = await c.svc.login({
+        email: 'jane@example.io',
+        password: PW,
+      });
       const rotated = await c.svc.refresh(fresh.refresh_token);
-      expect((await c.svc.refresh(rotated.refresh_token)).access_token).toBeTruthy();
-      const family = c.rTokens.rows.filter((r) => r.familyId === c.rTokens.rows[c.rTokens.rows.length - 1].familyId);
+      expect(
+        (await c.svc.refresh(rotated.refresh_token)).access_token,
+      ).toBeTruthy();
+      const family = c.rTokens.rows.filter(
+        (r) =>
+          r.familyId === c.rTokens.rows[c.rTokens.rows.length - 1].familyId,
+      );
       expect(family).toHaveLength(3);
-      expect(family.every((r) => r.familyStartedAt?.getTime() === base + 2000)).toBe(true);
+      expect(
+        family.every((r) => r.familyStartedAt?.getTime() === base + 2000),
+      ).toBe(true);
     });
 
     it('a legacy row without familyStartedAt falls back to createdAt and passes it on', async () => {
@@ -527,12 +757,20 @@ describe('MobileAuthService', () => {
       await registerAndVerify(c);
       const base = realNow();
       Date.now = () => base;
-      const legacy = await c.svc.login({ email: 'jane@example.io', password: PW });
-      Object.assign(c.rTokens.rows[0], { familyStartedAt: null, createdAt: new Date(base - 5000) });
+      const legacy = await c.svc.login({
+        email: 'jane@example.io',
+        password: PW,
+      });
+      Object.assign(c.rTokens.rows[0], {
+        familyStartedAt: null,
+        createdAt: new Date(base - 5000),
+      });
       const next = await c.svc.refresh(legacy.refresh_token);
       expect(c.rTokens.rows[1].familyStartedAt).toEqual(new Date(base - 5000));
       c.users.rows[0].sessionsRevokedAt = new Date(base - 1000); // revocation the family raced past
-      await expect(c.svc.refresh(next.refresh_token)).rejects.toThrow('Invalid refresh token');
+      await expect(c.svc.refresh(next.refresh_token)).rejects.toThrow(
+        'Invalid refresh token',
+      );
       expect(c.rTokens.rows.every((r) => r.revokedAt)).toBe(true);
     });
   });
@@ -561,13 +799,18 @@ describe('MobileAuthService login failure bookkeeping vs concurrent writes', () 
   }
 
   /** Lands [patch] on the stored user while the password check is in flight. */
-  function concurrentWriteDuringVerify(c: ReturnType<typeof build>, patch: Partial<EndUser>) {
+  function concurrentWriteDuringVerify(
+    c: ReturnType<typeof build>,
+    patch: Partial<EndUser>,
+  ) {
     const verify = c.passwords.verify.bind(c.passwords);
-    jest.spyOn(c.passwords, 'verify').mockImplementationOnce(async (pw, hash) => {
-      const ok = await verify(pw, hash);
-      Object.assign(c.users.rows[0], patch);
-      return ok;
-    });
+    jest
+      .spyOn(c.passwords, 'verify')
+      .mockImplementationOnce(async (pw, hash) => {
+        const ok = await verify(pw, hash);
+        Object.assign(c.users.rows[0], patch);
+        return ok;
+      });
   }
 
   it('a wrong password does not write back a hash or revocation changed meanwhile', async () => {
@@ -575,11 +818,14 @@ describe('MobileAuthService login failure bookkeeping vs concurrent writes', () 
     await registerAndVerify(c);
     detach(c.users);
     const revokedAt = new Date();
-    concurrentWriteDuringVerify(c, { passwordHash: 'scrypt$new', sessionsRevokedAt: revokedAt });
+    concurrentWriteDuringVerify(c, {
+      passwordHash: 'scrypt$new',
+      sessionsRevokedAt: revokedAt,
+    });
 
-    await expect(c.svc.login({ email: 'jane@example.io', password: 'wrong-password-1' })).rejects.toThrow(
-      UnauthorizedException,
-    );
+    await expect(
+      c.svc.login({ email: 'jane@example.io', password: 'wrong-password-1' }),
+    ).rejects.toThrow(UnauthorizedException);
 
     const row = c.users.rows[0];
     expect(row.passwordHash).toBe('scrypt$new');

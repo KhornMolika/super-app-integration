@@ -53,7 +53,11 @@ describe('MailService.sendAccountDeletionScheduled', () => {
     const svc = new MailService();
     const send = jest.fn().mockResolvedValue({ data: { id: '1' } });
     (svc as unknown as { resend: unknown }).resend = { emails: { send } };
-    await svc.sendAccountDeletionScheduled('jane@gmail.com', '<b>Jane</b>', new Date('2026-11-01T10:00:00Z'));
+    await svc.sendAccountDeletionScheduled(
+      'jane@gmail.com',
+      '<b>Jane</b>',
+      new Date('2026-11-01T10:00:00Z'),
+    );
     const arg = send.mock.calls[0][0];
     expect(arg.to).toBe('jane@gmail.com');
     expect(arg.html).toContain('&lt;b&gt;Jane&lt;/b&gt;');
@@ -62,12 +66,14 @@ describe('MailService.sendAccountDeletionScheduled', () => {
   });
 });
 
-
 describe('MailService.sendBackofficeEmailVerification', () => {
   const build = () => {
     const svc = new MailService();
     const send = jest
-      .fn<Promise<{ data: { id: string } }>, [{ html?: string; to?: string; subject?: string }]>()
+      .fn<
+        Promise<{ data: { id: string } }>,
+        [{ html?: string; to?: string; subject?: string }]
+      >()
       .mockResolvedValue({ data: { id: '1' } });
     (svc as unknown as { resend: { emails: { send: typeof send } } }).resend = {
       emails: { send },
@@ -86,7 +92,9 @@ describe('MailService.sendBackofficeEmailVerification', () => {
     );
     const callArg = send.mock.calls[0]?.[0];
     expect(callArg?.to).toBe('operator@gmail.com');
-    expect(callArg?.subject).toBe('FSA Backoffice — Email Verification Code: 654321');
+    expect(callArg?.subject).toBe(
+      'FSA Backoffice — Email Verification Code: 654321',
+    );
     expect(callArg?.html).toContain('FSA SuperApp Backoffice Portal');
     expect(callArg?.html).toContain('Verify in Backoffice Portal');
     expect(callArg?.html).toContain('654321');
@@ -104,6 +112,8 @@ describe('MailService.sendBackofficeEmailVerification', () => {
     );
     const callArg = send.mock.calls[0]?.[0];
     expect(callArg?.html).not.toContain('<script>');
-    expect(callArg?.html).toContain('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
+    expect(callArg?.html).toContain(
+      '&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;',
+    );
   });
 });

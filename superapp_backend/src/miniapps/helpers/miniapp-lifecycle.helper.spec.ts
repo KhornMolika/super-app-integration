@@ -27,17 +27,25 @@ describe('MiniappLifecycleHelper - Revision & Approval Lifecycle', () => {
     mockJenkinsService = {
       triggerMiniAppValidation: jest.fn().mockResolvedValue({ success: true }),
       triggerSuperAppBuild: jest.fn().mockResolvedValue({ success: true }),
-      triggerSuperAppSandboxBuild: jest.fn().mockResolvedValue({ success: true }),
+      triggerSuperAppSandboxBuild: jest
+        .fn()
+        .mockResolvedValue({ success: true }),
     };
     mockSuperAppService = {
       getAndRegisterNextVersion: jest.fn().mockResolvedValue('v1.1.1'),
       findLatestCapability: jest.fn().mockResolvedValue({ capabilities: [] }),
     };
     mockLocalSecurityScannerService = {};
-    const mockPipelinePacerService = { paceBuildTrigger: jest.fn().mockResolvedValue(undefined) };
-    const mockGitService = { getDeployPrivateKey: jest.fn().mockReturnValue('') };
+    const mockPipelinePacerService = {
+      paceBuildTrigger: jest.fn().mockResolvedValue(undefined),
+    };
+    const mockGitService = {
+      getDeployPrivateKey: jest.fn().mockReturnValue(''),
+    };
     const mockPubspecService = {
-      injectMiniApp: jest.fn().mockResolvedValue({ success: true, packageName: 'test' }),
+      injectMiniApp: jest
+        .fn()
+        .mockResolvedValue({ success: true, packageName: 'test' }),
       validateDependencies: jest.fn().mockResolvedValue({ success: true }),
       triggerSandboxRebuild: jest.fn().mockResolvedValue({ success: true }),
     };
@@ -67,7 +75,11 @@ describe('MiniappLifecycleHelper - Revision & Approval Lifecycle', () => {
         securityChecks: [],
       } as any;
 
-      const result = await helper.submitForReview(app, 'user-1', mockLogActivityFn);
+      const result = await helper.submitForReview(
+        app,
+        'user-1',
+        mockLogActivityFn,
+      );
 
       expect(result.lifecycleStatus).toBe('SUBMITTED');
       expect(result.validationStatus).toBe('RUNNING');

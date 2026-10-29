@@ -36,7 +36,9 @@ export enum EndUserHonorific {
 @Unique('UQ_end_users_email', ['email'])
 @Check('CHK_end_users_email_lowercase', `"email" = lower("email")`)
 export class EndUser {
-  @PrimaryGeneratedColumn('uuid', { primaryKeyConstraintName: 'PK_end_users_id' })
+  @PrimaryGeneratedColumn('uuid', {
+    primaryKeyConstraintName: 'PK_end_users_id',
+  })
   id!: string;
 
   /** Always stored lowercased + trimmed. */

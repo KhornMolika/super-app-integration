@@ -183,11 +183,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         chat.username ||
         'Telegram Operator';
 
-      await this.persistDiscoveredGroup(
-        chatId,
-        displayName,
-        'private',
-      );
+      await this.persistDiscoveredGroup(chatId, displayName, 'private');
 
       const text = update.message?.text?.trim() || '';
       if (text.startsWith('/start')) {

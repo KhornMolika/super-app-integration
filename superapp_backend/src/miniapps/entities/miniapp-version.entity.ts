@@ -28,7 +28,6 @@ export class MiniAppVersion {
   @Column()
   version!: string;
 
-
   @Column({ default: 'DRAFT' })
   status!: string; // ACTIVE, TESTING, PREVIOUS, DEPRECATED, SUPERSEDED, ARCHIVED, IN_REVIEW, APPROVED, DRAFT
 
@@ -73,7 +72,6 @@ export class MiniAppVersion {
 
   @Column({ type: 'jsonb', nullable: true, default: () => "'[]'" })
   permissions?: string[];
-
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;

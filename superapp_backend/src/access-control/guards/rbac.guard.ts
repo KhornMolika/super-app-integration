@@ -28,10 +28,12 @@ export class RbacGuard implements CanActivate {
     }
 
     const userRoles: string[] = Array.isArray(user.roles)
-      ? user.roles.map((r: any) => (typeof r === 'string' ? r : r?.name)).filter(Boolean)
+      ? user.roles
+          .map((r: any) => (typeof r === 'string' ? r : r?.name))
+          .filter(Boolean)
       : user.role
-      ? [user.role]
-      : [];
+        ? [user.role]
+        : [];
 
     const normalizedRoles = userRoles.map((r) => r.toUpperCase().trim());
     const email = (user.email || '').toLowerCase().trim();
@@ -44,7 +46,9 @@ export class RbacGuard implements CanActivate {
       return true;
     }
 
-    const userPerms = new Set<string>(Array.isArray(user.permissions) ? user.permissions : []);
+    const userPerms = new Set<string>(
+      Array.isArray(user.permissions) ? user.permissions : [],
+    );
 
     // Role-based fallback permissions (for legacy tokens or unseeded DB relations)
     if (
@@ -79,7 +83,13 @@ export class RbacGuard implements CanActivate {
     }
 
     if (
-      normalizedRoles.some((r) => r === 'MA_DEVELOPER' || r.includes('DEVELOPER') || r.includes('DEV') || r.includes('MINI_APP')) ||
+      normalizedRoles.some(
+        (r) =>
+          r === 'MA_DEVELOPER' ||
+          r.includes('DEVELOPER') ||
+          r.includes('DEV') ||
+          r.includes('MINI_APP'),
+      ) ||
       email.includes('dev') ||
       normalizedRoles.length === 0
     ) {
@@ -112,4 +122,3 @@ export class RbacGuard implements CanActivate {
     return true;
   }
 }
-

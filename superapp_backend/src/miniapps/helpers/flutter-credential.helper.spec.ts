@@ -31,8 +31,9 @@ sample-private-key-content-12345
   it('preserves existing encrypted deployKey when update sends masked value', () => {
     const existing = {
       packageName: 'my_flutter_app',
-      deployKey: secureFlutterIntegrationConfig({ deployKey: samplePrivateKey })!
-        .deployKey,
+      deployKey: secureFlutterIntegrationConfig({
+        deployKey: samplePrivateKey,
+      })!.deployKey,
     };
 
     const updateWithMask = {
@@ -48,8 +49,9 @@ sample-private-key-content-12345
   it('preserves existing deployKey when update leaves deployKey empty', () => {
     const existing = {
       packageName: 'my_flutter_app',
-      deployKey: secureFlutterIntegrationConfig({ deployKey: samplePrivateKey })!
-        .deployKey,
+      deployKey: secureFlutterIntegrationConfig({
+        deployKey: samplePrivateKey,
+      })!.deployKey,
     };
 
     const updateWithoutKey = {
@@ -63,8 +65,9 @@ sample-private-key-content-12345
 
   it('updates deployKey if a new real private key is provided in update', () => {
     const existing = {
-      deployKey: secureFlutterIntegrationConfig({ deployKey: samplePrivateKey })!
-        .deployKey,
+      deployKey: secureFlutterIntegrationConfig({
+        deployKey: samplePrivateKey,
+      })!.deployKey,
     };
 
     const newKey = `-----BEGIN OPENSSH PRIVATE KEY-----\nnew-key-67890\n-----END OPENSSH PRIVATE KEY-----`;
@@ -99,7 +102,10 @@ sample-private-key-content-12345
 
     const masked = maskMiniAppCredentials(app);
     const maskedConfig = masked.integrationConfig as Record<string, unknown>;
-    const maskedPending = masked.pendingRevision.integrationConfig as Record<string, unknown>;
+    const maskedPending = masked.pendingRevision.integrationConfig as Record<
+      string,
+      unknown
+    >;
 
     expect(maskedConfig.deployKey).toBe('********');
     expect(maskedConfig.hasDeployKey).toBe(true);

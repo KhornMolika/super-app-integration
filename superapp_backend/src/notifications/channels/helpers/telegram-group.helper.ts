@@ -58,7 +58,8 @@ export class TelegramGroupHelper {
     }
 
     // 2. Scan all mini apps owned by this user (or all mini apps if SUPER_ADMIN / ADMIN)
-    const userRoleList = (dbUser as any)?.roles || (dbUser?.role ? [dbUser.role] : []);
+    const userRoleList =
+      (dbUser as any)?.roles || (dbUser?.role ? [dbUser.role] : []);
     const isAdmin = userRoleList.some(
       (r: any) => r.name === 'SUPER_ADMIN' || r.name === 'ADMIN',
     );
@@ -73,7 +74,8 @@ export class TelegramGroupHelper {
     }
 
     for (const app of miniApps) {
-      const targetTeamChat = app.alertTelegramChatId || (app as any).teamTelegramChatId;
+      const targetTeamChat =
+        app.alertTelegramChatId || (app as any).teamTelegramChatId;
       if (targetTeamChat && targetTeamChat.trim()) {
         const rawIds = targetTeamChat
           .split(',')
@@ -362,7 +364,11 @@ export class TelegramGroupHelper {
     }
 
     // Include platform default operations channel if configured
-    if (defaultChatId && defaultChatId.trim() && !contactsMap.has(defaultChatId.trim())) {
+    if (
+      defaultChatId &&
+      defaultChatId.trim() &&
+      !contactsMap.has(defaultChatId.trim())
+    ) {
       contactsMap.set(defaultChatId.trim(), {
         chatId: defaultChatId.trim(),
         type: 'group',
@@ -492,7 +498,9 @@ export class TelegramGroupHelper {
         | null
         | undefined;
       const currentChatId =
-        app.alertTelegramChatId || (app as any).teamTelegramChatId || pendingRev?.teamTelegramChatId;
+        app.alertTelegramChatId ||
+        (app as any).teamTelegramChatId ||
+        pendingRev?.teamTelegramChatId;
       if (!currentChatId) continue;
       const ids: string[] = currentChatId
         .split(',')

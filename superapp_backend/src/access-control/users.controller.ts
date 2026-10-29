@@ -40,7 +40,8 @@ export class UsersController {
     if (!userEmail) {
       throw new ForbiddenException('User session not found');
     }
-    const user = await this.accessControlService.findByEmailWithPermissions(userEmail);
+    const user =
+      await this.accessControlService.findByEmailWithPermissions(userEmail);
     if (!user) {
       throw new ForbiddenException('User record not found');
     }
@@ -48,7 +49,9 @@ export class UsersController {
   }
 
   @Post('me/avatar')
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 2 * 1024 * 1024 } }))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 2 * 1024 * 1024 } }),
+  )
   async uploadMyAvatar(
     @UploadedFile() file: Express.Multer.File,
     @Req() req: any,
@@ -57,7 +60,8 @@ export class UsersController {
     if (!userEmail) {
       throw new ForbiddenException('User session not found');
     }
-    const user = await this.accessControlService.findByEmailWithPermissions(userEmail);
+    const user =
+      await this.accessControlService.findByEmailWithPermissions(userEmail);
     if (!user) {
       throw new ForbiddenException('User record not found');
     }
@@ -70,7 +74,8 @@ export class UsersController {
     if (!userEmail) {
       throw new ForbiddenException('User session not found');
     }
-    const user = await this.accessControlService.findByEmailWithPermissions(userEmail);
+    const user =
+      await this.accessControlService.findByEmailWithPermissions(userEmail);
     if (!user) {
       throw new ForbiddenException('User record not found');
     }
@@ -81,7 +86,9 @@ export class UsersController {
   @RequirePermissions('organization:read')
   async findAll(@Query() query: QueryUsersDto, @Req() req: any) {
     const requester = req?.user;
-    const userPerms = new Set<string>(Array.isArray(requester?.permissions) ? requester.permissions : []);
+    const userPerms = new Set<string>(
+      Array.isArray(requester?.permissions) ? requester.permissions : [],
+    );
     const isSuperOrAdmin =
       requester?.email?.includes('superadmin') ||
       requester?.email?.includes('admin') ||
@@ -96,7 +103,9 @@ export class UsersController {
     if (!userPerms.has('user:read') && !isSuperOrAdmin) {
       const orgId = requester?.organizationId || query.organizationId;
       if (!orgId) {
-        throw new ForbiddenException('You must belong to an organization to list members');
+        throw new ForbiddenException(
+          'You must belong to an organization to list members',
+        );
       }
       query.organizationId = requester?.organizationId || orgId;
     }
@@ -195,7 +204,9 @@ export class UsersController {
   }
 
   @Post(':id/avatar')
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 2 * 1024 * 1024 } }))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 2 * 1024 * 1024 } }),
+  )
   async uploadUserAvatar(
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
@@ -211,7 +222,10 @@ export class UsersController {
     return this.accessControlService.deleteUserAvatar(id, req?.user);
   }
 
-  private async assertCanManageTargetUser(targetId: string, requester: any): Promise<void> {
+  private async assertCanManageTargetUser(
+    targetId: string,
+    requester: any,
+  ): Promise<void> {
     if (!requester) {
       throw new ForbiddenException('Authentication required');
     }
@@ -230,7 +244,9 @@ export class UsersController {
         ));
 
     if (!userPerms.has('user:manage') && !isSuperOrAdmin) {
-      throw new ForbiddenException('Insufficient permissions to manage user media');
+      throw new ForbiddenException(
+        'Insufficient permissions to manage user media',
+      );
     }
   }
 }

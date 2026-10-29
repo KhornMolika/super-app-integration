@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Get,
-  Query,
-  Param,
-  Res,
-  Logger,
-} from '@nestjs/common';
+import { Controller, Get, Query, Param, Res, Logger } from '@nestjs/common';
 import type { Response } from 'express';
 import { Readable } from 'stream';
 import * as fs from 'fs';
@@ -32,7 +25,9 @@ export class ApkDownloadController {
     @Param('filename') filenameParam: string,
     @Res() res: Response,
   ) {
-    const match = filenameParam?.match(/superapp-(test|release)-(v?\d+\.\d+\.\d+)\.apk/i);
+    const match = filenameParam?.match(
+      /superapp-(test|release)-(v?\d+\.\d+\.\d+)\.apk/i,
+    );
     const type = match ? match[1].toLowerCase() : 'test';
     const version = match ? match[2] : 'v0.2.5';
     return this.handleStreamApk(type, version, res);
@@ -63,9 +58,7 @@ export class ApkDownloadController {
       process.env.NEXUS_USERNAME ||
       'admin';
     const nexusPass =
-      process.env.NEXUS_ADMIN_PASSWORD ||
-      process.env.NEXUS_PASSWORD ||
-      '';
+      process.env.NEXUS_ADMIN_PASSWORD || process.env.NEXUS_PASSWORD || '';
     const b64 = nexusPass
       ? Buffer.from(`${nexusUser}:${nexusPass}`).toString('base64')
       : '';
@@ -93,7 +86,10 @@ export class ApkDownloadController {
         });
 
         if (upstreamRes.ok) {
-          res.setHeader('Content-Type', 'application/vnd.android.package-archive');
+          res.setHeader(
+            'Content-Type',
+            'application/vnd.android.package-archive',
+          );
           res.setHeader('X-Content-Type-Options', 'nosniff');
           res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
           res.setHeader('Pragma', 'no-cache');

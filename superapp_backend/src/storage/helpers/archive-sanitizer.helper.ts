@@ -129,8 +129,14 @@ export class ArchiveSanitizerHelper {
       // Safe fallback if pubspec was not parsed via entries
       if (!parsedPubspec?.name) {
         try {
-          const sampleText = rawBuffer.toString('utf8', 0, Math.min(rawBuffer.length, 500000));
-          const nameMatch = sampleText.match(/(?:^|\n)\s*name:\s*([a-zA-Z0-9_-]+)/);
+          const sampleText = rawBuffer.toString(
+            'utf8',
+            0,
+            Math.min(rawBuffer.length, 500000),
+          );
+          const nameMatch = sampleText.match(
+            /(?:^|\n)\s*name:\s*([a-zA-Z0-9_-]+)/,
+          );
           const verMatch = sampleText.match(/(?:^|\n)\s*version:\s*([^\s#]+)/);
           if (nameMatch) {
             parsedPubspec.name = nameMatch[1].trim();
@@ -195,8 +201,12 @@ export class ArchiveSanitizerHelper {
       '_',
     );
 
-    const name = parsedPubspec?.name ? String(parsedPubspec.name).trim() : undefined;
-    const version = parsedPubspec?.version ? String(parsedPubspec.version).trim() : undefined;
+    const name = parsedPubspec?.name
+      ? String(parsedPubspec.name).trim()
+      : undefined;
+    const version = parsedPubspec?.version
+      ? String(parsedPubspec.version).trim()
+      : undefined;
 
     return {
       success: true,

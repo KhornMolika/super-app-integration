@@ -44,4 +44,3 @@ export class SuperAppController {
     return this.superAppService.findCapabilitiesForVersion(version);
   }
 }
-

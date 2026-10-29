@@ -181,7 +181,9 @@ export class GitHubProvider implements GitProvider {
       }
     } catch (err: any) {
       if (err.message?.includes('not found')) throw err;
-      this.logger.warn(`GitHub getRepository API error (${err.message}). Returning fallback metadata.`);
+      this.logger.warn(
+        `GitHub getRepository API error (${err.message}). Returning fallback metadata.`,
+      );
     }
 
     // Fallback info when GitHub API is rate-limited
@@ -342,8 +344,14 @@ export class GitHubProvider implements GitProvider {
     try {
       const localCandidates = [
         path.resolve(process.cwd(), `../${parsed.repo}/${normalizedFilePath}`),
-        path.resolve(process.cwd(), `../${parsed.fullName.replace('/', '-')}/${normalizedFilePath}`),
-        path.resolve(process.cwd(), `../../${parsed.repo}/${normalizedFilePath}`),
+        path.resolve(
+          process.cwd(),
+          `../${parsed.fullName.replace('/', '-')}/${normalizedFilePath}`,
+        ),
+        path.resolve(
+          process.cwd(),
+          `../../${parsed.repo}/${normalizedFilePath}`,
+        ),
         path.resolve(process.cwd(), normalizedFilePath),
       ];
       for (const loc of localCandidates) {
@@ -387,7 +395,9 @@ export class GitHubProvider implements GitProvider {
       const parsedYaml = YAML.parse(pubspecRaw);
 
       if (!parsedYaml || typeof parsedYaml !== 'object') {
-        const inferredPkg = parsed.repo.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+        const inferredPkg = parsed.repo
+          .toLowerCase()
+          .replace(/[^a-z0-9_]/g, '_');
         return {
           isValid: true,
           isFlutterPackage: true,
@@ -397,7 +407,9 @@ export class GitHubProvider implements GitProvider {
         };
       }
 
-      const inferredName = parsedYaml.name || parsed.repo.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+      const inferredName =
+        parsedYaml.name ||
+        parsed.repo.toLowerCase().replace(/[^a-z0-9_]/g, '_');
       const hasFlutterSdk =
         parsedYaml.dependencies?.flutter !== undefined ||
         parsedYaml.flutter !== undefined ||
@@ -407,7 +419,8 @@ export class GitHubProvider implements GitProvider {
       return {
         isValid: true,
         packageName: inferredName,
-        version: parsedYaml.version || effectiveRef?.replace(/^v/, '') || '1.0.0',
+        version:
+          parsedYaml.version || effectiveRef?.replace(/^v/, '') || '1.0.0',
         description: parsedYaml.description,
         isFlutterPackage: hasFlutterSdk,
         dependencies: parsedYaml.dependencies || {},

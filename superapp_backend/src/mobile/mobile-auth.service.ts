@@ -59,7 +59,12 @@ export const isTokenResponse = (r: RegisterResult): r is TokenResponse =>
 const newOpaqueToken = () => crypto.randomBytes(32).toString('base64url');
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
 
-export function intEnv(name: string, fallback: number, min: number, max: number): number {
+export function intEnv(
+  name: string,
+  fallback: number,
+  min: number,
+  max: number,
+): number {
   const n = Number(process.env[name]);
   const v = Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
   return Math.min(max, Math.max(min, v));
@@ -80,14 +85,18 @@ export class MobileAuthService implements OnModuleInit {
     private readonly authService: AuthService,
     private readonly mail: MailService,
     private readonly limiter: AuthRateLimiter,
-  ) { }
+  ) {}
 
   async onModuleInit() {
     await this.seedDefaultEndUsers();
   }
 
   private async seedDefaultEndUsers(): Promise<void> {
-    if (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'production' || process.env.ENVIRONMENT === 'PROD') {
+    if (
+      process.env.NODE_ENV === 'test' ||
+      process.env.NODE_ENV === 'production' ||
+      process.env.ENVIRONMENT === 'PROD'
+    ) {
       return;
     }
     const adminPass = process.env.SUPERADMIN_PASSWORD;
@@ -95,10 +104,26 @@ export class MobileAuthService implements OnModuleInit {
       return;
     }
     const defaultUsers = [
-      { email: process.env.SUPERADMIN_EMAIL || 'superadmin@superapp.gov.kh', name: 'Super Admin', password: adminPass },
-      { email: process.env.ADMIN_EMAIL || 'admin@superapp.gov.kh', name: 'Admin User', password: adminPass },
-      { email: process.env.DEV_EMAIL || 'ma-developer@superapp.gov.kh', name: 'MiniApp Developer', password: adminPass },
-      { email: 'qa@superapp.gov.kh', name: 'QA Test Engineer', password: adminPass },
+      {
+        email: process.env.SUPERADMIN_EMAIL || 'superadmin@superapp.gov.kh',
+        name: 'Super Admin',
+        password: adminPass,
+      },
+      {
+        email: process.env.ADMIN_EMAIL || 'admin@superapp.gov.kh',
+        name: 'Admin User',
+        password: adminPass,
+      },
+      {
+        email: process.env.DEV_EMAIL || 'ma-developer@superapp.gov.kh',
+        name: 'MiniApp Developer',
+        password: adminPass,
+      },
+      {
+        email: 'qa@superapp.gov.kh',
+        name: 'QA Test Engineer',
+        password: adminPass,
+      },
     ];
 
     for (const u of defaultUsers) {
@@ -117,7 +142,10 @@ export class MobileAuthService implements OnModuleInit {
           await this.users.save(endUser);
           this.logger.log(`Seeded default mobile EndUser account: ${email}`);
         } else {
-          const matches = await this.passwords.verify(u.password, existing.passwordHash);
+          const matches = await this.passwords.verify(
+            u.password,
+            existing.passwordHash,
+          );
           if (!matches) {
             existing.passwordHash = await this.passwords.hash(u.password);
           }
@@ -130,7 +158,9 @@ export class MobileAuthService implements OnModuleInit {
           await this.users.save(existing);
         }
       } catch (err: any) {
-        this.logger.warn(`Could not seed default mobile user ${u.email}: ${err?.message}`);
+        this.logger.warn(
+          `Could not seed default mobile user ${u.email}: ${err?.message}`,
+        );
       }
     }
 
@@ -143,13 +173,19 @@ export class MobileAuthService implements OnModuleInit {
 
       if (exampleEndUsers.length > 0) {
         await this.users.remove(exampleEndUsers);
-        this.logger.log(`Purged ${exampleEndUsers.length} legacy @example.com mobile end-user account(s)`);
+        this.logger.log(
+          `Purged ${exampleEndUsers.length} legacy @example.com mobile end-user account(s)`,
+        );
       }
     } catch (err: any) {
-      this.logger.warn(`Could not purge @example.com mobile end-users: ${err?.message}`);
+      this.logger.warn(
+        `Could not purge @example.com mobile end-users: ${err?.message}`,
+      );
     }
 
-    this.logger.log(`Mobile accounts ready: ${defaultUsers.map((u) => u.email).join(', ')}`);
+    this.logger.log(
+      `Mobile accounts ready: ${defaultUsers.map((u) => u.email).join(', ')}`,
+    );
   }
 
   get accessTtlSeconds(): number {
@@ -157,7 +193,9 @@ export class MobileAuthService implements OnModuleInit {
   }
 
   get refreshTtlMs(): number {
-    return intEnv('MOBILE_REFRESH_TOKEN_TTL_DAYS', 30, 1, 90) * 24 * 60 * 60 * 1000;
+    return (
+      intEnv('MOBILE_REFRESH_TOKEN_TTL_DAYS', 30, 1, 90) * 24 * 60 * 60 * 1000
+    );
   }
 
   // ---------------------------------------------------------------- register
@@ -237,7 +275,8 @@ export class MobileAuthService implements OnModuleInit {
       } catch (err: any) {
         if (err?.code !== '23505') throw err; // unique violation = lost a race
         user = await this.users.findOne({ where: { email } });
-        if (user) user = await this.takeOverUnverified(user, input.name, passwordHash);
+        if (user)
+          user = await this.takeOverUnverified(user, input.name, passwordHash);
       }
     } else {
       user = await this.takeOverUnverified(user, input.name, passwordHash);
@@ -320,7 +359,8 @@ export class MobileAuthService implements OnModuleInit {
     name: string,
     passwordHash: string,
   ): Promise<EndUser> {
-    if (user.emailVerifiedAt || user.status !== EndUserStatus.ACTIVE) return user;
+    if (user.emailVerifiedAt || user.status !== EndUserStatus.ACTIVE)
+      return user;
     const res = await this.users.update(
       { id: user.id, emailVerifiedAt: IsNull() },
       { name: name.trim(), passwordHash },
@@ -362,14 +402,22 @@ export class MobileAuthService implements OnModuleInit {
 
     // Fire and forget: mail latency must not differ between the branches.
     void this.mail
-      .sendEmailVerification(user.email, user.name, this.buildVerifyUrl(token), otpCode)
+      .sendEmailVerification(
+        user.email,
+        user.name,
+        this.buildVerifyUrl(token),
+        otpCode,
+      )
       .catch((err) =>
-        this.logger.error(`Verification email dispatch failed unexpectedly: ${err?.message || err}`),
+        this.logger.error(
+          `Verification email dispatch failed unexpectedly: ${err?.message || err}`,
+        ),
       );
   }
 
   private buildVerifyUrl(token: string): string {
-    const base = process.env.MOBILE_VERIFY_URL_BASE || 'superapp://verify-email';
+    const base =
+      process.env.MOBILE_VERIFY_URL_BASE || 'superapp://verify-email';
     return `${base}${base.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`;
   }
 
@@ -384,7 +432,10 @@ export class MobileAuthService implements OnModuleInit {
    * Verifies password if supplied (preserving backward compatibility with mobile app).
    * Atomically burns all active tokens for the user upon claim.
    */
-  async verifyEmail(token: string, password?: string): Promise<{ message: string }> {
+  async verifyEmail(
+    token: string,
+    password?: string,
+  ): Promise<{ message: string }> {
     const cleanToken = (token || '').trim();
     const fail = () => new BadRequestException('Invalid or expired token');
     const record = await this.verificationTokens.findOne({
@@ -395,13 +446,16 @@ export class MobileAuthService implements OnModuleInit {
       !record.usedAt &&
       new Date(record.expiresAt).getTime() > Date.now();
     const user = usable
-      ? await this.users.findOne({ where: { id: record!.userId } })
+      ? await this.users.findOne({ where: { id: record.userId } })
       : null;
     if (!record || !usable || !user) {
       if (password) await this.burnDummy(password);
       throw fail();
     }
-    if (password && !(await this.passwords.verify(password, user.passwordHash))) {
+    if (
+      password &&
+      !(await this.passwords.verify(password, user.passwordHash))
+    ) {
       // A token holder must not be able to use this endpoint as an unmetered
       // password oracle: after VERIFY_MAX_FAILED_ATTEMPTS wrong passwords the
       // token is invalidated (the user has to register again for a new one).
@@ -410,7 +464,9 @@ export class MobileAuthService implements OnModuleInit {
         { id: record.id, usedAt: IsNull() },
         {
           failedAttempts: attempts,
-          ...(attempts >= VERIFY_MAX_FAILED_ATTEMPTS ? { usedAt: new Date() } : {}),
+          ...(attempts >= VERIFY_MAX_FAILED_ATTEMPTS
+            ? { usedAt: new Date() }
+            : {}),
         },
       );
       throw fail();
@@ -439,12 +495,20 @@ export class MobileAuthService implements OnModuleInit {
 
     // Auto-sync backoffice portal developer/admin accounts if not yet in EndUser
     if (!user) {
-      const backofficeUser = await this.backofficeUsers.findOne({ where: { email } });
+      const backofficeUser = await this.backofficeUsers.findOne({
+        where: { email },
+      });
       if (backofficeUser && backofficeUser.status === 'ACTIVE') {
         let matchesPass = false;
         if (backofficeUser.passwordHash) {
-          matchesPass = await this.passwords.verify(input.password, backofficeUser.passwordHash);
-        } else if (process.env.SUPERADMIN_PASSWORD && input.password === process.env.SUPERADMIN_PASSWORD) {
+          matchesPass = await this.passwords.verify(
+            input.password,
+            backofficeUser.passwordHash,
+          );
+        } else if (
+          process.env.SUPERADMIN_PASSWORD &&
+          input.password === process.env.SUPERADMIN_PASSWORD
+        ) {
           matchesPass = true;
         }
 
@@ -477,7 +541,11 @@ export class MobileAuthService implements OnModuleInit {
     }
 
     let ok = await this.passwords.verify(input.password, user.passwordHash);
-    if (!ok && process.env.NODE_ENV !== 'production' && process.env.SUPERADMIN_PASSWORD) {
+    if (
+      !ok &&
+      process.env.NODE_ENV !== 'production' &&
+      process.env.SUPERADMIN_PASSWORD
+    ) {
       if (input.password === process.env.SUPERADMIN_PASSWORD) {
         ok = true;
         user.passwordHash = await this.passwords.hash(input.password);
@@ -494,7 +562,8 @@ export class MobileAuthService implements OnModuleInit {
       throw new UnauthorizedException(INVALID_CREDENTIALS);
     }
 
-    if (user.status !== EndUserStatus.ACTIVE) {
+    const restore = this.isRestorable(user);
+    if (!restore && user.status !== EndUserStatus.ACTIVE) {
       throw new UnauthorizedException(INVALID_CREDENTIALS);
     }
 
@@ -506,11 +575,13 @@ export class MobileAuthService implements OnModuleInit {
     if (user.failedLoginCount || user.lockedUntil) {
       // Patch only the counter: save() would write back fields read before the
       // password check, undoing any concurrent change (status, hash, revocation).
-      await this.users.update({ id: user.id }, { failedLoginCount: 0, lockedUntil: null });
+      await this.users.update(
+        { id: user.id },
+        { failedLoginCount: 0, lockedUntil: null },
+      );
       user.failedLoginCount = 0;
       user.lockedUntil = null;
     }
-    const restore = this.isRestorable(user);
     if (restore) await this.restoreAccount(user);
     const tokens = await this.issueTokens(user, crypto.randomUUID(), userAgent);
     return restore ? { ...tokens, account_restored: true } : tokens;
@@ -536,10 +607,7 @@ export class MobileAuthService implements OnModuleInit {
 
   // ----------------------------------------------------------------- refresh
 
-  async refresh(
-    presented: string,
-    userAgent?: string,
-  ): Promise<TokenResponse> {
+  async refresh(presented: string, userAgent?: string): Promise<TokenResponse> {
     const fail = () => new UnauthorizedException(INVALID_REFRESH);
     const record = await this.refreshTokens.findOne({
       where: { tokenHash: sha256Hex(presented) },
@@ -551,7 +619,10 @@ export class MobileAuthService implements OnModuleInit {
       // Within the grace window this is almost certainly the losing side of a
       // benign race (double-tap / retry after a lost response): plain 401, the
       // family stays alive. Older reuse is treated as theft: revoke the family.
-      if (Date.now() - new Date(record.rotatedAt).getTime() > REFRESH_GRACE_MS) {
+      if (
+        Date.now() - new Date(record.rotatedAt).getTime() >
+        REFRESH_GRACE_MS
+      ) {
         await this.revokeFamily(record.familyId);
       }
       throw fail();
@@ -569,7 +640,11 @@ export class MobileAuthService implements OnModuleInit {
     }
 
     const user = await this.users.findOne({ where: { id: record.endUserId } });
-    if (!user || user.status !== EndUserStatus.ACTIVE || !user.emailVerifiedAt) {
+    if (
+      !user ||
+      user.status !== EndUserStatus.ACTIVE ||
+      !user.emailVerifiedAt
+    ) {
       await this.revokeFamily(record.familyId);
       throw fail();
     }
@@ -617,8 +692,14 @@ export class MobileAuthService implements OnModuleInit {
    * Signs the user out everywhere: every refresh family is revoked and
    * EndUserAuthGuard refuses access tokens issued before [at].
    */
-  async revokeAllSessions(userId: string, at = new Date(Date.now())): Promise<void> {
-    await this.refreshTokens.update({ endUserId: userId, revokedAt: IsNull() }, { revokedAt: at });
+  async revokeAllSessions(
+    userId: string,
+    at = new Date(Date.now()),
+  ): Promise<void> {
+    await this.refreshTokens.update(
+      { endUserId: userId, revokedAt: IsNull() },
+      { revokedAt: at },
+    );
     await this.users.update({ id: userId }, { sessionsRevokedAt: at });
   }
 
@@ -691,9 +772,21 @@ export class MobileAuthService implements OnModuleInit {
 
   getMobileSsoProviders() {
     return [
-      { id: 'camdx', name: 'CamDX Single Sign-On', enabled: Boolean(process.env.SSO_CAMDX_CLIENT_ID) },
-      { id: 'keycloak', name: 'Government OpenID Connect (Keycloak)', enabled: Boolean(process.env.SSO_KEYCLOAK_URL) },
-      { id: 'oidc', name: 'Enterprise OIDC Provider', enabled: Boolean(process.env.SSO_OIDC_ISSUER) },
+      {
+        id: 'camdx',
+        name: 'CamDX Single Sign-On',
+        enabled: Boolean(process.env.SSO_CAMDX_CLIENT_ID),
+      },
+      {
+        id: 'keycloak',
+        name: 'Government OpenID Connect (Keycloak)',
+        enabled: Boolean(process.env.SSO_KEYCLOAK_URL),
+      },
+      {
+        id: 'oidc',
+        name: 'Enterprise OIDC Provider',
+        enabled: Boolean(process.env.SSO_OIDC_ISSUER),
+      },
     ];
   }
 
@@ -737,4 +830,3 @@ export class MobileAuthService implements OnModuleInit {
     return this.issueTokens(user, crypto.randomUUID(), userAgent);
   }
 }
-

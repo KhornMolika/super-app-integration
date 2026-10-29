@@ -12,7 +12,11 @@ export interface PrecheckConflictResult {
   packageName: string;
   isPendingPublication?: boolean;
   directConflicts: string[];
-  transitiveBumps: Array<{ package: string; oldVersion?: string; newVersion: string }>;
+  transitiveBumps: Array<{
+    package: string;
+    oldVersion?: string;
+    newVersion: string;
+  }>;
   newPackages: Array<{ package: string; version: string }>;
   message: string;
   rawOutput: string;
@@ -67,11 +71,23 @@ export class PubspecPrecheckService {
   /**
    * Simulates candidate dependency injection and runs a non-destructive dry-run conflict check.
    */
-  async simulateCandidate(dto: PrecheckConflictDto): Promise<PrecheckConflictResult> {
-    const { packageName, gitUrl, ref, path: localPath, version, isHosted, hostedUrl } = dto;
+  async simulateCandidate(
+    dto: PrecheckConflictDto,
+  ): Promise<PrecheckConflictResult> {
+    const {
+      packageName,
+      gitUrl,
+      ref,
+      path: localPath,
+      version,
+      isHosted,
+      hostedUrl,
+    } = dto;
 
     if (!packageName) {
-      throw new BadRequestException('Package name is required for pre-check simulation');
+      throw new BadRequestException(
+        'Package name is required for pre-check simulation',
+      );
     }
 
     // 1. Direct name collision check with base framework packages
@@ -123,7 +139,8 @@ export class PubspecPrecheckService {
         directConflicts: [],
         transitiveBumps: [],
         newPackages: [],
-        message: 'Pre-check completed (Server running in remote/CI mode without local flutter workspace). Full validation will be executed by Jenkins CI pipeline.',
+        message:
+          'Pre-check completed (Server running in remote/CI mode without local flutter workspace). Full validation will be executed by Jenkins CI pipeline.',
         rawOutput: 'OK',
       };
     }
@@ -191,7 +208,11 @@ export class PubspecPrecheckService {
       });
 
       // 5. Parse output for transitive bumps and new packages
-      const transitiveBumps: Array<{ package: string; oldVersion?: string; newVersion: string }> = [];
+      const transitiveBumps: Array<{
+        package: string;
+        oldVersion?: string;
+        newVersion: string;
+      }> = [];
       const newPackages: Array<{ package: string; version: string }> = [];
 
       const fullOutput = `${validation.stdout}\n${validation.stderr}`;
@@ -200,15 +221,22 @@ export class PubspecPrecheckService {
       for (const line of lines) {
         const trimmed = line.trim();
         // Match newly added packages: "+ <package> <version>"
-        const addMatch = trimmed.match(/^\+\s+([a-zA-Z0-9_-]+)\s+([0-9a-zA-Z.+_-]+)/);
+        const addMatch = trimmed.match(
+          /^\+\s+([a-zA-Z0-9_-]+)\s+([0-9a-zA-Z.+_-]+)/,
+        );
         if (addMatch && addMatch[1] !== packageName) {
           newPackages.push({ package: addMatch[1], version: addMatch[2] });
         }
 
         // Match version bumps: "~ <package> <oldVersion> (was ...) -> <newVersion>" or similar
-        const bumpMatch = trimmed.match(/^~\s+([a-zA-Z0-9_-]+)\s+([0-9a-zA-Z.+_-]+)/);
+        const bumpMatch = trimmed.match(
+          /^~\s+([a-zA-Z0-9_-]+)\s+([0-9a-zA-Z.+_-]+)/,
+        );
         if (bumpMatch) {
-          transitiveBumps.push({ package: bumpMatch[1], newVersion: bumpMatch[2] });
+          transitiveBumps.push({
+            package: bumpMatch[1],
+            newVersion: bumpMatch[2],
+          });
         }
       }
 
@@ -221,7 +249,9 @@ export class PubspecPrecheckService {
       const isUnpublishedInNexus =
         !compatible &&
         (rawOut.includes(`could not find package ${packageName}`) ||
-          rawOut.includes(`which doesn't exist (could not find package ${packageName}`));
+          rawOut.includes(
+            `which doesn't exist (could not find package ${packageName}`,
+          ));
 
       let finalMessage = compatible
         ? `Package "${packageName}" is fully compatible with SuperApp container (0 version conflicts).`
@@ -232,12 +262,12 @@ export class PubspecPrecheckService {
       if (isSshKeyDenied) {
         finalMessage = `Git authentication failed for "${dto.gitUrl || packageName}". Deploy Key is not yet authorized in repository.`;
         conflicts.unshift(
-          `🔑 SSH Deploy Key Not Authorized: Git returned "Permission denied (publickey)". Please copy the Public Deploy Key displayed in the portal above and add it to your GitHub/GitLab repository settings under Deploy Keys (Read-only), then click Pre-check Conflicts again.`
+          `🔑 SSH Deploy Key Not Authorized: Git returned "Permission denied (publickey)". Please copy the Public Deploy Key displayed in the portal above and add it to your GitHub/GitLab repository settings under Deploy Keys (Read-only), then click Pre-check Conflicts again.`,
         );
       } else if (isUnpublishedInNexus) {
         finalMessage = `Package "${packageName}" is pending review and has not yet been published to Nexus. It will be published automatically upon approval.`;
         conflicts.unshift(
-          `ℹ️ Pending Registry Publication: "${packageName}" is not yet published in Nexus (Status: PENDING Approval). Direct HTTP resolution will succeed automatically once published during review approval.`
+          `ℹ️ Pending Registry Publication: "${packageName}" is not yet published in Nexus (Status: PENDING Approval). Direct HTTP resolution will succeed automatically once published during review approval.`,
         );
       }
 
@@ -258,7 +288,9 @@ export class PubspecPrecheckService {
           fs.copyFileSync(simBackupPath, pubspecPath);
           fs.unlinkSync(simBackupPath);
         } catch (err: any) {
-          this.logger.error(`Failed to restore simulated pubspec backup: ${err.message}`);
+          this.logger.error(
+            `Failed to restore simulated pubspec backup: ${err.message}`,
+          );
         }
       }
       releaseLock();

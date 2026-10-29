@@ -9,9 +9,13 @@ import * as child_process from 'child_process';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 import { extractDecryptedDeployKey } from '../../miniapps/helpers/flutter-credential.helper';
 import { NotificationsService } from '../../notifications/notifications.service';
-import { getLocalIpAddress, resolveMobileApiBaseUrl } from '../../common/utils/network.utils';
+import {
+  getLocalIpAddress,
+  resolveMobileApiBaseUrl,
+} from '../../common/utils/network.utils';
 
-export type ApkBuildState = 'IDLE' | 'QUEUED' | 'BUILDING' | 'SUCCESS' | 'FAILED';
+export type ApkBuildState =
+  'IDLE' | 'QUEUED' | 'BUILDING' | 'SUCCESS' | 'FAILED';
 
 export interface ApkBuildStatus {
   state: ApkBuildState;
@@ -36,7 +40,11 @@ export class ApkBuildManagerService {
   private readonly logBuffer: string[] = [];
   private currentProcess?: child_process.ChildProcess;
   private lastBuildStartTime?: number;
-  private activeBuildPromise?: Promise<{ success: boolean; message: string; apkUrl?: string }>;
+  private activeBuildPromise?: Promise<{
+    success: boolean;
+    message: string;
+    apkUrl?: string;
+  }>;
 
   constructor(
     @InjectRepository(MiniApp)
@@ -54,7 +62,11 @@ export class ApkBuildManagerService {
   }
 
   getStatus(): ApkBuildStatus {
-    if (this.state === 'BUILDING' && this.lastBuildStartTime && Date.now() - this.lastBuildStartTime > 600000) {
+    if (
+      this.state === 'BUILDING' &&
+      this.lastBuildStartTime &&
+      Date.now() - this.lastBuildStartTime > 600000
+    ) {
       this.state = 'FAILED';
       this.message = 'APK build operation timed out after 10 minutes.';
       this.appendLog(`⚠️ ${this.message}`);
@@ -81,15 +93,24 @@ export class ApkBuildManagerService {
     apiBaseUrl?: string;
   }): Promise<{ success: boolean; message: string; apkUrl?: string }> {
     const releaseVersion = options.releaseVersion || 'v0.0.1';
-    const defaultBuildType = process.env.SUPERAPP_TEST_APK_BUILD_MODE || 'release';
+    const defaultBuildType =
+      process.env.SUPERAPP_TEST_APK_BUILD_MODE || 'release';
     const buildType = options.buildType || defaultBuildType;
     const appName = options.appName || 'superapp';
     const apiBaseUrl = resolveMobileApiBaseUrl(options.apiBaseUrl);
 
     if (this.state === 'BUILDING') {
-      if (this.activeBuildPromise && (!options.releaseVersion || options.releaseVersion === this.releaseVersion)) {
-        this.logger.log(`Attaching caller to in-progress APK build for version ${this.releaseVersion}...`);
-        this.appendLog(`Attaching caller to in-progress APK build for version ${this.releaseVersion}...`);
+      if (
+        this.activeBuildPromise &&
+        (!options.releaseVersion ||
+          options.releaseVersion === this.releaseVersion)
+      ) {
+        this.logger.log(
+          `Attaching caller to in-progress APK build for version ${this.releaseVersion}...`,
+        );
+        this.appendLog(
+          `Attaching caller to in-progress APK build for version ${this.releaseVersion}...`,
+        );
         return this.activeBuildPromise;
       }
       return {
@@ -103,19 +124,28 @@ export class ApkBuildManagerService {
     this.lastBuildStartTime = Date.now();
     this.exitCode = undefined;
     this.message = `Compiling SuperApp APK (${releaseVersion}, ${buildType})...`;
-    this.appendLog(`=== SuperApp APK Build Started for ${releaseVersion} (${buildType}) ===`);
+    this.appendLog(
+      `=== SuperApp APK Build Started for ${releaseVersion} (${buildType}) ===`,
+    );
 
     const candidates = [
       path.resolve(process.cwd(), 'scripts/build-optimized-apk.ps1'),
-      path.resolve(process.cwd(), 'superapp_backend/scripts/build-optimized-apk.ps1'),
+      path.resolve(
+        process.cwd(),
+        'superapp_backend/scripts/build-optimized-apk.ps1',
+      ),
       path.resolve(__dirname, '../../../scripts/build-optimized-apk.ps1'),
-      path.resolve(process.cwd(), '../superapp_backend/scripts/build-optimized-apk.ps1'),
+      path.resolve(
+        process.cwd(),
+        '../superapp_backend/scripts/build-optimized-apk.ps1',
+      ),
     ];
     const resolvedScript = candidates.find((p) => fs.existsSync(p)) || null;
 
     if (!resolvedScript) {
       this.state = 'FAILED';
-      this.message = 'build-optimized-apk.ps1 script not found on host filesystem.';
+      this.message =
+        'build-optimized-apk.ps1 script not found on host filesystem.';
       this.appendLog(`ERROR: ${this.message}`);
       return { success: false, message: this.message };
     }
@@ -131,19 +161,25 @@ export class ApkBuildManagerService {
       const privateKeys = new Set<string>();
 
       for (const app of allMiniApps) {
-        const activeKey = extractDecryptedDeployKey(app.integrationConfig as any);
+        const activeKey = extractDecryptedDeployKey(app.integrationConfig);
         if (activeKey && activeKey.trim()) {
           privateKeys.add(activeKey.trim());
         }
-        const pendingKey = extractDecryptedDeployKey(app.pendingRevision?.integrationConfig as any);
+        const pendingKey = extractDecryptedDeployKey(
+          app.pendingRevision?.integrationConfig,
+        );
         if (pendingKey && pendingKey.trim()) {
           privateKeys.add(pendingKey.trim());
         }
       }
 
       if (privateKeys.size > 0) {
-        this.appendLog(`Injecting SSH deploy keys for ${privateKeys.size} private repository package(s)...`);
-        const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'superapp-apk-keys-'));
+        this.appendLog(
+          `Injecting SSH deploy keys for ${privateKeys.size} private repository package(s)...`,
+        );
+        const tempDir = fs.mkdtempSync(
+          path.join(os.tmpdir(), 'superapp-apk-keys-'),
+        );
         let idx = 0;
         for (const key of privateKeys) {
           idx++;
@@ -153,22 +189,36 @@ export class ApkBuildManagerService {
             try {
               const user = process.env.USERNAME || process.env.USER;
               if (user) {
-                child_process.execFileSync('icacls', [keyPath, '/inheritance:r', '/grant:r', `${user}:R`], { stdio: 'pipe' });
+                child_process.execFileSync(
+                  'icacls',
+                  [keyPath, '/inheritance:r', '/grant:r', `${user}:R`],
+                  { stdio: 'pipe' },
+                );
               }
             } catch (aclErr: any) {
-              this.logger.warn(`Could not set ACL on deploy key file: ${aclErr.message}`);
+              this.logger.warn(
+                `Could not set ACL on deploy key file: ${aclErr.message}`,
+              );
             }
           }
           tempKeyFiles.push(keyPath);
         }
 
-        const identityArgs = tempKeyFiles.map((kp) => `-i "${kp.replace(/\\/g, '/')}"`).join(' ');
+        const identityArgs = tempKeyFiles
+          .map((kp) => `-i "${kp.replace(/\\/g, '/')}"`)
+          .join(' ');
         gitSshCommand = `ssh ${identityArgs} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null`;
-        this.appendLog(`Configured GIT_SSH_COMMAND with ${tempKeyFiles.length} private identity key(s).`);
+        this.appendLog(
+          `Configured GIT_SSH_COMMAND with ${tempKeyFiles.length} private identity key(s).`,
+        );
       }
     } catch (keyErr: any) {
-      this.logger.warn(`Failed extracting deploy keys for APK build: ${keyErr.message}`);
-      this.appendLog(`[WARN] Failed configuring deploy keys: ${keyErr.message}`);
+      this.logger.warn(
+        `Failed extracting deploy keys for APK build: ${keyErr.message}`,
+      );
+      this.appendLog(
+        `[WARN] Failed configuring deploy keys: ${keyErr.message}`,
+      );
     }
 
     const cleanupKeys = () => {
@@ -204,10 +254,21 @@ export class ApkBuildManagerService {
           '-AppName',
           appName,
         ]
-      : ['-c', `sh ${resolvedScript} "${apiBaseUrl}" "${releaseVersion}" "${buildType}" "${appName}"`];
+      : [
+          '-c',
+          `sh ${resolvedScript} "${apiBaseUrl}" "${releaseVersion}" "${buildType}" "${appName}"`,
+        ];
 
-    this.activeBuildPromise = new Promise<{ success: boolean; message: string; apkUrl?: string }>((resolve) => {
-      const finalize = (res: { success: boolean; message: string; apkUrl?: string }) => {
+    this.activeBuildPromise = new Promise<{
+      success: boolean;
+      message: string;
+      apkUrl?: string;
+    }>((resolve) => {
+      const finalize = (res: {
+        success: boolean;
+        message: string;
+        apkUrl?: string;
+      }) => {
         this.activeBuildPromise = undefined;
         resolve(res);
       };
@@ -245,8 +306,11 @@ export class ApkBuildManagerService {
           if (this.exitCode === 0) {
             this.state = 'SUCCESS';
             const repoName = 'apk-test-builds';
-            const targetName = buildType === 'release' ? 'app-release.apk' : 'app-debug.apk';
-            const nexusBase = (process.env.NEXUS_BASE_URL || 'http://localhost:8081').replace(/\/+$/, '');
+            const targetName =
+              buildType === 'release' ? 'app-release.apk' : 'app-debug.apk';
+            const nexusBase = (
+              process.env.NEXUS_BASE_URL || 'http://localhost:8081'
+            ).replace(/\/+$/, '');
             const apkUrl = `${nexusBase}/repository/${repoName}/${appName}/${releaseVersion}/${targetName}`;
             this.message = `SuperApp test APK (${releaseVersion}, ${buildType}) compiled and published to Nexus (${repoName}/${targetName}) successfully in ${(this.durationMs / 1000).toFixed(1)}s.`;
             this.appendLog(`✅ ${this.message}`);
@@ -255,7 +319,10 @@ export class ApkBuildManagerService {
             // Notify connected clients that compile & publish stages completed
             try {
               const buildingApps = await this.miniappRepository.find({
-                where: [{ lifecycleStatus: 'BUILDING' }, { activeTestVersion: releaseVersion }],
+                where: [
+                  { lifecycleStatus: 'BUILDING' },
+                  { activeTestVersion: releaseVersion },
+                ],
               });
               for (const app of buildingApps) {
                 this.notificationsService.emitBuildStageUpdate({

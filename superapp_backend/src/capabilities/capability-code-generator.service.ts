@@ -30,7 +30,7 @@ export interface CodeGenerationResult {
 export class CapabilityCodeGeneratorService {
   private readonly logger = new Logger(CapabilityCodeGeneratorService.name);
 
-  constructor(private readonly configService: ConfigService) { }
+  constructor(private readonly configService: ConfigService) {}
 
   /**
    * Resolves the root directory of the SuperApp Flutter repository if available on the local filesystem.
@@ -52,7 +52,10 @@ export class CapabilityCodeGeneratorService {
     ].filter(Boolean) as string[];
 
     for (const cand of candidatePaths) {
-      if (fs.existsSync(cand) && fs.existsSync(path.join(cand, 'pubspec.yaml'))) {
+      if (
+        fs.existsSync(cand) &&
+        fs.existsSync(path.join(cand, 'pubspec.yaml'))
+      ) {
         return cand;
       }
     }
@@ -119,7 +122,9 @@ export class CapabilityCodeGeneratorService {
     const mapping = this.resolveCapabilityMapping(capabilityKey, metadata);
 
     const androidTag = `<uses-permission android:name="${mapping.android}"/>`;
-    const pluginEntry = mapping.defaultPlugin ? `  ${mapping.defaultPlugin}` : undefined;
+    const pluginEntry = mapping.defaultPlugin
+      ? `  ${mapping.defaultPlugin}`
+      : undefined;
 
     return {
       permissionKey: capabilityKey,
@@ -129,7 +134,9 @@ export class CapabilityCodeGeneratorService {
       iosPlistEntry: mapping.iosKey,
       iosPlistDiff: `+    <key>${mapping.iosKey}</key>\n+    <string>${mapping.iosDescription}</string>`,
       flutterPluginEntry: mapping.defaultPlugin,
-      pubspecDiff: pluginEntry ? `+  dependencies:\n+  ${pluginEntry}` : undefined,
+      pubspecDiff: pluginEntry
+        ? `+  dependencies:\n+  ${pluginEntry}`
+        : undefined,
     };
   }
 
@@ -185,9 +192,11 @@ export class CapabilityCodeGeneratorService {
         pubspecBak = `${pubspecPath}.bak`;
 
         // 1. Create backups
-        if (fs.existsSync(manifestPath)) fs.copyFileSync(manifestPath, manifestBak);
+        if (fs.existsSync(manifestPath))
+          fs.copyFileSync(manifestPath, manifestBak);
         if (fs.existsSync(plistPath)) fs.copyFileSync(plistPath, plistBak);
-        if (fs.existsSync(pubspecPath)) fs.copyFileSync(pubspecPath, pubspecBak);
+        if (fs.existsSync(pubspecPath))
+          fs.copyFileSync(pubspecPath, pubspecBak);
 
         // 2. Inject Android Permission
         if (fs.existsSync(manifestPath)) {
@@ -209,7 +218,10 @@ export class CapabilityCodeGeneratorService {
           let plistContent = fs.readFileSync(plistPath, 'utf8');
           if (!plistContent.includes(`<key>${mapping.iosKey}</key>`)) {
             const iosBlock = `\t<!-- Auto-injected for capability: ${key} -->\n\t<key>${mapping.iosKey}</key>\n\t<string>${mapping.iosDescription}</string>\n</dict>`;
-            plistContent = plistContent.replace(/<\/dict>\s*<\/plist>/i, `${iosBlock}\n</plist>`);
+            plistContent = plistContent.replace(
+              /<\/dict>\s*<\/plist>/i,
+              `${iosBlock}\n</plist>`,
+            );
             fs.writeFileSync(plistPath, plistContent, 'utf8');
             filesModified.push('ios/Runner/Info.plist');
           }
@@ -217,7 +229,9 @@ export class CapabilityCodeGeneratorService {
 
         // 4. Inject Flutter Plugin if specified
         if (mapping.defaultPlugin && fs.existsSync(pubspecPath)) {
-          const [pkgName, pkgVer] = mapping.defaultPlugin.split(':').map((s) => s.trim());
+          const [pkgName, pkgVer] = mapping.defaultPlugin
+            .split(':')
+            .map((s) => s.trim());
           let pubspecContent = fs.readFileSync(pubspecPath, 'utf8');
           if (!pubspecContent.includes(`${pkgName}:`)) {
             pubspecContent = pubspecContent.replace(
@@ -247,12 +261,12 @@ export class CapabilityCodeGeneratorService {
         let originalBranch = 'main';
         try {
           originalBranch = runGit(['rev-parse', '--abbrev-ref', 'HEAD']).trim();
-        } catch (_) { }
+        } catch (_) {}
 
         // Switch to target branch before creating feature branch if possible
         try {
           runGit(['checkout', targetBranch]);
-        } catch (_) { }
+        } catch (_) {}
 
         // Create and checkout new feature branch
         runGit(['checkout', '-b', branchName]);
@@ -270,7 +284,9 @@ export class CapabilityCodeGeneratorService {
         try {
           runGit(['push', '-u', 'origin', branchName]);
         } catch (pushErr: any) {
-          this.logger.warn(`Push to remote failed (may be offline/sandbox): ${pushErr.message}`);
+          this.logger.warn(
+            `Push to remote failed (may be offline/sandbox): ${pushErr.message}`,
+          );
         }
 
         // Clean up backups on success
@@ -281,7 +297,7 @@ export class CapabilityCodeGeneratorService {
         // Return to original working branch
         try {
           runGit(['checkout', originalBranch || 'main']);
-        } catch (_) { }
+        } catch (_) {}
       } else {
         this.logger.log(
           `No local SuperApp directory mounted (running in containerized environment). Performing remote GitLab Merge Request generation for '${key}'.`,
@@ -295,7 +311,7 @@ export class CapabilityCodeGeneratorService {
 
       const miniAppDisplay =
         proposal.miniApp?.name ||
-        (proposal.metadata as any)?.miniAppName ||
+        proposal.metadata?.miniAppName ||
         'Platform / Host Core Shell';
 
       const mrTitleRaw = `feat(capability): Add ${key} capability`;
@@ -342,7 +358,7 @@ export class CapabilityCodeGeneratorService {
           });
 
           if (res.ok) {
-            const mrData = (await res.json()) as any;
+            const mrData = await res.json();
             if (mrData.web_url) {
               mrUrl = mrData.web_url;
               this.logger.log(
@@ -371,7 +387,10 @@ export class CapabilityCodeGeneratorService {
         message: `Successfully generated branch '${branchName}' and created Merge Request targeting '${targetBranch}'!`,
       };
     } catch (err: any) {
-      this.logger.error(`Capability generation failed: ${err.message}`, err.stack);
+      this.logger.error(
+        `Capability generation failed: ${err.message}`,
+        err.stack,
+      );
 
       // Restore backups on failure
       if (manifestBak && fs.existsSync(manifestBak)) {

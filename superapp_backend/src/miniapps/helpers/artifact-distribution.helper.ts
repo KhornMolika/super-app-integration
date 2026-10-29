@@ -24,7 +24,9 @@ export class ArtifactDistributionHelper {
     const isOwner =
       user?.sub === app.ownerId ||
       (user?.email &&
-        (user.email === app.supportEmail || user.email === app.owner?.email || user.email === (app as any).ownerEmail));
+        (user.email === app.supportEmail ||
+          user.email === app.owner?.email ||
+          user.email === (app as any).ownerEmail));
 
     if (user && !isSuperAdmin && !isOwner) {
       throw new ForbiddenException(
@@ -47,19 +49,20 @@ export class ArtifactDistributionHelper {
       '1.0.0';
 
     const packageName =
-      app.integrationConfig?.packageName ||
-      app.appId ||
-      app.name;
+      app.integrationConfig?.packageName || app.appId || app.name;
 
     const activeTest =
-      app.activeTestVersion ||
-      app.integrationConfig?.gitBranch ||
-      'develop';
+      app.activeTestVersion || app.integrationConfig?.gitBranch || 'develop';
 
     const draftVer =
-      app.draftVersion || (app.pendingRevision ? (app.pendingRevision.version || 'v1.1.0-draft') : null);
+      app.draftVersion ||
+      (app.pendingRevision
+        ? app.pendingRevision.version || 'v1.1.0-draft'
+        : null);
 
-    const history: any[] = Array.isArray((app as any).versionHistory || app.versions)
+    const history: any[] = Array.isArray(
+      (app as any).versionHistory || app.versions,
+    )
       ? [...((app as any).versionHistory || app.versions)]
       : [];
 
@@ -73,25 +76,30 @@ export class ArtifactDistributionHelper {
           app.integrationMethod === 'FLUTTER_PACKAGE'
             ? 'GIT'
             : app.integrationMethod === 'WEBVIEW'
-            ? 'WEBVIEW'
-            : 'ARTIFACT',
+              ? 'WEBVIEW'
+              : 'ARTIFACT',
         type:
           app.lifecycleStatus === 'PUBLISHED'
             ? 'PRODUCTION'
             : app.lifecycleStatus === 'TESTING'
-            ? 'TEST'
-            : 'PRODUCTION',
+              ? 'TEST'
+              : 'PRODUCTION',
         status:
           app.lifecycleStatus === 'PUBLISHED'
             ? 'ACTIVE'
             : app.lifecycleStatus === 'TESTING'
-            ? 'TESTING'
-            : app.lifecycleStatus === 'IN_REVIEW'
-            ? 'IN_REVIEW'
-            : 'ACTIVE',
+              ? 'TESTING'
+              : app.lifecycleStatus === 'IN_REVIEW'
+                ? 'IN_REVIEW'
+                : 'ACTIVE',
         changelog: `Official package release ${currentRelease} for ${app.name}`,
-        releasedAt: (app.updatedAt || app.createdAt || new Date()).toISOString(),
-        releasedBy: app.owner?.name || (app as any).ownerName || 'MiniApp Developer',
+        releasedAt: (
+          app.updatedAt ||
+          app.createdAt ||
+          new Date()
+        ).toISOString(),
+        releasedBy:
+          app.owner?.name || (app as any).ownerName || 'MiniApp Developer',
         checksum:
           app.integrationConfig?.archiveChecksum ||
           'sha256:' +
@@ -108,12 +116,14 @@ export class ArtifactDistributionHelper {
         version: prevVer,
         gitRef: prevVer,
         packageName,
-        sourceType: app.integrationMethod === 'FLUTTER_PACKAGE' ? 'GIT' : 'ARTIFACT',
+        sourceType:
+          app.integrationMethod === 'FLUTTER_PACKAGE' ? 'GIT' : 'ARTIFACT',
         type: 'PRODUCTION',
         status: 'PREVIOUS',
         changelog: `Prior stable build for ${app.name}`,
         releasedAt: new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString(),
-        releasedBy: app.owner?.name || (app as any).ownerName || 'MiniApp Developer',
+        releasedBy:
+          app.owner?.name || (app as any).ownerName || 'MiniApp Developer',
         checksum:
           'sha256:' +
           crypto
@@ -133,7 +143,8 @@ export class ArtifactDistributionHelper {
         status: 'TESTING',
         changelog: `Candidate build for sandbox testing on branch ${app.integrationConfig?.gitBranch || 'develop'}`,
         releasedAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(),
-        releasedBy: app.owner?.name || (app as any).ownerName || 'MiniApp Developer',
+        releasedBy:
+          app.owner?.name || (app as any).ownerName || 'MiniApp Developer',
         checksum:
           'sha256:' +
           crypto
@@ -151,7 +162,12 @@ export class ArtifactDistributionHelper {
       status: app.lifecycleStatus || (app as any).status,
       packageName,
       gitRef: effectiveGitRef,
-      sourceType: app.integrationMethod === 'FLUTTER_PACKAGE' ? 'Git Repository' : app.integrationMethod === 'WEBVIEW' ? 'Web Sandbox' : 'Artifact Package',
+      sourceType:
+        app.integrationMethod === 'FLUTTER_PACKAGE'
+          ? 'Git Repository'
+          : app.integrationMethod === 'WEBVIEW'
+            ? 'Web Sandbox'
+            : 'Artifact Package',
       currentReleaseVersion: currentRelease,
       activeTestVersion: activeTest,
       draftVersion: draftVer,
@@ -175,7 +191,9 @@ export class ArtifactDistributionHelper {
     const expiresAt = new Date(Date.now() + durationMs).toISOString();
     const secret = process.env.JWT_SECRET;
     if (!secret && process.env.NODE_ENV === 'production') {
-      throw new Error('JWT_SECRET must be configured in production environment');
+      throw new Error(
+        'JWT_SECRET must be configured in production environment',
+      );
     }
     const tokenSecret = secret || 'dev-distribution-signing-key';
     const payloadStr = JSON.stringify({
@@ -209,7 +227,9 @@ export class ArtifactDistributionHelper {
       );
       const secret = process.env.JWT_SECRET;
       if (!secret && process.env.NODE_ENV === 'production') {
-        throw new Error('JWT_SECRET must be configured in production environment');
+        throw new Error(
+          'JWT_SECRET must be configured in production environment',
+        );
       }
       const tokenSecret = secret || 'dev-distribution-signing-key';
       const expectedSig = crypto
@@ -220,7 +240,8 @@ export class ArtifactDistributionHelper {
 
       const parsedPayload = JSON.parse(decoded.payload);
       if (parsedPayload.miniAppId !== miniAppId) return false;
-      if (new Date(parsedPayload.expiresAt).getTime() < Date.now()) return false;
+      if (new Date(parsedPayload.expiresAt).getTime() < Date.now())
+        return false;
       return true;
     } catch {
       return false;
@@ -243,9 +264,11 @@ export class ArtifactDistributionHelper {
       const roles: string[] = Array.isArray(user?.roles)
         ? user.roles.map((r: any) => (typeof r === 'string' ? r : r.name))
         : user?.role
-        ? [user.role]
+          ? [user.role]
+          : [];
+      const perms: string[] = Array.isArray(user?.permissions)
+        ? user.permissions
         : [];
-      const perms: string[] = Array.isArray(user?.permissions) ? user.permissions : [];
       const isSuperAdmin =
         roles.includes('SUPER_ADMIN') ||
         roles.includes('ADMIN') ||
@@ -256,7 +279,9 @@ export class ArtifactDistributionHelper {
       const isOwner =
         user.sub === app.ownerId ||
         (user.email &&
-          (user.email === app.supportEmail || user.email === app.owner?.email || user.email === (app as any).ownerEmail));
+          (user.email === app.supportEmail ||
+            user.email === app.owner?.email ||
+            user.email === (app as any).ownerEmail));
       if (isSuperAdmin || isOwner || user.sub) {
         authorized = true;
       }
@@ -312,14 +337,23 @@ export class ArtifactDistributionHelper {
           ? path.resolve(process.env.MOBILE_APP_DIR)
           : path.resolve(process.cwd(), '../super-app');
         const localApkPaths = [
-          path.resolve(mobileDir, 'build/app/outputs/flutter-apk/app-debug.apk'),
+          path.resolve(
+            mobileDir,
+            'build/app/outputs/flutter-apk/app-debug.apk',
+          ),
           path.resolve(mobileDir, 'build/app/outputs/apk/debug/app-debug.apk'),
-          path.resolve(mobileDir, 'build/app/outputs/flutter-apk/app-release.apk'),
+          path.resolve(
+            mobileDir,
+            'build/app/outputs/flutter-apk/app-release.apk',
+          ),
         ];
         for (const lp of localApkPaths) {
           if (fs.existsSync(lp)) {
             const buf = fs.readFileSync(lp);
-            res?.setHeader?.('Content-Type', 'application/vnd.android.package-archive');
+            res?.setHeader?.(
+              'Content-Type',
+              'application/vnd.android.package-archive',
+            );
             res?.setHeader?.(
               'Content-Disposition',
               `attachment; filename="${downloadFilename}"`,
@@ -340,7 +374,10 @@ export class ArtifactDistributionHelper {
         });
       }
 
-      res?.setHeader?.('Content-Type', 'application/vnd.android.package-archive');
+      res?.setHeader?.(
+        'Content-Type',
+        'application/vnd.android.package-archive',
+      );
       res?.setHeader?.(
         'Content-Disposition',
         `attachment; filename="${downloadFilename}"`,

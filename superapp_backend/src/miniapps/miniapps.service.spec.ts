@@ -49,7 +49,14 @@ function build(app: any) {
     sdkUpload as any,
     {} as any,
   );
-  return { service, miniappRepository, lifecycleHelper, codegen, sdkUpload, patches };
+  return {
+    service,
+    miniappRepository,
+    lifecycleHelper,
+    codegen,
+    sdkUpload,
+    patches,
+  };
 }
 
 const uploaded = {
@@ -215,14 +222,18 @@ describe('MiniappsService.rerunNativeSdkCodegen', () => {
     ...over,
   });
   const withLog = (b: ReturnType<typeof build>) => {
-    const log = jest.spyOn(b.service, 'logActivity').mockResolvedValue(undefined as any);
+    const log = jest
+      .spyOn(b.service, 'logActivity')
+      .mockResolvedValue(undefined);
     return log;
   };
 
   it('verifies universal launcher configuration and reports up-to-date status', async () => {
     const b = build(app());
     const log = withLog(b);
-    await expect(b.service.rerunNativeSdkCodegen('1', 'admin')).resolves.toEqual({
+    await expect(
+      b.service.rerunNativeSdkCodegen('1', 'admin'),
+    ).resolves.toEqual({
       prUrl: null,
       changedFiles: 0,
       upToDate: true,
@@ -240,12 +251,22 @@ describe('MiniappsService.rerunNativeSdkCodegen', () => {
 
   it.each([
     ['not found', null, NotFoundException],
-    ['not NATIVE_SDK', app({ integrationMethod: 'WEBVIEW' }), BadRequestException],
+    [
+      'not NATIVE_SDK',
+      app({ integrationMethod: 'WEBVIEW' }),
+      BadRequestException,
+    ],
     ['not yet approved', app({ status: 'IN_REVIEW' }), BadRequestException],
-    ['artifacts missing', app({ integrationConfig: { androidNexusMavenUrl: 'x' } }), BadRequestException],
+    [
+      'artifacts missing',
+      app({ integrationConfig: { androidNexusMavenUrl: 'x' } }),
+      BadRequestException,
+    ],
   ])('rejects (%s) without running codegen', async (_n, a, err) => {
     const b = build(a);
-    await expect(b.service.rerunNativeSdkCodegen('1', 'admin')).rejects.toThrow(err as any);
+    await expect(b.service.rerunNativeSdkCodegen('1', 'admin')).rejects.toThrow(
+      err,
+    );
     expect(b.codegen.regenerate).not.toHaveBeenCalled();
   });
 });

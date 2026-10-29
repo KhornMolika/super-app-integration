@@ -1,4 +1,10 @@
-import { Injectable, Logger, BadRequestException, Optional, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  Optional,
+  Inject,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
@@ -65,7 +71,10 @@ export class PubspecInjectorService {
         ? path.normalize(configuredPath)
         : path.resolve(process.cwd(), configuredPath);
 
-      if (fs.existsSync(resolved) && fs.existsSync(path.join(resolved, 'pubspec.yaml'))) {
+      if (
+        fs.existsSync(resolved) &&
+        fs.existsSync(path.join(resolved, 'pubspec.yaml'))
+      ) {
         return resolved;
       }
     }
@@ -82,7 +91,10 @@ export class PubspecInjectorService {
     ];
 
     for (const candidate of candidates) {
-      if (fs.existsSync(candidate) && fs.existsSync(path.join(candidate, 'pubspec.yaml'))) {
+      if (
+        fs.existsSync(candidate) &&
+        fs.existsSync(path.join(candidate, 'pubspec.yaml'))
+      ) {
         return candidate;
       }
     }
@@ -172,24 +184,35 @@ export class PubspecInjectorService {
 
     fs.copyFileSync(src, dst);
     this.logger.log(`Restored pubspec.yaml from backup ${src}`);
-    return { success: true, message: 'pubspec.yaml successfully restored from backup.' };
+    return {
+      success: true,
+      message: 'pubspec.yaml successfully restored from backup.',
+    };
   }
 
   /**
    * Injects or updates a dependency in super-app/pubspec.yaml.
    */
-  async injectDependency(
-    dto: InjectDependencyDto,
-  ): Promise<{
+  async injectDependency(dto: InjectDependencyDto): Promise<{
     success: boolean;
     packageName: string;
     injectedConfig: any;
     message: string;
   }> {
-    const { packageName, gitUrl, ref, path: localPath, version, isHosted, hostedUrl } = dto;
+    const {
+      packageName,
+      gitUrl,
+      ref,
+      path: localPath,
+      version,
+      isHosted,
+      hostedUrl,
+    } = dto;
 
     if (!packageName) {
-      throw new BadRequestException('Package name is required for dependency injection');
+      throw new BadRequestException(
+        'Package name is required for dependency injection',
+      );
     }
 
     this.createBackup();
@@ -277,7 +300,11 @@ export class PubspecInjectorService {
             entry.name !== 'node_modules' &&
             entry.name !== '.git'
           ) {
-            const candidatePubspec = path.join(parentDir, entry.name, 'pubspec.yaml');
+            const candidatePubspec = path.join(
+              parentDir,
+              entry.name,
+              'pubspec.yaml',
+            );
             if (fs.existsSync(candidatePubspec)) {
               try {
                 const content = fs.readFileSync(candidatePubspec, 'utf-8');
@@ -285,7 +312,10 @@ export class PubspecInjectorService {
                 if (doc && doc.name) {
                   packageMap.set(doc.name, `../${entry.name}`);
                   packageMap.set(entry.name, `../${entry.name}`);
-                  packageMap.set(entry.name.replace(/-/g, '_'), `../${entry.name}`);
+                  packageMap.set(
+                    entry.name.replace(/-/g, '_'),
+                    `../${entry.name}`,
+                  );
                 }
               } catch (_) {}
             }
@@ -304,11 +334,18 @@ export class PubspecInjectorService {
    */
   inferCanonicalPackageName(miniApp: MiniApp): string {
     const cfg = miniApp.integrationConfig || {};
-    if (cfg.packageName && typeof cfg.packageName === 'string' && cfg.packageName.trim() !== '') {
+    if (
+      cfg.packageName &&
+      typeof cfg.packageName === 'string' &&
+      cfg.packageName.trim() !== ''
+    ) {
       return cfg.packageName.trim().replace(/-/g, '_').toLowerCase();
     }
 
-    const gitUrl = cfg.gitUrl || cfg.repoUrl || (cfg.repoOwner && cfg.repoName ? cfg.repoName : '');
+    const gitUrl =
+      cfg.gitUrl ||
+      cfg.repoUrl ||
+      (cfg.repoOwner && cfg.repoName ? cfg.repoName : '');
     if (gitUrl) {
       const match = gitUrl.match(/[\/:]([^\/:]+?)(\.git)?$/);
       if (match && match[1]) {
@@ -355,7 +392,11 @@ export class PubspecInjectorService {
     }
 
     // 2. Nexus Hosted Package Artifact
-    if (cfg.sourceType === 'ARTIFACT' || cfg.packageStoragePath || cfg.isHosted) {
+    if (
+      cfg.sourceType === 'ARTIFACT' ||
+      cfg.packageStoragePath ||
+      cfg.isHosted
+    ) {
       return this.injectDependency({
         packageName,
         isHosted: true,
@@ -395,7 +436,9 @@ export class PubspecInjectorService {
     packageName: string,
   ): Promise<{ success: boolean; message: string }> {
     if (!packageName) {
-      throw new BadRequestException('Package name is required to remove dependency');
+      throw new BadRequestException(
+        'Package name is required to remove dependency',
+      );
     }
 
     this.createBackup();
@@ -428,16 +471,25 @@ export class PubspecInjectorService {
     injectedPackages: string[];
     validationResult: any;
   }> {
-    this.logger.log('Synchronizing all approved Flutter Package MiniApps into pubspec.yaml...');
+    this.logger.log(
+      'Synchronizing all approved Flutter Package MiniApps into pubspec.yaml...',
+    );
 
     const approvedMiniApps = await this.miniappRepository.find({
       where: {
-        lifecycleStatus: In(['APPROVED', 'TESTING', 'ACTIVE', 'IN_REVIEW', 'BUILDING']),
+        lifecycleStatus: In([
+          'APPROVED',
+          'TESTING',
+          'ACTIVE',
+          'IN_REVIEW',
+          'BUILDING',
+        ]),
       },
     });
 
     const flutterMiniApps = approvedMiniApps.filter(
-      (app) => (app.integrationMethod || '').toUpperCase() === 'FLUTTER_PACKAGE',
+      (app) =>
+        (app.integrationMethod || '').toUpperCase() === 'FLUTTER_PACKAGE',
     );
 
     const baseFrameworkDeps = new Set([
@@ -472,7 +524,9 @@ export class PubspecInjectorService {
       const currentKeys = Object.keys(dependenciesNode.toJSON() || {});
       for (const k of currentKeys) {
         if (!baseFrameworkDeps.has(k) && !validMiniAppPackageNames.has(k)) {
-          this.logger.log(`Pruning stale/invalid dependency "${k}" from pubspec.yaml`);
+          this.logger.log(
+            `Pruning stale/invalid dependency "${k}" from pubspec.yaml`,
+          );
           dependenciesNode.delete(k);
         }
       }
@@ -495,7 +549,9 @@ export class PubspecInjectorService {
           injectedPackages.push(res.packageName);
         }
       } catch (err: any) {
-        this.logger.warn(`Failed to auto-inject mini app ${app.name}: ${err.message}`);
+        this.logger.warn(
+          `Failed to auto-inject mini app ${app.name}: ${err.message}`,
+        );
       }
     }
 
@@ -519,7 +575,10 @@ export class PubspecInjectorService {
   generateDynamicRegistry(apps: MiniApp[]): void {
     try {
       const mobileDir = this.getMobileAppDir();
-      const generatedPath = path.join(mobileDir, 'lib/core/miniapp/mini_app_registry.generated.dart');
+      const generatedPath = path.join(
+        mobileDir,
+        'lib/core/miniapp/mini_app_registry.generated.dart',
+      );
 
       const imports = new Set<string>([
         "import 'package:flutter/material.dart';",
@@ -535,19 +594,42 @@ export class PubspecInjectorService {
         const appId = app.appId || '';
 
         let widgetExpr = '';
-        if (canonicalName === 'sc_public_miniapp' || canonicalName.includes('transit') || canonicalName.includes('public')) {
-          imports.add("import 'package:sc_public_miniapp/sc_public_miniapp.dart';");
-          widgetExpr = "PublicMiniAppEntry(onExit: () => safePop(context), passengerName: 'SuperApp Commuter', passTier: '30-Day Unlimited All-Access')";
-        } else if (canonicalName === 'sc_private_miniapp' || canonicalName.includes('private') || canonicalName.includes('loyalty') || canonicalName.includes('reward')) {
-          imports.add("import 'package:sc_private_miniapp/sc_private_miniapp.dart';");
-          widgetExpr = "MiniAppEntry(onExit: () => safePop(context), userName: 'SuperApp VIP Member', userTier: 'Gold Elite')";
-        } else if (canonicalName === 'ma_flutter_kyc' || canonicalName.includes('kyc')) {
+        if (
+          canonicalName === 'sc_public_miniapp' ||
+          canonicalName.includes('transit') ||
+          canonicalName.includes('public')
+        ) {
+          imports.add(
+            "import 'package:sc_public_miniapp/sc_public_miniapp.dart';",
+          );
+          widgetExpr =
+            "PublicMiniAppEntry(onExit: () => safePop(context), passengerName: 'SuperApp Commuter', passTier: '30-Day Unlimited All-Access')";
+        } else if (
+          canonicalName === 'sc_private_miniapp' ||
+          canonicalName.includes('private') ||
+          canonicalName.includes('loyalty') ||
+          canonicalName.includes('reward')
+        ) {
+          imports.add(
+            "import 'package:sc_private_miniapp/sc_private_miniapp.dart';",
+          );
+          widgetExpr =
+            "MiniAppEntry(onExit: () => safePop(context), userName: 'SuperApp VIP Member', userTier: 'Gold Elite')";
+        } else if (
+          canonicalName === 'ma_flutter_kyc' ||
+          canonicalName.includes('kyc')
+        ) {
           imports.add("import 'package:ma_flutter_kyc/ma_flutter_kyc.dart';");
-          widgetExpr = "KycVerifierAppEntry(jwtToken: 'tok_live_superapp_session', userId: 'usr_fsa_verified', onExit: () => safePop(context))";
+          widgetExpr =
+            "KycVerifierAppEntry(jwtToken: 'tok_live_superapp_session', userId: 'usr_fsa_verified', onExit: () => safePop(context))";
         } else {
           // Dynamic invocation for any newly registered package entry point
-          const entryPoint = (app.integrationConfig?.entryPoint || 'MiniAppEntry').trim();
-          imports.add(`import 'package:${canonicalName}/${canonicalName}.dart';`);
+          const entryPoint = (
+            app.integrationConfig?.entryPoint || 'MiniAppEntry'
+          ).trim();
+          imports.add(
+            `import 'package:${canonicalName}/${canonicalName}.dart';`,
+          );
           widgetExpr = `${entryPoint}(onExit: () => safePop(context))`;
         }
 
@@ -582,7 +664,9 @@ ${registrations.join('\n\n')}
       fs.writeFileSync(generatedPath, content, 'utf-8');
       this.logger.log(`Generated dynamic MiniApp registry at ${generatedPath}`);
     } catch (err: any) {
-      this.logger.warn(`Failed to generate dynamic MiniApp registry: ${err.message}`);
+      this.logger.warn(
+        `Failed to generate dynamic MiniApp registry: ${err.message}`,
+      );
     }
   }
 
@@ -609,7 +693,8 @@ ${registrations.join('\n\n')}
         success: true,
         dryRun: isDryRun,
         exitCode: 0,
-        stdout: 'Local super-app repository not mounted on server. Validation delegated to Jenkins CI.',
+        stdout:
+          'Local super-app repository not mounted on server. Validation delegated to Jenkins CI.',
         stderr: '',
         message: 'Validation delegated to Jenkins CI.',
         conflicts: [],
@@ -639,14 +724,21 @@ ${registrations.join('\n\n')}
             try {
               const user = process.env.USERNAME || process.env.USER;
               if (user) {
-                child_process.execFileSync('icacls', [tempKeyFile, '/inheritance:r', '/grant:r', `${user}:R`], { stdio: 'pipe' });
+                child_process.execFileSync(
+                  'icacls',
+                  [tempKeyFile, '/inheritance:r', '/grant:r', `${user}:R`],
+                  { stdio: 'pipe' },
+                );
               }
             } catch {}
           }
           const normalizedKeyPath = tempKeyFile.replace(/\\/g, '/');
-          processEnv['GIT_SSH_COMMAND'] = `ssh -i "${normalizedKeyPath}" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null`;
+          processEnv['GIT_SSH_COMMAND'] =
+            `ssh -i "${normalizedKeyPath}" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null`;
         } catch (e: any) {
-          this.logger.warn(`Failed preparing tempKeyFile for pub get: ${e.message}`);
+          this.logger.warn(
+            `Failed preparing tempKeyFile for pub get: ${e.message}`,
+          );
         }
       }
     }
@@ -663,7 +755,9 @@ ${registrations.join('\n\n')}
     return new Promise((resolve) => {
       const isWindows = process.platform === 'win32';
       const shell = isWindows ? 'powershell.exe' : '/bin/sh';
-      const shellArgs = isWindows ? ['-NoProfile', '-Command', command] : ['-c', command];
+      const shellArgs = isWindows
+        ? ['-NoProfile', '-Command', command]
+        : ['-c', command];
 
       let stdout = '';
       let stderr = '';
@@ -676,6 +770,10 @@ ${registrations.join('\n\n')}
 
       proc.stdout.on('data', (data) => {
         stdout += data.toString();
+      });
+
+      proc.stderr.on('data', (data) => {
+        stderr += data.toString();
       });
 
       proc.on('error', (err: any) => {
@@ -708,7 +806,9 @@ ${registrations.join('\n\n')}
             stdout,
             stderr: stderr + '\nExecution timed out after 12 seconds.',
             message: 'Dependency validation timed out.',
-            conflicts: ['Dependency resolution timed out while contacting pub repositories.'],
+            conflicts: [
+              'Dependency resolution timed out while contacting pub repositories.',
+            ],
           });
         }
       }, 12000);
@@ -838,7 +938,9 @@ ${registrations.join('\n\n')}
   /**
    * Triggers the Web Sandbox build script to recompile Flutter Web preview with newly injected packages.
    */
-  async triggerSandboxRebuild(triggeredBy: string = 'SuperApp System'): Promise<{ success: boolean; message: string }> {
+  async triggerSandboxRebuild(
+    triggeredBy: string = 'SuperApp System',
+  ): Promise<{ success: boolean; message: string }> {
     if (this.sandboxBuildManager) {
       return this.sandboxBuildManager.triggerBuild(triggeredBy);
     }
@@ -855,7 +957,9 @@ ${registrations.join('\n\n')}
       return { success: false, message: 'build-sandbox.ps1 script not found' };
     }
 
-    this.logger.log(`Triggering background Flutter Web sandbox compilation: ${scriptPath}...`);
+    this.logger.log(
+      `Triggering background Flutter Web sandbox compilation: ${scriptPath}...`,
+    );
 
     const isWindows = process.platform === 'win32';
     const shell = isWindows ? 'powershell.exe' : '/bin/sh';
@@ -872,7 +976,8 @@ ${registrations.join('\n\n')}
 
     return {
       success: true,
-      message: 'Flutter Web SuperApp Sandbox compilation triggered in background.',
+      message:
+        'Flutter Web SuperApp Sandbox compilation triggered in background.',
     };
   }
 }

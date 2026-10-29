@@ -182,12 +182,19 @@ export function maskMiniAppCredentials<T>(app: T): T {
       }
     });
   }
-  if (target.legal && typeof target.legal === 'object' && 'miniApp' in (target.legal as any)) {
+  if (
+    target.legal &&
+    typeof target.legal === 'object' &&
+    'miniApp' in (target.legal as any)
+  ) {
     delete (target.legal as any).miniApp;
   }
 
   // Mask main integrationConfig
-  if (target.integrationConfig && typeof target.integrationConfig === 'object') {
+  if (
+    target.integrationConfig &&
+    typeof target.integrationConfig === 'object'
+  ) {
     target.integrationConfig = sanitizeConfigDictionary(
       target.integrationConfig as FlutterIntegrationConfig,
     );
@@ -196,7 +203,10 @@ export function maskMiniAppCredentials<T>(app: T): T {
   // Mask pendingRevision.integrationConfig
   if (target.pendingRevision && typeof target.pendingRevision === 'object') {
     const pending = target.pendingRevision as Record<string, unknown>;
-    if (pending.integrationConfig && typeof pending.integrationConfig === 'object') {
+    if (
+      pending.integrationConfig &&
+      typeof pending.integrationConfig === 'object'
+    ) {
       pending.integrationConfig = sanitizeConfigDictionary(
         pending.integrationConfig as FlutterIntegrationConfig,
       );
@@ -208,7 +218,10 @@ export function maskMiniAppCredentials<T>(app: T): T {
     target.versionHistory = target.versionHistory.map((v: unknown) => {
       if (v && typeof v === 'object') {
         const item = v as Record<string, unknown>;
-        if (item.integrationConfig && typeof item.integrationConfig === 'object') {
+        if (
+          item.integrationConfig &&
+          typeof item.integrationConfig === 'object'
+        ) {
           return {
             ...item,
             integrationConfig: sanitizeConfigDictionary(

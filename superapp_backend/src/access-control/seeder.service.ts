@@ -7,7 +7,10 @@ import { Role } from './entities/role.entity';
 import { Permission } from './entities/permission.entity';
 import { AccessToken, DeveloperToken } from './entities/access-token.entity';
 import { RefreshToken } from '../mobile/entities/refresh-token.entity';
-import { Organization, OrganizationStatus } from '../organizations/entities/organization.entity';
+import {
+  Organization,
+  OrganizationStatus,
+} from '../organizations/entities/organization.entity';
 import { MiniApp } from '../miniapps/entities/miniapp.entity';
 import { MiniAppIssue } from '../miniapps/entities/miniapp-issue.entity';
 import { MiniAppBuild } from '../miniapps/entities/miniapp-build.entity';
@@ -31,7 +34,7 @@ export class SeederService implements OnApplicationBootstrap {
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>,
     private configService: ConfigService,
-  ) { }
+  ) {}
 
   async onApplicationBootstrap() {
     await this.seed();
@@ -78,15 +81,21 @@ export class SeederService implements OnApplicationBootstrap {
     }
 
     // 2. Streamlined 3 Enterprise Roles (SUPER_ADMIN, ADMIN, MA_DEVELOPER)
-    const rolesConfig: Array<{ name: string; description: string; perms: string[] }> = [
+    const rolesConfig: Array<{
+      name: string;
+      description: string;
+      perms: string[];
+    }> = [
       {
         name: 'SUPER_ADMIN',
-        description: 'Super Administrator with unrestricted platform-wide governance and access control',
+        description:
+          'Super Administrator with unrestricted platform-wide governance and access control',
         perms: allPerms,
       },
       {
         name: 'ADMIN',
-        description: 'Platform Administrator for review, audit, approval workflow, and tenant supervision',
+        description:
+          'Platform Administrator for review, audit, approval workflow, and tenant supervision',
         perms: [
           'miniapp:create',
           'miniapp:read',
@@ -115,7 +124,8 @@ export class SeederService implements OnApplicationBootstrap {
       },
       {
         name: 'MA_DEVELOPER',
-        description: 'MiniApp Developer for building, testing, verifying, and submitting MiniApps',
+        description:
+          'MiniApp Developer for building, testing, verifying, and submitting MiniApps',
         perms: [
           'miniapp:create',
           'miniapp:read',
@@ -135,7 +145,9 @@ export class SeederService implements OnApplicationBootstrap {
         where: { name: rConfig.name },
         relations: { permissions: true },
       });
-      const matchingPerms = savedPerms.filter((p) => rConfig.perms.includes(p.name));
+      const matchingPerms = savedPerms.filter((p) =>
+        rConfig.perms.includes(p.name),
+      );
       if (!role) {
         role = this.roleRepository.create({
           name: rConfig.name,
@@ -158,7 +170,8 @@ export class SeederService implements OnApplicationBootstrap {
     const rootFsaData = {
       name: 'Non-Bank Financial Services Authority',
       code: 'FSA',
-      description: 'Non-Bank Financial Services Authority of Cambodia (Central Governing Authority)',
+      description:
+        'Non-Bank Financial Services Authority of Cambodia (Central Governing Authority)',
     };
 
     let fsaRoot: Organization | null = null;
@@ -169,7 +182,9 @@ export class SeederService implements OnApplicationBootstrap {
       if (!fsaRoot) {
         fsaRoot = await this.organizationRepository
           .createQueryBuilder('org')
-          .where('LOWER(TRIM(org.name)) = LOWER(:name)', { name: rootFsaData.name.trim() })
+          .where('LOWER(TRIM(org.name)) = LOWER(:name)', {
+            name: rootFsaData.name.trim(),
+          })
           .orWhere('org.code = :code', { code: rootFsaData.code })
           .getOne();
       }
@@ -185,7 +200,9 @@ export class SeederService implements OnApplicationBootstrap {
           status: OrganizationStatus.ACTIVE,
         });
         fsaRoot = await this.organizationRepository.save(fsaRoot);
-        this.logger.log(`Created root authority: ${fsaRoot.name} [${fsaRoot.code}]`);
+        this.logger.log(
+          `Created root authority: ${fsaRoot.name} [${fsaRoot.code}]`,
+        );
       } else {
         let rootChanged = false;
         if (fsaRoot.code !== rootFsaData.code) {
@@ -207,11 +224,15 @@ export class SeederService implements OnApplicationBootstrap {
         }
         if (rootChanged) {
           fsaRoot = await this.organizationRepository.save(fsaRoot);
-          this.logger.log(`Updated root authority: ${fsaRoot.name} [${fsaRoot.code}]`);
+          this.logger.log(
+            `Updated root authority: ${fsaRoot.name} [${fsaRoot.code}]`,
+          );
         }
       }
     } catch (err: any) {
-      this.logger.warn(`Root FSA organization seed warning: ${err?.message}. Adopting existing database record.`);
+      this.logger.warn(
+        `Root FSA organization seed warning: ${err?.message}. Adopting existing database record.`,
+      );
       fsaRoot = await this.organizationRepository.findOne({
         where: [{ name: rootFsaData.name }, { code: rootFsaData.code }],
       });
@@ -219,17 +240,61 @@ export class SeederService implements OnApplicationBootstrap {
 
     // 4. Seed 11 Subordinate FSA Organizations under root Non-Bank Financial Services Authority
     const subordinateFsaOrganizations = [
-      { name: 'Financial Technology Center', code: 'FTC', description: 'Financial Technology Center of FSA' },
-      { name: 'General Affairs Department', code: 'GAD', description: 'General Affairs Department of FSA' },
-      { name: 'Policy Department', code: 'PD', description: 'Policy Department of FSA' },
-      { name: 'Technical and Legal Affairs Department', code: 'TLAD', description: 'Technical and Legal Affairs Department of FSA' },
-      { name: 'Internal Audit Unit', code: 'IAU', description: 'Internal Audit Unit of FSA' },
-      { name: 'Securities and Exchange Regulator of Cambodia', code: 'SERC', description: 'Securities and Exchange Regulator of Cambodia' },
-      { name: 'Social Security Regulator', code: 'SSR', description: 'Social Security Regulator of Cambodia' },
-      { name: 'Trust Regulator', code: 'TR', description: 'Trust Regulator of Cambodia' },
-      { name: 'Accounting and Auditing Regulator', code: 'ACAR', description: 'Accounting and Auditing Regulator of Cambodia' },
-      { name: 'Insurance Regulator of Cambodia', code: 'IRC', description: 'Insurance Regulator of Cambodia' },
-      { name: 'Real Estate Business and Pawnshop Regulator', code: 'RPR', description: 'Real Estate Business and Pawnshop Regulator of Cambodia' },
+      {
+        name: 'Financial Technology Center',
+        code: 'FTC',
+        description: 'Financial Technology Center of FSA',
+      },
+      {
+        name: 'General Affairs Department',
+        code: 'GAD',
+        description: 'General Affairs Department of FSA',
+      },
+      {
+        name: 'Policy Department',
+        code: 'PD',
+        description: 'Policy Department of FSA',
+      },
+      {
+        name: 'Technical and Legal Affairs Department',
+        code: 'TLAD',
+        description: 'Technical and Legal Affairs Department of FSA',
+      },
+      {
+        name: 'Internal Audit Unit',
+        code: 'IAU',
+        description: 'Internal Audit Unit of FSA',
+      },
+      {
+        name: 'Securities and Exchange Regulator of Cambodia',
+        code: 'SERC',
+        description: 'Securities and Exchange Regulator of Cambodia',
+      },
+      {
+        name: 'Social Security Regulator',
+        code: 'SSR',
+        description: 'Social Security Regulator of Cambodia',
+      },
+      {
+        name: 'Trust Regulator',
+        code: 'TR',
+        description: 'Trust Regulator of Cambodia',
+      },
+      {
+        name: 'Accounting and Auditing Regulator',
+        code: 'ACAR',
+        description: 'Accounting and Auditing Regulator of Cambodia',
+      },
+      {
+        name: 'Insurance Regulator of Cambodia',
+        code: 'IRC',
+        description: 'Insurance Regulator of Cambodia',
+      },
+      {
+        name: 'Real Estate Business and Pawnshop Regulator',
+        code: 'RPR',
+        description: 'Real Estate Business and Pawnshop Regulator of Cambodia',
+      },
     ];
 
     let ftcOrg: Organization | null = null;
@@ -252,7 +317,9 @@ export class SeederService implements OnApplicationBootstrap {
         if (!org) {
           org = await this.organizationRepository
             .createQueryBuilder('org')
-            .where('LOWER(TRIM(org.name)) = LOWER(:name)', { name: orgData.name.trim() })
+            .where('LOWER(TRIM(org.name)) = LOWER(:name)', {
+              name: orgData.name.trim(),
+            })
             .orWhere('org.code = :code', { code: orgData.code })
             .getOne();
         }
@@ -268,7 +335,9 @@ export class SeederService implements OnApplicationBootstrap {
             status: OrganizationStatus.ACTIVE,
           });
           org = await this.organizationRepository.save(org);
-          this.logger.log(`Created subordinate organization: ${org.name} [${org.code}] under ${fsaRoot?.name || 'FSA'}`);
+          this.logger.log(
+            `Created subordinate organization: ${org.name} [${org.code}] under ${fsaRoot?.name || 'FSA'}`,
+          );
         } else {
           let changed = false;
           if (orgData.code && org.code !== orgData.code) {
@@ -290,29 +359,41 @@ export class SeederService implements OnApplicationBootstrap {
           }
           if (changed) {
             org = await this.organizationRepository.save(org);
-            this.logger.log(`Updated organization hierarchy: ${org.name} [${org.code}] -> parent ${fsaRoot?.name}`);
+            this.logger.log(
+              `Updated organization hierarchy: ${org.name} [${org.code}] -> parent ${fsaRoot?.name}`,
+            );
           }
         }
       } catch (err: any) {
         // Idempotent recovery: if duplicate key or conflict, adopt existing DB record
-        this.logger.warn(`Organization seed conflict for "${orgData.name}": ${err?.message}. Adopting existing database record.`);
-        org = await this.organizationRepository.findOne({
-          where: [{ name: orgData.name }, { code: orgData.code }],
-        }) || (await this.organizationRepository
-          .createQueryBuilder('org')
-          .where('org.name ILIKE :name', { name: `%${orgData.name}%` })
-          .getOne());
+        this.logger.warn(
+          `Organization seed conflict for "${orgData.name}": ${err?.message}. Adopting existing database record.`,
+        );
+        org =
+          (await this.organizationRepository.findOne({
+            where: [{ name: orgData.name }, { code: orgData.code }],
+          })) ||
+          (await this.organizationRepository
+            .createQueryBuilder('org')
+            .where('org.name ILIKE :name', { name: `%${orgData.name}%` })
+            .getOne());
       }
 
-      if (orgData.code === 'FTC' || orgData.name.includes('Financial Technology Center')) {
+      if (
+        orgData.code === 'FTC' ||
+        orgData.name.includes('Financial Technology Center')
+      ) {
         ftcOrg = org;
       }
     }
 
     if (!ftcOrg) {
-      ftcOrg = await this.organizationRepository.findOne({
-        where: [{ code: 'FTC' }, { name: 'Financial Technology Center' }],
-      }) || (await this.organizationRepository.find({ take: 1 }))[0] || null;
+      ftcOrg =
+        (await this.organizationRepository.findOne({
+          where: [{ code: 'FTC' }, { name: 'Financial Technology Center' }],
+        })) ||
+        (await this.organizationRepository.find({ take: 1 }))[0] ||
+        null;
     }
 
     // 4. Seed Password (Strictly retrieved from environment secret; no hardcoded credentials in source code)
@@ -375,7 +456,9 @@ export class SeederService implements OnApplicationBootstrap {
           passwordHash: defaultPasswordHash,
         });
         user = await this.userRepository.save(user);
-        this.logger.log(`Created official account: ${email} (${acc.role.name})`);
+        this.logger.log(
+          `Created official account: ${email} (${acc.role.name})`,
+        );
       } else {
         let changed = false;
         if (user.roleId !== acc.role.id) {
@@ -407,7 +490,9 @@ export class SeederService implements OnApplicationBootstrap {
         }
         if (changed) {
           user = await this.userRepository.save(user);
-          this.logger.log(`Synchronized credentials and role for official account: ${email}`);
+          this.logger.log(
+            `Synchronized credentials and role for official account: ${email}`,
+          );
         }
       }
 
@@ -417,10 +502,14 @@ export class SeederService implements OnApplicationBootstrap {
     }
 
     // 6. Exhaustively Purge Mock Data & Accounts via TypeORM QueryBuilder & Database Transaction
-    const officialEmails = officialAccounts.map((a) => a.email.toLowerCase().trim());
+    const officialEmails = officialAccounts.map((a) =>
+      a.email.toLowerCase().trim(),
+    );
     await this.purgeMockData(officialEmails);
 
-    this.logger.log('Database successfully seeded with official Super Admin & Admin accounts, 1 root FSA authority, and 11 subordinate organizations.');
+    this.logger.log(
+      'Database successfully seeded with official Super Admin & Admin accounts, 1 root FSA authority, and 11 subordinate organizations.',
+    );
   }
 
   /**
@@ -490,10 +579,13 @@ export class SeederService implements OnApplicationBootstrap {
             .createQueryBuilder()
             .delete()
             .from(MiniAppCollaborator)
-            .where('"miniappId" IN (:...mockAppIds) OR "userId" IN (:...mockUserIds)', {
-              mockAppIds,
-              mockUserIds,
-            })
+            .where(
+              '"miniappId" IN (:...mockAppIds) OR "userId" IN (:...mockUserIds)',
+              {
+                mockAppIds,
+                mockUserIds,
+              },
+            )
             .execute();
 
           await manager

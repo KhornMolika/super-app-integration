@@ -13,9 +13,7 @@ export interface DetectedPermissionResult {
 export class PermissionDetectorHelper {
   private readonly logger = new Logger(PermissionDetectorHelper.name);
 
-  constructor(
-    @Optional() private readonly gitlabProvider?: GitLabProvider,
-  ) {}
+  constructor(@Optional() private readonly gitlabProvider?: GitLabProvider) {}
 
   /**
    * Automatically discovers required native permissions from MiniApp endpoint,

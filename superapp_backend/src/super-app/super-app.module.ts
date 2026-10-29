@@ -18,4 +18,3 @@ import { CapabilitiesModule } from '../capabilities/capabilities.module';
   exports: [SuperAppService],
 })
 export class SuperAppModule {}
-

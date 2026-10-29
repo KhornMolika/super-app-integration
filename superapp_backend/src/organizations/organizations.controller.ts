@@ -15,7 +15,10 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RbacGuard } from '../access-control/guards/rbac.guard';
 import { RequirePermissions } from '../access-control/decorators/require-permissions.decorator';
 import { OrganizationsService } from './organizations.service';
-import { Organization, OrganizationStatus } from './entities/organization.entity';
+import {
+  Organization,
+  OrganizationStatus,
+} from './entities/organization.entity';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 import { QueryOrganizationsDto } from './dto/query-organizations.dto';

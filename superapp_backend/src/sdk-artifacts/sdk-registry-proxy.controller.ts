@@ -18,10 +18,10 @@ import * as path from 'path';
 
 /**
  * Scoped NPM Registry Gateway Controller (/api/sdk/*)
- * 
+ *
  * Provides an authenticated, strictly isolated reverse proxy for @fsasuperapp/* packages.
  * External developers configure .npmrc to point to this registry endpoint.
- * 
+ *
  * Enforces Least Privilege:
  * 1. Authenticates developer using Backoffice JWT or token.
  * 2. Strictly restricts all queries to the '@fsasuperapp/*' scope.
@@ -35,7 +35,7 @@ export class SdkRegistryProxyController {
   constructor(
     private readonly configService: ConfigService,
     private readonly authService: AuthService,
-  ) { }
+  ) {}
 
   /**
    * Packument Metadata for scoped packages:
@@ -99,9 +99,12 @@ export class SdkRegistryProxyController {
    */
   private assertScopeAllowed(packageName: string) {
     const cleanName = (packageName || '').trim().toLowerCase();
-    const isFsaScope = cleanName.startsWith('@fsasuperapp/') || cleanName === '@fsasuperapp';
+    const isFsaScope =
+      cleanName.startsWith('@fsasuperapp/') || cleanName === '@fsasuperapp';
     if (!isFsaScope) {
-      this.logger.warn(`[LeastPrivilege Violation] Blocked unauthorized request for: "${packageName}"`);
+      this.logger.warn(
+        `[LeastPrivilege Violation] Blocked unauthorized request for: "${packageName}"`,
+      );
       throw new ForbiddenException({
         statusCode: 403,
         error: 'Forbidden',
@@ -136,29 +139,40 @@ export class SdkRegistryProxyController {
       } catch (err: unknown) {
         // In production, reject invalid tokens
         if (process.env.NODE_ENV === 'production') {
-          throw new UnauthorizedException('Invalid or expired developer token.');
+          throw new UnauthorizedException(
+            'Invalid or expired developer token.',
+          );
         }
       }
     }
 
     // In production without token: reject
     if (process.env.NODE_ENV === 'production') {
-      throw new UnauthorizedException('Authentication required. Please configure _authToken in your .npmrc.');
+      throw new UnauthorizedException(
+        'Authentication required. Please configure _authToken in your .npmrc.',
+      );
     }
 
     // In development mode: allow with warning for local testing
-    this.logger.debug('Proceeding in dev mode without verified token for @fsasuperapp package.');
+    this.logger.debug(
+      'Proceeding in dev mode without verified token for @fsasuperapp package.',
+    );
   }
 
   /**
    * Fetches packument from Nexus npm-hosted repository and rewrites tarball URLs.
    */
-  private async handlePackument(packageName: string, req: Request, res: Response) {
+  private async handlePackument(
+    packageName: string,
+    req: Request,
+    res: Response,
+  ) {
     const nexusBase = this.getNexusBaseUrl();
     const nexusAuth = this.getNexusAuthHeader();
 
     const shortName = packageName.replace(/^@fsasuperapp\//, '');
-    const npmRepo = this.configService.get<string>('NEXUS_NPM_SDK_REPO') || 'npm-hosted';
+    const npmRepo =
+      this.configService.get<string>('NEXUS_NPM_SDK_REPO') || 'npm-hosted';
     const upstreamUrl = `${nexusBase}/repository/${npmRepo}/${packageName}`;
 
     try {
@@ -170,7 +184,7 @@ export class SdkRegistryProxyController {
       });
 
       if (upstreamRes.ok) {
-        const packument = (await upstreamRes.json()) as any;
+        const packument = await upstreamRes.json();
         const publicGatewayUrl = this.getPublicGatewayUrl(req);
 
         // Rewrite tarball URLs to point back to our /api/sdk gateway
@@ -189,27 +203,39 @@ export class SdkRegistryProxyController {
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      this.logger.debug(`Nexus packument query failed at ${upstreamUrl}: ${msg}`);
+      this.logger.debug(
+        `Nexus packument query failed at ${upstreamUrl}: ${msg}`,
+      );
     }
 
     // Local workspace fallback (supports dev/POC without running Nexus)
-    const localPackument = this.generateLocalFallbackPackument(packageName, req);
+    const localPackument = this.generateLocalFallbackPackument(
+      packageName,
+      req,
+    );
     if (localPackument) {
       res.setHeader('Content-Type', 'application/json');
       return res.json(localPackument);
     }
 
-    throw new NotFoundException(`Package "${packageName}" not found in @fsasuperapp repository.`);
+    throw new NotFoundException(
+      `Package "${packageName}" not found in @fsasuperapp repository.`,
+    );
   }
 
   /**
    * Streams package tarball binary from internal Nexus.
    */
-  private async handleTarball(packageName: string, tarballFilename: string, res: Response) {
+  private async handleTarball(
+    packageName: string,
+    tarballFilename: string,
+    res: Response,
+  ) {
     const nexusBase = this.getNexusBaseUrl();
     const nexusAuth = this.getNexusAuthHeader();
     const shortName = packageName.replace(/^@fsasuperapp\//, '');
-    const npmRepo = this.configService.get<string>('NEXUS_NPM_SDK_REPO') || 'npm-hosted';
+    const npmRepo =
+      this.configService.get<string>('NEXUS_NPM_SDK_REPO') || 'npm-hosted';
 
     const candidateUrls = [
       `${nexusBase}/repository/${npmRepo}/@fsasuperapp/${shortName}/-/${tarballFilename}`,
@@ -224,7 +250,10 @@ export class SdkRegistryProxyController {
 
         if (upstreamRes.ok) {
           res.setHeader('Content-Type', 'application/octet-stream');
-          res.setHeader('Content-Disposition', `attachment; filename="${tarballFilename}"`);
+          res.setHeader(
+            'Content-Disposition',
+            `attachment; filename="${tarballFilename}"`,
+          );
           const len = upstreamRes.headers.get('content-length');
           if (len) res.setHeader('Content-Length', len);
 
@@ -242,7 +271,9 @@ export class SdkRegistryProxyController {
       }
     }
 
-    throw new NotFoundException(`Tarball "${tarballFilename}" not found on repository storage.`);
+    throw new NotFoundException(
+      `Tarball "${tarballFilename}" not found on repository storage.`,
+    );
   }
 
   private getNexusBaseUrl(): string {
@@ -268,7 +299,10 @@ export class SdkRegistryProxyController {
 
   private getPublicGatewayUrl(req: Request): string {
     const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
-    const host = req.headers['x-forwarded-host'] || req.get('host') || 'app.fintechcenterfsa.com';
+    const host =
+      req.headers['x-forwarded-host'] ||
+      req.get('host') ||
+      'app.fintechcenterfsa.com';
     return `${proto}://${host}/api/sdk`;
   }
 
@@ -283,11 +317,15 @@ export class SdkRegistryProxyController {
     const baseDir = configuredSdkDir
       ? path.resolve(process.cwd(), configuredSdkDir)
       : path.resolve(
-        this.configService.get<string>('MOBILE_APP_DIR') || '../super-app',
-        'packages',
-      );
+          this.configService.get<string>('MOBILE_APP_DIR') || '../super-app',
+          'packages',
+        );
 
-    const pkgJsonPath = path.join(baseDir, 'fsa-superapp-miniapp-web-sdk', 'package.json');
+    const pkgJsonPath = path.join(
+      baseDir,
+      'fsa-superapp-miniapp-web-sdk',
+      'package.json',
+    );
     if (!fs.existsSync(pkgJsonPath)) return null;
 
     try {

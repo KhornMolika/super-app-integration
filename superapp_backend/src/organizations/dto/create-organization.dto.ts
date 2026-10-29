@@ -17,7 +17,9 @@ export class CreateOrganizationDto {
   @IsOptional()
   code?: string;
 
-  @ValidateIf((o) => o.parentId !== null && o.parentId !== '' && o.parentId !== undefined)
+  @ValidateIf(
+    (o) => o.parentId !== null && o.parentId !== '' && o.parentId !== undefined,
+  )
   @IsUUID('4', { message: 'parentId must be a valid UUID' })
   @IsOptional()
   parentId?: string | null;

@@ -424,7 +424,9 @@ export class CapabilitiesService implements OnApplicationBootstrap {
     for (let index = 0; index < permissions.length; index++) {
       const perm = permissions[index];
       const rawKey = (
-        typeof perm === 'string' ? perm : perm.type || perm.key || perm.name || ''
+        typeof perm === 'string'
+          ? perm
+          : perm.type || perm.key || perm.name || ''
       ).trim();
       if (!rawKey) continue;
 
@@ -500,7 +502,10 @@ export class CapabilitiesService implements OnApplicationBootstrap {
     const capabilities: any[] = [];
 
     const extractPlistString = (key: string): string => {
-      const regex = new RegExp(`<key>${key}</key>\\s*<string>([^<]+)</string>`, 'i');
+      const regex = new RegExp(
+        `<key>${key}</key>\\s*<string>([^<]+)</string>`,
+        'i',
+      );
       const match = infoPlistContent.match(regex);
       return match ? match[1].trim() : '';
     };
@@ -771,7 +776,10 @@ export class CapabilitiesService implements OnApplicationBootstrap {
     ]);
 
     for (const [pkg, version] of Object.entries(deps)) {
-      if (!handledFrameworkPackages.has(pkg) && !pkg.startsWith('flutter_test')) {
+      if (
+        !handledFrameworkPackages.has(pkg) &&
+        !pkg.startsWith('flutter_test')
+      ) {
         capabilities.push({
           id: `cap-${pkg}`,
           key: pkg,

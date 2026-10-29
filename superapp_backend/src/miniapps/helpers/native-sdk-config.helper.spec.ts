@@ -39,7 +39,9 @@ describe('latestCodegenMrIid', () => {
   });
 
   it('returns undefined when nothing has an MR', () => {
-    expect(latestCodegenMrIid([{}, null, { codegenPrUrl: 'x' }])).toBeUndefined();
+    expect(
+      latestCodegenMrIid([{}, null, { codegenPrUrl: 'x' }]),
+    ).toBeUndefined();
     expect(latestCodegenMrIid([])).toBeUndefined();
   });
 });

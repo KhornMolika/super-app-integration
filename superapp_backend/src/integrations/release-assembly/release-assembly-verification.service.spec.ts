@@ -39,8 +39,12 @@ describe('ReleaseAssemblyVerificationService', () => {
     };
 
     jenkinsService = {
-      triggerSuperAppBuild: jest.fn().mockResolvedValue({ queueId: 101, buildNumber: 42 }),
-      triggerSuperAppSandboxBuild: jest.fn().mockResolvedValue({ queueId: 102, buildNumber: 43 }),
+      triggerSuperAppBuild: jest
+        .fn()
+        .mockResolvedValue({ queueId: 101, buildNumber: 42 }),
+      triggerSuperAppSandboxBuild: jest
+        .fn()
+        .mockResolvedValue({ queueId: 102, buildNumber: 43 }),
     };
 
     notificationsService = {
@@ -56,7 +60,11 @@ describe('ReleaseAssemblyVerificationService', () => {
     };
 
     mockMiniappRepo = {
-      findOne: jest.fn().mockResolvedValue({ id: 'app-1', name: 'Banking MiniApp', appId: 'miniapp_banking' }),
+      findOne: jest.fn().mockResolvedValue({
+        id: 'app-1',
+        name: 'Banking MiniApp',
+        appId: 'miniapp_banking',
+      }),
       save: jest.fn().mockImplementation((app) => Promise.resolve(app)),
       find: jest.fn().mockResolvedValue([]),
       update: jest.fn().mockResolvedValue({}),
@@ -64,7 +72,9 @@ describe('ReleaseAssemblyVerificationService', () => {
     };
 
     mockUserRepo = {
-      findOne: jest.fn().mockResolvedValue({ id: 'user-1', email: 'owner@example.com' }),
+      findOne: jest
+        .fn()
+        .mockResolvedValue({ id: 'user-1', email: 'owner@example.com' }),
       find: jest.fn().mockResolvedValue([]),
     };
 
@@ -79,8 +89,12 @@ describe('ReleaseAssemblyVerificationService', () => {
         {
           provide: PubspecInjectorService,
           useValue: {
-            syncAllApprovedMiniApps: jest.fn().mockResolvedValue({ success: true }),
-            validateDependencies: jest.fn().mockResolvedValue({ success: true }),
+            syncAllApprovedMiniApps: jest
+              .fn()
+              .mockResolvedValue({ success: true }),
+            validateDependencies: jest
+              .fn()
+              .mockResolvedValue({ success: true }),
           },
         },
         { provide: getRepositoryToken(MiniApp), useValue: mockMiniappRepo },
@@ -138,9 +152,7 @@ describe('ReleaseAssemblyVerificationService', () => {
   describe('codegen MR iid passed to Jenkins', () => {
     const release = (id: string) => ({
       releaseVersion: '1.0.0',
-      miniApps: [
-        { id, name: 'X', packageName: 'p', version: '1.0.0' },
-      ],
+      miniApps: [{ id, name: 'X', packageName: 'p', version: '1.0.0' }],
     });
 
     it('passes the newest codegen MR iid found in the release apps', async () => {
@@ -206,7 +218,9 @@ describe('ReleaseAssemblyVerificationService', () => {
         details: 'gradle assembleDebug',
       });
       expect(JSON.parse(params.stageJson).updatedAt).toBeDefined();
-      expect(qb.returning).toHaveBeenCalledWith(expect.arrayContaining(['id', 'buildStages']));
+      expect(qb.returning).toHaveBeenCalledWith(
+        expect.arrayContaining(['id', 'buildStages']),
+      );
       expect(mockMiniappRepo.save).not.toHaveBeenCalled();
       expect(notificationsService.emitBuildStageUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -237,16 +251,14 @@ describe('ReleaseAssemblyVerificationService', () => {
         execute,
       };
       mockMiniappRepo.createQueryBuilder = jest.fn().mockReturnValue(qb);
-      mockMiniappRepo.find = jest
-        .fn()
-        .mockResolvedValue([
-          {
-            id: 'app-1',
-            name: 'Banking',
-            ownerId: 'u1',
-            ownerEmail: 'o@x.com',
-          },
-        ]);
+      mockMiniappRepo.find = jest.fn().mockResolvedValue([
+        {
+          id: 'app-1',
+          name: 'Banking',
+          ownerId: 'u1',
+          ownerEmail: 'o@x.com',
+        },
+      ]);
     });
 
     it('moves BUILDING to TESTING, notifies owner and emits build_completed', async () => {
@@ -297,10 +309,17 @@ describe('ReleaseAssemblyVerificationService', () => {
         expect.any(String),
         'BUILD_FAILED',
         'app-1',
-        expect.objectContaining({ releaseVersion: 'v1.0.0', error: 'APK build error' }),
+        expect.objectContaining({
+          releaseVersion: 'v1.0.0',
+          error: 'APK build error',
+        }),
       );
       expect(notificationsService.emitBuildCompleted).toHaveBeenCalledWith(
-        expect.objectContaining({ miniAppId: 'app-1', status: 'FAILED', error: 'APK build error' }),
+        expect.objectContaining({
+          miniAppId: 'app-1',
+          status: 'FAILED',
+          error: 'APK build error',
+        }),
       );
       expect(res).toEqual({ success: true });
     });

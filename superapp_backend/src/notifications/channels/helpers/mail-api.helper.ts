@@ -143,7 +143,9 @@ export class MailApiHelper {
         err.code === 'NXDOMAIN'
       ) {
         this.mxCache.set(domain, { isValid: false, expiresAt: now + 3600000 });
-        this.logger.warn(`Destination domain "${domain}" failed MX check: ${err.code}`);
+        this.logger.warn(
+          `Destination domain "${domain}" failed MX check: ${err.code}`,
+        );
         return {
           valid: false,
           reason: `Domain "${domain}" does not exist or has no active mail servers (DNS: ${err.code}).`,
@@ -180,16 +182,22 @@ export class MailApiHelper {
 
     const validation = await this.validateDeliverability(toAddress);
     if (!validation.valid) {
-      this.logger.warn(`Skipping email dispatch to ${toAddress}: ${validation.reason}`);
+      this.logger.warn(
+        `Skipping email dispatch to ${toAddress}: ${validation.reason}`,
+      );
       return {
         success: false,
-        message: validation.reason || `Recipient email "${toAddress}" is not deliverable.`,
+        message:
+          validation.reason ||
+          `Recipient email "${toAddress}" is not deliverable.`,
       };
     }
 
     try {
       const from = options.from || `FSA SuperApp <${fromDomain}>`;
-      this.logger.log(`Dispatching email -> From: "${from}", To: "${options.to}"`);
+      this.logger.log(
+        `Dispatching email -> From: "${from}", To: "${options.to}"`,
+      );
       const result = await client.emails.send({
         from,
         to: options.to,
@@ -200,7 +208,11 @@ export class MailApiHelper {
       if (result.error) {
         this.logger.error(`Resend API Error: ${result.error.message}`);
         let friendlyMessage = result.error.message;
-        if (friendlyMessage.includes('You can only send testing emails to your own email address')) {
+        if (
+          friendlyMessage.includes(
+            'You can only send testing emails to your own email address',
+          )
+        ) {
           friendlyMessage = `Resend Sandbox Mode: Emails can only be sent to the verified API key owner address in sandbox mode. Verify your sending domain at resend.com/domains to send to all addresses.`;
         }
         return {

@@ -80,16 +80,16 @@ export class CapabilityProposalsService {
       where: { id },
       relations: { miniApp: true, requestedBy: true },
     });
-    return p ? (formatCapabilityProposalResponse(p) as CapabilityProposal) : null;
+    return p ? formatCapabilityProposalResponse(p) : null;
   }
 
   async findPendingByKey(capabilityKey: string): Promise<CapabilityProposal[]> {
     const list = await this.capabilityProposalRepository.find({
-      where: [
-        { capabilityKey, status: 'PENDING_REVIEW' },
-      ],
+      where: [{ capabilityKey, status: 'PENDING_REVIEW' }],
     });
-    return list.map((p) => formatCapabilityProposalResponse(p) as CapabilityProposal);
+    return list.map(
+      (p) => formatCapabilityProposalResponse(p) as CapabilityProposal,
+    );
   }
 
   async create(data: any): Promise<CapabilityProposal> {
@@ -102,7 +102,7 @@ export class CapabilityProposalsService {
     delete (payload as any).permissionName;
     const proposal = this.capabilityProposalRepository.create(payload);
     const saved = await this.capabilityProposalRepository.save(proposal);
-    return formatCapabilityProposalResponse(saved) as CapabilityProposal;
+    return formatCapabilityProposalResponse(saved);
   }
 
   async update(id: string, data: any): Promise<void> {

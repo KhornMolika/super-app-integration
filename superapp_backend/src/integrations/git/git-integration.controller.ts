@@ -121,14 +121,20 @@ export class GitIntegrationController {
   @Post(['deploy-key/generate', 'generate-deploy-key'])
   @HttpCode(HttpStatus.OK)
   generateDeployKey(@Body() dto?: GenerateDeployKeyDto) {
-    const title = dto?.title || (dto?.appName ? `superapp-${dto.appName}-deploy-key` : undefined);
+    const title =
+      dto?.title ||
+      (dto?.appName ? `superapp-${dto.appName}-deploy-key` : undefined);
     return this.gitService.generateUniqueDeployKeyPair(title);
   }
 
   @Get(['deploy-key/generate', 'generate-deploy-key'])
   @HttpCode(HttpStatus.OK)
-  generateDeployKeyGet(@Query('title') title?: string, @Query('appName') appName?: string) {
-    const keyTitle = title || (appName ? `superapp-${appName}-deploy-key` : undefined);
+  generateDeployKeyGet(
+    @Query('title') title?: string,
+    @Query('appName') appName?: string,
+  ) {
+    const keyTitle =
+      title || (appName ? `superapp-${appName}-deploy-key` : undefined);
     return this.gitService.generateUniqueDeployKeyPair(keyTitle);
   }
 }

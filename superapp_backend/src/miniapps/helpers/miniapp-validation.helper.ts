@@ -60,7 +60,8 @@ export class MiniappValidationHelper {
     const urlValidator = new IsUrlReachableConstraint();
     const checks: Promise<void>[] = [];
 
-    const ownerEmail = (app as any).ownerEmail || app.supportEmail || app.owner?.email;
+    const ownerEmail =
+      (app as any).ownerEmail || app.supportEmail || app.owner?.email;
     if (!ownerEmail || !isEmail(ownerEmail)) {
       errors.ownerEmail = 'ownerEmail must be a valid email address.';
     }
@@ -289,8 +290,10 @@ export class MiniappValidationHelper {
             'Access Token is required for Private repository with Token authentication.';
         } else {
           const isDeployKey =
-            Boolean(flutterConfig.isPrivateRepo && flutterConfig.authMethod !== 'token') ||
-            gitUrl.startsWith('git@');
+            Boolean(
+              flutterConfig.isPrivateRepo &&
+              flutterConfig.authMethod !== 'token',
+            ) || gitUrl.startsWith('git@');
 
           checks.push(
             this.gitService
@@ -308,7 +311,11 @@ export class MiniappValidationHelper {
                       `Private Git repository configured with Deploy Key for ${gitUrl}. Full package verification will be orchestrated via Jenkins runner.`,
                     );
                   } else {
-                    const is404NotFound = result.validation.error?.toLowerCase().includes('not found') || result.validation.error?.includes('404');
+                    const is404NotFound =
+                      result.validation.error
+                        ?.toLowerCase()
+                        .includes('not found') ||
+                      result.validation.error?.includes('404');
                     if (is404NotFound) {
                       errors['integrationConfigFlutter.gitUrl'] =
                         `File 'pubspec.yaml' not found or repository '${gitUrl}' is private. If this repository is private, please select '🔒 Private Repository' and configure an SSH Deploy Key or Access Token.`;
@@ -330,7 +337,9 @@ export class MiniappValidationHelper {
                     `Private Git repository with Deploy Key for ${gitUrl}: REST check skipped (${err.message}). Jenkins runner will verify with deploy key.`,
                   );
                 } else {
-                  const is404NotFound = err.message?.toLowerCase().includes('not found') || err.message?.includes('404');
+                  const is404NotFound =
+                    err.message?.toLowerCase().includes('not found') ||
+                    err.message?.includes('404');
                   if (is404NotFound) {
                     errors['integrationConfigFlutter.gitUrl'] =
                       `Repository '${gitUrl}' was not found or is private. If this repository is private, please select '🔒 Private Repository' and configure an SSH Deploy Key or Access Token.`;
@@ -375,20 +384,20 @@ export class MiniappValidationHelper {
       );
     }
 
-    const privacyPolicyUrl = app.legal?.privacyPolicyUrl || (app as any).privacyPolicyUrl;
+    const privacyPolicyUrl =
+      app.legal?.privacyPolicyUrl || (app as any).privacyPolicyUrl;
     if (privacyPolicyUrl && privacyPolicyUrl.trim() !== '') {
       checks.push(
-        urlValidator
-          .validate(privacyPolicyUrl, null as any)
-          .then((isValid) => {
-            if (!isValid)
-              errors.privacyPolicyUrl =
-                'The Privacy Policy URL is unreachable. Please verify the link is publicly accessible.';
-          }),
+        urlValidator.validate(privacyPolicyUrl, null as any).then((isValid) => {
+          if (!isValid)
+            errors.privacyPolicyUrl =
+              'The Privacy Policy URL is unreachable. Please verify the link is publicly accessible.';
+        }),
       );
     }
 
-    const rawCapabilities = (app as any).capabilities || (app as any).permissions;
+    const rawCapabilities =
+      (app as any).capabilities || (app as any).permissions;
     if (rawCapabilities && Array.isArray(rawCapabilities)) {
       for (let index = 0; index < rawCapabilities.length; index++) {
         const perm = rawCapabilities[index];
@@ -507,7 +516,8 @@ export class MiniappValidationHelper {
         );
       }
 
-      const failEmail = (app as any).ownerEmail || app.supportEmail || app.owner?.email;
+      const failEmail =
+        (app as any).ownerEmail || app.supportEmail || app.owner?.email;
       if (failEmail) {
         await this.mailService.sendRegistrationFailureEmail(
           failEmail,
@@ -516,7 +526,8 @@ export class MiniappValidationHelper {
         );
       }
     } else {
-      const method = (app.integrationMethod || 'WEBVIEW') as 'WEBVIEW' | 'FLUTTER_PACKAGE' | 'NATIVE_SDK' | 'DEEP_LINK';
+      const method = (app.integrationMethod || 'WEBVIEW') as
+        'WEBVIEW' | 'FLUTTER_PACKAGE' | 'NATIVE_SDK' | 'DEEP_LINK';
       const initialStages = buildDynamicValidationStages(
         method,
         app.securityChecks,
@@ -542,15 +553,25 @@ export class MiniappValidationHelper {
       const allowLocal = envVal === 'DEV';
       const cfg = app.integrationConfig || {};
 
-      const declaredPerms = Array.isArray((app as any).capabilities || (app as any).permissions)
+      const declaredPerms = Array.isArray(
+        (app as any).capabilities || (app as any).permissions,
+      )
         ? ((app as any).capabilities || (app as any).permissions)
-            .map((p: any) => (typeof p === 'string' ? p : p.name || p.id || p.type))
+            .map((p: any) =>
+              typeof p === 'string' ? p : p.name || p.id || p.type,
+            )
             .filter(Boolean)
         : [];
       const requiredPerms = declaredPerms;
 
       // SuperApp Host Supported Capabilities whitelist
-      const allowedCaps = ['camera', 'geolocator', 'location', 'local_auth', 'biometrics'];
+      const allowedCaps = [
+        'camera',
+        'geolocator',
+        'location',
+        'local_auth',
+        'biometrics',
+      ];
       const requiredCaps = requiredPerms;
 
       const allowedDomains = Array.isArray(cfg.allowedDomains)
@@ -596,17 +617,20 @@ export class MiniappValidationHelper {
           requiredCapabilities: requiredCaps,
           checks: app.securityChecks || getDefaultChecksForMethod(method),
           isPrivateRepo: cfg.isPrivateRepo === true,
-          gitAuthMethod: cfg.authMethod || (cfg.isPrivateRepo ? 'deploy_key' : 'none'),
+          gitAuthMethod:
+            cfg.authMethod || (cfg.isPrivateRepo ? 'deploy_key' : 'none'),
           gitAccessToken: cfg.gitAccessToken || cfg.token || '',
           deployKey:
             cfg.deployKey ||
-            (cfg.authMethod === 'deploy_key' || (cfg.isPrivateRepo && !cfg.gitAccessToken)
+            (cfg.authMethod === 'deploy_key' ||
+            (cfg.isPrivateRepo && !cfg.gitAccessToken)
               ? this.gitService.getDeployPrivateKey()
               : ''),
         })
         .then(async (res) => {
           if (!res?.success) {
-            const reason = res?.message || 'Jenkins returned an unsuccessful status';
+            const reason =
+              res?.message || 'Jenkins returned an unsuccessful status';
             this.logger.warn(
               `Jenkins unavailable (${reason}). Falling back to local security scanner for ${method}.`,
             );
@@ -654,7 +678,10 @@ export class MiniappValidationHelper {
     permissionKey: string,
     permissionName?: string,
   ) {
-    const cleanKey = permissionKey.toLowerCase().trim().replace(/[^a-z0-9_]/g, '_');
+    const cleanKey = permissionKey
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9_]/g, '_');
     const [existing] =
       await this.capabilityProposalsService.findPendingByKey(cleanKey);
     if (existing) {

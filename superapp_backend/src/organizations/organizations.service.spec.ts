@@ -2,7 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { BadRequestException } from '@nestjs/common';
 import { OrganizationsService } from './organizations.service';
-import { Organization, OrganizationStatus } from './entities/organization.entity';
+import {
+  Organization,
+  OrganizationStatus,
+} from './entities/organization.entity';
 
 describe('OrganizationsService', () => {
   let service: OrganizationsService;

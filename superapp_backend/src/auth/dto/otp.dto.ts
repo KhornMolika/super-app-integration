@@ -1,4 +1,11 @@
-import { IsEmail, IsNotEmpty, IsString, Length, IsOptional, IsIn } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  Length,
+  IsOptional,
+  IsIn,
+} from 'class-validator';
 
 export class RequestOtpDto {
   @IsEmail({}, { message: 'A valid email address is required' })
@@ -34,6 +41,8 @@ export class ResetPasswordDto {
   resetToken!: string;
 
   @IsString({ message: 'New password must be a string' })
-  @Length(8, 128, { message: 'New password must be at least 8 characters long' })
+  @Length(8, 128, {
+    message: 'New password must be at least 8 characters long',
+  })
   newPassword!: string;
 }

@@ -123,8 +123,9 @@ export class SuperAppService implements OnApplicationBootstrap {
   async getAndRegisterNextVersion(targetVersion?: string): Promise<string> {
     const latest = await this.findLatestCapability();
     const activeCaps = await this.getActiveCapabilities();
-    const capabilities =
-      latest?.capabilities?.length ? latest.capabilities : activeCaps;
+    const capabilities = latest?.capabilities?.length
+      ? latest.capabilities
+      : activeCaps;
 
     if (targetVersion && /^v?\d+\.\d+(\.\d+)?/.test(targetVersion)) {
       const formatted = targetVersion.startsWith('v')
@@ -186,7 +187,10 @@ export class SuperAppService implements OnApplicationBootstrap {
         ...(mobileDir
           ? [path.resolve(process.cwd(), mobileDir, 'super_app_release.json')]
           : []),
-        path.resolve(process.cwd(), '../superapp_mobile/super_app_release.json'),
+        path.resolve(
+          process.cwd(),
+          '../superapp_mobile/super_app_release.json',
+        ),
       ];
       for (const releaseManifestPath of candidatePaths) {
         if (fs.existsSync(releaseManifestPath)) {

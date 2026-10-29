@@ -1,8 +1,18 @@
-import { Injectable, Logger, BadRequestException, Optional } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  Optional,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
-import { MiniApp, MiniAppStatus, MiniAppLifecycleStatus, MiniAppAvailabilityStatus } from '../entities/miniapp.entity';
+import {
+  MiniApp,
+  MiniAppStatus,
+  MiniAppLifecycleStatus,
+  MiniAppAvailabilityStatus,
+} from '../entities/miniapp.entity';
 import { MiniAppLegal } from '../entities/miniapp-legal.entity';
 import { StorageService } from '../../storage/storage.service';
 import { DomainAssociationHelper } from './domain-association.helper';
@@ -30,7 +40,7 @@ export class MiniappMutationHelper {
     private permissionDetectorHelper: PermissionDetectorHelper,
     @Optional()
     private organizationsService?: OrganizationsService,
-  ) { }
+  ) {}
 
   async create(
     data: any,
@@ -63,7 +73,13 @@ export class MiniappMutationHelper {
     if (!data.logo && data.iconUrl) {
       data.logo = data.iconUrl;
     }
-    if (!data.legal && (data.termsUrl || data.termsDescription || data.privacyPolicyUrl || data.privacyPolicyDescription)) {
+    if (
+      !data.legal &&
+      (data.termsUrl ||
+        data.termsDescription ||
+        data.privacyPolicyUrl ||
+        data.privacyPolicyDescription)
+    ) {
       data.legal = {
         termsUrl: data.termsUrl,
         termsDescription: data.termsDescription,
@@ -74,8 +90,10 @@ export class MiniappMutationHelper {
 
     // Resolve & normalize organization name and short code (e.g. FTC, IRC, etc.)
     const orgInfo = this.organizationsService
-      ? await this.organizationsService.resolveOrganization(data.organization || (data as any).category)
-      : await resolveOrganizationDetails(data.organization || (data as any).category);
+      ? await this.organizationsService.resolveOrganization(
+          data.organization || data.category,
+        )
+      : await resolveOrganizationDetails(data.organization || data.category);
     data.organization = orgInfo.name;
     data.organizationCode = orgInfo.code;
     if (orgInfo.id && !data.organizationId) {
@@ -84,7 +102,11 @@ export class MiniappMutationHelper {
 
     // Ensure slug is populated
     if (!data.slug && data.name) {
-      data.slug = data.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      data.slug = data.name
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
     }
 
     // Automatically upload base64 image data to MinIO object storage on submission
@@ -96,7 +118,7 @@ export class MiniappMutationHelper {
       try {
         const targetId = data.appId || `miniapp_${Date.now()}`;
         data.logo = await this.storageService.uploadBase64(
-          data.logo!,
+          data.logo,
           `logos/${targetId}/logo.png`,
         );
       } catch (err: any) {
@@ -105,7 +127,7 @@ export class MiniappMutationHelper {
     }
 
     if (!data.capabilities) {
-      data.capabilities = (data as any).permissions || [];
+      data.capabilities = data.permissions || [];
     }
 
     if (data.integrationMethod === 'WEBVIEW') {
@@ -122,7 +144,10 @@ export class MiniappMutationHelper {
         data.integrationConfig = secureFlutterIntegrationConfig(
           data.integrationConfig,
         );
-        if (!data.integrationConfig.packageName && data.integrationConfig.gitUrl) {
+        if (
+          !data.integrationConfig.packageName &&
+          data.integrationConfig.gitUrl
+        ) {
           data.integrationConfig.packageName = inferPackageNameFromGitUrl(
             data.integrationConfig.gitUrl,
             data.integrationConfig.gitPath || data.integrationConfig.path,
@@ -150,27 +175,26 @@ export class MiniappMutationHelper {
             data.integrationConfig?.gitBranch ||
             packageVer,
           packageName:
-            data.integrationConfig?.packageName ||
-            data.appId ||
-            data.name,
+            data.integrationConfig?.packageName || data.appId || data.name,
           type: 'PRODUCTION',
           status: 'IN_REVIEW',
-          changelog: (data as any).changelog || `Initial submission of version ${packageVer}`,
+          changelog:
+            data.changelog || `Initial submission of version ${packageVer}`,
           releasedAt: new Date().toISOString(),
           releasedBy: actorId || data.ownerName || 'MiniApp Developer',
           checksum:
             data.integrationConfig?.archiveChecksum ||
             'sha256:' +
-            crypto
-              .createHash('sha256')
-              .update((data.appId || 'miniapp') + packageVer)
-              .digest('hex')
-              .substring(0, 16),
+              crypto
+                .createHash('sha256')
+                .update((data.appId || 'miniapp') + packageVer)
+                .digest('hex')
+                .substring(0, 16),
         },
       ];
     }
 
-    const app = this.miniappRepository.create(data as Partial<MiniApp>) as MiniApp;
+    const app = this.miniappRepository.create(data as Partial<MiniApp>);
     let savedApp: MiniApp;
     try {
       savedApp = await this.miniappRepository.save(app);
@@ -200,9 +224,15 @@ export class MiniappMutationHelper {
           savedApp.id,
           {
             integrationMethod: savedApp.integrationMethod,
-            category: savedApp.organizationRelation?.name || (savedApp as any).category,
-            teamName: savedApp.organizationRelation?.name || savedApp.owner?.name || (savedApp as any).teamName,
-            teamTelegramChatId: savedApp.alertTelegramChatId || (savedApp as any).teamTelegramChatId,
+            category:
+              savedApp.organizationRelation?.name || (savedApp as any).category,
+            teamName:
+              savedApp.organizationRelation?.name ||
+              savedApp.owner?.name ||
+              (savedApp as any).teamName,
+            teamTelegramChatId:
+              savedApp.alertTelegramChatId ||
+              (savedApp as any).teamTelegramChatId,
           },
         );
       } else {
@@ -214,9 +244,15 @@ export class MiniappMutationHelper {
           savedApp.id,
           {
             integrationMethod: savedApp.integrationMethod,
-            category: savedApp.organizationRelation?.name || (savedApp as any).category,
-            teamName: savedApp.organizationRelation?.name || savedApp.owner?.name || (savedApp as any).teamName,
-            teamTelegramChatId: savedApp.alertTelegramChatId || (savedApp as any).teamTelegramChatId,
+            category:
+              savedApp.organizationRelation?.name || (savedApp as any).category,
+            teamName:
+              savedApp.organizationRelation?.name ||
+              savedApp.owner?.name ||
+              (savedApp as any).teamName,
+            teamTelegramChatId:
+              savedApp.alertTelegramChatId ||
+              (savedApp as any).teamTelegramChatId,
           },
         );
       }
@@ -233,7 +269,10 @@ export class MiniappMutationHelper {
           );
         });
 
-      const ownerEmail = savedApp.supportEmail || savedApp.owner?.email || (savedApp as any).ownerEmail;
+      const ownerEmail =
+        savedApp.supportEmail ||
+        savedApp.owner?.email ||
+        (savedApp as any).ownerEmail;
       if (ownerEmail) {
         await this.mailService.sendRegistrationSuccessEmail(
           ownerEmail,
@@ -283,7 +322,10 @@ export class MiniappMutationHelper {
       data.description = data.fullDescription;
       existing.description = data.fullDescription;
     }
-    if (data.teamTelegramChatId !== undefined && data.alertTelegramChatId === undefined) {
+    if (
+      data.teamTelegramChatId !== undefined &&
+      data.alertTelegramChatId === undefined
+    ) {
       data.alertTelegramChatId = data.teamTelegramChatId;
       existing.alertTelegramChatId = data.teamTelegramChatId;
     }
@@ -291,16 +333,24 @@ export class MiniappMutationHelper {
       data.logo = data.iconUrl;
       existing.logo = data.iconUrl;
     }
-    if (data.termsUrl !== undefined || data.termsDescription !== undefined || data.privacyPolicyUrl !== undefined || data.privacyPolicyDescription !== undefined) {
+    if (
+      data.termsUrl !== undefined ||
+      data.termsDescription !== undefined ||
+      data.privacyPolicyUrl !== undefined ||
+      data.privacyPolicyDescription !== undefined
+    ) {
       if (!existing.legal) {
         existing.legal = new MiniAppLegal();
         existing.legal.miniApp = existing;
         existing.legal.miniAppId = existing.id;
       }
       if (data.termsUrl !== undefined) existing.legal.termsUrl = data.termsUrl;
-      if (data.termsDescription !== undefined) existing.legal.termsDescription = data.termsDescription;
-      if (data.privacyPolicyUrl !== undefined) existing.legal.privacyPolicyUrl = data.privacyPolicyUrl;
-      if (data.privacyPolicyDescription !== undefined) existing.legal.privacyPolicyDescription = data.privacyPolicyDescription;
+      if (data.termsDescription !== undefined)
+        existing.legal.termsDescription = data.termsDescription;
+      if (data.privacyPolicyUrl !== undefined)
+        existing.legal.privacyPolicyUrl = data.privacyPolicyUrl;
+      if (data.privacyPolicyDescription !== undefined)
+        existing.legal.privacyPolicyDescription = data.privacyPolicyDescription;
     }
 
     if (data.permissions && Array.isArray(data.permissions)) {
@@ -324,7 +374,7 @@ export class MiniappMutationHelper {
       try {
         const targetId = data.appId || existing.appId || existing.id;
         data.logo = await this.storageService.uploadBase64(
-          data.logo!,
+          data.logo,
           `logos/${targetId}/logo.png`,
         );
       } catch (err: any) {
@@ -340,7 +390,7 @@ export class MiniappMutationHelper {
 
       if (!hasSecurityImpact) {
         // SMART FAST-TRACK: Only General Metadata / Contact / Legal info modified
-        const d = data as any;
+        const d = data;
         if (d.name !== undefined) existing.name = d.name;
         if (d.slug !== undefined) existing.slug = d.slug;
         if (d.tagline !== undefined || d.shortDescription !== undefined) {
@@ -350,10 +400,15 @@ export class MiniappMutationHelper {
           existing.description = d.description ?? d.fullDescription;
         }
         if (d.logo !== undefined) existing.logo = d.logo;
-        if (d.alertTelegramChatId !== undefined || d.teamTelegramChatId !== undefined) {
-          existing.alertTelegramChatId = d.alertTelegramChatId ?? d.teamTelegramChatId;
+        if (
+          d.alertTelegramChatId !== undefined ||
+          d.teamTelegramChatId !== undefined
+        ) {
+          existing.alertTelegramChatId =
+            d.alertTelegramChatId ?? d.teamTelegramChatId;
         }
-        if (d.supportEmail !== undefined) existing.supportEmail = d.supportEmail;
+        if (d.supportEmail !== undefined)
+          existing.supportEmail = d.supportEmail;
 
         if (
           d.termsUrl !== undefined ||
@@ -361,15 +416,21 @@ export class MiniappMutationHelper {
           d.privacyPolicyUrl !== undefined ||
           d.privacyPolicyDescription !== undefined
         ) {
-          const legalRepo = this.miniappRepository.manager.getRepository(MiniAppLegal);
-          let legal = existing.legal || (await legalRepo.findOne({ where: { miniAppId: existing.id } }));
+          const legalRepo =
+            this.miniappRepository.manager.getRepository(MiniAppLegal);
+          let legal =
+            existing.legal ||
+            (await legalRepo.findOne({ where: { miniAppId: existing.id } }));
           if (!legal) {
             legal = legalRepo.create({ miniAppId: existing.id });
           }
           if (d.termsUrl !== undefined) legal.termsUrl = d.termsUrl;
-          if (d.termsDescription !== undefined) legal.termsDescription = d.termsDescription;
-          if (d.privacyPolicyUrl !== undefined) legal.privacyPolicyUrl = d.privacyPolicyUrl;
-          if (d.privacyPolicyDescription !== undefined) legal.privacyPolicyDescription = d.privacyPolicyDescription;
+          if (d.termsDescription !== undefined)
+            legal.termsDescription = d.termsDescription;
+          if (d.privacyPolicyUrl !== undefined)
+            legal.privacyPolicyUrl = d.privacyPolicyUrl;
+          if (d.privacyPolicyDescription !== undefined)
+            legal.privacyPolicyDescription = d.privacyPolicyDescription;
           existing.legal = await legalRepo.save(legal);
         }
 
@@ -384,9 +445,13 @@ export class MiniappMutationHelper {
             fullDescription: existing.description,
             logo: existing.logo,
             termsUrl: existing.legal?.termsUrl || d.termsUrl,
-            termsDescription: existing.legal?.termsDescription || d.termsDescription,
-            privacyPolicyUrl: existing.legal?.privacyPolicyUrl || d.privacyPolicyUrl,
-            privacyPolicyDescription: existing.legal?.privacyPolicyDescription || d.privacyPolicyDescription,
+            termsDescription:
+              existing.legal?.termsDescription || d.termsDescription,
+            privacyPolicyUrl:
+              existing.legal?.privacyPolicyUrl || d.privacyPolicyUrl,
+            privacyPolicyDescription:
+              existing.legal?.privacyPolicyDescription ||
+              d.privacyPolicyDescription,
             supportEmail: existing.supportEmail,
             alertTelegramChatId: existing.alertTelegramChatId,
             teamTelegramChatId: existing.alertTelegramChatId,
@@ -414,11 +479,15 @@ export class MiniappMutationHelper {
       }
 
       // SECURITY GATEWAY: Changes include Permissions, URLs, Allowed Domains, or Packages
-      const d = data as any;
-      if (d.alertTelegramChatId !== undefined || d.teamTelegramChatId !== undefined) {
-        existing.alertTelegramChatId = d.alertTelegramChatId ?? d.teamTelegramChatId;
+      const d = data;
+      if (
+        d.alertTelegramChatId !== undefined ||
+        d.teamTelegramChatId !== undefined
+      ) {
+        existing.alertTelegramChatId =
+          d.alertTelegramChatId ?? d.teamTelegramChatId;
       }
-      const existingRev = (existing.pendingRevision || {}) as any;
+      const existingRev = existing.pendingRevision || {};
       const revisionData = {
         ...existingRev,
         name: d.name ?? existingRev.name ?? existing.name,
@@ -447,7 +516,8 @@ export class MiniappMutationHelper {
           existingRev.description ??
           existing.description,
         logo: d.logo ?? existingRev.logo ?? existing.logo,
-        termsUrl: d.termsUrl ?? existingRev.termsUrl ?? existing.legal?.termsUrl,
+        termsUrl:
+          d.termsUrl ?? existingRev.termsUrl ?? existing.legal?.termsUrl,
         termsDescription:
           d.termsDescription ??
           existingRev.termsDescription ??
@@ -461,22 +531,27 @@ export class MiniappMutationHelper {
           existingRev.privacyPolicyDescription ??
           existing.legal?.privacyPolicyDescription,
         ownerName:
-          (data as any).ownerName ?? existingRev.ownerName ?? (existing as any).ownerName,
+          data.ownerName ??
+          existingRev.ownerName ??
+          (existing as any).ownerName,
         ownerEmail:
-          (data as any).ownerEmail ?? existingRev.ownerEmail ?? (existing as any).ownerEmail,
+          data.ownerEmail ??
+          existingRev.ownerEmail ??
+          (existing as any).ownerEmail,
         supportEmail:
           data.supportEmail ??
           existingRev.supportEmail ??
           existing.supportEmail,
-        teamName: (data as any).teamName ?? existingRev.teamName ?? (existing as any).teamName,
+        teamName:
+          data.teamName ?? existingRev.teamName ?? (existing as any).teamName,
         teamTelegramChatId:
-          (data as any).teamTelegramChatId ??
+          data.teamTelegramChatId ??
           data.alertTelegramChatId ??
           existingRev.teamTelegramChatId ??
           existing.alertTelegramChatId,
         alertTelegramChatId:
           data.alertTelegramChatId ??
-          (data as any).teamTelegramChatId ??
+          data.teamTelegramChatId ??
           existingRev.alertTelegramChatId ??
           existing.alertTelegramChatId,
         integrationMethod:
@@ -485,18 +560,24 @@ export class MiniappMutationHelper {
           existing.integrationMethod,
         integrationConfig:
           data.integrationMethod === 'FLUTTER_PACKAGE' ||
-            existing.integrationMethod === 'FLUTTER_PACKAGE'
+          existing.integrationMethod === 'FLUTTER_PACKAGE'
             ? secureFlutterIntegrationConfig(
-              data.integrationConfig,
-              existingRev.integrationConfig ?? existing.integrationConfig,
-            )
+                data.integrationConfig,
+                existingRev.integrationConfig ?? existing.integrationConfig,
+              )
             : (data.integrationConfig ??
               existingRev.integrationConfig ??
               existing.integrationConfig),
         permissions:
-          (data as any).permissions ?? data.capabilities ?? existingRev.permissions ?? (existing as any).permissions,
+          data.permissions ??
+          data.capabilities ??
+          existingRev.permissions ??
+          (existing as any).permissions,
         capabilities:
-          data.capabilities ?? (data as any).permissions ?? existingRev.capabilities ?? existing.capabilities,
+          data.capabilities ??
+          data.permissions ??
+          existingRev.capabilities ??
+          existing.capabilities,
         securityChecks:
           data.securityChecks ??
           existingRev.securityChecks ??
@@ -514,11 +595,11 @@ export class MiniappMutationHelper {
           existingRev.verificationToken ??
           existing.verificationToken,
         changelog:
-          (data as any).changelog ||
+          data.changelog ||
           existingRev.changelog ||
           'Feature updates and improvements',
         justification:
-          (data as any).justification ||
+          data.justification ||
           existingRev.justification ||
           'Platform capability request',
         revisionStatus: 'IN_REVIEW',
@@ -579,16 +660,22 @@ export class MiniappMutationHelper {
     data.lifecycleStatus = 'SUBMITTED';
 
     const merged = this.miniappRepository.merge(existing, data);
-    if ((data as any).capabilities || (data as any).permissions) {
-      merged.capabilities = (data as any).capabilities || (data as any).permissions;
+    if (data.capabilities || data.permissions) {
+      merged.capabilities = data.capabilities || data.permissions;
     }
-    if (data.alertTelegramChatId !== undefined || (data as any).teamTelegramChatId !== undefined) {
-      merged.alertTelegramChatId = data.alertTelegramChatId || (data as any).teamTelegramChatId;
+    if (
+      data.alertTelegramChatId !== undefined ||
+      data.teamTelegramChatId !== undefined
+    ) {
+      merged.alertTelegramChatId =
+        data.alertTelegramChatId || data.teamTelegramChatId;
     }
-    if ((data as any).organization || (data as any).category) {
+    if (data.organization || data.category) {
       const orgInfo = this.organizationsService
-        ? await this.organizationsService.resolveOrganization((data as any).organization || (data as any).category)
-        : await resolveOrganizationDetails((data as any).organization || (data as any).category);
+        ? await this.organizationsService.resolveOrganization(
+            data.organization || data.category,
+          )
+        : await resolveOrganizationDetails(data.organization || data.category);
       if (orgInfo?.id) merged.organizationId = orgInfo.id;
     }
 
@@ -623,7 +710,7 @@ export class MiniappMutationHelper {
       data.integrationConfig?.gitTag ||
       data.integrationConfig?.ref ||
       data.integrationConfig?.versionConstraint?.replace(/^[\^~>=<]+/, '') ||
-      (data as any).version ||
+      data.version ||
       data.currentReleaseVersion;
     if (effectiveVer) {
       merged.currentReleaseVersion = effectiveVer;
@@ -633,7 +720,9 @@ export class MiniappMutationHelper {
       ? [...(merged as any).versionHistory]
       : [];
     const verToAdd = effectiveVer || merged.currentReleaseVersion || '1.0.0';
-    const existingVerIdx = currentHistory.findIndex((h: any) => h.version === verToAdd);
+    const existingVerIdx = currentHistory.findIndex(
+      (h: any) => h.version === verToAdd,
+    );
     const newRecord = {
       version: verToAdd,
       gitRef:
@@ -642,22 +731,27 @@ export class MiniappMutationHelper {
         merged.integrationConfig?.gitBranch ||
         verToAdd,
       packageName:
-        merged.integrationConfig?.packageName ||
-        merged.appId ||
-        merged.name,
-      type: (merged.lifecycleStatus === 'ACTIVE' ? 'PRODUCTION' : 'TEST') as 'PRODUCTION' | 'TEST' | 'DRAFT',
-      status: (merged.lifecycleStatus === 'ACTIVE' ? 'ACTIVE' : 'IN_REVIEW') as any,
-      changelog: (data as any).changelog || `Version update to ${verToAdd}`,
+        merged.integrationConfig?.packageName || merged.appId || merged.name,
+      type: (merged.lifecycleStatus === 'ACTIVE' ? 'PRODUCTION' : 'TEST') as
+        'PRODUCTION' | 'TEST' | 'DRAFT',
+      status: (merged.lifecycleStatus === 'ACTIVE'
+        ? 'ACTIVE'
+        : 'IN_REVIEW') as any,
+      changelog: data.changelog || `Version update to ${verToAdd}`,
       releasedAt: new Date().toISOString(),
-      releasedBy: actorId || merged.owner?.name || (merged as any).ownerName || 'MiniApp Developer',
+      releasedBy:
+        actorId ||
+        merged.owner?.name ||
+        (merged as any).ownerName ||
+        'MiniApp Developer',
       checksum:
         merged.integrationConfig?.archiveChecksum ||
         'sha256:' +
-        crypto
-          .createHash('sha256')
-          .update(merged.id + verToAdd + Date.now())
-          .digest('hex')
-          .substring(0, 16),
+          crypto
+            .createHash('sha256')
+            .update(merged.id + verToAdd + Date.now())
+            .digest('hex')
+            .substring(0, 16),
     };
 
     if (existingVerIdx >= 0) {
@@ -674,8 +768,7 @@ export class MiniappMutationHelper {
 
     // Kick off async validation only when NOT in draft mode
     const isDraft =
-      merged.lifecycleStatus === 'DRAFT' ||
-      (merged as any).status === 'DRAFT';
+      merged.lifecycleStatus === 'DRAFT' || (merged as any).status === 'DRAFT';
 
     if (!isDraft) {
       this.validationHelper
@@ -729,18 +822,33 @@ export class MiniappMutationHelper {
   ) {
     if (miniAppId && miniAppId !== 'draft') {
       try {
-        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(miniAppId);
-        const app = await this.miniappRepository.findOne(isUuid ? { where: { id: miniAppId } } : { where: { appId: miniAppId } });
+        const isUuid =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+            miniAppId,
+          );
+        const app = await this.miniappRepository.findOne(
+          isUuid
+            ? { where: { id: miniAppId } }
+            : { where: { appId: miniAppId } },
+        );
         if (app?.integrationConfig?.packageStoragePath) {
           const oldPath = app.integrationConfig.packageStoragePath;
-          const cleanOrigName = (file.originalname || 'package.zip').replace(/[^a-zA-Z0-9.-]/g, '_');
+          const cleanOrigName = (file.originalname || 'package.zip').replace(
+            /[^a-zA-Z0-9.-]/g,
+            '_',
+          );
           const expectedNewKey = `pending/${miniAppId}/${version || '1.0.0'}/${cleanOrigName}`;
           if (oldPath !== expectedNewKey) {
-            await this.storageService.deleteObject(this.storageService.packageSubmissionsBucket, oldPath);
+            await this.storageService.deleteObject(
+              this.storageService.packageSubmissionsBucket,
+              oldPath,
+            );
           }
         }
       } catch (e: any) {
-        this.logger.warn(`Could not check/clean prior package artifact: ${e.message}`);
+        this.logger.warn(
+          `Could not check/clean prior package artifact: ${e.message}`,
+        );
       }
     }
 
@@ -774,7 +882,10 @@ export class MiniappMutationHelper {
       newVal?: any,
     ) => Promise<void>,
   ) {
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    const isUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        id,
+      );
     const existing = await this.miniappRepository.findOne(
       isUuid ? { where: { id } } : { where: { appId: id } },
     );

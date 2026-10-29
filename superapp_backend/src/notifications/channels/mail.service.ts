@@ -423,7 +423,9 @@ export class MailService {
 
     try {
       const from = rendered.from || `FSA SuperApp <${this.fromEmail}>`;
-      this.logger.log(`Dispatching lifecycle email -> From: "${from}", To: "${toEmail}"`);
+      this.logger.log(
+        `Dispatching lifecycle email -> From: "${from}", To: "${toEmail}"`,
+      );
       const result = await this.resend.emails.send({
         from,
         to: toEmail,
@@ -453,7 +455,9 @@ export class MailService {
             );
             throw new Error(fallbackResult.error.message);
           }
-          this.logger.log(`${options.successLog} (ID: ${fallbackResult.data?.id})`);
+          this.logger.log(
+            `${options.successLog} (ID: ${fallbackResult.data?.id})`,
+          );
           return;
         }
 

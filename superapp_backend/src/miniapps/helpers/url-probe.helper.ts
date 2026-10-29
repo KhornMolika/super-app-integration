@@ -33,9 +33,12 @@ export class UrlProbeHelper {
     });
   }
 
-  async checkUrl(
-    url: string,
-  ): Promise<{ reachable: boolean; message?: string; host?: string; port?: number }> {
+  async checkUrl(url: string): Promise<{
+    reachable: boolean;
+    message?: string;
+    host?: string;
+    port?: number;
+  }> {
     if (!url) return { reachable: false, message: 'URL is required' };
 
     let parsed: URL;
@@ -91,7 +94,8 @@ export class UrlProbeHelper {
       });
       clearTimeout(timeoutId);
 
-      const isOk = response.ok || (response.status >= 300 && response.status < 400);
+      const isOk =
+        response.ok || (response.status >= 300 && response.status < 400);
       if (isOk) {
         return { reachable: true, host, port };
       }

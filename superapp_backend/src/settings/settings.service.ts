@@ -28,7 +28,9 @@ export const DEFAULT_PIPELINE_TIMING: PipelineTimingSettings = {
 @Injectable()
 export class SettingsService implements OnModuleInit {
   private readonly logger = new Logger(SettingsService.name);
-  private cachedPipelineTiming: PipelineTimingSettings = { ...DEFAULT_PIPELINE_TIMING };
+  private cachedPipelineTiming: PipelineTimingSettings = {
+    ...DEFAULT_PIPELINE_TIMING,
+  };
 
   constructor(
     @InjectRepository(SystemSetting)
@@ -47,7 +49,11 @@ export class SettingsService implements OnModuleInit {
     return record.value as T;
   }
 
-  async setSetting(key: string, value: any, description?: string): Promise<SystemSetting> {
+  async setSetting(
+    key: string,
+    value: any,
+    description?: string,
+  ): Promise<SystemSetting> {
     let record = await this.settingsRepo.findOne({ where: { key } });
     if (!record) {
       record = this.settingsRepo.create({ key, value, description });
@@ -71,7 +77,9 @@ export class SettingsService implements OnModuleInit {
     return this.cachedPipelineTiming;
   }
 
-  async updatePipelineTiming(settings: Partial<PipelineTimingSettings>): Promise<PipelineTimingSettings> {
+  async updatePipelineTiming(
+    settings: Partial<PipelineTimingSettings>,
+  ): Promise<PipelineTimingSettings> {
     const current = await this.getPipelineTiming();
     const updated: PipelineTimingSettings = {
       ...current,
@@ -109,27 +117,37 @@ export class SettingsService implements OnModuleInit {
       'Pipeline automation pacing and duration settings in seconds',
     );
     this.cachedPipelineTiming = updated;
-    this.logger.log(`Pipeline timing updated: preset=${updated.preset}, startDelay=${updated.validationStartDelaySec}s, passDelay=${updated.validationPassDelaySec}s, buildDelay=${updated.buildTriggerDelaySec}s`);
+    this.logger.log(
+      `Pipeline timing updated: preset=${updated.preset}, startDelay=${updated.validationStartDelaySec}s, passDelay=${updated.validationPassDelaySec}s, buildDelay=${updated.buildTriggerDelaySec}s`,
+    );
     return updated;
   }
 
   private async loadPipelineTiming() {
     try {
-      const stored = await this.settingsRepo.findOne({ where: { key: 'pipeline_timing' } });
+      const stored = await this.settingsRepo.findOne({
+        where: { key: 'pipeline_timing' },
+      });
       if (stored && stored.value) {
-        this.cachedPipelineTiming = { ...DEFAULT_PIPELINE_TIMING, ...stored.value };
+        this.cachedPipelineTiming = {
+          ...DEFAULT_PIPELINE_TIMING,
+          ...stored.value,
+        };
       } else {
         this.cachedPipelineTiming = { ...DEFAULT_PIPELINE_TIMING };
         await this.settingsRepo.save(
           this.settingsRepo.create({
             key: 'pipeline_timing',
             value: DEFAULT_PIPELINE_TIMING,
-            description: 'Pipeline automation pacing and duration settings in seconds',
+            description:
+              'Pipeline automation pacing and duration settings in seconds',
           }),
         );
       }
     } catch (err: any) {
-      this.logger.warn(`Could not load pipeline timing from DB: ${err.message}. Using default in-memory.`);
+      this.logger.warn(
+        `Could not load pipeline timing from DB: ${err.message}. Using default in-memory.`,
+      );
       this.cachedPipelineTiming = { ...DEFAULT_PIPELINE_TIMING };
     }
   }

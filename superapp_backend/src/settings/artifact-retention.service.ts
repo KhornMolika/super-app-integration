@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleInit, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  ForbiddenException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -52,7 +57,9 @@ export interface StorageOverviewStats {
 @Injectable()
 export class ArtifactRetentionService implements OnModuleInit {
   private readonly logger = new Logger(ArtifactRetentionService.name);
-  private cachedPolicy: ArtifactRetentionPolicy = { ...DEFAULT_RETENTION_POLICY };
+  private cachedPolicy: ArtifactRetentionPolicy = {
+    ...DEFAULT_RETENTION_POLICY,
+  };
   private intervalTimer: NodeJS.Timeout | null = null;
 
   constructor(
@@ -85,7 +92,8 @@ export class ArtifactRetentionService implements OnModuleInit {
     await this.settingsRepo.save({
       key: 'artifact_retention_policy',
       value: updated,
-      description: 'Automated test build APK retention and storage pruning policy',
+      description:
+        'Automated test build APK retention and storage pruning policy',
       updatedAt: new Date(),
     });
 
@@ -95,11 +103,17 @@ export class ArtifactRetentionService implements OnModuleInit {
     );
 
     // If specific datetime is set and already reached/passed, execute immediately
-    if (updated.enabled && updated.scheduleType === 'specific_datetime' && updated.specificRunDateTime) {
+    if (
+      updated.enabled &&
+      updated.scheduleType === 'specific_datetime' &&
+      updated.specificRunDateTime
+    ) {
       const targetTime = new Date(updated.specificRunDateTime).getTime();
       if (Date.now() >= targetTime) {
         this.checkAndExecuteScheduledRun().catch((err) => {
-          this.logger.error(`Error in immediate execution of scheduled retention: ${err.message}`);
+          this.logger.error(
+            `Error in immediate execution of scheduled retention: ${err.message}`,
+          );
         });
       }
     }
@@ -119,7 +133,8 @@ export class ArtifactRetentionService implements OnModuleInit {
         await this.settingsRepo.save({
           key: 'artifact_retention_policy',
           value: DEFAULT_RETENTION_POLICY,
-          description: 'Automated test build APK retention and storage pruning policy',
+          description:
+            'Automated test build APK retention and storage pruning policy',
         });
       }
     } catch (err: any) {
@@ -135,7 +150,9 @@ export class ArtifactRetentionService implements OnModuleInit {
     if (this.intervalTimer) clearInterval(this.intervalTimer);
     this.intervalTimer = setInterval(() => {
       this.checkAndExecuteScheduledRun().catch((err) => {
-        this.logger.error(`Error in scheduled artifact retention checker: ${err.message}`);
+        this.logger.error(
+          `Error in scheduled artifact retention checker: ${err.message}`,
+        );
       });
     }, 30 * 1000);
   }
@@ -149,17 +166,28 @@ export class ArtifactRetentionService implements OnModuleInit {
     const nowMinute = String(now.getMinutes()).padStart(2, '0');
     const currentTimeStr = `${nowHour}:${nowMinute}`;
 
-    if (policy.scheduleType === 'specific_datetime' && policy.specificRunDateTime) {
+    if (
+      policy.scheduleType === 'specific_datetime' &&
+      policy.specificRunDateTime
+    ) {
       const targetTime = new Date(policy.specificRunDateTime).getTime();
       if (now.getTime() >= targetTime) {
-        this.logger.log(`Target execution datetime ${policy.specificRunDateTime} reached or passed. Triggering scheduled cleanup...`);
+        this.logger.log(
+          `Target execution datetime ${policy.specificRunDateTime} reached or passed. Triggering scheduled cleanup...`,
+        );
         await this.executePruning('SCHEDULED_SPECIFIC_DATETIME');
         // Reset specific datetime to prevent repeating
-        await this.updatePolicy({ specificRunDateTime: null, scheduleType: 'recurring' });
+        await this.updatePolicy({
+          specificRunDateTime: null,
+          scheduleType: 'recurring',
+        });
       }
     } else if (policy.scheduleType === 'recurring') {
       if (currentTimeStr === policy.scheduleTime) {
-        if (policy.frequency === 'weekly' && now.getDay() !== policy.weeklyDay) {
+        if (
+          policy.frequency === 'weekly' &&
+          now.getDay() !== policy.weeklyDay
+        ) {
           return; // Not the scheduled day of week
         }
 
@@ -171,7 +199,9 @@ export class ArtifactRetentionService implements OnModuleInit {
           }
         }
 
-        this.logger.log(`Triggering recurring scheduled artifact cleanup at ${currentTimeStr}...`);
+        this.logger.log(
+          `Triggering recurring scheduled artifact cleanup at ${currentTimeStr}...`,
+        );
         await this.executePruning('SCHEDULED_RECURRING');
       }
     }
@@ -241,7 +271,9 @@ export class ArtifactRetentionService implements OnModuleInit {
           const versions = Object.keys(versionMap).map((ver) => {
             const verItems = versionMap[ver];
             const maxTime = Math.max(
-              ...verItems.map((it) => new Date(it.lastModified || it.blobCreated || 0).getTime()),
+              ...verItems.map((it) =>
+                new Date(it.lastModified || it.blobCreated || 0).getTime(),
+              ),
             );
             return { version: ver, items: verItems, time: maxTime };
           });
@@ -257,13 +289,16 @@ export class ArtifactRetentionService implements OnModuleInit {
           for (const verObj of candidates) {
             for (const item of verObj.items) {
               prunableCount++;
-              prunableSizeMb += (item.fileSize || 50 * 1024 * 1024) / (1024 * 1024);
+              prunableSizeMb +=
+                (item.fileSize || 50 * 1024 * 1024) / (1024 * 1024);
             }
           }
         }
       }
     } catch (err: any) {
-      this.logger.warn(`Could not query Nexus apk-test-builds assets: ${err.message}`);
+      this.logger.warn(
+        `Could not query Nexus apk-test-builds assets: ${err.message}`,
+      );
       testCount = 6;
       testSizeMb = 288;
       prunableCount = 3;
@@ -292,7 +327,10 @@ export class ArtifactRetentionService implements OnModuleInit {
     // Calculate next run date/time display
     let nextScheduledRun: string | null = null;
     if (policy.enabled) {
-      if (policy.scheduleType === 'specific_datetime' && policy.specificRunDateTime) {
+      if (
+        policy.scheduleType === 'specific_datetime' &&
+        policy.specificRunDateTime
+      ) {
         nextScheduledRun = policy.specificRunDateTime;
       } else {
         const [hh, mm] = policy.scheduleTime.split(':').map(Number);
@@ -319,7 +357,12 @@ export class ArtifactRetentionService implements OnModuleInit {
     };
   }
 
-  async executePruning(triggerSource: 'MANUAL' | 'SCHEDULED_RECURRING' | 'SCHEDULED_SPECIFIC_DATETIME' = 'MANUAL'): Promise<{
+  async executePruning(
+    triggerSource:
+      | 'MANUAL'
+      | 'SCHEDULED_RECURRING'
+      | 'SCHEDULED_SPECIFIC_DATETIME' = 'MANUAL',
+  ): Promise<{
     success: boolean;
     triggerSource: string;
     prunedCount: number;
@@ -333,7 +376,9 @@ export class ArtifactRetentionService implements OnModuleInit {
     const baseUrl = this.getNexusBaseUrl();
     const authHeaders = this.getNexusAuthHeader();
 
-    this.logger.log(`Starting storage pruning job [Source: ${triggerSource}] with retention policy: keepLast=${policy.maxTestBuildsPerApp} build versions, ageThreshold=${policy.retentionDays}d`);
+    this.logger.log(
+      `Starting storage pruning job [Source: ${triggerSource}] with retention policy: keepLast=${policy.maxTestBuildsPerApp} build versions, ageThreshold=${policy.retentionDays}d`,
+    );
 
     let prunedCount = 0;
     let freedBytes = 0;
@@ -370,7 +415,9 @@ export class ArtifactRetentionService implements OnModuleInit {
             const versions = Object.keys(versionMap).map((ver) => {
               const verItems = versionMap[ver];
               const maxTime = Math.max(
-                ...verItems.map((it) => new Date(it.lastModified || it.blobCreated || 0).getTime()),
+                ...verItems.map((it) =>
+                  new Date(it.lastModified || it.blobCreated || 0).getTime(),
+                ),
               );
               return { version: ver, items: verItems, time: maxTime };
             });
@@ -383,7 +430,10 @@ export class ArtifactRetentionService implements OnModuleInit {
             });
 
             // Retain top N build versions unconditionally
-            const protectedVersions = versions.slice(0, policy.maxTestBuildsPerApp);
+            const protectedVersions = versions.slice(
+              0,
+              policy.maxTestBuildsPerApp,
+            );
             for (const verObj of protectedVersions) {
               for (const item of verObj.items) {
                 details.push({
@@ -395,7 +445,9 @@ export class ArtifactRetentionService implements OnModuleInit {
             }
 
             // Inspect remainder versions for age cutoff or manual pruning
-            const remainderVersions = versions.slice(policy.maxTestBuildsPerApp);
+            const remainderVersions = versions.slice(
+              policy.maxTestBuildsPerApp,
+            );
             for (const verObj of remainderVersions) {
               const isOlder = verObj.time < cutoffDate.getTime();
               const shouldPrune =
@@ -421,7 +473,9 @@ export class ArtifactRetentionService implements OnModuleInit {
                       });
                     }
                   } catch (delErr: any) {
-                    this.logger.warn(`Failed to delete asset ${item.id}: ${delErr.message}`);
+                    this.logger.warn(
+                      `Failed to delete asset ${item.id}: ${delErr.message}`,
+                    );
                   }
                 } else {
                   details.push({
@@ -436,7 +490,9 @@ export class ArtifactRetentionService implements OnModuleInit {
         }
       }
     } catch (err: any) {
-      this.logger.warn(`Storage pruning encountering Nexus error: ${err.message}`);
+      this.logger.warn(
+        `Storage pruning encountering Nexus error: ${err.message}`,
+      );
     }
 
     // Update policy last run metrics
@@ -448,10 +504,15 @@ export class ArtifactRetentionService implements OnModuleInit {
     });
 
     const freedMbStr = (freedBytes / (1024 * 1024)).toFixed(1);
-    this.logger.log(`Artifact pruning completed: Freed ${freedMbStr} MB (${prunedCount} test APKs removed). Official release APKs remained permanently protected.`);
+    this.logger.log(
+      `Artifact pruning completed: Freed ${freedMbStr} MB (${prunedCount} test APKs removed). Official release APKs remained permanently protected.`,
+    );
 
     const latestStats = await this.getStorageStats().catch(() => null);
-    const protectedCount = latestStats?.protectedReleaseCount || latestStats?.nexusReleasesCount || 14;
+    const protectedCount =
+      latestStats?.protectedReleaseCount ||
+      latestStats?.nexusReleasesCount ||
+      14;
 
     return {
       success: true,

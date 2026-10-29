@@ -1,5 +1,8 @@
 import { DataSource, Repository } from 'typeorm';
-import { Organization, OrganizationStatus } from '../entities/organization.entity';
+import {
+  Organization,
+  OrganizationStatus,
+} from '../entities/organization.entity';
 
 export interface ResolvedOrganization {
   id?: string;
@@ -10,9 +13,12 @@ export interface ResolvedOrganization {
   status?: OrganizationStatus;
 }
 
-let activeOrganizationSource: Repository<Organization> | DataSource | null = null;
+let activeOrganizationSource: Repository<Organization> | DataSource | null =
+  null;
 
-export function setOrganizationDataSource(source: Repository<Organization> | DataSource | null) {
+export function setOrganizationDataSource(
+  source: Repository<Organization> | DataSource | null,
+) {
   activeOrganizationSource = source;
 }
 
@@ -88,9 +94,12 @@ export async function resolveOrganizationDetails(
         if (!matched) {
           matched = await repo
             .createQueryBuilder('org')
-            .where('LOWER(org.name) ILIKE :term OR LOWER(org.code) ILIKE :term', {
-              term: `%${lower}%`,
-            })
+            .where(
+              'LOWER(org.name) ILIKE :term OR LOWER(org.code) ILIKE :term',
+              {
+                term: `%${lower}%`,
+              },
+            )
             .orderBy('org.name', 'ASC')
             .getOne();
         }
@@ -118,4 +127,3 @@ export async function resolveOrganizationDetails(
     status: OrganizationStatus.ACTIVE,
   };
 }
-

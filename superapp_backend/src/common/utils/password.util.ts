@@ -43,7 +43,10 @@ export async function hashPassword(password: string): Promise<string> {
 /**
  * Verify a plain-text password against a stored scrypt hash using timing-safe comparison.
  */
-export async function verifyPassword(password: string, stored: string): Promise<boolean> {
+export async function verifyPassword(
+  password: string,
+  stored: string,
+): Promise<boolean> {
   if (!password || !stored || typeof stored !== 'string') return false;
 
   const parts = stored.split('$');
@@ -81,5 +84,8 @@ export async function verifyPassword(password: string, stored: string): Promise<
     return false;
   }
 
-  return actual.length === expected.length && crypto.timingSafeEqual(actual, expected);
+  return (
+    actual.length === expected.length &&
+    crypto.timingSafeEqual(actual, expected)
+  );
 }

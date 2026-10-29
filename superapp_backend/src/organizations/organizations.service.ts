@@ -7,7 +7,10 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Organization, OrganizationStatus } from './entities/organization.entity';
+import {
+  Organization,
+  OrganizationStatus,
+} from './entities/organization.entity';
 import {
   setOrganizationDataSource,
   resolveOrganizationDetails,
@@ -36,7 +39,9 @@ export class OrganizationsService implements OnApplicationBootstrap {
     // Register the repository for global database organization resolution
     setOrganizationDataSource(this.organizationRepository);
     const count = await this.organizationRepository.count();
-    this.logger.log(`Initialized OrganizationsService with ${count} real database records`);
+    this.logger.log(
+      `Initialized OrganizationsService with ${count} real database records`,
+    );
     await this.backfillPrimaryAuthorityRelationships();
   }
 
@@ -59,7 +64,9 @@ export class OrganizationsService implements OnApplicationBootstrap {
           .execute();
       }
     } catch (err: any) {
-      this.logger.debug(`Parent relationship backfill skipped: ${err?.message || err}`);
+      this.logger.debug(
+        `Parent relationship backfill skipped: ${err?.message || err}`,
+      );
     }
   }
 
@@ -78,7 +85,8 @@ export class OrganizationsService implements OnApplicationBootstrap {
       });
     }
 
-    const query: QueryOrganizationsDto = (queryOrStatus || {}) as QueryOrganizationsDto;
+    const query: QueryOrganizationsDto = (queryOrStatus ||
+      {}) as QueryOrganizationsDto;
     const {
       page = 1,
       limit = 20,
@@ -121,7 +129,11 @@ export class OrganizationsService implements OnApplicationBootstrap {
     return createPaginatedResponse(items, totalItems, page, limit);
   }
 
-  async getStats(): Promise<{ total: number; active: number; inactive: number }> {
+  async getStats(): Promise<{
+    total: number;
+    active: number;
+    inactive: number;
+  }> {
     const rawCounts = await this.organizationRepository
       .createQueryBuilder('org')
       .select('org.status', 'status')
@@ -153,16 +165,20 @@ export class OrganizationsService implements OnApplicationBootstrap {
     });
     if (!org) return null;
 
-    const users = await this.organizationRepository.manager.getRepository(User).find({
-      where: { organizationId: id },
-      relations: { role: true },
-      order: { name: 'ASC' },
-    });
+    const users = await this.organizationRepository.manager
+      .getRepository(User)
+      .find({
+        where: { organizationId: id },
+        relations: { role: true },
+        order: { name: 'ASC' },
+      });
 
-    const miniApps = await this.organizationRepository.manager.getRepository(MiniApp).find({
-      where: { organizationId: id },
-      order: { name: 'ASC' },
-    });
+    const miniApps = await this.organizationRepository.manager
+      .getRepository(MiniApp)
+      .find({
+        where: { organizationId: id },
+        order: { name: 'ASC' },
+      });
 
     const safeUsers = users.map((u) => {
       const { passwordHash, organization, ...rest } = u as any;
@@ -178,7 +194,7 @@ export class OrganizationsService implements OnApplicationBootstrap {
       ...org,
       users: safeUsers,
       miniApps: safeMiniApps,
-    } as Organization;
+    };
   }
 
   async findByNameOrCode(term?: string): Promise<Organization | null> {
@@ -196,9 +212,12 @@ export class OrganizationsService implements OnApplicationBootstrap {
       org = await this.organizationRepository
         .createQueryBuilder('org')
         .leftJoinAndSelect('org.parent', 'parent')
-        .where('LOWER(org.name) ILIKE :likeTerm OR LOWER(org.code) ILIKE :likeTerm', {
-          likeTerm: `%${clean}%`,
-        })
+        .where(
+          'LOWER(org.name) ILIKE :likeTerm OR LOWER(org.code) ILIKE :likeTerm',
+          {
+            likeTerm: `%${clean}%`,
+          },
+        )
         .orderBy('org.name', 'ASC')
         .getOne();
     }
@@ -216,7 +235,9 @@ export class OrganizationsService implements OnApplicationBootstrap {
         where: { id: data.parentId },
       });
       if (!parent) {
-        throw new BadRequestException(`Parent organization ${data.parentId} not found`);
+        throw new BadRequestException(
+          `Parent organization ${data.parentId} not found`,
+        );
       }
       parentAuthority = parent.name;
     }
@@ -242,7 +263,9 @@ export class OrganizationsService implements OnApplicationBootstrap {
 
     // Guard: Prevent self-parenting
     if (data.parentId && data.parentId === id) {
-      throw new BadRequestException('An organization cannot be its own parent authority.');
+      throw new BadRequestException(
+        'An organization cannot be its own parent authority.',
+      );
     }
 
     if (data.parentId) {
@@ -250,7 +273,9 @@ export class OrganizationsService implements OnApplicationBootstrap {
         where: { id: data.parentId },
       });
       if (!parent) {
-        throw new BadRequestException(`Parent organization ${data.parentId} not found`);
+        throw new BadRequestException(
+          `Parent organization ${data.parentId} not found`,
+        );
       }
       org.parent = parent;
       org.parentId = parent.id;
@@ -259,8 +284,8 @@ export class OrganizationsService implements OnApplicationBootstrap {
       data.parentId = null;
       org.parent = null;
       org.parentId = null;
-      data.parentAuthority = null as any;
-      org.parentAuthority = null as any;
+      data.parentAuthority = null;
+      org.parentAuthority = null;
     }
 
     // Guard: Prevent deactivating Primary Authority (FTC, FSA)
@@ -292,11 +317,19 @@ export class OrganizationsService implements OnApplicationBootstrap {
 
       // Guard: Cannot disable a parent organization while active subordinate children exist
       const activeChildren = (org.children || []).filter(
-        (c) => c.status === OrganizationStatus.ACTIVE || (c.status as any) === 'ACTIVE',
+        (c) =>
+          c.status === OrganizationStatus.ACTIVE ||
+          (c.status as any) === 'ACTIVE',
       );
       if (activeChildren.length > 0) {
-        const childNames = activeChildren.map((c) => c.name).slice(0, 3).join(', ');
-        const extra = activeChildren.length > 3 ? ` and ${activeChildren.length - 3} more` : '';
+        const childNames = activeChildren
+          .map((c) => c.name)
+          .slice(0, 3)
+          .join(', ');
+        const extra =
+          activeChildren.length > 3
+            ? ` and ${activeChildren.length - 3} more`
+            : '';
         throw new BadRequestException(
           `Cannot disable parent authority "${org.name}" because it governs ${activeChildren.length} active subordinate organization(s) (${childNames}${extra}). Please disable or reassign all subordinate entities first.`,
         );

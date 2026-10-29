@@ -52,7 +52,7 @@ export class JenkinsService {
     );
   }
 
-    /**
+  /**
    * Constructs a sanitized callback URL ensuring no duplicate /api/api/ prefix,
    * working seamlessly across local (http://host.docker.internal:3000) and
    * production (https://app.fintechcenterfsa.com/api or https://app.fintechcenterfsa.com).
@@ -64,7 +64,7 @@ export class JenkinsService {
     return `${base}/api/${cleanEndpoint}`;
   }
 
-private getAuthHeader(): string | null {
+  private getAuthHeader(): string | null {
     const user =
       this.configService.get<string>('JENKINS_USER') ||
       process.env.JENKINS_USER ||
@@ -121,7 +121,8 @@ private getAuthHeader(): string | null {
    */
   async triggerMiniAppValidation(options: {
     miniAppId: string;
-    integrationMethod: 'WEBVIEW' | 'FLUTTER_PACKAGE' | 'NATIVE_SDK' | 'DEEP_LINK';
+    integrationMethod:
+      'WEBVIEW' | 'FLUTTER_PACKAGE' | 'NATIVE_SDK' | 'DEEP_LINK';
     checks?: string[];
     targetUrl?: string;
     urlScheme?: string;
@@ -143,9 +144,13 @@ private getAuthHeader(): string | null {
     deployKey?: string;
     jobName?: string;
   }): Promise<{ success: boolean; message: string }> {
-    const callbackUrl = this.getCallbackUrl('/integrations/validation/callback');
+    const callbackUrl = this.getCallbackUrl(
+      '/integrations/validation/callback',
+    );
     const allowedDomainsStr = (options.allowedDomains || []).join(',');
-    const allowedCapsStr = (options.allowedCapabilities || ['camera', 'geolocator', 'local_auth']).join(',');
+    const allowedCapsStr = (
+      options.allowedCapabilities || ['camera', 'geolocator', 'local_auth']
+    ).join(',');
     const requiredCapsStr = (options.requiredCapabilities || []).join(',');
     const checksStr = (options.checks || []).join(',');
     const allowLocalStr = options.allowLocal ? 'true' : 'false';
@@ -168,7 +173,9 @@ private getAuthHeader(): string | null {
       ALLOWED_CAPABILITIES: allowedCapsStr,
       REQUIRED_CAPABILITIES: requiredCapsStr,
       IS_PRIVATE_REPO: options.isPrivateRepo ? 'true' : 'false',
-      GIT_AUTH_METHOD: options.gitAuthMethod || (options.isPrivateRepo ? 'deploy_key' : 'none'),
+      GIT_AUTH_METHOD:
+        options.gitAuthMethod ||
+        (options.isPrivateRepo ? 'deploy_key' : 'none'),
       GIT_ACCESS_TOKEN: options.gitAccessToken || '',
       GIT_DEPLOY_KEY: options.deployKey || '',
       CALLBACK_URL: callbackUrl,
@@ -182,13 +189,18 @@ private getAuthHeader(): string | null {
       DEEP_LINK: 'miniapp-validation-deep-link',
     };
 
-    const targetJob = options.jobName || methodJobMap[options.integrationMethod] || 'miniapp-validation';
+    const targetJob =
+      options.jobName ||
+      methodJobMap[options.integrationMethod] ||
+      'miniapp-validation';
 
     const executeTrigger = async (
       job: string,
     ): Promise<{ success: boolean; message: string; notFound?: boolean }> => {
       const triggerUrl = `${this.jenkinsUrl}/job/${job}/buildWithParameters?${params.toString()}`;
-      this.logger.log(`Triggering Jenkins job "${job}" (${options.integrationMethod}): ${triggerUrl}`);
+      this.logger.log(
+        `Triggering Jenkins job "${job}" (${options.integrationMethod}): ${triggerUrl}`,
+      );
 
       const headers: Record<string, string> = {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -257,7 +269,9 @@ private getAuthHeader(): string | null {
 
       return result;
     } catch (err: any) {
-      this.logger.error(`Failed to trigger Jenkins pipeline (${targetJob}): ${err.message}`);
+      this.logger.error(
+        `Failed to trigger Jenkins pipeline (${targetJob}): ${err.message}`,
+      );
       return {
         success: false,
         message: `Could not connect to Jenkins: ${err.message}`,

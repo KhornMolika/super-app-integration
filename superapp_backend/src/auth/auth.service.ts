@@ -13,8 +13,14 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
-import { AccessControlService, OFFICIAL_SEEDS } from '../access-control/access-control.service';
-import { AccessToken, DeveloperToken } from '../access-control/entities/access-token.entity';
+import {
+  AccessControlService,
+  OFFICIAL_SEEDS,
+} from '../access-control/access-control.service';
+import {
+  AccessToken,
+  DeveloperToken,
+} from '../access-control/entities/access-token.entity';
 import { AuthOtp, OtpPurpose } from './entities/auth-otp.entity';
 import { MailService } from '../notifications/channels/mail.service';
 import { verifyPassword, hashPassword } from '../common/utils/password.util';
@@ -64,7 +70,7 @@ export class AuthService implements OnModuleInit {
     @Optional()
     @Inject(forwardRef(() => OrganizationsService))
     private organizationsService?: OrganizationsService,
-  ) { }
+  ) {}
 
   private get developerTokenRepo(): Repository<AccessToken> | undefined {
     return this.accessTokenRepo;
@@ -187,7 +193,12 @@ export class AuthService implements OnModuleInit {
       new Set(
         rawRoles
           .map((r) => {
-            if (r === 'MINI_APP_DEVELOPER' || r === 'DEVELOPER' || r === 'QA_TESTER' || r === 'AUDITOR') {
+            if (
+              r === 'MINI_APP_DEVELOPER' ||
+              r === 'DEVELOPER' ||
+              r === 'QA_TESTER' ||
+              r === 'AUDITOR'
+            ) {
               return 'MA_DEVELOPER';
             }
             return r;
@@ -326,21 +337,29 @@ export class AuthService implements OnModuleInit {
    * Note: SSO is intentionally bypassed/disabled — credentials verify strictly against the PostgreSQL DB.
    */
   async login(body: LoginDto) {
-    const rawEmail = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
+    const rawEmail =
+      typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
     const rawPassword = typeof body?.password === 'string' ? body.password : '';
 
     if (!rawEmail || !rawPassword) {
-      return { success: false as const, message: 'Email and password are required' };
+      return {
+        success: false as const,
+        message: 'Email and password are required',
+      };
     }
 
-    const user = await this.accessControlService.findByEmailWithPermissions(rawEmail);
+    const user =
+      await this.accessControlService.findByEmailWithPermissions(rawEmail);
 
     this.logger.log(
-      `[AUTH] Login attempt for: ${rawEmail}. User found: ${Boolean(user)}, hasHash: ${Boolean(user?.passwordHash)}, status: ${user?.status}, role: ${(user as any)?.role?.name || (user as any)?.roleId || 'none'}`
+      `[AUTH] Login attempt for: ${rawEmail}. User found: ${Boolean(user)}, hasHash: ${Boolean(user?.passwordHash)}, status: ${user?.status}, role: ${(user as any)?.role?.name || (user as any)?.roleId || 'none'}`,
     );
 
     if (!user) {
-      return { success: false as const, message: 'Invalid credentials or user not found' };
+      return {
+        success: false as const,
+        message: 'Invalid credentials or user not found',
+      };
     }
 
     // 1. Password Verification
@@ -357,7 +376,12 @@ export class AuthService implements OnModuleInit {
     }
 
     // In non-production environments only, allow sync if SUPERADMIN_PASSWORD is configured
-    if (!isMatch && isSeedAccount && process.env.NODE_ENV !== 'production' && SEED_DEFAULT_PASSWORD) {
+    if (
+      !isMatch &&
+      isSeedAccount &&
+      process.env.NODE_ENV !== 'production' &&
+      SEED_DEFAULT_PASSWORD
+    ) {
       const isDefaultSeedPassword =
         rawPassword === SEED_DEFAULT_PASSWORD ||
         rawPassword.trim() === SEED_DEFAULT_PASSWORD.trim();
@@ -365,9 +389,14 @@ export class AuthService implements OnModuleInit {
       if (isDefaultSeedPassword) {
         isMatch = true;
         const initialHash = await hashPassword(SEED_DEFAULT_PASSWORD);
-        await this.accessControlService.updatePasswordDirectly(user.id, initialHash);
+        await this.accessControlService.updatePasswordDirectly(
+          user.id,
+          initialHash,
+        );
         user.passwordHash = initialHash;
-        this.logger.log(`[AUTH] Authenticated with configured seed password for: ${rawEmail}`);
+        this.logger.log(
+          `[AUTH] Authenticated with configured seed password for: ${rawEmail}`,
+        );
       }
     }
 
@@ -379,15 +408,21 @@ export class AuthService implements OnModuleInit {
     if (isSeedAccount) {
       user.status = 'ACTIVE';
     } else if (user.status === 'PENDING_EMAIL_VERIFICATION') {
-      throw new UnauthorizedException('Please verify your email address with the 6-digit code before signing in. Check your inbox.');
-    } else if (user.status !== 'ACTIVE' || (!user.role && !(user as any).roles?.length)) {
+      throw new UnauthorizedException(
+        'Please verify your email address with the 6-digit code before signing in. Check your inbox.',
+      );
+    } else if (
+      user.status !== 'ACTIVE' ||
+      (!user.role && !(user as any).roles?.length)
+    ) {
       this.logger.warn(
-        `[AUTH] Approval gate blocked for: ${rawEmail} (status=${user.status}, roles=${(user as any).roles?.length || (user.role ? 1 : 0)})`
+        `[AUTH] Approval gate blocked for: ${rawEmail} (status=${user.status}, roles=${(user as any).roles?.length || (user.role ? 1 : 0)})`,
       );
       return {
         success: false as const,
         pendingApproval: true,
-        message: 'Your account is pending Super Administrator approval. Please contact a Super Administrator to activate your account and assign permissions.',
+        message:
+          'Your account is pending Super Administrator approval. Please contact a Super Administrator to activate your account and assign permissions.',
       };
     }
 
@@ -412,7 +447,9 @@ export class AuthService implements OnModuleInit {
     const organizationInput = (body.organization || '').trim();
 
     if (!email || !name) {
-      throw new BadRequestException('Name and email are required for registration');
+      throw new BadRequestException(
+        'Name and email are required for registration',
+      );
     }
 
     // Resolve organization ID (falls back to default authority if not provided)
@@ -421,7 +458,8 @@ export class AuthService implements OnModuleInit {
       : await resolveOrganizationDetails(organizationInput);
     const organizationId = resolvedOrg?.id || '';
 
-    const existing = await this.accessControlService.findByEmailWithPermissions(email);
+    const existing =
+      await this.accessControlService.findByEmailWithPermissions(email);
     const passwordHash = password ? await hashPassword(password) : undefined;
 
     if (existing) {
@@ -432,16 +470,22 @@ export class AuthService implements OnModuleInit {
           passwordHash,
           organizationId,
         });
-        const otpResult = await this.requestOtp({ email, purpose: 'EMAIL_VERIFICATION' });
+        const otpResult = await this.requestOtp({
+          email,
+          purpose: 'EMAIL_VERIFICATION',
+        });
         return {
           success: true,
           pendingEmailVerification: true,
           email,
           emailDispatched: otpResult.emailDispatched,
-          message: 'A 6-digit verification code has been dispatched to your email address.',
+          message:
+            'A 6-digit verification code has been dispatched to your email address.',
         };
       }
-      throw new BadRequestException('An account with this email already exists. Please Login.');
+      throw new BadRequestException(
+        'An account with this email already exists. Please Login.',
+      );
     }
 
     // Self-registered accounts start in PENDING_EMAIL_VERIFICATION so they DO NOT clutter
@@ -457,14 +501,18 @@ export class AuthService implements OnModuleInit {
     });
 
     // Dispatch 6-digit OTP to the recipient
-    const otpResult = await this.requestOtp({ email, purpose: 'EMAIL_VERIFICATION' });
+    const otpResult = await this.requestOtp({
+      email,
+      purpose: 'EMAIL_VERIFICATION',
+    });
 
     return {
       success: true,
       pendingEmailVerification: true,
       email,
       emailDispatched: otpResult.emailDispatched,
-      message: 'Registration submitted. Please enter the 6-digit verification code sent to your email to confirm your identity.',
+      message:
+        'Registration submitted. Please enter the 6-digit verification code sent to your email to confirm your identity.',
     };
   }
 
@@ -483,9 +531,13 @@ export class AuthService implements OnModuleInit {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
-    const user = await this.accessControlService.findByEmailWithPermissions(payload.email);
+    const user = await this.accessControlService.findByEmailWithPermissions(
+      payload.email,
+    );
     if (!user || user.status !== 'ACTIVE') {
-      throw new UnauthorizedException('User account is deactivated or not found');
+      throw new UnauthorizedException(
+        'User account is deactivated or not found',
+      );
     }
 
     const tokens = this.generateAuthTokens(user);
@@ -659,11 +711,19 @@ export class AuthService implements OnModuleInit {
     if (user.passwordHash) {
       isOldValid = await verifyPassword(body.oldPassword, user.passwordHash);
       if (!isOldValid && body.oldPassword.trim() !== body.oldPassword) {
-        isOldValid = await verifyPassword(body.oldPassword.trim(), user.passwordHash);
+        isOldValid = await verifyPassword(
+          body.oldPassword.trim(),
+          user.passwordHash,
+        );
       }
     }
 
-    if (!isOldValid && process.env.NODE_ENV !== 'production' && defaultSeedPassword && body.oldPassword === defaultSeedPassword) {
+    if (
+      !isOldValid &&
+      process.env.NODE_ENV !== 'production' &&
+      defaultSeedPassword &&
+      body.oldPassword === defaultSeedPassword
+    ) {
       isOldValid = true;
     }
 
@@ -671,9 +731,13 @@ export class AuthService implements OnModuleInit {
       throw new BadRequestException('Current password does not match.');
     }
 
-    const newHash = await hashPassword(body.newPassword.trim() || body.newPassword);
+    const newHash = await hashPassword(
+      body.newPassword.trim() || body.newPassword,
+    );
     await this.accessControlService.updatePasswordDirectly(user.id, newHash);
-    this.logger.log(`[AUTH] Password successfully updated for user: ${user.email} (${user.id})`);
+    this.logger.log(
+      `[AUTH] Password successfully updated for user: ${user.email} (${user.id})`,
+    );
     return { success: true, message: 'Password updated successfully' };
   }
 
@@ -693,19 +757,25 @@ export class AuthService implements OnModuleInit {
     }
 
     // Verify user exists
-    const user = await this.accessControlService.findByEmailWithPermissions(rawEmail);
+    const user =
+      await this.accessControlService.findByEmailWithPermissions(rawEmail);
     if (purpose === 'PASSWORD_RESET' && !user) {
-      this.logger.warn(`[OTP] Password reset requested for non-existent user: ${rawEmail}`);
+      this.logger.warn(
+        `[OTP] Password reset requested for non-existent user: ${rawEmail}`,
+      );
       return {
         success: true,
-        message: 'If this email is registered, a 6-digit recovery code has been dispatched.',
+        message:
+          'If this email is registered, a 6-digit recovery code has been dispatched.',
         expiresInSeconds: 300,
       };
     }
 
     if (purpose === 'EMAIL_VERIFICATION') {
       if (!user) {
-        throw new BadRequestException('No registration found for this email. Please sign up first.');
+        throw new BadRequestException(
+          'No registration found for this email. Please sign up first.',
+        );
       }
       if (user.status !== 'PENDING_EMAIL_VERIFICATION') {
         return {
@@ -746,7 +816,9 @@ export class AuthService implements OnModuleInit {
     });
     await this.otpRepo.save(otpRecord);
 
-    this.logger.log(`[OTP] Generated 6-digit code for ${rawEmail} (${purpose}), expires at ${expiresAt.toISOString()}`);
+    this.logger.log(
+      `[OTP] Generated 6-digit code for ${rawEmail} (${purpose}), expires at ${expiresAt.toISOString()}`,
+    );
 
     // 3. Dispatch Live Email via Resend
     let emailDispatched = false;
@@ -776,10 +848,14 @@ export class AuthService implements OnModuleInit {
           );
         }
         emailDispatched = true;
-        this.logger.log(`[OTP] Successfully dispatched email via Resend to ${rawEmail}`);
+        this.logger.log(
+          `[OTP] Successfully dispatched email via Resend to ${rawEmail}`,
+        );
       } catch (err: any) {
         emailError = err.message || String(err);
-        this.logger.error(`[OTP] Resend dispatch error for ${rawEmail}: ${emailError}`);
+        this.logger.error(
+          `[OTP] Resend dispatch error for ${rawEmail}: ${emailError}`,
+        );
       }
     } else {
       this.logger.warn(`[OTP] MailService is not wired into AuthService.`);
@@ -809,7 +885,9 @@ export class AuthService implements OnModuleInit {
     const purpose: OtpPurpose = (dto.purpose as OtpPurpose) || 'PASSWORD_RESET';
 
     if (!rawEmail || !code || code.length !== 6) {
-      throw new BadRequestException('Valid email and 6-digit code are required');
+      throw new BadRequestException(
+        'Valid email and 6-digit code are required',
+      );
     }
 
     if (!this.otpRepo) {
@@ -818,29 +896,38 @@ export class AuthService implements OnModuleInit {
 
     const activeOtp = await this.otpRepo
       .createQueryBuilder('otp')
-      .where('otp.email = :email AND otp.purpose = :purpose AND otp.isUsed = false', {
-        email: rawEmail,
-        purpose,
-      })
+      .where(
+        'otp.email = :email AND otp.purpose = :purpose AND otp.isUsed = false',
+        {
+          email: rawEmail,
+          purpose,
+        },
+      )
       .orderBy('otp.createdAt', 'DESC')
       .getOne();
 
     if (!activeOtp) {
-      throw new BadRequestException('No active recovery code found or code has already been used. Please request a new code.');
+      throw new BadRequestException(
+        'No active recovery code found or code has already been used. Please request a new code.',
+      );
     }
 
     // Expiry check
     if (new Date() > activeOtp.expiresAt) {
       activeOtp.isUsed = true;
       await this.otpRepo.save(activeOtp);
-      throw new BadRequestException('The 5-minute validity window for this code has expired. Please request a new code.');
+      throw new BadRequestException(
+        'The 5-minute validity window for this code has expired. Please request a new code.',
+      );
     }
 
     // Attempt limit check
     if (activeOtp.attempts >= 5) {
       activeOtp.isUsed = true;
       await this.otpRepo.save(activeOtp);
-      throw new BadRequestException('Too many incorrect attempts. This code has been invalidated for security. Please request a new code.');
+      throw new BadRequestException(
+        'Too many incorrect attempts. This code has been invalidated for security. Please request a new code.',
+      );
     }
 
     // Code match check
@@ -853,7 +940,7 @@ export class AuthService implements OnModuleInit {
       throw new BadRequestException(
         activeOtp.isUsed
           ? 'Too many incorrect attempts. This code has been invalidated.'
-          : `Incorrect verification code. ${5 - activeOtp.attempts} attempts remaining.`
+          : `Incorrect verification code. ${5 - activeOtp.attempts} attempts remaining.`,
       );
     }
 
@@ -862,11 +949,14 @@ export class AuthService implements OnModuleInit {
     activeOtp.usedAt = new Date();
     await this.otpRepo.save(activeOtp);
 
-    this.logger.log(`[OTP] Successfully consumed single-use OTP for ${rawEmail} (${purpose})`);
+    this.logger.log(
+      `[OTP] Successfully consumed single-use OTP for ${rawEmail} (${purpose})`,
+    );
 
     // For EMAIL_VERIFICATION: promote user to ACTIVE (if Admin/SuperAdmin) or PENDING_APPROVAL (if self-registered Developer)
     if (purpose === 'EMAIL_VERIFICATION') {
-      const user = await this.accessControlService.findByEmailWithPermissions(rawEmail);
+      const user =
+        await this.accessControlService.findByEmailWithPermissions(rawEmail);
       if (user && user.status === 'PENDING_EMAIL_VERIFICATION') {
         const isSuperOrAdmin =
           user.role?.name === 'SUPER_ADMIN' ||
@@ -874,12 +964,15 @@ export class AuthService implements OnModuleInit {
           Boolean(OFFICIAL_SEEDS[rawEmail]);
         const nextStatus = isSuperOrAdmin ? 'ACTIVE' : 'PENDING_APPROVAL';
         await this.accessControlService.updateUserStatus(user.id, nextStatus);
-        this.logger.log(`[AUTH] User ${rawEmail} successfully verified email. Transitioned to ${nextStatus}`);
+        this.logger.log(
+          `[AUTH] User ${rawEmail} successfully verified email. Transitioned to ${nextStatus}`,
+        );
       }
       return {
         success: true,
         verified: true,
-        message: 'Email verified successfully! You may now Login to your account.',
+        message:
+          'Email verified successfully! You may now Login to your account.',
       };
     }
 
@@ -910,25 +1003,33 @@ export class AuthService implements OnModuleInit {
   async resetPassword(dto: ResetPasswordDto) {
     const { resetToken, newPassword } = dto;
     if (!resetToken || !newPassword) {
-      throw new BadRequestException('Reset token and new password are required');
+      throw new BadRequestException(
+        'Reset token and new password are required',
+      );
     }
 
     let payload: any;
     try {
       payload = this.verifyToken(resetToken, { typ: 'password_reset_token' });
     } catch {
-      throw new BadRequestException('Invalid or expired reset session. Please restart password recovery.');
+      throw new BadRequestException(
+        'Invalid or expired reset session. Please restart password recovery.',
+      );
     }
 
     const email = payload.email || payload.sub;
-    const user = await this.accessControlService.findByEmailWithPermissions(email);
+    const user =
+      await this.accessControlService.findByEmailWithPermissions(email);
     if (!user) {
       throw new BadRequestException('User account not found');
     }
 
     // Hash new password using Scrypt
     const passwordHash = await hashPassword(newPassword.trim() || newPassword);
-    await this.accessControlService.updatePasswordDirectly(user.id, passwordHash);
+    await this.accessControlService.updatePasswordDirectly(
+      user.id,
+      passwordHash,
+    );
 
     this.logger.log(`[AUTH] Password successfully reset for: ${email}`);
 
@@ -938,5 +1039,3 @@ export class AuthService implements OnModuleInit {
     };
   }
 }
-
-

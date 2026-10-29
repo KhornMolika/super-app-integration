@@ -24,7 +24,9 @@ export class NexusIntegrationService {
 
   async onModuleInit(): Promise<void> {
     this.bootstrapRepositories().catch((err) => {
-      this.logger.warn(`Nexus repository bootstrap check warning: ${err.message}`);
+      this.logger.warn(
+        `Nexus repository bootstrap check warning: ${err.message}`,
+      );
     });
   }
 
@@ -84,31 +86,52 @@ export class NexusIntegrationService {
       });
       if (!res.ok) return;
 
-      const repos = (await res.json()) as Array<{ name: string; format: string; type: string }>;
+      const repos = (await res.json()) as Array<{
+        name: string;
+        format: string;
+        type: string;
+      }>;
       const existingNames = new Set(repos.map((r) => r.name));
 
-      const rawRepo = this.configService.get<string>('NEXUS_RAW_SDK_REPO') || 'raw-sdk-artifacts';
-      const specsRepo = this.configService.get<string>('NEXUS_COCOAPODS_SPECS_REPO') || 'cocoapods-specs';
-      const requiredHostedRaw = [rawRepo, specsRepo, 'apk-releases', 'apk-test-builds', 'superapp-artifacts'];
+      const rawRepo =
+        this.configService.get<string>('NEXUS_RAW_SDK_REPO') ||
+        'raw-sdk-artifacts';
+      const specsRepo =
+        this.configService.get<string>('NEXUS_COCOAPODS_SPECS_REPO') ||
+        'cocoapods-specs';
+      const requiredHostedRaw = [
+        rawRepo,
+        specsRepo,
+        'apk-releases',
+        'apk-test-builds',
+        'superapp-artifacts',
+      ];
       for (const repoName of requiredHostedRaw) {
         if (!existingNames.has(repoName)) {
           await this.createHostedRawRepository(baseUrl, repoName, authHeader);
         }
       }
 
-      const mavenRepo = this.configService.get<string>('NEXUS_MAVEN_SDK_REPO') || 'maven-sdk-hosted';
+      const mavenRepo =
+        this.configService.get<string>('NEXUS_MAVEN_SDK_REPO') ||
+        'maven-sdk-hosted';
       if (!existingNames.has(mavenRepo)) {
         await this.createHostedMavenRepository(baseUrl, mavenRepo, authHeader);
       }
 
-      const npmRepo = this.configService.get<string>('NEXUS_NPM_SDK_REPO') || 'npm-hosted';
+      const npmRepo =
+        this.configService.get<string>('NEXUS_NPM_SDK_REPO') || 'npm-hosted';
       if (!existingNames.has(npmRepo)) {
         await this.createHostedNpmRepository(baseUrl, npmRepo, authHeader);
       }
     } catch (_) {}
   }
 
-  private async createHostedNpmRepository(baseUrl: string, name: string, headers: Record<string, string>): Promise<void> {
+  private async createHostedNpmRepository(
+    baseUrl: string,
+    name: string,
+    headers: Record<string, string>,
+  ): Promise<void> {
     try {
       await fetch(`${baseUrl}/service/rest/v1/repositories/npm/hosted`, {
         method: 'POST',
@@ -116,14 +139,22 @@ export class NexusIntegrationService {
         body: JSON.stringify({
           name,
           online: true,
-          storage: { blobStoreName: 'default', strictContentTypeValidation: false, writePolicy: 'ALLOW' },
+          storage: {
+            blobStoreName: 'default',
+            strictContentTypeValidation: false,
+            writePolicy: 'ALLOW',
+          },
         }),
       });
       this.logger.log(`Created Nexus repository "${name}" (npm/hosted).`);
     } catch (_) {}
   }
 
-  private async createHostedRawRepository(baseUrl: string, name: string, headers: Record<string, string>): Promise<void> {
+  private async createHostedRawRepository(
+    baseUrl: string,
+    name: string,
+    headers: Record<string, string>,
+  ): Promise<void> {
     try {
       await fetch(`${baseUrl}/service/rest/v1/repositories/raw/hosted`, {
         method: 'POST',
@@ -131,14 +162,22 @@ export class NexusIntegrationService {
         body: JSON.stringify({
           name,
           online: true,
-          storage: { blobStoreName: 'default', strictContentTypeValidation: false, writePolicy: 'ALLOW' },
+          storage: {
+            blobStoreName: 'default',
+            strictContentTypeValidation: false,
+            writePolicy: 'ALLOW',
+          },
         }),
       });
       this.logger.log(`Created Nexus repository "${name}" (raw/hosted).`);
     } catch (_) {}
   }
 
-  private async createHostedMavenRepository(baseUrl: string, name: string, headers: Record<string, string>): Promise<void> {
+  private async createHostedMavenRepository(
+    baseUrl: string,
+    name: string,
+    headers: Record<string, string>,
+  ): Promise<void> {
     try {
       await fetch(`${baseUrl}/service/rest/v1/repositories/maven/hosted`, {
         method: 'POST',
@@ -146,7 +185,11 @@ export class NexusIntegrationService {
         body: JSON.stringify({
           name,
           online: true,
-          storage: { blobStoreName: 'default', strictContentTypeValidation: false, writePolicy: 'ALLOW' },
+          storage: {
+            blobStoreName: 'default',
+            strictContentTypeValidation: false,
+            writePolicy: 'ALLOW',
+          },
           maven: { versionPolicy: 'MIXED', layoutPolicy: 'PERMISSIVE' },
         }),
       });
@@ -185,7 +228,10 @@ export class NexusIntegrationService {
   ): Promise<string> {
     const cleanPath = path.replace(/^\/+/, '');
     const authHeader = this.getAuthHeader();
-    const candidates = [await this.getWorkingBaseUrl(), ...this.getCandidateBaseUrls()];
+    const candidates = [
+      await this.getWorkingBaseUrl(),
+      ...this.getCandidateBaseUrls(),
+    ];
     const uniqueCandidates = Array.from(new Set(candidates));
 
     let lastError: Error | null = null;
@@ -200,20 +246,32 @@ export class NexusIntegrationService {
           body: new Uint8Array(buffer),
         });
 
-        if (res.ok || res.status === 200 || res.status === 201 || res.status === 204) {
+        if (
+          res.ok ||
+          res.status === 200 ||
+          res.status === 201 ||
+          res.status === 204
+        ) {
           this.workingBaseUrl = baseUrl;
           uploadSucceeded = true;
           break;
         } else {
-          lastError = new Error(`Nexus PUT to ${uploadUrl} failed with HTTP ${res.status}: ${res.statusText}`);
+          lastError = new Error(
+            `Nexus PUT to ${uploadUrl} failed with HTTP ${res.status}: ${res.statusText}`,
+          );
         }
       } catch (err: any) {
-        lastError = new Error(`Could not reach Nexus at ${uploadUrl}: ${err.message}`);
+        lastError = new Error(
+          `Could not reach Nexus at ${uploadUrl}: ${err.message}`,
+        );
       }
     }
 
     if (!uploadSucceeded) {
-      throw lastError || new Error(`Failed to upload raw asset to ${repo}/${cleanPath}`);
+      throw (
+        lastError ||
+        new Error(`Failed to upload raw asset to ${repo}/${cleanPath}`)
+      );
     }
 
     return `${this.getPublicBaseUrl()}/repository/${repo}/${cleanPath}`;
@@ -358,7 +416,12 @@ export class NexusIntegrationService {
     archiveBuffer: Buffer,
     packageName: string,
     version = '1.0.0',
-  ): Promise<{ success: boolean; packageName: string; version: string; message: string }> {
+  ): Promise<{
+    success: boolean;
+    packageName: string;
+    version: string;
+    message: string;
+  }> {
     const AdmZip = require('adm-zip');
     const zlib = require('zlib');
 
@@ -411,9 +474,19 @@ export class NexusIntegrationService {
       // If zipped inside a wrapper subfolder, strip root wrapper
       let relativeName = entryName;
       const slashIdx = entryName.indexOf('/');
-      if (slashIdx > 0 && !entryName.startsWith('lib/') && !entryName.startsWith('assets/')) {
+      if (
+        slashIdx > 0 &&
+        !entryName.startsWith('lib/') &&
+        !entryName.startsWith('assets/')
+      ) {
         const topFolder = entryName.substring(0, slashIdx);
-        if (zipEntries.some(e => e.entryName.includes('pubspec.yaml') && e.entryName.startsWith(topFolder))) {
+        if (
+          zipEntries.some(
+            (e) =>
+              e.entryName.includes('pubspec.yaml') &&
+              e.entryName.startsWith(topFolder),
+          )
+        ) {
           relativeName = entryName.substring(slashIdx + 1);
         }
       }
@@ -424,7 +497,10 @@ export class NexusIntegrationService {
     if (!hasReadme) {
       filesToPack.push({
         name: 'README.md',
-        data: Buffer.from(`# ${cleanPkg}\n\nAutomated package distribution for SuperApp.\n`, 'utf8'),
+        data: Buffer.from(
+          `# ${cleanPkg}\n\nAutomated package distribution for SuperApp.\n`,
+          'utf8',
+        ),
       });
     }
 
@@ -440,7 +516,10 @@ export class NexusIntegrationService {
       header.write('0000000\0', 116, 8, 'ascii'); // gid
       const sizeOctal = file.data.length.toString(8).padStart(11, '0') + ' ';
       header.write(sizeOctal, 124, 12, 'ascii'); // size
-      const mtimeOctal = Math.floor(Date.now() / 1000).toString(8).padStart(11, '0') + ' ';
+      const mtimeOctal =
+        Math.floor(Date.now() / 1000)
+          .toString(8)
+          .padStart(11, '0') + ' ';
       header.write(mtimeOctal, 136, 12, 'ascii'); // mtime
       header.write('0', 156, 1, 'ascii'); // typeflag regular file
       header.write('ustar\0', 257, 6, 'ascii'); // magic
@@ -478,11 +557,14 @@ export class NexusIntegrationService {
     });
 
     if (!initRes.ok) {
-      throw new Error(`Failed to initiate Nexus Pub upload: HTTP ${initRes.status} ${initRes.statusText}`);
+      throw new Error(
+        `Failed to initiate Nexus Pub upload: HTTP ${initRes.status} ${initRes.statusText}`,
+      );
     }
 
     const initData = await initRes.json();
-    const uploadUrl = initData.url || `${hostedUrl}/api/packages/versions/newUpload`;
+    const uploadUrl =
+      initData.url || `${hostedUrl}/api/packages/versions/newUpload`;
 
     const formData = new FormData();
     const blob = new Blob([tarGzBuffer], { type: 'application/gzip' });
@@ -500,12 +582,21 @@ export class NexusIntegrationService {
       headers: authHeader,
     });
 
-    if (!uploadRes.ok && uploadRes.status !== 200 && uploadRes.status !== 204 && uploadRes.status !== 302) {
+    if (
+      !uploadRes.ok &&
+      uploadRes.status !== 200 &&
+      uploadRes.status !== 204 &&
+      uploadRes.status !== 302
+    ) {
       const errText = await uploadRes.text();
-      throw new Error(`Nexus Pub package upload failed with HTTP ${uploadRes.status}: ${errText}`);
+      throw new Error(
+        `Nexus Pub package upload failed with HTTP ${uploadRes.status}: ${errText}`,
+      );
     }
 
-    this.logger.log(`Successfully published "${cleanPkg}" (${cleanVer}) to Nexus pub-hosted repository.`);
+    this.logger.log(
+      `Successfully published "${cleanPkg}" (${cleanVer}) to Nexus pub-hosted repository.`,
+    );
     return {
       success: true,
       packageName: cleanPkg,
@@ -531,9 +622,13 @@ export class NexusIntegrationService {
   async listComponents(repo: string): Promise<any[]> {
     const url = `${this.getBaseUrl()}/service/rest/v1/components?repository=${encodeURIComponent(repo)}`;
     const authHeader = this.getAuthHeader();
-    const res = await fetch(url, { headers: { ...authHeader, Accept: 'application/json' } });
+    const res = await fetch(url, {
+      headers: { ...authHeader, Accept: 'application/json' },
+    });
     if (!res.ok) {
-      throw new Error(`Failed to list components in repo "${repo}": HTTP ${res.status}`);
+      throw new Error(
+        `Failed to list components in repo "${repo}": HTTP ${res.status}`,
+      );
     }
     const data = await res.json();
     return data.items || [];
@@ -542,26 +637,37 @@ export class NexusIntegrationService {
   /**
    * Deletes a component from Nexus by its component ID.
    */
-  async deleteComponent(componentId: string): Promise<{ success: boolean; message: string }> {
+  async deleteComponent(
+    componentId: string,
+  ): Promise<{ success: boolean; message: string }> {
     const url = `${this.getBaseUrl()}/service/rest/v1/components/${encodeURIComponent(componentId)}`;
     const authHeader = this.getAuthHeader();
     const res = await fetch(url, { method: 'DELETE', headers: authHeader });
     if (!res.ok && res.status !== 204) {
-      throw new Error(`Failed to delete Nexus component ${componentId}: HTTP ${res.status}`);
+      throw new Error(
+        `Failed to delete Nexus component ${componentId}: HTTP ${res.status}`,
+      );
     }
     this.logger.log(`Deleted Nexus component: ${componentId}`);
-    return { success: true, message: `Component ${componentId} deleted successfully.` };
+    return {
+      success: true,
+      message: `Component ${componentId} deleted successfully.`,
+    };
   }
 
   /**
    * Deletes an asset from Nexus by its asset ID.
    */
-  async deleteAsset(assetId: string): Promise<{ success: boolean; message: string }> {
+  async deleteAsset(
+    assetId: string,
+  ): Promise<{ success: boolean; message: string }> {
     const url = `${this.getBaseUrl()}/service/rest/v1/assets/${encodeURIComponent(assetId)}`;
     const authHeader = this.getAuthHeader();
     const res = await fetch(url, { method: 'DELETE', headers: authHeader });
     if (!res.ok && res.status !== 204) {
-      throw new Error(`Failed to delete Nexus asset ${assetId}: HTTP ${res.status}`);
+      throw new Error(
+        `Failed to delete Nexus asset ${assetId}: HTTP ${res.status}`,
+      );
     }
     this.logger.log(`Deleted Nexus asset: ${assetId}`);
     return { success: true, message: `Asset ${assetId} deleted successfully.` };
@@ -570,21 +676,28 @@ export class NexusIntegrationService {
   /**
    * Deletes a published Flutter package and all its versions from the pub-hosted repository.
    */
-  async deletePubPackage(packageName: string): Promise<{ success: boolean; deletedCount: number }> {
+  async deletePubPackage(
+    packageName: string,
+  ): Promise<{ success: boolean; deletedCount: number }> {
     const cleanPkg = packageName.trim().replace(/-/g, '_').toLowerCase();
     const components = await this.listComponents('pub-hosted');
-    const matched = components.filter((c: any) => (c.name || '').toLowerCase() === cleanPkg);
+    const matched = components.filter(
+      (c: any) => (c.name || '').toLowerCase() === cleanPkg,
+    );
     let deletedCount = 0;
     for (const comp of matched) {
       try {
         await this.deleteComponent(comp.id);
         deletedCount++;
       } catch (err: any) {
-        this.logger.warn(`Could not delete component ${comp.id} for package ${cleanPkg}: ${err.message}`);
+        this.logger.warn(
+          `Could not delete component ${comp.id} for package ${cleanPkg}: ${err.message}`,
+        );
       }
     }
-    this.logger.log(`Deleted ${deletedCount} versions/components for package "${cleanPkg}" from Nexus pub-hosted.`);
+    this.logger.log(
+      `Deleted ${deletedCount} versions/components for package "${cleanPkg}" from Nexus pub-hosted.`,
+    );
     return { success: true, deletedCount };
   }
 }
-

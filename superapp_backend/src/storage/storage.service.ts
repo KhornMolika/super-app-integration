@@ -292,7 +292,14 @@ export class StorageService implements OnModuleInit {
    */
   async uploadBackofficeUserAvatar(
     userId: string,
-    file: { buffer?: Buffer; size?: number; originalname?: string; mimetype?: string } | undefined,
+    file:
+      | {
+          buffer?: Buffer;
+          size?: number;
+          originalname?: string;
+          mimetype?: string;
+        }
+      | undefined,
   ): Promise<{ url: string; key: string }> {
     const buf = file?.buffer;
     if (!buf || buf.length === 0) {
@@ -303,7 +310,9 @@ export class StorageService implements OnModuleInit {
     }
     const detected = detectImageFileType(buf);
     if (!detected) {
-      throw new BadRequestException('Only JPEG, PNG, or WebP images are permitted');
+      throw new BadRequestException(
+        'Only JPEG, PNG, or WebP images are permitted',
+      );
     }
 
     const key = `avatars/${userId}/${randomUUID().slice(0, 8)}.${detected.ext}`;
@@ -312,7 +321,11 @@ export class StorageService implements OnModuleInit {
     // Prune existing avatar(s) in this user's dedicated folder (avatars/${userId}/)
     try {
       if (typeof this.minioClient?.listObjectsV2 === 'function') {
-        const stream = this.minioClient.listObjectsV2(bucket, `avatars/${userId}/`, true);
+        const stream = this.minioClient.listObjectsV2(
+          bucket,
+          `avatars/${userId}/`,
+          true,
+        );
         if (stream && typeof stream.on === 'function') {
           const oldKeys: string[] = [];
           await new Promise<void>((resolve) => {
@@ -328,16 +341,14 @@ export class StorageService implements OnModuleInit {
         }
       }
     } catch (err: any) {
-      this.logger.debug(`Could not prune existing user avatars for user ${userId}: ${err?.message}`);
+      this.logger.debug(
+        `Could not prune existing user avatars for user ${userId}: ${err?.message}`,
+      );
     }
 
-    await this.minioClient.putObject(
-      bucket,
-      key,
-      buf,
-      buf.length,
-      { 'Content-Type': detected.contentType },
-    );
+    await this.minioClient.putObject(bucket, key, buf, buf.length, {
+      'Content-Type': detected.contentType,
+    });
 
     const url = `/api/backoffice-user-media/${key}`;
 
@@ -348,21 +359,28 @@ export class StorageService implements OnModuleInit {
   /**
    * Delete an avatar object for a backoffice user from the backoffice-user-media bucket
    */
-  async deleteBackofficeUserAvatar(avatarUrlOrKey?: string | null): Promise<void> {
+  async deleteBackofficeUserAvatar(
+    avatarUrlOrKey?: string | null,
+  ): Promise<void> {
     if (!avatarUrlOrKey) return;
     const bucket = this.backofficeUserMediaBucket || 'backoffice-user-media';
     let key = avatarUrlOrKey.split('?')[0];
     key = decodeURIComponent(key)
       .replace(/^https?:\/\/[^\/]+\//, '')
       .replace(/^\/+/, '')
-      .replace(/^(?:api\/)?(?:storage\/asset\?key=|backoffice-user-media\/)/, '')
+      .replace(
+        /^(?:api\/)?(?:storage\/asset\?key=|backoffice-user-media\/)/,
+        '',
+      )
       .replace(/^\/+/, '');
 
     try {
       await this.minioClient.removeObject(bucket, key);
       this.logger.log(`Deleted backoffice avatar from ${bucket}: ${key}`);
     } catch (err: any) {
-      this.logger.warn(`Could not delete backoffice avatar ${key}: ${err?.message}`);
+      this.logger.warn(
+        `Could not delete backoffice avatar ${key}: ${err?.message}`,
+      );
     }
   }
 
@@ -387,7 +405,10 @@ export class StorageService implements OnModuleInit {
   /**
    * Retrieves an object from MinIO as a readable stream.
    */
-  async getObjectStream(bucket: string, key: string): Promise<NodeJS.ReadableStream> {
+  async getObjectStream(
+    bucket: string,
+    key: string,
+  ): Promise<NodeJS.ReadableStream> {
     return this.minioClient.getObject(bucket, key);
   }
 

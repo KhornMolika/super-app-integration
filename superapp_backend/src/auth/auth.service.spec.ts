@@ -2,7 +2,10 @@ import { UnauthorizedException } from '@nestjs/common';
 import { ExecutionContext } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as crypto from 'crypto';
-import { AuthService, BACK_OFFICE_ACCESS_TOKEN_TTL_SECONDS } from './auth.service';
+import {
+  AuthService,
+  BACK_OFFICE_ACCESS_TOKEN_TTL_SECONDS,
+} from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { hashPassword } from '../common/utils/password.util';
 

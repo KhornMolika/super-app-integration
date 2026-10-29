@@ -1,4 +1,11 @@
-import { IsArray, IsInt, IsNotEmpty, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsArray,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 
 export class CreateAccessTokenDto {
   @IsString({ message: 'Token name must be a string' })

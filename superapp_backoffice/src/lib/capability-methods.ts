@@ -381,8 +381,8 @@ function parseJsBridgeString(jsBridge?: string): {
   const parts = fullPath.split('.');
   if (parts.length > 1) {
     const method = parts.pop() || '';
-    const module = parts.join('.');
-    return { module, method, params, fullCleanCall: clean };
+    const moduleName = parts.join('.');
+    return { module: moduleName, method, params, fullCleanCall: clean };
   }
 
   return { module: '', method: parts[0] || '', params, fullCleanCall: clean };

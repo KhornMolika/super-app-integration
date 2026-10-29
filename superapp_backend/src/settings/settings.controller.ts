@@ -125,4 +125,3 @@ export class SettingsController {
     return { success: true, setting };
   }
 }
-

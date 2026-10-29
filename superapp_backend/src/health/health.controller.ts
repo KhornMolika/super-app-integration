@@ -9,7 +9,9 @@ export class HealthController {
   constructor(private readonly healthService: HealthService) {}
 
   @Get()
-  async check(@Res({ passthrough: true }) res: Response): Promise<HealthCheckResult> {
+  async check(
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<HealthCheckResult> {
     const result = await this.healthService.check();
     if (result.status === 'error') {
       res.status(HttpStatus.SERVICE_UNAVAILABLE);

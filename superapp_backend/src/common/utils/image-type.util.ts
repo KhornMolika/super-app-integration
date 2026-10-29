@@ -38,4 +38,3 @@ export function detectImageFileType(buf: Buffer): ImageTypeResult | null {
 
   return null;
 }
-

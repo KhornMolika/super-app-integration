@@ -24,11 +24,14 @@ async function pipeAssetHelper(
   res: Response,
 ) {
   if (!rawKey) {
-    return res.status(HttpStatus.BAD_REQUEST).json({ message: 'Key is required' });
+    return res
+      .status(HttpStatus.BAD_REQUEST)
+      .json({ message: 'Key is required' });
   }
 
   // Use provided bucket or fallback to mini-app-assets
-  const targetBucket = rawBucket || storageService.assetsBucket || 'mini-app-assets';
+  const targetBucket =
+    rawBucket || storageService.assetsBucket || 'mini-app-assets';
 
   const cleanKey = decodeURIComponent(rawKey)
     .replace(/^https?:\/\/[^\/]+\//, '')
@@ -63,7 +66,9 @@ async function pipeAssetHelper(
   }
 
   if (!resolvedKey) {
-    return res.status(HttpStatus.NOT_FOUND).json({ message: 'Asset not found' });
+    return res
+      .status(HttpStatus.NOT_FOUND)
+      .json({ message: 'Asset not found' });
   }
 
   const ext = resolvedKey.split('.').pop()?.toLowerCase();
@@ -87,7 +92,10 @@ async function pipeAssetHelper(
   res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
 
   try {
-    const stream = await storageService.getObjectStream(targetBucket, resolvedKey);
+    const stream = await storageService.getObjectStream(
+      targetBucket,
+      resolvedKey,
+    );
     stream.on('error', () => {
       if (!res.headersSent) {
         res.status(HttpStatus.NOT_FOUND).json({ message: 'Asset not found' });
@@ -95,7 +103,9 @@ async function pipeAssetHelper(
     });
     return stream.pipe(res);
   } catch (_) {
-    return res.status(HttpStatus.NOT_FOUND).json({ message: 'Asset not found' });
+    return res
+      .status(HttpStatus.NOT_FOUND)
+      .json({ message: 'Asset not found' });
   }
 }
 
@@ -194,10 +204,12 @@ export class PublicAssetProxyController {
     const rawUrl = req.originalUrl || req.url || '';
     const isBackofficeMedia = rawUrl.includes('backoffice-user-media');
     const bucket = isBackofficeMedia
-      ? (this.storageService.backofficeUserMediaBucket || 'backoffice-user-media')
-      : (this.storageService.assetsBucket || 'mini-app-assets');
-    const key = rawUrl.replace(/^\/(?:api\/)?(?:mini-app-assets|mini-app-logos|logos|backoffice-user-media)\/?/, '');
+      ? this.storageService.backofficeUserMediaBucket || 'backoffice-user-media'
+      : this.storageService.assetsBucket || 'mini-app-assets';
+    const key = rawUrl.replace(
+      /^\/(?:api\/)?(?:mini-app-assets|mini-app-logos|logos|backoffice-user-media)\/?/,
+      '',
+    );
     return pipeAssetHelper(this.storageService, key, bucket, res);
   }
 }
-

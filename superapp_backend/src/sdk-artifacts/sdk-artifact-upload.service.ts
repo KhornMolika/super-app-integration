@@ -13,7 +13,10 @@ import { Repository } from 'typeorm';
 import { NexusIntegrationService } from '../integrations/nexus/nexus-integration.service';
 import { NativeSdkConfigDto } from '../miniapps/dto/create-miniapp.dto';
 import { MiniApp } from '../miniapps/entities/miniapp.entity';
-import { ArtifactScannerService, ScannedNativeSdkResult } from './artifact-scanner.service';
+import {
+  ArtifactScannerService,
+  ScannedNativeSdkResult,
+} from './artifact-scanner.service';
 import { StorageService } from '../storage/storage.service';
 
 export type SdkPlatform = 'IOS' | 'ANDROID';
@@ -68,7 +71,10 @@ export class SdkArtifactUploadService {
         buffer: req.buffer,
         originalname: req.filename,
         size: req.buffer.length,
-        mimetype: req.platform === 'IOS' ? 'application/zip' : 'application/octet-stream',
+        mimetype:
+          req.platform === 'IOS'
+            ? 'application/zip'
+            : 'application/octet-stream',
       } as any,
       req.miniAppId || 'draft',
       req.version || '1.0.0',
@@ -94,7 +100,10 @@ export class SdkArtifactUploadService {
             androidMinioUrl: minioResult.minioUrl,
             androidSha256: sha256,
             androidArtifactFilename: req.filename,
-            androidMavenGroupId: req.groupId?.trim() || scannedFields.androidMavenGroupId || DEFAULT_MAVEN_GROUP_ID,
+            androidMavenGroupId:
+              req.groupId?.trim() ||
+              scannedFields.androidMavenGroupId ||
+              DEFAULT_MAVEN_GROUP_ID,
             ...(req.version ? { androidMavenVersion: req.version.trim() } : {}),
           };
 
@@ -150,7 +159,6 @@ export class SdkArtifactUploadService {
       throw new NotFoundException(`Mini app ${miniAppId} not found`);
     }
 
-
     const config = miniApp.integrationConfig || {};
     const patch: Record<string, any> = {};
 
@@ -164,7 +172,8 @@ export class SdkArtifactUploadService {
         const groupId = config.androidMavenGroupId || DEFAULT_MAVEN_GROUP_ID;
         const artifactId = config.androidMavenArtifactId || miniApp.appId;
         const version = config.androidMavenVersion || '1.0.0';
-        const filename = config.androidArtifactFilename || `${artifactId}-${version}.aar`;
+        const filename =
+          config.androidArtifactFilename || `${artifactId}-${version}.aar`;
 
         this.assertToken('artifactId', artifactId);
         this.assertToken('version', version);
@@ -180,7 +189,9 @@ export class SdkArtifactUploadService {
           }),
         );
         patch.androidNexusMavenUrl = mavenUrl;
-        this.logger.log(`Published Android SDK ${miniApp.name} to Nexus: ${mavenUrl}`);
+        this.logger.log(
+          `Published Android SDK ${miniApp.name} to Nexus: ${mavenUrl}`,
+        );
 
         // Clean up quarantined Android AAR from MinIO after successful Nexus publish
         try {
@@ -188,13 +199,21 @@ export class SdkArtifactUploadService {
             this.storage.sdkSubmissionsBucket,
             config.androidMinioKey,
           );
-          this.logger.log(`Cleaned up Android SDK from MinIO quarantine: ${config.androidMinioKey}`);
+          this.logger.log(
+            `Cleaned up Android SDK from MinIO quarantine: ${config.androidMinioKey}`,
+          );
         } catch (delErr: any) {
-          this.logger.warn(`Could not delete Android SDK from MinIO quarantine: ${delErr.message}`);
+          this.logger.warn(
+            `Could not delete Android SDK from MinIO quarantine: ${delErr.message}`,
+          );
         }
       } catch (err: any) {
-        this.logger.error(`Failed to publish Android SDK to Nexus: ${err.message}`);
-        throw new BadGatewayException(`Android Nexus publish failed: ${err.message}`);
+        this.logger.error(
+          `Failed to publish Android SDK to Nexus: ${err.message}`,
+        );
+        throw new BadGatewayException(
+          `Android Nexus publish failed: ${err.message}`,
+        );
       }
     }
 
@@ -211,7 +230,10 @@ export class SdkArtifactUploadService {
         this.assertToken('version', version);
 
         const rawRepo = this.repo('NEXUS_RAW_SDK_REPO', 'raw-sdk-artifacts');
-        const specsRepo = this.repo('NEXUS_COCOAPODS_SPECS_REPO', 'cocoapods-specs');
+        const specsRepo = this.repo(
+          'NEXUS_COCOAPODS_SPECS_REPO',
+          'cocoapods-specs',
+        );
 
         const zipUrl = await this.wrap(() =>
           this.nexus.putRawAsset(
@@ -232,7 +254,9 @@ export class SdkArtifactUploadService {
         );
 
         patch.iosNexusZipUrl = zipUrl;
-        this.logger.log(`Published iOS SDK ${miniApp.name} to Nexus: ${zipUrl}`);
+        this.logger.log(
+          `Published iOS SDK ${miniApp.name} to Nexus: ${zipUrl}`,
+        );
 
         // Clean up quarantined iOS xcframework from MinIO after successful Nexus publish
         try {
@@ -240,13 +264,19 @@ export class SdkArtifactUploadService {
             this.storage.sdkSubmissionsBucket,
             config.iosMinioKey,
           );
-          this.logger.log(`Cleaned up iOS SDK from MinIO quarantine: ${config.iosMinioKey}`);
+          this.logger.log(
+            `Cleaned up iOS SDK from MinIO quarantine: ${config.iosMinioKey}`,
+          );
         } catch (delErr: any) {
-          this.logger.warn(`Could not delete iOS SDK from MinIO quarantine: ${delErr.message}`);
+          this.logger.warn(
+            `Could not delete iOS SDK from MinIO quarantine: ${delErr.message}`,
+          );
         }
       } catch (err: any) {
         this.logger.error(`Failed to publish iOS SDK to Nexus: ${err.message}`);
-        throw new BadGatewayException(`iOS Nexus publish failed: ${err.message}`);
+        throw new BadGatewayException(
+          `iOS Nexus publish failed: ${err.message}`,
+        );
       }
     }
 
@@ -281,13 +311,13 @@ export class SdkArtifactUploadService {
       ios: cfg.iosNexusZipUrl
         ? ('published' as const)
         : cfg.iosMinioKey
-        ? ('quarantined' as const)
-        : ('pending' as const),
+          ? ('quarantined' as const)
+          : ('pending' as const),
       android: cfg.androidNexusMavenUrl
         ? ('published' as const)
         : cfg.androidMinioKey
-        ? ('quarantined' as const)
-        : ('pending' as const),
+          ? ('quarantined' as const)
+          : ('pending' as const),
       iosMinioKey: cfg.iosMinioKey,
       androidMinioKey: cfg.androidMinioKey,
       iosNexusZipUrl: cfg.iosNexusZipUrl,
@@ -297,13 +327,15 @@ export class SdkArtifactUploadService {
 
   private async findMiniApp(identifier?: string): Promise<MiniApp | null> {
     if (!identifier || identifier === 'draft') return null;
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
+    const isUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        identifier,
+      );
     if (isUuid) {
       return this.miniappRepository.findOne({ where: { id: identifier } });
     }
     return this.miniappRepository.findOne({ where: { appId: identifier } });
   }
-
 
   renderPodspec(name: string, version: string, zipUrl: string): string {
     return `Pod::Spec.new do |s|

@@ -63,17 +63,13 @@ export class MiniappsController {
       dataToSave.integrationConfig = dto.integrationConfigWebView;
       if (dto.isDomainVerified !== undefined) {
         dataToSave.isDomainVerified = dto.isDomainVerified;
-      } else if (
-        dto.integrationConfigWebView?.isDomainVerified !== undefined
-      ) {
+      } else if (dto.integrationConfigWebView?.isDomainVerified !== undefined) {
         dataToSave.isDomainVerified =
           dto.integrationConfigWebView.isDomainVerified;
       }
       if (dto.domainVerifiedAt !== undefined) {
         dataToSave.domainVerifiedAt = dto.domainVerifiedAt;
-      } else if (
-        dto.integrationConfigWebView?.domainVerifiedAt !== undefined
-      ) {
+      } else if (dto.integrationConfigWebView?.domainVerifiedAt !== undefined) {
         dataToSave.domainVerifiedAt =
           dto.integrationConfigWebView.domainVerifiedAt;
       }
@@ -121,12 +117,20 @@ export class MiniappsController {
     const userOrgId = req.user?.organizationId;
     const isDeveloper = req.user?.roles?.includes('MA_DEVELOPER');
     if (userOrgId) {
-      if (isDeveloper && dataToSave.organizationId && dataToSave.organizationId !== userOrgId) {
-        throw new ForbiddenException("Access Denied: You cannot create a MiniApp under another organization");
+      if (
+        isDeveloper &&
+        dataToSave.organizationId &&
+        dataToSave.organizationId !== userOrgId
+      ) {
+        throw new ForbiddenException(
+          'Access Denied: You cannot create a MiniApp under another organization',
+        );
       }
       dataToSave.organizationId = userOrgId;
-      if (req.user?.organization) dataToSave.organization = req.user.organization;
-      if (req.user?.organizationCode) dataToSave.organizationCode = req.user.organizationCode;
+      if (req.user?.organization)
+        dataToSave.organization = req.user.organization;
+      if (req.user?.organizationCode)
+        dataToSave.organizationCode = req.user.organizationCode;
     }
 
     const created = await this.miniappService.create(dataToSave, req.user.sub);
@@ -147,12 +151,20 @@ export class MiniappsController {
     const userOrgId = req.user?.organizationId;
     const isDeveloper = req.user?.roles?.includes('MA_DEVELOPER');
     if (userOrgId) {
-      if (isDeveloper && dataToSave.organizationId && dataToSave.organizationId !== userOrgId) {
-        throw new ForbiddenException("Access Denied: You cannot create a MiniApp under another organization");
+      if (
+        isDeveloper &&
+        dataToSave.organizationId &&
+        dataToSave.organizationId !== userOrgId
+      ) {
+        throw new ForbiddenException(
+          'Access Denied: You cannot create a MiniApp under another organization',
+        );
       }
       dataToSave.organizationId = userOrgId;
-      if (req.user?.organization) dataToSave.organization = req.user.organization;
-      if (req.user?.organizationCode) dataToSave.organizationCode = req.user.organizationCode;
+      if (req.user?.organization)
+        dataToSave.organization = req.user.organization;
+      if (req.user?.organizationCode)
+        dataToSave.organizationCode = req.user.organizationCode;
     }
 
     const created = await this.miniappService.create(dataToSave, req.user.sub);
@@ -161,10 +173,7 @@ export class MiniappsController {
 
   @Get()
   @RequirePermissions('miniapp:read')
-  async findAll(
-    @Query() query: QueryMiniAppsDto,
-    @Req() req?: any,
-  ) {
+  async findAll(@Query() query: QueryMiniAppsDto, @Req() req?: any) {
     const user = req?.user;
     const roles = user?.roles || [];
     try {
@@ -269,24 +278,35 @@ export class MiniappsController {
 
   @Post(':id/submit')
   @RequirePermissions('miniapp:update')
-  async submitForReview(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+  async submitForReview(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: any,
+  ) {
     const app = await this.miniappService.findOne(id);
     if (!app) throw new NotFoundException('MiniApp not found');
 
     const user = req?.user;
     const isElevated =
-      user?.roles?.includes('SUPER_ADMIN') ||
-      user?.roles?.includes('ADMIN');
+      user?.roles?.includes('SUPER_ADMIN') || user?.roles?.includes('ADMIN');
 
     // Step 2: Cross-Agency Strict Isolation
-    if (!isElevated && user?.organizationId && app.organizationId && user.organizationId !== app.organizationId) {
-      throw new ForbiddenException("Access Denied: You cannot access another organization's MiniApp");
+    if (
+      !isElevated &&
+      user?.organizationId &&
+      app.organizationId &&
+      user.organizationId !== app.organizationId
+    ) {
+      throw new ForbiddenException(
+        "Access Denied: You cannot access another organization's MiniApp",
+      );
     }
 
     // Step 3: Sensitive Governance Gate (Option C: Only Lead Developer or SuperAdmin/Admin can submit for review)
     const isLeadMaintainer = app.ownerId === (user?.sub || user?.id);
     if (!isElevated && !isLeadMaintainer) {
-      throw new ForbiddenException('Only the Lead Developer (ownerId) or a SuperAdmin can submit releases or change availability');
+      throw new ForbiddenException(
+        'Only the Lead Developer (ownerId) or a SuperAdmin can submit releases or change availability',
+      );
     }
 
     return this.miniappService.submitForReview(id, req.user.sub);
@@ -392,7 +412,11 @@ export class MiniappsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { userId: string; role?: any },
   ) {
-    return this.miniappService.addCollaborator(id, body.userId, body.role || 'DEVELOPER');
+    return this.miniappService.addCollaborator(
+      id,
+      body.userId,
+      body.role || 'DEVELOPER',
+    );
   }
 
   @Delete(':id/collaborators/:userId')
@@ -418,8 +442,15 @@ export class MiniappsController {
       user?.roles?.includes('SECURITY_ADMIN') ||
       user?.roles?.includes('COMPLIANCE_OFFICER');
 
-    if (!isElevated && user?.organizationId && app.organizationId && user.organizationId !== app.organizationId) {
-      throw new ForbiddenException("Access Denied: You cannot access another organization's MiniApp");
+    if (
+      !isElevated &&
+      user?.organizationId &&
+      app.organizationId &&
+      user.organizationId !== app.organizationId
+    ) {
+      throw new ForbiddenException(
+        "Access Denied: You cannot access another organization's MiniApp",
+      );
     }
 
     return maskMiniAppCredentials(app);
@@ -442,12 +473,23 @@ export class MiniappsController {
       user?.roles?.includes('SECURITY_ADMIN') ||
       user?.roles?.includes('COMPLIANCE_OFFICER');
 
-    if (!isElevated && user?.organizationId && app.organizationId && user.organizationId !== app.organizationId) {
-      throw new ForbiddenException("Access Denied: You cannot access another organization's MiniApp");
+    if (
+      !isElevated &&
+      user?.organizationId &&
+      app.organizationId &&
+      user.organizationId !== app.organizationId
+    ) {
+      throw new ForbiddenException(
+        "Access Denied: You cannot access another organization's MiniApp",
+      );
     }
 
     const dataToSave = this.extractIntegrationConfig(updateData);
-    const updated = await this.miniappService.update(id, dataToSave, user?.sub || user?.id);
+    const updated = await this.miniappService.update(
+      id,
+      dataToSave,
+      user?.sub || user?.id,
+    );
     return maskMiniAppCredentials(updated);
   }
 
@@ -562,4 +604,3 @@ export class MiniappsController {
     );
   }
 }
-

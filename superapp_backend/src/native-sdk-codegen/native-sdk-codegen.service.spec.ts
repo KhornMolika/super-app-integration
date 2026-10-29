@@ -95,7 +95,8 @@ describe('NativeSdkCodegenService', () => {
       CODEGEN_BASE_BRANCH: 'main',
       NEXUS_BASE_URL: 'http://nexus.test:8081',
       NEXUS_ADMIN_USER: 'admin',
-      NEXUS_ADMIN_PASSWORD: process.env.NEXUS_ADMIN_PASSWORD || 'mock-nexus-test-pass',
+      NEXUS_ADMIN_PASSWORD:
+        process.env.NEXUS_ADMIN_PASSWORD || 'mock-nexus-test-pass',
       ...extraConfig,
     };
     const module: TestingModule = await Test.createTestingModule({
@@ -169,7 +170,10 @@ describe('NativeSdkCodegenService', () => {
     await service.regenerate();
     const where = miniappFind.mock.calls[0][0].where;
     expect(where.integrationMethod).toBe('NATIVE_SDK');
-    expect((where.lifecycleStatus || where.status).value).toEqual(['APPROVED', 'ACTIVE']);
+    expect((where.lifecycleStatus || where.status).value).toEqual([
+      'APPROVED',
+      'ACTIVE',
+    ]);
   });
 
   it('returns no changed files when the generated content already matches', async () => {
@@ -205,7 +209,7 @@ describe('NativeSdkCodegenService', () => {
           ...makeApp().integrationConfig,
           iosNexusZipUrl: 'http://evil.example.com/x.zip',
         },
-      } as any),
+      }),
     ]);
     await expect(service.regenerate()).rejects.toThrow(
       /not under the configured Nexus/,
@@ -228,14 +232,14 @@ describe('NativeSdkCodegenService', () => {
   });
 
   it('throws naming the app when a required config field is blank', async () => {
-    await setup([makeApp({ integrationConfig: { iosModuleName: '' } } as any)]);
+    await setup([makeApp({ integrationConfig: { iosModuleName: '' } })]);
     await expect(service.regenerate()).rejects.toThrow(
       /permit_check.*iosModuleName/,
     );
   });
 
   it('throws when a NATIVE_SDK app has no integrationConfig', async () => {
-    await setup([makeApp({ integrationConfig: null } as any)]);
+    await setup([makeApp({ integrationConfig: null })]);
     await expect(service.regenerate()).rejects.toThrow(
       /has no integrationConfig/i,
     );
@@ -248,7 +252,7 @@ describe('NativeSdkCodegenService', () => {
           ...makeApp().integrationConfig,
           iosModuleName: 'Bad Name',
         },
-      } as any),
+      }),
     ]);
     await expect(service.regenerate()).rejects.toThrow(/iosModuleName/);
   });

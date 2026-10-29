@@ -3,7 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MiniApp } from '../../../miniapps/entities/miniapp.entity';
 import { MiniAppIssue } from '../../../miniapps/entities/miniapp-issue.entity';
-import { NotificationsService, PipelinePacerService } from '../../../notifications';
+import {
+  NotificationsService,
+  PipelinePacerService,
+} from '../../../notifications';
 import { CapabilitiesService } from '../../../capabilities/capabilities.service';
 import { ValidationFindingDto } from '../validation-callback.controller';
 import { PubVulnerabilityScannerService } from '../pub-vulnerability-scanner.service';
@@ -80,7 +83,10 @@ export class FlutterPackageSecurityScanner {
     let score = 100;
     let cycloneDxManifest: Record<string, any> | undefined = undefined;
 
-    const stages = buildDynamicValidationStages('FLUTTER_PACKAGE', activeChecks);
+    const stages = buildDynamicValidationStages(
+      'FLUTTER_PACKAGE',
+      activeChecks,
+    );
     app.validationStages = stages;
     app.validationStatus = 'RUNNING';
     await this.miniappRepository.save(app);
@@ -100,12 +106,14 @@ export class FlutterPackageSecurityScanner {
     // --- STAGE: Ingestion & Integrity Verification (Always baseline) ---
     if (stages.ingest) {
       stages.ingest.status = 'RUNNING';
-      stages.ingest.details = 'Verifying SHA-256 package checksum & pubspec.yaml manifest...';
+      stages.ingest.details =
+        'Verifying SHA-256 package checksum & pubspec.yaml manifest...';
       await emitUpdate('ingest');
       await this.delay(500);
 
       stages.ingest.status = 'COMPLETED';
-      stages.ingest.details = 'Package archive digest verified. Valid pubspec.yaml manifest discovered.';
+      stages.ingest.details =
+        'Package archive digest verified. Valid pubspec.yaml manifest discovered.';
       checks.ingest = { passed: true, details: stages.ingest.details };
       await emitUpdate('ingest');
     }
@@ -113,25 +121,32 @@ export class FlutterPackageSecurityScanner {
     // --- STAGE: Secret Scan ---
     if (stages.secret_scan) {
       stages.secret_scan.status = 'RUNNING';
-      stages.secret_scan.details = 'Scanning Dart source code and assets with Gitleaks...';
+      stages.secret_scan.details =
+        'Scanning Dart source code and assets with Gitleaks...';
       await emitUpdate('secret_scan');
       await this.delay(500);
 
       stages.secret_scan.status = 'COMPLETED';
-      stages.secret_scan.details = 'No hardcoded private keys, JWTs, or API secrets detected in source.';
-      checks.secret_scan = { passed: true, details: stages.secret_scan.details };
+      stages.secret_scan.details =
+        'No hardcoded private keys, JWTs, or API secrets detected in source.';
+      checks.secret_scan = {
+        passed: true,
+        details: stages.secret_scan.details,
+      };
       await emitUpdate('secret_scan');
     }
 
     // --- STAGE: SAST & AST Sandbox ---
     if (stages.sast) {
       stages.sast.status = 'RUNNING';
-      stages.sast.details = 'Analyzing Dart AST for unsafe memory, eval, or prohibited OS calls...';
+      stages.sast.details =
+        'Analyzing Dart AST for unsafe memory, eval, or prohibited OS calls...';
       await emitUpdate('sast');
       await this.delay(500);
 
       stages.sast.status = 'COMPLETED';
-      stages.sast.details = 'Dart AST static analysis passed. No prohibited mirrors, eval, or unapproved FFI found.';
+      stages.sast.details =
+        'Dart AST static analysis passed. No prohibited mirrors, eval, or unapproved FFI found.';
       checks.sast = { passed: true, details: stages.sast.details };
       await emitUpdate('sast');
     }
@@ -139,7 +154,8 @@ export class FlutterPackageSecurityScanner {
     // --- STAGE: Software Composition Analysis (SCA / CVE) ---
     if (stages.dependency_scan) {
       stages.dependency_scan.status = 'RUNNING';
-      stages.dependency_scan.details = 'Cross-referencing declared package dependencies with Google OSV database...';
+      stages.dependency_scan.details =
+        'Cross-referencing declared package dependencies with Google OSV database...';
       await emitUpdate('dependency_scan');
 
       const declaredDeps =
@@ -149,10 +165,14 @@ export class FlutterPackageSecurityScanner {
 
       let osvReport: any = null;
       if (this.pubVulnerabilityScanner) {
-        osvReport = await this.pubVulnerabilityScanner.scanPubDependencies(declaredDeps);
+        osvReport =
+          await this.pubVulnerabilityScanner.scanPubDependencies(declaredDeps);
       }
 
-      if (osvReport && (osvReport.criticalCount > 0 || osvReport.highCount > 0)) {
+      if (
+        osvReport &&
+        (osvReport.criticalCount > 0 || osvReport.highCount > 0)
+      ) {
         stages.dependency_scan.status = 'FAILED';
         stages.dependency_scan.details = `Detected ${osvReport.criticalCount} critical and ${osvReport.highCount} high CVE vulnerabilities across declared packages.`;
         checks.dependency_scan = {
@@ -208,18 +228,26 @@ export class FlutterPackageSecurityScanner {
     // --- STAGE: SBOM Generation ---
     if (stages.sbom) {
       stages.sbom.status = 'RUNNING';
-      stages.sbom.details = 'Generating CycloneDX & SPDX Software Bill of Materials...';
+      stages.sbom.details =
+        'Generating CycloneDX & SPDX Software Bill of Materials...';
       await emitUpdate('sbom');
       await this.delay(500);
 
       const sbomComponents = [
         {
-          name: app.integrationConfig?.packageName || app.appId || 'miniapp_core',
+          name:
+            app.integrationConfig?.packageName || app.appId || 'miniapp_core',
           version: app.currentReleaseVersion || '1.0.0',
           type: 'application',
           purl: `pkg:pub/${app.integrationConfig?.packageName || app.appId}@${app.currentReleaseVersion || '1.0.0'}`,
           licenses: [{ license: { id: 'MIT', name: 'MIT License' } }],
-          hashes: [{ alg: 'SHA-256', content: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' }],
+          hashes: [
+            {
+              alg: 'SHA-256',
+              content:
+                'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+            },
+          ],
         },
         {
           name: 'flutter',
@@ -227,7 +255,13 @@ export class FlutterPackageSecurityScanner {
           type: 'framework',
           purl: 'pkg:pub/flutter@3.24.0',
           licenses: [{ license: { id: 'BSD-3-Clause', name: 'BSD 3-Clause' } }],
-          hashes: [{ alg: 'SHA-256', content: '8f4c2298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' }],
+          hashes: [
+            {
+              alg: 'SHA-256',
+              content:
+                '8f4c2298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+            },
+          ],
         },
         {
           name: 'dio',
@@ -235,7 +269,13 @@ export class FlutterPackageSecurityScanner {
           type: 'library',
           purl: 'pkg:pub/dio@5.4.3',
           licenses: [{ license: { id: 'MIT', name: 'MIT License' } }],
-          hashes: [{ alg: 'SHA-256', content: 'c1b2c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' }],
+          hashes: [
+            {
+              alg: 'SHA-256',
+              content:
+                'c1b2c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+            },
+          ],
         },
         {
           name: 'crypto',
@@ -243,7 +283,13 @@ export class FlutterPackageSecurityScanner {
           type: 'library',
           purl: 'pkg:pub/crypto@3.0.3',
           licenses: [{ license: { id: 'BSD-3-Clause', name: 'BSD 3-Clause' } }],
-          hashes: [{ alg: 'SHA-256', content: '9a7f44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' }],
+          hashes: [
+            {
+              alg: 'SHA-256',
+              content:
+                '9a7f44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+            },
+          ],
         },
         {
           name: 'shared_preferences',
@@ -251,7 +297,13 @@ export class FlutterPackageSecurityScanner {
           type: 'library',
           purl: 'pkg:pub/shared_preferences@2.2.3',
           licenses: [{ license: { id: 'BSD-3-Clause', name: 'BSD 3-Clause' } }],
-          hashes: [{ alg: 'SHA-256', content: '5d3e44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' }],
+          hashes: [
+            {
+              alg: 'SHA-256',
+              content:
+                '5d3e44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+            },
+          ],
         },
       ];
 
@@ -262,7 +314,13 @@ export class FlutterPackageSecurityScanner {
         version: 1,
         metadata: {
           timestamp: new Date().toISOString(),
-          tools: [{ vendor: 'Syft / CycloneDX', name: 'LocalSecurityScanner', version: '1.5.0' }],
+          tools: [
+            {
+              vendor: 'Syft / CycloneDX',
+              name: 'LocalSecurityScanner',
+              version: '1.5.0',
+            },
+          ],
           component: {
             name: app.name || app.appId,
             version: app.currentReleaseVersion || '1.0.0',
@@ -287,43 +345,55 @@ export class FlutterPackageSecurityScanner {
     // --- STAGE: Malware & Binary Signature ---
     if (stages.malware_scan) {
       stages.malware_scan.status = 'RUNNING';
-      stages.malware_scan.details = 'Performing binary signature and heuristic ClamAV inspection...';
+      stages.malware_scan.details =
+        'Performing binary signature and heuristic ClamAV inspection...';
       await emitUpdate('malware_scan');
       await this.delay(500);
 
       stages.malware_scan.status = 'COMPLETED';
-      stages.malware_scan.details = 'Malware and binary signature audit completed with zero threats detected.';
-      checks.malware_scan = { passed: true, details: stages.malware_scan.details };
+      stages.malware_scan.details =
+        'Malware and binary signature audit completed with zero threats detected.';
+      checks.malware_scan = {
+        passed: true,
+        details: stages.malware_scan.details,
+      };
       await emitUpdate('malware_scan');
     }
 
     // --- STAGE: License Compliance ---
     if (stages.license_compliance) {
       stages.license_compliance.status = 'RUNNING';
-      stages.license_compliance.details = 'Auditing dependency licenses against platform IP policy...';
+      stages.license_compliance.details =
+        'Auditing dependency licenses against platform IP policy...';
       await emitUpdate('license_compliance');
       await this.delay(500);
 
       stages.license_compliance.status = 'COMPLETED';
-      stages.license_compliance.details = 'All third-party package licenses comply with MIT, BSD, and Apache 2.0 terms.';
-      checks.license_compliance = { passed: true, details: stages.license_compliance.details };
+      stages.license_compliance.details =
+        'All third-party package licenses comply with MIT, BSD, and Apache 2.0 terms.';
+      checks.license_compliance = {
+        passed: true,
+        details: stages.license_compliance.details,
+      };
       await emitUpdate('license_compliance');
     }
 
     // --- STAGE: Host Capability Gatekeeper Audit ---
     if (stages.capability_gate) {
       stages.capability_gate.status = 'RUNNING';
-      stages.capability_gate.details = 'Auditing declared permissions against SuperApp capability boundary...';
+      stages.capability_gate.details =
+        'Auditing declared permissions against SuperApp capability boundary...';
       await emitUpdate('capability_gate');
       await this.delay(500);
 
       const perms = Array.isArray(app.capabilities || (app as any).permissions)
-        ? (app.capabilities || (app as any).permissions)
+        ? app.capabilities || (app as any).permissions
         : [];
       let hasUnsupportedRequired = false;
       for (const p of perms) {
         const permName = typeof p === 'string' ? p : p.name || p.type;
-        const isSupported = !!(await this.capabilitiesService.findByKey(permName));
+        const isSupported =
+          !!(await this.capabilitiesService.findByKey(permName));
         if (!isSupported) {
           hasUnsupportedRequired = true;
           findings.push({
@@ -332,13 +402,18 @@ export class FlutterPackageSecurityScanner {
             category: 'Capability Compliance',
             title: `Unsupported Platform Capability: ${permName}`,
             description: `The MiniApp requires capability "${permName}" which is not supported or whitelisted by the SuperApp host catalog.`,
-            recommendation: 'Either submit a capability whitelist proposal or remove the unsupported capability.',
+            recommendation:
+              'Either submit a capability whitelist proposal or remove the unsupported capability.',
           });
         }
       }
 
-      const packageName = (app.integrationConfig?.packageName || '').toLowerCase();
-      const detectedStoragePath = (app.integrationConfig?.packageStoragePath || '').toLowerCase();
+      const packageName = (
+        app.integrationConfig?.packageName || ''
+      ).toLowerCase();
+      const detectedStoragePath = (
+        app.integrationConfig?.packageStoragePath || ''
+      ).toLowerCase();
       const appName = (app.name || '').toLowerCase();
       if (
         packageName.includes('trust_regulator') ||
@@ -347,7 +422,10 @@ export class FlutterPackageSecurityScanner {
       ) {
         const restrictedPlugins = [
           { name: 'NFC Manager (nfc_manager: ^3.3.0)', cap: 'NFC_MANAGER' },
-          { name: 'Bluetooth BLE (flutter_blue_plus: ^1.35.4)', cap: 'BLUETOOTH' },
+          {
+            name: 'Bluetooth BLE (flutter_blue_plus: ^1.35.4)',
+            cap: 'BLUETOOTH',
+          },
           { name: 'Address Book (flutter_contacts: ^1.1.9)', cap: 'CONTACTS' },
         ];
         hasUnsupportedRequired = true;
@@ -363,7 +441,9 @@ export class FlutterPackageSecurityScanner {
         }
       }
 
-      stages.capability_gate.status = hasUnsupportedRequired ? 'FAILED' : 'COMPLETED';
+      stages.capability_gate.status = hasUnsupportedRequired
+        ? 'FAILED'
+        : 'COMPLETED';
       stages.capability_gate.details = hasUnsupportedRequired
         ? 'Blocking capability mismatch: MiniApp contains unsupported host capabilities (NFC, Bluetooth, Contacts).'
         : 'All declared native plugins comply with host platform capability gate.';

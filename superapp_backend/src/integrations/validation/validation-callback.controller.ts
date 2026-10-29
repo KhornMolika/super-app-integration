@@ -86,13 +86,23 @@ export class ValidationCallbackController {
       sca: ['dependency_scan', 'sca'],
       license_audit: ['license_compliance', 'license_audit'],
       license_compliance: ['license_audit', 'license_compliance'],
-      capability_gate: ['capability_gate', 'capability_analysis', 'permissions'],
-      capability_analysis: ['capability_gate', 'capability_analysis', 'permissions'],
+      capability_gate: [
+        'capability_gate',
+        'capability_analysis',
+        'permissions',
+      ],
+      capability_analysis: [
+        'capability_gate',
+        'capability_analysis',
+        'permissions',
+      ],
       malware: ['malware', 'malware_scan'],
       malware_scan: ['malware', 'malware_scan'],
     };
 
-    const targetKeys = Array.from(new Set([stageId, ...(STAGE_ALIASES[stageId] || [])]));
+    const targetKeys = Array.from(
+      new Set([stageId, ...(STAGE_ALIASES[stageId] || [])]),
+    );
     for (const key of targetKeys) {
       const existing = stages[key] || {};
       stages[key] = {
@@ -175,7 +185,11 @@ export class ValidationCallbackController {
           if (checkResult.details) s.details = checkResult.details;
         } else if (dto.status === 'PASSED') {
           s.status = 'COMPLETED';
-          if (!s.details || s.details.startsWith('Awaiting') || s.details.startsWith('Initiating')) {
+          if (
+            !s.details ||
+            s.details.startsWith('Awaiting') ||
+            s.details.startsWith('Initiating')
+          ) {
             s.details = 'Verification completed.';
           }
         }
@@ -199,7 +213,10 @@ export class ValidationCallbackController {
     if (dto.status === 'PASSED') {
       app.validationStatus = 'PASSED';
       const initialStatuses = ['DRAFT', 'SUBMITTED'];
-      if (!hasPendingRevision && initialStatuses.includes(app.lifecycleStatus)) {
+      if (
+        !hasPendingRevision &&
+        initialStatuses.includes(app.lifecycleStatus)
+      ) {
         app.lifecycleStatus = 'IN_REVIEW';
       }
       app.validationErrors = null;
@@ -208,17 +225,20 @@ export class ValidationCallbackController {
 
       await this.notificationsService.createNotification(
         app.ownerId || '',
-        hasPendingRevision ? 'Revision Validation Passed' : 'Automated Validation Passed',
+        hasPendingRevision
+          ? 'Revision Validation Passed'
+          : 'Automated Validation Passed',
         hasPendingRevision
           ? `${app.name || 'MiniApp'} revision passed automated ${dto.method} validation (Score: ${dto.score}/100). Live version remains active.`
           : initialStatuses.includes(app.lifecycleStatus)
-          ? `${app.name || 'MiniApp'} passed automated ${dto.method} security validation (Score: ${dto.score}/100) and is now In Review.`
-          : `${app.name || 'MiniApp'} security re-scan passed (${dto.score}/100). Status remains ${app.lifecycleStatus}.`,
+            ? `${app.name || 'MiniApp'} passed automated ${dto.method} security validation (Score: ${dto.score}/100) and is now In Review.`
+            : `${app.name || 'MiniApp'} security re-scan passed (${dto.score}/100). Status remains ${app.lifecycleStatus}.`,
         'REVIEW_STARTED',
         app.id,
       );
 
-      const targetEmail = app.supportEmail || app.owner?.email || (app as any).ownerEmail;
+      const targetEmail =
+        app.supportEmail || app.owner?.email || (app as any).ownerEmail;
       if (targetEmail) {
         await this.mailService.sendValidationPassedEmail(
           targetEmail,
@@ -248,7 +268,10 @@ export class ValidationCallbackController {
     } else {
       app.validationStatus = 'FAILED';
       const resetToDraftStatuses = ['DRAFT', 'SUBMITTED', 'IN_REVIEW'];
-      if (!hasPendingRevision && resetToDraftStatuses.includes(app.lifecycleStatus)) {
+      if (
+        !hasPendingRevision &&
+        resetToDraftStatuses.includes(app.lifecycleStatus)
+      ) {
         app.lifecycleStatus = 'DRAFT'; // Auto-reset to DRAFT for remediation if in pre-approval stage
       }
 
@@ -280,7 +303,10 @@ export class ValidationCallbackController {
       // Log findings as MiniAppIssues (handling N multiple issues from Jenkins)
       const issuesToCreate: MiniAppIssue[] = [];
       const actionableFindings = (dto.findings || []).filter(
-        (f) => f.severity === 'CRITICAL' || f.severity === 'HIGH' || f.severity === 'MEDIUM',
+        (f) =>
+          f.severity === 'CRITICAL' ||
+          f.severity === 'HIGH' ||
+          f.severity === 'MEDIUM',
       );
 
       for (const finding of actionableFindings) {
@@ -331,7 +357,8 @@ export class ValidationCallbackController {
         app.id,
       );
 
-      const targetEmail = app.supportEmail || app.owner?.email || (app as any).ownerEmail;
+      const targetEmail =
+        app.supportEmail || app.owner?.email || (app as any).ownerEmail;
       if (targetEmail) {
         await this.mailService.sendValidationFailedEmail(
           targetEmail,

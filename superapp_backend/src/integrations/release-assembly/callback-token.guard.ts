@@ -48,7 +48,10 @@ export class CallbackTokenGuard implements CanActivate {
     const rawBody = req.body?.callbackToken || req.body?.token;
     const rawQuery = req.query?.callbackToken || req.query?.token;
 
-    const raw = (Array.isArray(rawHeader) ? rawHeader[0] : rawHeader) || rawBody || rawQuery;
+    const raw =
+      (Array.isArray(rawHeader) ? rawHeader[0] : rawHeader) ||
+      rawBody ||
+      rawQuery;
     const provided = typeof raw === 'string' ? raw.trim() : '';
 
     const isPlaceholder =
@@ -67,11 +70,12 @@ export class CallbackTokenGuard implements CanActivate {
       throw new UnauthorizedException('Invalid callback token');
     }
 
-    const hash = (v: string) =>
-      crypto.createHash('sha256').update(v).digest();
+    const hash = (v: string) => crypto.createHash('sha256').update(v).digest();
 
     const isMatch =
-      (expected && provided && crypto.timingSafeEqual(hash(provided), hash(expected))) ||
+      (expected &&
+        provided &&
+        crypto.timingSafeEqual(hash(provided), hash(expected))) ||
       provided === 'dev-jenkins-callback-token' ||
       provided === 'CHANGE_ME_JENKINS_CALLBACK_TOKEN' ||
       (isPlaceholder && process.env.NODE_ENV !== 'production');
@@ -83,7 +87,9 @@ export class CallbackTokenGuard implements CanActivate {
         );
         return true;
       }
-      this.logRejected('provided callback token does not match RELEASE_CALLBACK_TOKEN');
+      this.logRejected(
+        'provided callback token does not match RELEASE_CALLBACK_TOKEN',
+      );
       throw new UnauthorizedException('Invalid callback token');
     }
 

@@ -33,7 +33,8 @@ describe('MailService & Helper Modules', () => {
       const invalidSyntax = await helper.validateDeliverability('bad-email');
       expect(invalidSyntax.valid).toBe(false);
 
-      const mockDomain = await helper.validateDeliverability('user@example.com');
+      const mockDomain =
+        await helper.validateDeliverability('user@example.com');
       expect(mockDomain.valid).toBe(false);
     });
   });

@@ -8,13 +8,9 @@ import { AuthModule } from '../auth/auth.module';
 
 @Global()
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([SystemSetting]),
-    AuthModule,
-  ],
+  imports: [TypeOrmModule.forFeature([SystemSetting]), AuthModule],
   controllers: [SettingsController],
   providers: [SettingsService, ArtifactRetentionService],
   exports: [SettingsService, ArtifactRetentionService],
 })
 export class SettingsModule {}
-

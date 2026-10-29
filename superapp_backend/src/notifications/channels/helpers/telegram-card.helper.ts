@@ -102,13 +102,13 @@ export class TelegramCardHelper {
         const score = metadata?.score ?? 0;
         const cleanIssue = message
           ? message
-            .split('\n')
-            .filter(Boolean)
-            .map((l) => {
-              const line = l.trim().replace(/^[-•!+]\s*/, '');
-              return `- Issue        : ${line}`;
-            })
-            .join('\n')
+              .split('\n')
+              .filter(Boolean)
+              .map((l) => {
+                const line = l.trim().replace(/^[-•!+]\s*/, '');
+                return `- Issue        : ${line}`;
+              })
+              .join('\n')
           : '- Issue        : Security compliance gate requirements not satisfied';
 
         const text = `
@@ -211,7 +211,10 @@ ${cleanIssue}
 
         const actionRow: TelegramInlineButton[] = [];
         if (apkUrl) {
-          actionRow.push({ text: `📲 Download ${targetFilename}`, url: apkUrl });
+          actionRow.push({
+            text: `📲 Download ${targetFilename}`,
+            url: apkUrl,
+          });
         }
         actionRow.push({ text: '🌐 Launch Sandbox', url: sandboxUrl });
 
@@ -227,10 +230,12 @@ ${cleanIssue}
           'latest';
         const cleanReason = message
           ? message
-            .split('\n')
-            .filter(Boolean)
-            .map((l) => `- Error        : ${l.trim().replace(/^[-•!+]\s*/, '')}`)
-            .join('\n')
+              .split('\n')
+              .filter(Boolean)
+              .map(
+                (l) => `- Error        : ${l.trim().replace(/^[-•!+]\s*/, '')}`,
+              )
+              .join('\n')
           : '- Error        : Fastlane packaging or Nexus publish failed';
 
         const text = `
@@ -256,10 +261,12 @@ ${cleanReason}
       case 'CHANGES_REQUESTED': {
         const cleanFeedback = message
           ? message
-            .split('\n')
-            .filter(Boolean)
-            .map((l) => `! Note         : ${l.trim().replace(/^[-•!+]\s*/, '')}`)
-            .join('\n')
+              .split('\n')
+              .filter(Boolean)
+              .map(
+                (l) => `! Note         : ${l.trim().replace(/^[-•!+]\s*/, '')}`,
+              )
+              .join('\n')
           : '! Note         : Revisions requested before approval';
 
         const text = `
@@ -285,10 +292,12 @@ ${cleanFeedback}
       case 'MINIAPP_REJECTED': {
         const cleanReason = message
           ? message
-            .split('\n')
-            .filter(Boolean)
-            .map((l) => `- Reason       : ${l.trim().replace(/^[-•!+]\s*/, '')}`)
-            .join('\n')
+              .split('\n')
+              .filter(Boolean)
+              .map(
+                (l) => `- Reason       : ${l.trim().replace(/^[-•!+]\s*/, '')}`,
+              )
+              .join('\n')
           : '- Reason       : Submission does not meet integration policies';
 
         const text = `
@@ -339,10 +348,13 @@ ${cleanReason}
 
         const detailLines = message
           ? message
-            .split('\n')
-            .filter(Boolean)
-            .map((l) => `${prefix} Detail       : ${l.trim().replace(/^[-•!+]\s*/, '')}`)
-            .join('\n')
+              .split('\n')
+              .filter(Boolean)
+              .map(
+                (l) =>
+                  `${prefix} Detail       : ${l.trim().replace(/^[-•!+]\s*/, '')}`,
+              )
+              .join('\n')
           : `${prefix} Detail       : Notification update`;
 
         const text = `

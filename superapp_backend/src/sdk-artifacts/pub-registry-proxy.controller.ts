@@ -18,17 +18,17 @@ import * as path from 'path';
 
 /**
  * Scoped Dart Pub Registry Gateway Controller (/pub/*)
- * 
+ *
  * Provides an authenticated, strictly isolated reverse proxy for FSA Flutter SDK packages.
  * MiniApp developers configure `pubspec.yaml` with:
  *   hosted:
  *     name: fsa_superapp_flutter_sdk
  *     url: https://app.fintechcenterfsa.com/pub
- * 
+ *
  * Dart Pub natively queries:
  *   GET /pub/api/packages/:packageName
  *   GET /pub/packages/:packageName/versions/:version.tar.gz
- * 
+ *
  * Enforces Least Privilege:
  * 1. Authenticates developer via Bearer token (from `dart pub token add`).
  * 2. Strictly restricts queries to `fsa_superapp_flutter*` packages.
@@ -88,8 +88,13 @@ export class PubRegistryProxyController {
    * Rejects any attempt to query internal banking packages or probe other repositories.
    */
   private assertPackageAllowed(packageName: string) {
-    if (!this.allowedPackages.has(packageName) && !packageName.startsWith('fsa_superapp_flutter')) {
-      this.logger.warn(`[LeastPrivilege Violation] Blocked unauthorized Pub request for: "${packageName}"`);
+    if (
+      !this.allowedPackages.has(packageName) &&
+      !packageName.startsWith('fsa_superapp_flutter')
+    ) {
+      this.logger.warn(
+        `[LeastPrivilege Violation] Blocked unauthorized Pub request for: "${packageName}"`,
+      );
       throw new ForbiddenException({
         statusCode: 403,
         error: 'Forbidden',
@@ -123,7 +128,9 @@ export class PubRegistryProxyController {
         return;
       } catch (err: unknown) {
         if (process.env.NODE_ENV === 'production') {
-          throw new UnauthorizedException('Invalid or expired developer token.');
+          throw new UnauthorizedException(
+            'Invalid or expired developer token.',
+          );
         }
       }
     }
@@ -134,13 +141,19 @@ export class PubRegistryProxyController {
       );
     }
 
-    this.logger.debug('Proceeding in dev mode without verified token for Flutter package.');
+    this.logger.debug(
+      'Proceeding in dev mode without verified token for Flutter package.',
+    );
   }
 
   /**
    * Fetches package metadata from Nexus pub-hosted repository and rewrites archive URLs.
    */
-  private async handleMetadata(packageName: string, req: Request, res: Response) {
+  private async handleMetadata(
+    packageName: string,
+    req: Request,
+    res: Response,
+  ) {
     const nexusBase = this.getNexusBaseUrl();
     const nexusAuth = this.getNexusAuthHeader();
     const upstreamUrl = `${nexusBase}/repository/pub-hosted/api/packages/${packageName}`;
@@ -154,7 +167,7 @@ export class PubRegistryProxyController {
       });
 
       if (upstreamRes.ok) {
-        const metadata = (await upstreamRes.json()) as any;
+        const metadata = await upstreamRes.json();
         const publicPubBase = this.getPublicPubBase(req);
 
         // Rewrite archive_url to point back to our /pub gateway
@@ -187,13 +200,19 @@ export class PubRegistryProxyController {
       return res.json(localMetadata);
     }
 
-    throw new NotFoundException(`Flutter package "${packageName}" not found on repository storage.`);
+    throw new NotFoundException(
+      `Flutter package "${packageName}" not found on repository storage.`,
+    );
   }
 
   /**
    * Streams package archive (.tar.gz) from internal Nexus.
    */
-  private async handleArchive(packageName: string, archiveFilename: string, res: Response) {
+  private async handleArchive(
+    packageName: string,
+    archiveFilename: string,
+    res: Response,
+  ) {
     const nexusBase = this.getNexusBaseUrl();
     const nexusAuth = this.getNexusAuthHeader();
     const upstreamUrl = `${nexusBase}/repository/pub-hosted/packages/${packageName}/versions/${archiveFilename}`;
@@ -205,7 +224,10 @@ export class PubRegistryProxyController {
 
       if (upstreamRes.ok) {
         res.setHeader('Content-Type', 'application/octet-stream');
-        res.setHeader('Content-Disposition', `attachment; filename="${archiveFilename}"`);
+        res.setHeader(
+          'Content-Disposition',
+          `attachment; filename="${archiveFilename}"`,
+        );
         const len = upstreamRes.headers.get('content-length');
         if (len) res.setHeader('Content-Length', len);
 
@@ -222,7 +244,9 @@ export class PubRegistryProxyController {
       this.logger.debug(`Could not stream archive from ${upstreamUrl}: ${msg}`);
     }
 
-    throw new NotFoundException(`Archive "${archiveFilename}" not found on repository storage.`);
+    throw new NotFoundException(
+      `Archive "${archiveFilename}" not found on repository storage.`,
+    );
   }
 
   private getNexusBaseUrl(): string {
@@ -248,7 +272,10 @@ export class PubRegistryProxyController {
 
   private getPublicPubBase(req: Request): string {
     const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
-    const host = req.headers['x-forwarded-host'] || req.get('host') || 'app.fintechcenterfsa.com';
+    const host =
+      req.headers['x-forwarded-host'] ||
+      req.get('host') ||
+      'app.fintechcenterfsa.com';
     return `${proto}://${host}/pub`;
   }
 

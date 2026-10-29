@@ -329,7 +329,11 @@ export class GitIntegrationService {
           try {
             const user = process.env.USERNAME || process.env.USER;
             if (user) {
-              execFileSync('icacls', [tempKeyFile, '/inheritance:r', '/grant:r', `${user}:R`], { stdio: 'pipe' });
+              execFileSync(
+                'icacls',
+                [tempKeyFile, '/inheritance:r', '/grant:r', `${user}:R`],
+                { stdio: 'pipe' },
+              );
             }
           } catch {}
         }
@@ -395,8 +399,12 @@ export class GitIntegrationService {
   }
 
   getDeployKey(): GitDeployKeyInfo {
-    const envPublicKey = this.configService.get<string>('GIT_DEPLOY_PUBLIC_KEY');
-    const envFingerprint = this.configService.get<string>('GIT_DEPLOY_KEY_FINGERPRINT');
+    const envPublicKey = this.configService.get<string>(
+      'GIT_DEPLOY_PUBLIC_KEY',
+    );
+    const envFingerprint = this.configService.get<string>(
+      'GIT_DEPLOY_KEY_FINGERPRINT',
+    );
 
     if (envPublicKey) {
       return {
@@ -415,7 +423,9 @@ export class GitIntegrationService {
         const pubKey = fs.readFileSync(pubPath, 'utf8').trim();
         let fp = DEFAULT_PLATFORM_DEPLOY_KEY_FINGERPRINT;
         try {
-          const raw = execFileSync('ssh-keygen', ['-lf', pubPath]).toString().trim();
+          const raw = execFileSync('ssh-keygen', ['-lf', pubPath])
+            .toString()
+            .trim();
           const match = raw.match(/SHA256:[a-zA-Z0-9+/=]+/);
           if (match) fp = match[0];
         } catch {
@@ -428,7 +438,9 @@ export class GitIntegrationService {
           title: 'DSP SuperApp Integration Deploy Key',
         };
       } catch (err) {
-        this.logger.warn(`Failed reading deploy_key.pub: ${(err as Error).message}`);
+        this.logger.warn(
+          `Failed reading deploy_key.pub: ${(err as Error).message}`,
+        );
       }
     }
 
@@ -524,7 +536,9 @@ export class GitIntegrationService {
   }
 
   getDeployPrivateKey(): string {
-    const envPrivateKey = this.configService.get<string>('GIT_DEPLOY_PRIVATE_KEY');
+    const envPrivateKey = this.configService.get<string>(
+      'GIT_DEPLOY_PRIVATE_KEY',
+    );
     if (envPrivateKey) return envPrivateKey.trim();
 
     const secretsDir = path.resolve(process.cwd(), 'secrets');
@@ -533,7 +547,9 @@ export class GitIntegrationService {
       try {
         return fs.readFileSync(keyPath, 'utf8').trim();
       } catch (err) {
-        this.logger.warn(`Failed reading deploy_key private key: ${(err as Error).message}`);
+        this.logger.warn(
+          `Failed reading deploy_key private key: ${(err as Error).message}`,
+        );
       }
     }
     return '';

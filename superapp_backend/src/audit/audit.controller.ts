@@ -1,4 +1,10 @@
-import { Controller, Get, Param, Query, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Query,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from './audit.service';
 import { AuditLog } from './entities/audit-log.entity';
 import { QueryAuditLogDto } from './dto/query-audit-log.dto';

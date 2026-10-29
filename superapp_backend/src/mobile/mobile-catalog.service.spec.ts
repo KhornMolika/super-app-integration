@@ -49,7 +49,9 @@ describe('toCatalogItem', () => {
   });
 
   it('adds nativeSdk.available only for NATIVE_SDK apps', () => {
-    expect(toCatalogItem(makeApp({ integrationMethod: 'NATIVE_SDK' })).nativeSdk).toEqual({ available: true });
+    expect(
+      toCatalogItem(makeApp({ integrationMethod: 'NATIVE_SDK' })).nativeSdk,
+    ).toEqual({ available: true });
     expect(toCatalogItem(makeApp()).nativeSdk).toBeUndefined();
   });
 });
@@ -72,9 +74,14 @@ describe('MobileCatalogService.list', () => {
   }
 
   it('restricts to ACTIVE, TESTING, and APPROVED statuses and returns catalog items', async () => {
-    const { repo, calls } = qbFor([makeApp(), makeApp({ id: 'id-2', integrationMethod: 'NATIVE_SDK' })]);
+    const { repo, calls } = qbFor([
+      makeApp(),
+      makeApp({ id: 'id-2', integrationMethod: 'NATIVE_SDK' }),
+    ]);
     const page = await new MobileCatalogService(repo).list(undefined, 20, 40);
-    expect(calls.where[0][1]).toEqual({ statuses: ['ACTIVE', 'TESTING', 'APPROVED'] });
+    expect(calls.where[0][1]).toEqual({
+      statuses: ['ACTIVE', 'TESTING', 'APPROVED'],
+    });
     expect(calls.take).toBe(20);
     expect(calls.skip).toBe(40);
     expect(page).toMatchObject({ total: 7, limit: 20, offset: 40 });

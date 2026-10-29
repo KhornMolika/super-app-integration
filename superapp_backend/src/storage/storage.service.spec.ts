@@ -21,8 +21,10 @@ describe('StorageService & Helpers', () => {
         MINIO_ENDPOINT: 'localhost',
         MINIO_PORT: '9000',
         MINIO_USE_SSL: 'false',
-        MINIO_ACCESS_KEY: process.env.MINIO_ACCESS_KEY || 'test-storage-access-key',
-        MINIO_SECRET_KEY: process.env.MINIO_SECRET_KEY || 'test-storage-secret-key',
+        MINIO_ACCESS_KEY:
+          process.env.MINIO_ACCESS_KEY || 'test-storage-access-key',
+        MINIO_SECRET_KEY:
+          process.env.MINIO_SECRET_KEY || 'test-storage-secret-key',
         MINIO_BUCKET_NAME: 'mini-app-assets',
         MINIO_PACKAGE_SUBMISSIONS_BUCKET: 'package-submissions',
         MINIO_SDK_SUBMISSIONS_BUCKET: 'sdk-submissions',
@@ -46,10 +48,16 @@ describe('StorageService & Helpers', () => {
     }).compile();
 
     service = module.get<StorageService>(StorageService);
-    sanitizerHelper = module.get<ArchiveSanitizerHelper>(ArchiveSanitizerHelper);
-    bucketLifecycleHelper = module.get<BucketLifecycleHelper>(BucketLifecycleHelper);
+    sanitizerHelper = module.get<ArchiveSanitizerHelper>(
+      ArchiveSanitizerHelper,
+    );
+    bucketLifecycleHelper = module.get<BucketLifecycleHelper>(
+      BucketLifecycleHelper,
+    );
     presignedUrlHelper = module.get<PresignedUrlHelper>(PresignedUrlHelper);
-    quarantineHelper = module.get<QuarantineStorageHelper>(QuarantineStorageHelper);
+    quarantineHelper = module.get<QuarantineStorageHelper>(
+      QuarantineStorageHelper,
+    );
   });
 
   it('should be defined and initialize bucket configurations', () => {
@@ -102,14 +110,19 @@ describe('StorageService & Helpers', () => {
     it('resolves raw local logo key to presigned url', async () => {
       jest
         .spyOn(presignedUrlHelper, 'getPresignedUrl')
-        .mockResolvedValue('http://localhost:9000/mini-app-assets/logo.png?X-Amz-Signature=123');
+        .mockResolvedValue(
+          'http://localhost:9000/mini-app-assets/logo.png?X-Amz-Signature=123',
+        );
 
-      const url = await service.resolveLogoUrl('mini-app-assets/my-app/logo.png');
+      const url = await service.resolveLogoUrl(
+        'mini-app-assets/my-app/logo.png',
+      );
       expect(url).toContain('X-Amz-Signature');
     });
 
     it('preserves existing presigned url with signature', async () => {
-      const existing = 'https://app.fintechcenterfsa.com/minio/mini-app-assets/logo.png?X-Amz-Signature=existing';
+      const existing =
+        'https://app.fintechcenterfsa.com/minio/mini-app-assets/logo.png?X-Amz-Signature=existing';
       const url = await service.resolveLogoUrl(existing);
       expect(url).toBe(existing);
     });
@@ -121,11 +134,17 @@ describe('StorageService & Helpers', () => {
   });
 
   describe('Backoffice User Avatar Management', () => {
-    const pngMagicHeader = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00]);
+    const pngMagicHeader = Buffer.from([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00,
+    ]);
 
     it('successfully uploads valid PNG avatar and prunes existing avatars in user folder', async () => {
-      const putSpy = jest.spyOn((service as any).minioClient, 'putObject').mockResolvedValue(undefined as any);
-      const removeSpy = jest.spyOn((service as any).minioClient, 'removeObject').mockResolvedValue(undefined as any);
+      const putSpy = jest
+        .spyOn((service as any).minioClient, 'putObject')
+        .mockResolvedValue(undefined as any);
+      const removeSpy = jest
+        .spyOn((service as any).minioClient, 'removeObject')
+        .mockResolvedValue(undefined as any);
 
       // Mock listObjectsV2 stream
       const mockStream = {
@@ -135,7 +154,9 @@ describe('StorageService & Helpers', () => {
           return mockStream;
         }),
       };
-      jest.spyOn((service as any).minioClient, 'listObjectsV2').mockReturnValue(mockStream as any);
+      jest
+        .spyOn((service as any).minioClient, 'listObjectsV2')
+        .mockReturnValue(mockStream);
 
       const result = await service.uploadBackofficeUserAvatar('user-123', {
         buffer: pngMagicHeader,
@@ -144,8 +165,13 @@ describe('StorageService & Helpers', () => {
         mimetype: 'image/png',
       });
 
-      expect(removeSpy).toHaveBeenCalledWith('backoffice-user-media', 'avatars/user-123/old-avatar.png');
-      expect(result.url).toMatch(/^\/api\/backoffice-user-media\/avatars\/user-123\//);
+      expect(removeSpy).toHaveBeenCalledWith(
+        'backoffice-user-media',
+        'avatars/user-123/old-avatar.png',
+      );
+      expect(result.url).toMatch(
+        /^\/api\/backoffice-user-media\/avatars\/user-123\//,
+      );
       expect(result.key).toMatch(/^avatars\/user-123\/[a-f0-9-]+\.png$/);
       expect(putSpy).toHaveBeenCalledWith(
         'backoffice-user-media',
@@ -177,10 +203,17 @@ describe('StorageService & Helpers', () => {
     });
 
     it('successfully deletes avatar object from backoffice-user-media', async () => {
-      const removeSpy = jest.spyOn((service as any).minioClient, 'removeObject').mockResolvedValue(undefined as any);
+      const removeSpy = jest
+        .spyOn((service as any).minioClient, 'removeObject')
+        .mockResolvedValue(undefined as any);
 
-      await service.deleteBackofficeUserAvatar('/api/backoffice-user-media/avatars/user-123/abc.png');
-      expect(removeSpy).toHaveBeenCalledWith('backoffice-user-media', 'avatars/user-123/abc.png');
+      await service.deleteBackofficeUserAvatar(
+        '/api/backoffice-user-media/avatars/user-123/abc.png',
+      );
+      expect(removeSpy).toHaveBeenCalledWith(
+        'backoffice-user-media',
+        'avatars/user-123/abc.png',
+      );
     });
   });
 });

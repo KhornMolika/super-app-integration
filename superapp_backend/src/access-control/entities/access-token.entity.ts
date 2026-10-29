@@ -32,7 +32,7 @@ export class AccessToken {
   @Column()
   tokenHash!: string;
 
-  @Column({ type: 'jsonb', default: () => "'[\"sdk:read\", \"packages:read\"]'" })
+  @Column({ type: 'jsonb', default: () => '\'["sdk:read", "packages:read"]\'' })
   scopes!: string[];
 
   @Column({ type: 'timestamptz', nullable: true })

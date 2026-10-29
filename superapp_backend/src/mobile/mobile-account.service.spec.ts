@@ -30,6 +30,7 @@ export async function buildAccount() {
   };
   const auth = new MobileAuthService(
     users as any,
+    new FakeRepo() as any,
     new FakeRepo<EmailVerificationToken>() as any,
     rTokens as any,
     passwords,

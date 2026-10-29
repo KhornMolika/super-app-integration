@@ -37,7 +37,6 @@ describe('GitIntegrationService & Providers', () => {
     gitlabProvider = module.get<GitLabProvider>(GitLabProvider);
   });
 
-
   describe('URL Auto-Detection', () => {
     it('should auto-detect GitHub HTTPS URL', () => {
       const result = service.detect(

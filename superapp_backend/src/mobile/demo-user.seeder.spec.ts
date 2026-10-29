@@ -31,21 +31,35 @@ describe('DemoUserSeeder', () => {
     expect(user.position).toBeTruthy();
     expect(user.organizationUnit).toBeTruthy();
     expect(user.staffId).toMatch(/^[A-Za-z0-9-]+$/);
-    expect(await passwords.verify(DEFAULT_DEMO_USER_PASSWORD, user.passwordHash)).toBe(true);
-    expect(passwords.validatePolicy(DEFAULT_DEMO_USER_PASSWORD, DEFAULT_DEMO_USER_EMAIL)).toBeNull();
+    expect(
+      await passwords.verify(DEFAULT_DEMO_USER_PASSWORD, user.passwordHash),
+    ).toBe(true);
+    expect(
+      passwords.validatePolicy(
+        DEFAULT_DEMO_USER_PASSWORD,
+        DEFAULT_DEMO_USER_EMAIL,
+      ),
+    ).toBeNull();
   });
 
   it('leaves an existing account alone, so changes made in the app survive restarts', async () => {
-    users.rows.push({ id: 'u1', email: DEFAULT_DEMO_USER_EMAIL, passwordHash: 'changed-in-app' } as EndUser);
+    users.rows.push({
+      id: 'u1',
+      email: DEFAULT_DEMO_USER_EMAIL,
+      passwordHash: 'changed-in-app',
+    } as EndUser);
     expect(await seeder.seed(dev)).toBe(false);
     expect(users.rows).toHaveLength(1);
     expect(users.rows[0].passwordHash).toBe('changed-in-app');
   });
 
-  it.each(['production', 'test', undefined])('does nothing when NODE_ENV is %s', async (nodeEnv) => {
-    expect(await seeder.seed({ NODE_ENV: nodeEnv } as NodeJS.ProcessEnv)).toBe(false);
-    expect(users.rows).toHaveLength(0);
-  });
+  it.each(['production', 'test', undefined])(
+    'does nothing when NODE_ENV is %s',
+    async (nodeEnv) => {
+      expect(await seeder.seed({ NODE_ENV: nodeEnv })).toBe(false);
+      expect(users.rows).toHaveLength(0);
+    },
+  );
 
   it('uses MOBILE_DEMO_USER_EMAIL / MOBILE_DEMO_USER_PASSWORD when set, lowercasing the email', async () => {
     const env = {
@@ -55,11 +69,19 @@ describe('DemoUserSeeder', () => {
     } as NodeJS.ProcessEnv;
     expect(await seeder.seed(env)).toBe(true);
     expect(users.rows[0].email).toBe('tester@example.com');
-    expect(await passwords.verify('another-long-password', users.rows[0].passwordHash)).toBe(true);
+    expect(
+      await passwords.verify(
+        'another-long-password',
+        users.rows[0].passwordHash,
+      ),
+    ).toBe(true);
   });
 
   it('refuses a configured password that breaks the policy', async () => {
-    const env = { ...dev, MOBILE_DEMO_USER_PASSWORD: 'short' } as NodeJS.ProcessEnv;
+    const env = {
+      ...dev,
+      MOBILE_DEMO_USER_PASSWORD: 'short',
+    } as NodeJS.ProcessEnv;
     await expect(seeder.seed(env)).rejects.toThrow('MOBILE_DEMO_USER_PASSWORD');
     expect(users.rows).toHaveLength(0);
   });
@@ -77,7 +99,9 @@ describe('DemoUserSeeder', () => {
   });
 
   it('never fails application start-up', async () => {
-    const broken = { findOne: jest.fn(async () => Promise.reject(new Error('db down'))) };
+    const broken = {
+      findOne: jest.fn(async () => Promise.reject(new Error('db down'))),
+    };
     seeder = new DemoUserSeeder(broken as any, passwords);
     const previous = process.env.NODE_ENV;
     process.env.NODE_ENV = 'development';

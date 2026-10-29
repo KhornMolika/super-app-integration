@@ -422,9 +422,7 @@ export class TelegramApiHelper {
         process.env.NEXUS_USERNAME ||
         'admin';
       const nexusPass =
-        process.env.NEXUS_ADMIN_PASSWORD ||
-        process.env.NEXUS_PASSWORD ||
-        '';
+        process.env.NEXUS_ADMIN_PASSWORD || process.env.NEXUS_PASSWORD || '';
       const nexusAuthHeader = nexusPass
         ? `Basic ${Buffer.from(`${nexusUser}:${nexusPass}`).toString('base64')}`
         : '';
@@ -437,11 +435,17 @@ export class TelegramApiHelper {
 
       // Sanitize incoming APK URL if it uses Docker internal hostnames
       const sanitizedIncomingUrl = apkUrlOrPath?.startsWith('http')
-        ? apkUrlOrPath.replace(/https?:\/\/host\.docker\.internal:8081/, nexusBase)
+        ? apkUrlOrPath.replace(
+            /https?:\/\/host\.docker\.internal:8081/,
+            nexusBase,
+          )
         : null;
 
       // Ordered list of authoritative download endpoints
-      const downloadEndpoints: { url: string; headers?: Record<string, string> }[] = [
+      const downloadEndpoints: {
+        url: string;
+        headers?: Record<string, string>;
+      }[] = [
         // 1. Direct Backend download endpoint on port 3000 (ApkDownloadController)
         {
           url: `http://localhost:3000/api/download-apk?type=test&version=${encodeURIComponent(normVer)}&appName=superapp`,
@@ -456,7 +460,9 @@ export class TelegramApiHelper {
               {
                 url: sanitizedIncomingUrl,
                 headers:
-                  nexusAuthHeader && (sanitizedIncomingUrl.includes(':8081') || sanitizedIncomingUrl.includes('nexus'))
+                  nexusAuthHeader &&
+                  (sanitizedIncomingUrl.includes(':8081') ||
+                    sanitizedIncomingUrl.includes('nexus'))
                     ? { Authorization: nexusAuthHeader }
                     : undefined,
               },
@@ -465,19 +471,27 @@ export class TelegramApiHelper {
         // 3. Direct Sonatype Nexus test builds repository (release APK preferred, debug APK fallback)
         {
           url: `${nexusBase}/repository/apk-test-builds/superapp/${normVer}/app-release.apk`,
-          headers: nexusAuthHeader ? { Authorization: nexusAuthHeader } : undefined,
+          headers: nexusAuthHeader
+            ? { Authorization: nexusAuthHeader }
+            : undefined,
         },
         {
           url: `${nexusBase}/repository/apk-test-builds/superapp/${normVer}/app-debug.apk`,
-          headers: nexusAuthHeader ? { Authorization: nexusAuthHeader } : undefined,
+          headers: nexusAuthHeader
+            ? { Authorization: nexusAuthHeader }
+            : undefined,
         },
         {
           url: `${nexusBase}/repository/apk-test-builds/superapp/latest/app-release.apk`,
-          headers: nexusAuthHeader ? { Authorization: nexusAuthHeader } : undefined,
+          headers: nexusAuthHeader
+            ? { Authorization: nexusAuthHeader }
+            : undefined,
         },
         {
           url: `${nexusBase}/repository/apk-test-builds/superapp/latest/app-debug.apk`,
-          headers: nexusAuthHeader ? { Authorization: nexusAuthHeader } : undefined,
+          headers: nexusAuthHeader
+            ? { Authorization: nexusAuthHeader }
+            : undefined,
         },
       ];
 
@@ -504,7 +518,8 @@ export class TelegramApiHelper {
             }
           }
         } catch (fetchErr: unknown) {
-          const msg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+          const msg =
+            fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
           logger?.debug?.(`Failed to fetch APK from ${endpoint.url}: ${msg}`);
         }
       }

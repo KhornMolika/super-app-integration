@@ -20,8 +20,16 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request, Response } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { AuthRateLimitGuard, AuthRateLimiter, RateLimit, RateLimitedException } from './auth-rate-limiter';
-import { EndUserAuthGuard, OptionalEndUserAuthGuard } from './end-user-auth.guard';
+import {
+  AuthRateLimitGuard,
+  AuthRateLimiter,
+  RateLimit,
+  RateLimitedException,
+} from './auth-rate-limiter';
+import {
+  EndUserAuthGuard,
+  OptionalEndUserAuthGuard,
+} from './end-user-auth.guard';
 import { MobileAppConfigService } from './mobile-app-config.service';
 import { AVATAR_MAX_BYTES, MobileAvatarService } from './mobile-avatar.service';
 import { MobileAccountService } from './mobile-account.service';
@@ -51,7 +59,7 @@ export class MobileController {
     private readonly profiles: MobileProfileService,
     private readonly avatars: MobileAvatarService,
     private readonly account: MobileAccountService,
-  ) { }
+  ) {}
 
   @Post('auth/register')
   @HttpCode(202)
@@ -150,8 +158,15 @@ export class MobileController {
   @HttpCode(200)
   @UseGuards(EndUserAuthGuard, AuthRateLimitGuard)
   @RateLimit({ scope: 'avatar', ipMax: 30, userMax: 10 })
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: AVATAR_MAX_BYTES, files: 1 } }))
-  async uploadAvatar(@Req() req: Request, @UploadedFile() file?: Express.Multer.File) {
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: AVATAR_MAX_BYTES, files: 1 },
+    }),
+  )
+  async uploadAvatar(
+    @Req() req: Request,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
     return toProfile(await this.avatars.upload(req.endUser!.id, file));
   }
 
@@ -173,7 +188,10 @@ export class MobileController {
       res.status(304);
       return undefined;
     }
-    return new StreamableFile(a.body, { type: a.contentType, length: a.body.length });
+    return new StreamableFile(a.body, {
+      type: a.contentType,
+      length: a.body.length,
+    });
   }
 
   @Delete('me/avatar')
@@ -186,7 +204,11 @@ export class MobileController {
   @Get('mini-apps')
   @UseGuards(OptionalEndUserAuthGuard)
   miniApps(@Query() query: CatalogQueryDto, @Req() req: Request) {
-    const rawHost = req.headers['x-forwarded-host'] || req.headers.host || req.hostname || 'localhost:3000';
+    const rawHost =
+      req.headers['x-forwarded-host'] ||
+      req.headers.host ||
+      req.hostname ||
+      'localhost:3000';
     const clientHost = String(rawHost).split(':')[0];
     return this.catalog.list(query, clientHost);
   }
@@ -210,7 +232,13 @@ export class MobileController {
   @UseGuards(AuthRateLimitGuard)
   @RateLimit({ scope: 'login', ipMax: 15 })
   async ssoCallback(
-    @Body() body: { provider: string; email: string; name?: string; externalId?: string },
+    @Body()
+    body: {
+      provider: string;
+      email: string;
+      name?: string;
+      externalId?: string;
+    },
     @Headers('user-agent') userAgent?: string,
   ) {
     return this.auth.handleSsoLogin(body.provider, body, userAgent);

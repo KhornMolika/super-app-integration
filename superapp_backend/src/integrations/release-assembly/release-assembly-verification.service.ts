@@ -206,7 +206,10 @@ export class ReleaseAssemblyVerificationService {
         if (!fs.existsSync(dataDir)) {
           fs.mkdirSync(dataDir, { recursive: true });
         }
-        const releaseManifestPath = path.join(dataDir, 'super_app_release.json');
+        const releaseManifestPath = path.join(
+          dataDir,
+          'super_app_release.json',
+        );
         fs.writeFileSync(
           releaseManifestPath,
           JSON.stringify(manifest, null, 2),
@@ -220,9 +223,13 @@ export class ReleaseAssemblyVerificationService {
       // Automatically sync and inject all verified MiniApp package dependencies into pubspec.yaml
       try {
         await this.pubspecService.syncAllApprovedMiniApps();
-        this.logger.log('Synchronized SuperApp pubspec.yaml dependencies for release assembly.');
+        this.logger.log(
+          'Synchronized SuperApp pubspec.yaml dependencies for release assembly.',
+        );
       } catch (err: any) {
-        this.logger.warn(`Pubspec synchronization warning during release assembly: ${err.message}`);
+        this.logger.warn(
+          `Pubspec synchronization warning during release assembly: ${err.message}`,
+        );
       }
 
       // Integration configs of the apps in this release (to find the codegen MR for the build).
@@ -268,13 +275,11 @@ export class ReleaseAssemblyVerificationService {
       });
 
       // Trigger Jenkins SuperApp Web Sandbox build pipeline
-      this.jenkinsService
-        .triggerSuperAppSandboxBuild()
-        .catch((e: any) => {
-          this.logger.warn(
-            `Failed to trigger superapp-sandbox-build: ${e.message}`,
-          );
-        });
+      this.jenkinsService.triggerSuperAppSandboxBuild().catch((e: any) => {
+        this.logger.warn(
+          `Failed to trigger superapp-sandbox-build: ${e.message}`,
+        );
+      });
     }
 
     const nexusBase = (
@@ -331,8 +336,14 @@ export class ReleaseAssemblyVerificationService {
       if (body.status === 'FAILED') {
         app.lifecycleStatus = 'BUILD_FAILED';
         app.buildStatus = 'FAILED';
-        app.buildError = body.details || body.errorMessage || `Stage ${body.stageName || body.stageId} failed.`;
-      } else if (body.stageId === 'publish' && (body.status === 'COMPLETED' || body.status === 'SUCCESS')) {
+        app.buildError =
+          body.details ||
+          body.errorMessage ||
+          `Stage ${body.stageName || body.stageId} failed.`;
+      } else if (
+        body.stageId === 'publish' &&
+        (body.status === 'COMPLETED' || body.status === 'SUCCESS')
+      ) {
         app.lifecycleStatus = 'TESTING';
         app.buildStatus = 'COMPLETED';
         app.buildError = undefined;
@@ -357,9 +368,15 @@ export class ReleaseAssemblyVerificationService {
    */
   private async resolveBuildingApps(body: any): Promise<MiniApp[]> {
     const rawVersion = body.releaseVersion || '';
-    const vPrefixed = rawVersion.startsWith('v') ? rawVersion : `v${rawVersion}`;
-    const unPrefixed = rawVersion.startsWith('v') ? rawVersion.slice(1) : rawVersion;
-    const candidateVersions = [rawVersion, vPrefixed, unPrefixed].filter(Boolean);
+    const vPrefixed = rawVersion.startsWith('v')
+      ? rawVersion
+      : `v${rawVersion}`;
+    const unPrefixed = rawVersion.startsWith('v')
+      ? rawVersion.slice(1)
+      : rawVersion;
+    const candidateVersions = [rawVersion, vPrefixed, unPrefixed].filter(
+      Boolean,
+    );
 
     const whereConditions: any[] = [
       { status: 'BUILDING' },
@@ -380,7 +397,9 @@ export class ReleaseAssemblyVerificationService {
         where: [
           { appId: body.appName },
           { name: body.appName },
-          ...(body.appName.match(/^[0-9a-f-]{36}$/i) ? [{ id: body.appName }] : []),
+          ...(body.appName.match(/^[0-9a-f-]{36}$/i)
+            ? [{ id: body.appName }]
+            : []),
         ],
         relations: { owner: true },
       });
@@ -536,7 +555,8 @@ export class ReleaseAssemblyVerificationService {
 
         // Resolve App Owner and notify
         let targetOwnerId = app.ownerId || app.owner?.id;
-        let targetEmail = app.supportEmail || app.owner?.email || (app as any).ownerEmail;
+        let targetEmail =
+          app.supportEmail || app.owner?.email || (app as any).ownerEmail;
 
         if (!targetOwnerId && targetEmail) {
           const ownerUser = await this.userRepository.findOne({
@@ -563,7 +583,8 @@ export class ReleaseAssemblyVerificationService {
               apkUrl: finalApkUrl,
               nexusApkUrl: sanitizedNexusUrl,
               buildType: body.buildType || 'debug',
-              teamTelegramChatId: app.alertTelegramChatId || (app as any).teamTelegramChatId,
+              teamTelegramChatId:
+                app.alertTelegramChatId || (app as any).teamTelegramChatId,
             },
           );
         }
@@ -618,7 +639,9 @@ export class ReleaseAssemblyVerificationService {
             version: effectiveVersion,
             apkUrl: standaloneApkUrl,
             buildType: body.buildType || 'release',
-            teamTelegramChatId: fallbackApp?.alertTelegramChatId || (fallbackApp as any)?.teamTelegramChatId,
+            teamTelegramChatId:
+              fallbackApp?.alertTelegramChatId ||
+              (fallbackApp as any)?.teamTelegramChatId,
           },
         );
       }
@@ -694,7 +717,8 @@ export class ReleaseAssemblyVerificationService {
 
       // Resolve App Owner and dispatch notifications
       let targetOwnerId = app.ownerId || app.owner?.id;
-      let targetEmail = app.supportEmail || app.owner?.email || (app as any).ownerEmail;
+      let targetEmail =
+        app.supportEmail || app.owner?.email || (app as any).ownerEmail;
 
       if (!targetOwnerId && targetEmail) {
         const ownerUser = await this.userRepository.findOne({
@@ -721,7 +745,8 @@ export class ReleaseAssemblyVerificationService {
             buildType,
             error: errorMessage,
             failedAt: new Date().toISOString(),
-            teamTelegramChatId: app.alertTelegramChatId || (app as any).teamTelegramChatId,
+            teamTelegramChatId:
+              app.alertTelegramChatId || (app as any).teamTelegramChatId,
           },
         );
       }
@@ -791,7 +816,8 @@ export class ReleaseAssemblyVerificationService {
     if (isFailure) {
       updatePayload.status = 'BUILD_FAILED';
       updatePayload.buildStatus = 'FAILED';
-      updatePayload.buildError = dto.details || `Stage ${dto.stageName || dto.stageId} failed.`;
+      updatePayload.buildError =
+        dto.details || `Stage ${dto.stageName || dto.stageId} failed.`;
     }
 
     const result = await this.miniappRepository

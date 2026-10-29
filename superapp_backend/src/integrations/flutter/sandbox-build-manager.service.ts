@@ -58,7 +58,11 @@ export class SandboxBuildManagerService {
    */
   getStatus(): SandboxBuildStatus {
     // Timeout safeguard: If stuck in BUILDING for more than 4 minutes, auto-reset to IDLE/FAILED
-    if (this.state === 'BUILDING' && this.lastBuildStartTime && Date.now() - this.lastBuildStartTime > 240000) {
+    if (
+      this.state === 'BUILDING' &&
+      this.lastBuildStartTime &&
+      Date.now() - this.lastBuildStartTime > 240000
+    ) {
       this.state = 'FAILED';
       this.message = 'Build operation timed out after 4 minutes.';
       this.appendLog(`⚠️ ${this.message}`);
@@ -100,7 +104,8 @@ export class SandboxBuildManagerService {
       }
 
       try {
-        const jStatus = await this.jenkinsService.getSandboxBuildStatusFromJenkins();
+        const jStatus =
+          await this.jenkinsService.getSandboxBuildStatusFromJenkins();
         if (jStatus.available) {
           if (jStatus.consoleText && jStatus.consoleText !== lastSeenConsole) {
             const newLines = jStatus.consoleText
@@ -120,17 +125,23 @@ export class SandboxBuildManagerService {
             this.lastBuildTime = new Date().toISOString();
 
             if (jStatus.result === 'SUCCESS') {
-              this.appendLog(`✅ Jenkins superapp-sandbox-build completed successfully in ${(this.durationMs / 1000).toFixed(1)}s.`);
+              this.appendLog(
+                `✅ Jenkins superapp-sandbox-build completed successfully in ${(this.durationMs / 1000).toFixed(1)}s.`,
+              );
               if (!this.currentProcess) {
                 this.state = 'SUCCESS';
                 this.message = `Jenkins superapp-sandbox-build completed successfully in ${(this.durationMs / 1000).toFixed(1)}s.`;
                 this.appendLog(`✅ ${this.message}`);
                 this.logger.log(this.message);
               } else {
-                this.appendLog('Local Flutter Web sandbox compilation is progressing in background...');
+                this.appendLog(
+                  'Local Flutter Web sandbox compilation is progressing in background...',
+                );
               }
             } else if (jStatus.result === 'FAILURE') {
-              this.appendLog('❌ Jenkins superapp-sandbox-build pipeline failed. Awaiting local fallback build...');
+              this.appendLog(
+                '❌ Jenkins superapp-sandbox-build pipeline failed. Awaiting local fallback build...',
+              );
             } else {
               this.appendLog('Jenkins sandbox build completed.');
             }
@@ -143,11 +154,14 @@ export class SandboxBuildManagerService {
   /**
    * Triggers compilation of Flutter Web Sandbox via Jenkins pipeline, with local PowerShell fallback.
    */
-  async triggerBuild(triggeredBy: string = 'SuperApp Admin'): Promise<{ success: boolean; message: string }> {
+  async triggerBuild(
+    triggeredBy: string = 'SuperApp Admin',
+  ): Promise<{ success: boolean; message: string }> {
     if (this.state === 'BUILDING') {
       return {
         success: false,
-        message: 'A sandbox build is already in progress. Please wait for it to complete.',
+        message:
+          'A sandbox build is already in progress. Please wait for it to complete.',
       };
     }
 
@@ -159,13 +173,18 @@ export class SandboxBuildManagerService {
     this.appendLog(`=== Sandbox Build Started by ${triggeredBy} ===`);
 
     try {
-      this.appendLog('Connecting to Jenkins to trigger superapp-sandbox-build...');
-      const jenkinsRes = await this.jenkinsService.triggerSuperAppSandboxBuild();
+      this.appendLog(
+        'Connecting to Jenkins to trigger superapp-sandbox-build...',
+      );
+      const jenkinsRes =
+        await this.jenkinsService.triggerSuperAppSandboxBuild();
       if (jenkinsRes.success) {
         this.appendLog(`✅ Jenkins pipeline triggered: ${jenkinsRes.message}`);
         this.monitorJenkinsBuild(this.lastBuildStartTime);
       } else {
-        this.appendLog(`[WARN] Jenkins trigger returned: ${jenkinsRes.message}`);
+        this.appendLog(
+          `[WARN] Jenkins trigger returned: ${jenkinsRes.message}`,
+        );
       }
     } catch (err: any) {
       this.appendLog(`[WARN] Failed to trigger Jenkins: ${err.message}`);
@@ -181,7 +200,8 @@ export class SandboxBuildManagerService {
 
     if (!resolvedScript) {
       this.state = 'FAILED';
-      this.message = 'build-sandbox.ps1 script not found on host filesystem and Jenkins trigger failed.';
+      this.message =
+        'build-sandbox.ps1 script not found on host filesystem and Jenkins trigger failed.';
       this.appendLog(`ERROR: ${this.message}`);
       return { success: false, message: this.message };
     }
@@ -197,19 +217,25 @@ export class SandboxBuildManagerService {
       const privateKeys = new Set<string>();
 
       for (const app of allMiniApps) {
-        const activeKey = extractDecryptedDeployKey(app.integrationConfig as any);
+        const activeKey = extractDecryptedDeployKey(app.integrationConfig);
         if (activeKey && activeKey.trim()) {
           privateKeys.add(activeKey.trim());
         }
-        const pendingKey = extractDecryptedDeployKey(app.pendingRevision?.integrationConfig as any);
+        const pendingKey = extractDecryptedDeployKey(
+          app.pendingRevision?.integrationConfig,
+        );
         if (pendingKey && pendingKey.trim()) {
           privateKeys.add(pendingKey.trim());
         }
       }
 
       if (privateKeys.size > 0) {
-        this.appendLog(`Configuring SSH deploy keys for ${privateKeys.size} private repository package(s)...`);
-        const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'superapp-deploy-keys-'));
+        this.appendLog(
+          `Configuring SSH deploy keys for ${privateKeys.size} private repository package(s)...`,
+        );
+        const tempDir = fs.mkdtempSync(
+          path.join(os.tmpdir(), 'superapp-deploy-keys-'),
+        );
         let idx = 0;
         for (const key of privateKeys) {
           idx++;
@@ -219,10 +245,16 @@ export class SandboxBuildManagerService {
             try {
               const user = process.env.USERNAME || process.env.USER;
               if (user) {
-                child_process.execFileSync('icacls', [keyPath, '/inheritance:r', '/grant:r', `${user}:R`], { stdio: 'pipe' });
+                child_process.execFileSync(
+                  'icacls',
+                  [keyPath, '/inheritance:r', '/grant:r', `${user}:R`],
+                  { stdio: 'pipe' },
+                );
               }
             } catch (aclErr: any) {
-              this.logger.warn(`Could not set ACL on deploy key file: ${aclErr.message}`);
+              this.logger.warn(
+                `Could not set ACL on deploy key file: ${aclErr.message}`,
+              );
             }
           }
           tempKeyFiles.push(keyPath);
@@ -232,11 +264,17 @@ export class SandboxBuildManagerService {
           .map((kp) => `-i "${kp.replace(/\\/g, '/')}"`)
           .join(' ');
         gitSshCommand = `ssh ${identityArgs} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null`;
-        this.appendLog(`Configured GIT_SSH_COMMAND with ${tempKeyFiles.length} identity key(s).`);
+        this.appendLog(
+          `Configured GIT_SSH_COMMAND with ${tempKeyFiles.length} identity key(s).`,
+        );
       }
     } catch (keyErr: any) {
-      this.logger.warn(`Failed extracting deploy keys for sandbox build: ${keyErr.message}`);
-      this.appendLog(`[WARN] Failed configuring deploy keys: ${keyErr.message}`);
+      this.logger.warn(
+        `Failed extracting deploy keys for sandbox build: ${keyErr.message}`,
+      );
+      this.appendLog(
+        `[WARN] Failed configuring deploy keys: ${keyErr.message}`,
+      );
     }
 
     const cleanupKeys = () => {

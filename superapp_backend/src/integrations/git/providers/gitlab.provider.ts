@@ -287,7 +287,11 @@ export class GitLabProvider implements GitProvider {
 
     // 2. Fetch directly from the remote GitLab repository via Git transport
     // (strictly from the remote repository URL, no local directory fallback)
-    return this.getFileContentViaGit(parsed.rawUrl || urlOrSlug, filePath, targetRef);
+    return this.getFileContentViaGit(
+      parsed.rawUrl || urlOrSlug,
+      filePath,
+      targetRef,
+    );
   }
 
   async getFileContentViaGit(

@@ -73,7 +73,9 @@ export class PresignedUrlHelper {
     if (
       logoUrlOrPath.startsWith('/api/storage/') ||
       logoUrlOrPath.startsWith('/storage/') ||
-      (logoUrlOrPath.startsWith('https://') && (logoUrlOrPath.includes('X-Amz-Signature') || logoUrlOrPath.includes('X-Amz-Credential')))
+      (logoUrlOrPath.startsWith('https://') &&
+        (logoUrlOrPath.includes('X-Amz-Signature') ||
+          logoUrlOrPath.includes('X-Amz-Credential')))
     ) {
       return logoUrlOrPath;
     }
@@ -214,13 +216,9 @@ export class PresignedUrlHelper {
       filename = `logos/logo-${Date.now()}-${randomUUID().slice(0, 8)}.${ext}`;
     }
 
-    await minioClient.putObject(
-      assetsBucket,
-      filename,
-      buffer,
-      buffer.length,
-      { 'Content-Type': mimeType },
-    );
+    await minioClient.putObject(assetsBucket, filename, buffer, buffer.length, {
+      'Content-Type': mimeType,
+    });
 
     const url = await this.getPresignedUrl(
       minioClient,
