@@ -316,7 +316,7 @@ export class StorageService implements OnModuleInit {
     }
 
     const key = `avatars/${userId}/${randomUUID().slice(0, 8)}.${detected.ext}`;
-    const bucket = this.backofficeUserMediaBucket || 'backoffice-user-media';
+    let bucket = this.backofficeUserMediaBucket || 'backoffice-user-media';
 
     // Prune existing avatar(s) in this user's dedicated folder (avatars/${userId}/)
     try {
@@ -346,9 +346,29 @@ export class StorageService implements OnModuleInit {
       );
     }
 
-    await this.minioClient.putObject(bucket, key, buf, buf.length, {
-      'Content-Type': detected.contentType,
-    });
+    try {
+      await this.minioClient.putObject(bucket, key, buf, buf.length, {
+        'Content-Type': detected.contentType,
+      });
+    } catch (err: any) {
+      const isAccessOrBucketError =
+        err?.message?.includes('Access Denied') ||
+        err?.code === 'AccessDenied' ||
+        err?.code === 'NoSuchBucket' ||
+        err?.message?.includes('does not exist');
+
+      if (isAccessOrBucketError && bucket !== this.assetsBucket) {
+        this.logger.warn(
+          `Cannot write backoffice avatar to bucket "${bucket}" (${err.message}). Falling back to assets bucket "${this.assetsBucket}".`,
+        );
+        bucket = this.assetsBucket;
+        await this.minioClient.putObject(bucket, key, buf, buf.length, {
+          'Content-Type': detected.contentType,
+        });
+      } else {
+        throw err;
+      }
+    }
 
     const url = `/api/backoffice-user-media/${key}`;
 
@@ -363,22 +383,28 @@ export class StorageService implements OnModuleInit {
     avatarUrlOrKey?: string | null,
   ): Promise<void> {
     if (!avatarUrlOrKey) return;
-    const bucket = this.backofficeUserMediaBucket || 'backoffice-user-media';
+    const primaryBucket =
+      this.backofficeUserMediaBucket || 'backoffice-user-media';
     let key = avatarUrlOrKey.split('?')[0];
     key = decodeURIComponent(key)
       .replace(/^https?:\/\/[^\/]+\//, '')
       .replace(/^\/+/, '')
       .replace(
-        /^(?:api\/)?(?:storage\/asset\?key=|backoffice-user-media\/)/,
+        /^(?:api\/)?(?:storage\/asset\?key=|backoffice-user-media\/|mini-app-assets\/)/,
         '',
       )
       .replace(/^\/+/, '');
 
     try {
-      await this.minioClient.removeObject(bucket, key);
-      this.logger.log(`Deleted backoffice avatar from ${bucket}: ${key}`);
+      await this.minioClient.removeObject(primaryBucket, key);
+      this.logger.log(`Deleted backoffice avatar from ${primaryBucket}: ${key}`);
     } catch (err: any) {
-      this.logger.warn(
+      if (primaryBucket !== this.assetsBucket) {
+        await this.minioClient
+          .removeObject(this.assetsBucket, key)
+          .catch(() => {});
+      }
+      this.logger.debug(
         `Could not delete backoffice avatar ${key}: ${err?.message}`,
       );
     }

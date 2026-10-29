@@ -54,15 +54,29 @@ async function pipeAssetHelper(
     `${strippedKey}/logo.jpg`,
   ];
 
+  const bucketsToCheck = [targetBucket];
+  if (
+    storageService.assetsBucket &&
+    !bucketsToCheck.includes(storageService.assetsBucket)
+  ) {
+    bucketsToCheck.push(storageService.assetsBucket);
+  }
+
   let resolvedKey: string | null = null;
-  for (const candidate of candidateKeys) {
-    try {
-      await storageService.statObject(targetBucket, candidate);
-      resolvedKey = candidate;
-      break;
-    } catch {
-      // Continue to next candidate
+  let resolvedBucket: string = targetBucket;
+
+  for (const b of bucketsToCheck) {
+    for (const candidate of candidateKeys) {
+      try {
+        await storageService.statObject(b, candidate);
+        resolvedKey = candidate;
+        resolvedBucket = b;
+        break;
+      } catch {
+        // Continue to next candidate
+      }
     }
+    if (resolvedKey) break;
   }
 
   if (!resolvedKey) {
@@ -93,7 +107,7 @@ async function pipeAssetHelper(
 
   try {
     const stream = await storageService.getObjectStream(
-      targetBucket,
+      resolvedBucket,
       resolvedKey,
     );
     stream.on('error', () => {
