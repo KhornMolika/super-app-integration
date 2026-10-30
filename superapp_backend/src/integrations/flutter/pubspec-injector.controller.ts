@@ -42,6 +42,7 @@ export class PubspecInjectorController {
   }
 
   @Post('precheck-conflicts')
+  @BypassTransform()
   @HttpCode(HttpStatus.OK)
   async precheckConflicts(@Body() dto: PrecheckConflictDto) {
     return this.precheckService.simulateCandidate(dto);

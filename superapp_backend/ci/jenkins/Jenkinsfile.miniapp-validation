@@ -261,11 +261,19 @@ pipeline {
                             timestamp: new Date().toISOString()
                         };
 
-                        fetch(callbackUrl, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify(payload)
-                        }).catch((e) => console.error("Callback error:", e));
+                        (async () => {
+                            try {
+                                process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+                                const res = await fetch(callbackUrl, {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify(payload)
+                                });
+                                console.log("Final callback HTTP status:", res.status);
+                            } catch (e) {
+                                console.error("Callback error:", e.message);
+                            }
+                        })();
                     ' || true
                     """
                 }
@@ -277,18 +285,26 @@ pipeline {
 def notifyStage(String stageId, String stageName, String status, String details) {
     sh """
     node -e '
-        const callbackUrl = "${params.CALLBACK_URL}".replace("/callback", "/stage");
-        fetch(callbackUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                miniAppId: "${params.MINIAPP_ID}",
-                stageId: "${stageId}",
-                stageName: "${stageName}",
-                status: "${status}",
-                details: "${details}"
-            })
-        }).catch(() => {});
+        (async () => {
+            try {
+                process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+                const callbackUrl = "${params.CALLBACK_URL}".replace("/callback", "/stage");
+                const res = await fetch(callbackUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        miniAppId: "${params.MINIAPP_ID}",
+                        stageId: "${stageId}",
+                        stageName: "${stageName}",
+                        status: "${status}",
+                        details: "${details}"
+                    })
+                });
+                console.log("Stage update [" + "${stageId}" + "] status: " + res.status);
+            } catch (err) {
+                console.warn("Stage update failed for " + "${stageId}" + ":", err.message);
+            }
+        })();
     ' || true
     """
 }

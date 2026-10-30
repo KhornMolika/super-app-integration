@@ -940,11 +940,24 @@ export class MiniappLifecycleHelper {
       }
 
       try {
-        await this.jenkinsService.triggerSuperAppBuild({
+        const jenkinsResult = await this.jenkinsService.triggerSuperAppBuild({
           releaseVersion,
           appName: 'superapp',
           buildType: testBuildType,
         });
+        if (!jenkinsResult.success) {
+          this.logger.warn(
+            `Jenkins test build trigger returned: ${jenkinsResult.message}`,
+          );
+          await this.markBuildFailed(
+            app.id,
+            releaseVersion,
+            `Failed to trigger Jenkins pipeline: ${jenkinsResult.message}`,
+          );
+        } else {
+          this.monitorJenkinsTestBuild(app.id, releaseVersion);
+        }
+
         if (this.apkBuildManager) {
           this.apkBuildManager
             .triggerBuild({
@@ -958,6 +971,11 @@ export class MiniappLifecycleHelper {
       } catch (err: any) {
         this.logger.error(
           `Error triggering Jenkins test build for revision: ${err.message}`,
+        );
+        await this.markBuildFailed(
+          app.id,
+          releaseVersion,
+          `Error triggering Jenkins test build: ${err.message}`,
         );
       }
 
@@ -1050,6 +1068,14 @@ export class MiniappLifecycleHelper {
         this.logger.warn(
           `Jenkins test build trigger returned: ${jenkinsResult.message}`,
         );
+        await this.markBuildFailed(
+          app.id,
+          releaseVersion,
+          `Failed to trigger Jenkins pipeline: ${jenkinsResult.message}`,
+        );
+      } else {
+        // Start background watchdog poller in case Jenkins pipeline crashes, aborts, or encounters syntax error
+        this.monitorJenkinsTestBuild(app.id, releaseVersion);
       }
 
       // Also trigger host APK compilation manager
@@ -1073,6 +1099,11 @@ export class MiniappLifecycleHelper {
       });
     } catch (err: any) {
       this.logger.error(`Error triggering Jenkins test build: ${err.message}`);
+      await this.markBuildFailed(
+        app.id,
+        releaseVersion,
+        `Error triggering Jenkins test build: ${err.message}`,
+      );
     }
 
     await logActivityFn(
@@ -1550,5 +1581,125 @@ export class MiniappLifecycleHelper {
     );
 
     return app;
+  }
+
+  /**
+   * Watchdog poller for Jenkins superapp-test-build.
+   * If Jenkins crashes, fails during Groovy compilation, or is aborted,
+   * this poller detects it and immediately transitions the app to BUILD_FAILED.
+   */
+  private monitorJenkinsTestBuild(miniAppId: string, releaseVersion: string) {
+    let polls = 0;
+    const maxPolls = 180; // 180 * 3s = 9 minutes
+    const interval = setInterval(async () => {
+      polls++;
+      try {
+        const app = await this.miniappRepository.findOne({
+          where: { id: miniAppId },
+        });
+        if (!app || app.buildStatus !== 'BUILDING' || polls >= maxPolls) {
+          clearInterval(interval);
+          if (app && app.buildStatus === 'BUILDING' && polls >= maxPolls) {
+            await this.markBuildFailed(
+              miniAppId,
+              releaseVersion,
+              'SuperApp build pipeline timed out after 9 minutes.',
+            );
+          }
+          return;
+        }
+
+        const jStatus =
+          await this.jenkinsService.getTestBuildStatusFromJenkins();
+        if (jStatus.available && !jStatus.building) {
+          clearInterval(interval);
+          if (jStatus.result === 'FAILURE' || jStatus.result === 'ABORTED') {
+            const errorLine =
+              jStatus.consoleText
+                ?.split('\n')
+                .map((l) => l.trim())
+                .filter(
+                  (l) =>
+                    l.includes('FAILURE') ||
+                    l.includes('ERROR') ||
+                    l.includes('Exception') ||
+                    l.includes('failed') ||
+                    l.includes('unexpected char'),
+                )
+                .slice(-3)
+                .join(' | ') ||
+              `Jenkins pipeline build ended with ${jStatus.result || 'FAILURE'}.`;
+
+            this.logger.warn(
+              `Jenkins test build failure detected by watchdog for app ${miniAppId}: ${errorLine}`,
+            );
+            await this.markBuildFailed(miniAppId, releaseVersion, errorLine);
+          }
+        }
+      } catch (err: any) {
+        this.logger.debug(`Jenkins watchdog poll error: ${err.message}`);
+      }
+    }, 3000);
+  }
+
+  /**
+   * Transitions a building miniApp to BUILD_FAILED, updates buildStages, and emits build completed socket event.
+   */
+  private async markBuildFailed(
+    miniAppId: string,
+    releaseVersion: string,
+    errorMessage: string,
+  ) {
+    const app = await this.miniappRepository.findOne({
+      where: { id: miniAppId },
+    });
+    if (!app || app.buildStatus !== 'BUILDING') return;
+
+    const stages: Record<string, any> = { ...(app.buildStages || {}) };
+    let hadRunning = false;
+    for (const k of Object.keys(stages)) {
+      if (stages[k]?.status === 'RUNNING') {
+        stages[k] = {
+          ...stages[k],
+          status: 'FAILED',
+          details: errorMessage,
+          updatedAt: new Date().toISOString(),
+        };
+        hadRunning = true;
+      }
+    }
+    if (!hadRunning && stages.preflight) {
+      stages.preflight = {
+        ...stages.preflight,
+        status: 'FAILED',
+        details: errorMessage,
+        updatedAt: new Date().toISOString(),
+      };
+    }
+
+    app.lifecycleStatus = MiniAppLifecycleStatus.APPROVED as any;
+    app.buildStatus = 'FAILED';
+    app.buildError = errorMessage;
+    app.buildStages = stages;
+    await this.miniappRepository.save(app);
+
+    this.notificationsService.emitBuildCompleted({
+      miniAppId: app.id,
+      appName: app.name || 'superapp',
+      releaseVersion,
+      status: 'FAILED',
+      error: errorMessage,
+    } as any);
+
+    if (app.ownerId) {
+      await this.notificationsService.createNotification(
+        app.ownerId,
+        'SuperApp Test Build Failed',
+        `Test build compilation (${releaseVersion}) for "${app.name}" failed: ${errorMessage}`,
+        'BUILD_FAILED',
+        app.id,
+        { releaseVersion, error: errorMessage },
+      );
+    }
   }
 }

@@ -114,16 +114,15 @@ export function getOrganizationFullName(input?: string): string {
  * Root authorities are Primary Authorities that cannot be disabled because they operate the SuperApp platform.
  */
 export function isRootOrganization(
-  org: { name?: string; code?: string; parentAuthority?: string | null } | null | undefined,
+  org: { name?: string; code?: string; parentAuthority?: string | null; parentId?: string | null } | null | undefined,
 ): boolean {
   if (!org) return false;
   const code = (org.code || '').trim().toUpperCase();
   const name = (org.name || '').toLowerCase();
   return (
     code === 'FSA' ||
-    code === 'FTC' ||
     name.includes('non-bank financial services authority') ||
-    name.includes('financial technology center')
+    (!org.parentAuthority && !org.parentId && code !== 'FTC' && !name.includes('financial technology center') && !name.includes('fintech center'))
   );
 }
 

@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { authApi } from '@/api/auth.api';
 import { usersApi } from '@/api/users.api';
+import { resetSessionExpiredState } from '@/api/client';
 
 export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'MA_DEVELOPER';
 
@@ -207,6 +208,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginWithEmail = async (email: string, password?: string) => {
     try {
+      resetSessionExpiredState();
       const res = await authApi.login({ email, password });
       if (res?.user) {
         const userRoles: string[] = (res.user.roles || []).map((r: any) => {

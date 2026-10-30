@@ -40,6 +40,18 @@ export class SeederService implements OnApplicationBootstrap {
   }
 
   async seed() {
+    // 0. Ensure table columns allow null values even if migrator container has not executed yet
+    try {
+      await this.dataSource.query(`
+        ALTER TABLE "organizations" ALTER COLUMN "parentAuthority" DROP NOT NULL;
+        ALTER TABLE "organizations" ALTER COLUMN "domain" DROP NOT NULL;
+      `);
+    } catch (err: any) {
+      this.logger.debug(
+        `Self-healing organization column nullability check skipped: ${err?.message}`,
+      );
+    }
+
     // 1. Standardized platform permissions (25 RBAC permissions)
     const allPerms = [
       'miniapp:create',
@@ -198,7 +210,18 @@ export class SeederService implements OnApplicationBootstrap {
           description: rootFsaData.description,
           status: OrganizationStatus.ACTIVE,
         });
-        fsaRoot = await this.organizationRepository.save(fsaRoot);
+        try {
+          fsaRoot = await this.organizationRepository.save(fsaRoot);
+        } catch (saveErr: any) {
+          this.logger.warn(`Initial FSA root save attempt failed (${saveErr?.message}), self-healing column constraints...`);
+          await this.dataSource.query('ALTER TABLE "organizations" ALTER COLUMN "parentAuthority" DROP NOT NULL;').catch(() => {});
+          try {
+            fsaRoot = await this.organizationRepository.save(fsaRoot);
+          } catch {
+            fsaRoot.parentAuthority = 'Primary Authority (Root)';
+            fsaRoot = await this.organizationRepository.save(fsaRoot);
+          }
+        }
         this.logger.log(
           `Created root authority: ${fsaRoot.name} [${fsaRoot.code}]`,
         );
@@ -222,7 +245,18 @@ export class SeederService implements OnApplicationBootstrap {
           rootChanged = true;
         }
         if (rootChanged) {
-          fsaRoot = await this.organizationRepository.save(fsaRoot);
+          try {
+            fsaRoot = await this.organizationRepository.save(fsaRoot);
+          } catch (saveErr: any) {
+            this.logger.warn(`FSA root update attempt failed (${saveErr?.message}), self-healing column constraints...`);
+            await this.dataSource.query('ALTER TABLE "organizations" ALTER COLUMN "parentAuthority" DROP NOT NULL;').catch(() => {});
+            try {
+              fsaRoot = await this.organizationRepository.save(fsaRoot);
+            } catch {
+              fsaRoot.parentAuthority = 'Primary Authority (Root)';
+              fsaRoot = await this.organizationRepository.save(fsaRoot);
+            }
+          }
           this.logger.log(
             `Updated root authority: ${fsaRoot.name} [${fsaRoot.code}]`,
           );
@@ -235,6 +269,19 @@ export class SeederService implements OnApplicationBootstrap {
       fsaRoot = await this.organizationRepository.findOne({
         where: [{ name: rootFsaData.name }, { code: rootFsaData.code }],
       });
+      if (!fsaRoot) {
+        fsaRoot = await this.organizationRepository.save(
+          this.organizationRepository.create({
+            name: rootFsaData.name,
+            code: rootFsaData.code,
+            parentId: null,
+            parent: null,
+            parentAuthority: 'Primary Authority (Root)',
+            description: rootFsaData.description,
+            status: OrganizationStatus.ACTIVE,
+          }),
+        ).catch(() => null);
+      }
     }
 
     // 4. Seed 11 Subordinate FSA Organizations under root Non-Bank Financial Services Authority
@@ -393,6 +440,25 @@ export class SeederService implements OnApplicationBootstrap {
         })) ||
         (await this.organizationRepository.find({ take: 1 }))[0] ||
         null;
+    }
+
+    // Clean up obsolete mock organization 'Fintech Center'
+    try {
+      const mockFintechCenter = await this.organizationRepository.findOne({
+        where: { name: 'Fintech Center' },
+      });
+      if (mockFintechCenter) {
+        if (ftcOrg && ftcOrg.id !== mockFintechCenter.id) {
+          await this.userRepository.update(
+            { organizationId: mockFintechCenter.id },
+            { organizationId: ftcOrg.id },
+          );
+          await this.organizationRepository.delete(mockFintechCenter.id);
+          this.logger.log("Purged obsolete mock organization 'Fintech Center'.");
+        }
+      }
+    } catch {
+      // Safe fallback
     }
 
     // 4. Seed Password (Strictly retrieved from environment secret; no hardcoded credentials in source code)

@@ -23,29 +23,29 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
 
           // Find organization that the current user belongs to
           const userOrg = user?.organization;
-          const userOrgId = user?.organizationId || (typeof userOrg === 'object' ? userOrg?.id : null);
+          const userOrgId = user?.organizationId || (typeof userOrg === 'object' && userOrg ? userOrg.id : null);
           const userOrgName = typeof userOrg === 'string' ? userOrg : userOrg?.name;
-          const userOrgCode = typeof userOrg === 'object' ? userOrg?.code : null;
+          const userOrgCode = typeof userOrg === 'object' && userOrg ? userOrg.code : null;
 
           const matchedUserOrg = data.find((org) => {
             if (userOrgId && org.id === userOrgId) return true;
-            if (
-              userOrgName &&
-              (org.name?.toLowerCase() === userOrgName.toLowerCase() ||
-                (org.code && org.code.toLowerCase() === userOrgName.toLowerCase()))
-            ) {
-              return true;
-            }
-            if (userOrgCode && org.code && org.code.toLowerCase() === userOrgCode.toLowerCase()) {
-              return true;
+            if (userOrgCode && org.code && org.code.toLowerCase() === userOrgCode.toLowerCase()) return true;
+            if (userOrgName) {
+              const u = userOrgName.toLowerCase().trim();
+              const oName = (org.name || '').toLowerCase().trim();
+              const oCode = (org.code || '').toLowerCase().trim();
+              if (oName === u || oCode === u) return true;
+              if (oName && u.includes(oName)) return true;
+              if (oCode && u.includes(oCode)) return true;
+              if (u && oName.includes(u)) return true;
             }
             return false;
           });
 
-          // Auto-select user's organization, or fallback to first if no selection
-          const targetOrg = matchedUserOrg || (!formData.organization ? data[0] : null);
+          // If user belongs to an organization, always bind to their organization
+          const targetOrg = matchedUserOrg || (userOrgName ? { name: userOrgName, code: userOrgCode || '' } : (!formData.organization ? data[0] : null));
 
-          if (targetOrg && handleChange && (!formData.organization || (!formData.id && matchedUserOrg))) {
+          if (targetOrg && handleChange && (!formData.organization || (!formData.id && (matchedUserOrg || userOrgName)))) {
             handleChange({
               target: { name: 'organization', value: targetOrg.name },
             } as any);
@@ -72,45 +72,66 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
     };
   }, [user]);
 
-  // Sync user organization when user or organizations finish loading
-  useEffect(() => {
-    if (!user || dbOrganizations.length === 0 || !handleChange) return;
-    if (formData.id) return; // Do not overwrite existing miniapp organization
-
+  // User Affiliated Organization: Auto-detect from authenticated user session
+  const userAffiliatedOrg = useMemo(() => {
+    if (!user) return null;
     const userOrg = user.organization;
-    const userOrgId = user.organizationId || (typeof userOrg === 'object' ? userOrg?.id : null);
+    const userOrgId = user.organizationId || (typeof userOrg === 'object' && userOrg ? userOrg.id : null);
     const userOrgName = typeof userOrg === 'string' ? userOrg : userOrg?.name;
-    const userOrgCode = typeof userOrg === 'object' ? userOrg?.code : null;
+    const userOrgCode = typeof userOrg === 'object' && userOrg ? userOrg.code : null;
 
-    const matchedUserOrg = dbOrganizations.find((org) => {
+    if (!userOrg && !userOrgId && !userOrgName) return null;
+
+    const matched = dbOrganizations.find((org) => {
       if (userOrgId && org.id === userOrgId) return true;
-      if (
-        userOrgName &&
-        (org.name?.toLowerCase() === userOrgName.toLowerCase() ||
-          (org.code && org.code.toLowerCase() === userOrgName.toLowerCase()))
-      ) {
-        return true;
-      }
-      if (userOrgCode && org.code && org.code.toLowerCase() === userOrgCode.toLowerCase()) {
-        return true;
+      if (userOrgCode && org.code && org.code.toLowerCase() === userOrgCode.toLowerCase()) return true;
+      if (userOrgName) {
+        const u = userOrgName.toLowerCase().trim();
+        const oName = (org.name || '').toLowerCase().trim();
+        const oCode = (org.code || '').toLowerCase().trim();
+        if (oName === u || oCode === u) return true;
+        if (oName && u.includes(oName)) return true;
+        if (oCode && u.includes(oCode)) return true;
+        if (u && oName.includes(u)) return true;
       }
       return false;
     });
 
-    if (matchedUserOrg && formData.organization !== matchedUserOrg.name) {
+    if (matched) return matched;
+    if (userOrgName || userOrgId) {
+      return {
+        id: userOrgId || '',
+        name: userOrgName || '',
+        code: userOrgCode || '',
+      } as Organization;
+    }
+    return null;
+  }, [user, dbOrganizations]);
+
+  // Sync user organization when user or organizations finish loading
+  useEffect(() => {
+    if (!userAffiliatedOrg || !handleChange) return;
+    if (formData.id) return; // Do not overwrite existing miniapp organization
+
+    const targetName = userAffiliatedOrg.name;
+    const targetCode = userAffiliatedOrg.code || '';
+
+    if (formData.organization !== targetName) {
       handleChange({
-        target: { name: 'organization', value: matchedUserOrg.name },
-      } as any);
-      if (matchedUserOrg.code) {
-        handleChange({
-          target: { name: 'organizationCode', value: matchedUserOrg.code },
-        } as any);
-      }
-      handleChange({
-        target: { name: 'category', value: matchedUserOrg.name },
+        target: { name: 'organization', value: targetName },
       } as any);
     }
-  }, [user, dbOrganizations, formData.id]);
+    if (targetCode && formData.organizationCode !== targetCode) {
+      handleChange({
+        target: { name: 'organizationCode', value: targetCode },
+      } as any);
+    }
+    if (formData.category !== targetName) {
+      handleChange({
+        target: { name: 'category', value: targetName },
+      } as any);
+    }
+  }, [userAffiliatedOrg, formData.id, formData.organization, formData.organizationCode, formData.category, handleChange]);
 
   // Filter out any INACTIVE organizations and sort in Ascending (ASC) order from A to Z
   const activeDbOrgs = useMemo(
@@ -137,6 +158,7 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
   }, [activeDbOrgs]);
 
   const handleOrgSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    if (userAffiliatedOrg) return; // Disallow changing organization when bound to user's org
     const chosenName = e.target.value;
     const selectedOrg = dbOrganizations.find((o) => o.name === chosenName);
 
@@ -199,7 +221,7 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
           {allErrors.slug && <p className="mt-1.5 text-sm text-rose-600 font-medium">{allErrors.slug}</p>}
         </div>
 
-        {/* 3. Organization Dropdown (100% Live Database Driven) */}
+        {/* 3. Organization (Auto-detected and locked to user's organization) */}
         <div>
           <div className="flex items-center justify-between mb-1">
             <Label className="flex items-center gap-1.5">
@@ -208,38 +230,70 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
                 Organization <span className="text-rose-500">*</span>
               </span>
             </Label>
-            {loadingOrgs && (
+            {userAffiliatedOrg ? (
+              <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
+                Affiliated Organization (Locked)
+              </span>
+            ) : loadingOrgs ? (
               <span className="text-[11px] text-slate-400 animate-pulse">
                 Querying database...
               </span>
-            )}
+            ) : null}
           </div>
-          <Select
-            name="organization"
-            value={formData.organization || ''}
-            onChange={handleOrgSelect}
-            disabled={!isEditable || loadingOrgs}
-            className="text-sm font-medium"
-          >
-            {activeDbOrgs.length === 0 ? (
-              <option value="">
-                {loadingOrgs ? 'Loading organizations from database...' : 'No active organizations found'}
-              </option>
-            ) : (
-              <>
-                <option value="">Select an organization</option>
-                {Object.entries(groupedByParent).map(([parent, orgs]) => (
-                  <optgroup key={parent} label={parent} className="font-semibold text-slate-700 dark:text-slate-200">
-                    {orgs.map((org) => (
-                      <option key={org.id} value={org.name} className="font-normal text-slate-800 dark:text-slate-300">
-                        {org.code ? `${org.code} — ` : ''}{org.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </>
-            )}
-          </Select>
+          {userAffiliatedOrg ? (
+            <div>
+              <div className="relative flex items-center">
+                <Input
+                  disabled
+                  readOnly
+                  name="organization"
+                  value={
+                    userAffiliatedOrg.code
+                      ? `${userAffiliatedOrg.code} — ${userAffiliatedOrg.name}`
+                      : userAffiliatedOrg.name
+                  }
+                  className="font-medium text-sm !bg-slate-100/90 dark:!bg-slate-800/90 !border-slate-300/80 dark:!border-slate-700 !text-slate-800 dark:!text-slate-200 cursor-not-allowed select-all pr-10"
+                />
+                <div
+                  className="absolute right-3.5 pointer-events-none flex items-center text-slate-400 dark:text-slate-500"
+                  title="Organization is locked to your affiliated authority"
+                >
+                  <LockIcon className="w-4 h-4" />
+                </div>
+              </div>
+              <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                MiniApp ownership is locked to your affiliated organization ({userAffiliatedOrg.code || userAffiliatedOrg.name}). Changing organization is restricted.
+              </p>
+            </div>
+          ) : (
+            <Select
+              name="organization"
+              value={formData.organization || ''}
+              onChange={handleOrgSelect}
+              disabled={!isEditable || loadingOrgs}
+              className="text-sm font-medium"
+            >
+              {activeDbOrgs.length === 0 ? (
+                <option value="">
+                  {loadingOrgs ? 'Loading organizations from database...' : 'No active organizations found'}
+                </option>
+              ) : (
+                <>
+                  <option value="">Select an organization</option>
+                  {Object.entries(groupedByParent).map(([parent, orgs]) => (
+                    <optgroup key={parent} label={parent} className="font-semibold text-slate-700 dark:text-slate-200">
+                      {orgs.map((org) => (
+                        <option key={org.id} value={org.name} className="font-normal text-slate-800 dark:text-slate-300">
+                          {org.code ? `${org.code} — ` : ''}{org.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </>
+              )}
+            </Select>
+          )}
         </div>
 
         {/* 4. Logo Upload */}

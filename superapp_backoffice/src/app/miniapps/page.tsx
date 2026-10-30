@@ -82,42 +82,46 @@ function MiniAppsContent() {
     return () => clearTimeout(handler);
   }, [searchQuery, debouncedSearch]);
 
-  // Synchronize state with browser URL search params
+  // Synchronize active table filters and pagination state with browser address bar without router flooding
   useEffect(() => {
     const params = new URLSearchParams();
-    params.set('page', String(currentPage));
-    params.set('limit', String(pageSize));
+    if (currentPage > 1) params.set('page', String(currentPage));
+    if (pageSize !== 10) params.set('limit', String(pageSize));
     if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
     if (methodFilter !== 'ALL') params.set('method', methodFilter);
     if (scope !== (isSuper ? 'all' : 'mine')) params.set('scope', scope);
 
     const queryStr = params.toString();
     const targetUrl = queryStr ? `${pathname}?${queryStr}` : pathname;
-    const currentQueryStr = searchParams.toString();
-    const currentUrl = currentQueryStr ? `${pathname}?${currentQueryStr}` : pathname;
-
-    if (targetUrl !== currentUrl) {
-      router.replace(targetUrl, { scroll: false });
+    if (typeof window !== 'undefined') {
+      const currentFullUrl = window.location.pathname + window.location.search;
+      if (currentFullUrl !== targetUrl && window.history?.replaceState) {
+        window.history.replaceState(null, '', targetUrl);
+      }
     }
-  }, [currentPage, pageSize, debouncedSearch, methodFilter, scope, isSuper, pathname, router, searchParams]);
+  }, [currentPage, pageSize, debouncedSearch, methodFilter, scope, isSuper, pathname]);
 
-  // Sync state from URL searchParams (e.g. browser back/forward or pasting a bookmark URL)
+  // Handle browser back/forward navigation smoothly via popstate
   useEffect(() => {
-    const pageFromUrl = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-    const limitFromUrl = Math.max(1, parseInt(searchParams.get('limit') || '10', 10));
-    const searchFromUrl = searchParams.get('search') || '';
-    const methodFromUrl = searchParams.get('method') || 'ALL';
-    const scopeFromUrl = (searchParams.get('scope') as 'all' | 'mine') || (isSuper ? 'all' : 'mine');
+    const handlePopState = () => {
+      if (typeof window === 'undefined') return;
+      const params = new URLSearchParams(window.location.search);
+      const pageFromUrl = Math.max(1, parseInt(params.get('page') || '1', 10));
+      const limitFromUrl = Math.max(1, parseInt(params.get('limit') || '10', 10));
+      const searchFromUrl = params.get('search') || '';
+      const methodFromUrl = params.get('method') || 'ALL';
+      const scopeFromUrl = (params.get('scope') as 'all' | 'mine') || (isSuper ? 'all' : 'mine');
 
-    setCurrentPage((prev) => (prev !== pageFromUrl ? pageFromUrl : prev));
-    setPageSize((prev) => (prev !== limitFromUrl ? limitFromUrl : prev));
-    setMethodFilter((prev) => (prev !== methodFromUrl ? methodFromUrl : prev));
-    setScope((prev) => (prev !== scopeFromUrl ? scopeFromUrl : prev));
-    if (searchFromUrl !== debouncedSearch) {
+      setCurrentPage(pageFromUrl);
+      setPageSize(limitFromUrl);
+      setMethodFilter(methodFromUrl);
+      setScope(scopeFromUrl);
       setSearchQuery(searchFromUrl);
       setDebouncedSearch(searchFromUrl);
-    }
-  }, [searchParams, isSuper, debouncedSearch]);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [isSuper]);
 
   // Fetch MiniApps via Server-Driven Query API
   const fetchMiniApps = useCallback(async () => {

@@ -47,11 +47,11 @@ export class OrganizationsService implements OnApplicationBootstrap {
 
   private async backfillPrimaryAuthorityRelationships() {
     try {
-      // Find Primary Root Authority (FSA or FTC)
+      // Find Primary Root Authority: Non-Bank Financial Services Authority (FSA)
       const root = await this.organizationRepository
         .createQueryBuilder('org')
-        .where("org.code IN ('FSA', 'FTC') OR LOWER(org.name) LIKE :term", {
-          term: '%financial technology center%',
+        .where("org.code = 'FSA' OR LOWER(org.name) LIKE :term", {
+          term: '%non-bank financial services authority%',
         })
         .getOne();
 
@@ -60,7 +60,14 @@ export class OrganizationsService implements OnApplicationBootstrap {
           .createQueryBuilder()
           .update(Organization)
           .set({ parentId: root.id, parentAuthority: root.name })
-          .where('"parentId" IS NULL AND id != :rootId', { rootId: root.id })
+          .where(
+            '("parentId" IS NULL OR "parentAuthority" = :legacyParent OR "parentAuthority" = :ftcParent) AND id != :rootId',
+            {
+              legacyParent: 'Fintech Center',
+              ftcParent: 'Financial Technology Center',
+              rootId: root.id,
+            },
+          )
           .execute();
       }
     } catch (err: any) {

@@ -265,11 +265,6 @@ export class CapabilitiesService implements OnApplicationBootstrap {
     const activeSyncedKeys = new Set<string>();
     for (const cap of detectedCaps) {
       activeSyncedKeys.add(cap.key.toLowerCase());
-      if (Array.isArray(cap.requiredPermissions)) {
-        for (const rp of cap.requiredPermissions) {
-          activeSyncedKeys.add(rp.toLowerCase());
-        }
-      }
     }
 
     const allDbPerms = await this.capabilityDefinitionRepository.find();
@@ -325,14 +320,16 @@ export class CapabilitiesService implements OnApplicationBootstrap {
     const dbDefinitions: CapabilityDefinition[] = [];
     for (const perm of allActive) {
       const meta = perm.metadata || {};
-      const isLegacyMockMic =
-        perm.key === 'microphone' &&
+      const isLegacyMock =
+        ['microphone', 'camera', 'location', 'biometrics', 'storage'].includes(
+          perm.key,
+        ) &&
         (!meta.commitSha ||
           meta.source !== 'gitlab:main' ||
-          meta.providerPackage === 'microphone' ||
+          meta.providerPackage === perm.key ||
           !meta.providerPackage?.includes(':'));
 
-      if (isLegacyMockMic) {
+      if (isLegacyMock) {
         perm.isActive = false;
         perm.metadata = {
           ...meta,
@@ -435,10 +432,11 @@ export class CapabilitiesService implements OnApplicationBootstrap {
 
       const isSupported =
         activeKeySet.has(lowerKey) ||
-        (lowerKey === 'camera' && activeKeySet.has('scan_qr_code')) ||
-        (lowerKey === 'scan_qr_code' && activeKeySet.has('camera')) ||
-        (lowerKey === 'location' && activeKeySet.has('high_precision_gps')) ||
-        (lowerKey === 'biometrics' && activeKeySet.has('biometric_auth'));
+        (lowerKey === 'camera' && (activeKeySet.has('take_photo') || activeKeySet.has('scan_qr_code'))) ||
+        (lowerKey === 'scan_qr_code' && activeKeySet.has('take_photo')) ||
+        (lowerKey === 'location' && (activeKeySet.has('get_location') || activeKeySet.has('high_precision_gps'))) ||
+        (lowerKey === 'biometrics' && activeKeySet.has('biometric_auth')) ||
+        (lowerKey === 'storage' && activeKeySet.has('secure_storage'));
 
       if (!isSupported) {
         if (isRequired) {

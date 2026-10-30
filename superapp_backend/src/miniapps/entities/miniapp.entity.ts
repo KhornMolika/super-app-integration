@@ -155,13 +155,26 @@ export class MiniApp {
   @Column({ nullable: true })
   draftVersion?: string;
 
-  // Transient pipeline state for build and validation execution (persisted to miniapp_builds)
+  // Pipeline state for build and validation execution
+  @Column({ type: 'varchar', nullable: true, default: 'PENDING' })
   validationStatus?: string;
+
+  @Column({ type: 'jsonb', nullable: true, default: () => "'{}'" })
   validationStages?: any;
+
+  @Column({ type: 'jsonb', nullable: true })
   validationReport?: any;
+
+  @Column({ type: 'jsonb', nullable: true })
   validationErrors?: any;
+
+  @Column({ type: 'varchar', nullable: true, default: 'IDLE' })
   buildStatus?: string;
+
+  @Column({ type: 'jsonb', nullable: true, default: () => "'{}'" })
   buildStages?: any;
+
+  @Column({ type: 'text', nullable: true })
   buildError?: string;
 
   @OneToMany(() => MiniAppCollaborator, (collab) => collab.miniApp, {

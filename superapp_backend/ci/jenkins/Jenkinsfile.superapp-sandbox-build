@@ -96,20 +96,27 @@ pipeline {
             script {
                 sh """
                 node -e '
-                    const callbackUrl = "${params.CALLBACK_URL}";
-                    const token = "${params.CALLBACK_TOKEN || ''}";
-                    const headers = { "Content-Type": "application/json" };
-                    if (token) headers["x-callback-token"] = token;
-                    fetch(callbackUrl, {
-                        headers: headers,
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            appName: "superapp-sandbox",
-                            status: "COMPLETED",
-                            details: "Flutter Web Sandbox compiled successfully with base-href ${params.BASE_HREF}."
-                        })
-                    }).catch(() => {});
+                    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+                    (async () => {
+                        const callbackUrl = "${params.CALLBACK_URL}";
+                        const token = "${params.CALLBACK_TOKEN || ''}";
+                        const headers = { "Content-Type": "application/json" };
+                        if (token) headers["x-callback-token"] = token;
+                        try {
+                            const res = await fetch(callbackUrl, {
+                                method: "POST",
+                                headers: headers,
+                                body: JSON.stringify({
+                                    appName: "superapp-sandbox",
+                                    status: "COMPLETED",
+                                    details: "Flutter Web Sandbox compiled successfully with base-href ${params.BASE_HREF}."
+                                })
+                            });
+                            console.log("[SANDBOX SUCCESS CALLBACK] Status:", res.status);
+                        } catch (err) {
+                            console.error("[SANDBOX SUCCESS CALLBACK ERROR]:", err.message);
+                        }
+                    })();
                 ' || true
                 """
             }
@@ -119,20 +126,27 @@ pipeline {
             script {
                 sh """
                 node -e '
-                    const callbackUrl = "${params.CALLBACK_URL}";
-                    const token = "${params.CALLBACK_TOKEN || ''}";
-                    const headers = { "Content-Type": "application/json" };
-                    if (token) headers["x-callback-token"] = token;
-                    fetch(callbackUrl, {
-                        headers: headers,
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            appName: "superapp-sandbox",
-                            status: "FAILED",
-                            details: "Flutter Web Sandbox build execution failed in Jenkins."
-                        })
-                    }).catch(() => {});
+                    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+                    (async () => {
+                        const callbackUrl = "${params.CALLBACK_URL}";
+                        const token = "${params.CALLBACK_TOKEN || ''}";
+                        const headers = { "Content-Type": "application/json" };
+                        if (token) headers["x-callback-token"] = token;
+                        try {
+                            const res = await fetch(callbackUrl, {
+                                method: "POST",
+                                headers: headers,
+                                body: JSON.stringify({
+                                    appName: "superapp-sandbox",
+                                    status: "FAILED",
+                                    details: "Flutter Web Sandbox build execution failed in Jenkins."
+                                })
+                            });
+                            console.log("[SANDBOX FAILURE CALLBACK] Status:", res.status);
+                        } catch (err) {
+                            console.error("[SANDBOX FAILURE CALLBACK ERROR]:", err.message);
+                        }
+                    })();
                 ' || true
                 """
             }

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { SourceType } from "@/types/miniapp.types";
-import { miniappsApi, integrationsApi, pubspecApi } from "@/api";
+import { miniappsApi, integrationsApi, pubspecApi, unwrapItem } from "@/api";
 import { useAuth } from "@/lib/auth";
 import { inferPackageNameFromGitUrl } from "@/lib/miniapp-form.validator";
 import { toast } from "@/components/ui/Toast";
@@ -163,7 +163,8 @@ export default function FlutterPackageIntegrationForm({
         deployKey: flutterConfig.deployKey,
         gitAccessToken: flutterConfig.gitAccessToken,
       });
-      setPrecheckResult(res);
+      const cleanResult = unwrapItem(res) || (res as any)?.data || res;
+      setPrecheckResult(cleanResult);
     } catch (err: any) {
       setPrecheckResult({
         compatible: false,

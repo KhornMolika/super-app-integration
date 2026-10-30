@@ -199,15 +199,20 @@ export function useMiniAppRegister() {
       const userOrg = user.organization;
       const userOrgName = typeof userOrg === 'string' ? userOrg : userOrg?.name || '';
       const userOrgCode = typeof userOrg === 'object' ? userOrg?.code || '' : '';
+      const userOrgId = user.organizationId || (typeof userOrg === 'object' ? userOrg?.id : '') || '';
 
       setFormData((prev) => ({
         ...prev,
         ownerName: prev.ownerName || user.name || '',
         ownerEmail: prev.ownerEmail || user.email || '',
         supportEmail: prev.supportEmail || user.email || '',
-        organization: prev.organization || userOrgName,
-        organizationCode: prev.organizationCode || userOrgCode,
-        category: prev.category || userOrgName,
+        teamName: prev.teamName || (userOrgName ? `${userOrgName} Team` : 'MiniApp Development Team'),
+        ...(userOrgName ? {
+          organization: userOrgName,
+          organizationCode: userOrgCode,
+          organizationId: userOrgId,
+          category: userOrgName,
+        } : {}),
       }));
     }
   }, [user]);
@@ -402,6 +407,11 @@ export function useMiniAppRegister() {
   ) => {
     const { name, value } = e.target;
     if (name === 'organization' || name === 'category') {
+      const userOrg = user?.organization;
+      const userOrgName = typeof userOrg === 'string' ? userOrg : userOrg?.name;
+      if (userOrgName) {
+        return; // Disallow changing organization when bound to user's organization
+      }
       setFormData((prev) => ({
         ...prev,
         organization: value,
@@ -410,6 +420,11 @@ export function useMiniAppRegister() {
       return;
     }
     if (name === 'organizationCode') {
+      const userOrg = user?.organization;
+      const userOrgCode = typeof userOrg === 'object' ? userOrg?.code : null;
+      if (userOrgCode) {
+        return; // Disallow changing organization code
+      }
       setFormData((prev) => ({
         ...prev,
         organizationCode: value,

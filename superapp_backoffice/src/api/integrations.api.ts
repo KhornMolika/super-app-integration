@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient, unwrapItem } from './client';
 
 export interface GitValidationResult {
   isValid: boolean;
@@ -160,10 +160,10 @@ export const pubspecApi = {
   getPackageConstraints: () => apiClient<Record<string, string>>('/api/pubspec/package-constraints'),
 
   precheckConflicts: (data: CandidateDependencyDto) =>
-    apiClient<PrecheckConflictResult>('/api/pubspec/precheck-conflicts', {
+    apiClient<any>('/api/pubspec/precheck-conflicts', {
       method: 'POST',
       body: data,
-    }),
+    }).then((res) => unwrapItem<PrecheckConflictResult>(res)),
 
   validate: (dryRun = true) =>
     apiClient<PubspecValidationResult>('/api/pubspec/validate', {

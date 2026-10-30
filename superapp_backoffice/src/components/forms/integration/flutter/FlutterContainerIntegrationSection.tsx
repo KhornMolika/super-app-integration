@@ -269,89 +269,94 @@ export default function FlutterContainerIntegrationSection({
         )}
 
         {/* Pre-check Conflict Simulation Diagnostics Card */}
-        {precheckResult && (
-          <div
-            className={`p-4 rounded-xl border text-xs sm:text-sm space-y-2 transition-all ${
-              precheckResult.compatible
-                ? "bg-emerald-50/90 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200"
-                : precheckResult.isPendingPublication
-                ? "bg-amber-50/90 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200"
-                : "bg-rose-50/90 dark:bg-rose-950/30 border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200"
-            }`}
-          >
-            <div className="flex items-center justify-between font-bold">
-              <span className="flex items-center gap-2">
-                {precheckResult.compatible ? (
-                  <CheckCircleIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                ) : precheckResult.isPendingPublication ? (
-                  <ZapIcon className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                ) : (
-                  <AlertTriangleIcon className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-                )}
-                <span>
-                  {precheckResult.compatible
-                    ? "Pre-check Passed: 100% Compatible with SuperApp Container"
-                    : precheckResult.isPendingPublication
-                    ? "Pending Publication Notice (Expected for Draft Packages)"
-                    : "Pre-check Conflict Detected"}
-                </span>
-              </span>
-              <button
-                type="button"
-                onClick={onClosePrecheckResult}
-                className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-              >
-                ✕ Close
-              </button>
-            </div>
-            <p className="text-xs leading-relaxed">{precheckResult.message}</p>
+        {precheckResult && (() => {
+          const result = precheckResult.data ? precheckResult.data : precheckResult;
+          const isCompatible = Boolean(result.compatible);
+          const isPending = Boolean(result.isPendingPublication);
+          const message = result.message || precheckResult.message || "";
+          const directConflicts = result.directConflicts || precheckResult.directConflicts || [];
+          const newPackages = result.newPackages || precheckResult.newPackages || [];
 
-            {precheckResult.directConflicts &&
-              precheckResult.directConflicts.length > 0 && (
+          return (
+            <div
+              className={`p-4 rounded-xl border text-xs sm:text-sm space-y-2 transition-all ${
+                isCompatible
+                  ? "bg-emerald-50/90 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200"
+                  : isPending
+                  ? "bg-amber-50/90 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200"
+                  : "bg-rose-50/90 dark:bg-rose-950/30 border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200"
+              }`}
+            >
+              <div className="flex items-center justify-between font-bold">
+                <span className="flex items-center gap-2">
+                  {isCompatible ? (
+                    <CheckCircleIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  ) : isPending ? (
+                    <ZapIcon className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  ) : (
+                    <AlertTriangleIcon className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                  )}
+                  <span>
+                    {isCompatible
+                      ? "Pre-check Passed: 100% Compatible with SuperApp Container"
+                      : isPending
+                      ? "Pending Publication Notice (Expected for Draft Packages)"
+                      : "Pre-check Conflict Detected"}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={onClosePrecheckResult}
+                  className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                >
+                  ✕ Close
+                </button>
+              </div>
+              <p className="text-xs leading-relaxed">{message}</p>
+
+              {directConflicts && directConflicts.length > 0 && (
                 <div
                   className={`p-2.5 rounded-lg border space-y-1 font-mono text-[11px] ${
-                    precheckResult.isPendingPublication
+                    isPending
                       ? "bg-amber-100/80 dark:bg-amber-900/40 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-100"
                       : "bg-rose-100/80 dark:bg-rose-900/40 border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200"
                   }`}
                 >
                   <div
                     className={`font-bold flex items-center gap-1.5 ${
-                      precheckResult.isPendingPublication
+                      isPending
                         ? "text-amber-950 dark:text-amber-100"
                         : "text-rose-900 dark:text-rose-100"
                     }`}
                   >
                     <AlertTriangleIcon className="w-3.5 h-3.5" />
                     <span>
-                      {precheckResult.isPendingPublication
+                      {isPending
                         ? "Registry Resolution Status:"
                         : "Version Incompatibilities:"}
                     </span>
                   </div>
-                  {precheckResult.directConflicts.map(
-                    (c: string, i: number) => (
-                      <div key={i} className="pl-4 leading-relaxed">
-                        &bull; {c}
-                      </div>
-                    ),
-                  )}
+                  {directConflicts.map((c: string, i: number) => (
+                    <div key={i} className="pl-4 leading-relaxed">
+                      &bull; {c}
+                    </div>
+                  ))}
                 </div>
               )}
 
-            {precheckResult.newPackages &&
-              precheckResult.newPackages.length > 0 && (
+              {newPackages && newPackages.length > 0 && (
                 <div className="text-[11px] text-slate-600 dark:text-slate-400">
                   <span className="font-semibold text-slate-700 dark:text-slate-300">
                     Introduced Dependencies:{" "}
                   </span>
-                  {precheckResult.newPackages
+                  {newPackages
                     .map((p: any) => `${p.package} (${p.version})`)
                     .join(", ")}
                 </div>
               )}
-          </div>
-        )}
+            </div>
+          );
+        })()}
 
         {/* Terminal Console Output for Pub Resolution */}
         {resolutionResult && (

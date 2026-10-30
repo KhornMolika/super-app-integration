@@ -88,39 +88,43 @@ function AuditLogsContent() {
     return () => clearTimeout(handler);
   }, [searchQuery, debouncedSearch]);
 
-  // Synchronize state with browser URL search params
+  // Synchronize active table filters and pagination state with browser address bar without router flooding
   useEffect(() => {
     const params = new URLSearchParams();
-    params.set('page', String(currentPage));
-    params.set('limit', String(pageSize));
+    if (currentPage > 1) params.set('page', String(currentPage));
+    if (pageSize !== 10) params.set('limit', String(pageSize));
     if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
     if (actionFilter !== 'ALL') params.set('action', actionFilter);
 
     const queryStr = params.toString();
     const targetUrl = queryStr ? `${pathname}?${queryStr}` : pathname;
-    const currentQueryStr = searchParams.toString();
-    const currentUrl = currentQueryStr ? `${pathname}?${currentQueryStr}` : pathname;
-
-    if (targetUrl !== currentUrl) {
-      router.replace(targetUrl, { scroll: false });
+    if (typeof window !== 'undefined') {
+      const currentFullUrl = window.location.pathname + window.location.search;
+      if (currentFullUrl !== targetUrl && window.history?.replaceState) {
+        window.history.replaceState(null, '', targetUrl);
+      }
     }
-  }, [currentPage, pageSize, debouncedSearch, actionFilter, pathname, router, searchParams]);
+  }, [currentPage, pageSize, debouncedSearch, actionFilter, pathname]);
 
-  // Sync state from URL searchParams (e.g. browser back/forward or pasting a bookmark URL)
+  // Handle browser back/forward navigation smoothly via popstate
   useEffect(() => {
-    const pageFromUrl = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-    const limitFromUrl = Math.max(1, parseInt(searchParams.get('limit') || '10', 10));
-    const searchFromUrl = searchParams.get('search') || '';
-    const actionFromUrl = searchParams.get('action') || 'ALL';
+    const handlePopState = () => {
+      if (typeof window === 'undefined') return;
+      const params = new URLSearchParams(window.location.search);
+      const pageFromUrl = Math.max(1, parseInt(params.get('page') || '1', 10));
+      const limitFromUrl = Math.max(1, parseInt(params.get('limit') || '10', 10));
+      const searchFromUrl = params.get('search') || '';
+      const actionFromUrl = params.get('action') || 'ALL';
 
-    setCurrentPage((prev) => (prev !== pageFromUrl ? pageFromUrl : prev));
-    setPageSize((prev) => (prev !== limitFromUrl ? limitFromUrl : prev));
-    setActionFilter((prev) => (prev !== actionFromUrl ? actionFromUrl : prev));
-    if (searchFromUrl !== debouncedSearch) {
+      setCurrentPage(pageFromUrl);
+      setPageSize(limitFromUrl);
+      setActionFilter(actionFromUrl);
       setSearchQuery(searchFromUrl);
       setDebouncedSearch(searchFromUrl);
-    }
-  }, [searchParams, debouncedSearch]);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Fetch audit logs via Server-Driven Query API
   const fetchLogs = useCallback(async () => {

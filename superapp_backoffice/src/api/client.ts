@@ -74,9 +74,19 @@ export function isBackendUnreachableError(error: unknown): boolean {
 
 
 let isRefreshing = false;
+let isSessionExpired = false;
 let refreshSubscribers: Array<(refreshed: boolean) => void> = [];
 
+export function resetSessionExpiredState() {
+  isSessionExpired = false;
+}
+
 function onTokenRefreshed(refreshed: boolean) {
+  if (!refreshed) {
+    isSessionExpired = true;
+  } else {
+    isSessionExpired = false;
+  }
   refreshSubscribers.forEach((callback) => callback(refreshed));
   refreshSubscribers = [];
 }
@@ -141,6 +151,14 @@ export async function apiClient<T = any>(endpoint: string, options: RequestOptio
       window.location.pathname.startsWith('/legal'));
 
   if (response.status === 401 && !_retry && !isAuthPage && !url.includes('/api/auth/login') && !url.includes('/api/auth/refresh')) {
+    if (isSessionExpired) {
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/signup')) {
+        const currentPath = window.location.pathname;
+        const redirectParam = currentPath && currentPath !== '/' ? `?redirect=${encodeURIComponent(currentPath)}&expired=true` : '?expired=true';
+        window.location.href = `/login${redirectParam}`;
+      }
+      throw new ApiError('Session expired. Please log in again.', 401);
+    }
     if (!isRefreshing) {
       isRefreshing = true;
       try {

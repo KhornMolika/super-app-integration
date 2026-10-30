@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import { Button } from '@/components/ui/inputs';
@@ -61,6 +61,12 @@ export default function BuildProgressModal({
   if (!state.isOpen) return null;
 
   const rawStages = state.stages || {};
+  const isFailedStagePresent = Object.values(rawStages).some((s: any) => s?.status === 'FAILED');
+  const effectiveStatus = state.status === 'error' || isFailedStagePresent ? 'error' : state.status;
+  const resolvedErrorMessage =
+    state.errorMessage ||
+    Object.values(rawStages).find((s: any) => s?.status === 'FAILED')?.details ||
+    'The Fastlane build pipeline encountered an error during APK packaging. Inspect Jenkins console logs for details.';
 
   const stagesList = DEFAULT_STAGES.map((def, idx) => {
     const recorded = rawStages[def.id];
@@ -76,8 +82,8 @@ export default function BuildProgressModal({
     return {
       id: def.id,
       name: def.name,
-      status: state.status === 'success' ? 'COMPLETED' : idx === 0 ? 'RUNNING' : 'PENDING',
-      details: state.status === 'success' ? 'Stage completed successfully.' : def.defaultDetails,
+      status: effectiveStatus === 'success' ? 'COMPLETED' : effectiveStatus === 'error' ? 'PENDING' : idx === 0 ? 'RUNNING' : 'PENDING',
+      details: effectiveStatus === 'success' ? 'Stage completed successfully.' : def.defaultDetails,
       icon: def.icon,
     };
   });
@@ -98,7 +104,7 @@ export default function BuildProgressModal({
         </button>
 
         {/* ─── State: BUILDING / RUNNING ─── */}
-        {state.status === 'building' && (
+        {effectiveStatus === 'building' && (
           <div className="w-full flex flex-col items-center">
             <div className="w-16 h-16 rounded-2xl bg-accent-50 dark:bg-accent-950/60 border border-accent-200 dark:border-accent-800 flex items-center justify-center mb-4 shadow-sm">
               <svg className="animate-spin w-8 h-8 text-accent-500 dark:text-accent-400" fill="none" viewBox="0 0 24 24">
@@ -220,7 +226,7 @@ export default function BuildProgressModal({
         )}
 
         {/* ─── State: SUCCESS ─── */}
-        {state.status === 'success' && (
+        {effectiveStatus === 'success' && (
           <div className="w-full flex flex-col items-center text-center">
             <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-2xl flex items-center justify-center mb-4 border border-emerald-200 dark:border-emerald-800 shadow-md">
               <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -274,7 +280,7 @@ export default function BuildProgressModal({
         )}
 
         {/* ─── State: ERROR / FAILED ─── */}
-        {state.status === 'error' && (
+        {effectiveStatus === 'error' && (
           <div className="w-full flex flex-col items-center">
             <div className="w-16 h-16 bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 rounded-2xl flex items-center justify-center mb-4 border border-rose-200 dark:border-rose-800 shadow-md">
               <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -304,7 +310,7 @@ export default function BuildProgressModal({
                 <span>Failure Reason &amp; Diagnostics</span>
               </div>
               <p className="text-xs text-rose-800 dark:text-rose-300 font-mono leading-relaxed bg-white/70 dark:bg-slate-900/70 p-3 rounded-xl border border-rose-200/80 dark:border-rose-900/40 break-words">
-                {state.errorMessage || `Fastlane APK compilation exited with errors. Inspect Jenkins console logs at ${process.env.NEXT_PUBLIC_JENKINS_URL || 'http://localhost:8085'} for details.`}
+                {resolvedErrorMessage}
               </p>
             </div>
 

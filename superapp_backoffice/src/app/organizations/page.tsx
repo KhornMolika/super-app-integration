@@ -143,48 +143,43 @@ function OrganizationsContent() {
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
-  // Synchronize state with browser URL search params
+  // Synchronize active table filters and pagination state with browser address bar without router flooding
   useEffect(() => {
     const params = new URLSearchParams();
-    params.set('page', String(currentPage));
-    params.set('limit', String(pageSize));
+    if (currentPage > 1) params.set('page', String(currentPage));
+    if (pageSize !== 10) params.set('limit', String(pageSize));
     if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
     if (statusFilter !== 'ALL') params.set('status', statusFilter);
 
     const queryStr = params.toString();
     const targetUrl = queryStr ? `${pathname}?${queryStr}` : pathname;
-    const currentQueryStr = searchParams.toString();
-    const currentUrl = currentQueryStr ? `${pathname}?${currentQueryStr}` : pathname;
-
-    if (targetUrl !== currentUrl) {
-      lastPushedUrlRef.current = targetUrl;
-      router.replace(targetUrl, { scroll: false });
+    if (typeof window !== 'undefined') {
+      const currentFullUrl = window.location.pathname + window.location.search;
+      if (currentFullUrl !== targetUrl && window.history?.replaceState) {
+        window.history.replaceState(null, '', targetUrl);
+      }
     }
-  }, [currentPage, pageSize, debouncedSearch, statusFilter, pathname, router, searchParams]);
+  }, [currentPage, pageSize, debouncedSearch, statusFilter, pathname]);
 
-  // Sync state from URL searchParams (e.g. browser back/forward or navigation)
+  // Handle browser back/forward navigation smoothly via popstate
   useEffect(() => {
-    const currentQueryStr = searchParams.toString();
-    const currentUrl = currentQueryStr ? `${pathname}?${currentQueryStr}` : pathname;
+    const handlePopState = () => {
+      if (typeof window === 'undefined') return;
+      const params = new URLSearchParams(window.location.search);
+      const pageFromUrl = Math.max(1, parseInt(params.get('page') || '1', 10));
+      const limitFromUrl = Math.max(1, parseInt(params.get('limit') || '10', 10));
+      const searchFromUrl = params.get('search') || '';
+      const statusFromUrl = (params.get('status') as OrganizationStatusFilter) || 'ALL';
 
-    // Ignore if this searchParams change was dispatched by our own router.replace above
-    if (currentUrl === lastPushedUrlRef.current) {
-      return;
-    }
-
-    const pageFromUrl = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-    const limitFromUrl = Math.max(1, parseInt(searchParams.get('limit') || '10', 10));
-    const searchFromUrl = searchParams.get('search') || '';
-    const statusFromUrl = (searchParams.get('status') as OrganizationStatusFilter) || 'ALL';
-
-    setCurrentPage((prev) => (prev !== pageFromUrl ? pageFromUrl : prev));
-    setPageSize((prev) => (prev !== limitFromUrl ? limitFromUrl : prev));
-    setStatusFilter((prev) => (prev !== statusFromUrl ? statusFromUrl : prev));
-    if (searchFromUrl !== searchQuery) {
+      setCurrentPage(pageFromUrl);
+      setPageSize(limitFromUrl);
+      setStatusFilter(statusFromUrl);
       setSearchQuery(searchFromUrl);
       setDebouncedSearch(searchFromUrl);
-    }
-  }, [searchParams, pathname]);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // 1. Fetch organizations from database via Server-Driven Query API
   const fetchOrganizations = useCallback(async () => {

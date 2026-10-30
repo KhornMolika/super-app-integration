@@ -23,7 +23,8 @@ export class BucketLifecycleHelper {
     minioClient: MinioClient,
     buckets: string[],
   ): Promise<void> {
-    for (const bucketName of buckets) {
+    const uniqueBuckets = Array.from(new Set(buckets.filter(Boolean)));
+    for (const bucketName of uniqueBuckets) {
       try {
         const exists = await minioClient.bucketExists(bucketName);
         if (!exists) {

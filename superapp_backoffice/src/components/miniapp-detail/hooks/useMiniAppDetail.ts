@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { io } from 'socket.io-client';
 import { miniappsApi, superAppApi, unwrapItem } from '@/api';
 import { toast } from '@/components/ui/Toast';
 import { validateUrlFormat } from '@/components/ui/ValidatedUrlInput';
@@ -266,40 +267,125 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
           setBuildModalState((prev) => {
             if (!prev.isOpen) return prev;
 
-            const isCurrentlyBuilding =
-              updated.status === 'BUILDING' ||
-              updated.buildStatus === 'BUILDING' ||
-              (updated.buildStages && Object.values(updated.buildStages).some((s: any) => s?.status === 'RUNNING'));
+            const hasFailedStage =
+              updated.buildStages &&
+              Object.values(updated.buildStages).some(
+                (s: any) => s?.status === 'FAILED',
+              );
+            const isFailed =
+              updated.status === 'BUILD_FAILED' ||
+              updated.buildStatus === 'FAILED' ||
+              Boolean(updated.buildError) ||
+              hasFailedStage;
 
-            if (isCurrentlyBuilding) {
+            // Priority 1: If failed, immediately stop spinner and transition to error state
+            if (isFailed) {
               return {
                 ...prev,
-                status: 'building',
+                status: 'error',
+                stages: updated.buildStages || prev.stages,
+                errorMessage:
+                  updated.buildError ||
+                  prev.errorMessage ||
+                  (Object.values(updated.buildStages || {}).find(
+                    (s: any) => s?.status === 'FAILED',
+                  ) as any)?.details ||
+                  'The SuperApp Fastlane build pipeline encountered an error. Check Jenkins console for details.',
+                releaseVersion: updated.activeTestVersion || prev.releaseVersion,
+              };
+            }
+
+            // Priority 2: If completed, transition to success
+            const isSuccess =
+              updated.status === 'TESTING' || updated.buildStatus === 'COMPLETED';
+            if (isSuccess) {
+              return {
+                ...prev,
+                status: 'success',
                 stages: updated.buildStages || prev.stages,
                 releaseVersion: updated.activeTestVersion || prev.releaseVersion,
               };
             }
 
-            const isSuccess = updated.status === 'TESTING' || updated.buildStatus === 'COMPLETED';
-            const isFailed =
-              updated.status === 'BUILD_FAILED' ||
-              updated.buildStatus === 'FAILED' ||
-              (updated.buildStages && Object.values(updated.buildStages).some((s: any) => s?.status === 'FAILED'));
+            // Priority 3: Otherwise check if actively building
+            const isCurrentlyBuilding =
+              updated.status === 'BUILDING' ||
+              updated.buildStatus === 'BUILDING' ||
+              (updated.buildStages &&
+                Object.values(updated.buildStages).some(
+                  (s: any) => s?.status === 'RUNNING',
+                ));
 
             return {
               ...prev,
-              status: isSuccess ? 'success' : isFailed ? 'error' : prev.status,
+              status: isCurrentlyBuilding ? 'building' : prev.status,
               stages: updated.buildStages || prev.stages,
-              errorMessage: updated.buildError || prev.errorMessage,
               releaseVersion: updated.activeTestVersion || prev.releaseVersion,
             };
           });
         }
-      } catch (_) { }
+      } catch (_) {}
     }, 2500);
 
     return () => clearInterval(pollInterval);
   }, [formData.status, formData.buildStatus, buildModalState.isOpen, isSubmitting, id]);
+
+  // Real-time WebSocket listener for immediate build and stage failure/completion updates
+  useEffect(() => {
+    if (!id) return;
+    const socketUrl =
+      process.env.NEXT_PUBLIC_SOCKET_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      (typeof window !== 'undefined'
+        ? `${window.location.protocol}//${window.location.hostname}:3000`
+        : 'http://localhost:3000');
+
+    const socket = io(socketUrl, {
+      transports: ['websocket', 'polling'],
+      reconnectionAttempts: 5,
+    });
+
+    socket.on('miniapp.build_stage_updated', (data: any) => {
+      if (data && (data.miniAppId === id || data.appId === id)) {
+        if (data.stage) {
+          const isStageFailed = data.stage.status === 'FAILED';
+          setBuildModalState((prev) => {
+            const currentStages = {
+              ...(prev.stages || {}),
+              [data.stage.id]: data.stage,
+            };
+            return {
+              ...prev,
+              status: isStageFailed ? 'error' : prev.status,
+              stages: currentStages,
+              errorMessage: isStageFailed
+                ? data.stage.details || 'Build stage failed in Jenkins'
+                : prev.errorMessage,
+            };
+          });
+        }
+      }
+    });
+
+    socket.on('miniapp.build_completed', (data: any) => {
+      if (data && (data.miniAppId === id || data.appId === id)) {
+        const isFailed = data.status === 'FAILED' || Boolean(data.error);
+        setBuildModalState((prev) => ({
+          ...prev,
+          status: isFailed ? 'error' : 'success',
+          errorMessage: isFailed
+            ? data.error || data.errorMessage || 'SuperApp compilation failed.'
+            : undefined,
+          releaseVersion: data.releaseVersion || prev.releaseVersion,
+        }));
+        fetchApp(false);
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [id, fetchApp]);
 
   // Form field change handlers
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {

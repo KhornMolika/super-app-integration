@@ -68,39 +68,43 @@ function IssuesContent() {
   // Synchronize state with browser URL search params
   useEffect(() => {
     const params = new URLSearchParams();
-    params.set('page', String(currentPage));
-    params.set('limit', String(pageSize));
+    if (currentPage > 1) params.set('page', String(currentPage));
+    if (pageSize !== 10) params.set('limit', String(pageSize));
     if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
     if (severityFilter !== 'ALL') params.set('severity', severityFilter);
     if (statusFilter !== 'ALL') params.set('status', statusFilter);
 
     const queryStr = params.toString();
     const targetUrl = queryStr ? `${pathname}?${queryStr}` : pathname;
-    const currentQueryStr = searchParams.toString();
-    const currentUrl = currentQueryStr ? `${pathname}?${currentQueryStr}` : pathname;
-
-    if (targetUrl !== currentUrl) {
-      router.replace(targetUrl, { scroll: false });
+    if (typeof window !== 'undefined') {
+      const currentFullUrl = window.location.pathname + window.location.search;
+      if (currentFullUrl !== targetUrl && window.history?.replaceState) {
+        window.history.replaceState(null, '', targetUrl);
+      }
     }
-  }, [currentPage, pageSize, debouncedSearch, severityFilter, statusFilter, pathname, router, searchParams]);
+  }, [currentPage, pageSize, debouncedSearch, severityFilter, statusFilter, pathname]);
 
-  // Sync state from URL searchParams
+  // Handle browser back/forward navigation smoothly via popstate
   useEffect(() => {
-    const pageFromUrl = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-    const limitFromUrl = Math.max(1, parseInt(searchParams.get('limit') || '10', 10));
-    const searchFromUrl = searchParams.get('search') || '';
-    const severityFromUrl = searchParams.get('severity') || 'ALL';
-    const statusFromUrl = searchParams.get('status') || 'ALL';
+    const handlePopState = () => {
+      if (typeof window === 'undefined') return;
+      const params = new URLSearchParams(window.location.search);
+      const pageFromUrl = Math.max(1, parseInt(params.get('page') || '1', 10));
+      const limitFromUrl = Math.max(1, parseInt(params.get('limit') || '10', 10));
+      const searchFromUrl = params.get('search') || '';
+      const severityFromUrl = params.get('severity') || 'ALL';
+      const statusFromUrl = params.get('status') || 'ALL';
 
-    setCurrentPage((prev) => (prev !== pageFromUrl ? pageFromUrl : prev));
-    setPageSize((prev) => (prev !== limitFromUrl ? limitFromUrl : prev));
-    setSeverityFilter((prev) => (prev !== severityFromUrl ? severityFromUrl : prev));
-    setStatusFilter((prev) => (prev !== statusFromUrl ? statusFromUrl : prev));
-    if (searchFromUrl !== debouncedSearch) {
+      setCurrentPage(pageFromUrl);
+      setPageSize(limitFromUrl);
+      setSeverityFilter(severityFromUrl);
+      setStatusFilter(statusFromUrl);
       setSearchQuery(searchFromUrl);
       setDebouncedSearch(searchFromUrl);
-    }
-  }, [searchParams, debouncedSearch]);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Filtered Issues (Client-side search & filtering)
   const filteredIssues = useMemo(() => {

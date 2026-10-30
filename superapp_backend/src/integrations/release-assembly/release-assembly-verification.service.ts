@@ -314,14 +314,7 @@ export class ReleaseAssemblyVerificationService {
       `Received build stage update for release ${body.releaseVersion}: [${body.stageId}] ${body.status} - ${body.details}`,
     );
 
-    const whereConditions: any[] = [{ status: 'BUILDING' }];
-    if (body.releaseVersion) {
-      whereConditions.push({ activeTestVersion: body.releaseVersion });
-    }
-
-    const buildingApps = await this.miniappRepository.find({
-      where: whereConditions,
-    });
+    const buildingApps = await this.resolveBuildingApps(body);
 
     for (const app of buildingApps) {
       const currentStages = app.buildStages || {};
@@ -460,7 +453,9 @@ export class ReleaseAssemblyVerificationService {
         .createQueryBuilder()
         .update(MiniApp)
         .set({ lifecycleStatus: 'TESTING', buildStatus: 'COMPLETED' })
-        .where("lifecycle_status = 'BUILDING'")
+        .where('"buildStatus" = :status OR "lifecycleStatus" = :status', {
+          status: 'BUILDING',
+        })
         .execute();
 
       const repoName = 'apk-test-builds';
@@ -814,7 +809,7 @@ export class ReleaseAssemblyVerificationService {
         `jsonb_set(COALESCE("buildStages", '{}'::jsonb), ARRAY[:stageId]::text[], CAST(:stageJson AS jsonb), true)`,
     };
     if (isFailure) {
-      updatePayload.status = 'BUILD_FAILED';
+      updatePayload.lifecycleStatus = 'BUILD_FAILED';
       updatePayload.buildStatus = 'FAILED';
       updatePayload.buildError =
         dto.details || `Stage ${dto.stageName || dto.stageId} failed.`;
@@ -824,9 +819,11 @@ export class ReleaseAssemblyVerificationService {
       .createQueryBuilder()
       .update(MiniApp)
       .set(updatePayload)
-      .where("status = 'BUILDING'")
+      .where('"buildStatus" = :status OR "lifecycleStatus" = :status', {
+        status: 'BUILDING',
+      })
       .setParameters({ stageId: dto.stageId, stageJson: JSON.stringify(stage) })
-      .returning(['id', 'buildStages', 'status', 'buildStatus', 'buildError'])
+      .returning(['id', 'buildStages', 'buildStatus', 'lifecycleStatus', 'buildError'])
       .execute();
 
     const rows: { id: string; buildStages: any }[] = result?.raw || [];

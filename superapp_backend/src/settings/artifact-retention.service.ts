@@ -219,16 +219,53 @@ export class ArtifactRetentionService implements OnModuleInit {
     return { Authorization: `Basic ${b64}`, Accept: 'application/json' };
   }
 
-  private getNexusBaseUrl(): string {
-    return (
-      this.configService.get<string>('NEXUS_BASE_URL') ||
-      'http://localhost:8081'
-    ).replace(/\/+$/, '');
+  private workingNexusBaseUrl: string | null = null;
+
+  private async getNexusBaseUrl(): Promise<string> {
+    if (this.workingNexusBaseUrl) return this.workingNexusBaseUrl;
+
+    const configured = this.configService.get<string>('NEXUS_BASE_URL');
+    const candidates = [
+      configured,
+      'https://app.fintechcenterfsa.com/nexus',
+      'http://10.200.8.6:8081',
+      'http://nexus:8081',
+      'http://nexus.super-app.svc.cluster.local:8081',
+      'http://localhost:8081',
+    ].filter(Boolean) as string[];
+
+    let authHeaders: Record<string, string> = {};
+    try {
+      authHeaders = this.getNexusAuthHeader();
+    } catch {
+      // password might not be set yet
+    }
+
+    for (const rawUrl of candidates) {
+      const url = rawUrl.replace(/\/+$/, '');
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        const res = await fetch(`${url}/service/rest/v1/status`, {
+          headers: authHeaders,
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        if (res.ok || res.status === 200 || res.status === 401) {
+          this.workingNexusBaseUrl = url;
+          return url;
+        }
+      } catch (_) {}
+    }
+
+    const fallback = (candidates[0] || 'http://localhost:8081').replace(/\/+$/, '');
+    this.workingNexusBaseUrl = fallback;
+    return fallback;
   }
 
   async getStorageStats(): Promise<StorageOverviewStats> {
     const policy = await this.getPolicy();
-    const baseUrl = this.getNexusBaseUrl();
+    const baseUrl = await this.getNexusBaseUrl();
     const authHeaders = this.getNexusAuthHeader();
 
     let testCount = 0;
@@ -373,7 +410,7 @@ export class ArtifactRetentionService implements OnModuleInit {
     details: Array<{ path: string; size: string; status: string }>;
   }> {
     const policy = await this.getPolicy();
-    const baseUrl = this.getNexusBaseUrl();
+    const baseUrl = await this.getNexusBaseUrl();
     const authHeaders = this.getNexusAuthHeader();
 
     this.logger.log(
