@@ -411,7 +411,7 @@ export class ReleaseAssemblyVerificationService {
     );
 
     const whereConditions: any[] = [
-      { status: 'BUILDING' },
+      { lifecycleStatus: 'BUILDING' },
       { buildStatus: 'BUILDING' },
     ];
     for (const v of candidateVersions) {
