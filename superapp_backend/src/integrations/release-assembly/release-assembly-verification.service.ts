@@ -236,11 +236,35 @@ export class ReleaseAssemblyVerificationService {
       const releaseConfigs: unknown[] = [];
 
       // Transition approved apps to BUILDING and dispatch notifications
+      const initialBuildStages = {
+        preflight: {
+          id: 'preflight',
+          name: '1. Pre-Flight & Manifest Verification',
+          status: 'RUNNING',
+          details: `Verifying dependency checksums and manifest digest for ${dto.releaseVersion}.`,
+          updatedAt: new Date().toISOString(),
+        },
+        compile: {
+          id: 'compile',
+          name: '2. Fastlane APK Packaging',
+          status: 'PENDING',
+          details: 'Assembling Flutter SuperApp container and compiling debug APK binary with Fastlane.',
+        },
+        publish: {
+          id: 'publish',
+          name: '3. Publish to Nexus & Finalize',
+          status: 'PENDING',
+          details: 'Uploading compiled APK artifact to Sonatype Nexus repository.',
+        },
+      };
+
       for (const appDto of dto.miniApps) {
         try {
           await this.miniappRepository.update(appDto.id, {
             lifecycleStatus: 'BUILDING',
-            buildStages: null as any,
+            buildStatus: 'BUILDING',
+            buildStages: initialBuildStages as any,
+            buildError: null as any,
           });
 
           const appRecord = await this.miniappRepository.findOne({
@@ -267,12 +291,27 @@ export class ReleaseAssemblyVerificationService {
       }
 
       // Trigger Jenkins SuperApp build pipeline
-      await this.jenkinsService.triggerSuperAppBuild({
+      const jenkinsBuildRes = await this.jenkinsService.triggerSuperAppBuild({
         appName: 'superapp',
         releaseVersion: dto.releaseVersion,
         buildType: 'debug',
         codegenMrIid: latestCodegenMrIid(releaseConfigs),
       });
+
+      if (!jenkinsBuildRes.success) {
+        this.logger.warn(`Jenkins test build trigger returned failure: ${jenkinsBuildRes.message}`);
+        await this.markReleaseBuildFailed(
+          dto.miniApps.map((a) => a.id),
+          dto.releaseVersion,
+          `Failed to trigger Jenkins pipeline: ${jenkinsBuildRes.message}`,
+        );
+      } else {
+        // Start background watchdog poller in case Jenkins pipeline crashes, aborts, or encounters Groovy error
+        this.monitorJenkinsReleaseBuild(
+          dto.miniApps.map((a) => a.id),
+          dto.releaseVersion,
+        );
+      }
 
       // Trigger Jenkins SuperApp Web Sandbox build pipeline
       this.jenkinsService.triggerSuperAppSandboxBuild().catch((e: any) => {
@@ -851,6 +890,132 @@ export class ReleaseAssemblyVerificationService {
       `Build stage [${dto.releaseVersion}] ${dto.stageId} -> ${dto.status} (${rows.length} app(s))`,
     );
     return { ok: true, updated: rows.length };
+  }
+
+  /**
+   * Watchdog poller for Jenkins superapp-test-build in release assembly.
+   */
+  private monitorJenkinsReleaseBuild(miniAppIds: string[], releaseVersion: string) {
+    let polls = 0;
+    const maxPolls = 180; // 180 * 3s = 9 minutes
+    const interval = setInterval(async () => {
+      polls++;
+      try {
+        const apps = await this.miniappRepository.find({
+          where: miniAppIds.map((id) => ({ id })),
+        });
+        const anyBuilding = apps.some((a) => a.buildStatus === 'BUILDING' || a.lifecycleStatus === 'BUILDING');
+        if (!anyBuilding || polls >= maxPolls) {
+          clearInterval(interval);
+          if (anyBuilding && polls >= maxPolls) {
+            await this.markReleaseBuildFailed(
+              miniAppIds,
+              releaseVersion,
+              'SuperApp build pipeline timed out after 9 minutes.',
+            );
+          }
+          return;
+        }
+
+        const jStatus = await this.jenkinsService.getTestBuildStatusFromJenkins();
+        if (jStatus.available && !jStatus.building) {
+          clearInterval(interval);
+          if (jStatus.result === 'FAILURE' || jStatus.result === 'ABORTED') {
+            const errorLine =
+              jStatus.consoleText
+                ?.split('\n')
+                .map((l) => l.trim())
+                .filter(
+                  (l) =>
+                    l.includes('FAILURE') ||
+                    l.includes('ERROR') ||
+                    l.includes('Exception') ||
+                    l.includes('failed') ||
+                    l.includes('unexpected char'),
+                )
+                .slice(-3)
+                .join(' | ') ||
+              `Jenkins pipeline build ended with ${jStatus.result || 'FAILURE'}.`;
+
+            this.logger.warn(
+              `Jenkins release build failure detected by watchdog for apps [${miniAppIds.join(', ')}]: ${errorLine}`,
+            );
+            await this.markReleaseBuildFailed(miniAppIds, releaseVersion, errorLine);
+          }
+        }
+      } catch (err: any) {
+        this.logger.debug(`Jenkins release build watchdog poll error: ${err.message}`);
+      }
+    }, 3000);
+  }
+
+  /**
+   * Transitions building miniApps to BUILD_FAILED and emits websocket events.
+   */
+  private async markReleaseBuildFailed(
+    miniAppIds: string[],
+    releaseVersion: string,
+    errorMessage: string,
+  ) {
+    for (const id of miniAppIds) {
+      const app = await this.miniappRepository.findOne({ where: { id } });
+      if (!app) continue;
+
+      const stages: Record<string, any> = {
+        preflight: {
+          id: 'preflight',
+          name: '1. Pre-Flight & Manifest Verification',
+          status: 'FAILED',
+          details: errorMessage,
+          updatedAt: new Date().toISOString(),
+        },
+        compile: {
+          id: 'compile',
+          name: '2. Fastlane APK Packaging',
+          status: 'PENDING',
+          details: 'Stage aborted due to pre-flight failure.',
+        },
+        publish: {
+          id: 'publish',
+          name: '3. Publish to Nexus & Finalize',
+          status: 'PENDING',
+          details: 'Stage aborted due to packaging failure.',
+        },
+      };
+
+      app.lifecycleStatus = 'BUILD_FAILED' as any;
+      app.buildStatus = 'FAILED';
+      app.buildError = errorMessage;
+      app.buildStages = stages;
+      await this.miniappRepository.save(app);
+
+      this.notificationsService.emitBuildCompleted({
+        miniAppId: app.id,
+        appName: app.name || 'superapp',
+        releaseVersion,
+        status: 'FAILED',
+        error: errorMessage,
+      } as any);
+
+      this.notificationsService.emitBuildStageUpdate({
+        miniAppId: app.id,
+        appName: app.name || 'superapp',
+        releaseVersion,
+        stage: stages.preflight,
+        stages,
+      });
+
+      if (app.ownerId) {
+        await this.notificationsService.createNotification(
+          app.ownerId,
+          'SuperApp Build Failed',
+          `SuperApp build (${releaseVersion}) failed: ${errorMessage}`,
+          'BUILD_FAILED',
+          app.id,
+          { releaseVersion, error: errorMessage },
+        );
+      }
+    }
   }
 }
 

@@ -1,10 +1,11 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as child_process from 'child_process';
 import * as YAML from 'yaml';
 import { CapabilityProposal } from '../capability-proposals/entities/capability-proposal.entity';
+import { GitLabProvider } from '../integrations/git/providers/gitlab.provider';
 
 export interface CodePreviewResult {
   permissionKey: string;
@@ -30,7 +31,10 @@ export interface CodeGenerationResult {
 export class CapabilityCodeGeneratorService {
   private readonly logger = new Logger(CapabilityCodeGeneratorService.name);
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    @Optional() private readonly gitlabProvider?: GitLabProvider,
+  ) {}
 
   /**
    * Resolves the root directory of the SuperApp Flutter repository if available on the local filesystem.
@@ -302,10 +306,171 @@ export class CapabilityCodeGeneratorService {
         this.logger.log(
           `No local SuperApp directory mounted (running in containerized environment). Performing remote GitLab Merge Request generation for '${key}'.`,
         );
-        filesModified.push('android/app/src/main/AndroidManifest.xml');
-        filesModified.push('ios/Runner/Info.plist');
-        if (mapping.defaultPlugin) {
-          filesModified.push('pubspec.yaml');
+
+        const gitlabToken =
+          this.configService.get<string>('MOBILE_GIT_TOKEN') ||
+          this.configService.get<string>('GITLAB_ACCESS_TOKEN');
+        const projectSlug =
+          this.configService.get<string>('CODEGEN_REPO_SLUG') ||
+          'frontend/super-app';
+        const gitlabBaseUrl =
+          this.configService.get<string>('GITLAB_BASE_URL') ||
+          'https://git.fintechcenterfsa.com';
+
+        if (gitlabToken) {
+          const projectApiUrl = this.gitlabProvider
+            ? this.gitlabProvider.getProjectApiUrl(projectSlug)
+            : `${gitlabBaseUrl.replace(/\/+$/, '')}/api/v4/projects/${encodeURIComponent(projectSlug)}`;
+
+          const gitlabHeaders = {
+            'Content-Type': 'application/json',
+            'PRIVATE-TOKEN': gitlabToken,
+            'User-Agent': 'FSA-SuperApp-Platform',
+          };
+
+          try {
+            // 1. Create remote feature branch from targetBranch
+            const createBranchRes = await fetch(
+              `${projectApiUrl}/repository/branches?branch=${encodeURIComponent(branchName)}&ref=${encodeURIComponent(targetBranch)}`,
+              { method: 'POST', headers: gitlabHeaders },
+            );
+
+            if (!createBranchRes.ok && createBranchRes.status !== 400) {
+              const errTxt = await createBranchRes.text();
+              this.logger.warn(
+                `Could not create remote branch '${branchName}' (${createBranchRes.status}): ${errTxt}`,
+              );
+            } else {
+              this.logger.log(
+                `Remote branch '${branchName}' created from '${targetBranch}'`,
+              );
+            }
+
+            // 2. Fetch existing files from targetBranch, modify them in-memory, and collect commit actions
+            const actions: Array<{
+              action: 'update' | 'create';
+              file_path: string;
+              content: string;
+            }> = [];
+
+            const fetchRaw = async (rawPath: string): Promise<string | null> => {
+              try {
+                const encodedPath = encodeURIComponent(
+                  rawPath.replace(/^\//, ''),
+                );
+                const res = await fetch(
+                  `${projectApiUrl}/repository/files/${encodedPath}/raw?ref=${encodeURIComponent(targetBranch)}`,
+                  { headers: gitlabHeaders },
+                );
+                if (res.ok) return await res.text();
+              } catch (_) {}
+              return null;
+            };
+
+            // AndroidManifest.xml
+            const manifestContent = await fetchRaw(
+              'android/app/src/main/AndroidManifest.xml',
+            );
+            if (manifestContent) {
+              const permTag = `<uses-permission android:name="${mapping.android}"/>`;
+              if (!manifestContent.includes(mapping.android)) {
+                const updatedManifest = manifestContent.replace(
+                  /(<manifest[^>]*>)/i,
+                  `$1\n    <!-- Auto-injected for capability: ${key} -->\n    ${permTag}`,
+                );
+                actions.push({
+                  action: 'update',
+                  file_path: 'android/app/src/main/AndroidManifest.xml',
+                  content: updatedManifest,
+                });
+                filesModified.push('android/app/src/main/AndroidManifest.xml');
+              }
+            } else {
+              filesModified.push('android/app/src/main/AndroidManifest.xml');
+            }
+
+            // Info.plist
+            const plistContent = await fetchRaw('ios/Runner/Info.plist');
+            if (plistContent) {
+              if (!plistContent.includes(`<key>${mapping.iosKey}</key>`)) {
+                const iosBlock = `\t<!-- Auto-injected for capability: ${key} -->\n\t<key>${mapping.iosKey}</key>\n\t<string>${mapping.iosDescription}</string>\n</dict>`;
+                const updatedPlist = plistContent.replace(
+                  /<\/dict>\s*<\/plist>/i,
+                  `${iosBlock}\n</plist>`,
+                );
+                actions.push({
+                  action: 'update',
+                  file_path: 'ios/Runner/Info.plist',
+                  content: updatedPlist,
+                });
+                filesModified.push('ios/Runner/Info.plist');
+              }
+            } else {
+              filesModified.push('ios/Runner/Info.plist');
+            }
+
+            // pubspec.yaml
+            if (mapping.defaultPlugin) {
+              const pubspecContent = await fetchRaw('pubspec.yaml');
+              if (pubspecContent) {
+                const [pkgName, pkgVer] = mapping.defaultPlugin
+                  .split(':')
+                  .map((s) => s.trim());
+                if (!pubspecContent.includes(`${pkgName}:`)) {
+                  const updatedPubspec = pubspecContent.replace(
+                    /(dependencies:\s*\n)/,
+                    `$1  # Auto-injected for capability: ${key}\n  ${pkgName}: ${pkgVer || 'any'}\n`,
+                  );
+                  actions.push({
+                    action: 'update',
+                    file_path: 'pubspec.yaml',
+                    content: updatedPubspec,
+                  });
+                  filesModified.push('pubspec.yaml');
+                }
+              } else {
+                filesModified.push('pubspec.yaml');
+              }
+            }
+
+            // 3. Commit files to remote branch
+            if (actions.length > 0) {
+              const commitMsg = `feat(capability): add ${key} capability & permissions (target: ${targetVersion || 'next'})`;
+              const commitRes = await fetch(
+                `${projectApiUrl}/repository/commits`,
+                {
+                  method: 'POST',
+                  headers: gitlabHeaders,
+                  body: JSON.stringify({
+                    branch: branchName,
+                    commit_message: commitMsg,
+                    actions,
+                  }),
+                },
+              );
+
+              if (commitRes.ok) {
+                this.logger.log(
+                  `Successfully committed ${actions.length} file modification(s) to remote branch '${branchName}'`,
+                );
+              } else {
+                const errBody = await commitRes.text();
+                this.logger.warn(
+                  `GitLab commit API returned ${commitRes.status}: ${errBody}`,
+                );
+              }
+            }
+          } catch (gitOpsErr: any) {
+            this.logger.warn(
+              `Remote GitLab GitOps error for '${key}': ${gitOpsErr.message}`,
+            );
+          }
+        } else {
+          filesModified.push('android/app/src/main/AndroidManifest.xml');
+          filesModified.push('ios/Runner/Info.plist');
+          if (mapping.defaultPlugin) {
+            filesModified.push('pubspec.yaml');
+          }
         }
       }
 

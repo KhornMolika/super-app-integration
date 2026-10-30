@@ -646,18 +646,17 @@ export class JenkinsService {
   }
 
   /**
-   * Fetches latest build status and console log snippet from Jenkins for superapp-test-build
+   * Fetches latest build status and console log snippet from Jenkins for any job
    */
-  async getTestBuildStatusFromJenkins(): Promise<{
+  async getJobBuildStatus(jobName: string): Promise<{
     available: boolean;
     building?: boolean;
     result?: string | null;
     duration?: number;
     consoleText?: string;
   }> {
-    const jobName = 'superapp-test-build';
-    const statusUrl = `${this.jenkinsUrl}/job/${jobName}/lastBuild/api/json`;
-    const consoleUrl = `${this.jenkinsUrl}/job/${jobName}/lastBuild/consoleText`;
+    const statusUrl = `${this.jenkinsUrl}/job/${encodeURIComponent(jobName)}/lastBuild/api/json`;
+    const consoleUrl = `${this.jenkinsUrl}/job/${encodeURIComponent(jobName)}/lastBuild/consoleText`;
 
     try {
       const headers: Record<string, string> = {};
@@ -688,5 +687,18 @@ export class JenkinsService {
     } catch (_) {
       return { available: false };
     }
+  }
+
+  /**
+   * Fetches latest build status and console log snippet from Jenkins for superapp-test-build
+   */
+  async getTestBuildStatusFromJenkins(): Promise<{
+    available: boolean;
+    building?: boolean;
+    result?: string | null;
+    duration?: number;
+    consoleText?: string;
+  }> {
+    return this.getJobBuildStatus('superapp-test-build');
   }
 }

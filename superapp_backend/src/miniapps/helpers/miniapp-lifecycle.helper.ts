@@ -1668,13 +1668,30 @@ export class MiniappLifecycleHelper {
         hadRunning = true;
       }
     }
-    if (!hadRunning && stages.preflight) {
+    if (!hadRunning) {
       stages.preflight = {
-        ...stages.preflight,
+        id: 'preflight',
+        name: '1. Pre-Flight & Manifest Verification',
         status: 'FAILED',
         details: errorMessage,
         updatedAt: new Date().toISOString(),
       };
+      if (!stages.compile) {
+        stages.compile = {
+          id: 'compile',
+          name: '2. Fastlane APK Packaging',
+          status: 'PENDING',
+          details: 'Stage aborted due to pre-flight failure.',
+        };
+      }
+      if (!stages.publish) {
+        stages.publish = {
+          id: 'publish',
+          name: '3. Publish to Nexus & Finalize',
+          status: 'PENDING',
+          details: 'Stage aborted due to packaging failure.',
+        };
+      }
     }
 
     app.lifecycleStatus = MiniAppLifecycleStatus.APPROVED as any;
@@ -1690,6 +1707,14 @@ export class MiniappLifecycleHelper {
       status: 'FAILED',
       error: errorMessage,
     } as any);
+
+    this.notificationsService.emitBuildStageUpdate({
+      miniAppId: app.id,
+      appName: app.name || 'superapp',
+      releaseVersion,
+      stage: stages.preflight,
+      stages,
+    });
 
     if (app.ownerId) {
       await this.notificationsService.createNotification(

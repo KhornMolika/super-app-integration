@@ -647,6 +647,9 @@ export class MiniappValidationHelper {
               fallbackReason: reason,
               securityChecks: app.securityChecks,
             });
+          } else {
+            // Watchdog poller for Jenkins validation pipeline in case of Groovy/runner crash or abort
+            this.monitorJenkinsValidation(id, method);
           }
         })
         .catch(async (err) => {
@@ -719,5 +722,134 @@ export class MiniappValidationHelper {
     );
 
     return proposal;
+  }
+
+  /**
+   * Watchdog poller for Jenkins validation pipelines (WebView, Flutter Package, Native SDK, Deep Link).
+   * Detects early Jenkins crashes, Groovy compilation failures, or pipeline aborts.
+   */
+  private monitorJenkinsValidation(miniAppId: string, integrationMethod: string) {
+    const methodJobMap: Record<string, string> = {
+      WEBVIEW: 'miniapp-validation-webview',
+      FLUTTER_PACKAGE: 'miniapp-validation-flutter-package',
+      NATIVE_SDK: 'miniapp-validation-native-sdk',
+      DEEP_LINK: 'miniapp-validation-deep-link',
+    };
+    const targetJob = methodJobMap[integrationMethod] || 'miniapp-validation';
+
+    let polls = 0;
+    const maxPolls = 120; // 120 * 3s = 6 minutes
+    const interval = setInterval(async () => {
+      polls++;
+      try {
+        const app = await this.miniappRepository.findOne({ where: { id: miniAppId } });
+        if (!app || app.validationStatus !== 'RUNNING' || polls >= maxPolls) {
+          clearInterval(interval);
+          if (app && app.validationStatus === 'RUNNING' && polls >= maxPolls) {
+            await this.markValidationFailed(
+              miniAppId,
+              'Validation pipeline timed out after 6 minutes waiting for Jenkins CI.',
+            );
+          }
+          return;
+        }
+
+        const jStatus = await this.jenkinsService.getJobBuildStatus(targetJob);
+        if (jStatus.available && !jStatus.building) {
+          clearInterval(interval);
+          if (jStatus.result === 'FAILURE' || jStatus.result === 'ABORTED') {
+            const errorLine =
+              jStatus.consoleText
+                ?.split('\n')
+                .map((l) => l.trim())
+                .filter(
+                  (l) =>
+                    l.includes('FAILURE') ||
+                    l.includes('ERROR') ||
+                    l.includes('Exception') ||
+                    l.includes('failed') ||
+                    l.includes('unexpected char'),
+                )
+                .slice(-3)
+                .join(' | ') ||
+              `Jenkins validation pipeline finished with ${jStatus.result || 'FAILURE'}.`;
+
+            this.logger.warn(
+              `Jenkins validation failure detected by watchdog for ${integrationMethod} app ${miniAppId}: ${errorLine}`,
+            );
+            await this.markValidationFailed(miniAppId, errorLine);
+          }
+        }
+      } catch (err: any) {
+        this.logger.debug(`Jenkins validation watchdog poll error: ${err.message}`);
+      }
+    }, 3000);
+  }
+
+  /**
+   * Transitions an active validation to FAILED if Jenkins pipeline crashed or failed.
+   */
+  private async markValidationFailed(miniAppId: string, errorMessage: string) {
+    const app = await this.miniappRepository.findOne({ where: { id: miniAppId } });
+    if (!app || app.validationStatus !== 'RUNNING') return;
+
+    const stages: Record<string, any> = { ...(app.validationStages || {}) };
+    let hadRunning = false;
+    for (const k of Object.keys(stages)) {
+      if (stages[k]?.status === 'RUNNING') {
+        stages[k] = {
+          ...stages[k],
+          status: 'FAILED',
+          details: errorMessage,
+          updatedAt: new Date().toISOString(),
+        };
+        hadRunning = true;
+      }
+    }
+    if (!hadRunning && Object.keys(stages).length > 0) {
+      const firstKey = Object.keys(stages)[0];
+      stages[firstKey] = {
+        ...stages[firstKey],
+        status: 'FAILED',
+        details: errorMessage,
+        updatedAt: new Date().toISOString(),
+      };
+    }
+
+    app.validationStatus = 'FAILED';
+    app.validationStages = stages;
+    app.validationReport = {
+      score: 0,
+      status: 'FAILED',
+      method: app.integrationMethod || 'FLUTTER_PACKAGE',
+      completedAt: new Date().toISOString(),
+      findings: [
+        {
+          id: 'JENKINS_PIPELINE_ERROR',
+          severity: 'CRITICAL',
+          title: 'Jenkins Pipeline Execution Failed',
+          description: errorMessage,
+          recommendation: 'Check the Jenkins build console logs and re-run the security scan.',
+        },
+      ],
+    };
+
+    await this.miniappRepository.save(app);
+
+    this.notificationsService.emitStageUpdate({
+      miniAppId: app.id,
+      stages: app.validationStages,
+      validationStatus: 'FAILED',
+    });
+
+    if (app.ownerId) {
+      await this.notificationsService.createNotification(
+        app.ownerId,
+        'Security Validation Failed',
+        `Automated security scan for "${app.name}" failed: ${errorMessage}`,
+        'SCAN_FAILED',
+        app.id,
+      );
+    }
   }
 }
