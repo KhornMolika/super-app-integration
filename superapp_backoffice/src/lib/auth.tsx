@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
 import { authApi } from '@/api/auth.api';
 import { usersApi } from '@/api/users.api';
 import { resetSessionExpiredState } from '@/api/client';
@@ -226,6 +226,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           roles: userRoles,
           permissions: res.user.permissions,
           avatarUrl: res.user.avatarUrl || null,
+          organizationId: res.user.organizationId || res.user.organization?.id || null,
+          organization: res.user.organization || null,
         });
         setIsAuthenticated(true);
         return { success: true };
@@ -252,36 +254,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const can = (permission: string) => {
-    if (role === 'SUPER_ADMIN') return true;
-    const defaultPerms = ROLE_PERMISSIONS[role] || [];
-    const userPerms = currentUser?.permissions || [];
-    return defaultPerms.includes(permission) || userPerms.includes(permission);
-  };
+  const can = useCallback(
+    (permission: string) => {
+      if (role === 'SUPER_ADMIN') return true;
+      const defaultPerms = ROLE_PERMISSIONS[role] || [];
+      const userPerms = currentUser?.permissions || [];
+      return defaultPerms.includes(permission) || userPerms.includes(permission);
+    },
+    [role, currentUser?.permissions]
+  );
 
-  const hasRole = (r: Role) => {
-    return role === r;
-  };
+  const hasRole = useCallback((r: Role) => role === r, [role]);
+
+  const authValue = useMemo(
+    () => ({
+      role,
+      setRole: setRoleState,
+      user: currentUser,
+      isAuthenticated,
+      isLoading,
+      avatarUrl: effectiveAvatarUrl,
+      setAvatarPreview,
+      clearAvatarPreview,
+      updateUserAvatar,
+      updateCurrentUser,
+      loginWithEmail,
+      can,
+      hasRole,
+      logout,
+      refreshSession: fetchSession,
+    }),
+    [
+      role,
+      currentUser,
+      isAuthenticated,
+      isLoading,
+      effectiveAvatarUrl,
+      can,
+      hasRole,
+    ]
+  );
 
   return (
-    <AuthContext.Provider
-      value={{
-        role,
-        setRole: setRoleState,
-        user: currentUser,
-        isAuthenticated,
-        isLoading,
-        avatarUrl: effectiveAvatarUrl,
-        setAvatarPreview,
-        clearAvatarPreview,
-        updateUserAvatar,
-        updateCurrentUser,
-        loginWithEmail,
-        can,
-        hasRole,
-        logout,
-        refreshSession: fetchSession,
-      }}
+    <AuthContext.Provider value={authValue}
     >
       {children}
     </AuthContext.Provider>

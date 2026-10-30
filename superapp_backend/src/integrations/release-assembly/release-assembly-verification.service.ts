@@ -585,14 +585,18 @@ export class ReleaseAssemblyVerificationService {
         }
 
         if (targetEmail) {
-          const sandboxUrl = `${backofficeBase}/miniapps/${app.id}`;
-          await this.mailService.sendTestBuildReadyEmail(
-            targetEmail,
-            app.name || app.appId || 'MiniApp',
-            effectiveVersion,
-            finalApkUrl,
-            sandboxUrl,
-          );
+          try {
+            const sandboxUrl = `${backofficeBase}/miniapps/${app.id}`;
+            await this.mailService.sendTestBuildReadyEmail(
+              targetEmail,
+              app.name || app.appId || 'MiniApp',
+              effectiveVersion,
+              finalApkUrl,
+              sandboxUrl,
+            );
+          } catch (mailErr: any) {
+            this.logger.warn(`Failed to send test build ready email: ${mailErr?.message || mailErr}`);
+          }
         }
       }
 

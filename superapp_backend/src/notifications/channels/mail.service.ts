@@ -453,7 +453,7 @@ export class MailService {
             this.logger.error(
               `${options.errorLog} (fallback failed): ${fallbackResult.error.message}`,
             );
-            throw new Error(fallbackResult.error.message);
+            return;
           }
           this.logger.log(
             `${options.successLog} (ID: ${fallbackResult.data?.id})`,
@@ -462,13 +462,13 @@ export class MailService {
         }
 
         this.logger.error(`${options.errorLog}: ${result.error.message}`);
-        throw new Error(result.error.message);
+        return;
       }
 
       this.logger.log(`${options.successLog} (ID: ${result.data?.id})`);
     } catch (error: any) {
       this.logger.error(`${options.errorLog}: ${error?.message || error}`);
-      throw error;
+      // Non-fatal: email delivery failure should not crash webhooks or transactional flows
     }
   }
 }

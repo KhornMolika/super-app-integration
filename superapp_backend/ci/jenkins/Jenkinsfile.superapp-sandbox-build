@@ -99,7 +99,7 @@ pipeline {
                     process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
                     (async () => {
                         const callbackUrl = "${params.CALLBACK_URL}";
-                        const token = "${params.CALLBACK_TOKEN || ''}";
+                        const token = "${params.CALLBACK_TOKEN ?: ''}";
                         const headers = { "Content-Type": "application/json" };
                         if (token) headers["x-callback-token"] = token;
                         try {
@@ -107,6 +107,7 @@ pipeline {
                                 method: "POST",
                                 headers: headers,
                                 body: JSON.stringify({
+                                    callbackToken: token,
                                     appName: "superapp-sandbox",
                                     status: "COMPLETED",
                                     details: "Flutter Web Sandbox compiled successfully with base-href ${params.BASE_HREF}."
@@ -129,7 +130,7 @@ pipeline {
                     process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
                     (async () => {
                         const callbackUrl = "${params.CALLBACK_URL}";
-                        const token = "${params.CALLBACK_TOKEN || ''}";
+                        const token = "${params.CALLBACK_TOKEN ?: ''}";
                         const headers = { "Content-Type": "application/json" };
                         if (token) headers["x-callback-token"] = token;
                         try {
@@ -137,6 +138,7 @@ pipeline {
                                 method: "POST",
                                 headers: headers,
                                 body: JSON.stringify({
+                                    callbackToken: token,
                                     appName: "superapp-sandbox",
                                     status: "FAILED",
                                     details: "Flutter Web Sandbox build execution failed in Jenkins."

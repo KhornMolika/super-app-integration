@@ -105,6 +105,9 @@ function UsersContent() {
   }, [can]);
   // Modals State
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const lastPushedUrlRef = React.useRef<string>('');
+  const fetchUsersRef = React.useRef<() => Promise<void>>(() => Promise.resolve());
+  const fetchGlobalCountsRef = React.useRef<() => Promise<void>>(() => Promise.resolve());
   const [editingUser, setEditingUser] = useState<User | null>(null);
   // Debounce search input to avoid spamming the backend on every keystroke
   useEffect(() => {
@@ -128,7 +131,8 @@ function UsersContent() {
     const targetUrl = queryStr ? `${pathname}?${queryStr}` : pathname;
     if (typeof window !== 'undefined') {
       const currentFullUrl = window.location.pathname + window.location.search;
-      if (currentFullUrl !== targetUrl && window.history?.replaceState) {
+      if (currentFullUrl !== targetUrl && lastPushedUrlRef.current !== targetUrl && window.history?.replaceState) {
+        lastPushedUrlRef.current = targetUrl;
         window.history.replaceState(null, '', targetUrl);
       }
     }
@@ -212,7 +216,10 @@ function UsersContent() {
     } finally {
       setLoadingUsers(false);
     }
-  }, [can, currentPage, pageSize, debouncedSearch, roleFilter, statusFilter, toast]);
+  }, [can, currentPage, pageSize, debouncedSearch, roleFilter, statusFilter]);
+
+  fetchUsersRef.current = fetchUsers;
+  fetchGlobalCountsRef.current = fetchGlobalCounts;
   // Fetch Roles and Organizations from Database via Next.js BFF proxy
   const fetchRoles = useCallback(async () => {
     if (!can('role:read') && !can('user:read')) return;
@@ -690,7 +697,7 @@ function UsersContent() {
         );
       },
     },
-  ], [roleFilter, statusFilter, canManageUsers, toast, fetchUsers, fetchGlobalCounts, handleOpenEditUser, handleToggleUserStatus, handleDeleteUser]);
+  ], [roleFilter, statusFilter, canManageUsers, handleOpenEditUser, handleToggleUserStatus, handleDeleteUser]);
   // Server-Driven Pagination Props for DataTable
   const paginationProps: PaginationProps = {
     currentPage: paginationMeta.page || currentPage,

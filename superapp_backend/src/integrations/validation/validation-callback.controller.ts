@@ -240,12 +240,16 @@ export class ValidationCallbackController {
       const targetEmail =
         app.supportEmail || app.owner?.email || (app as any).ownerEmail;
       if (targetEmail) {
-        await this.mailService.sendValidationPassedEmail(
-          targetEmail,
-          app.name || app.appId || 'MiniApp',
-          dto.score ?? 100,
-          `${this.backofficeBaseUrl}/miniapps/${app.id}`,
-        );
+        try {
+          await this.mailService.sendValidationPassedEmail(
+            targetEmail,
+            app.name || app.appId || 'MiniApp',
+            dto.score ?? 100,
+            `${this.backofficeBaseUrl}/miniapps/${app.id}`,
+          );
+        } catch (mailErr: any) {
+          this.logger.warn(`Failed to deliver validation passed email to ${targetEmail}: ${mailErr?.message || mailErr}`);
+        }
       }
 
       await this.auditService.log({
@@ -360,15 +364,19 @@ export class ValidationCallbackController {
       const targetEmail =
         app.supportEmail || app.owner?.email || (app as any).ownerEmail;
       if (targetEmail) {
-        await this.mailService.sendValidationFailedEmail(
-          targetEmail,
-          app.name || app.appId || 'MiniApp',
-          dto.score ?? 0,
-          (dto.findings || []).filter(
-            (f) => f.severity === 'CRITICAL' || f.severity === 'HIGH',
-          ),
-          `${this.backofficeBaseUrl}/miniapps/${app.id}`,
-        );
+        try {
+          await this.mailService.sendValidationFailedEmail(
+            targetEmail,
+            app.name || app.appId || 'MiniApp',
+            dto.score ?? 0,
+            (dto.findings || []).filter(
+              (f) => f.severity === 'CRITICAL' || f.severity === 'HIGH',
+            ),
+            `${this.backofficeBaseUrl}/miniapps/${app.id}`,
+          );
+        } catch (mailErr: any) {
+          this.logger.warn(`Failed to deliver validation failed email to ${targetEmail}: ${mailErr?.message || mailErr}`);
+        }
       }
 
       await this.auditService.log({

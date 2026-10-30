@@ -80,7 +80,13 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
     const userOrgName = typeof userOrg === 'string' ? userOrg : userOrg?.name;
     const userOrgCode = typeof userOrg === 'object' && userOrg ? userOrg.code : null;
 
-    if (!userOrg && !userOrgId && !userOrgName) return null;
+    if (!userOrg && !userOrgId && !userOrgName) {
+      const ftcOrg = dbOrganizations.find(
+        (o) => (o.code || '').toUpperCase() === 'FTC' || (o.name || '').toLowerCase().includes('financial technology center')
+      );
+      if (ftcOrg) return ftcOrg;
+      return dbOrganizations[0] || null;
+    }
 
     const matched = dbOrganizations.find((org) => {
       if (userOrgId && org.id === userOrgId) return true;

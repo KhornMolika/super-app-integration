@@ -113,6 +113,18 @@ export class AccessControlService {
         userChanged = true;
       }
 
+      if (!user.organizationId) {
+        try {
+          const ftcOrgs = await this.userRepository.manager.query(
+            "SELECT id, name, code FROM organizations WHERE code = 'FTC' OR name ILIKE '%Financial Technology Center%' LIMIT 1",
+          );
+          if (ftcOrgs && ftcOrgs.length > 0) {
+            user.organizationId = ftcOrgs[0].id;
+            userChanged = true;
+          }
+        } catch (_) {}
+      }
+
       if (userChanged) {
         await this.userRepository.save(user);
         user = await this.userRepository
@@ -154,11 +166,20 @@ export class AccessControlService {
     }
     const passwordHash = await hashPassword(defaultPassword);
 
+    let ftcOrgId: string | null = null;
+    try {
+      const ftcOrgs = await this.userRepository.manager.query(
+        "SELECT id, name, code FROM organizations WHERE code = 'FTC' OR name ILIKE '%Financial Technology Center%' LIMIT 1",
+      );
+      if (ftcOrgs && ftcOrgs.length > 0) ftcOrgId = ftcOrgs[0].id;
+    } catch (_) {}
+
     const user = this.userRepository.create({
       email,
       name: seedInfo.name,
       roleId: role.id,
       role: role,
+      organizationId: ftcOrgId,
       status: 'ACTIVE',
       passwordHash,
     });

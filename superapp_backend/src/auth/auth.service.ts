@@ -328,6 +328,8 @@ export class AuthService implements OnModuleInit {
         name: user.name,
         roles,
         permissions: Array.from(permissions),
+        organizationId: user.organizationId || (user.organization ? user.organization.id : null) || null,
+        organization: user.organization || null,
       },
     };
   }

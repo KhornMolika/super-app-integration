@@ -49,6 +49,7 @@ pipeline {
                                     method: "POST",
                                     headers: headers,
                                     body: JSON.stringify({
+                                        callbackToken: token,
                                         appName: "${params.APP_NAME}",
                                         releaseVersion: "${params.RELEASE_VERSION}",
                                         stageId: "preflight",
@@ -86,6 +87,7 @@ pipeline {
                                     method: "POST",
                                     headers: headers,
                                     body: JSON.stringify({
+                                        callbackToken: token,
                                         appName: "${params.APP_NAME}",
                                         releaseVersion: "${params.RELEASE_VERSION}",
                                         stageId: "compile",
@@ -161,6 +163,7 @@ pipeline {
                                     method: "POST",
                                     headers: headers,
                                     body: JSON.stringify({
+                                        callbackToken: token,
                                         appName: "${params.APP_NAME}",
                                         releaseVersion: "${params.RELEASE_VERSION}",
                                         stageId: "compile",
@@ -228,6 +231,7 @@ pipeline {
                                     method: "POST",
                                     headers: headers,
                                     body: JSON.stringify({
+                                        callbackToken: token,
                                         appName: "${params.APP_NAME}",
                                         releaseVersion: "${params.RELEASE_VERSION}",
                                         stageId: "publish",
@@ -337,6 +341,7 @@ pipeline {
                                 method: "POST",
                                 headers: headers,
                                 body: JSON.stringify({
+                                    callbackToken: token,
                                     appName: appName,
                                     releaseVersion: releaseVersion,
                                     status: "FAILED",
