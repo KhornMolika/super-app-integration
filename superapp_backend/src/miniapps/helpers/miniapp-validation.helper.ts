@@ -461,20 +461,29 @@ export class MiniappValidationHelper {
       Boolean(app.pendingRevision);
 
     if (Object.keys(errors).length > 0) {
-      const updatePayload: any = {
-        validationErrors: errors as any,
-        validationStatus: 'FAILED',
-      };
-      if (!isLive) {
-        updatePayload.lifecycleStatus = 'DRAFT';
-      } else if (app.pendingRevision) {
-        updatePayload.pendingRevision = {
-          ...app.pendingRevision,
+      try {
+        const updatePayload: any = {
+          validationErrors: errors as any,
           validationStatus: 'FAILED',
-          validationErrors: errors,
         };
+        if (!isLive) {
+          updatePayload.lifecycleStatus = 'DRAFT';
+        } else if (app.pendingRevision) {
+          updatePayload.pendingRevision = {
+            ...app.pendingRevision,
+            validationStatus: 'FAILED',
+            validationErrors: errors,
+          };
+        }
+        await this.miniappRepository.update(id, updatePayload);
+      } catch (updErr: any) {
+        this.logger.warn(
+          `Could not update validationErrors directly: ${updErr.message}`,
+        );
+        app.validationStatus = 'FAILED';
+        if (!isLive) app.lifecycleStatus = 'DRAFT' as any;
+        await this.miniappRepository.save(app);
       }
-      await this.miniappRepository.update(id, updatePayload);
 
       // Create persistent issues
       const issues = Object.entries(errors).map(([key, value]) => {
