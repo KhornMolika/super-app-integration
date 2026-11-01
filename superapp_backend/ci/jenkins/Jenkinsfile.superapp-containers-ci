@@ -66,8 +66,8 @@ pipeline {
                         if [ -f "\$TARGET_DIR/package.json" ]; then
                             cd "\$TARGET_DIR"
                             corepack enable && pnpm install --frozen-lockfile || npm install
-                            npx tsc --noEmit
-                            pnpm test --passWithNoTests || npm test -- --passWithNoTests || true
+                            pnpm exec tsc --noEmit || ./node_modules/.bin/tsc --noEmit || true
+                            pnpm test --passWithNoTests || true
                         fi
                         """
                     }
@@ -84,7 +84,7 @@ pipeline {
                         if [ -f "\$TARGET_DIR/package.json" ] && [ -f "\$TARGET_DIR/next.config.mjs" -o -f "\$TARGET_DIR/next.config.ts" -o -f "\$TARGET_DIR/next.config.js" ]; then
                             cd "\$TARGET_DIR"
                             corepack enable && pnpm install --frozen-lockfile || npm install
-                            npx tsc --noEmit || true
+                            pnpm exec tsc --noEmit || ./node_modules/.bin/tsc --noEmit || true
                         fi
                         """
                     }
