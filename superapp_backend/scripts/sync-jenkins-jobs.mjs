@@ -214,6 +214,56 @@ function buildJobParametersXml(jobName, branch = defaultBranch) {
         </hudson.model.StringParameterDefinition>`;
   }
 
+  if (jobName.includes('containers') || jobName.includes('harbor')) {
+    return `${scmTokenParam}
+        <hudson.model.ChoiceParameterDefinition>
+          <name>SERVICE</name>
+          <description>Service(s) to compile and push to Harbor</description>
+          <choices class="java.util.Arrays$ArrayList">
+            <a class="string-array">
+              <string>all</string>
+              <string>backend</string>
+              <string>manager-client</string>
+              <string>client</string>
+            </a>
+          </choices>
+        </hudson.model.ChoiceParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>IMAGE_TAG</name>
+          <defaultValue>latest</defaultValue>
+          <description>Docker image tag (e.g., latest, v1.0.6, or commit SHA)</description>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.BooleanParameterDefinition>
+          <name>RUN_TESTS</name>
+          <defaultValue>true</defaultValue>
+          <description>Run lint, typecheck, and unit tests before Docker build</description>
+        </hudson.model.BooleanParameterDefinition>
+        <hudson.model.BooleanParameterDefinition>
+          <name>DEPLOY_TO_K8S</name>
+          <defaultValue>true</defaultValue>
+          <description>Execute rolling restart on Kubernetes deployments after push</description>
+        </hudson.model.BooleanParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>HARBOR_REGISTRY</name>
+          <defaultValue>registry.fintechcenterfsa.com</defaultValue>
+          <description>Harbor Registry Host</description>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>HARBOR_PROJECT</name>
+          <defaultValue>super-app</defaultValue>
+          <description>Harbor Project / Repository Namespace</description>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>K8S_NAMESPACE</name>
+          <defaultValue>super-app</defaultValue>
+          <description>Target Kubernetes Namespace</description>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>`;
+  }
+
   return `${scmTokenParam}
         <hudson.model.StringParameterDefinition>
           <name>APP_NAME</name>
@@ -723,6 +773,7 @@ async function main() {
   await syncJob('miniapp-validation-deep-link', resolveScript('Jenkinsfile.deeplink-validation'), defaultBackendRepo, defaultBranch, 'ci/jenkins/Jenkinsfile.deeplink-validation');
   await syncJob('superapp-sandbox-build', resolveScript('Jenkinsfile.superapp-sandbox-build'), defaultBackendRepo, defaultBranch, 'ci/jenkins/Jenkinsfile.superapp-sandbox-build');
   await syncJob('superapp-test-build', resolveScript('Jenkinsfile.superapp-test-build'), defaultBackendRepo, defaultBranch, 'ci/jenkins/Jenkinsfile.superapp-test-build');
+  await syncJob('superapp-containers-ci', resolveScript('Jenkinsfile.superapp-containers-ci'), defaultBackendRepo, defaultBranch, 'ci/jenkins/Jenkinsfile.superapp-containers-ci');
   console.log('✨ All Jenkins jobs processed successfully.');
 }
 

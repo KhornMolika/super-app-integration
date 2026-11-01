@@ -7,7 +7,24 @@ This document defines the official procedure for building and pushing the three 
 
 ---
 
-## 0. One-Time Harbor Registry Authentication
+## 0. Automated CI/CD via Jenkins (`superapp-containers-ci`)
+
+> [!TIP]
+> **Recommended Automated Workflow**: Instead of executing manual terminal commands on your local workstation, the Jenkins pipeline job **`superapp-containers-ci`** at `https://app.fintechcenterfsa.com/jenkins/job/superapp-containers-ci/` automatically compiles, tests, packages, pushes to Harbor, and triggers Kubernetes rolling restarts.
+
+### How to Trigger in Jenkins:
+1. Navigate to: `https://app.fintechcenterfsa.com/jenkins/job/superapp-containers-ci/`
+2. Click **Build with Parameters**:
+   * **`SERVICE`**: Select `all`, `backend`, `manager-client`, or `client`.
+   * **`IMAGE_TAG`**: Set to `latest` (or release tag, e.g. `v1.0.6`).
+   * **`GIT_BRANCH`**: Branch to build from (e.g. `molika` or `development`).
+   * **`RUN_TESTS`**: `true` (executes lint, type checks, and unit tests).
+   * **`DEPLOY_TO_K8S`**: `true` (automatically executes `kubectl rollout restart`).
+3. Click **Build**. Jenkins handles everything end-to-end.
+
+---
+
+## 0.1 One-Time Harbor Registry Authentication (Manual Fallback)
 
 Before building and pushing images, authenticate Docker against the private Harbor registry:
 
