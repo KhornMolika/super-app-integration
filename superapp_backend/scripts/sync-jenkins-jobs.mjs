@@ -762,7 +762,11 @@ async function main() {
   await syncJob('miniapp-validation-deep-link', resolveScript('Jenkinsfile.deeplink-validation'), defaultBackendRepo, defaultBranch, 'ci/jenkins/Jenkinsfile.deeplink-validation');
   await syncJob('superapp-sandbox-build', resolveScript('Jenkinsfile.superapp-sandbox-build'), defaultBackendRepo, defaultBranch, 'ci/jenkins/Jenkinsfile.superapp-sandbox-build');
   await syncJob('superapp-test-build', resolveScript('Jenkinsfile.superapp-test-build'), defaultBackendRepo, defaultBranch, 'ci/jenkins/Jenkinsfile.superapp-test-build');
-  await syncJob('superapp-containers-ci', resolveScript('Jenkinsfile.superapp-containers-ci'), defaultBackendRepo, defaultBranch, 'ci/jenkins/Jenkinsfile.superapp-containers-ci');
+  
+  // Dedicated per-project Harbor CI pipelines
+  await syncJob('superapp-backend-ci', resolveScript('Jenkinsfile.backend-ci'), defaultBackendRepo, defaultBranch, 'ci/jenkins/Jenkinsfile.backend-ci');
+  await syncJob('superapp-manager-ci', resolveScript('Jenkinsfile.manager-ci'), 'https://git.fintechcenterfsa.com/frontend/super-app-manager.git', defaultBranch, 'ci/jenkins/Jenkinsfile.manager-ci');
+  await syncJob('superapp-client-ci', resolveScript('Jenkinsfile.client-ci'), 'https://git.fintechcenterfsa.com/frontend/super-app.git', 'development', 'scripts/jenkins/Jenkinsfile.client-ci');
   console.log('✨ All Jenkins jobs processed successfully.');
 }
 
