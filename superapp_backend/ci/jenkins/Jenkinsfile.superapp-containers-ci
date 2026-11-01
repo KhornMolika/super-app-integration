@@ -6,16 +6,13 @@ pipeline {
         string(name: 'IMAGE_TAG', defaultValue: 'latest', description: 'Docker image tag (e.g., latest, v1.0.6, or commit SHA)')
         string(name: 'GIT_BRANCH', defaultValue: 'molika', description: 'Target Git branch to build from')
         booleanParam(name: 'RUN_TESTS', defaultValue: true, description: 'Run lint, typecheck, and unit tests before Docker build')
-        booleanParam(name: 'DEPLOY_TO_K8S', defaultValue: true, description: 'Execute rolling restart on Kubernetes deployments after push')
         string(name: 'HARBOR_REGISTRY', defaultValue: 'registry.fintechcenterfsa.com', description: 'Harbor Registry Host')
         string(name: 'HARBOR_PROJECT', defaultValue: 'super-app', description: 'Harbor Project / Repository Namespace')
-        string(name: 'K8S_NAMESPACE', defaultValue: 'super-app', description: 'Target Kubernetes Namespace')
     }
 
     environment {
         HARBOR_REGISTRY = "${params.HARBOR_REGISTRY ?: 'registry.fintechcenterfsa.com'}"
         HARBOR_PROJECT  = "${params.HARBOR_PROJECT ?: 'super-app'}"
-        K8S_NAMESPACE   = "${params.K8S_NAMESPACE ?: 'super-app'}"
         BACKEND_GIT_URL = 'https://git.fintechcenterfsa.com/backend/super-app.git'
         MANAGER_GIT_URL = 'https://git.fintechcenterfsa.com/frontend/super-app-manager.git'
         CLIENT_GIT_URL  = 'https://git.fintechcenterfsa.com/frontend/super-app.git'
@@ -27,13 +24,13 @@ pipeline {
         stage('1. Pre-Flight & Workspace Preparation') {
             steps {
                 echo "=========================================================="
-                echo " [*] Super App Automated Harbor CI/CD Pipeline"
+                echo " [*] Super App Automated Harbor Container CI Pipeline"
                 echo " Target Service  : ${params.SERVICE}"
                 echo " Image Tag       : ${params.IMAGE_TAG}"
                 echo " Git Branch      : ${params.GIT_BRANCH}"
                 echo " Registry        : ${env.HARBOR_REGISTRY}/${env.HARBOR_PROJECT}"
                 echo " Run Tests       : ${params.RUN_TESTS}"
-                echo " Deploy to K8s   : ${params.DEPLOY_TO_K8S}"
+                echo " Final Action    : Build & Push to Harbor"
                 echo "=========================================================="
 
                 script {
@@ -215,37 +212,6 @@ pipeline {
                 }
             }
         }
-
-        stage('6. Kubernetes Rolling Deployment (Continuous Deployment)') {
-            when { expression { return params.DEPLOY_TO_K8S == true } }
-            steps {
-                echo "=== Executing Kubernetes Rolling Restarts on Namespace '${env.K8S_NAMESPACE}' ==="
-                sh """
-                if command -v kubectl &> /dev/null; then
-                    if [ "${params.SERVICE}" = "all" ] || [ "${params.SERVICE}" = "backend" ]; then
-                        echo "Restarting deployment/super-app-backend..."
-                        kubectl rollout restart deployment/super-app-backend -n "${env.K8S_NAMESPACE}" || true
-                        kubectl rollout status deployment/super-app-backend -n "${env.K8S_NAMESPACE}" --timeout=180s || true
-                    fi
-
-                    if [ "${params.SERVICE}" = "all" ] || [ "${params.SERVICE}" = "manager-client" ]; then
-                        echo "Restarting deployment/super-app-manager-client..."
-                        kubectl rollout restart deployment/super-app-manager-client -n "${env.K8S_NAMESPACE}" || true
-                        kubectl rollout status deployment/super-app-manager-client -n "${env.K8S_NAMESPACE}" --timeout=180s || true
-                    fi
-
-                    if [ "${params.SERVICE}" = "all" ] || [ "${params.SERVICE}" = "client" ]; then
-                        echo "Restarting deployment/super-app-client..."
-                        kubectl rollout restart deployment/super-app-client -n "${env.K8S_NAMESPACE}" || true
-                        kubectl rollout status deployment/super-app-client -n "${env.K8S_NAMESPACE}" --timeout=180s || true
-                    fi
-                else
-                    echo "[WARN] 'kubectl' command not found in Jenkins agent environment. Skipping automatic rolling restart."
-                    echo "[INFO] Pods will pull the new image on their next scheduled restart or manual rollout."
-                fi
-                """
-            }
-        }
     }
 
     post {
@@ -255,18 +221,18 @@ pipeline {
         }
         success {
             echo "=========================================================="
-            echo " [SUCCESS] Harbor CI/CD Pipeline completed successfully!"
+            echo " [SUCCESS] All images built and pushed to Harbor successfully!"
             echo " Service Target : ${params.SERVICE}"
             echo " Image Tag      : ${params.IMAGE_TAG}"
             echo " Harbor Host    : ${env.HARBOR_REGISTRY}/${env.HARBOR_PROJECT}"
+            echo " Pipeline finished (No pod restart executed)."
             echo "=========================================================="
         }
         failure {
             echo "=========================================================="
-            echo " [FAILURE] Harbor CI/CD Pipeline encountered an error."
+            echo " [FAILURE] Container CI Pipeline encountered an error."
             echo " Check the console log above for details."
             echo "=========================================================="
         }
     }
 }
-

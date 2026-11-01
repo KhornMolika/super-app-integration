@@ -239,11 +239,6 @@ function buildJobParametersXml(jobName, branch = defaultBranch) {
           <defaultValue>true</defaultValue>
           <description>Run lint, typecheck, and unit tests before Docker build</description>
         </hudson.model.BooleanParameterDefinition>
-        <hudson.model.BooleanParameterDefinition>
-          <name>DEPLOY_TO_K8S</name>
-          <defaultValue>true</defaultValue>
-          <description>Execute rolling restart on Kubernetes deployments after push</description>
-        </hudson.model.BooleanParameterDefinition>
         <hudson.model.StringParameterDefinition>
           <name>HARBOR_REGISTRY</name>
           <defaultValue>registry.fintechcenterfsa.com</defaultValue>
@@ -254,12 +249,6 @@ function buildJobParametersXml(jobName, branch = defaultBranch) {
           <name>HARBOR_PROJECT</name>
           <defaultValue>super-app</defaultValue>
           <description>Harbor Project / Repository Namespace</description>
-          <trim>true</trim>
-        </hudson.model.StringParameterDefinition>
-        <hudson.model.StringParameterDefinition>
-          <name>K8S_NAMESPACE</name>
-          <defaultValue>super-app</defaultValue>
-          <description>Target Kubernetes Namespace</description>
           <trim>true</trim>
         </hudson.model.StringParameterDefinition>`;
   }

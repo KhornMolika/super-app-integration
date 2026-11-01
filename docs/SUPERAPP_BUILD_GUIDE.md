@@ -7,10 +7,10 @@ This document defines the official procedure for building and pushing the three 
 
 ---
 
-## 0. Automated CI/CD via Jenkins (`superapp-containers-ci`)
+## 0. Automated CI via Jenkins (`superapp-containers-ci`)
 
 > [!TIP]
-> **Recommended Automated Workflow**: Instead of executing manual terminal commands on your local workstation, the Jenkins pipeline job **`superapp-containers-ci`** at `https://app.fintechcenterfsa.com/jenkins/job/superapp-containers-ci/` automatically compiles, tests, packages, pushes to Harbor, and triggers Kubernetes rolling restarts.
+> **Automated Harbor CI Workflow**: Instead of executing manual terminal commands on your workstation, the Jenkins pipeline job **`superapp-containers-ci`** at `https://app.fintechcenterfsa.com/jenkins/job/superapp-containers-ci/` automatically runs tests, builds the production Docker images (`linux/amd64`), and pushes them to Harbor registry (`registry.fintechcenterfsa.com`). **Push to Harbor is the final step; it does NOT restart Kubernetes pods automatically.**
 
 ### How to Trigger in Jenkins:
 1. Navigate to: `https://app.fintechcenterfsa.com/jenkins/job/superapp-containers-ci/`
@@ -19,8 +19,8 @@ This document defines the official procedure for building and pushing the three 
    * **`IMAGE_TAG`**: Set to `latest` (or release tag, e.g. `v1.0.6`).
    * **`GIT_BRANCH`**: Branch to build from (e.g. `molika` or `development`).
    * **`RUN_TESTS`**: `true` (executes lint, type checks, and unit tests).
-   * **`DEPLOY_TO_K8S`**: `true` (automatically executes `kubectl rollout restart`).
-3. Click **Build**. Jenkins handles everything end-to-end.
+3. Click **Build**. Jenkins runs tests, builds the containers, and pushes them directly to Harbor.
+4. When you are ready to roll out changes to the Kubernetes cluster, you can execute the rolling restart command manually at your chosen time.
 
 ---
 
