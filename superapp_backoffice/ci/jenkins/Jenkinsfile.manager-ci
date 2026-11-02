@@ -7,6 +7,8 @@ pipeline {
         booleanParam(name: 'RUN_TESTS', defaultValue: true, description: 'Run lint and typecheck before building image')
         string(name: 'HARBOR_REGISTRY', defaultValue: 'registry.fintechcenterfsa.com', description: 'Harbor Registry Host')
         string(name: 'HARBOR_PROJECT', defaultValue: 'super-app', description: 'Harbor Project / Namespace')
+        string(name: 'HARBOR_USER', defaultValue: '', description: 'Harbor Robot / Bot Account Username (e.g. robot$...)')
+        password(name: 'HARBOR_PASSWORD', defaultValue: '', description: 'Harbor Robot Account Token / Secret')
     }
 
     environment {
@@ -29,15 +31,40 @@ pipeline {
                 echo "=========================================================="
 
                 script {
-                    try {
-                        withCredentials([usernamePassword(credentialsId: env.HARBOR_CREDS_ID, usernameVariable: 'H_USER', passwordVariable: 'H_PASS')]) {
-                            sh 'echo "$H_PASS" | docker login "${HARBOR_REGISTRY}" -u "$H_USER" --password-stdin'
-                            echo "[INFO] Successfully authenticated against Harbor registry: ${env.HARBOR_REGISTRY}"
+                    def loggedIn = false
+
+                    // 1. Authenticate with Bot account credentials if provided in parameters
+                    if (params.HARBOR_USER && params.HARBOR_PASSWORD) {
+                        try {
+                            withEnv(["H_USER=${params.HARBOR_USER}", "H_PASS=${params.HARBOR_PASSWORD}"]) {
+                                sh 'echo "$H_PASS" | docker login "${HARBOR_REGISTRY}" -u "$H_USER" --password-stdin'
+                                echo "[INFO] Successfully authenticated against Harbor using bot account '${params.HARBOR_USER}'"
+                                loggedIn = true
+                            }
+                        } catch (Exception paramErr) {
+                            echo "[WARN] Direct parameter authentication failed: ${paramErr.message}"
                         }
-                    } catch (Exception credErr) {
-                        echo "[WARN] Could not authenticate via credential '${env.HARBOR_CREDS_ID}': ${credErr.message}"
-                        echo "[WARN] Attempting to continue using existing Docker daemon login..."
                     }
+
+                    // 2. Fall back to Jenkins Credential store
+                    if (!loggedIn) {
+                        try {
+                            withCredentials([usernamePassword(credentialsId: env.HARBOR_CREDS_ID, usernameVariable: 'H_USER', passwordVariable: 'H_PASS')]) {
+                                sh 'echo "$H_PASS" | docker login "${HARBOR_REGISTRY}" -u "$H_USER" --password-stdin'
+                                echo "[INFO] Successfully authenticated against Harbor registry: ${env.HARBOR_REGISTRY}"
+                                loggedIn = true
+                            }
+                        } catch (Exception credErr) {
+                            echo "[WARN] Could not authenticate via credential '${env.HARBOR_CREDS_ID}': ${credErr.message}"
+                            echo "[WARN] Attempting to continue using existing Docker daemon login..."
+                        }
+                    }
+
+                    // 3. Network pre-flight check
+                    sh """
+                    echo "[INFO] Testing connectivity to https://${env.HARBOR_REGISTRY}/v2/..."
+                    curl -k -fsS -m 5 "https://${env.HARBOR_REGISTRY}/v2/" >/dev/null 2>&1 && echo "[OK] Harbor endpoint is reachable." || echo "[WARN] Direct connection to https://${env.HARBOR_REGISTRY}/v2/ timed out or unreachable. Check agent DNS/firewall if push fails."
+                    """
                 }
             }
         }
@@ -53,11 +80,11 @@ pipeline {
             }
         }
 
-        stage('3. Build & Push: manager-client') {
+        stage('3. Build & Push: manager-client (Next.js)') {
             steps {
                 script {
                     def imgManager = "${env.HARBOR_REGISTRY}/${env.HARBOR_PROJECT}/manager-client:${params.IMAGE_TAG}"
-                    echo "=== Compiling & Pushing Next.js Backoffice Manager Image: ${imgManager} ==="
+                    echo "=== Compiling & Pushing Backoffice Image: ${imgManager} ==="
                     sh """
                     docker build --platform linux/amd64 \
                         --build-arg NEXT_PUBLIC_SOCKET_URL=https://app.fintechcenterfsa.com \
@@ -83,7 +110,11 @@ pipeline {
 
     post {
         always {
-            sh 'docker logout "${HARBOR_REGISTRY}" || true'
+            script {
+                if (params.HARBOR_USER && params.HARBOR_PASSWORD) {
+                    sh 'docker logout "${HARBOR_REGISTRY}" || true'
+                }
+            }
         }
         success {
             echo "=========================================================="
@@ -98,4 +129,3 @@ pipeline {
         }
     }
 }
-

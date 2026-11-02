@@ -214,8 +214,8 @@ function buildJobParametersXml(jobName, branch = defaultBranch) {
         </hudson.model.StringParameterDefinition>`;
   }
 
-  if (jobName.includes('containers') || jobName.includes('harbor')) {
-    return `${scmTokenParam}
+  if (jobName.includes('containers') || jobName.includes('harbor') || jobName.includes('backend-ci') || jobName.includes('manager-ci') || jobName.includes('client-ci')) {
+    const serviceChoice = jobName.includes('containers') ? `
         <hudson.model.ChoiceParameterDefinition>
           <name>SERVICE</name>
           <description>Service(s) to compile and push to Harbor</description>
@@ -227,7 +227,9 @@ function buildJobParametersXml(jobName, branch = defaultBranch) {
               <string>client</string>
             </a>
           </choices>
-        </hudson.model.ChoiceParameterDefinition>
+        </hudson.model.ChoiceParameterDefinition>` : '';
+
+    return `${scmTokenParam}${serviceChoice}
         <hudson.model.StringParameterDefinition>
           <name>IMAGE_TAG</name>
           <defaultValue>latest</defaultValue>
@@ -250,7 +252,18 @@ function buildJobParametersXml(jobName, branch = defaultBranch) {
           <defaultValue>super-app</defaultValue>
           <description>Harbor Project / Repository Namespace</description>
           <trim>true</trim>
-        </hudson.model.StringParameterDefinition>`;
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>HARBOR_USER</name>
+          <defaultValue></defaultValue>
+          <description>Harbor Robot / Bot Account Username (e.g. robot$...)</description>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.PasswordParameterDefinition>
+          <name>HARBOR_PASSWORD</name>
+          <defaultValue></defaultValue>
+          <description>Harbor Robot Account Token / Secret</description>
+        </hudson.model.PasswordParameterDefinition>`;
   }
 
   return `${scmTokenParam}
