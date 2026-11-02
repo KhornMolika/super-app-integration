@@ -9,7 +9,7 @@ import { AuditService } from './audit.service';
 import { AuditLog } from './entities/audit-log.entity';
 import { QueryAuditLogDto } from './dto/query-audit-log.dto';
 
-@Controller('audit-logs')
+@Controller(['audit-logs', 'api/audit-logs'])
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}
 

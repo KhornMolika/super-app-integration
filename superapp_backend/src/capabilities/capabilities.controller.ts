@@ -14,7 +14,7 @@ import { RequirePermissions } from '../access-control/decorators/require-permiss
 import { UpdateCapabilityDefinitionDto } from './dto/update-capability-definition.dto';
 import { QueryCapabilitiesDto } from './dto/query-capabilities.dto';
 
-@Controller(['capabilities', 'permissions'])
+@Controller(['capabilities', 'permissions', 'api/capabilities', 'api/permissions'])
 export class CapabilitiesController {
   constructor(private readonly capabilitiesService: CapabilitiesService) {}
 

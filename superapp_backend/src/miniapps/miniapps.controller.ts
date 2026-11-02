@@ -44,7 +44,12 @@ import { QueryIssuesDto } from './dto/query-issues.dto';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 
 @UseGuards(JwtAuthGuard, RbacGuard)
-@Controller(['mini-apps', 'miniapps'])
+@Controller([
+  'mini-apps',
+  'miniapps',
+  'api/mini-apps',
+  'api/miniapps',
+])
 export class MiniappsController {
   constructor(
     private readonly miniappService: MiniappsService,

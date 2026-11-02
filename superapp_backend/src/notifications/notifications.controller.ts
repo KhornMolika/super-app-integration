@@ -17,7 +17,11 @@ import { RequirePermissions } from '../access-control/decorators/require-permiss
 import { QueryNotificationsDto } from './dto/query-notifications.dto';
 
 @UseGuards(JwtAuthGuard, RbacGuard)
-@Controller(['notifications', 'mini-apps/notifications'])
+@Controller([
+  'notifications',
+  'mini-apps/notifications',
+  'api/notifications',
+])
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 

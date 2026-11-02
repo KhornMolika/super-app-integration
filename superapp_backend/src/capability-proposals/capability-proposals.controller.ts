@@ -22,7 +22,12 @@ import { CreateCapabilityProposalDto } from './dto/create-capability-proposal.dt
 import { QueryCapabilityProposalsDto } from './dto/query-capability-proposals.dto';
 
 @UseGuards(JwtAuthGuard, RbacGuard)
-@Controller(['capability-proposals', 'permission-proposals'])
+@Controller([
+  'capability-proposals',
+  'permission-proposals',
+  'api/capability-proposals',
+  'api/permission-proposals',
+])
 export class CapabilityProposalsController {
   private readonly logger = new Logger(CapabilityProposalsController.name);
 

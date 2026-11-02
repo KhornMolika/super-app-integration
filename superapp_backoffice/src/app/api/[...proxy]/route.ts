@@ -9,7 +9,9 @@ const ALLOWED_ROUTES = [
   'mini-apps',
   'miniapps',
   'sdk-artifacts',
+  'capabilities',
   'permissions',
+  'capability-proposals',
   'permission-proposals',
   'users',
   'roles',
@@ -31,6 +33,8 @@ const ALLOWED_ROUTES = [
   'pubspec',
   'mobile',
   'health',
+  'download-apk',
+  'pub',
 ];
 
 async function handleProxy(request: Request, { params }: { params: Promise<{ proxy: string[] }> }) {

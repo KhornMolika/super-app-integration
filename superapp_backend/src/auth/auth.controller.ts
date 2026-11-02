@@ -26,7 +26,7 @@ import {
 } from './dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
-@Controller('auth')
+@Controller(['auth', 'api/auth'])
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 

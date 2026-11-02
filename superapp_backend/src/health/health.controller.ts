@@ -3,7 +3,7 @@ import type { Response } from 'express';
 import { HealthService, HealthCheckResult } from './health.service';
 import { BypassTransform } from '../common/decorators/bypass-transform.decorator';
 
-@Controller('health')
+@Controller(['health', 'api/health'])
 @BypassTransform()
 export class HealthController {
   constructor(private readonly healthService: HealthService) {}

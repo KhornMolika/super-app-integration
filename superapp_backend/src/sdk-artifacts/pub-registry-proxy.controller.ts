@@ -35,7 +35,7 @@ import * as path from 'path';
  *    Any query for non-FSA packages is immediately blocked with 403 Forbidden.
  * 3. Proxies authorized requests to internal Nexus (pub-hosted) and rewrites archive URLs.
  */
-@Controller('pub')
+@Controller(['pub', 'api/pub'])
 export class PubRegistryProxyController {
   private readonly logger = new Logger(PubRegistryProxyController.name);
 

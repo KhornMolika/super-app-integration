@@ -1,8 +1,8 @@
 {
   "info": {
-    "_postman_id": "superapp-gateway-api-collection-v2",
-    "name": "Super App Gateway & Backoffice API (Complete)",
-    "description": "Comprehensive Postman API Collection for Super App Gateway backend services, access control, mini-apps lifecycle, automated security scans, Jenkins CI/CD callbacks, release assembly, Nexus registry, and audit logging.",
+    "_postman_id": "superapp-gateway-api-collection-v3",
+    "name": "Super App Gateway & Backoffice API (Complete v3.0)",
+    "description": "Production & Development Postman Collection for Super App Gateway backend services, access control, mini-apps lifecycle, automated security scans, Jenkins CI/CD callbacks, release assembly, Nexus registry, Git integrations, and audit logging.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -22,7 +22,37 @@
       "type": "string"
     },
     {
+      "key": "superadminPassword",
+      "value": "Admin@12345",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "293614c2-6062-42f7-bd9f-55078245d779",
+      "type": "string"
+    },
+    {
+      "key": "organizationId",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "miniAppId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "roleId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "proposalId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "capabilityId",
       "value": "",
       "type": "string"
     },
@@ -30,14 +60,29 @@
       "key": "callbackToken",
       "value": "dev-jenkins-callback-token",
       "type": "string"
+    },
+    {
+      "key": "packageName",
+      "value": "sc_public_miniapp",
+      "type": "string"
+    },
+    {
+      "key": "notificationId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "mobileToken",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
     {
-      "name": "1. Authentication",
+      "name": "1. Authentication & Identity",
       "item": [
         {
-          "name": "Login (Auto-sets Token)",
+          "name": "Admin Login (Auto-captures Token)",
           "event": [
             {
               "listen": "test",
@@ -47,8 +92,13 @@
                   "if (jsonData.access_token) {",
                   "    pm.collectionVariables.set('token', jsonData.access_token);",
                   "    pm.environment.set('token', jsonData.access_token);",
-                  "    console.log('Access token automatically saved.');",
-                  "} else if (jsonData.user && jsonData.user.id) {",
+                  "    console.log('Access token saved:', jsonData.access_token.substring(0, 20) + '...');",
+                  "} else if (jsonData.token) {",
+                  "    pm.collectionVariables.set('token', jsonData.token);",
+                  "    pm.environment.set('token', jsonData.token);",
+                  "}",
+                  "if (jsonData.user && jsonData.user.id) {",
+                  "    pm.collectionVariables.set('userId', jsonData.user.id);",
                   "    pm.environment.set('userId', jsonData.user.id);",
                   "}"
                 ],
@@ -66,14 +116,88 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"{{superadminEmail}}\"\n}"
+              "raw": "{\n  \"email\": \"{{superadminEmail}}\",\n  \"password\": \"{{superadminPassword}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
             },
-            "description": "Authenticates administrative users and retrieves an RS256 JWT access token."
+            "description": "Authenticates administrative users and retrieves an RS256 JWT access token. Auto-populates 'token' collection and environment variable."
+          }
+        },
+        {
+          "name": "Register Admin / Developer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Developer One\",\n  \"email\": \"developer1@superapp.gov.kh\",\n  \"password\": \"Password@123\",\n  \"organization\": \"Trust Regulator\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Registers a new user account with pending approval state."
+          }
+        },
+        {
+          "name": "Refresh JWT Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.access_token) {",
+                  "    pm.collectionVariables.set('token', jsonData.access_token);",
+                  "    pm.environment.set('token', jsonData.access_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"YOUR_REFRESH_TOKEN\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "description": "Refreshes an expired access token using the refresh token."
           }
         },
         {
@@ -82,36 +206,37 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/auth/jwks",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "jwks"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "jwks"
+              ]
             },
             "description": "Returns JSON Web Key Set (JWKS) public keys used for token verification."
           }
-        }
-      ]
-    },
-    {
-      "name": "2. Users & Access Control",
-      "item": [
+        },
         {
-          "name": "List All Users",
+          "name": "Get SSO Identity Providers",
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
             "url": {
-              "raw": "{{baseUrl}}/users",
-              "host": ["{{baseUrl}}"],
-              "path": ["users"]
-            }
+              "raw": "{{baseUrl}}/auth/sso/providers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "sso",
+                "providers"
+              ]
+            },
+            "description": "Returns configured single sign-on (SSO) identity providers (Keycloak, CamDX, Google, etc.)."
           }
         },
         {
-          "name": "Create New User",
+          "name": "Change Password",
           "request": {
             "method": "POST",
             "header": [
@@ -126,12 +251,309 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Super Admin\",\n  \"email\": \"superadmin@superapp.gov.kh\",\n  \"roleNames\": [\"SUPER_ADMIN\"]\n}"
+              "raw": "{\n  \"oldPassword\": \"{{superadminPassword}}\",\n  \"newPassword\": \"NewAdminPassword@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/change-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "change-password"
+              ]
+            },
+            "description": "Changes the authenticated user's password."
+          }
+        },
+        {
+          "name": "Request OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{superadminEmail}}\",\n  \"purpose\": \"PASSWORD_RESET\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/request-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "request-otp"
+              ]
+            },
+            "description": "Triggers OTP dispatch to user email or phone."
+          }
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{superadminEmail}}\",\n  \"otp\": \"123456\",\n  \"purpose\": \"PASSWORD_RESET\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/verify-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "verify-otp"
+              ]
+            },
+            "description": "Verifies submitted OTP code."
+          }
+        },
+        {
+          "name": "Reset Password via OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{superadminEmail}}\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"FreshPassword@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/reset-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "reset-password"
+              ]
+            },
+            "description": "Resets user password with valid OTP."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Invalidates the current session and clears auth cookies."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Users & Access Control",
+      "item": [
+        {
+          "name": "Get Current Profile (Me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            },
+            "description": "Returns profile, assigned roles, and granular permissions for the authenticated session."
+          }
+        },
+        {
+          "name": "Update Current Profile (Me)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Super Administrator\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List All Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "role",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get User Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "stats"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get User By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{userId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) {",
+                  "    pm.collectionVariables.set('userId', jsonData.id);",
+                  "    pm.environment.set('userId', jsonData.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Regulator Reviewer\",\n  \"email\": \"reviewer@superapp.gov.kh\",\n  \"roleNames\": [\n    \"SECURITY_REVIEWER\"\n  ]\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/users",
-              "host": ["{{baseUrl}}"],
-              "path": ["users"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
             }
           }
         },
@@ -151,17 +573,68 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Super Admin Updated\",\n  \"email\": \"superadmin@superapp.gov.kh\",\n  \"roleNames\": [\"SUPER_ADMIN\"]\n}"
+              "raw": "{\n  \"name\": \"Regulator Reviewer Updated\",\n  \"roleNames\": [\n    \"SECURITY_REVIEWER\",\n    \"DEVELOPER\"\n  ]\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/users/{{userId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["users", "{{userId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{userId}}"
+              ]
             }
           }
         },
         {
-          "name": "Get Roles List",
+          "name": "Approve User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{userId}}",
+                "approve"
+              ]
+            },
+            "description": "Approves a newly registered user account."
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{userId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Roles",
           "request": {
             "method": "GET",
             "header": [
@@ -172,13 +645,17 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/roles",
-              "host": ["{{baseUrl}}"],
-              "path": ["roles"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "roles"
+              ]
             }
           }
         },
         {
-          "name": "Get Permissions List",
+          "name": "List Permissions",
           "request": {
             "method": "GET",
             "header": [
@@ -189,18 +666,61 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/permissions",
-              "host": ["{{baseUrl}}"],
-              "path": ["permissions"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "permissions"
+              ]
             }
           }
-        }
-      ]
-    },
-    {
-      "name": "3. Mini Apps Management",
-      "item": [
+        },
         {
-          "name": "Get All Mini Apps",
+          "name": "Create Role",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) {",
+                  "    pm.collectionVariables.set('roleId', jsonData.id);",
+                  "    pm.environment.set('roleId', jsonData.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"AUDITOR\",\n  \"description\": \"External system auditor\",\n  \"permissionKeys\": [\n    \"miniapp:read\",\n    \"audit:read\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/roles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "roles"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Role By ID",
           "request": {
             "method": "GET",
             "header": [
@@ -210,9 +730,293 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/mini-apps",
-              "host": ["{{baseUrl}}"],
-              "path": ["mini-apps"]
+              "raw": "{{baseUrl}}/roles/{{roleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "roles",
+                "{{roleId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Updated external system auditor\",\n  \"permissionKeys\": [\n    \"miniapp:read\",\n    \"audit:read\",\n    \"user:read\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/roles/{{roleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "roles",
+                "{{roleId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Role",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/roles/{{roleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "roles",
+                "{{roleId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Organizations Management",
+      "item": [
+        {
+          "name": "List Organizations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Organization Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                "stats"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Organization",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) {",
+                  "    pm.collectionVariables.set('organizationId', jsonData.id);",
+                  "    pm.environment.set('organizationId', jsonData.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Trust Regulator of Cambodia\",\n  \"code\": \"TRC\",\n  \"description\": \"Trust Regulator statutory authority under FSA\",\n  \"contactEmail\": \"info@trustregulator.gov.kh\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organizations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Organization By ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/{{organizationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                "{{organizationId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Organization",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Updated authority description\",\n  \"contactEmail\": \"contact@trustregulator.gov.kh\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organizations/{{organizationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                "{{organizationId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Organization",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/{{organizationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                "{{organizationId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Mini Apps Management & Lifecycle",
+      "item": [
+        {
+          "name": "List All Mini Apps",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mini-apps?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mini-apps"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "category",
+                  "value": "REGULATORY",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "APPROVED",
+                  "disabled": true
+                }
+              ]
             }
           }
         },
@@ -228,8 +1032,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/mini-apps/{{miniAppId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["mini-apps", "{{miniAppId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mini-apps",
+                "{{miniAppId}}"
+              ]
             }
           }
         },
@@ -244,12 +1053,23 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/mini-apps/check-exists?appId=sc_miniapp&name=Public Mini App",
-              "host": ["{{baseUrl}}"],
-              "path": ["mini-apps", "check-exists"],
+              "raw": "{{baseUrl}}/mini-apps/check-exists?appId=trust_regulator_app&name=Trust Regulator",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mini-apps",
+                "check-exists"
+              ],
               "query": [
-                { "key": "appId", "value": "sc_miniapp" },
-                { "key": "name", "value": "Public Mini App" }
+                {
+                  "key": "appId",
+                  "value": "trust_regulator_app"
+                },
+                {
+                  "key": "name",
+                  "value": "Trust Regulator"
+                }
               ]
             }
           }
@@ -266,10 +1086,18 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/mini-apps/check-url?url=https://app.fintechcenterfsa.com",
-              "host": ["{{baseUrl}}"],
-              "path": ["mini-apps", "check-url"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mini-apps",
+                "check-url"
+              ],
               "query": [
-                { "key": "url", "value": "https://app.fintechcenterfsa.com" }
+                {
+                  "key": "url",
+                  "value": "https://app.fintechcenterfsa.com"
+                }
               ]
             }
           }
@@ -306,17 +1134,21 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Trust Regulator Mini App\",\n  \"appId\": \"trust_regulator_app\",\n  \"category\": \"REGULATORY\",\n  \"description\": \"Official Trust Regulator service for FSA Super App\",\n  \"ownerEmail\": \"superadmin@superapp.gov.kh\",\n  \"logo\": \"https://app.fintechcenterfsa.com/assets/fsa_logo.png\",\n  \"integrationMethod\": \"FLUTTER_PACKAGE\",\n  \"integrationConfigFlutter\": {\n    \"packageName\": \"sc_public_miniapp\",\n    \"gitUrl\": \"https://git.fintechcenterfsa.com/frontend/super-app.git\",\n    \"ref\": \"molika\",\n    \"isPrivateRepo\": false,\n    \"authMethod\": \"none\"\n  }\n}"
+              "raw": "{\n  \"name\": \"Trust Regulator Mini App\",\n  \"appId\": \"trust_regulator_app\",\n  \"category\": \"REGULATORY\",\n  \"description\": \"Official Trust Regulator service for FSA Super App\",\n  \"ownerEmail\": \"{{superadminEmail}}\",\n  \"logo\": \"https://app.fintechcenterfsa.com/assets/fsa_logo.png\",\n  \"integrationMethod\": \"FLUTTER_PACKAGE\",\n  \"integrationConfigFlutter\": {\n    \"packageName\": \"sc_public_miniapp\",\n    \"gitUrl\": \"https://git.fintechcenterfsa.com/frontend/super-app.git\",\n    \"ref\": \"molika\",\n    \"isPrivateRepo\": false,\n    \"authMethod\": \"none\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/mini-apps",
-              "host": ["{{baseUrl}}"],
-              "path": ["mini-apps"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mini-apps"
+              ]
             }
           }
         },
         {
-          "name": "Re-Run Security Scan",
+          "name": "Register WebView Mini App",
           "request": {
             "method": "POST",
             "header": [
@@ -331,14 +1163,79 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"securityChecks\": [\"ingest\", \"sast\", \"secret_scan\", \"dependency_scan\", \"capability_gate\", \"sbom\"]\n}"
+              "raw": "{\n  \"name\": \"Tax Calculator Mini App\",\n  \"appId\": \"tax_calculator_webview\",\n  \"category\": \"FINANCIAL\",\n  \"description\": \"Tax services portal embedded via secured Webview\",\n  \"ownerEmail\": \"{{superadminEmail}}\",\n  \"integrationMethod\": \"WEBVIEW\",\n  \"integrationConfigWebview\": {\n    \"productionUrl\": \"https://tax.fintechcenterfsa.com\",\n    \"stagingUrl\": \"https://tax-staging.fintechcenterfsa.com\",\n    \"allowedDomains\": [\n      \"tax.fintechcenterfsa.com\"\n    ],\n    \"bridgeApiVersion\": \"1.0.0\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/mini-apps",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mini-apps"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Save Mini App Draft",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Draft Mini App\",\n  \"appId\": \"draft_mini_app\",\n  \"category\": \"OTHER\",\n  \"integrationMethod\": \"WEBVIEW\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/mini-apps/draft",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mini-apps",
+                "draft"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Trigger Security Scan (Validate)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"securityChecks\": [\n    \"ingest\",\n    \"sast\",\n    \"secret_scan\",\n    \"dependency_scan\",\n    \"capability_gate\",\n    \"sbom\"\n  ]\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/mini-apps/{{miniAppId}}/validate",
-              "host": ["{{baseUrl}}"],
-              "path": ["mini-apps", "{{miniAppId}}", "validate"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mini-apps",
+                "{{miniAppId}}",
+                "validate"
+              ]
             },
-            "description": "Triggers automated security validation scan via Jenkins or fallback to Local Security Scanner."
+            "description": "Triggers automated security validation scan via Jenkins pipeline or fallback local scanner."
           }
         },
         {
@@ -353,8 +1250,37 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/mini-apps/{{miniAppId}}/validation-status",
-              "host": ["{{baseUrl}}"],
-              "path": ["mini-apps", "{{miniAppId}}", "validation-status"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mini-apps",
+                "{{miniAppId}}",
+                "validation-status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cancel Running Validation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mini-apps/{{miniAppId}}/cancel-validation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mini-apps",
+                "{{miniAppId}}",
+                "cancel-validation"
+              ]
             }
           }
         },
@@ -374,12 +1300,18 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"notes\": \"Ready for review and production rollout\"\n}"
+              "raw": "{\n  \"notes\": \"Ready for regulatory and security review\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/mini-apps/{{miniAppId}}/submit",
-              "host": ["{{baseUrl}}"],
-              "path": ["mini-apps", "{{miniAppId}}", "submit"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mini-apps",
+                "{{miniAppId}}",
+                "submit"
+              ]
             }
           }
         },
@@ -399,19 +1331,540 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"reason\": \"Approved for production deployment\"\n}"
+              "raw": "{\n  \"reason\": \"Approved for production rollout.\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/mini-apps/{{miniAppId}}/approve",
-              "host": ["{{baseUrl}}"],
-              "path": ["mini-apps", "{{miniAppId}}", "approve"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mini-apps",
+                "{{miniAppId}}",
+                "approve"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject Mini App",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Failed security policy checklist.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/mini-apps/{{miniAppId}}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mini-apps",
+                "{{miniAppId}}",
+                "reject"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Request Changes",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Please update required permission scopes and upgrade deprecated dependencies.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/mini-apps/{{miniAppId}}/request-changes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mini-apps",
+                "{{miniAppId}}",
+                "request-changes"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Start Testing",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mini-apps/{{miniAppId}}/start-testing",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mini-apps",
+                "{{miniAppId}}",
+                "start-testing"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Activate Mini App",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mini-apps/{{miniAppId}}/activate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mini-apps",
+                "{{miniAppId}}",
+                "activate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Suspend Mini App",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Emergency suspension due to upstream provider outage\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/mini-apps/{{miniAppId}}/suspend",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mini-apps",
+                "{{miniAppId}}",
+                "suspend"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Publish Revision",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mini-apps/{{miniAppId}}/publish-revision",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mini-apps",
+                "{{miniAppId}}",
+                "publish-revision"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Mini App Activities",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mini-apps/{{miniAppId}}/activities",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mini-apps",
+                "{{miniAppId}}",
+                "activities"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Mini App Versions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mini-apps/{{miniAppId}}/versions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mini-apps",
+                "{{miniAppId}}",
+                "versions"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Mini App Collaborators",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mini-apps/{{miniAppId}}/collaborators",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mini-apps",
+                "{{miniAppId}}",
+                "collaborators"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add Collaborator",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"developer1@superapp.gov.kh\",\n  \"role\": \"CONTRIBUTOR\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/mini-apps/{{miniAppId}}/collaborators",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mini-apps",
+                "{{miniAppId}}",
+                "collaborators"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get All Issues",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mini-apps/issues/all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mini-apps",
+                "issues",
+                "all"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Download Mini App Test APK",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mini-apps/{{miniAppId}}/artifacts/test-apk",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mini-apps",
+                "{{miniAppId}}",
+                "artifacts",
+                "test-apk"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Mini App",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mini-apps/{{miniAppId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mini-apps",
+                "{{miniAppId}}"
+              ]
             }
           }
         }
       ]
     },
     {
-      "name": "4. Release Assembly & Builds",
+      "name": "5. Capabilities & Permissions Gate",
+      "item": [
+        {
+          "name": "List Capabilities",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/capabilities",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "capabilities"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Bridge Manifest",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/capabilities/bridge-manifest",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "capabilities",
+                "bridge-manifest"
+              ]
+            },
+            "description": "Public runtime manifest exposing available JS-Bridge and Native capabilities."
+          }
+        },
+        {
+          "name": "Sync Capabilities from GitLab",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/capabilities/sync-gitlab",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "capabilities",
+                "sync-gitlab"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Capability Proposals",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/capability-proposals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "capability-proposals"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Capability Proposal",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) {",
+                  "    pm.collectionVariables.set('proposalId', jsonData.id);",
+                  "    pm.environment.set('proposalId', jsonData.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"permissionKey\": \"device.nfc.read\",\n  \"permissionName\": \"NFC Reader Capability\",\n  \"description\": \"Allows scanning of contactless smart cards and national e-IDs\",\n  \"justification\": \"Required for e-KYC passport NFC verification\",\n  \"targetSuperAppVersion\": \"v1.1.0\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/capability-proposals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "capability-proposals"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Preview Proposal Code Generation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/capability-proposals/{{proposalId}}/preview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "capability-proposals",
+                "{{proposalId}}",
+                "preview"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Review Proposal (Approve / Reject)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"APPROVED\",\n  \"reason\": \"Security risk evaluated; approved for release in v1.1.0.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/capability-proposals/{{proposalId}}/review",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "capability-proposals",
+                "{{proposalId}}",
+                "review"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Release Assembly & Builds",
       "item": [
         {
           "name": "Trigger Super App Assembly",
@@ -433,8 +1886,95 @@
             },
             "url": {
               "raw": "{{baseUrl}}/release-assembly/trigger-build",
-              "host": ["{{baseUrl}}"],
-              "path": ["release-assembly", "trigger-build"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "release-assembly",
+                "trigger-build"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Verify Pre-flight Manifest",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"releaseVersion\": \"v1.0.0\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/release-assembly/verify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "release-assembly",
+                "verify"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Compile Super App APK",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"buildType\": \"release\",\n  \"targetVersion\": \"v1.0.0\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/release-assembly/compile-apk",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "release-assembly",
+                "compile-apk"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Assembly APK Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/release-assembly/apk-status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "release-assembly",
+                "apk-status"
+              ]
             }
           }
         },
@@ -458,8 +1998,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/release-assembly/stage",
-              "host": ["{{baseUrl}}"],
-              "path": ["release-assembly", "stage"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "release-assembly",
+                "stage"
+              ]
             }
           }
         },
@@ -483,15 +2028,20 @@
             },
             "url": {
               "raw": "{{baseUrl}}/release-assembly/build-callback",
-              "host": ["{{baseUrl}}"],
-              "path": ["release-assembly", "build-callback"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "release-assembly",
+                "build-callback"
+              ]
             }
           }
         }
       ]
     },
     {
-      "name": "5. Flutter & Pubspec Operations",
+      "name": "7. Flutter & Pubspec Operations",
       "item": [
         {
           "name": "Get Pubspec Status",
@@ -505,8 +2055,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/pubspec/status",
-              "host": ["{{baseUrl}}"],
-              "path": ["pubspec", "status"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pubspec",
+                "status"
+              ]
             }
           }
         },
@@ -522,8 +2077,13 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/pubspec/package-constraints",
-              "host": ["{{baseUrl}}"],
-              "path": ["pubspec", "package-constraints"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pubspec",
+                "package-constraints"
+              ]
             }
           }
         },
@@ -547,13 +2107,18 @@
             },
             "url": {
               "raw": "{{baseUrl}}/pubspec/precheck-conflicts",
-              "host": ["{{baseUrl}}"],
-              "path": ["pubspec", "precheck-conflicts"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pubspec",
+                "precheck-conflicts"
+              ]
             }
           }
         },
         {
-          "name": "Sync Approved Mini Apps",
+          "name": "Sync Approved Mini Apps into Shell",
           "request": {
             "method": "POST",
             "header": [
@@ -564,15 +2129,43 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/pubspec/sync",
-              "host": ["{{baseUrl}}"],
-              "path": ["pubspec", "sync"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pubspec",
+                "sync"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Sandbox Build Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pubspec/sandbox-build/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pubspec",
+                "sandbox-build",
+                "status"
+              ]
             }
           }
         }
       ]
     },
     {
-      "name": "6. Sonatype Nexus Operations",
+      "name": "8. Sonatype Nexus & SDK Artifacts",
       "item": [
         {
           "name": "Check Package Exists on Nexus",
@@ -585,14 +2178,21 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/nexus/packages/sc_public_miniapp",
-              "host": ["{{baseUrl}}"],
-              "path": ["nexus", "packages", "sc_public_miniapp"]
+              "raw": "{{baseUrl}}/integrations/nexus/packages/{{packageName}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "integrations",
+                "nexus",
+                "packages",
+                "{{packageName}}"
+              ]
             }
           }
         },
         {
-          "name": "List Nexus Components",
+          "name": "List Nexus Pub Components",
           "request": {
             "method": "GET",
             "header": [
@@ -602,11 +2202,125 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/nexus/components?repository=pub-group",
-              "host": ["{{baseUrl}}"],
-              "path": ["nexus", "components"],
-              "query": [
-                { "key": "repository", "value": "pub-group" }
+              "raw": "{{baseUrl}}/integrations/nexus/repositories/pub-group/components",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "integrations",
+                "nexus",
+                "repositories",
+                "pub-group",
+                "components"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Validate Nexus Package Info",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"packageName\": \"sc_public_miniapp\",\n  \"version\": \"1.0.0\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/integrations/nexus/validate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "integrations",
+                "nexus",
+                "validate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Nexus Snippet",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"packageName\": \"sc_public_miniapp\",\n  \"version\": \"^1.0.0\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/integrations/nexus/snippet",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "integrations",
+                "nexus",
+                "snippet"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Pub Proxy Metadata",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pub/api/packages/fsa_superapp_flutter_sdk",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pub",
+                "api",
+                "packages",
+                "fsa_superapp_flutter_sdk"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get SDK Artifact Upload Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sdk-artifacts/{{miniAppId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sdk-artifacts",
+                "{{miniAppId}}",
+                "status"
               ]
             }
           }
@@ -614,10 +2328,795 @@
       ]
     },
     {
-      "name": "7. Audit Logs & System Health",
+      "name": "9. Git Repositories & Deploy Keys",
       "item": [
         {
-          "name": "Get Audit Logs",
+          "name": "Detect Git Provider",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://git.fintechcenterfsa.com/frontend/super-app.git\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/integrations/git/detect",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "integrations",
+                "git",
+                "detect"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Repository Details",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://git.fintechcenterfsa.com/frontend/super-app.git\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/integrations/git/repository",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "integrations",
+                "git",
+                "repository"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Branches",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://git.fintechcenterfsa.com/frontend/super-app.git\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/integrations/git/branches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "integrations",
+                "git",
+                "branches"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Tags",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://git.fintechcenterfsa.com/frontend/super-app.git\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/integrations/git/tags",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "integrations",
+                "git",
+                "tags"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Commits",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://git.fintechcenterfsa.com/frontend/super-app.git\",\n  \"ref\": \"main\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/integrations/git/commits",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "integrations",
+                "git",
+                "commits"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Server Deploy Key",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/integrations/git/deploy-key",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "integrations",
+                "git",
+                "deploy-key"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Super App Platform Ecosystem",
+      "item": [
+        {
+          "name": "Get Super App Info",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/super-app/info",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-app",
+                "info"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Ecosystem Status",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/super-app/ecosystem-status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-app",
+                "ecosystem-status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Next Release Version",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/super-app/next-version",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-app",
+                "next-version"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Release History",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/super-app/releases/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-app",
+                "releases",
+                "history"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Compare Releases",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/super-app/releases/compare?base=v1.0.0&target=v1.0.1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-app",
+                "releases",
+                "compare"
+              ],
+              "query": [
+                {
+                  "key": "base",
+                  "value": "v1.0.0"
+                },
+                {
+                  "key": "target",
+                  "value": "v1.0.1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Platform Capabilities",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/super-app/capabilities",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "super-app",
+                "capabilities"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. Mobile Client Consumer API",
+      "item": [
+        {
+          "name": "Register Mobile End User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phoneNumber\": \"+85512345678\",\n  \"password\": \"UserPassword@123\",\n  \"fullName\": \"Sokha Mean\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/mobile/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mobile",
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login Mobile End User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.token) {",
+                  "    pm.collectionVariables.set('mobileToken', jsonData.token);",
+                  "    pm.environment.set('mobileToken', jsonData.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phoneNumber\": \"+85512345678\",\n  \"password\": \"UserPassword@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/mobile/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mobile",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Mobile App Config",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/mobile/app-config",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mobile",
+                "app-config"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Mobile User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mobileToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mobile/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mobile",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Mini Apps for Mobile Shell",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/mobile/mini-apps",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mobile",
+                "mini-apps"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "12. Notifications & Telegram Bot",
+      "item": [
+        {
+          "name": "List Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get My Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "mine"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Mark All Notifications as Read",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/mark-all-read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "mark-all-read"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Telegram Bot Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/telegram/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "telegram",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Telegram Connect URL",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/telegram/connect-url",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "telegram",
+                "connect-url"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Send Telegram Team Test Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/telegram/test-team",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "telegram",
+                "test-team"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Send Mail Test Notification",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mail/test",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mail",
+                "test"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "13. Object Storage & Asset Management",
+      "item": [
+        {
+          "name": "Get Presigned S3 URL",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/storage/presign?key=logos/my-logo.png",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "storage",
+                "presign"
+              ],
+              "query": [
+                {
+                  "key": "key",
+                  "value": "logos/my-logo.png"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Check Storage License Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/storage/license-status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "storage",
+                "license-status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Download Public APK by Filename",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/download-apk/superapp-test-latest.apk",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "download-apk",
+                "superapp-test-latest.apk"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "14. System Settings & Retention",
+      "item": [
+        {
+          "name": "Get Pipeline Timing Settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/settings/pipeline-timing",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "settings",
+                "pipeline-timing"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Pipeline Timing Settings",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maxBuildDurationMinutes\": 30,\n  \"validationTimeoutMinutes\": 15\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/settings/pipeline-timing",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "settings",
+                "pipeline-timing"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Artifact Retention Settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/settings/artifact-retention",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "settings",
+                "artifact-retention"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Artifact Retention Settings",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"retentionDays\": 30,\n  \"autoPrune\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/settings/artifact-retention",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "settings",
+                "artifact-retention"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Run Artifact Retention Pruning",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/settings/artifact-retention/run",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "settings",
+                "artifact-retention",
+                "run"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "15. Audit Logs & System Health",
+      "item": [
+        {
+          "name": "List Audit Logs",
           "request": {
             "method": "GET",
             "header": [
@@ -628,10 +3127,17 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/audit-logs?limit=50",
-              "host": ["{{baseUrl}}"],
-              "path": ["audit-logs"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "audit-logs"
+              ],
               "query": [
-                { "key": "limit", "value": "50" }
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
               ]
             }
           }
@@ -642,8 +3148,28 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/health",
-              "host": ["{{baseUrl}}"],
-              "path": ["health"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Liveness Probe",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/health/liveness",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health",
+                "liveness"
+              ]
             }
           }
         }
