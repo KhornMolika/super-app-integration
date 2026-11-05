@@ -35,7 +35,7 @@ def set_run(run, text, font_size_pt=11, bold=False, color=COLOR_WHITE):
 
 def update_presentation():
     os.makedirs(os.path.join(PROJECT_ROOT, 'slide'), exist_ok=True)
-    src_pptx = os.path.join(PROJECT_ROOT, 'docs', 'slide-deck', 'superapp_presentation.pptx')
+    src_pptx = os.path.join(PROJECT_ROOT, 'slide', 'superapp_presentation.pptx')
     dest_pptx = os.path.join(PROJECT_ROOT, 'slide', 'superapp_presentation.pptx')
     updated_pptx = os.path.join(PROJECT_ROOT, 'slide', 'superapp_presentation_updated.pptx')
     

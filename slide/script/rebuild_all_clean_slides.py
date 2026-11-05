@@ -826,8 +826,7 @@ def build_presentation():
     out_data = out_stream.getvalue()
 
     paths = [
-        os.path.join(PROJECT_ROOT, 'slide', 'superapp_presentation.pptx'),
-        os.path.join(PROJECT_ROOT, 'docs', 'slide-deck', 'superapp_presentation.pptx')
+        os.path.join(PROJECT_ROOT, 'slide', 'superapp_presentation.pptx')
     ]
 
     for p in paths:

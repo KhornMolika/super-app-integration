@@ -2,6 +2,7 @@ import {
   Injectable,
   Logger,
   BadRequestException,
+  ForbiddenException,
   Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -871,6 +872,7 @@ export class MiniappMutationHelper {
   async remove(
     id: string,
     actorId?: string,
+    user?: any,
     logActivityFn?: (
       miniAppId: string,
       actorId: string,
@@ -889,48 +891,82 @@ export class MiniappMutationHelper {
     const existing = await this.miniappRepository.findOne(
       isUuid ? { where: { id } } : { where: { appId: id } },
     );
-    if (existing) {
-      // 1. Delete staged Flutter package archive from MinIO quarantine if present
-      if (existing.integrationConfig?.packageStoragePath) {
-        await this.storageService.deleteObject(
-          this.storageService.packageSubmissionsBucket,
-          existing.integrationConfig.packageStoragePath,
-        );
-      }
-
-      // 2. Delete staged Native SDK archives from MinIO quarantine if present
-      if (existing.integrationConfig?.iosMinioKey) {
-        await this.storageService.deleteObject(
-          this.storageService.sdkSubmissionsBucket,
-          existing.integrationConfig.iosMinioKey,
-        );
-      }
-      if (existing.integrationConfig?.androidMinioKey) {
-        await this.storageService.deleteObject(
-          this.storageService.sdkSubmissionsBucket,
-          existing.integrationConfig.androidMinioKey,
-        );
-      }
-
-      // 3. Delete logo from MinIO assets if present
-      if (existing.logo) {
-        await this.storageService.deleteLogo(existing.logo);
-      }
-
-      if (logActivityFn) {
-        await logActivityFn(
-          existing.id,
-          actorId || 'system',
-          'DELETE',
-          `App ${existing.name || existing.appId} Deleted`,
-          'App removed and MinIO objects purged',
-          'DELETE_MINI_APP',
-          existing,
-          null,
-        );
-      }
-      return this.miniappRepository.delete(existing.id);
+    if (!existing) {
+      return this.miniappRepository.delete(id);
     }
-    return this.miniappRepository.delete(id);
+
+    // 1. Permission check: Only SuperAdmin or the user who registered this specific mini-app can delete it
+    if (user || actorId) {
+      const roles = Array.isArray(user?.roles)
+        ? user.roles
+        : (user?.role ? [user.role] : []);
+      const isSuperAdmin = roles.includes('SUPER_ADMIN') || roles.includes('ADMIN');
+      const isOwner =
+        (actorId && (existing.ownerId === actorId || (existing.owner as any)?.id === actorId)) ||
+        (user?.sub && (existing.ownerId === user.sub || (existing.owner as any)?.id === user.sub));
+
+      if (!isSuperAdmin && !isOwner) {
+        throw new ForbiddenException(
+          'You do not have permission to delete this MiniApp. Only SuperAdmin or the user who registered this MiniApp can delete it.',
+        );
+      }
+    }
+
+    // 2. Status guard: Only apps in DRAFT or REJECTED status can be deleted
+    const deletableStatuses = [
+      MiniAppLifecycleStatus.DRAFT,
+      MiniAppLifecycleStatus.REJECTED,
+      'DRAFT',
+      'REJECTED',
+    ];
+    if (
+      existing.lifecycleStatus &&
+      !deletableStatuses.includes(existing.lifecycleStatus as any)
+    ) {
+      throw new BadRequestException(
+        `Cannot delete MiniApp in '${existing.lifecycleStatus}' status. Only mini-apps in DRAFT or REJECTED status can be permanently deleted. Active, submitted, or in-testing applications must be archived instead.`,
+      );
+    }
+
+    // 3. Delete staged Flutter package archive from MinIO quarantine if present
+    if (existing.integrationConfig?.packageStoragePath) {
+      await this.storageService.deleteObject(
+        this.storageService.packageSubmissionsBucket,
+        existing.integrationConfig.packageStoragePath,
+      );
+    }
+
+    // 4. Delete staged Native SDK archives from MinIO quarantine if present
+    if (existing.integrationConfig?.iosMinioKey) {
+      await this.storageService.deleteObject(
+        this.storageService.sdkSubmissionsBucket,
+        existing.integrationConfig.iosMinioKey,
+      );
+    }
+    if (existing.integrationConfig?.androidMinioKey) {
+      await this.storageService.deleteObject(
+        this.storageService.sdkSubmissionsBucket,
+        existing.integrationConfig.androidMinioKey,
+      );
+    }
+
+    // 5. Delete logo from MinIO assets if present
+    if (existing.logo) {
+      await this.storageService.deleteLogo(existing.logo);
+    }
+
+    if (logActivityFn) {
+      await logActivityFn(
+        existing.id,
+        actorId || user?.sub || 'system',
+        'DELETE',
+        `App ${existing.name || existing.appId} Deleted`,
+        'App removed and MinIO objects purged',
+        'DELETE_MINI_APP',
+        existing,
+        null,
+      );
+    }
+    return this.miniappRepository.delete(existing.id);
   }
 }

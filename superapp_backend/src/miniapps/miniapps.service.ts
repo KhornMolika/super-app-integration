@@ -513,10 +513,11 @@ export class MiniappsService implements OnApplicationBootstrap {
     );
   }
 
-  async remove(id: string, actorId?: string) {
+  async remove(id: string, actorId?: string, user?: any) {
     return this.miniappMutationHelper.remove(
       id,
       actorId,
+      user,
       (mId, aId, aType, t, d, aAction, oVal, nVal) =>
         this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal),
     );

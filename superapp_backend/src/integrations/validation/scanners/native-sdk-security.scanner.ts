@@ -158,7 +158,7 @@ export class NativeSdkSecurityScanner {
 
     await this.scanFinalizer.finalizeScan(
       app,
-      'FLUTTER_PACKAGE',
+      'NATIVE_SDK',
       score,
       checks,
       findings,

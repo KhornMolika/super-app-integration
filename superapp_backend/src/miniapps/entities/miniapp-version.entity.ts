@@ -10,6 +10,26 @@ import {
 } from 'typeorm';
 import { MiniApp } from './miniapp.entity';
 
+/**
+ * Version-Level Lifecycle Status Taxonomy (MiniAppVersion Entity)
+ */
+export enum MiniAppVersionStatus {
+  /** Staged new version in active development or awaiting review. */
+  DRAFT = 'DRAFT',
+
+  /** Active test version deployed in sandbox for QA validation and regression verification. */
+  TESTING = 'TESTING',
+
+  /** Current live production version published to end users in the SuperApp catalog. */
+  ACTIVE = 'ACTIVE',
+
+  /** Prior live production release displaced by a newly published active version. Preserved for instant rollback capability. */
+  PREVIOUS = 'PREVIOUS',
+
+  /** Deprecated version scheduled for end-of-life / sunset. Preserved for historical traceability. */
+  DEPRECATED = 'DEPRECATED',
+}
+
 @Entity('miniapp_versions')
 export class MiniAppVersion {
   @PrimaryGeneratedColumn('uuid')
@@ -28,8 +48,8 @@ export class MiniAppVersion {
   @Column()
   version!: string;
 
-  @Column({ default: 'DRAFT' })
-  status!: string; // ACTIVE, TESTING, PREVIOUS, DEPRECATED, SUPERSEDED, ARCHIVED, IN_REVIEW, APPROVED, DRAFT
+  @Column({ default: MiniAppVersionStatus.DRAFT })
+  status!: string; // ACTIVE, TESTING, PREVIOUS, DEPRECATED, DRAFT
 
   @Column({ nullable: true })
   gitRef?: string;

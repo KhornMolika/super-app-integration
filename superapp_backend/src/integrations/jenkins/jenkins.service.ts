@@ -148,9 +148,7 @@ export class JenkinsService {
       '/integrations/validation/callback',
     );
     const allowedDomainsStr = (options.allowedDomains || []).join(',');
-    const allowedCapsStr = (
-      options.allowedCapabilities || ['camera', 'geolocator', 'local_auth']
-    ).join(',');
+    const allowedCapsStr = (options.allowedCapabilities || []).join(',');
     const requiredCapsStr = (options.requiredCapabilities || []).join(',');
     const checksStr = (options.checks || []).join(',');
     const allowLocalStr = options.allowLocal ? 'true' : 'false';

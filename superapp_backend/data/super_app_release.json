@@ -1,6 +1,6 @@
 {
   "superAppVersion": "1.0.0",
-  "buildTimestamp": "2026-11-05T03:03:31.456Z",
+  "buildTimestamp": "2026-11-05T09:45:32.767Z",
   "bundledMiniApps": [
     {
       "id": "app-1",
@@ -11,5 +11,5 @@
     }
   ],
   "consolidatedPermissions": [],
-  "integrityDigest": "89deac2ef32a306d184044bd21863eaa300b011fa4703e5a20c164774fb3a4d6"
+  "integrityDigest": "14b93fe0a3f8e75005259247254f485cca7c0fdb19d4b3c5944c75bd072e0e8c"
 }

@@ -1,59 +1,84 @@
 # Super App Build & Harbor Release Guide
 
-This document defines the official procedure for building and pushing the three core Super App container images to Harbor registry (`registry.fintechcenterfsa.com`), running TypeORM database migrations, and executing rolling restarts on the Kubernetes cluster (`super-app` namespace).
+This document defines the official procedure for building, testing, and pushing the three core SuperApp container images to the Harbor registry (`registry.fintechcenterfsa.com`), running TypeORM database migrations, and executing rolling restarts on the Kubernetes cluster (`super-app` namespace).
 
 > [!IMPORTANT]
-> **Architecture Target**: All images **MUST** be built for `--platform linux/amd64`. Cluster worker nodes run on `x86_64/amd64` architecture.
+> **Core Architectural Targets & Tag Policy**:
+> - **Architecture Target**: All images **MUST** be built for `--platform linux/amd64` (Cluster worker nodes run on `x86_64/amd64`).
+> - **Tag Policy**: Container tags are **always `:latest`** (`:migrator` for the database migration initContainer). Kubernetes deployments use `imagePullPolicy: Always` and automatically pull the updated `:latest` tag upon rollout.
 
 ---
 
-## 0. Automated CI via Jenkins (`superapp-containers-ci`)
+## Quick Reference: Targeted Build & Push Matrix
 
-> [!TIP]
-> **Automated Harbor CI Workflow**: Instead of executing manual terminal commands on your workstation, the Jenkins pipeline job **`superapp-containers-ci`** at `https://app.fintechcenterfsa.com/jenkins/job/superapp-containers-ci/` automatically runs tests, builds the production Docker images (`linux/amd64`), and pushes them to Harbor registry (`registry.fintechcenterfsa.com`). **Push to Harbor is the final step; it does NOT restart Kubernetes pods automatically.**
+All commands run pre-flight quality checks (Jest unit tests, TypeScript typechecks, linting) before building to guarantee zero broken images reach production.
 
-### How to Trigger in Jenkins:
-1. Navigate to: `https://app.fintechcenterfsa.com/jenkins/job/superapp-containers-ci/`
-2. Click **Build with Parameters**:
-   * **`SERVICE`**: Select `all`, `backend`, `manager-client`, or `client`.
-   * **`IMAGE_TAG`**: Set to `latest` (or release tag, e.g. `v1.0.6`).
-   * **`GIT_BRANCH`**: Branch to build from (e.g. `molika` or `development`).
-   * **`RUN_TESTS`**: `true` (executes lint, type checks, and unit tests).
-3. Click **Build**. Jenkins runs tests, builds the containers, and pushes them directly to Harbor.
-4. When you are ready to roll out changes to the Kubernetes cluster, you can execute the rolling restart command manually at your chosen time.
+| Component | Target Alias | Harbor Image & Tag | PowerShell Command | pnpm Shortcut (from `superapp_backend/`) |
+| :--- | :--- | :--- | :--- | :--- |
+| **All Components** | `all` | *All 3 images sequentially* | `.\scripts\publish-containers-to-harbor.ps1 -Target all` | `pnpm publish:containers` |
+| **Backend API & Migrator** | `backend` *(or `api`)* | `super-app/backend:latest`<br>`super-app/backend:migrator` | `.\scripts\publish-containers-to-harbor.ps1 -Target backend` | `pnpm publish:backend` |
+| **Backoffice Manager** | `frontend` *(or `manager`, `backoffice`)* | `super-app/manager-client:latest` | `.\scripts\publish-containers-to-harbor.ps1 -Target frontend` | `pnpm publish:frontend` |
+| **Flutter Web Client** | `mobile` *(or `client`)* | `super-app/client:latest` | `.\scripts\publish-containers-to-harbor.ps1 -Target mobile` | `pnpm publish:mobile` |
 
 ---
 
-## 0.1 One-Time Harbor Registry Authentication (Manual Fallback)
+## 1. Automated Pre-Flight Release Script (`scripts/publish-containers-to-harbor.ps1`)
 
-Before building and pushing images, authenticate Docker against the private Harbor registry:
+The release script is located at `scripts/publish-containers-to-harbor.ps1` at the monorepo root.
+
+### Sequential Execution Policy
+Docker builds run **sequentially by default** rather than concurrently. This prevents CPU core thrashing (100% saturation) and memory exhaustion (OOM) on development machines when running SWC, Dart, and Jest compilers simultaneously. It also ensures **fail-fast safety**: if unit tests fail, the build halts immediately before wasting time building frontend images.
+
+### Command Examples:
+
+```powershell
+# 1. Build and push ALL three containers (Sequential):
+.\scripts\publish-containers-to-harbor.ps1 -Target all
+
+# 2. Build and push ONLY Backend (NestJS runtime + DB migrator):
+.\scripts\publish-containers-to-harbor.ps1 -Target backend
+
+# 3. Build and push ONLY Backoffice Frontend (Next.js):
+.\scripts\publish-containers-to-harbor.ps1 -Target frontend
+
+# 4. Build and push ONLY Mobile Client (Flutter Web):
+.\scripts\publish-containers-to-harbor.ps1 -Target mobile
+
+# Dry Run / Test build locally without pushing to Harbor:
+.\scripts\publish-containers-to-harbor.ps1 -Target backend -SkipPush
+
+# Emergency bypass tests:
+.\scripts\publish-containers-to-harbor.ps1 -Target backend -SkipTests
+```
+
+---
+
+## 2. One-Time Harbor Registry Authentication
+
+Before running Docker commands, ensure your local Docker daemon is authenticated with Harbor:
 
 ```bash
 docker login registry.fintechcenterfsa.com
 ```
-*Prompt: Enter your Harbor username/robot-account secret.*
+*Prompt: Enter your Harbor username / robot account token.*
 
 ---
 
-## 1. `super-app-backend` (NestJS API & Database Migrator)
+## 3. Manual Docker Build & Push Fallback
 
-The backend `Dockerfile` uses multi-stage targets to produce two distinct artifacts:
-1. **Runtime API Image (`runner`)**: Serves HTTP & WebSocket traffic on port 3000.
-2. **Database Migrator Image (`migrator`)**: Used as a Kubernetes `initContainer` to execute `typeorm migration:run` before the main application starts. Both images must be updated in lockstep.
+If you need to run standard Docker CLI commands manually without the script:
 
-### Build & Push Commands:
-
+### A. Backend API & Database Migrator
 ```bash
-# Navigate to the backend directory
 cd superapp_backend
 
-# 1. Build and push the main runtime API image
+# 1. Build & push NestJS Runtime API (port 3000)
 docker build --platform linux/amd64 \
   -t registry.fintechcenterfsa.com/super-app/backend:latest \
   .
 docker push registry.fintechcenterfsa.com/super-app/backend:latest
 
-# 2. Build and push the database migrator initContainer image
+# 2. Build & push Database Migrator (Kubernetes initContainer)
 docker build --platform linux/amd64 \
   --target migrator \
   -t registry.fintechcenterfsa.com/super-app/backend:migrator \
@@ -61,20 +86,13 @@ docker build --platform linux/amd64 \
 docker push registry.fintechcenterfsa.com/super-app/backend:migrator
 ```
 
----
-
-## 2. `super-app-manager-client` (Next.js Backoffice Manager)
-
+### B. Backoffice Manager (`super-app-manager-client`)
 > [!WARNING]
-> `NEXT_PUBLIC_*` environment variables are **inlined into the JavaScript bundle at build time**. Changing them in a Kubernetes ConfigMap will have **no effect** without rebuilding the image. All build arguments must be explicitly provided.
-
-### Build & Push Commands:
+> `NEXT_PUBLIC_*` variables are inlined into JavaScript assets at build time. All 11 arguments must be passed explicitly:
 
 ```bash
-# Navigate to the backoffice directory
 cd superapp_backoffice
 
-# Build and push the Next.js standalone container
 docker build --platform linux/amd64 \
   --build-arg NEXT_PUBLIC_SOCKET_URL=https://app.fintechcenterfsa.com \
   --build-arg NEXT_PUBLIC_ENVIRONMENT=PROD \
@@ -93,21 +111,10 @@ docker build --platform linux/amd64 \
 docker push registry.fintechcenterfsa.com/super-app/manager-client:latest
 ```
 
----
-
-## 3. `super-app-client` (Flutter Web Preview)
-
-The Flutter SuperApp web release is hosted under the path prefix `/preview/` on the main domain.
-- `BASE_HREF` **must** be `/preview/`.
-- `API_BASE_URL` is baked into the compiled Dart web assembly.
-
-### Build & Push Commands:
-
+### C. Flutter Web Client (`super-app-client`)
 ```bash
-# Navigate to the Flutter mobile / client directory
 cd super-app
 
-# Build and push the Flutter Web container
 docker build --platform linux/amd64 \
   --build-arg BASE_HREF=/preview/ \
   --build-arg API_BASE_URL=https://app.fintechcenterfsa.com/api \
@@ -120,15 +127,15 @@ docker push registry.fintechcenterfsa.com/super-app/client:latest
 
 ## 4. Kubernetes Rolling Deployment & Status Verification
 
-Since all Kubernetes deployments are configured with `imagePullPolicy: Always`, restarting the deployments will immediately pull the new `:latest` and `:migrator` tags:
+Because all Kubernetes deployments specify `imagePullPolicy: Always`, triggering a rollout restart immediately pulls the newly published `:latest` and `:migrator` images:
 
 ```bash
-# 1. Trigger rolling restart across all three deployments
+# 1. Trigger rolling restart on Kubernetes deployments:
 kubectl rollout restart deployment/super-app-backend -n super-app
 kubectl rollout restart deployment/super-app-manager-client -n super-app
 kubectl rollout restart deployment/super-app-client -n super-app
 
-# 2. Monitor rollout status until complete
+# 2. Monitor rollout status until healthy:
 kubectl rollout status deployment/super-app-backend -n super-app
 kubectl rollout status deployment/super-app-manager-client -n super-app
 kubectl rollout status deployment/super-app-client -n super-app
@@ -142,6 +149,7 @@ kubectl rollout status deployment/super-app-client -n super-app
 | :--- | :--- | :--- |
 | **Backoffice Manager** | `https://app.fintechcenterfsa.com/` | SuperApp Backoffice Portal |
 | **Backend REST & WS** | `https://app.fintechcenterfsa.com/api/` | NestJS Core Platform API |
-| **Flutter Web Preview**| `https://app.fintechcenterfsa.com/preview/` | Interactive SuperApp Client |
+| **Flutter Web Preview** | `https://app.fintechcenterfsa.com/preview/` | Interactive SuperApp Client |
 | **Nexus Registry** | `https://app.fintechcenterfsa.com/nexus/` | Package & SDK Artifact Repository |
-| **Jenkins CI/CD** | `https://app.fintechcenterfsa.com/jenkins/` | Pipeline Automation Engine |
+| **Jenkins CI/CD** | `https://app.fintechcenterfsa.com/jenkins/` | Pipeline Automation Engine (Test builds only) |
+| **Harbor Registry** | `https://registry.fintechcenterfsa.com/` | Container Image Registry (`super-app` project) |

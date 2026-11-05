@@ -472,11 +472,13 @@ export default function CapabilitiesForm({
       }
     });
 
-    // 3. Fallback baseline if offline
-    WHITELISTED_HOST_CAPABILITIES.forEach((p) => {
-      set.add(p.toLowerCase());
-      set.add(normalizeCapabilityKey(p));
-    });
+    // 3. Fallback baseline only if completely offline
+    if (hostCapabilities.length === 0 && hostPermissions.length === 0) {
+      WHITELISTED_HOST_CAPABILITIES.forEach((p) => {
+        set.add(p.toLowerCase());
+        set.add(normalizeCapabilityKey(p));
+      });
+    }
 
     return set;
   }, [hostCapabilities, hostPermissions]);
@@ -496,15 +498,17 @@ export default function CapabilitiesForm({
       }
     };
 
-    // 1. Core Shell Capabilities (active 5 verified capabilities)
-    CANONICAL_SHELL_CAPABILITIES.forEach((c) => addType(c));
-
-    // 2. Real SuperApp capabilities detected from shell (from /api/permissions/capabilities)
-    hostCapabilities.forEach((c) => {
-      if (c.status === 'Active' || c.status === 'Beta') {
-        addType(c.key);
-      }
-    });
+    // 1. Dynamic SuperApp capabilities detected from shell (from /api/permissions/capabilities)
+    if (hostCapabilities.length > 0 || hostPermissions.length > 0) {
+      hostCapabilities.forEach((c) => {
+        if (c.status === 'Active' || c.status === 'Beta') {
+          addType(c.key);
+        }
+      });
+    } else {
+      // Offline fallback only when backend registry is unreachable
+      CANONICAL_SHELL_CAPABILITIES.forEach((c) => addType(c));
+    }
 
     // 3. Real active permissions defined in database
     hostPermissions.forEach((p) => {

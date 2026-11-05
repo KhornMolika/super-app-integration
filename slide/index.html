@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FSA Super App & Mini App Platform — Executive Presentation</title>
+  <title>FSA SuperApp & MiniApp Platform — Executive Presentation</title>
 
   <!-- Typography: Plus Jakarta Sans & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,19 +12,21 @@
 
   <style>
     /* ===========================================
-       CLEAN EXECUTIVE COLOR PALETTE
-       Strictly Un-nested / Open / Bullet Dots / No Emojis
+       MINIMAL EXECUTIVE PALETTE & STYLING
+       Light Text, Big Whitespace, Simple Words
        =========================================== */
     :root {
       --bg-dark: #080C09;
       --bg-surface: #0E1410;
-      --border-line: rgba(255, 255, 255, 0.10);
+      --bg-card: rgba(14, 20, 16, 0.55);
+      --border-line: rgba(255, 255, 255, 0.08);
       --border-accent: rgba(248, 209, 97, 0.35);
 
       --gold: #F8D161;
       --gold-deep: #E6A71C;
       --green-pass: #4ADE80;
       --red-accent: #F87171;
+      --cyan-accent: #38BDF8;
 
       --text-main: #FFFFFF;
       --text-muted: #CBD5E1;
@@ -34,7 +36,7 @@
       --font-mono: 'JetBrains Mono', monospace;
 
       --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-      --duration-normal: 0.5s;
+      --duration-normal: 0.45s;
     }
 
     *, *::before, *::after {
@@ -51,7 +53,7 @@
       background: #000000;
       color: var(--text-main);
       font-family: var(--font-display);
-      user-select: none;
+      user-select: text;
       -webkit-font-smoothing: antialiased;
     }
 
@@ -69,25 +71,25 @@
       position: absolute;
       left: 0;
       top: 0;
-      width: 1920px;
+      width: 1820px;
       height: 1080px;
       overflow: hidden;
       transform-origin: 0 0;
       background: var(--bg-dark);
       background-image:
-        radial-gradient(circle at 10% 10%, rgba(57, 99, 68, 0.18) 0%, transparent 40%),
-        radial-gradient(circle at 90% 90%, rgba(248, 209, 97, 0.08) 0%, transparent 40%),
-        linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.012) 1px, transparent 1px);
+        radial-gradient(circle at 12% 12%, rgba(57, 99, 68, 0.22) 0%, transparent 45%),
+        radial-gradient(circle at 88% 88%, rgba(248, 209, 97, 0.10) 0%, transparent 45%),
+        linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
       background-size: 100% 100%, 100% 100%, 64px 64px, 64px 64px;
     }
 
     .slide {
       position: absolute;
       inset: 0;
-      width: 1920px;
+      width: 1820px;
       height: 1080px;
-      padding: 60px 96px 76px 96px;
+      padding: 60px 104px 76px 104px;
       overflow: hidden;
       display: flex;
       flex-direction: column;
@@ -107,7 +109,7 @@
 
     .reveal {
       opacity: 0;
-      transform: translateY(16px);
+      transform: translateY(14px);
       transition: opacity var(--duration-normal) var(--ease-out-expo),
                   transform var(--duration-normal) var(--ease-out-expo);
     }
@@ -117,17 +119,17 @@
       transform: translateY(0);
     }
 
-    .reveal:nth-child(1) { transition-delay: 0.05s; }
-    .reveal:nth-child(2) { transition-delay: 0.10s; }
-    .reveal:nth-child(3) { transition-delay: 0.15s; }
-    .reveal:nth-child(4) { transition-delay: 0.20s; }
+    .reveal:nth-child(1) { transition-delay: 0.04s; }
+    .reveal:nth-child(2) { transition-delay: 0.08s; }
+    .reveal:nth-child(3) { transition-delay: 0.12s; }
+    .reveal:nth-child(4) { transition-delay: 0.16s; }
 
-    /* Header */
+    /* Slide Header */
     .slide-header {
       display: flex;
       flex-direction: column;
       gap: 6px;
-      margin-bottom: 32px;
+      margin-bottom: 30px;
       position: relative;
     }
 
@@ -139,8 +141,8 @@
     }
 
     .org-logo {
-      width: 40px;
-      height: 40px;
+      width: 38px;
+      height: 38px;
       object-fit: contain;
     }
 
@@ -163,7 +165,7 @@
     }
 
     .slide-title {
-      font-size: 42px;
+      font-size: 44px;
       font-weight: 800;
       color: var(--text-main);
       letter-spacing: -0.025em;
@@ -171,11 +173,11 @@
     }
 
     .slide-subtitle {
-      font-size: 18.5px;
+      font-size: 18px;
       font-weight: 400;
       color: var(--text-sage);
       line-height: 1.4;
-      max-width: 1500px;
+      max-width: 1400px;
     }
 
     .slide-divider {
@@ -185,6 +187,66 @@
       margin-top: 14px;
     }
 
+    /* Section Divider Slides */
+    .section-hero {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      height: 100%;
+      max-width: 1400px;
+      margin: 0 auto;
+      text-align: left;
+    }
+
+    .section-watermark {
+      font-family: var(--font-mono);
+      font-size: 140px;
+      font-weight: 800;
+      color: rgba(248, 209, 97, 0.12);
+      line-height: 0.85;
+      margin-bottom: 2px;
+      letter-spacing: -0.04em;
+    }
+
+    .section-hero-title {
+      font-size: 58px;
+      font-weight: 800;
+      color: #FFFFFF;
+      letter-spacing: -0.025em;
+      line-height: 1.1;
+      margin-bottom: 18px;
+    }
+
+    .section-hero-subtitle {
+      font-size: 23px;
+      color: var(--text-sage);
+      max-width: 1100px;
+      line-height: 1.45;
+      margin-bottom: 38px;
+    }
+
+    .section-topics-bar {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      padding-top: 26px;
+      border-top: 1px solid var(--border-line);
+    }
+
+    .section-topic-pill {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--gold);
+      background: rgba(248, 209, 97, 0.08);
+      border: 1px solid rgba(248, 209, 97, 0.25);
+      padding: 9px 20px;
+      border-radius: 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
     /* Layout Grids */
     .content-area {
       flex: 1;
@@ -192,70 +254,212 @@
       flex-direction: column;
       position: relative;
       overflow: hidden;
+      justify-content: center;
     }
 
     .open-grid-2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 64px;
-      height: 100%;
+      gap: 48px;
+      height: auto;
+      align-items: stretch;
     }
 
     .open-grid-3 {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 48px;
-      height: 100%;
+      gap: 36px;
+      height: auto;
+      align-items: stretch;
     }
 
     .open-grid-4 {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 36px;
-      height: 100%;
+      gap: 28px;
+      height: auto;
+      align-items: stretch;
     }
 
-    .open-grid-3x2 {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      grid-template-rows: repeat(2, 1fr);
-      gap: 36px 48px;
-      height: 100%;
-    }
-
-    .open-col {
+    /* Open Column Keynote Style (No enclosing box borders) */
+    .clean-card {
       display: flex;
       flex-direction: column;
-      border-top: 2px solid var(--border-line);
-      padding-top: 20px;
+      border-top: 3px solid var(--border-line);
+      background: transparent;
+      border-left: none;
+      border-right: none;
+      border-bottom: none;
+      border-radius: 0;
+      padding: 22px 0 0 0;
+      min-height: auto;
+      justify-content: flex-start;
     }
 
-    .open-col.gold { border-top-color: var(--gold); }
-    .open-col.red { border-top-color: var(--red-accent); }
-    .open-col.emerald { border-top-color: var(--green-pass); }
+    .clean-card.gold { border-top-color: var(--gold); }
+    .clean-card.red { border-top-color: var(--red-accent); }
+    .clean-card.emerald { border-top-color: var(--green-pass); }
 
-    .col-header {
+    /* ===========================================
+       DIRECT COMPARISON MATRIX (Slide 5)
+       Horizontal Contrast Rows (McKinsey / Keynote style)
+       =========================================== */
+    .comparison-matrix-clean {
       display: flex;
-      align-items: center;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
       justify-content: space-between;
-      margin-bottom: 20px;
+      gap: 10px;
     }
 
-    .col-title-group {
+    .matrix-header-row {
+      display: grid;
+      grid-template-columns: 240px 1fr 1fr;
+      gap: 40px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border-line);
+      align-items: flex-end;
+    }
+
+    .matrix-header-dim {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-sage);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .matrix-header-col {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      border-bottom: 3px solid transparent;
+      padding-bottom: 12px;
+    }
+
+    .matrix-header-col.bad {
+      border-bottom-color: var(--red-accent);
+    }
+
+    .matrix-header-col.good {
+      border-bottom-color: var(--green-pass);
+    }
+
+    .matrix-col-top {
       display: flex;
       align-items: center;
-      gap: 12px;
     }
 
-    .col-title {
+    .matrix-col-title {
+      font-size: 23px;
+      font-weight: 800;
+      letter-spacing: -0.015em;
+    }
+
+    .matrix-col-title.bad { color: #FCA5A5; }
+    .matrix-col-title.good { color: #86EFAC; }
+
+    .matrix-row {
+      display: grid;
+      grid-template-columns: 240px 1fr 1fr;
+      gap: 40px;
+      padding: 18px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      align-items: center;
+      transition: background 0.2s;
+    }
+
+    .matrix-row:last-child {
+      border-bottom: none;
+    }
+
+    .matrix-col-dim {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .matrix-dim-num {
+      font-family: var(--font-mono);
       font-size: 20px;
+      font-weight: 800;
+      color: var(--gold);
+      line-height: 1;
+    }
+
+    .matrix-dim-name {
+      font-size: 16.5px;
       font-weight: 700;
       color: #FFFFFF;
       letter-spacing: -0.01em;
     }
 
-    .col-title.gold { color: var(--gold); }
-    .col-title.red { color: var(--red-accent); }
+    .matrix-dim-sub {
+      font-size: 12px;
+      color: var(--text-sage);
+      font-family: var(--font-mono);
+      margin-top: 2px;
+    }
+
+    .matrix-col-bad {
+      padding-right: 20px;
+    }
+
+    .matrix-col-good {
+      padding: 12px 18px;
+      background: rgba(74, 222, 128, 0.04);
+      border-radius: 8px;
+      border-left: 2px solid rgba(74, 222, 128, 0.4);
+    }
+
+    .matrix-item-head {
+      font-size: 17.5px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .matrix-item-head.red { color: #FCA5A5; }
+    .matrix-item-head.emerald { color: #86EFAC; }
+
+    .matrix-dot {
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    .matrix-dot.red { color: var(--red-accent); }
+    .matrix-dot.emerald { color: var(--green-pass); }
+
+    .matrix-item-desc {
+      font-size: 15px;
+      color: var(--text-sage);
+      line-height: 1.45;
+      padding-left: 16px;
+    }
+
+    .card-title-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-line);
+    }
+
+    .card-title {
+      font-size: 21px;
+      font-weight: 700;
+      color: #FFFFFF;
+      letter-spacing: -0.01em;
+    }
+
+    .card-title.gold { color: var(--gold); }
+    .card-title.red { color: var(--red-accent); }
+    .card-title.emerald { color: var(--green-pass); }
 
     .clean-tag {
       font-family: var(--font-mono);
@@ -264,90 +468,98 @@
       letter-spacing: 0.10em;
       text-transform: uppercase;
       color: var(--text-sage);
+      background: rgba(255, 255, 255, 0.05);
+      padding: 3px 8px;
+      border-radius: 4px;
     }
 
-    .clean-tag.gold { color: var(--gold); }
-    .clean-tag.red { color: var(--red-accent); }
-    .clean-tag.pass { color: var(--green-pass); }
+    .clean-tag.gold { color: var(--gold); background: rgba(248, 209, 97, 0.12); }
+    .clean-tag.red { color: var(--red-accent); background: rgba(248, 113, 113, 0.12); }
+    .clean-tag.pass { color: var(--green-pass); background: rgba(74, 222, 128, 0.12); }
 
-    /* Slide Symbol Dot (MANDATORY: NO DASHES) */
-    .clean-point {
+    /* Bullet Items (Short & Punchy) */
+    .punchy-item {
       margin-bottom: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
     }
 
-    .clean-point:last-child {
+    .punchy-item:last-child {
       margin-bottom: 0;
     }
 
-    .point-head-clean {
-      font-size: 16.5px;
+    .punchy-head {
+      font-size: 18.5px;
       font-weight: 700;
       color: #FFFFFF;
-      margin-bottom: 4px;
       display: flex;
       align-items: baseline;
       gap: 10px;
     }
 
-    .point-head-clean.red { color: #FCA5A5; }
-    .point-head-clean.gold { color: var(--gold); }
+    .punchy-head.red { color: #FCA5A5; }
+    .punchy-head.gold { color: var(--gold); }
+    .punchy-head.emerald { color: #86EFAC; }
 
-    .point-dot {
-      color: var(--gold);
-      font-size: 18px;
+    .punchy-dot {
+      font-size: 17px;
       line-height: 1;
+      flex-shrink: 0;
     }
 
-    .point-dot.red { color: var(--red-accent); }
-    .point-dot.emerald { color: var(--green-pass); }
+    .punchy-dot.gold { color: var(--gold); }
+    .punchy-dot.red { color: var(--red-accent); }
+    .punchy-dot.emerald { color: var(--green-pass); }
 
-    .point-desc-clean {
-      font-size: 14.5px;
+    .punchy-sub {
+      font-size: 15.5px;
       color: var(--text-sage);
-      line-height: 1.48;
+      line-height: 1.5;
       padding-left: 20px;
     }
 
-    /* Table of Contents Clean Grid */
+    /* Agenda Grid */
     .agenda-clean-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       grid-template-rows: 1fr 1fr;
-      gap: 36px 64px;
+      gap: 28px 56px;
       height: 100%;
-      padding-top: 10px;
+      padding-top: 6px;
     }
 
     .agenda-clean-item {
       display: flex;
       flex-direction: column;
       border-bottom: 1px solid var(--border-line);
-      padding-bottom: 24px;
+      padding-bottom: 18px;
       cursor: pointer;
-      transition: border-bottom-color 0.2s;
+      transition: border-bottom-color 0.2s, transform 0.2s;
     }
 
     .agenda-clean-item:hover {
       border-bottom-color: var(--gold);
+      transform: translateY(-2px);
     }
 
     .agenda-clean-header {
       display: flex;
       align-items: baseline;
       gap: 16px;
-      margin-bottom: 14px;
+      margin-bottom: 10px;
     }
 
     .agenda-clean-num {
       font-family: var(--font-mono);
-      font-size: 36px;
+      font-size: 32px;
       font-weight: 800;
       color: var(--gold);
       line-height: 1;
     }
 
     .agenda-clean-title {
-      font-size: 22px;
+      font-size: 21px;
       font-weight: 700;
       color: #FFFFFF;
       letter-spacing: -0.01em;
@@ -356,17 +568,17 @@
     .agenda-clean-sublist {
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      padding-left: 54px;
+      gap: 6px;
+      padding-left: 48px;
     }
 
     .agenda-clean-sub {
       display: flex;
       align-items: baseline;
-      gap: 12px;
-      font-size: 15.5px;
+      gap: 10px;
+      font-size: 15px;
       color: var(--text-sage);
-      padding: 3px 0;
+      padding: 2px 0;
       transition: color 0.2s, transform 0.2s;
     }
 
@@ -375,49 +587,25 @@
       transform: translateX(4px);
     }
 
-    .sub-dot-clean {
-      color: var(--gold);
-      font-size: 15px;
-      line-height: 1;
-    }
-
-    .sub-num-clean {
-      font-family: var(--font-mono);
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--gold);
-      min-width: 26px;
-    }
-
-    /* Media Frames: Show FULL Native Aspect Ratio Without Distortion */
+    /* Media Frame */
     .full-image-frame {
       width: 100%;
       height: auto;
-      max-height: 520px;
+      max-height: 480px;
       object-fit: contain;
       border: 1px solid var(--border-line);
-      border-radius: 6px;
+      border-radius: 8px;
       background: #040605;
       display: block;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     }
 
-    .phone-full-frame {
-      height: 380px;
-      width: auto;
-      aspect-ratio: 604 / 1285;
-      object-fit: contain;
-      border: 1px solid var(--border-line);
-      border-radius: 18px;
-      background: #040605;
-      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7);
-    }
-
-    /* Gate List */
+    /* Gates List */
     .gate-row-clean {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 12px 0;
+      padding: 10px 0;
       border-bottom: 1px solid var(--border-line);
     }
 
@@ -432,7 +620,7 @@
     }
 
     .gate-name-clean {
-      font-size: 15.5px;
+      font-size: 15px;
       font-weight: 700;
       color: #FFFFFF;
       display: flex;
@@ -441,22 +629,26 @@
     }
 
     .gate-desc-clean {
-      font-size: 13.5px;
+      font-size: 13px;
       color: var(--text-sage);
       padding-left: 18px;
     }
 
     .gate-badge-clean {
       font-family: var(--font-mono);
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 800;
       color: var(--green-pass);
       letter-spacing: 0.08em;
-      margin-left: 16px;
+      margin-left: 14px;
       flex-shrink: 0;
+      background: rgba(74, 222, 128, 0.12);
+      padding: 3px 8px;
+      border-radius: 4px;
+      border: 1px solid rgba(74, 222, 128, 0.25);
     }
 
-    /* Presentation Controls */
+    /* Controls */
     .deck-controls {
       position: fixed;
       bottom: 22px;
@@ -465,7 +657,7 @@
       display: flex;
       align-items: center;
       gap: 14px;
-      background: rgba(14, 20, 16, 0.90);
+      background: rgba(14, 20, 16, 0.92);
       border: 1px solid var(--border-accent);
       backdrop-filter: blur(12px);
       padding: 6px 18px;
@@ -495,7 +687,7 @@
       font-size: 14px;
       font-weight: 700;
       color: var(--gold);
-      min-width: 65px;
+      min-width: 75px;
       text-align: center;
     }
 
@@ -509,6 +701,20 @@
       transition: width 0.3s var(--ease-out-expo);
       z-index: 1001;
     }
+
+    /* Step Pill */
+    .flow-step-pill {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 10px;
+      background: rgba(248, 209, 97, 0.12);
+      color: var(--gold);
+      border: 1px solid rgba(248, 209, 97, 0.3);
+      display: inline-flex;
+      align-items: center;
+    }
   </style>
 </head>
 <body>
@@ -517,59 +723,59 @@
     <main class="deck-stage" id="deckStage">
 
       <!-- ==========================================
-           SLIDE 01: Hero & Title
+           SLIDE 01: Hero & Title Cover
            ========================================== -->
       <section class="slide active" id="slide-1">
-        <div style="display: flex; flex-direction: column; justify-content: center; height: 100%; max-width: 1400px; margin: 0 auto; text-align: left;">
+        <div style="display: flex; flex-direction: column; justify-content: center; height: 100%; max-width: 1440px; margin: 0 auto; text-align: left;">
           <div class="reveal">
             <div class="org-bar" style="margin-bottom: 24px;">
-              <img src="assets/fsa_logo.png" alt="FSA Logo" class="org-logo" style="width: 56px; height: 56px;">
+              <img src="assets/fsa_logo.png" alt="FSA Logo" class="org-logo" style="width: 58px; height: 58px;">
               <div>
-                <div class="org-title" style="font-size: 16px;">Fintech Center of General Secretariat of FSA</div>
-                <div style="font-family: var(--font-mono); font-size: 12px; color: var(--text-sage);">Non-Bank Financial Services Authority</div>
+                <div class="org-title" style="font-size: 16px;">FinTech Center of General Secretariat of FSA</div>
+                <div style="font-family: var(--font-mono); font-size: 12.5px; color: var(--text-sage);">Non-Bank Financial Services Authority</div>
               </div>
             </div>
 
-            <div class="slide-eyebrow" style="margin-bottom: 16px; font-size: 14px;">NATIONAL REGULATORY FINTECH INITIATIVE</div>
-            <h1 class="slide-title" style="font-size: 64px; line-height: 1.08; margin-bottom: 20px;">Super App & Mini App Platform</h1>
-            <p class="slide-subtitle" style="font-size: 22px; max-width: 1100px; margin-bottom: 40px; color: var(--text-muted);">
-              Unified Mobile Architecture, Multi-Tier Partner Integration & Automated Pre-Flight Security Framework for Digital Public Services.
+            <div class="slide-eyebrow" style="margin-bottom: 16px; font-size: 14px;">FINTECH CENTER OF GENERAL SECRETARIAT OF FSA</div>
+            <h1 class="slide-title" style="font-size: 64px; line-height: 1.08; margin-bottom: 20px;">FSA SuperApp & MiniApp Platform</h1>
+            <p class="slide-subtitle" style="font-size: 24px; max-width: 1100px; margin-bottom: 44px; color: var(--text-muted);">
+              One Secure Mobile Gateway for FSA Regulatory Units & Financial Services.
             </p>
 
-            <div style="display: flex; gap: 32px; border-top: 1px solid var(--border-line); padding-top: 28px; margin-top: 10px;">
+            <div style="display: flex; gap: 32px; border-top: 1px solid var(--border-line); padding-top: 28px; margin-top: 8px;">
               <div style="display: flex; align-items: center; gap: 10px; font-size: 15px; color: #FFFFFF;">
-                <svg class="svg-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F8D161" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-                <span>Zero-Trust Architecture</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F8D161" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                <span style="font-weight: 700; letter-spacing: 0.05em; font-family: var(--font-mono); font-size: 13px;">4 INTEGRATION WAYS</span>
               </div>
               <div style="display: flex; align-items: center; gap: 10px; font-size: 15px; color: #FFFFFF;">
-                <svg class="svg-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F8D161" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-                <span>4 Integration Tiers</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+                <span style="font-weight: 700; letter-spacing: 0.05em; font-family: var(--font-mono); font-size: 13px;">GUARANTEED SAFETY</span>
               </div>
               <div style="display: flex; align-items: center; gap: 10px; font-size: 15px; color: #FFFFFF;">
-                <svg class="svg-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F8D161" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
-                <span>Automated CI/CD Codegen</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F8D161" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <span style="font-weight: 700; letter-spacing: 0.05em; font-family: var(--font-mono); font-size: 13px;">ONE SECURE GATEWAY</span>
               </div>
-              <div style="display: flex; align-items: center; gap: 10px; font-size: 15px; color: #FFFFFF;">
-                <svg class="svg-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F8D161" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-1.5 1.5L14 9l-2-2-4 4 2 2-3 3 1.5 1.5L7 19l-4 4-2-2 4-4 1.5 1.5 1.5-1.5 2 2 3-3-2-2 3.5-3.5L21 2z"/></svg>
-                <span>National SSO Ready</span>
-              </div>
+            </div>
+
+            <div style="margin-top: 24px; font-family: var(--font-mono); font-size: 12px; color: var(--text-sage);">
+              Non-Bank Financial Services Authority (FSA) · Platform Overview & Architecture
             </div>
           </div>
         </div>
       </section>
 
       <!-- ==========================================
-           SLIDE 02: Table of Contents (Open 2x2, Bullet Dots)
+           SLIDE 02: Table of Contents
            ========================================== -->
       <section class="slide" id="slide-2">
         <div class="slide-header">
           <div class="org-bar">
             <img src="assets/fsa_logo.png" alt="FSA Logo" class="org-logo">
-            <span class="org-title">Fintech Center  •  General Secretariat of FSA</span>
+            <span class="org-title">FinTech Center  •  General Secretariat of FSA</span>
           </div>
           <div class="slide-eyebrow">AGENDA</div>
-          <h2 class="slide-title">Executive Table of Contents</h2>
-          <p class="slide-subtitle">Four core strategic domains governing architecture, integration tiers, security gates, and operational roadmap.</p>
+          <h2 class="slide-title">Table of Contents</h2>
+          <p class="slide-subtitle">Four foundational domains governing strategic value, system architecture, partner lifecycle, and roadmap.</p>
           <div class="slide-divider"></div>
         </div>
 
@@ -579,78 +785,90 @@
             <div class="agenda-clean-item reveal" onclick="window.deck.goToSlide(2)">
               <div class="agenda-clean-header">
                 <span class="agenda-clean-num">01</span>
-                <h3 class="agenda-clean-title">1. Platform Vision & System Architecture</h3>
+                <h3 class="agenda-clean-title">1. Platform Definition & Strategic Value</h3>
               </div>
               <div class="agenda-clean-sublist">
-                <div class="agenda-clean-sub" onclick="event.stopPropagation(); window.deck.goToSlide(2)">
-                  <span class="sub-dot-clean">•</span>
-                  <span class="sub-num-clean">1.1</span>
-                  <span>Strategic Vision (The Dilemma vs. Unified Solution)</span>
-                </div>
                 <div class="agenda-clean-sub" onclick="event.stopPropagation(); window.deck.goToSlide(3)">
                   <span class="sub-dot-clean">•</span>
-                  <span class="sub-num-clean">1.2</span>
-                  <span>End-to-End System Architecture (4-Phase Integration Pipeline)</span>
+                  <span>1.1 What is FSA SuperApp?</span>
+                </div>
+                <div class="agenda-clean-sub" onclick="event.stopPropagation(); window.deck.goToSlide(4)">
+                  <span class="sub-dot-clean">•</span>
+                  <span>1.2 Platform Benefits</span>
                 </div>
               </div>
             </div>
 
             <!-- 02 -->
-            <div class="agenda-clean-item reveal" onclick="window.deck.goToSlide(4)">
+            <div class="agenda-clean-item reveal" onclick="window.deck.goToSlide(5)">
               <div class="agenda-clean-header">
                 <span class="agenda-clean-num">02</span>
-                <h3 class="agenda-clean-title">2. Core Features & 4 Integration Tiers</h3>
+                <h3 class="agenda-clean-title">2. FSA SuperApp System Architecture</h3>
               </div>
               <div class="agenda-clean-sublist">
-                <div class="agenda-clean-sub" onclick="event.stopPropagation(); window.deck.goToSlide(4)">
+                <div class="agenda-clean-sub" onclick="event.stopPropagation(); window.deck.goToSlide(6)">
                   <span class="sub-dot-clean">•</span>
-                  <span class="sub-num-clean">2.1</span>
-                  <span>4 Flexible Integration Tiers (WebView, Flutter, Native, Deep Link)</span>
+                  <span>2.1 How the System Works</span>
                 </div>
-                <div class="agenda-clean-sub" onclick="event.stopPropagation(); window.deck.goToSlide(5)">
+                <div class="agenda-clean-sub" onclick="event.stopPropagation(); window.deck.goToSlide(7)">
                   <span class="sub-dot-clean">•</span>
-                  <span class="sub-num-clean">2.2</span>
-                  <span>Platform Core Features (Size Cleaner, Codegen, Dynamic RBAC)</span>
+                  <span>2.2 4 Flexible Ways to Integrate</span>
                 </div>
               </div>
             </div>
 
             <!-- 03 -->
-            <div class="agenda-clean-item reveal" onclick="window.deck.goToSlide(6)">
+            <div class="agenda-clean-item reveal" onclick="window.deck.goToSlide(8)">
               <div class="agenda-clean-header">
                 <span class="agenda-clean-num">03</span>
-                <h3 class="agenda-clean-title">3. Partner Portal & Enterprise Security</h3>
+                <h3 class="agenda-clean-title">3. The Partner & MiniApp Lifecycle</h3>
               </div>
               <div class="agenda-clean-sublist">
-                <div class="agenda-clean-sub" onclick="event.stopPropagation(); window.deck.goToSlide(6)">
+                <div class="agenda-clean-sub" onclick="event.stopPropagation(); window.deck.goToSlide(9)">
                   <span class="sub-dot-clean">•</span>
-                  <span class="sub-num-clean">3.1</span>
-                  <span>Partner Self-Service Backoffice & 6-Step Wizard</span>
+                  <span>3.1 Self-Service Partner Portal (6 Steps)</span>
                 </div>
-                <div class="agenda-clean-sub" onclick="event.stopPropagation(); window.deck.goToSlide(7)">
+                <div class="agenda-clean-sub" onclick="event.stopPropagation(); window.deck.goToSlide(10)">
                   <span class="sub-dot-clean">•</span>
-                  <span class="sub-num-clean">3.2</span>
-                  <span>Automated Security Pipeline (8 Pre-Flight Gates & 12 Scanners)</span>
+                  <span>3.2 Guaranteed Safety & 8 Pre-Flight Checks</span>
+                </div>
+                <div class="agenda-clean-sub" onclick="event.stopPropagation(); window.deck.goToSlide(11)">
+                  <span class="sub-dot-clean">•</span>
+                  <span>3.3 Strict Device Safety & Citizen Privacy</span>
+                </div>
+                <div class="agenda-clean-sub" onclick="event.stopPropagation(); window.deck.goToSlide(12)">
+                  <span class="sub-dot-clean">•</span>
+                  <span>3.4 Stage 1: In-Browser Web Sandbox</span>
+                </div>
+                <div class="agenda-clean-sub" onclick="event.stopPropagation(); window.deck.goToSlide(13)">
+                  <span class="sub-dot-clean">•</span>
+                  <span>3.5 Stage 2: Install Test APK on Real Device</span>
+                </div>
+                <div class="agenda-clean-sub" onclick="event.stopPropagation(); window.deck.goToSlide(14)">
+                  <span class="sub-dot-clean">•</span>
+                  <span>3.6 Stage 3: Admin Activation & Store Release</span>
                 </div>
               </div>
             </div>
 
             <!-- 04 -->
-            <div class="agenda-clean-item reveal" onclick="window.deck.goToSlide(8)">
+            <div class="agenda-clean-item reveal" onclick="window.deck.goToSlide(15)">
               <div class="agenda-clean-header">
                 <span class="agenda-clean-num">04</span>
-                <h3 class="agenda-clean-title">4. CI/CD Assembly, QA & Strategic Roadmap</h3>
+                <h3 class="agenda-clean-title">4. Proven Milestones & Strategic Roadmap</h3>
               </div>
               <div class="agenda-clean-sublist">
-                <div class="agenda-clean-sub" onclick="event.stopPropagation(); window.deck.goToSlide(8)">
+                <div class="agenda-clean-sub" onclick="event.stopPropagation(); window.deck.goToSlide(16)">
                   <span class="sub-dot-clean">•</span>
-                  <span class="sub-num-clean">4.1</span>
-                  <span>Jenkins Codegen Assembly, Nexus Registry & Dual QA Engine</span>
+                  <span>4.1 What We Completed in October</span>
                 </div>
-                <div class="agenda-clean-sub" onclick="event.stopPropagation(); window.deck.goToSlide(10)">
+                <div class="agenda-clean-sub" onclick="event.stopPropagation(); window.deck.goToSlide(17)">
                   <span class="sub-dot-clean">•</span>
-                  <span class="sub-num-clean">4.2</span>
-                  <span>Operational Milestones & Strategic Roadmap (CamDigiKey, HR)</span>
+                  <span>4.2 Strategic Roadmap & Next Steps</span>
+                </div>
+                <div class="agenda-clean-sub" onclick="event.stopPropagation(); window.deck.goToSlide(18)">
+                  <span class="sub-dot-clean">•</span>
+                  <span>4.3 Live Platform Demo</span>
                 </div>
               </div>
             </div>
@@ -659,160 +877,87 @@
       </section>
 
       <!-- ==========================================
-           SLIDE 03: 1.1 Strategic Vision (Bullet Dots)
+           SLIDE 03: SECTION 1 DIVIDER
            ========================================== -->
       <section class="slide" id="slide-3">
-        <div class="slide-header">
-          <div class="org-bar">
+        <div class="section-hero reveal">
+          <div class="org-bar" style="margin-bottom: 20px;">
             <img src="assets/fsa_logo.png" alt="FSA Logo" class="org-logo">
-            <span class="org-title">Fintech Center  •  General Secretariat of FSA</span>
+            <span class="org-title">FinTech Center  •  General Secretariat of FSA</span>
           </div>
-          <div class="slide-eyebrow">1.1 STRATEGIC VISION</div>
-          <h2 class="slide-title">Operational Dilemma vs. Unified Solution</h2>
-          <p class="slide-subtitle">Transforming fragmented citizen applications into a unified, secure digital public service ecosystem.</p>
-          <div class="slide-divider"></div>
-        </div>
+          <div class="section-watermark">01</div>
+          <div class="slide-eyebrow" style="margin-bottom: 12px;">PART 01 · STRATEGIC FOUNDATION</div>
+          <h2 class="section-hero-title">Platform Definition & Strategic Value</h2>
+          <p class="section-hero-subtitle">
+            Moving away from fragmented apps into an integrated, integrated, centrally governed mobile gateway.
+          </p>
 
-        <div class="content-area">
-          <div class="open-grid-2">
-            <!-- Left: Challenges -->
-            <div class="open-col red reveal">
-              <div class="col-header">
-                <div class="col-title-group">
-                  <svg class="svg-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                  <h3 class="col-title red">Operational Challenges & Fragmentation</h3>
-                </div>
-                <span class="clean-tag red">CRITICAL RISKS</span>
-              </div>
-
-              <div class="clean-point">
-                <div class="point-head-clean red">
-                  <span class="point-dot red">•</span>
-                  <span>Severe Citizen App Fatigue</span>
-                </div>
-                <div class="point-desc-clean">Citizens are forced to download dozens of separate standalone government and financial apps for individual ministry services.</div>
-              </div>
-
-              <div class="clean-point">
-                <div class="point-head-clean red">
-                  <span class="point-dot red">•</span>
-                  <span>Fragmented Security & Identity</span>
-                </div>
-                <div class="point-desc-clean">Inconsistent authentication standards, variable security postures, unvetted third-party SDKs, and scattered citizen profiles.</div>
-              </div>
-
-              <div class="clean-point">
-                <div class="point-head-clean red">
-                  <span class="point-dot red">•</span>
-                  <span>High Partner Onboarding Overhead</span>
-                </div>
-                <div class="point-desc-clean">Slow integration cycles with manual code reviews, duplicated infrastructure, and high engineering costs per ministry.</div>
-              </div>
-
-              <div class="clean-point">
-                <div class="point-head-clean red">
-                  <span class="point-dot red">•</span>
-                  <span>Decentralized Governance Void</span>
-                </div>
-                <div class="point-desc-clean">No centralized control to enforce regulatory compliance, inspect dependencies, or revoke compromised mobile versions instantly.</div>
-              </div>
-            </div>
-
-            <!-- Right: Solution -->
-            <div class="open-col gold reveal">
-              <div class="col-header">
-                <div class="col-title-group">
-                  <svg class="svg-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F8D161" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-                  <h3 class="col-title gold">Unified Super App Architecture</h3>
-                </div>
-                <span class="clean-tag gold">REGULATORY SOLUTION</span>
-              </div>
-
-              <div class="clean-point">
-                <div class="point-head-clean gold">
-                  <span class="point-dot emerald">•</span>
-                  <span>Single Citizen Digital Portal</span>
-                </div>
-                <div class="point-desc-clean">Consolidates all public and financial services into one authoritative, state-level mobile gateway with unified identity.</div>
-              </div>
-
-              <div class="clean-point">
-                <div class="point-head-clean gold">
-                  <span class="point-dot emerald">•</span>
-                  <span>Bank-Grade Zero-Trust Security</span>
-                </div>
-                <div class="point-desc-clean">Centralized CamDigiKey national SSO, automated SAST vulnerability scanning, and strict sandboxed JavaScript runtime boundaries.</div>
-              </div>
-
-              <div class="clean-point">
-                <div class="point-head-clean gold">
-                  <span class="point-dot emerald">•</span>
-                  <span>Automated Self-Service Onboarding</span>
-                </div>
-                <div class="point-desc-clean">6-step developer portal with live reachability probes, automated manifest validation, and dynamic route code generation.</div>
-              </div>
-
-              <div class="clean-point">
-                <div class="point-head-clean gold">
-                  <span class="point-dot emerald">•</span>
-                  <span>Centralized Regulatory Governance</span>
-                </div>
-                <div class="point-desc-clean">Immediate capability revocation, multi-tenant RBAC permissions, and end-to-end immutable audit logging for full compliance.</div>
-              </div>
-            </div>
+          <div class="section-topics-bar">
+            <div class="section-topic-pill"><span>1.1</span><span>What is FSA SuperApp?</span></div>
+            <div class="section-topic-pill"><span>1.2</span><span>Platform Benefits</span></div>
           </div>
         </div>
       </section>
 
       <!-- ==========================================
-           SLIDE 04: 1.2 System Architecture
+           SLIDE 04: 1.1 What is FSA SuperApp?
            ========================================== -->
       <section class="slide" id="slide-4">
         <div class="slide-header">
           <div class="org-bar">
             <img src="assets/fsa_logo.png" alt="FSA Logo" class="org-logo">
-            <span class="org-title">Fintech Center  •  General Secretariat of FSA</span>
+            <span class="org-title">FinTech Center  •  General Secretariat of FSA</span>
           </div>
-          <div class="slide-eyebrow">1.2 SYSTEM ARCHITECTURE & PROTOCOLS</div>
-          <h2 class="slide-title">Technology Stacks & Communication Architecture</h2>
-          <p class="slide-subtitle">Decoupled technical topology showing exact technologies, ports, data flows, and inter-service communication channels.</p>
+          <div class="slide-eyebrow">1. PLATFORM DEFINITION & STRATEGIC VALUE • 1.1 WHAT IS FSA SUPERAPP?</div>
+          <h2 class="slide-title">What is FSA SuperApp?</h2>
+          <p class="slide-subtitle">The digital foundation connecting financial services, regulators, and citizens into one mobile gateway.</p>
           <div class="slide-divider"></div>
         </div>
 
         <div class="content-area">
-          <div style="display: flex; gap: 40px; align-items: center; height: 100%;">
-            <div class="reveal" style="flex: 2.3; height: 100%; display: flex; align-items: center;">
-              <img src="assets/fsa_superapp_system_architecture.png" alt="FSA Super App Platform Architecture Blueprint" class="full-image-frame" style="max-height: 520px; width: 100%; object-fit: contain;">
+          <div class="open-grid-3">
+            <div class="clean-card gold reveal">
+              <div class="card-title-bar">
+                <h3 class="card-title gold">One Digital Host</h3>
+                <span class="clean-tag gold">OPERATING SYSTEM</span>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Central Mobile Home</span></div>
+                <div class="punchy-sub">Acts like an operating system for FSA regulatory units and financial services.</div>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Shared Core Tools</span></div>
+                <div class="punchy-sub">Provides built-in login, secure storage, and notifications out-of-the-box.</div>
+              </div>
             </div>
 
-            <div class="open-col gold reveal" style="flex: 0.95; height: 100%; border-top-color: var(--gold); padding-top: 14px;">
-              <div class="col-header" style="margin-bottom: 12px;">
-                <h3 class="col-title">Inter-Service Communication</h3>
-                <span class="clean-tag gold">PROTOCOLS</span>
+            <div class="clean-card gold reveal">
+              <div class="card-title-bar">
+                <h3 class="card-title gold">Plug & Play MiniApps</h3>
+                <span class="clean-tag gold">INDEPENDENCE</span>
               </div>
-
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Portal to Backend (BFF)</span></div>
-                <div class="point-desc-clean">Next.js 16 Server Actions call NestJS 11 REST API via Bearer JWT; real-time build progress via Socket.IO WebSocket.</div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Lightweight Services</span></div>
+                <div class="punchy-sub">Partners build compact mini-apps that load instantly on user phones without app store installs.</div>
               </div>
-
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Backend to Data & Storage</span></div>
-                <div class="point-desc-clean">NestJS connects to PostgreSQL 15 over TCP 5432 (TypeORM QueryBuilder) and MinIO over S3 API (Port 9000).</div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Own Code & Servers</span></div>
+                <div class="punchy-sub">Partners keep their own development teams, codebases, and backend servers.</div>
               </div>
+            </div>
 
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Automated CI/CD Security</span></div>
-                <div class="point-desc-clean">Jenkins triggers rootless Docker DinD (Port 2376), executes 12 scanners (OWASP ZAP 8090, Trivy), publishes to Nexus CE 8081.</div>
+            <div class="clean-card gold reveal">
+              <div class="card-title-bar">
+                <h3 class="card-title gold">Centrally Governed</h3>
+                <span class="clean-tag gold">GOVERNANCE</span>
               </div>
-
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Super App Sandboxed IPC</span></div>
-                <div class="point-desc-clean">Flutter host binds WebView via window.postMessage, Native SDK via MethodChannels, and CamDigiKey SSO via OIDC PKCE.</div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>100% FSA Controlled</span></div>
+                <div class="punchy-sub">Owned and operated by the FSA to guarantee institutional data privacy and regulatory compliance.</div>
               </div>
-
-              <div style="font-family: var(--font-mono); font-size: 11px; color: var(--green-pass); margin-top: auto; padding-top: 14px;">
-                [ PROVEN FULL-STACK POC ARCHITECTURE ]
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Emergency Controls</span></div>
+                <div class="punchy-sub">FSA review team can remotely disable or update any mini-app in seconds if needed.</div>
               </div>
             </div>
           </div>
@@ -820,209 +965,277 @@
       </section>
 
       <!-- ==========================================
-           SLIDE 05: 2.1 4 Flexible Integration Tiers
+           SLIDE 05: 1.2 Platform Benefits
            ========================================== -->
       <section class="slide" id="slide-5">
         <div class="slide-header">
           <div class="org-bar">
             <img src="assets/fsa_logo.png" alt="FSA Logo" class="org-logo">
-            <span class="org-title">Fintech Center  •  General Secretariat of FSA</span>
+            <span class="org-title">FinTech Center  •  General Secretariat of FSA</span>
           </div>
-          <div class="slide-eyebrow">2.1 INTEGRATION TIERS</div>
-          <h2 class="slide-title">4 Flexible Partner Integration Tiers</h2>
+          <div class="slide-eyebrow">1. PLATFORM DEFINITION & STRATEGIC VALUE • 1.2 PLATFORM BENEFITS</div>
+          <h2 class="slide-title">Platform Benefits (Why Join FSA SuperApp?)</h2>
+          <p class="slide-subtitle">Clear advantages for regulatory entities, commercial FinTech partners, and citizens.</p>
+          <div class="slide-divider"></div>
+        </div>
+
+        <div class="content-area">
+          <div class="open-grid-3">
+            <div class="clean-card gold reveal">
+              <div class="card-title-bar">
+                <h3 class="card-title gold">For Regulators</h3>
+                <span class="clean-tag gold">FSA ENTITIES</span>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Instant User Reach</span></div>
+                <div class="punchy-sub">Launch digital services directly to active citizens without marketing costs.</div>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Shared Infrastructure</span></div>
+                <div class="punchy-sub">Reuse pre-built cloud servers, databases, and push notification systems.</div>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Built-in Compliance</span></div>
+                <div class="punchy-sub">Automatically follows national financial security and UI guidelines.</div>
+              </div>
+            </div>
+
+            <div class="clean-card gold reveal">
+              <div class="card-title-bar">
+                <h3 class="card-title gold">For FinTech Partners</h3>
+                <span class="clean-tag gold">COMMERCIAL</span>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Fast Self-Service Setup</span></div>
+                <div class="punchy-sub">6-step online registration reduces onboarding time to under an hour.</div>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Official Brand Trust</span></div>
+                <div class="punchy-sub">Operating inside the official FSA SuperApp immediately earns user trust.</div>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Flexible Integration</span></div>
+                <div class="punchy-sub">Choose from 4 tiers: existing websites, Flutter, native code, or links.</div>
+              </div>
+            </div>
+
+            <div class="clean-card gold reveal">
+              <div class="card-title-bar">
+                <h3 class="card-title gold">For Citizens</h3>
+                <span class="clean-tag gold">END USERS</span>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>One Master App</span></div>
+                <div class="punchy-sub">No more juggling multiple logins and separate app downloads.</div>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Saves Phone Storage</span></div>
+                <div class="punchy-sub">MiniApps load smoothly on demand without filling up device memory.</div>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Total Privacy Control</span></div>
+                <div class="punchy-sub">Clear prompts let citizens decide which permissions to allow.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           SLIDE 06: SECTION 2 DIVIDER
+           ========================================== -->
+      <section class="slide" id="slide-6">
+        <div class="section-hero reveal">
+          <div class="org-bar" style="margin-bottom: 20px;">
+            <img src="assets/fsa_logo.png" alt="FSA Logo" class="org-logo">
+            <span class="org-title">FinTech Center  •  General Secretariat of FSA</span>
+          </div>
+          <div class="section-watermark">02</div>
+          <div class="slide-eyebrow" style="margin-bottom: 12px;">PART 02 · TECHNICAL BLUEPRINT</div>
+          <h2 class="section-hero-title">FSA SuperApp System Architecture</h2>
+          <p class="section-hero-subtitle">
+            Modern cloud infrastructure, high-availability microservices, and 4 flexible integration tiers.
+          </p>
+
+          <div class="section-topics-bar">
+            <div class="section-topic-pill"><span>2.1</span><span>How the System Works</span></div>
+            <div class="section-topic-pill"><span>2.2</span><span>4 Flexible Ways to Integrate</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           SLIDE 07: 2.1 How the System Works (System Architecture)
+           ========================================== -->
+      <section class="slide" id="slide-7">
+        <div class="slide-header">
+          <div class="org-bar">
+            <img src="assets/fsa_logo.png" alt="FSA Logo" class="org-logo">
+            <span class="org-title">FinTech Center  •  General Secretariat of FSA</span>
+          </div>
+          <div class="slide-eyebrow">2. FSA SUPERAPP SYSTEM ARCHITECTURE • 2.1 SYSTEM TOPOLOGY</div>
+          <h2 class="slide-title">FSA SuperApp System Architecture</h2>
+          <p class="slide-subtitle">End-to-end structural blueprint connecting client frontends, central NestJS backend, private cloud storage, and CI/CD automation.</p>
+          <div class="slide-divider"></div>
+        </div>
+
+        <div class="content-area" style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+          <div class="reveal" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+            <!-- Diagram Frame -->
+            <div style="width: 100%; max-height: 540px; display: flex; align-items: center; justify-content: center; background: rgba(8, 12, 9, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 18px 24px; box-shadow: 0 20px 45px rgba(0, 0, 0, 0.65);">
+              <img src="assets/fsa_superapp_system_architecture.png" alt="FSA SuperApp System Architecture" style="width: 100%; height: auto; max-height: 480px; object-fit: contain; border-radius: 6px;">
+            </div>
+
+            <!-- Color-Coded Architectural Highlights (Matching Diagram 1 to 5) -->
+            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; width: 100%; margin-top: 24px;">
+              <div style="border-top: 2px solid #C084FC; padding-top: 8px;">
+                <div style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: #C084FC; margin-bottom: 2px;">1. CLIENT LAYER</div>
+                <div style="font-size: 13.5px; color: #FFFFFF; font-weight: 600;">Flutter & Web Backoffice</div>
+                <div style="font-size: 11.5px; color: var(--text-sage); margin-top: 2px;">Mobile app for citizens · Next.js portal for staff</div>
+              </div>
+              <div style="border-top: 2px solid #2DD4BF; padding-top: 8px;">
+                <div style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: #2DD4BF; margin-bottom: 2px;">2. CORE BACKEND</div>
+                <div style="font-size: 13.5px; color: #FFFFFF; font-weight: 600;">Central NestJS API</div>
+                <div style="font-size: 11.5px; color: var(--text-sage); margin-top: 2px;">Auth, MiniApp catalog & dynamic capabilities</div>
+              </div>
+              <div style="border-top: 2px solid #FB923C; padding-top: 8px;">
+                <div style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: #FB923C; margin-bottom: 2px;">3. PRIVATE CLOUD</div>
+                <div style="font-size: 13.5px; color: #FFFFFF; font-weight: 600;">PostgreSQL, MinIO & Nexus</div>
+                <div style="font-size: 11.5px; color: var(--text-sage); margin-top: 2px;">100% FSA-controlled database, S3 & packages</div>
+              </div>
+              <div style="border-top: 2px solid #38BDF8; padding-top: 8px;">
+                <div style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: #38BDF8; margin-bottom: 2px;">4. CI/CD ENGINE</div>
+                <div style="font-size: 13.5px; color: #FFFFFF; font-weight: 600;">Jenkins Security Pipeline</div>
+                <div style="font-size: 11.5px; color: var(--text-sage); margin-top: 2px;">Pre-flight vulnerability scans & automated builds</div>
+              </div>
+              <div style="border-top: 2px solid #4ADE80; padding-top: 8px;">
+                <div style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: #4ADE80; margin-bottom: 2px;">5. EXTERNAL ECOSYSTEM</div>
+                <div style="font-size: 13.5px; color: #FFFFFF; font-weight: 600;">Partner Backend APIs</div>
+                <div style="font-size: 11.5px; color: var(--text-sage); margin-top: 2px;">Decoupled servers via encrypted HTTPS/JWT channels</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           SLIDE 08: 2.2 4 Ways to Integrate
+           ========================================== -->
+      <section class="slide" id="slide-8">
+        <div class="slide-header">
+          <div class="org-bar">
+            <img src="assets/fsa_logo.png" alt="FSA Logo" class="org-logo">
+            <span class="org-title">FinTech Center  •  General Secretariat of FSA</span>
+          </div>
+          <div class="slide-eyebrow">2. FSA SUPERAPP SYSTEM ARCHITECTURE • 2.2 INTEGRATION TIERS</div>
+          <h2 class="slide-title">Four Flexible Ways to Integrate</h2>
           <p class="slide-subtitle">Supporting existing web applications, high-performance Flutter modules, native OEM SDKs, and external ecosystem apps.</p>
           <div class="slide-divider"></div>
         </div>
 
         <div class="content-area">
           <div class="open-grid-4">
-            <div class="open-col gold reveal">
-              <div class="col-header">
-                <h3 class="col-title">WebView</h3>
-                <span class="clean-tag gold">TIER 01</span>
+            <!-- Method 01: WebView -->
+            <div class="clean-card gold reveal">
+              <div class="card-title-bar">
+                <div>
+                  <div style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 3px;">METHOD 01</div>
+                  <h3 class="card-title gold" style="font-size: 20px;">WebView MiniApp</h3>
+                </div>
+                <span class="clean-tag gold">WEBVIEW</span>
               </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Zero App Rebuild</span></div>
-                <div class="point-desc-clean">Instantly embed existing web applications with zero mobile compilation required.</div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Best For</span></div>
+                <div class="punchy-sub">Existing web portals, regulatory forms, and quick informational tools.</div>
               </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>JS Bridge Isolation</span></div>
-                <div class="point-desc-clean">Restricted JavaScript bridge communicates over monitored postMessage channels.</div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Zero Mobile Code</span></div>
+                <div class="punchy-sub">Embeds existing React, Vue, or web servers with zero app compilation.</div>
               </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Automated Auth</span></div>
-                <div class="point-desc-clean">Direct JWT session token injection via secure headers and CamDigiKey handoff.</div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Rapid Launch</span></div>
+                <div class="punchy-sub">Go live on citizen phones in 1–3 days with instant cloud updates.</div>
               </div>
-              <div style="font-family: var(--font-mono); font-size: 11.5px; color: var(--text-sage); margin-top: auto; padding-top: 14px;">HTML5 / React / Vue • &lt;8MB Memory</div>
-            </div>
-
-            <div class="open-col gold reveal">
-              <div class="col-header">
-                <h3 class="col-title">Flutter Mini App</h3>
-                <span class="clean-tag gold">TIER 02</span>
-              </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>60 FPS Native UI</span></div>
-                <div class="point-desc-clean">Delivers fluid 60fps animations with Flutter Riverpod state architecture.</div>
-              </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Native Channel Bridge</span></div>
-                <div class="point-desc-clean">Direct MethodChannel access to host camera, biometric auth, and secure storage.</div>
-              </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Decoupled Routes</span></div>
-                <div class="point-desc-clean">Dynamic route registry allows independent module versioning and testing.</div>
-              </div>
-              <div style="font-family: var(--font-mono); font-size: 11.5px; color: var(--text-sage); margin-top: auto; padding-top: 14px;">Dart / Riverpod • Instant Hot Launch</div>
-            </div>
-
-            <div class="open-col gold reveal">
-              <div class="col-header">
-                <h3 class="col-title">Native Mobile SDK</h3>
-                <span class="clean-tag gold">TIER 03</span>
-              </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Direct OEM Modules</span></div>
-                <div class="point-desc-clean">Integrates iOS Swift and Android Kotlin frameworks for intensive processing.</div>
-              </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Hardware Access</span></div>
-                <div class="point-desc-clean">Low-level hardware access for NFC chip reading, secure element, and Bluetooth.</div>
-              </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Execution Guards</span></div>
-                <div class="point-desc-clean">Strict in-flight execution guards prevent crashes from propagating to host.</div>
-              </div>
-              <div style="font-family: var(--font-mono); font-size: 11.5px; color: var(--text-sage); margin-top: auto; padding-top: 14px;">Kotlin / Swift • NFC & Secure Enclave</div>
-            </div>
-
-            <div class="open-col gold reveal">
-              <div class="col-header">
-                <h3 class="col-title">External Deep Link</h3>
-                <span class="clean-tag gold">TIER 04</span>
-              </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>App-to-App Handoff</span></div>
-                <div class="point-desc-clean">Cryptographic single sign-on handoff to external bank and agency applications.</div>
-              </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Zero Binary Footprint</span></div>
-                <div class="point-desc-clean">Adds zero megabytes to the core Super App package size.</div>
-              </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Verified Return URL</span></div>
-                <div class="point-desc-clean">Cryptographically signed return callbacks verify transaction results.</div>
-              </div>
-              <div style="font-family: var(--font-mono); font-size: 11.5px; color: var(--text-sage); margin-top: auto; padding-top: 14px;">Custom URL Schemes • Universal Links</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ==========================================
-           SLIDE 06: 2.2 Core Features
-           ========================================== -->
-      <section class="slide" id="slide-6">
-        <div class="slide-header">
-          <div class="org-bar">
-            <img src="assets/fsa_logo.png" alt="FSA Logo" class="org-logo">
-            <span class="org-title">Fintech Center  •  General Secretariat of FSA</span>
-          </div>
-          <div class="slide-eyebrow">2.2 PLATFORM CAPABILITIES</div>
-          <h2 class="slide-title">Core Platform Features & Architecture</h2>
-          <p class="slide-subtitle">Engineered for high-volume citizen services, automated governance, and enterprise-grade performance.</p>
-          <div class="slide-divider"></div>
-        </div>
-
-        <div class="content-area">
-          <div class="open-grid-3x2">
-            <div class="open-col reveal">
-              <div class="col-header" style="margin-bottom: 12px;">
-                <h3 class="col-title">Smart Size & Asset Cleaner</h3>
-                <span class="clean-tag">OPTIMIZATION</span>
-              </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Binary Symbol Stripping</span></div>
-                <div class="point-desc-clean">Strips unused symbols, duplicate assets, and debug metadata from release builds.</div>
-              </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Strict Size Enforcer</span></div>
-                <div class="point-desc-clean">Blocks builds exceeding 15MB to ensure rapid citizen mobile app downloads.</div>
+              <div style="margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border-line); font-family: var(--font-mono); font-size: 11.5px; color: var(--gold);">
+                HTML5 · React · Vue • 0 MB
               </div>
             </div>
 
-            <div class="open-col reveal">
-              <div class="col-header" style="margin-bottom: 12px;">
-                <h3 class="col-title">Dynamic Code Generator</h3>
-                <span class="clean-tag">AUTOMATION</span>
+            <!-- Method 02: Flutter MiniApp -->
+            <div class="clean-card gold reveal">
+              <div class="card-title-bar">
+                <div>
+                  <div style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 3px;">METHOD 02</div>
+                  <h3 class="card-title gold" style="font-size: 20px;">Flutter MiniApp</h3>
+                </div>
+                <span class="clean-tag gold">PACKAGE</span>
               </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Automated Routing</span></div>
-                <div class="point-desc-clean">Generates Riverpod providers, route tables, and bridge wrappers dynamically.</div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Best For</span></div>
+                <div class="punchy-sub">Brand-new services (HR MiniApp, digital wallets, dynamic calculators).</div>
               </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Zero Human Error</span></div>
-                <div class="point-desc-clean">Eliminates manual integration boilerplate and prevents route collision issues.</div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Fluid 60 FPS</span></div>
+                <div class="punchy-sub">Delivers smooth native animations identical to the core SuperApp.</div>
               </div>
-            </div>
-
-            <div class="open-col reveal">
-              <div class="col-header" style="margin-bottom: 12px;">
-                <h3 class="col-title">Multi-Tenant Backoffice RBAC</h3>
-                <span class="clean-tag">GOVERNANCE</span>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Direct Hardware</span></div>
+                <div class="punchy-sub">Fast, secure access to camera, biometric login, and local storage.</div>
               </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Role-Based Isolation</span></div>
-                <div class="point-desc-clean">Strict separation between FSA regulatory auditors, QA staff, and ministry developers.</div>
-              </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Audit Tracking</span></div>
-                <div class="point-desc-clean">Logs every permission update, approval decision, and status modification.</div>
+              <div style="margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border-line); font-family: var(--font-mono); font-size: 11.5px; color: var(--gold);">
+                Dart · Cross-Platform iOS & Android
               </div>
             </div>
 
-            <div class="open-col reveal">
-              <div class="col-header" style="margin-bottom: 12px;">
-                <h3 class="col-title">Live Web Sandbox Emulator</h3>
-                <span class="clean-tag">TESTING</span>
+            <!-- Method 03: Native SDK -->
+            <div class="clean-card gold reveal">
+              <div class="card-title-bar">
+                <div>
+                  <div style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 3px;">METHOD 03</div>
+                  <h3 class="card-title gold" style="font-size: 20px;">Native Mobile SDK</h3>
+                </div>
+                <span class="clean-tag gold">KOTLIN / SWIFT</span>
               </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>In-Browser Device Frame</span></div>
-                <div class="point-desc-clean">Instant desktop simulation of mobile viewports, touch gestures, and bridge APIs.</div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Best For</span></div>
+                <div class="punchy-sub">High-security banking, crypto tokens, and NFC national ID card readers.</div>
               </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Hardware Mocking</span></div>
-                <div class="point-desc-clean">Mocks camera feeds, GPS coordinates, and auth tokens without physical devices.</div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Maximum Speed</span></div>
+                <div class="punchy-sub">Direct execution on raw phone CPU/GPU without bridge overhead.</div>
               </div>
-            </div>
-
-            <div class="open-col reveal">
-              <div class="col-header" style="margin-bottom: 12px;">
-                <h3 class="col-title">Pre-Flight Security Scanner</h3>
-                <span class="clean-tag pass">ZERO-TRUST</span>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Crash-Guarded</span></div>
+                <div class="punchy-sub">Strict execution isolation ensures native code never crashes the host app.</div>
               </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot emerald">•</span><span>8 Automated Gates</span></div>
-                <div class="point-desc-clean">Scans AST code, third-party SBOM packages, and SSRF network endpoints automatically.</div>
-              </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot emerald">•</span><span>Immediate Quarantine</span></div>
-                <div class="point-desc-clean">Quarantines non-compliant commits before reaching staging and release builds.</div>
+              <div style="margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border-line); font-family: var(--font-mono); font-size: 11.5px; color: var(--gold);">
+                Kotlin (Android) · Swift (iOS)
               </div>
             </div>
 
-            <div class="open-col reveal">
-              <div class="col-header" style="margin-bottom: 12px;">
-                <h3 class="col-title">Git Multi-Branch & Nexus Sync</h3>
-                <span class="clean-tag">DEVOPS</span>
+            <!-- Method 04: External Deep Link -->
+            <div class="clean-card gold reveal">
+              <div class="card-title-bar">
+                <div>
+                  <div style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 3px;">METHOD 04</div>
+                  <h3 class="card-title gold" style="font-size: 20px;">External Deep Link</h3>
+                </div>
+                <span class="clean-tag gold">DEEP LINK</span>
               </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Webhook Pipeline</span></div>
-                <div class="point-desc-clean">Tracks dev, staging, and production branches with automated webhook builds.</div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Best For</span></div>
+                <div class="punchy-sub">Large existing standalone banking apps (ABA, ACLEDA, complex tax suites).</div>
               </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Nexus Enterprise Registry</span></div>
-                <div class="point-desc-clean">Stores version-pinned, tamper-evident packages in private Nexus registry.</div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Zero Binary Footprint</span></div>
+                <div class="punchy-sub">Adds 0 MB to the core FSA SuperApp package download size.</div>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Seamless Return</span></div>
+                <div class="punchy-sub">Cryptographically signed callbacks verify user return to the SuperApp.</div>
+              </div>
+              <div style="margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border-line); font-family: var(--font-mono); font-size: 11.5px; color: var(--gold);">
+                Secure URL Schemes · App Links
               </div>
             </div>
           </div>
@@ -1030,56 +1243,77 @@
       </section>
 
       <!-- ==========================================
-           SLIDE 07: 3.1 Partner Portal (Native Image Aspect)
+           SLIDE 09: SECTION 3 DIVIDER
            ========================================== -->
-      <section class="slide" id="slide-7">
+      <section class="slide" id="slide-9">
+        <div class="section-hero reveal">
+          <div class="org-bar" style="margin-bottom: 20px;">
+            <img src="assets/fsa_logo.png" alt="FSA Logo" class="org-logo">
+            <span class="org-title">FinTech Center  •  General Secretariat of FSA</span>
+          </div>
+          <div class="section-watermark">03</div>
+          <div class="slide-eyebrow" style="margin-bottom: 12px;">PART 03 · OPERATIONAL PIPELINE</div>
+          <h2 class="section-hero-title">The Partner & MiniApp Lifecycle</h2>
+          <p class="section-hero-subtitle">
+            A step-by-step journey: from self-service onboarding, to safety checks, permissions, and publishing.
+          </p>
+
+          <div class="section-topics-bar">
+            <div class="section-topic-pill"><span>3.1</span><span>Partner Portal</span></div>
+            <div class="section-topic-pill"><span>3.2</span><span>8 Safety Checks</span></div>
+            <div class="section-topic-pill"><span>3.3</span><span>Device Permissions</span></div>
+            <div class="section-topic-pill"><span>3.4</span><span>In-Browser Sandbox</span></div>
+            <div class="section-topic-pill"><span>3.5</span><span>Real Device QA</span></div>
+            <div class="section-topic-pill"><span>3.6</span><span>Store Release</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           SLIDE 10: 3.1 Self-Service Partner Portal
+           ========================================== -->
+      <section class="slide" id="slide-10">
         <div class="slide-header">
           <div class="org-bar">
             <img src="assets/fsa_logo.png" alt="FSA Logo" class="org-logo">
-            <span class="org-title">Fintech Center  •  General Secretariat of FSA</span>
+            <span class="org-title">FinTech Center  •  General Secretariat of FSA</span>
           </div>
-          <div class="slide-eyebrow">3.1 PARTNER ONBOARDING</div>
-          <h2 class="slide-title">Partner Self-Service Portal & 6-Step Wizard</h2>
-          <p class="slide-subtitle">Accelerating partner onboarding from months to minutes while enforcing strict architectural and security requirements.</p>
+          <div class="slide-eyebrow">3. PARTNER & MINIAPP LIFECYCLE • 3.1 SELF-SERVICE ONBOARDING</div>
+          <h2 class="slide-title">Self-Service Partner Portal</h2>
+          <p class="slide-subtitle">A guided 6-step online registration wizard for regulatory entities and commercial partners.</p>
           <div class="slide-divider"></div>
         </div>
 
         <div class="content-area">
           <div class="open-grid-2" style="align-items: center;">
-            <div class="open-col gold reveal">
-              <div class="col-header">
-                <h3 class="col-title">Structured 6-Step Developer Flow</h3>
-                <span class="clean-tag gold">BACKOFFICE ONBOARDING</span>
+            <div class="clean-card gold reveal">
+              <div class="card-title-bar">
+                <h3 class="card-title">6-Step Registration Wizard</h3>
+                <span class="clean-tag gold">app.fintechcenterfsa.com</span>
               </div>
-
-              <div class="clean-point">
-                <div class="point-head-clean gold"><span class="point-dot">•</span><span>01  Metadata Registration</span></div>
-                <div class="point-desc-clean">Application name, ministry category, localized descriptions, and official icons.</div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="flow-step-pill">1</span><span>Basic Info</span></div>
+                <div class="punchy-sub">App name, official organization, logo icon, tagline, and description.</div>
               </div>
-
-              <div class="clean-point">
-                <div class="point-head-clean gold"><span class="point-dot">•</span><span>02  Integration Tier Selection</span></div>
-                <div class="point-desc-clean">Select architectural tier: WebView, Flutter Module, Native SDK, or Deep Link.</div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="flow-step-pill">2</span><span>Legal & Compliance</span></div>
+                <div class="punchy-sub">Terms of Service and Privacy Policy URLs or Markdown text/files.</div>
               </div>
-
-              <div class="clean-point">
-                <div class="point-head-clean gold"><span class="point-dot">•</span><span>03  Repository & Branch Sync</span></div>
-                <div class="point-desc-clean">Configure GitLab/GitHub repository URL, deployment branch, and webhook credentials.</div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="flow-step-pill">3</span><span>Technical Integration</span></div>
+                <div class="punchy-sub">Pick an integration method (Web, Flutter, Native, Link) and input required data.</div>
               </div>
-
-              <div class="clean-point">
-                <div class="point-head-clean gold"><span class="point-dot">•</span><span>04  Capability & Permission Grants</span></div>
-                <div class="point-desc-clean">Request explicit access to native Camera, Location, Storage, and CamDigiKey SSO.</div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="flow-step-pill">4</span><span>Capabilities & Scopes</span></div>
+                <div class="punchy-sub">Declare needed permissions (Camera, Storage, Biometrics) and purpose for user consent.</div>
               </div>
-
-              <div class="clean-point">
-                <div class="point-head-clean gold"><span class="point-dot">•</span><span>05  Endpoint Reachability Probes</span></div>
-                <div class="point-desc-clean">Automated SSRF validation and DNS health probing of partner server endpoints.</div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="flow-step-pill">5</span><span>Security Profile</span></div>
+                <div class="punchy-sub">Choose active security scan options and automated compliance checks to run.</div>
               </div>
-
-              <div class="clean-point">
-                <div class="point-head-clean gold"><span class="point-dot">•</span><span>06  Policy Disclosure & Sign-Off</span></div>
-                <div class="point-desc-clean">Digital legal acceptance of FSA platform guidelines, queuing the submission for review.</div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="flow-step-pill">6</span><span>Review & Submit</span></div>
+                <div class="punchy-sub">Verify application profile and submit for official FSA review.</div>
               </div>
             </div>
 
@@ -1087,282 +1321,124 @@
               <div style="font-family: var(--font-mono); font-size: 12px; color: var(--gold); margin-bottom: 8px; text-transform: uppercase;">
                 PRODUCTION BACKOFFICE WIZARD INTERFACE
               </div>
-              <img src="assets/backoffice_wizard.png" alt="Backoffice Wizard" class="full-image-frame">
+              <img src="assets/backoffice_register_wizard.png" alt="Backoffice Register Wizard" class="full-image-frame">
             </div>
           </div>
         </div>
       </section>
 
       <!-- ==========================================
-           SLIDE 08: 3.2 8 Multi-Layered Security Gates
-           ========================================== -->
-      <section class="slide" id="slide-8">
-        <div class="slide-header">
-          <div class="org-bar">
-            <img src="assets/fsa_logo.png" alt="FSA Logo" class="org-logo">
-            <span class="org-title">Fintech Center  •  General Secretariat of FSA</span>
-          </div>
-          <div class="slide-eyebrow">3.2 ENTERPRISE SECURITY</div>
-          <h2 class="slide-title">Multi-Layered Security Pipeline: 8 Pre-Flight Gates</h2>
-          <p class="slide-subtitle">Continuous automated vulnerability scanning and policy enforcement protecting the super app ecosystem before release.</p>
-          <div class="slide-divider"></div>
-        </div>
-
-        <div class="content-area">
-          <div class="open-grid-2">
-            <div class="open-col gold reveal">
-              <div class="col-header">
-                <h3 class="col-title">Static Code & Network Scanners</h3>
-                <span class="clean-tag gold">GATES 01-04</span>
-              </div>
-
-              <div class="gate-row-clean">
-                <div class="gate-text-clean">
-                  <div class="gate-name-clean"><span class="point-dot">•</span><span>Gate 01: SSRF & Network Endpoint Probe</span></div>
-                  <div class="gate-desc-clean">Validates endpoint reachability, blocks private RFC1918 subnets, and enforces HTTPS.</div>
-                </div>
-                <div class="gate-badge-clean">[ PASS ]</div>
-              </div>
-
-              <div class="gate-row-clean">
-                <div class="gate-text-clean">
-                  <div class="gate-name-clean"><span class="point-dot">•</span><span>Gate 02: Static AST Code Analysis</span></div>
-                  <div class="gate-desc-clean">Scans source code for unauthorized APIs, hardcoded credentials, and unsafe eval().</div>
-                </div>
-                <div class="gate-badge-clean">[ PASS ]</div>
-              </div>
-
-              <div class="gate-row-clean">
-                <div class="gate-text-clean">
-                  <div class="gate-name-clean"><span class="point-dot">•</span><span>Gate 03: SBOM & Dependency CVE Audit</span></div>
-                  <div class="gate-desc-clean">Audits all third-party libraries against national vulnerability registries and copyleft licenses.</div>
-                </div>
-                <div class="gate-badge-clean">[ PASS ]</div>
-              </div>
-
-              <div class="gate-row-clean">
-                <div class="gate-text-clean">
-                  <div class="gate-name-clean"><span class="point-dot">•</span><span>Gate 04: Capability & Manifest Alignment</span></div>
-                  <div class="gate-desc-clean">Ensures declared mini app permissions strictly match iOS Info.plist & Android manifest entries.</div>
-                </div>
-                <div class="gate-badge-clean">[ PASS ]</div>
-              </div>
-            </div>
-
-            <div class="open-col gold reveal">
-              <div class="col-header">
-                <h3 class="col-title">Runtime & Isolation Governance</h3>
-                <span class="clean-tag gold">GATES 05-08</span>
-              </div>
-
-              <div class="gate-row-clean">
-                <div class="gate-text-clean">
-                  <div class="gate-name-clean"><span class="point-dot">•</span><span>Gate 05: Cryptographic Token Isolation</span></div>
-                  <div class="gate-desc-clean">Enforces HttpOnly SameSite=Strict cookies; strictly prohibits tokens in localStorage.</div>
-                </div>
-                <div class="gate-badge-clean">[ PASS ]</div>
-              </div>
-
-              <div class="gate-row-clean">
-                <div class="gate-text-clean">
-                  <div class="gate-name-clean"><span class="point-dot">•</span><span>Gate 06: Native MethodChannel Guard</span></div>
-                  <div class="gate-desc-clean">Validates payload schemas on all Flutter method channels to block injection attacks.</div>
-                </div>
-                <div class="gate-badge-clean">[ PASS ]</div>
-              </div>
-
-              <div class="gate-row-clean">
-                <div class="gate-text-clean">
-                  <div class="gate-name-clean"><span class="point-dot">•</span><span>Gate 07: Content Security Policy Enforcement</span></div>
-                  <div class="gate-desc-clean">Restricts WebView origins, script sources, and forbids framing by unauthorized domains.</div>
-                </div>
-                <div class="gate-badge-clean">[ PASS ]</div>
-              </div>
-
-              <div class="gate-row-clean">
-                <div class="gate-text-clean">
-                  <div class="gate-name-clean"><span class="point-dot">•</span><span>Gate 08: Immutable Regulatory Audit Log</span></div>
-                  <div class="gate-desc-clean">Records SHA-256 binary hash, operator approval, and gate logs in tamper-evident database.</div>
-                </div>
-                <div class="gate-badge-clean">[ PASS ]</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ==========================================
-           SLIDE 09: 4.1 CI/CD (Flowchart on Left, Takeaways Right)
-           ========================================== -->
-      <section class="slide" id="slide-9">
-        <div class="slide-header">
-          <div class="org-bar">
-            <img src="assets/fsa_logo.png" alt="FSA Logo" class="org-logo">
-            <span class="org-title">Fintech Center  •  General Secretariat of FSA</span>
-          </div>
-          <div class="slide-eyebrow">4.1 CI/CD & NEXUS REGISTRY</div>
-          <h2 class="slide-title">CI/CD Codegen Assembly & Nexus Registry</h2>
-          <p class="slide-subtitle">Automating compilation, code generation, and package release in an air-gapped, verifiable DevOps pipeline.</p>
-          <div class="slide-divider"></div>
-        </div>
-
-        <div class="content-area">
-          <div style="display: flex; gap: 48px; align-items: center; height: 100%;">
-            <div class="reveal" style="flex: 1.15;">
-              <img src="assets/executive_flowchart_security_scan.jpg" alt="Security Scan Flowchart" class="full-image-frame" style="max-height: 500px;">
-            </div>
-
-            <div class="open-col reveal" style="flex: 0.85; border-top-color: var(--gold); padding-top: 14px;">
-              <div class="col-header" style="margin-bottom: 12px;">
-                <h3 class="col-title">DevOps Assembly Architecture</h3>
-                <span class="clean-tag gold">PIPELINE CORE</span>
-              </div>
-
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Zero Remote Code Loading</span></div>
-                <div class="point-desc-clean">Strict regulatory policy: zero remote uncompiled Dart/JS loading over the air. All executable code is inspected, compiled, and pinned at build time.</div>
-              </div>
-
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Nexus Enterprise Registry</span></div>
-                <div class="point-desc-clean">Release bundles are versioned, signed, and hosted within a private Nexus CE repository, guaranteeing package authenticity and tamper evidence.</div>
-              </div>
-
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Automated Jenkins CI/CD</span></div>
-                <div class="point-desc-clean">Dynamic code generation, symbol obfuscation, ProGuard/R8 shrinking, and signed APK/AAB release generation without manual developer intervention.</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ==========================================
-           SLIDE 10: 4.2 Dual-Environment QA (Both Show Full Native Aspect)
-           ========================================== -->
-      <section class="slide" id="slide-10">
-        <div class="slide-header">
-          <div class="org-bar">
-            <img src="assets/fsa_logo.png" alt="FSA Logo" class="org-logo">
-            <span class="org-title">Fintech Center  •  General Secretariat of FSA</span>
-          </div>
-          <div class="slide-eyebrow">4.2 DUAL-ENVIRONMENT QA</div>
-          <h2 class="slide-title">Dual-Environment Testing & QA Verification</h2>
-          <p class="slide-subtitle">Combining browser-based emulator agility with physical device hardware verification for zero-defect releases.</p>
-          <div class="slide-divider"></div>
-        </div>
-
-        <div class="content-area">
-          <div class="open-grid-2">
-            <!-- Left: Web Sandbox (Desktop 16:9 Landscape) -->
-            <div class="open-col reveal">
-              <div class="col-header" style="margin-bottom: 12px;">
-                <h3 class="col-title">Environment 1: In-Browser Web Sandbox</h3>
-                <span class="clean-tag gold">RAPID QA</span>
-              </div>
-              <div class="clean-point" style="margin-bottom: 14px;">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Zero Device Overhead</span></div>
-                <div class="point-desc-clean" style="padding-left: 0;">QA teams inspect UI layouts, touch response, and mock bridge APIs directly in Chrome/Edge without physical phones.</div>
-              </div>
-              <img src="assets/superapp_sandbox_preview.png" alt="Web Sandbox Preview" class="full-image-frame" style="max-height: 380px;">
-            </div>
-
-            <!-- Right: Physical Device Verification (Phone Portrait at True Aspect Ratio + Checklist) -->
-            <div class="open-col reveal">
-              <div class="col-header" style="margin-bottom: 12px;">
-                <h3 class="col-title">Environment 2: Physical Device Verification</h3>
-                <span class="clean-tag gold">HARDWARE QA</span>
-              </div>
-              <div class="clean-point" style="margin-bottom: 14px;">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Live QR Installation</span></div>
-                <div class="point-desc-clean" style="padding-left: 0;">Auditors scan dynamic backoffice QR codes to test live biometric scanning and physical performance.</div>
-              </div>
-
-              <div style="display: flex; gap: 24px; align-items: center;">
-                <img src="assets/mobile_preview.png" alt="Mobile Preview" class="phone-full-frame">
-                <div style="display: flex; flex-direction: column; gap: 12px; flex: 1;">
-                  <div class="clean-point">
-                    <div class="point-head-clean"><span class="point-dot">•</span><span>Dynamic QR Code Install</span></div>
-                    <div class="point-desc-clean" style="padding-left: 14px;">Instant over-the-air test builds on actual hardware.</div>
-                  </div>
-                  <div class="clean-point">
-                    <div class="point-head-clean"><span class="point-dot">•</span><span>Live Biometric Auth</span></div>
-                    <div class="point-desc-clean" style="padding-left: 14px;">Tests real fingerprint & face scanners with host bridge.</div>
-                  </div>
-                  <div class="clean-point">
-                    <div class="point-head-clean"><span class="point-dot">•</span><span>Camera & GPS Sensors</span></div>
-                    <div class="point-desc-clean" style="padding-left: 14px;">Validates hardware capture and geo-fencing policies.</div>
-                  </div>
-                  <div class="clean-point">
-                    <div class="point-head-clean"><span class="point-dot">•</span><span>Fluid 60fps Experience</span></div>
-                    <div class="point-desc-clean" style="padding-left: 14px;">Verifies frame rates, thermal profiles and battery health.</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ==========================================
-           SLIDE 11: 4.3 Current Operational Milestones
+           SLIDE 11: 3.2 Guaranteed Safety & 8 Pre-Flight Checks
            ========================================== -->
       <section class="slide" id="slide-11">
         <div class="slide-header">
           <div class="org-bar">
             <img src="assets/fsa_logo.png" alt="FSA Logo" class="org-logo">
-            <span class="org-title">Fintech Center  •  General Secretariat of FSA</span>
+            <span class="org-title">FinTech Center  •  General Secretariat of FSA</span>
           </div>
-          <div class="slide-eyebrow">4.3 OPERATIONAL STATUS</div>
-          <h2 class="slide-title">Current Platform Milestones & Verification</h2>
-          <p class="slide-subtitle">Proven technical capabilities operating end-to-end across backend microservices, backoffice portal, and mobile runtime.</p>
+          <div class="slide-eyebrow">3. PARTNER & MINIAPP LIFECYCLE • 3.2 PRE-FLIGHT AUDIT</div>
+          <h2 class="slide-title">Guaranteed Safety & 8 Pre-Flight Checks</h2>
+          <p class="slide-subtitle">Packages and Native SDKs from MinIO are audited in an isolated Jenkins sandbox before any build is created.</p>
           <div class="slide-divider"></div>
         </div>
 
         <div class="content-area">
-          <div class="open-grid-3">
-            <div class="open-col emerald reveal">
-              <div class="col-header">
-                <h3 class="col-title">4 Tiers Fully Verified</h3>
-                <span class="clean-tag pass">100% OPERATIONAL</span>
+          <div class="open-grid-2" style="align-items: stretch; gap: 36px;">
+            <!-- Left: All 8 Pre-Flight Gates in Compact Executive List -->
+            <div class="clean-card gold reveal" style="padding: 16px 0 0 0; display: flex; flex-direction: column; justify-content: space-between;">
+              <div class="card-title-bar" style="margin-bottom: 12px; padding-bottom: 10px;">
+                <h3 class="card-title gold" style="font-size: 19px;">8 Automated Security Gates</h3>
+                <span class="clean-tag gold">JENKINS CI/CD</span>
               </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot emerald">•</span><span>Comprehensive Verification</span></div>
-                <div class="point-desc-clean">WebView, Flutter Mini App, Native Android SDK, and Deep Link schemes have all completed end-to-end integration testing.</div>
-              </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot emerald">•</span><span>Bridge Protocol Stability</span></div>
-                <div class="point-desc-clean">JavaScript bridge postMessage and native Flutter MethodChannels operating with sub-millisecond response latency.</div>
+              
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <div class="gate-row-clean" style="padding: 6px 0;">
+                  <div class="gate-text-clean">
+                    <div class="gate-name-clean" style="font-size: 13.5px;"><span class="punchy-dot gold">•</span><span>01. Server Network Check</span></div>
+                    <div class="gate-desc-clean" style="font-size: 11.5px;">Confirms server is safe, online, and enforces HTTPS.</div>
+                  </div>
+                  <div class="gate-badge-clean" style="font-size: 10.5px;">[ PASS ]</div>
+                </div>
+
+                <div class="gate-row-clean" style="padding: 6px 0;">
+                  <div class="gate-text-clean">
+                    <div class="gate-name-clean" style="font-size: 13.5px;"><span class="punchy-dot gold">•</span><span>02. Code Safety Scan</span></div>
+                    <div class="gate-desc-clean" style="font-size: 11.5px;">Scans source code for unauthorized APIs and unsafe eval calls.</div>
+                  </div>
+                  <div class="gate-badge-clean" style="font-size: 10.5px;">[ PASS ]</div>
+                </div>
+
+                <div class="gate-row-clean" style="padding: 6px 0;">
+                  <div class="gate-text-clean">
+                    <div class="gate-name-clean" style="font-size: 13.5px;"><span class="punchy-dot gold">•</span><span>03. Secret Hunter</span></div>
+                    <div class="gate-desc-clean" style="font-size: 11.5px;">Ensures no private passwords, API keys, or tokens exist in code.</div>
+                  </div>
+                  <div class="gate-badge-clean" style="font-size: 10.5px;">[ PASS ]</div>
+                </div>
+
+                <div class="gate-row-clean" style="padding: 6px 0;">
+                  <div class="gate-text-clean">
+                    <div class="gate-name-clean" style="font-size: 13.5px;"><span class="punchy-dot gold">•</span><span>04. Open-Source Audit</span></div>
+                    <div class="gate-desc-clean" style="font-size: 11.5px;">Audits all external libraries against national CVE registries.</div>
+                  </div>
+                  <div class="gate-badge-clean" style="font-size: 10.5px;">[ PASS ]</div>
+                </div>
+
+                <div class="gate-row-clean" style="padding: 6px 0;">
+                  <div class="gate-text-clean">
+                    <div class="gate-name-clean" style="font-size: 13.5px;"><span class="punchy-dot gold">•</span><span>05. Permission Match</span></div>
+                    <div class="gate-desc-clean" style="font-size: 11.5px;">Ensures declared capabilities match actual code without overreaching.</div>
+                  </div>
+                  <div class="gate-badge-clean" style="font-size: 10.5px;">[ PASS ]</div>
+                </div>
+
+                <div class="gate-row-clean" style="padding: 6px 0;">
+                  <div class="gate-text-clean">
+                    <div class="gate-name-clean" style="font-size: 13.5px;"><span class="punchy-dot gold">•</span><span>06. Safe Bridge Guard</span></div>
+                    <div class="gate-desc-clean" style="font-size: 11.5px;">Protects communication channels between mini-app and phone host.</div>
+                  </div>
+                  <div class="gate-badge-clean" style="font-size: 10.5px;">[ PASS ]</div>
+                </div>
+
+                <div class="gate-row-clean" style="padding: 6px 0;">
+                  <div class="gate-text-clean">
+                    <div class="gate-name-clean" style="font-size: 13.5px;"><span class="punchy-dot gold">•</span><span>07. Web Safety Rules</span></div>
+                    <div class="gate-desc-clean" style="font-size: 11.5px;">Restricts external domains and blocks unauthorized scripts.</div>
+                  </div>
+                  <div class="gate-badge-clean" style="font-size: 10.5px;">[ PASS ]</div>
+                </div>
+
+                <div class="gate-row-clean" style="padding: 6px 0;">
+                  <div class="gate-text-clean">
+                    <div class="gate-name-clean" style="font-size: 13.5px;"><span class="punchy-dot gold">•</span><span>08. Auditor Approval</span></div>
+                    <div class="gate-desc-clean" style="font-size: 11.5px;">Records digital hash in tamper-evident database for sign-off.</div>
+                  </div>
+                  <div class="gate-badge-clean" style="font-size: 10.5px;">[ PASS ]</div>
+                </div>
               </div>
             </div>
 
-            <div class="open-col emerald reveal">
-              <div class="col-header">
-                <h3 class="col-title">8-Gate Security Pipeline</h3>
-                <span class="clean-tag pass">ZERO-TRUST ACTIVE</span>
+            <!-- Right: Real Backoffice UI Scan Validation Screenshot -->
+            <div class="reveal" style="display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                <div style="font-family: var(--font-mono); font-size: 11.5px; color: var(--gold); margin-bottom: 8px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.08em;">
+                  PRODUCTION AUTOMATED SECURITY AUDIT INTERFACE
+                </div>
+                <div style="width: 100%; max-height: 400px; display: flex; align-items: center; justify-content: center; background: rgba(8, 12, 9, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 6px; box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55);">
+                  <img src="assets/backoffice_security.png" alt="Backoffice Security Validation Report" class="full-image-frame" style="max-height: 380px; width: 100%; object-fit: contain;">
+                </div>
               </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot emerald">•</span><span>Automated Pre-Flight Audits</span></div>
-                <div class="point-desc-clean">AST code parser, SSRF network probe, and SBOM vulnerability checks fully integrated into backoffice submission queue.</div>
-              </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot emerald">•</span><span>Zero Hardcoded Capabilities</span></div>
-                <div class="point-desc-clean">Dynamic capability registry synchronized with native iOS Info.plist and AndroidManifest files.</div>
-              </div>
-            </div>
 
-            <div class="open-col emerald reveal">
-              <div class="col-header">
-                <h3 class="col-title">Production Stack Ready</h3>
-                <span class="clean-tag pass">TIER-1 ARCHITECTURE</span>
-              </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot emerald">•</span><span>Modular Enterprise Core</span></div>
-                <div class="point-desc-clean">Next.js 16 Backoffice BFF, NestJS Microservices, TypeORM transaction safety, and PostgreSQL containerized.</div>
-              </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot emerald">•</span><span>Scale-Ready Foundation</span></div>
-                <div class="point-desc-clean">Built according to national regulatory standards to support dozens of ministry mini apps concurrently.</div>
+              <!-- Pass vs Fail Operational Strip -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px;">
+                <div style="padding: 8px 12px; border-radius: 6px; background: rgba(248, 113, 113, 0.08); border: 1px solid rgba(248, 113, 113, 0.28); display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 12px; color: var(--red-accent); font-weight: 800; font-family: var(--font-mono); flex-shrink: 0;">❌ FAIL</span>
+                  <span style="font-size: 11.5px; color: var(--text-muted); line-height: 1.35;">Pipeline halts immediately. Build blocked & report sent to partner.</span>
+                </div>
+                <div style="padding: 8px 12px; border-radius: 6px; background: rgba(74, 222, 128, 0.08); border: 1px solid rgba(74, 222, 128, 0.28); display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 12px; color: var(--green-pass); font-weight: 800; font-family: var(--font-mono); flex-shrink: 0;">✅ PASS</span>
+                  <span style="font-size: 11.5px; color: var(--text-muted); line-height: 1.35;">Package digitally signed & published to Nexus for Test Build.</span>
+                </div>
               </div>
             </div>
           </div>
@@ -1370,58 +1446,67 @@
       </section>
 
       <!-- ==========================================
-           SLIDE 12: 4.4 Strategic Roadmap
+           SLIDE 12: 3.3 Strict Device Safety Control
            ========================================== -->
       <section class="slide" id="slide-12">
         <div class="slide-header">
           <div class="org-bar">
             <img src="assets/fsa_logo.png" alt="FSA Logo" class="org-logo">
-            <span class="org-title">Fintech Center  •  General Secretariat of FSA</span>
+            <span class="org-title">FinTech Center  •  General Secretariat of FSA</span>
           </div>
-          <div class="slide-eyebrow">4.4 STRATEGIC ROADMAP</div>
-          <h2 class="slide-title">Next Integrations & Strategic Roadmap</h2>
-          <p class="slide-subtitle">Expanding ecosystem capabilities with national identity, enterprise administration, and automated synchronization.</p>
+          <div class="slide-eyebrow">3. PARTNER & MINIAPP LIFECYCLE • 3.3 DEVICE PERMISSIONS</div>
+          <h2 class="slide-title">Strict Device Safety Control</h2>
+          <p class="slide-subtitle">Zero access by default: protecting citizen hardware, personal sensors, and sensitive private data.</p>
           <div class="slide-divider"></div>
         </div>
 
         <div class="content-area">
-          <div class="open-grid-3">
-            <div class="open-col gold reveal">
-              <div style="font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--gold); margin-bottom: 8px;">HORIZON 01  •  Q1 2027</div>
-              <h3 class="col-title" style="margin-bottom: 14px;">CamDigiKey National SSO</h3>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Single Digital Citizen Identity</span></div>
-                <div class="point-desc-clean">Seamless integration with Cambodia's national identity authentication system for instant login across all mini apps.</div>
+          <div class="open-grid-2">
+            <!-- Left: 4-Step Gatekeeper Pipeline -->
+            <div class="clean-card gold reveal">
+              <div class="card-title-bar">
+                <h3 class="card-title gold">4-Step Permission Gate</h3>
+                <span class="clean-tag gold">WORKFLOW</span>
               </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Biometric Authorization</span></div>
-                <div class="point-desc-clean">Enables citizens to digitally sign financial and administrative documents using verified cryptographic keys.</div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="flow-step-pill">1</span><span>Zero Access by Default</span></div>
+                <div class="punchy-sub">Mini-apps start with zero access to camera, microphone, or storage.</div>
               </div>
-            </div>
-
-            <div class="open-col gold reveal">
-              <div style="font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--gold); margin-bottom: 8px;">HORIZON 02  •  Q2 2027</div>
-              <h3 class="col-title" style="margin-bottom: 14px;">Flagship Enterprise HR App</h3>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>First Internal Ministry Mini App</span></div>
-                <div class="point-desc-clean">Flagship showcase featuring employee profile management, digital attendance tracking, and leave workflow approval.</div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="flow-step-pill">2</span><span>Partner Must Declare</span></div>
+                <div class="punchy-sub">Developer formally explains why their app needs each specific feature.</div>
               </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Flutter Riverpod Blueprint</span></div>
-                <div class="point-desc-clean">Establishes the gold-standard architectural template for all subsequent enterprise ministry applications.</div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="flow-step-pill">3</span><span>FSA Technical Review</span></div>
+                <div class="punchy-sub">Audit team reviews the request; unnecessary requests are denied.</div>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="flow-step-pill">4</span><span>Citizen Direct Consent</span></div>
+                <div class="punchy-sub">Phone displays an explicit popup asking the citizen before any sensor opens.</div>
               </div>
             </div>
 
-            <div class="open-col gold reveal">
-              <div style="font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--gold); margin-bottom: 8px;">HORIZON 03  •  Q3 2027</div>
-              <h3 class="col-title" style="margin-bottom: 14px;">Automated Capability Sync</h3>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Automated Manifest Discovery</span></div>
-                <div class="point-desc-clean">CI/CD crawler automatically discovers new native iOS/Android capabilities from mobile core and updates the backoffice registry.</div>
+            <!-- Right: Safety Guarantees -->
+            <div class="clean-card emerald reveal">
+              <div class="card-title-bar">
+                <h3 class="card-title emerald">Citizen Protections</h3>
+                <span class="clean-tag pass">PRIVACY</span>
               </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Zero Hardcoded Configuration</span></div>
-                <div class="point-desc-clean">Maintains total zero-hardcode compliance by dynamically generating permission selectors and bridge adapters.</div>
+              <div class="punchy-item">
+                <div class="punchy-head emerald"><span class="punchy-dot emerald">•</span><span>No Silent Background Access</span></div>
+                <div class="punchy-sub">Mini-apps cannot use cameras, record audio, or track location silently.</div>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head emerald"><span class="punchy-dot emerald">•</span><span>No Cross-App Data Snooping</span></div>
+                <div class="punchy-sub">Mini-apps cannot see what other apps the citizen is using on the device.</div>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head emerald"><span class="punchy-dot emerald">•</span><span>Instant Remote Revocation</span></div>
+                <div class="punchy-sub">FSA review team can instantly shut down any app's permissions across all phones.</div>
+              </div>
+              <div style="margin-top: auto; padding: 12px 16px; border-radius: 6px; background: rgba(74, 222, 128, 0.08); border: 1px solid rgba(74, 222, 128, 0.25);">
+                <div style="font-weight: 700; font-size: 13.5px; color: var(--green-pass);">User First Principle</div>
+                <div style="font-size: 12.5px; color: var(--text-sage);">Citizens remain in complete control of their phone hardware at all times.</div>
               </div>
             </div>
           </div>
@@ -1429,64 +1514,61 @@
       </section>
 
       <!-- ==========================================
-           SLIDE 13: Live Demonstration
+           SLIDE 13: 3.4 Dual Testing & Official Publishing
            ========================================== -->
       <section class="slide" id="slide-13">
         <div class="slide-header">
           <div class="org-bar">
             <img src="assets/fsa_logo.png" alt="FSA Logo" class="org-logo">
-            <span class="org-title">Fintech Center  •  General Secretariat of FSA</span>
+            <span class="org-title">FinTech Center  •  General Secretariat of FSA</span>
           </div>
-          <div class="slide-eyebrow">SYSTEM DEMO</div>
-          <h2 class="slide-title">Live Platform Demonstration</h2>
-          <p class="slide-subtitle">Walkthrough of the partner onboarding wizard, automated pre-flight security scan, and live mobile execution.</p>
+          <div class="slide-eyebrow">3. PARTNER & MINIAPP LIFECYCLE • 3.4 STAGE 1: BROWSER EMULATION</div>
+          <h2 class="slide-title">In-Browser Web Sandbox Testing</h2>
+          <p class="slide-subtitle">Rapid browser-based emulation allowing developers and reviewers to test layouts and mock APIs without phone installs.</p>
           <div class="slide-divider"></div>
         </div>
 
         <div class="content-area">
-          <div class="open-grid-3">
-            <div class="open-col reveal">
-              <div class="col-header">
-                <h3 class="col-title">1. Partner Onboarding</h3>
-                <span class="clean-tag">3-MIN FLOW</span>
+          <div class="open-grid-2" style="align-items: stretch; gap: 36px;">
+            <!-- Left: Browser Emulation Highlights -->
+            <div class="clean-card gold reveal" style="padding: 16px 0 0 0; display: flex; flex-direction: column; justify-content: space-between;">
+              <div class="card-title-bar" style="margin-bottom: 14px; padding-bottom: 10px;">
+                <h3 class="card-title gold" style="font-size: 20px;">Stage 1: Browser Emulation</h3>
+                <span class="clean-tag gold">CHROME / EDGE</span>
               </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Rapid Configuration</span></div>
-                <div class="point-desc-clean">Registering a new ministry service, configuring GitLab repository hooks, and requesting camera and location permissions.</div>
+
+              <div style="display: flex; flex-direction: column; gap: 16px;">
+                <div class="punchy-item" style="margin-bottom: 0;">
+                  <div class="punchy-head gold" style="font-size: 17px;"><span class="punchy-dot gold">•</span><span>Zero-Hardware Simulation</span></div>
+                  <div class="punchy-sub" style="font-size: 14.5px;">Developers test UI layouts, responsive breakpoints, and touch response directly in Google Chrome or Edge without mobile cables.</div>
+                </div>
+
+                <div class="punchy-item" style="margin-bottom: 0;">
+                  <div class="punchy-head gold" style="font-size: 17px;"><span class="punchy-dot gold">•</span><span>Mock Capabilities Bridge</span></div>
+                  <div class="punchy-sub" style="font-size: 14.5px;">Simulate camera capture, biometric prompts, and secure storage with real-time JSON logs and inspection panels.</div>
+                </div>
+
+                <div class="punchy-item" style="margin-bottom: 0;">
+                  <div class="punchy-head gold" style="font-size: 17px;"><span class="punchy-dot gold">•</span><span>Instant Debugging & Hot Reload</span></div>
+                  <div class="punchy-sub" style="font-size: 14.5px;">Fix CSS, JavaScript, and layout bugs and verify fixes immediately—accelerating partner onboarding by 5x.</div>
+                </div>
               </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Live Probing</span></div>
-                <div class="point-desc-clean">Observing real-time SSRF and DNS endpoint validation before saving the partner profile.</div>
+
+              <!-- Bottom Tag -->
+              <div style="margin-top: auto; padding: 12px 16px; border-radius: 6px; background: rgba(248, 209, 97, 0.08); border: 1px solid rgba(248, 209, 97, 0.25);">
+                <div style="font-size: 13px; color: var(--text-sage);">
+                  <strong style="color: var(--gold);">Fast Feedback Loop:</strong> Reviewers and developers test code instantly with zero software installs.
+                </div>
               </div>
             </div>
 
-            <div class="open-col reveal">
-              <div class="col-header">
-                <h3 class="col-title">2. Pre-Flight Security</h3>
-                <span class="clean-tag pass">AUDIT GATES</span>
+            <!-- Right: Real In-Browser Sandbox Emulator Screenshot -->
+            <div class="reveal" style="display: flex; flex-direction: column; justify-content: center;">
+              <div style="font-family: var(--font-mono); font-size: 11.5px; color: var(--gold); margin-bottom: 8px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.08em;">
+                PRODUCTION IN-BROWSER WEB SANDBOX EMULATOR
               </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot emerald">•</span><span>Instant Vulnerability Scan</span></div>
-                <div class="point-desc-clean">Executing the 8 security scanners against the partner codebase and generating the executive compliance report.</div>
-              </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot emerald">•</span><span>Operator Sign-Off</span></div>
-                <div class="point-desc-clean">Regulatory review in the live web sandbox emulator and promoting the build to staging.</div>
-              </div>
-            </div>
-
-            <div class="open-col reveal">
-              <div class="col-header">
-                <h3 class="col-title">3. Mobile Runtime</h3>
-                <span class="clean-tag">CITIZEN EXPERIENCE</span>
-              </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Seamless Launch</span></div>
-                <div class="point-desc-clean">Scanning the dynamic QR code on a physical mobile device and launching the Flutter mini app with zero perceptible latency.</div>
-              </div>
-              <div class="clean-point">
-                <div class="point-head-clean"><span class="point-dot">•</span><span>Native Bridge Execution</span></div>
-                <div class="point-desc-clean">Testing real camera scanning, biometric authorization, and secure session management.</div>
+              <div style="width: 100%; max-height: 480px; display: flex; align-items: center; justify-content: center; background: rgba(8, 12, 9, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 8px; box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55);">
+                <img src="assets/superapp_sandbox_preview.png" alt="In-Browser Web Sandbox Emulator" class="full-image-frame" style="max-height: 460px; width: 100%; object-fit: contain;">
               </div>
             </div>
           </div>
@@ -1494,37 +1576,428 @@
       </section>
 
       <!-- ==========================================
-           SLIDE 14: Q&A / Conclusion
+           SLIDE 14: 3.5 Install Test APK on Real Device
            ========================================== -->
       <section class="slide" id="slide-14">
-        <div style="display: flex; flex-direction: column; justify-content: center; height: 100%; max-width: 1400px; margin: 0 auto; text-align: left;">
-          <div class="reveal">
-            <div class="org-bar" style="margin-bottom: 24px;">
-              <img src="assets/fsa_logo.png" alt="FSA Logo" class="org-logo" style="width: 56px; height: 56px;">
-              <div>
-                <div class="org-title" style="font-size: 16px;">Fintech Center of General Secretariat of FSA</div>
-                <div style="font-family: var(--font-mono); font-size: 12px; color: var(--text-sage);">Non-Bank Financial Services Authority</div>
+        <div class="slide-header">
+          <div class="org-bar">
+            <img src="assets/fsa_logo.png" alt="FSA Logo" class="org-logo">
+            <span class="org-title">FinTech Center  •  General Secretariat of FSA</span>
+          </div>
+          <div class="slide-eyebrow">3. PARTNER & MINIAPP LIFECYCLE • 3.5 STAGE 2: PHYSICAL HARDWARE QA</div>
+          <h2 class="slide-title">Install Test APK on Real Device</h2>
+          <p class="slide-subtitle">Physical hardware validation using encrypted dynamic QR codes to test camera, biometrics, and 60 FPS performance.</p>
+          <div class="slide-divider"></div>
+        </div>
+
+        <div class="content-area">
+          <div class="open-grid-2" style="align-items: stretch; gap: 48px;">
+            <!-- Left: Real Device Hardware QA Highlights -->
+            <div class="clean-card gold reveal" style="padding: 16px 0 0 0; display: flex; flex-direction: column; justify-content: space-between;">
+              <div class="card-title-bar" style="margin-bottom: 14px; padding-bottom: 10px;">
+                <h3 class="card-title gold" style="font-size: 20px;">Stage 2: Physical Hardware QA</h3>
+                <span class="clean-tag gold">REAL PHONE TESTING</span>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 16px;">
+                <div class="punchy-item" style="margin-bottom: 0;">
+                  <div class="punchy-head gold" style="font-size: 17px;"><span class="punchy-dot gold">•</span><span>Private QR Code Scan</span></div>
+                  <div class="punchy-sub" style="font-size: 14.5px;">QA testers scan an encrypted dynamic QR code from the Backoffice to download and install the private Test Build directly onto real mobile devices.</div>
+                </div>
+
+                <div class="punchy-item" style="margin-bottom: 0;">
+                  <div class="punchy-head gold" style="font-size: 17px;"><span class="punchy-dot gold">•</span><span>Real Hardware & Sensor Validation</span></div>
+                  <div class="punchy-sub" style="font-size: 14.5px;">Validates physical camera barcode scanning, fingerprint and Face ID biometric authentication, and push notification delivery in real time.</div>
+                </div>
+
+                <div class="punchy-item" style="margin-bottom: 0;">
+                  <div class="punchy-head gold" style="font-size: 17px;"><span class="punchy-dot gold">•</span><span>Performance & 60 FPS Fluidity</span></div>
+                  <div class="punchy-sub" style="font-size: 14.5px;">Confirms zero memory leaks, smooth scrolling animations, and fluid response under real-world 4G/5G mobile network conditions.</div>
+                </div>
+              </div>
+
+              <!-- Bottom Tag -->
+              <div style="margin-top: auto; padding: 12px 16px; border-radius: 6px; background: rgba(74, 222, 128, 0.08); border: 1px solid rgba(74, 222, 128, 0.25);">
+                <div style="font-size: 13px; color: var(--text-sage);">
+                  <strong style="color: var(--green-pass);">Hardware Guarantee:</strong> Verifies real physical phone behavior with zero risk to production citizens.
+                </div>
               </div>
             </div>
 
-            <div class="slide-eyebrow" style="margin-bottom: 16px; font-size: 14px;">EXECUTIVE DISCUSSION</div>
-            <h1 class="slide-title" style="font-size: 60px; line-height: 1.1; margin-bottom: 20px;">Super App & Mini App Platform</h1>
+            <!-- Right: Real Phone Preview Mockup -->
+            <div class="reveal" style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+              <div style="font-family: var(--font-mono); font-size: 11.5px; color: var(--gold); margin-bottom: 8px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.08em; text-align: center;">
+                MOBILE SUPERAPP TEST BUILD PREVIEW
+              </div>
+              <div style="max-height: 480px; display: flex; align-items: center; justify-content: center; background: rgba(8, 12, 9, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 12px; box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55);">
+                <img src="assets/mobile_preview.png" alt="Mobile SuperApp Phone Preview" style="max-height: 450px; width: auto; object-fit: contain; border-radius: 8px;">
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           SLIDE 15: 3.6 Admin Activation & Store Release
+           ========================================== -->
+      <section class="slide" id="slide-15">
+        <div class="slide-header">
+          <div class="org-bar">
+            <img src="assets/fsa_logo.png" alt="FSA Logo" class="org-logo">
+            <span class="org-title">FinTech Center  •  General Secretariat of FSA</span>
+          </div>
+          <div class="slide-eyebrow">3. PARTNER & MINIAPP LIFECYCLE • 3.6 STAGE 3: STORE PUBLISHING</div>
+          <h2 class="slide-title">Admin Activation & Store Release</h2>
+          <p class="slide-subtitle">Strict operational governance: SuperApp Admin formally activates certified MiniApps before bundled public store release.</p>
+          <div class="slide-divider"></div>
+        </div>
+
+        <div class="content-area">
+          <div class="open-grid-2" style="align-items: stretch; gap: 36px;">
+            <!-- Left: Admin Activation & Store Release Process -->
+            <div class="clean-card gold reveal" style="padding: 16px 0 0 0; display: flex; flex-direction: column; justify-content: space-between;">
+              <div class="card-title-bar" style="margin-bottom: 14px; padding-bottom: 10px;">
+                <h3 class="card-title emerald" style="font-size: 20px;">Stage 3: Production Release</h3>
+                <span class="clean-tag pass">APP STORES</span>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 16px;">
+                <div class="punchy-item" style="margin-bottom: 0;">
+                  <div class="punchy-head emerald" style="font-size: 17px;"><span class="punchy-dot emerald">•</span><span>FSA Admin Formal Approval</span></div>
+                  <div class="punchy-sub" style="font-size: 14.5px;">Once QA confirms zero defects on real devices, the FSA SuperApp Administrator formally changes the MiniApp status to <strong style="color: var(--green-pass);">ACTIVE</strong> in the Backoffice catalog.</div>
+                </div>
+
+                <div class="punchy-item" style="margin-bottom: 0;">
+                  <div class="punchy-head emerald" style="font-size: 17px;"><span class="punchy-dot emerald">•</span><span>Nexus Artifact Ingestion</span></div>
+                  <div class="punchy-sub" style="font-size: 14.5px;">Jenkins automatically pulls the certified, digitally signed packages and Native SDKs directly from the private Nexus artifact repository.</div>
+                </div>
+
+                <div class="punchy-item" style="margin-bottom: 0;">
+                  <div class="punchy-head emerald" style="font-size: 17px;"><span class="punchy-dot emerald">•</span><span>Bundled Public Store Release</span></div>
+                  <div class="punchy-sub" style="font-size: 14.5px;">Jenkins compiles the production SuperApp host bundling all <strong style="color: var(--green-pass);">ACTIVE</strong> MiniApps and publishes the certified release to the Apple App Store & Google Play Store.</div>
+                </div>
+              </div>
+
+              <!-- Bottom Tag -->
+              <div style="margin-top: auto; padding: 12px 16px; border-radius: 6px; background: rgba(74, 222, 128, 0.08); border: 1px solid rgba(74, 222, 128, 0.25);">
+                <div style="font-size: 13px; color: var(--text-sage);">
+                  <strong style="color: var(--green-pass);">Zero-Defect Governance:</strong> Untrusted code can never reach citizens. Only admin-approved ACTIVE MiniApps are published.
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Real Backoffice Catalog & Active Management Screenshot -->
+            <div class="reveal" style="display: flex; flex-direction: column; justify-content: center;">
+              <div style="font-family: var(--font-mono); font-size: 11.5px; color: var(--gold); margin-bottom: 8px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.08em;">
+                PRODUCTION BACKOFFICE CATALOG (ACTIVE STATUS)
+              </div>
+              <div style="width: 100%; max-height: 480px; display: flex; align-items: center; justify-content: center; background: rgba(8, 12, 9, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 8px; box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55);">
+                <img src="assets/backoffice_catalog.png" alt="Backoffice MiniApp Catalog" class="full-image-frame" style="max-height: 460px; width: 100%; object-fit: contain;">
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           SLIDE 16: SECTION 4 DIVIDER
+           ========================================== -->
+      <section class="slide" id="slide-16">
+        <div class="section-hero reveal">
+          <div class="org-bar" style="margin-bottom: 20px;">
+            <img src="assets/fsa_logo.png" alt="FSA Logo" class="org-logo">
+            <span class="org-title">FinTech Center  •  General Secretariat of FSA</span>
+          </div>
+          <div class="section-watermark">04</div>
+          <div class="slide-eyebrow" style="margin-bottom: 12px;">PART 04 · EXECUTION & ROADMAP</div>
+          <h2 class="section-hero-title">Proven Milestones & Strategic Roadmap</h2>
+          <p class="section-hero-subtitle">
+            Engineering delivery completed in October and our phased strategic expansion ahead.
+          </p>
+
+          <div class="section-topics-bar">
+            <div class="section-topic-pill"><span>4.1</span><span>October Achievements</span></div>
+            <div class="section-topic-pill"><span>4.2</span><span>Strategic Expansion Roadmap</span></div>
+            <div class="section-topic-pill"><span>4.3</span><span>Live Platform Demo</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           SLIDE 17: 4.1 Proven Milestones: Completed in October
+           ========================================== -->
+      <section class="slide" id="slide-17">
+        <div class="slide-header">
+          <div class="org-bar">
+            <img src="assets/fsa_logo.png" alt="FSA Logo" class="org-logo">
+            <span class="org-title">FinTech Center  •  General Secretariat of FSA</span>
+          </div>
+          <div class="slide-eyebrow">4. PROVEN MILESTONES & ROADMAP • 4.1 OCTOBER ENGINEERING ACHIEVEMENTS</div>
+          <h2 class="slide-title">Proven Milestones: What We Completed in October</h2>
+          <p class="slide-subtitle">Concrete delivery across mobile core, automated pipelines, secure storage, and live mini-app.</p>
+          <div class="slide-divider"></div>
+        </div>
+
+        <div class="content-area">
+          <div class="open-grid-3">
+            <!-- 1. Mobile & MiniApp Showcase (Teammate) -->
+            <div class="clean-card emerald reveal">
+              <div class="card-title-bar">
+                <h3 class="card-title emerald">Mobile & Showcase</h3>
+                <span class="clean-tag pass">TEAMMATE WORK</span>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head emerald"><span class="punchy-dot emerald">•</span><span>Mobile SuperApp Host</span></div>
+                <div class="punchy-sub">Completed Flutter mobile container for iOS & Android with bridge layer.</div>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head emerald"><span class="punchy-dot emerald">•</span><span>Flagship HR MiniApp</span></div>
+                <div class="punchy-sub">Completed full showcase: employee profiles, attendance, and leave workflows.</div>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head emerald"><span class="punchy-dot emerald">•</span><span>Working Blueprint</span></div>
+                <div class="punchy-sub">Establishes the proven standard for all future regulatory mini-apps.</div>
+              </div>
+            </div>
+
+            <!-- 2. Production CI/CD & Automation -->
+            <div class="clean-card emerald reveal">
+              <div class="card-title-bar">
+                <h3 class="card-title emerald">DevOps & Automation</h3>
+                <span class="clean-tag pass">DELIVERY</span>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head emerald"><span class="punchy-dot emerald">•</span><span>Installed Jenkins Plugins</span></div>
+                <div class="punchy-sub">Installed required automation plugins for rootless build containers.</div>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head emerald"><span class="punchy-dot emerald">•</span><span>Production Build Pipeline</span></div>
+                <div class="punchy-sub">Configured Jenkins CI/CD for automated compilation and package signing.</div>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head emerald"><span class="punchy-dot emerald">•</span><span>Capability Code Generator</span></div>
+                <div class="punchy-sub">Automated tool mapping partner permissions to native mobile code.</div>
+              </div>
+            </div>
+
+            <!-- 3. Dedicated Storage & Modern UI -->
+            <div class="clean-card emerald reveal">
+              <div class="card-title-bar">
+                <h3 class="card-title emerald">Storage & Platform</h3>
+                <span class="clean-tag pass">INFRASTRUCTURE</span>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head emerald"><span class="punchy-dot emerald">•</span><span>MinIO Secure S3 Storage</span></div>
+                <div class="punchy-sub">Migrated asset and package storage to private S3 for complete institutional data control.</div>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head emerald"><span class="punchy-dot emerald">•</span><span>Database Schema Migration</span></div>
+                <div class="punchy-sub">Upgraded PostgreSQL schema with transaction safety and audit logs.</div>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head emerald"><span class="punchy-dot emerald">•</span><span>Polished Backoffice UI</span></div>
+                <div class="punchy-sub">Streamlined the 6-step registration wizard and dashboard responsiveness.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           SLIDE 18: 4.2 Strategic Roadmap & Next Steps
+           ========================================== -->
+                  <section class="slide" id="slide-18">
+        <div class="slide-header">
+          <div class="org-bar">
+            <img src="assets/fsa_logo.png" alt="FSA Logo" class="org-logo">
+            <span class="org-title">FinTech Center  •  General Secretariat of FSA</span>
+          </div>
+          <div class="slide-eyebrow">4. PROVEN MILESTONES & ROADMAP • 4.2 IMMEDIATE NEXT STEPS</div>
+          <h2 class="slide-title">Strategic Next Steps & Engineering Priorities</h2>
+          <p class="slide-subtitle">Three concrete initiatives: FSA SSO integration, DG SuperApp alignment study, and continuous HR MiniApp enhancements.</p>
+          <div class="slide-divider"></div>
+        </div>
+
+        <div class="content-area">
+          <div class="open-grid-3">
+            <!-- Step 01: FSA SSO Integration -->
+            <div class="clean-card gold reveal">
+              <div class="card-title-bar">
+                <div>
+                  <div style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 3px;">STEP 01</div>
+                  <h3 class="card-title gold" style="font-size: 21px;">Integrate FSA SSO</h3>
+                </div>
+                <span class="clean-tag gold">IDENTITY & AUTH</span>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Single Sign-On Integration</span></div>
+                <div class="punchy-sub">Connect the SuperApp host with the central FSA Single Sign-On service using OAuth 2.0 and OpenID Connect (OIDC).</div>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Single Identity Login</span></div>
+                <div class="punchy-sub">Staff and users log in once to securely access all authorized mini-apps across departments without repeated passwords.</div>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Centralized Access Governance</span></div>
+                <div class="punchy-sub">Enforce authority-wide session revocation, security audit logging, and role-based access control (RBAC).</div>
+              </div>
+              <div style="margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border-line); font-family: var(--font-mono); font-size: 11.5px; color: var(--gold);">
+                OAuth 2.0 · OpenID Connect · Central FSA Directory
+              </div>
+            </div>
+
+            <!-- Step 02: DG SuperApp Integration Study -->
+            <div class="clean-card gold reveal">
+              <div class="card-title-bar">
+                <div>
+                  <div style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 3px;">STEP 02</div>
+                  <h3 class="card-title gold" style="font-size: 21px;">DG SuperApp Study</h3>
+                </div>
+                <span class="clean-tag gold">ECOSYSTEM ALIGNMENT</span>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Requirement Analysis</span></div>
+                <div class="punchy-sub">Study technical requirements, data standards, and security policies for integrating HR MiniApp into the DG SuperApp.</div>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Bridge Protocol Compatibility</span></div>
+                <div class="punchy-sub">Align JavaScript bridge methods, session token exchange, and capability schemas between both host environments.</div>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Formal Interoperability Blueprint</span></div>
+                <div class="punchy-sub">Deliver an integration feasibility report and API contract specification for DG technical stakeholders.</div>
+              </div>
+              <div style="margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border-line); font-family: var(--font-mono); font-size: 11.5px; color: var(--gold);">
+                DG SuperApp Host · Protocol Mapping · Feasibility Report
+              </div>
+            </div>
+
+            <!-- Step 03: Update HR MiniApp UI & Features -->
+            <div class="clean-card gold reveal">
+              <div class="card-title-bar">
+                <div>
+                  <div style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 3px;">STEP 03</div>
+                  <h3 class="card-title gold" style="font-size: 21px;">Update HR MiniApp</h3>
+                </div>
+                <span class="clean-tag gold">CONTINUOUS UPDATES</span>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Maintain 4 Core Modules</span></div>
+                <div class="punchy-sub">Support active baseline: HR Home dashboard, Daily Attendance (check-in/out), Monthly Reports, and Digital Employee Card.</div>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Requirement-Driven Updates</span></div>
+                <div class="punchy-sub">Adapt and upgrade UI screens, navigation, and features promptly as new department policies or user feedback emerge.</div>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head gold"><span class="punchy-dot gold">•</span><span>Modular Zero-Downtime Releases</span></div>
+                <div class="punchy-sub">Deliver visual refinements and feature updates rapidly via Flutter Riverpod with zero downtime or host recompilation.</div>
+              </div>
+              <div style="margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border-line); font-family: var(--font-mono); font-size: 11.5px; color: var(--gold);">
+                Attendance · Reports · Employee Card · Adaptive UI
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           SLIDE 19: Live Platform Demonstration
+           ========================================== -->
+      <section class="slide" id="slide-19">
+        <div class="slide-header">
+          <div class="org-bar">
+            <img src="assets/fsa_logo.png" alt="FSA Logo" class="org-logo">
+            <span class="org-title">FinTech Center  •  General Secretariat of FSA</span>
+          </div>
+          <div class="slide-eyebrow">SYSTEM DEMO • 3-MINUTE PLATFORM WALKTHROUGH</div>
+          <h2 class="slide-title">Live Platform Demonstration</h2>
+          <p class="slide-subtitle">Walkthrough of the onboarding wizard, automated security scan, and live mobile launch.</p>
+          <div class="slide-divider"></div>
+        </div>
+
+        <div class="content-area">
+          <div class="open-grid-3">
+            <div class="clean-card reveal">
+              <div class="card-title-bar">
+                <h3 class="card-title">1. Partner Onboarding</h3>
+                <span class="clean-tag">PORTAL WIZARD</span>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head"><span class="punchy-dot gold">•</span><span>6-Step Registration</span></div>
+                <div class="punchy-sub">Register app, upload icons, pick integration tier, and set repo webhooks.</div>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head"><span class="punchy-dot gold">•</span><span>Live Network Check</span></div>
+                <div class="punchy-sub">Demonstrating real-time URL and server reachability validation.</div>
+              </div>
+            </div>
+
+            <div class="clean-card emerald reveal">
+              <div class="card-title-bar">
+                <h3 class="card-title emerald">2. Pre-Flight Security</h3>
+                <span class="clean-tag pass">AUTOMATED AUDIT</span>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head emerald"><span class="punchy-dot emerald">•</span><span>Instant 8 Scans</span></div>
+                <div class="punchy-sub">Running all security scanners and generating the pass report.</div>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head emerald"><span class="punchy-dot emerald">•</span><span>Reviewer Sign-off</span></div>
+                <div class="punchy-sub">Inspecting the app in the web sandbox and approving the package.</div>
+              </div>
+            </div>
+
+            <div class="clean-card reveal">
+              <div class="card-title-bar">
+                <h3 class="card-title">3. Mobile Runtime</h3>
+                <span class="clean-tag">PHONE EXPERIENCE</span>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head"><span class="punchy-dot gold">•</span><span>Instant QR Launch</span></div>
+                <div class="punchy-sub">Scanning QR code on phone to launch HR MiniApp with zero delay.</div>
+              </div>
+              <div class="punchy-item">
+                <div class="punchy-head"><span class="punchy-dot gold">•</span><span>Native Hardware</span></div>
+                <div class="punchy-sub">Testing biometric login, camera scanning, and fluid 60fps animations.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           SLIDE 20: Q&A / Executive Discussion
+           ========================================== -->
+      <section class="slide" id="slide-20">
+        <div style="display: flex; flex-direction: column; justify-content: center; height: 100%; max-width: 1400px; margin: 0 auto; text-align: left;">
+          <div class="reveal">
+            <div class="org-bar" style="margin-bottom: 24px;">
+              <img src="assets/fsa_logo.png" alt="FSA Logo" class="org-logo" style="width: 58px; height: 58px;">
+              <div>
+                <div class="org-title" style="font-size: 16px;">FinTech Center of General Secretariat of FSA</div>
+                <div style="font-family: var(--font-mono); font-size: 12.5px; color: var(--text-sage);">Non-Bank Financial Services Authority</div>
+              </div>
+            </div>
+
+            <div class="slide-eyebrow" style="margin-bottom: 16px; font-size: 14px;">EXECUTIVE DISCUSSION & Q&A</div>
+            <h1 class="slide-title" style="font-size: 60px; line-height: 1.1; margin-bottom: 20px;">FSA SuperApp & MiniApp Platform</h1>
             <p class="slide-subtitle" style="font-size: 22px; max-width: 1100px; margin-bottom: 40px; color: var(--text-muted);">
-              Open for Strategic Guidance, Architectural Questions & Executive Direction.
+              Open for Strategic Guidance, Leadership Feedback & Executive Next Steps.
             </p>
 
             <div style="display: flex; gap: 48px; border-top: 1px solid var(--border-line); padding-top: 28px;">
               <div>
-                <div style="font-size: 18px; font-weight: 700; color: var(--gold); margin-bottom: 6px;">Sovereign Security</div>
-                <div style="font-size: 14.5px; color: var(--text-sage); max-width: 340px;">Zero-trust architecture, bank-grade pre-flight gates, and national SSO integration.</div>
+                <div style="font-size: 18px; font-weight: 700; color: var(--gold); margin-bottom: 6px;">Independent Ownership</div>
+                <div style="font-size: 14.5px; color: var(--text-sage); max-width: 340px;">Partners keep their own teams, code, and servers while connecting seamlessly through secure digital bridges.</div>
               </div>
               <div>
-                <div style="font-size: 18px; font-weight: 700; color: var(--gold); margin-bottom: 6px;">Architectural Agility</div>
-                <div style="font-size: 14.5px; color: var(--text-sage); max-width: 340px;">4 modular integration tiers supporting rapid public service scaling.</div>
+                <div style="font-size: 18px; font-weight: 700; color: var(--gold); margin-bottom: 6px;">Guaranteed Safety</div>
+                <div style="font-size: 14.5px; color: var(--text-sage); max-width: 340px;">Zero-trust quarantine, 8 automated pre-flight security checks, and isolated sandboxes protect users.</div>
               </div>
               <div>
-                <div style="font-size: 18px; font-weight: 700; color: var(--gold); margin-bottom: 6px;">Regulatory Governance</div>
-                <div style="font-size: 14.5px; color: var(--text-sage); max-width: 340px;">Centralized oversight, dynamic permission revocation, and immutable audit logs.</div>
+                <div style="font-size: 18px; font-weight: 700; color: var(--gold); margin-bottom: 6px;">Scalable National Gateway</div>
+                <div style="font-size: 14.5px; color: var(--text-sage); max-width: 340px;">One secure gateway for citizens, regulatory authorities, and commercial financial partners in one app.</div>
               </div>
             </div>
           </div>
@@ -1534,19 +2007,20 @@
     </main>
   </div>
 
+  <!-- Deck Navigation Controls -->
   <nav class="deck-controls">
     <button class="deck-btn" id="prevBtn" title="Previous Slide (Left Arrow)">
-      <svg class="svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="12" x2="5" y2="12"/><polyline points="12 18 5 12 12 5"/></svg>
     </button>
     <button class="deck-btn" id="tocBtn" title="Table of Contents (Agenda)">
-      <svg class="svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
     </button>
-    <span class="slide-counter" id="slideCounter">01 / 14</span>
+    <span class="slide-counter" id="slideCounter">01 / 20</span>
     <button class="deck-btn" id="nextBtn" title="Next Slide (Right Arrow / Space)">
-      <svg class="svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="18" y2="12"/><polyline points="12 5 18 12 12 18"/></svg>
     </button>
     <button class="deck-btn" id="fsBtn" title="Toggle Fullscreen (F)">
-      <svg class="svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
     </button>
   </nav>
 
@@ -1575,8 +2049,8 @@
         const resize = () => {
           const vw = window.innerWidth;
           const vh = window.innerHeight;
-          const factor = Math.min(vw / 1920, vh / 1080);
-          const x = (vw - 1920 * factor) / 2;
+          const factor = Math.min(vw / 2020, vh / 1080);
+          const x = (vw - 1820 * factor) / 2;
           const y = (vh - 1080 * factor) / 2;
           this.stage.style.transform = `translate(${x}px, ${y}px) scale(${factor})`;
         };

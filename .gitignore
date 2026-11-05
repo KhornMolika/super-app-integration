@@ -44,3 +44,4 @@ super-app/
 *.apk
 cookies.txt
 ~$*
+/diagrams/

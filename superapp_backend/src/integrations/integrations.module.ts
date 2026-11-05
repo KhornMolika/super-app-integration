@@ -17,6 +17,7 @@ import { User } from '../access-control/entities/user.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { AuditModule } from '../audit/audit.module';
 import { CapabilitiesModule } from '../capabilities/capabilities.module';
+import { StorageModule } from '../storage/storage.module';
 import { DomainVerificationService } from './webview/domain-verification.service';
 import { ValidationCallbackController } from './validation/validation-callback.controller';
 import { JenkinsService } from './jenkins/jenkins.service';
@@ -40,6 +41,7 @@ import { PubspecInjectorController } from './flutter/pubspec-injector.controller
     NotificationsModule,
     AuditModule,
     CapabilitiesModule,
+    StorageModule,
   ],
   controllers: [
     GitIntegrationController,

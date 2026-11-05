@@ -1,4 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
+import { StorageService } from '../../storage/storage.service';
+import {
+  detectMalwareFindings,
+  executeMalwarePurge,
+} from './helpers/malware-purge.helper';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
@@ -32,6 +37,8 @@ export class ScanFinalizerService {
     private readonly auditService: AuditService,
     private readonly mailService: MailService,
     private readonly pipelinePacerService: PipelinePacerService,
+    @Optional()
+    private readonly storageService?: StorageService,
   ) {}
 
   async finalizeScan(
@@ -141,6 +148,33 @@ export class ScanFinalizerService {
       });
     } else {
       app.validationStatus = 'FAILED';
+
+      // ZERO-TRUST MALWARE AUTO-PURGE & FORENSIC INCIDENT LOGGING
+      const malwareFindings = detectMalwareFindings(findings);
+      if (malwareFindings.length > 0) {
+        const purgeResult = await executeMalwarePurge(
+          app,
+          malwareFindings,
+          this.storageService,
+          this.logger,
+        );
+        if (purgeResult.report) {
+          if (!app.validationReport) app.validationReport = {} as any;
+          app.validationReport.malwareIncident = purgeResult.report;
+
+          await this.auditService.log({
+            actorId: 'system:local-scanner',
+            action: 'MALWARE_DETECTED_AND_PURGED',
+            resourceType: 'MiniApp',
+            resourceId: app.id,
+            newValue: {
+              status: app.lifecycleStatus,
+              validationStatus: 'FAILED',
+              malwareIncident: purgeResult.report,
+            },
+          });
+        }
+      }
       const resetToDraftStatuses = ['DRAFT', 'SUBMITTED', 'IN_REVIEW'];
       if (
         !hasPendingRevision &&

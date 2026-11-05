@@ -78,32 +78,36 @@ export class DeepLinkSecurityScanner {
       });
     };
 
-    if (stages.ssrf) {
-      stages.ssrf.status = 'RUNNING';
-      stages.ssrf.details =
+    const schemeStage = stages.scheme_audit || stages.ssrf;
+    if (schemeStage) {
+      const stageKey = stages.scheme_audit ? 'scheme_audit' : 'ssrf';
+      schemeStage.status = 'RUNNING';
+      schemeStage.details =
         'Verifying URL scheme syntax & universal link routing...';
-      await emitUpdate('ssrf');
+      await emitUpdate(stageKey);
       await this.delay(400);
-      stages.ssrf.status = 'COMPLETED';
-      stages.ssrf.details = 'Deep link scheme format & routing scope verified.';
-      checks.ssrf = { passed: true, details: stages.ssrf.details };
-      await emitUpdate('ssrf');
+      schemeStage.status = 'COMPLETED';
+      schemeStage.details = 'Deep link scheme format & routing scope verified.';
+      checks[stageKey] = { passed: true, details: schemeStage.details };
+      await emitUpdate(stageKey);
     }
 
-    if (stages.domain_tls_audit) {
-      stages.domain_tls_audit.status = 'RUNNING';
-      stages.domain_tls_audit.details =
+    const storeStage = stages.store_url_audit || stages.domain_tls_audit;
+    if (storeStage) {
+      const stageKey = stages.store_url_audit ? 'store_url_audit' : 'domain_tls_audit';
+      storeStage.status = 'RUNNING';
+      storeStage.details =
         'Verifying App Store fallback URL and TLS security...';
-      await emitUpdate('domain_tls_audit');
+      await emitUpdate(stageKey);
       await this.delay(400);
-      stages.domain_tls_audit.status = 'COMPLETED';
-      stages.domain_tls_audit.details =
+      storeStage.status = 'COMPLETED';
+      storeStage.details =
         'Fallback store URL uses secure HTTPS transport.';
-      checks.domain_tls_audit = {
+      checks[stageKey] = {
         passed: true,
-        details: stages.domain_tls_audit.details,
+        details: storeStage.details,
       };
-      await emitUpdate('domain_tls_audit');
+      await emitUpdate(stageKey);
     }
 
     if (stages.secret_scan) {
@@ -140,7 +144,7 @@ export class DeepLinkSecurityScanner {
 
     await this.scanFinalizer.finalizeScan(
       app,
-      'WEBVIEW',
+      'DEEP_LINK',
       100,
       checks,
       findings,

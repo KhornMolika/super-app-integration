@@ -1532,7 +1532,7 @@ export class MiniappLifecycleHelper {
         h.status = 'ACTIVE';
         h.type = 'PRODUCTION';
       } else if (h.status === 'ACTIVE') {
-        h.status = 'SUPERSEDED';
+        h.status = 'PREVIOUS';
       }
     });
     (app as any).versionHistory = history;

@@ -581,22 +581,10 @@ export default function WebViewIntegrationForm({
               formData.environment ||
               (process.env.NEXT_PUBLIC_ENVIRONMENT === 'DEV' ? 'DEV' : 'PROD');
 
-            const defaultCategoryPerms: Record<string, string[]> = {
-              insurance: ['Camera'],
-              banking: ['Camera', 'Biometrics'],
-              travel: ['Location'],
-              transport: ['Location'],
-              healthcare: ['Camera', 'Biometrics'],
-              food: ['Location'],
-              shopping: ['Location'],
-            };
-            const catKey = (formData.category || '').toLowerCase();
-            const fallbackPerms = defaultCategoryPerms[catKey] || ['Camera', 'Location'];
-
             const activePerms =
               Array.isArray(formData.permissions) && formData.permissions.length > 0
                 ? formData.permissions.map((p: any) => p.type || p)
-                : fallbackPerms;
+                : [];
 
             const dynamicPayload = {
               appId: formData.appId || 'miniapp_8f32a1',

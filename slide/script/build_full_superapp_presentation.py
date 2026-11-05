@@ -25,7 +25,7 @@ COLOR_BADGE_LINE = RGBColor(144, 90, 1)   # #905A01
 FONT_FAMILY = "Segoe UI"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, '..', '..'))
-LOGO_PATH = os.path.join(PROJECT_ROOT, 'docs', 'slide-deck', 'assets', 'fsa_logo.png')
+LOGO_PATH = os.path.join(PROJECT_ROOT, 'slide', 'assets', 'fsa_logo.png')
 
 def set_run(run, text, font_size_pt=11, bold=False, color=COLOR_WHITE):
     run.text = text
@@ -72,7 +72,7 @@ def add_standard_header(slide, tag_text, title_text, subtitle_text):
     line.line.color.rgb = COLOR_CARD_LINE
 
 def generate_presentation():
-    src_pptx = os.path.join(PROJECT_ROOT, 'docs', 'slide-deck', 'superapp_presentation.pptx')
+    src_pptx = os.path.join(PROJECT_ROOT, 'slide', 'superapp_presentation.pptx')
     with open(src_pptx, 'rb') as f:
         stream = io.BytesIO(f.read())
     prs = pptx.Presentation(stream)
@@ -844,14 +844,6 @@ def generate_presentation():
         print(f"Also successfully overwritten main presentation: {dest_main}")
     except PermissionError:
         print(f"Note: {dest_main} is currently open in PowerPoint.")
-
-    dest_docs = os.path.join(PROJECT_ROOT, 'docs', 'slide-deck', 'superapp_presentation.pptx')
-    try:
-        with open(dest_docs, 'wb') as f:
-            f.write(out_data)
-        print(f"Also successfully overwritten docs presentation: {dest_docs}")
-    except PermissionError:
-        print(f"Note: {dest_docs} is currently open in PowerPoint.")
 
 if __name__ == '__main__':
     generate_presentation()

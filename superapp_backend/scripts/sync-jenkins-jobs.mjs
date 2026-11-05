@@ -776,10 +776,8 @@ async function main() {
   await syncJob('superapp-sandbox-build', resolveScript('Jenkinsfile.superapp-sandbox-build'), defaultBackendRepo, defaultBranch, 'ci/jenkins/Jenkinsfile.superapp-sandbox-build');
   await syncJob('superapp-test-build', resolveScript('Jenkinsfile.superapp-test-build'), defaultBackendRepo, defaultBranch, 'ci/jenkins/Jenkinsfile.superapp-test-build');
   
-  // Dedicated per-project Harbor CI pipelines
-  await syncJob('superapp-backend-ci', resolveScript('Jenkinsfile.backend-ci'), defaultBackendRepo, defaultBranch, 'ci/jenkins/Jenkinsfile.backend-ci');
-  await syncJob('superapp-manager-ci', resolveScript('Jenkinsfile.manager-ci'), 'https://git.fintechcenterfsa.com/frontend/super-app-manager.git', defaultBranch, 'ci/jenkins/Jenkinsfile.manager-ci');
-  await syncJob('superapp-client-ci', resolveScript('Jenkinsfile.client-ci'), 'https://git.fintechcenterfsa.com/frontend/super-app.git', 'development', 'scripts/jenkins/Jenkinsfile.client-ci');
+  // Container build pipelines retired from Jenkins due to Harbor network isolation.
+  // Use scripts/publish-containers-to-harbor.ps1 for pre-flight testing and pushing to Harbor.
   console.log('✨ All Jenkins jobs processed successfully.');
 }
 

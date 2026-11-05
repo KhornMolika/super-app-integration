@@ -501,7 +501,7 @@ export class MiniappsController {
   @Delete(':id')
   @RequirePermissions('miniapp:delete')
   remove(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
-    return this.miniappService.remove(id, req.user.sub);
+    return this.miniappService.remove(id, req.user?.sub, req.user);
   }
 
   @Get(':id/versions')
