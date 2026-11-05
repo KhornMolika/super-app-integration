@@ -389,14 +389,25 @@ function OrganizationDetailContent() {
     setErrorMessage(null);
 
     try {
-      await organizationsApi.update(organization.id, {
+      const payload: Partial<Organization> = {
         name: formData.name.trim(),
         code: formData.code.trim().toUpperCase() || undefined,
         parentId: formData.parentId || null,
         parentAuthority: formData.parentId ? (formData.parentAuthority?.trim() || undefined) : null,
         description: formData.description.trim() || undefined,
         status: formData.status,
-      });
+      };
+      if (formData.logo === null && !formData.logoFile) {
+        payload.logo = null;
+      }
+      await organizationsApi.update(organization.id, payload);
+      if (formData.logoFile) {
+        try {
+          await organizationsApi.uploadLogo(organization.id, formData.logoFile);
+        } catch (uploadErr) {
+          console.error('Failed to upload logo:', uploadErr);
+        }
+      }
       toast.success(`Organization "${formData.name}" updated successfully.`);
       setIsEditModalOpen(false);
       await fetchOrganization();

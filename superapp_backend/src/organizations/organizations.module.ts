@@ -1,3 +1,4 @@
+import { StorageModule } from '../storage/storage.module';
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Organization } from './entities/organization.entity';
@@ -11,6 +12,7 @@ import { AccessControlModule } from '../access-control/access-control.module';
     TypeOrmModule.forFeature([Organization]),
     forwardRef(() => AuthModule),
     AccessControlModule,
+    forwardRef(() => StorageModule),
   ],
   controllers: [OrganizationsController],
   providers: [OrganizationsService],

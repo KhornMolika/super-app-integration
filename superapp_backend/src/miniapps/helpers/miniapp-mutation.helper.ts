@@ -790,12 +790,12 @@ export class MiniappMutationHelper {
     }
     if (orgInput) {
       const orgInfo = await this.resolveOrganization(orgInput);
-      merged.organization = orgInfo.name;
-      merged.organizationCode = orgInfo.code;
+      (merged as any).organization = orgInfo.name;
+      (merged as any).organizationCode = orgInfo.code;
       if (orgInfo?.id) merged.organizationId = orgInfo.id;
     }
     if (data.category !== undefined) {
-      merged.category = data.category;
+      (merged as any).category = data.category;
     }
 
     // Reset domain verification status if productionUrl changes

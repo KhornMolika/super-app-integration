@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Organization, isRootOrganization } from '@/api/organizations.api';
 import { Button, Input, Label, Select } from '@/components/ui/inputs';
-import { BuildingIcon, ShieldCheckIcon, DocumentTextIcon, CheckIcon, XIcon } from '@/components/ui/Icons';
+import { BuildingIcon, ShieldCheckIcon, DocumentTextIcon, CheckIcon, XIcon, CameraIcon } from '@/components/ui/Icons';
 
 export interface OrganizationFormData {
   name: string;
@@ -13,6 +13,8 @@ export interface OrganizationFormData {
   parentAuthority?: string;
   description: string;
   status: 'ACTIVE' | 'INACTIVE';
+  logo?: string | null;
+  logoFile?: File | null;
 }
 
 interface OrganizationModalProps {
@@ -41,7 +43,12 @@ export function OrganizationModal({
     parentAuthority: '',
     description: '',
     status: 'ACTIVE',
+    logo: null,
+    logoFile: null,
   });
+
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isRoot = isRootOrganization(editingOrg);
 
@@ -62,9 +69,11 @@ export function OrganizationModal({
         parentAuthority: editingOrg.parent?.name || editingOrg.parentAuthority || '',
         description: editingOrg.description || '',
         status: editingOrg.status || 'ACTIVE',
+        logo: editingOrg.logo || null,
+        logoFile: null,
       });
+      setLogoPreview(editingOrg.logo || null);
     } else {
-      // Do not auto-assign any parent organization unless intentionally selected
       setFormData({
         name: '',
         code: '',
@@ -72,11 +81,36 @@ export function OrganizationModal({
         parentAuthority: '',
         description: '',
         status: 'ACTIVE',
+        logo: null,
+        logoFile: null,
       });
+      setLogoPreview(null);
     }
   }, [editingOrg, isOpen]);
 
   if (!isOpen) return null;
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Only image files (PNG, JPEG, WebP, SVG) are supported');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Logo file must be smaller than 2MB');
+      return;
+    }
+    const previewUrl = URL.createObjectURL(file);
+    setLogoPreview(previewUrl);
+    setFormData((prev) => ({ ...prev, logoFile: file }));
+  };
+
+  const handleRemoveLogo = () => {
+    setLogoPreview(null);
+    setFormData((prev) => ({ ...prev, logo: null, logoFile: null }));
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,6 +154,59 @@ export function OrganizationModal({
               <span>{errorMessage}</span>
             </div>
           )}
+
+          {/* Organization Logo & Branding */}
+          <div>
+            <Label className="flex items-center gap-1.5 mb-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
+              <CameraIcon className="w-3.5 h-3.5 text-slate-400" />
+              Organization Logo / Branding
+            </Label>
+            <div className="flex items-center gap-3.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850">
+              <div className="w-14 h-14 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center overflow-hidden shrink-0 shadow-xs">
+                {logoPreview ? (
+                  <img src={logoPreview} alt="Logo preview" className="w-full h-full object-contain p-1" />
+                ) : (
+                  <span className="font-mono font-bold text-xs text-slate-400">
+                    {formData.code || 'LOGO'}
+                  </span>
+                )}
+              </div>
+              <div className="flex-1 min-w-0 space-y-1">
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    onChange={handleLogoChange}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="text-xs h-7 px-2.5"
+                  >
+                    Select Logo
+                  </Button>
+                  {logoPreview && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleRemoveLogo}
+                      className="text-xs h-7 px-2 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-400 dark:text-slate-400">
+                  PNG, JPG, SVG, or WEBP (max 2MB).
+                </p>
+              </div>
+            </div>
+          </div>
 
           {/* Organization Name */}
           <div>

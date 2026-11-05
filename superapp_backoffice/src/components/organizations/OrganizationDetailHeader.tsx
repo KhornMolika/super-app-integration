@@ -90,6 +90,18 @@ export function OrganizationDetailHeader({
       <div className="flex justify-between items-center gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
         <div className="flex items-center gap-4 min-w-0">
           <BackButton href={isSuperOrAdmin ? '/organizations' : '/miniapps'} />
+          {organization.logo && (
+            <div className="w-12 h-12 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 p-1.5 flex items-center justify-center shrink-0 shadow-sm overflow-hidden">
+              <img
+                src={organization.logo}
+                alt={organization.name}
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  (e.currentTarget.parentElement as HTMLElement).style.display = 'none';
+                }}
+              />
+            </div>
+          )}
           <div className="min-w-0">
             {/* Breadcrumb Path */}
             <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-1">

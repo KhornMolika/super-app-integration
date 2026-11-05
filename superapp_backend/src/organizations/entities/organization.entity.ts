@@ -50,6 +50,9 @@ export class Organization {
   @Column({ type: 'text', nullable: true })
   description?: string;
 
+  @Column({ type: 'text', nullable: true })
+  logo?: string | null;
+
   @Column({
     type: 'enum',
     enum: OrganizationStatus,

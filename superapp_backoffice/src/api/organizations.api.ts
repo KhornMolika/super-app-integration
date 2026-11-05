@@ -30,6 +30,7 @@ export interface Organization {
   id: string;
   name: string;
   code?: string;
+  logo?: string | null;
   parentId?: string | null;
   parent?: Organization | null;
   children?: Organization[];
@@ -76,6 +77,15 @@ export const organizationsApi = {
       method: 'PATCH',
       body: { status },
     }),
+
+  uploadLogo: (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiClient<Organization>(`/api/organizations/${id}/logo`, {
+      method: 'POST',
+      body: formData,
+    });
+  },
 
   delete: (id: string) =>
     apiClient<void>(`/api/organizations/${id}`, {

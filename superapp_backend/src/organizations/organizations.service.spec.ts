@@ -175,5 +175,40 @@ describe('OrganizationsService', () => {
         /cannot be deleted because subordinate organization/,
       );
     });
+
+    it('should upload organization logo and save url on entity', async () => {
+      const mockStorageService = {
+        uploadOrganizationLogo: jest.fn().mockResolvedValue({
+          url: '/api/storage/asset?key=organizations%2Forg-123%2Fbranding%2Flogo.png',
+          key: 'organizations/org-123/branding/logo.png',
+        }),
+      };
+      (service as any).storageService = mockStorageService;
+
+      const org = {
+        id: 'org-123',
+        name: 'Trust Regulator',
+        logo: null,
+      };
+      mockOrgRepo.findOne.mockResolvedValue(org);
+
+      const mockFile: any = {
+        buffer: Buffer.from('fake-image-bytes'),
+        originalname: 'logo.png',
+        mimetype: 'image/png',
+        size: 100,
+      };
+
+      const result = await service.uploadLogo('org-123', mockFile);
+
+      expect(mockStorageService.uploadOrganizationLogo).toHaveBeenCalledWith('org-123', mockFile);
+      expect(result.logo).toBe('/api/storage/asset?key=organizations%2Forg-123%2Fbranding%2Flogo.png');
+      expect(mockOrgRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'org-123',
+          logo: '/api/storage/asset?key=organizations%2Forg-123%2Fbranding%2Flogo.png',
+        }),
+      );
+    });
   });
 });

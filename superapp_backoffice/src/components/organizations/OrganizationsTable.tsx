@@ -48,7 +48,18 @@ export function OrganizationsTable({
                     : 'bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/60'
                 }`}
               >
-                {org.code || org.name.substring(0, 3).toUpperCase()}
+                {org.logo ? (
+                  <img
+                    src={org.logo}
+                    alt={org.name}
+                    className="w-full h-full object-contain rounded-xl p-1"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  org.code || org.name.substring(0, 3).toUpperCase()
+                )}
               </div>
               <div className="min-w-0">
                 <div className="font-semibold text-slate-900 dark:text-slate-100 text-sm group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors flex items-center gap-2">

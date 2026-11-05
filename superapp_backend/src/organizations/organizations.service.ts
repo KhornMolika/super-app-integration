@@ -1,3 +1,5 @@
+import { StorageService } from '../storage/storage.service';
+import { Optional, Inject, forwardRef } from '@nestjs/common';
 import {
   Injectable,
   OnApplicationBootstrap,
@@ -33,7 +35,23 @@ export class OrganizationsService implements OnApplicationBootstrap {
   constructor(
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>,
+    @Optional()
+    @Inject(forwardRef(() => StorageService))
+    private storageService?: StorageService,
   ) {}
+
+  async uploadLogo(id: string, file: Express.Multer.File): Promise<Organization> {
+    const org = await this.findOne(id);
+    if (!org) {
+      throw new NotFoundException(`Organization ${id} not found`);
+    }
+    if (!this.storageService) {
+      throw new BadRequestException('Storage service is not available');
+    }
+    const result = await this.storageService.uploadOrganizationLogo(id, file);
+    org.logo = result.url;
+    return this.organizationRepository.save(org);
+  }
 
   async onApplicationBootstrap() {
     // Register the repository for global database organization resolution

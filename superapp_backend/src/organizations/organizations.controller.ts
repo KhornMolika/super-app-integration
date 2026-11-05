@@ -10,6 +10,9 @@ import {
   Req,
   UseGuards,
   NotFoundException,
+  BadRequestException,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RbacGuard } from '../access-control/guards/rbac.guard';
@@ -22,6 +25,7 @@ import {
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 import { QueryOrganizationsDto } from './dto/query-organizations.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller(['organizations', 'api/organizations'])
 export class OrganizationsController {
@@ -44,6 +48,23 @@ export class OrganizationsController {
       throw new NotFoundException(`Organization ${id} not found`);
     }
     return org;
+  }
+
+  @Post(':id/logo')
+  @UseGuards(JwtAuthGuard, RbacGuard)
+  @RequirePermissions('organization:manage')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadLogo(
+    @Param('id') id: string,
+    @UploadedFile() file?: Express.Multer.File,
+  ): Promise<Organization> {
+    if (!file) {
+      throw new BadRequestException('No logo file provided');
+    }
+    if (!file.mimetype.startsWith('image/')) {
+      throw new BadRequestException('Only image files are permitted');
+    }
+    return this.organizationsService.uploadLogo(id, file);
   }
 
   @Post()

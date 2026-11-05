@@ -563,12 +563,26 @@ function OrganizationsContent() {
         description: formData.description?.trim() || undefined,
         status: formData.status,
       };
+      if (formData.logo === null && !formData.logoFile) {
+        payload.logo = null;
+      }
+      let savedOrg: any;
       if (selectedOrg) {
-        await organizationsApi.update(selectedOrg.id, payload);
+        savedOrg = await organizationsApi.update(selectedOrg.id, payload);
         toast.success(`Organization "${formData.name}" updated successfully.`);
       } else {
-        await organizationsApi.create(payload);
+        savedOrg = await organizationsApi.create(payload);
         toast.success(`Organization "${formData.name}" registered successfully.`);
+      }
+      if (formData.logoFile) {
+        try {
+          const targetId = savedOrg?.id || selectedOrg?.id;
+          if (targetId) {
+            await organizationsApi.uploadLogo(targetId, formData.logoFile);
+          }
+        } catch (uploadErr) {
+          console.error('Failed to upload logo:', uploadErr);
+        }
       }
       setIsCreateEditModalOpen(false);
       setSelectedOrg(null);

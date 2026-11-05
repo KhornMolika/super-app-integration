@@ -32,6 +32,10 @@ export class CreateOrganizationDto {
   @IsOptional()
   description?: string;
 
+  @IsString()
+  @IsOptional()
+  logo?: string | null;
+
   @IsEnum(OrganizationStatus, { message: 'Status must be ACTIVE or INACTIVE' })
   @IsOptional()
   status?: OrganizationStatus;

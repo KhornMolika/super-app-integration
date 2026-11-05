@@ -378,6 +378,30 @@ export class StorageService implements OnModuleInit {
   }
 
   /**
+   * Upload an organization branding logo to organizations/{orgId}/branding/logo.{ext}
+   */
+  async uploadOrganizationLogo(
+    orgId: string,
+    file: Express.Multer.File,
+  ): Promise<{ url: string; key: string }> {
+    if (!file || !file.buffer) {
+      throw new BadRequestException('Choose an image to upload');
+    }
+    const ext = file.originalname?.split('.').pop()?.toLowerCase() || 'png';
+    const key = `organizations/${orgId}/branding/logo.${ext}`;
+    const bucket = this.assetsBucket || 'superapp-storage';
+
+    await this.minioClient.putObject(bucket, key, file.buffer, file.size, {
+      'Content-Type': file.mimetype || 'image/png',
+      'x-amz-meta-org-id': orgId,
+    });
+
+    const url = `/api/storage/asset?key=${encodeURIComponent(key)}`;
+    this.logger.log(`Uploaded organization logo for org ${orgId}: ${key}`);
+    return { url, key };
+  }
+
+  /**
    * Delete an avatar object for a backoffice user from the backoffice-user-media bucket
    */
   async deleteBackofficeUserAvatar(
