@@ -124,7 +124,7 @@ describe('MobileCatalogService.list', () => {
     ]);
     const page = await new MobileCatalogService(repo).list(undefined, 20, 0);
     expect(calls.select).toContain('m.homeWidget');
-    expect(calls.select).toContain('m.organizationCode');
+    expect(calls.select).toContain('m.organizationId');
     expect(page.items[0].widget).toEqual({ widgetClass: 'HrHomeWidget' });
   });
 });
