@@ -5,6 +5,46 @@ export enum IntegrationMethod {
   DEEP_LINK = 'DEEP_LINK',
 }
 
+/**
+ * Home widget declaration, owned by the mini-app. Exactly one field applies per
+ * integration method (see HOME_WIDGET_FIELD); null = no Home widget.
+ */
+export interface HomeWidget {
+  widgetClass?: string;
+  viewId?: string;
+  url?: string;
+}
+
+export const HOME_WIDGET_FIELD: Record<
+  IntegrationMethod,
+  { key: 'widgetClass' | 'viewId' | 'url'; label: string; placeholder: string; help: string }
+> = {
+  [IntegrationMethod.FLUTTER_PACKAGE]: {
+    key: 'widgetClass',
+    label: 'Widget class',
+    placeholder: 'HrHomeWidget',
+    help: 'The widget class your package exports from `package:<name>/<name>.dart`. Its constructor must accept `onOpen` (a `VoidCallback`).',
+  },
+  [IntegrationMethod.NATIVE_SDK]: {
+    key: 'viewId',
+    label: 'Widget view ID',
+    placeholder: 'spa_booking_widget',
+    help: 'The platform-view type your SDK registers for its widget view on iOS and Android.',
+  },
+  [IntegrationMethod.WEBVIEW]: {
+    key: 'url',
+    label: 'Widget URL',
+    placeholder: 'https://your-domain.com/widget',
+    help: 'A page on one of your allowed domains, shown inside the Home widget slot.',
+  },
+  [IntegrationMethod.DEEP_LINK]: {
+    key: 'url',
+    label: 'Widget URL',
+    placeholder: 'https://your-domain.com/widget',
+    help: 'A page on your server, shown inside the Home widget slot.',
+  },
+};
+
 export enum SourceType {
   GIT = 'GIT',
   ARTIFACT = 'ARTIFACT',
@@ -47,6 +87,9 @@ export interface FlutterPackageConfigDto {
   archiveStrippedFilesCount?: number;
   isSanitized?: boolean;
   isArchiveSubmission?: boolean;
+  widgetCandidates?: string[];
+  gitWidgetCandidates?: string[];
+  isScanningGitWidgets?: boolean;
 }
 
 export interface DeepLinkConfigDto {
@@ -119,6 +162,7 @@ export interface CreateMiniAppDto {
   integrationConfigFlutter?: FlutterPackageConfigDto;
   integrationConfigNativeSdk?: NativeSdkConfigDto;
   integrationConfigDeepLink?: DeepLinkConfigDto;
+  homeWidget?: HomeWidget | null;
   verificationToken?: string;
   isDomainVerified?: boolean;
   domainVerifiedAt?: string;

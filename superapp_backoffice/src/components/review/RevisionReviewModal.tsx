@@ -436,7 +436,7 @@ export function RevisionReviewModal({
                         className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 text-xs space-y-1"
                       >
                         <span className="font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
-                          {key}
+                          {key === 'homeWidget' ? 'Home widget' : key}
                         </span>
                         <div className="space-y-1">
                           <div className="text-slate-500 line-through truncate">

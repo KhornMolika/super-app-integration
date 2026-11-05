@@ -32,6 +32,63 @@ import {
   extractDecryptedDeployKey,
   extractDecryptedGitToken,
 } from './flutter-credential.helper';
+import { keepLifecycleConfigKeys } from './lifecycle-config-keys';
+import { HomeWidget, sameHomeWidget } from '../home-widget';
+import { dartFilesFromZip, hasWidgetClass } from './widget-class-check';
+import { gitDartFiles, withVerification } from './home-widget-verifier';
+
+/**
+ * The revision's homeWidget is already normalised (no client verifiedClass).
+ * Unchanged widget: keep the live one so its backend-set verifiedClass
+ * survives. Changed: take the revision's value; verification re-runs.
+ */
+function nextHomeWidget(
+  revWidget: HomeWidget | null,
+  live: HomeWidget | null | undefined,
+): HomeWidget | null {
+  if (sameHomeWidget(revWidget, live)) return live ?? null;
+  if (!revWidget) return null;
+  const { verifiedClass: _dropped, ...publicFields } = revWidget;
+  return publicFields;
+}
+
+function sameVerified(a: HomeWidget, b: HomeWidget | null | undefined): boolean {
+  return (a.verifiedClass ?? null) === (b?.verifiedClass ?? null);
+}
+
+/** integrationConfig keys that decide which package source a Flutter app builds from. */
+const PACKAGE_SOURCE_KEYS = [
+  'sourceType',
+  'gitUrl',
+  'repoUrl',
+  'repoOwner',
+  'repoName',
+  'gitBranch',
+  'gitTag',
+  'commitSha',
+  'branch',
+  'ref',
+  'gitRef',
+  'gitPath',
+  'packagePath',
+  'packageName',
+  'packageStoragePath',
+  'versionConstraint',
+  'packageVersion',
+];
+
+/** True when the package source differs, so a stored verifiedClass may be stale. */
+function packageSourceChanged(
+  before: Record<string, any> | null | undefined,
+  after: Record<string, any> | null | undefined,
+): boolean {
+  return PACKAGE_SOURCE_KEYS.some(
+    (k) => JSON.stringify(before?.[k] ?? null) !== JSON.stringify(after?.[k] ?? null),
+  );
+}
+
+/** Why a declared Home widget class could not be confirmed. */
+type WidgetProblem = 'missing' | 'unreadable';
 
 import { CapabilitiesService } from '../../capabilities/capabilities.service';
 
@@ -63,6 +120,122 @@ export class MiniappLifecycleHelper {
     @Optional()
     private capabilitiesService?: CapabilitiesService,
   ) {}
+
+  /** Staged package archive from MinIO, or null when absent/unreadable. */
+  private async readStagedArchive(storagePath?: string): Promise<Buffer | null> {
+    if (!storagePath || !this.storageService) return null;
+    try {
+      const buf = await this.storageService.getObjectBuffer(
+        this.storageService.packageSubmissionsBucket,
+        storagePath,
+      );
+      return buf && buf.length > 0 ? buf : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Confirms a FLUTTER_PACKAGE app's declared Home widget class is really
+   * exported by the package (archive when given, else its Git source) and
+   * records the result in `homeWidget.verifiedClass`. Never throws: a failed
+   * check or fetch leaves the widget unverified, logs a warning and tells the
+   * app owner. `force` re-checks even when `verifiedClass` already matches
+   * (the package source may have changed since).
+   */
+  private async verifyHomeWidgetClass(
+    app: MiniApp,
+    archiveBuf?: Buffer | null,
+    opts: { force?: boolean } = {},
+  ): Promise<void> {
+    const widget = app.homeWidget;
+    const widgetClass = widget?.widgetClass;
+    if ((app.integrationMethod || '').toUpperCase() !== 'FLUTTER_PACKAGE') return;
+    if (!widgetClass) return;
+    if (!opts.force && widget?.verifiedClass === widgetClass) return;
+
+    let packageName = '';
+    let problem: WidgetProblem | null = null;
+    try {
+      packageName = this.pubspecService.inferCanonicalPackageName(app);
+      let files: Record<string, string> | null = null;
+
+      if (archiveBuf && archiveBuf.length > 0) {
+        files = dartFilesFromZip(archiveBuf);
+      } else {
+        const cfg = app.integrationConfig || {};
+        const repoUrl =
+          cfg.gitUrl ||
+          cfg.repoUrl ||
+          (cfg.repoOwner && cfg.repoName
+            ? `https://github.com/${cfg.repoOwner}/${cfg.repoName}.git`
+            : undefined);
+        if (repoUrl && (cfg.sourceType === 'GIT' || !cfg.sourceType)) {
+          const gitRef =
+            cfg.gitBranch || cfg.gitTag || cfg.commitSha || cfg.branch || cfg.ref || 'main';
+          const token = extractDecryptedGitToken(cfg) || undefined;
+          files = await gitDartFiles(
+            (path) => this.gitService.getFileContent(repoUrl, path, gitRef, token),
+            packageName,
+            cfg.gitPath || cfg.packagePath || undefined,
+          );
+        }
+      }
+
+      if (!files || Object.keys(files).length === 0) {
+        problem = 'unreadable';
+      } else if (!hasWidgetClass(files, packageName, widgetClass)) {
+        problem = 'missing';
+      }
+
+      const next = withVerification(widget, problem === null);
+      if (next && !sameVerified(next, widget)) {
+        app.homeWidget = next;
+        await this.miniappRepository.save(app);
+      }
+    } catch (err: any) {
+      this.logger.warn(
+        `Could not verify Home widget class "${widgetClass}" of ${app.name}: ${err?.message}`,
+      );
+      problem = 'unreadable';
+    }
+
+    if (problem) await this.reportUnverifiedWidget(app, widgetClass, packageName, problem);
+  }
+
+  /** Warns in the log and tells the app owner that their Home widget will not be shown. */
+  private async reportUnverifiedWidget(
+    app: MiniApp,
+    widgetClass: string,
+    packageName: string,
+    problem: WidgetProblem,
+  ): Promise<void> {
+    const pkg = packageName || 'the package';
+    let message: string;
+    if (problem === 'missing') {
+      this.logger.warn(
+        `Home widget class "${widgetClass}" of ${app.name} is not exported by package "${pkg}"; leaving it unverified.`,
+      );
+      message = `Home widget ${widgetClass} was not found in package ${pkg}; the widget won't be shown. Upload a package that exports it.`;
+    } else {
+      this.logger.warn(
+        `Home widget class "${widgetClass}" of ${app.name} left unverified: could not read package sources of "${pkg}".`,
+      );
+      message = `Home widget ${widgetClass} could not be checked because the sources of package ${pkg} could not be read; the widget won't be shown. Upload a new package version to check it again.`;
+    }
+    if (!app.ownerId) return;
+    try {
+      await this.notificationsService.createNotification(
+        app.ownerId,
+        'Home widget not shown',
+        message,
+        'HOME_WIDGET_UNVERIFIED',
+        app.id,
+      );
+    } catch (err: any) {
+      this.logger.warn(`Could not notify the owner about the Home widget: ${err?.message}`);
+    }
+  }
 
   async submitForReview(
     app: MiniApp,
@@ -539,8 +712,10 @@ export class MiniappLifecycleHelper {
       );
     }
 
+    let sourceChanged = false;
     if (app.pendingRevision) {
       const rev = app.pendingRevision;
+      const liveConfig = app.integrationConfig;
       app.name = rev.name ?? app.name;
       app.tagline = rev.tagline ?? rev.shortDescription ?? app.tagline;
       app.description =
@@ -576,15 +751,26 @@ export class MiniappLifecycleHelper {
           app.alertTelegramChatId;
       }
       app.integrationMethod = rev.integrationMethod ?? app.integrationMethod;
-      app.integrationConfig = rev.integrationConfig ?? app.integrationConfig;
+      app.integrationConfig = keepLifecycleConfigKeys(
+        rev.integrationConfig ?? app.integrationConfig,
+        app.integrationConfig,
+      );
       if (rev.capabilities || rev.permissions) {
         app.capabilities =
           rev.capabilities ?? rev.permissions ?? app.capabilities;
+      }
+      if (rev.homeWidget !== undefined) {
+        app.homeWidget = nextHomeWidget(rev.homeWidget, app.homeWidget);
+      }
+      sourceChanged = packageSourceChanged(liveConfig, app.integrationConfig);
+      if (sourceChanged && app.homeWidget) {
+        app.homeWidget = withVerification(app.homeWidget, false) ?? null;
       }
       app.pendingRevision = null;
     }
 
     app.lifecycleStatus = MiniAppLifecycleStatus.APPROVED;
+    (app as any).status = 'APPROVED';
     await this.miniappRepository.save(app);
 
     // Auto-inject Flutter package dependency into SuperApp pubspec.yaml if applicable
@@ -602,6 +788,7 @@ export class MiniappLifecycleHelper {
         const storagePath = app.integrationConfig?.packageStoragePath;
 
         // Auto-publish candidate package archive to Nexus pub-hosted repository
+        let widgetChecked = false;
         if (storagePath && this.storageService && this.nexusService) {
           try {
             const archiveBuf = await this.storageService.getObjectBuffer(
@@ -609,6 +796,9 @@ export class MiniappLifecycleHelper {
               storagePath,
             );
             if (archiveBuf && archiveBuf.length > 0) {
+              // Verify the Home widget class while the archive is still in MinIO
+              widgetChecked = true;
+              await this.verifyHomeWidgetClass(app, archiveBuf, { force: sourceChanged });
               await this.nexusService.publishPubArchive(
                 archiveBuf,
                 pkgName,
@@ -639,8 +829,10 @@ export class MiniappLifecycleHelper {
             );
           }
         }
+        if (!widgetChecked) await this.verifyHomeWidgetClass(app, null, { force: sourceChanged });
 
         await this.pubspecService.injectMiniApp(app);
+        await this.pubspecService.regenerateRegistry();
         await this.pubspecService.validateDependencies({ dryRun: true });
         this.pubspecService
           .triggerSandboxRebuild(`Approval of ${app.name}`)
@@ -1260,6 +1452,7 @@ export class MiniappLifecycleHelper {
 
     const rev = app.pendingRevision;
     const oldVal = { ...app };
+    const liveConfig = app.integrationConfig;
 
     app.name = rev.name ?? app.name;
     app.tagline = rev.tagline ?? rev.shortDescription ?? app.tagline;
@@ -1295,10 +1488,22 @@ export class MiniappLifecycleHelper {
         app.alertTelegramChatId;
     }
     app.integrationMethod = rev.integrationMethod ?? app.integrationMethod;
-    app.integrationConfig = rev.integrationConfig ?? app.integrationConfig;
+    app.integrationConfig = keepLifecycleConfigKeys(
+      rev.integrationConfig ?? app.integrationConfig,
+      app.integrationConfig,
+    );
     if (rev.capabilities || rev.permissions) {
       app.capabilities =
         rev.capabilities ?? rev.permissions ?? app.capabilities;
+    }
+    if (rev.homeWidget !== undefined) {
+      app.homeWidget = nextHomeWidget(rev.homeWidget, app.homeWidget);
+    }
+    // A different package source makes the stored verifiedClass stale: drop it
+    // now (saved below) and re-check it against the new source.
+    const sourceChanged = packageSourceChanged(liveConfig, app.integrationConfig);
+    if (sourceChanged && app.homeWidget) {
+      app.homeWidget = withVerification(app.homeWidget, false) ?? null;
     }
     if (rev.isDomainVerified !== undefined)
       app.isDomainVerified = rev.isDomainVerified;
@@ -1365,8 +1570,16 @@ export class MiniappLifecycleHelper {
 
     // Auto-update Flutter package dependency in SuperApp pubspec.yaml if applicable
     if ((app.integrationMethod || '').toUpperCase() === 'FLUTTER_PACKAGE') {
+      if (app.homeWidget?.widgetClass && (sourceChanged || app.homeWidget.verifiedClass !== app.homeWidget.widgetClass)) {
+        // The staged archive is not deleted on this path; fall back to Git
+        const archive = await this.readStagedArchive(
+          app.integrationConfig?.packageStoragePath,
+        );
+        await this.verifyHomeWidgetClass(app, archive, { force: sourceChanged });
+      }
       try {
         await this.pubspecService.injectMiniApp(app);
+        await this.pubspecService.regenerateRegistry();
         await this.pubspecService.validateDependencies({ dryRun: true });
         this.pubspecService
           .triggerSandboxRebuild(
@@ -1537,11 +1750,26 @@ export class MiniappLifecycleHelper {
     });
     (app as any).versionHistory = history;
 
+    const isFlutterPackage = (app.integrationMethod || '').toUpperCase() === 'FLUTTER_PACKAGE';
+    // The rolled-back package may not export the Home widget class any more:
+    // drop the verification before saving so the registry never emits a stale one.
+    if (isFlutterPackage && app.homeWidget) {
+      app.homeWidget = withVerification(app.homeWidget, false) ?? null;
+    }
+
     await this.miniappRepository.save(app);
 
-    if ((app.integrationMethod || '').toUpperCase() === 'FLUTTER_PACKAGE') {
+    if (isFlutterPackage) {
+      if (app.homeWidget?.widgetClass) {
+        // Archive if it still exists in MinIO, else the Git source at the rolled-back ref
+        const archive = await this.readStagedArchive(
+          app.integrationConfig?.packageStoragePath,
+        );
+        await this.verifyHomeWidgetClass(app, archive, { force: true });
+      }
       try {
         await this.pubspecService.injectMiniApp(app);
+        await this.pubspecService.regenerateRegistry();
         await this.pubspecService.validateDependencies({ dryRun: true });
         this.pubspecService
           .triggerSandboxRebuild(`Rollback to ${targetVersion} for ${app.name}`)

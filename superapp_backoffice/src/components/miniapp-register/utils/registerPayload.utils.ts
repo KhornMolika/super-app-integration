@@ -5,7 +5,7 @@ export async function prepareDraftPayload(
   formData: Partial<CreateMiniAppDto>,
   pendingArchiveFile: File | null
 ): Promise<Partial<CreateMiniAppDto>> {
-  const payload = { ...formData };
+  const payload = { ...formData, homeWidget: formData.homeWidget ?? null };
   if (payload.integrationMethod !== IntegrationMethod.WEBVIEW) {
     delete payload.integrationConfigWebView;
   }
@@ -52,7 +52,7 @@ export async function prepareSubmitPayload(
   formData: Partial<CreateMiniAppDto>,
   pendingArchiveFile: File | null
 ): Promise<Partial<CreateMiniAppDto>> {
-  const payload = { ...formData };
+  const payload = { ...formData, homeWidget: formData.homeWidget ?? null };
 
   if (payload.integrationMethod !== IntegrationMethod.WEBVIEW) {
     delete payload.integrationConfigWebView;

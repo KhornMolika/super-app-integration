@@ -69,6 +69,7 @@ export const INITIAL_MINIAPP_FORM_DATA: MiniAppDetailFormData = {
   integrationConfigWebView: { productionUrl: '' },
   integrationConfigFlutter: { sourceType: SourceType.ARTIFACT, packageName: '', versionConstraint: '' },
   integrationConfigDeepLink: { urlScheme: '', packageName: '', appStoreUrl: '' },
+  homeWidget: null,
   integrationConfigNativeSdk: {
     iosModuleName: '',
     iosTypeName: '',

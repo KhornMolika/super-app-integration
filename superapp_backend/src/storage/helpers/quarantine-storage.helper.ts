@@ -22,6 +22,7 @@ export interface UploadPackageArchiveResult {
     dependencies?: Record<string, any>;
     environment?: Record<string, any>;
   };
+  widgetCandidates: string[];
 }
 
 export interface UploadSdkArchiveResult {
@@ -58,6 +59,7 @@ export class QuarantineStorageHelper {
       isSanitized,
       strippedFilesCount,
       parsedPubspec,
+      widgetCandidates,
     } = this.sanitizerHelper.sanitizePackageArchive(file.buffer);
 
     const sha256 = require('crypto')
@@ -108,6 +110,7 @@ export class QuarantineStorageHelper {
         dependencies: parsedPubspec?.dependencies,
         environment: parsedPubspec?.environment,
       },
+      widgetCandidates,
     };
   }
 

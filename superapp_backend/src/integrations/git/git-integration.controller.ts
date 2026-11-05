@@ -79,6 +79,19 @@ export class GitIntegrationController {
     );
   }
 
+  /** Home widget classes the package exports, for the portal to fill in. */
+  @Post('widget-candidates')
+  @HttpCode(HttpStatus.OK)
+  widgetCandidates(@Body() dto: ValidateGitPackageDto) {
+    return this.gitService.detectWidgetClasses(
+      dto.url,
+      dto.ref,
+      dto.provider,
+      dto.token,
+      dto.path,
+    );
+  }
+
   @Post('snippet')
   @HttpCode(HttpStatus.OK)
   generateSnippet(@Body() dto: GenerateGitSnippetDto) {

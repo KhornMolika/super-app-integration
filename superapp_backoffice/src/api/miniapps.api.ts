@@ -1,4 +1,5 @@
 import { apiClient, PaginatedResponse, unwrapItem } from './client';
+import type { HomeWidget } from '@/types/miniapp.types';
 
 export interface MiniApp {
   id: string;
@@ -19,6 +20,7 @@ export interface MiniApp {
   activeTestVersion?: string;
   integrationMethod?: any;
   integrationConfig?: any;
+  homeWidget?: HomeWidget | null;
   capabilities?: any[];
   permissions?: any[];
   permissionRequests?: any[];

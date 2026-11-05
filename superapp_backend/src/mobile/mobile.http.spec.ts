@@ -20,6 +20,8 @@ import { MobileAvatarService } from './mobile-avatar.service';
 import { MobileAuthService } from './mobile-auth.service';
 import { MobileCatalogService } from './mobile-catalog.service';
 import { MobileProfileService } from './mobile-profile.service';
+import { MobileRegulatorsService } from './mobile-regulators.service';
+import { Organization } from '../organizations/entities/organization.entity';
 import { MobileController } from './mobile.controller';
 import { PasswordService } from './password.service';
 import { FakeRepo } from './testing/fake-repo';
@@ -95,6 +97,7 @@ describe('Mobile HTTP (in-process)', () => {
         MobileProfileService,
         MobileAvatarService,
         MobileAccountService,
+        MobileRegulatorsService,
         { provide: StorageService, useValue: fakeStorage() },
         {
           provide: SettingsService,
@@ -122,6 +125,10 @@ describe('Mobile HTTP (in-process)', () => {
         {
           provide: getRepositoryToken(MiniApp),
           useValue: { createQueryBuilder: () => qb },
+        },
+        {
+          provide: getRepositoryToken(Organization),
+          useValue: new FakeRepo(),
         },
       ],
     }).compile();

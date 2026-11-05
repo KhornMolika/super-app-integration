@@ -15,6 +15,7 @@ import {
   MiniAppAvailabilityStatus,
 } from '../entities/miniapp.entity';
 import { MiniAppLegal } from '../entities/miniapp-legal.entity';
+import { Organization } from '../../organizations/entities/organization.entity';
 import { StorageService } from '../../storage/storage.service';
 import { DomainAssociationHelper } from './domain-association.helper';
 import { NotificationsService, MailService } from '../../notifications';
@@ -23,8 +24,14 @@ import { PermissionDetectorHelper } from './permission-detector.helper';
 import { VersionDiffHelper } from './version-diff.helper';
 import { inferPackageNameFromGitUrl } from '../../integrations/git/git-integration.service';
 import { resolveOrganizationDetails } from '../../organizations/helpers/organization-resolver.helper';
+import { FSA_ORGANIZATIONS, resolveOrganizationDetails as fsaResolveOrg } from '../../common/constants/fsa-organizations';
 import { OrganizationsService } from '../../organizations/organizations.service';
 import { secureFlutterIntegrationConfig } from './flutter-credential.helper';
+import {
+  HOME_WIDGET_FIELD,
+  normalizeHomeWidget,
+  sameHomeWidget,
+} from '../home-widget';
 
 @Injectable()
 export class MiniappMutationHelper {
@@ -40,8 +47,78 @@ export class MiniappMutationHelper {
     private validationHelper: MiniappValidationHelper,
     private permissionDetectorHelper: PermissionDetectorHelper,
     @Optional()
+    @InjectRepository(Organization)
+    private organizationRepository?: Repository<Organization> | any,
+    @Optional()
     private organizationsService?: OrganizationsService,
   ) {}
+
+  private async resolveOrganization(input?: string): Promise<{ name: string; code: string; id?: string }> {
+    const clean = input?.trim();
+    if (clean && this.organizationRepository?.findOne) {
+      const org = await this.organizationRepository.findOne({
+        where: [{ name: clean }, { code: clean }],
+      });
+      if (org?.code) return { name: org.name, code: org.code, id: org.id };
+    }
+    if (this.organizationsService?.resolveOrganization) {
+      const resolved = await this.organizationsService.resolveOrganization(input);
+      if (resolved && resolved.code && resolved.code !== clean?.slice(0, 4).toUpperCase()) {
+        return resolved;
+      }
+    }
+    const fsaFallback = fsaResolveOrg(input);
+    if (fsaFallback && fsaFallback.code !== (clean ? clean.slice(0, 4).toUpperCase() : 'FTC')) {
+      return fsaFallback;
+    }
+    const dbResolved = await resolveOrganizationDetails(input);
+    return fsaFallback || dbResolved;
+  }
+
+  private async serviceCategory(category: string | null | undefined): Promise<string | null> {
+    const clean = category?.trim();
+    if (!clean) return null;
+    const lower = clean.toLowerCase();
+    const builtIn = FSA_ORGANIZATIONS.some(
+      (o) => o.name.toLowerCase() === lower || o.code.toLowerCase() === lower,
+    );
+    if (builtIn) return null;
+    if (this.organizationRepository?.findOne) {
+      const org = await this.organizationRepository.findOne({
+        where: [{ name: clean }, { code: clean }],
+      });
+      return org ? null : clean;
+    }
+    return clean;
+  }
+
+  private assertWidgetSurvivesMethodSwitch(
+    existing: MiniApp,
+    data: Partial<MiniApp>,
+  ): void {
+    const newMethod = data.integrationMethod;
+    const previousMethod =
+      existing.pendingRevision?.integrationMethod ?? existing.integrationMethod;
+    if (
+      !newMethod ||
+      newMethod === previousMethod ||
+      data.homeWidget !== undefined ||
+      !Object.hasOwn(HOME_WIDGET_FIELD, newMethod)
+    ) {
+      return;
+    }
+    const previousWidget =
+      existing.pendingRevision?.homeWidget !== undefined
+        ? existing.pendingRevision.homeWidget
+        : existing.homeWidget;
+    if (!previousWidget) return;
+    const field = HOME_WIDGET_FIELD[newMethod as keyof typeof HOME_WIDGET_FIELD];
+    if (!previousWidget[field]) {
+      throw new BadRequestException(
+        `Home widget: re-enter the widget field for ${newMethod}.`,
+      );
+    }
+  }
 
   async create(
     data: any,
@@ -57,7 +134,18 @@ export class MiniappMutationHelper {
       newVal?: any,
     ) => Promise<void>,
   ): Promise<MiniApp> {
+    const homeWidget = normalizeHomeWidget(
+      data.homeWidget,
+      data.integrationMethod,
+      data.integrationConfig,
+    );
+    if (homeWidget !== undefined) data.homeWidget = homeWidget;
+
     delete data.status;
+    const orgInput = data.organization || data.category || undefined;
+    if (data.category !== undefined) {
+      data.category = await this.serviceCategory(data.category);
+    }
     data.lifecycleStatus = data.lifecycleStatus || MiniAppLifecycleStatus.DRAFT;
     data.currentReleaseVersion = undefined;
     data.pendingRevision = null;
@@ -90,13 +178,10 @@ export class MiniappMutationHelper {
     }
 
     // Resolve & normalize organization name and short code (e.g. FTC, IRC, etc.)
-    const orgInfo = this.organizationsService
-      ? await this.organizationsService.resolveOrganization(
-          data.organization || data.category,
-        )
-      : await resolveOrganizationDetails(data.organization || data.category);
+    const orgInfo = await this.resolveOrganization(data.organization || data.category);
     data.organization = orgInfo.name;
     data.organizationCode = orgInfo.code;
+    data.category = await this.serviceCategory(data.category);
     if (orgInfo.id && !data.organizationId) {
       data.organizationId = orgInfo.id;
     }
@@ -109,6 +194,7 @@ export class MiniappMutationHelper {
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '');
     }
+
 
     // Automatically upload base64 image data to MinIO object storage on submission
     const isBase64Logo =
@@ -313,7 +399,24 @@ export class MiniappMutationHelper {
       newVal?: any,
     ) => Promise<void>,
   ): Promise<MiniApp> {
+    const effectiveMethod = data.integrationMethod ?? existing.integrationMethod;
+    const effectiveConfig =
+      data.integrationConfig ??
+      existing.pendingRevision?.integrationConfig ??
+      existing.integrationConfig;
+    const homeWidget = normalizeHomeWidget(
+      data.homeWidget,
+      effectiveMethod,
+      effectiveConfig,
+    );
+    if (homeWidget !== undefined) data.homeWidget = homeWidget;
+    this.assertWidgetSurvivesMethodSwitch(existing, data);
+
     delete data.status;
+    const orgInput = data.organization || data.category || undefined;
+    if (data.category !== undefined) {
+      data.category = await this.serviceCategory(data.category);
+    }
 
     if (data.shortDescription !== undefined) {
       data.tagline = data.shortDescription;
@@ -366,6 +469,16 @@ export class MiniappMutationHelper {
       (existing as any).status === 'ACTIVE' ||
       (existing as any).status === 'TESTING';
 
+    // Unchanged input keeps its backend-set verification: the client never
+    // sends `verifiedClass`, so the stored row (or open revision) wins.
+    if (data.homeWidget) {
+      const stored = [
+        isLive ? existing.pendingRevision?.homeWidget : undefined,
+        existing.homeWidget,
+      ].find((w) => w && sameHomeWidget(data.homeWidget, w));
+      if (stored) data.homeWidget = stored;
+    }
+
     // Automatically upload base64 image data to MinIO object storage on submission
     const isBase64Logo =
       data.logo &&
@@ -410,6 +523,9 @@ export class MiniappMutationHelper {
         }
         if (d.supportEmail !== undefined)
           existing.supportEmail = d.supportEmail;
+        if (d.homeWidget !== undefined) {
+          existing.homeWidget = d.homeWidget;
+        }
 
         if (
           d.termsUrl !== undefined ||
@@ -456,6 +572,9 @@ export class MiniappMutationHelper {
             supportEmail: existing.supportEmail,
             alertTelegramChatId: existing.alertTelegramChatId,
             teamTelegramChatId: existing.alertTelegramChatId,
+            ...(data.homeWidget !== undefined
+              ? { homeWidget: data.homeWidget }
+              : {}),
           };
         }
 
@@ -595,6 +714,12 @@ export class MiniappMutationHelper {
           data.verificationToken ??
           existingRev.verificationToken ??
           existing.verificationToken,
+        homeWidget:
+          data.homeWidget !== undefined
+            ? data.homeWidget
+            : existingRev.homeWidget !== undefined
+              ? existingRev.homeWidget
+              : (existing.homeWidget ?? null),
         changelog:
           data.changelog ||
           existingRev.changelog ||
@@ -671,13 +796,14 @@ export class MiniappMutationHelper {
       merged.alertTelegramChatId =
         data.alertTelegramChatId || data.teamTelegramChatId;
     }
-    if (data.organization || data.category) {
-      const orgInfo = this.organizationsService
-        ? await this.organizationsService.resolveOrganization(
-            data.organization || data.category,
-          )
-        : await resolveOrganizationDetails(data.organization || data.category);
+    if (orgInput) {
+      const orgInfo = await this.resolveOrganization(orgInput);
+      merged.organization = orgInfo.name;
+      merged.organizationCode = orgInfo.code;
       if (orgInfo?.id) merged.organizationId = orgInfo.id;
+    }
+    if (data.category !== undefined) {
+      merged.category = data.category;
     }
 
     // Reset domain verification status if productionUrl changes

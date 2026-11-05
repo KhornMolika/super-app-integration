@@ -54,6 +54,10 @@ export default function FlutterPackageIntegrationForm({
       sourceType: newMode === "git" ? SourceType.GIT : SourceType.ARTIFACT,
       isHosted: false,
     };
+    // Candidates come from an uploaded archive; with a Git source they are stale
+    // and the validator must not block the widget class against them.
+    if (newMode === "git") updates.widgetCandidates = undefined;
+    else updates.gitWidgetCandidates = undefined;
 
     if (onUpdateFlutterConfig) {
       onUpdateFlutterConfig(updates);
@@ -329,6 +333,7 @@ export default function FlutterPackageIntegrationForm({
           archiveStrippedFilesCount: data.strippedFilesCount,
           isSanitized: data.isSanitized,
           isArchiveSubmission: true,
+          widgetCandidates: Array.isArray(data.widgetCandidates) ? data.widgetCandidates : [],
         };
 
         if (onUpdateFlutterConfig) {
@@ -741,6 +746,82 @@ export default function FlutterPackageIntegrationForm({
     isPrivateRepo,
     authMethod,
     selectedRef,
+  ]);
+
+  // Home widget classes in the Git package, searched once "Has Home widget" is
+  // ticked and the repository has validated (an archive's come with its
+  // inspection). Deploy-key repos can't be read over HTTP, so they're skipped.
+  const wantsHomeWidget = formData.homeWidget != null;
+  useEffect(() => {
+    const url = flutterConfig.gitUrl?.trim() || "";
+    const usesDeployKey =
+      (isPrivateRepo && authMethod === "deploy_key") || url.startsWith("git@");
+    if (
+      currentMode !== "git" ||
+      !wantsHomeWidget ||
+      !url ||
+      usesDeployKey ||
+      !gitValidationResult?.isValid ||
+      gitValidationResult.isDeployKeyNotice
+    ) {
+      return;
+    }
+
+    const update = (updates: Record<string, unknown>) => {
+      if (onUpdateFlutterConfig) {
+        onUpdateFlutterConfig(updates);
+      } else {
+        Object.entries(updates).forEach(([key, val]) => {
+          handleFlutterChange({
+            target: { name: key, value: val },
+          } as unknown as React.ChangeEvent<HTMLInputElement>);
+        });
+      }
+    };
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      update({ isScanningGitWidgets: true, gitWidgetCandidates: undefined });
+      try {
+        const res = await integrationsApi.getGitWidgetCandidates({
+          url,
+          ref: flutterConfig.gitBranch || flutterConfig.ref || undefined,
+          path: (flutterConfig.gitPath || flutterConfig.path || "").trim() || undefined,
+          token:
+            isPrivateRepo && authMethod === "token"
+              ? flutterConfig.gitAccessToken || undefined
+              : undefined,
+        });
+        if (!cancelled) {
+          update({
+            gitWidgetCandidates: res.widgetCandidates ?? undefined,
+            isScanningGitWidgets: false,
+          });
+        }
+      } catch {
+        if (!cancelled) {
+          update({ gitWidgetCandidates: undefined, isScanningGitWidgets: false });
+        }
+      }
+    }, 400);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      update({ isScanningGitWidgets: false });
+    };
+  }, [
+    currentMode,
+    wantsHomeWidget,
+    gitValidationResult,
+    flutterConfig.gitUrl,
+    flutterConfig.gitPath,
+    flutterConfig.path,
+    flutterConfig.gitBranch,
+    flutterConfig.ref,
+    flutterConfig.gitAccessToken,
+    isPrivateRepo,
+    authMethod,
   ]);
 
   // Real-time Nexus Package Validation with Debounce (500ms)

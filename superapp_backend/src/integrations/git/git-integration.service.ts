@@ -15,6 +15,11 @@ import {
 } from './git-provider.interface';
 import { GitHubProvider } from './providers/github.provider';
 import { GitLabProvider } from './providers/gitlab.provider';
+import { gitDartFiles } from '../../miniapps/helpers/home-widget-verifier';
+import {
+  findWidgetCandidates,
+  hasWidgetClass,
+} from '../../miniapps/helpers/widget-class-check';
 import {
   decryptCredential,
   encryptCredential,
@@ -209,6 +214,48 @@ export class GitIntegrationService {
     return {
       provider: provider.type,
       commits,
+    };
+  }
+
+  /** Reads one file from a repository through the provider that owns `url`. */
+  async getFileContent(
+    url: string,
+    filePath: string,
+    ref?: string,
+    token?: string,
+  ): Promise<string> {
+    return this.resolveProvider(url).getFileContent(url, filePath, ref, token);
+  }
+
+  /**
+   * Home widget classes the Flutter package at `url` (folder `path`, at `ref`)
+   * exports from `lib/<pkg>.dart`, by the rule approval verifies, for the
+   * portal to offer. `widgetCandidates` is null when the main library cannot
+   * be read (private repo without a token, wrong path or ref, ...).
+   */
+  async detectWidgetClasses(
+    url: string,
+    ref?: string,
+    explicitProvider?: GitProviderType,
+    token?: string,
+    path?: string,
+  ): Promise<{ packageName: string | null; widgetCandidates: string[] | null }> {
+    const provider = this.resolveProvider(url, explicitProvider);
+    const validation = await provider.validateFlutterPackage(url, ref, token, path);
+    const packageName = validation.packageName || inferPackageNameFromGitUrl(url, path);
+    if (!packageName) return { packageName: null, widgetCandidates: null };
+
+    const files = await gitDartFiles(
+      (filePath) => provider.getFileContent(url, filePath, ref, token),
+      packageName,
+      path || validation.path,
+    );
+    if (!files[`lib/${packageName}.dart`]) return { packageName, widgetCandidates: null };
+    return {
+      packageName,
+      widgetCandidates: findWidgetCandidates(files).filter((c) =>
+        hasWidgetClass(files, packageName, c),
+      ),
     };
   }
 

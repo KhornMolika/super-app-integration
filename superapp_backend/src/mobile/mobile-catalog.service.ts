@@ -14,6 +14,8 @@ export interface CatalogItem {
   fullDescription?: string | null;
   logo: string | null;
   category: string | null;
+  /** Lowercased code of the publishing organization (see GET /mobile/regulators). */
+  regulator: string | null;
   integrationMethod: string;
   integrationConfig?: any;
   permissions?: any[];
@@ -21,6 +23,8 @@ export interface CatalogItem {
   privacyPolicy?: string | null;
   status: string;
   nativeSdk?: { available: true };
+  /** The app's Home widget (public fields only, never verifiedClass); omitted when it has none. */
+  widget?: { widgetClass?: string; viewId?: string; url?: string };
 }
 
 export interface CatalogPage {
@@ -143,6 +147,7 @@ export function toCatalogItem(app: MiniApp, clientHost?: string): CatalogItem {
       raw.category ??
       raw.organization ??
       null,
+    regulator: (app.organizationRelation?.code ?? raw.organizationCode)?.toLowerCase() || null,
     integrationMethod: app.integrationMethod,
     integrationConfig: config ?? null,
     permissions: app.capabilities ?? raw.permissions ?? [],
@@ -156,6 +161,13 @@ export function toCatalogItem(app: MiniApp, clientHost?: string): CatalogItem {
   };
   if (app.integrationMethod === 'NATIVE_SDK') {
     item.nativeSdk = { available: true };
+  }
+  const hw = app.homeWidget;
+  if (hw && (hw.widgetClass || hw.viewId || hw.url)) {
+    item.widget = {};
+    if (hw.widgetClass) item.widget.widgetClass = hw.widgetClass;
+    if (hw.viewId) item.widget.viewId = hw.viewId;
+    if (hw.url) item.widget.url = hw.url;
   }
   return item;
 }
@@ -214,6 +226,10 @@ export class MobileCatalogService {
       'm.lifecycleStatus',
       'm.availabilityStatus',
       'org.name',
+      'org.code',
+      'm.organizationCode',
+      'm.category',
+      'm.homeWidget',
       'legal.termsDescription',
       'legal.privacyPolicyDescription',
     ]).where(

@@ -20,7 +20,11 @@ import {
   InjectDependencyDto,
   ValidateDependencyDto,
 } from './dto/pubspec-injector.dto';
-import { SandboxBuildManagerService } from './sandbox-build-manager.service';
+import {
+  SandboxBuildManagerService,
+  sandboxBuildCommand,
+  sandboxScriptName,
+} from './sandbox-build-manager.service';
 
 export interface PubspecDependencyEntry {
   type: 'git' | 'path' | 'hosted' | 'version';
@@ -570,10 +574,42 @@ export class PubspecInjectorService {
   }
 
   /**
+   * Regenerates mini_app_registry.generated.dart from the current Flutter package mini apps.
+   * Never throws.
+   */
+  async regenerateRegistry(): Promise<void> {
+    try {
+      const approvedMiniApps = await this.miniappRepository.find({
+        where: {
+          status: In(['APPROVED', 'TESTING', 'ACTIVE', 'IN_REVIEW'] as any),
+        },
+      });
+      const flutterMiniApps = approvedMiniApps.filter(
+        (app) => (app.integrationMethod || '').toUpperCase() === 'FLUTTER_PACKAGE',
+      );
+      this.generateDynamicRegistry(flutterMiniApps);
+    } catch (err: any) {
+      this.logger.warn(`Failed to regenerate dynamic MiniApp registry: ${err.message}`);
+    }
+  }
+
+  /** A valid, lower-case Dart import prefix for a package name. */
+  private dartImportPrefix(pkg: string): string {
+    const safe = pkg.replace(/[^a-z0-9_]/g, '_');
+    return /^[a-z_]/.test(safe) ? safe : `p_${safe}`;
+  }
+
+  /**
    * Automatically generates the dynamic Dart registry file linking all approved mini-apps to builders.
    */
   generateDynamicRegistry(apps: MiniApp[]): void {
     try {
+      // Only apps whose package is an actual pubspec dependency can be imported
+      const currentDeps = new Set(
+        Object.keys(this.readPubspecDocument().dependenciesNode?.toJSON() ?? {}),
+      );
+      apps = apps.filter((app) => currentDeps.has(this.inferCanonicalPackageName(app)));
+
       const mobileDir = this.getMobileAppDir();
       const generatedPath = path.join(
         mobileDir,
@@ -593,55 +629,69 @@ export class PubspecInjectorService {
         const nameSlug = (app.name || '').toLowerCase().replace(/\s+/g, '_');
         const appId = app.appId || '';
 
+        // Every package is imported under its own prefix so two packages that
+        // both export `MiniAppEntry` never make the generated file ambiguous.
+        const importPackage = (pkg: string): string => {
+          const prefix = this.dartImportPrefix(pkg);
+          imports.add(`import 'package:${pkg}/${pkg}.dart' as ${prefix};`);
+          return prefix;
+        };
+
         let widgetExpr = '';
+        let prefix: string;
         if (
           canonicalName === 'sc_public_miniapp' ||
           canonicalName.includes('transit') ||
           canonicalName.includes('public')
         ) {
-          imports.add(
-            "import 'package:sc_public_miniapp/sc_public_miniapp.dart';",
-          );
+          prefix = importPackage('sc_public_miniapp');
           widgetExpr =
-            "PublicMiniAppEntry(onExit: () => safePop(context), passengerName: 'SuperApp Commuter', passTier: '30-Day Unlimited All-Access')";
+            `${prefix}.PublicMiniAppEntry(onExit: () => safePop(context), passengerName: 'Super App Commuter', passTier: '30-Day Unlimited All-Access')`;
         } else if (
           canonicalName === 'sc_private_miniapp' ||
           canonicalName.includes('private') ||
           canonicalName.includes('loyalty') ||
           canonicalName.includes('reward')
         ) {
-          imports.add(
-            "import 'package:sc_private_miniapp/sc_private_miniapp.dart';",
-          );
+          prefix = importPackage('sc_private_miniapp');
           widgetExpr =
-            "MiniAppEntry(onExit: () => safePop(context), userName: 'SuperApp VIP Member', userTier: 'Gold Elite')";
+            `${prefix}.MiniAppEntry(onExit: () => safePop(context), userName: 'Super App VIP Member', userTier: 'Gold Elite')`;
         } else if (
           canonicalName === 'ma_flutter_kyc' ||
           canonicalName.includes('kyc')
         ) {
-          imports.add("import 'package:ma_flutter_kyc/ma_flutter_kyc.dart';");
+          prefix = importPackage('ma_flutter_kyc');
           widgetExpr =
-            "KycVerifierAppEntry(jwtToken: 'tok_live_superapp_session', userId: 'usr_fsa_verified', onExit: () => safePop(context))";
+            `${prefix}.KycVerifierAppEntry(jwtToken: 'tok_live_superapp_session', userId: 'usr_fsa_verified', onExit: () => safePop(context))`;
         } else {
           // Dynamic invocation for any newly registered package entry point
           const entryPoint = (
             app.integrationConfig?.entryPoint || 'MiniAppEntry'
           ).trim();
-          imports.add(
-            `import 'package:${canonicalName}/${canonicalName}.dart';`,
-          );
-          widgetExpr = `${entryPoint}(onExit: () => safePop(context))`;
+          prefix = importPackage(canonicalName);
+          // the helper hands the super app's token to constructors that accept it
+          widgetExpr = `buildPackageWidget(${prefix}.${entryPoint}.new, {#onExit: () => safePop(context)}, superAppTokenProvider(context, '${appId}'))`;
         }
 
         if (widgetExpr) {
-          registrations.push(`  MiniAppRegistry.registerAliases([
+          const aliasList = `[
     '${canonicalName}',
     '${appId}',
     '${nameSlug}',
     '${app.name || ''}',
     'miniapp_${nameSlug}_${(app.id || '').substring(0, 6)}',
     '${app.id || ''}',
-  ].where((s) => s.isNotEmpty).toList(), (context, arguments) => ${widgetExpr});`);
+  ].where((s) => s.isNotEmpty).toList()`;
+          let registration = `  MiniAppRegistry.registerAliases(${aliasList}, (context, arguments) => ${widgetExpr});`;
+
+          const widgetClass = app.homeWidget?.widgetClass;
+          if (widgetClass && app.homeWidget?.verifiedClass === widgetClass) {
+            // the widget was verified in the app's own package, which the
+            // hard-coded entry branches above may not import
+            const widgetPrefix = importPackage(canonicalName);
+            registration += `\n\n  MiniAppRegistry.registerWidgetAliases(${aliasList}, (context, onOpen) => buildPackageWidget(${widgetPrefix}.${widgetClass}.new, {#onOpen: onOpen}, superAppTokenProvider(context, '${appId}')));`;
+          }
+          registrations.push(registration);
         }
       }
 

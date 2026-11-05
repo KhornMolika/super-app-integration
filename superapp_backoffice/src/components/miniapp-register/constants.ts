@@ -65,6 +65,7 @@ export function getInitialRegisterFormData(): Partial<CreateMiniAppDto> {
       packageName: '',
       appStoreUrl: '',
     },
+    homeWidget: null,
     permissions: [],
     securityChecks: [],
   };

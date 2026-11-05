@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { Label, Select } from '@/components/ui/inputs';
-import { IntegrationMethod } from '@/types/miniapp.types';
+import { IntegrationMethod, SourceType } from '@/types/miniapp.types';
+import HomeWidgetField from './HomeWidgetField';
 import WebViewIntegrationForm from './integration/WebViewIntegrationForm';
 import FlutterPackageIntegrationForm from './integration/FlutterPackageIntegrationForm';
 import NativeSdkIntegrationForm from './integration/NativeSdkIntegrationForm';
@@ -53,6 +54,9 @@ export default function IntegrationForm({
   onDomainVerified,
   isEditable = true,
 }: IntegrationFormProps) {
+  // Home widget classes found in the Flutter package: in its Git repo or its uploaded archive.
+  const flutterConfig = formData.integrationConfigFlutter;
+  const widgetFromGit = flutterConfig?.sourceType === SourceType.GIT;
   return (
     <div className="space-y-6">
       <div>
@@ -60,7 +64,13 @@ export default function IntegrationForm({
         <Select
           name="integrationMethod"
           value={formData.integrationMethod}
-          onChange={handleChange}
+          onChange={(e) => {
+            handleChange(e);
+            // Each method has its own widget field: keep the box ticked, clear the value.
+            if (formData.homeWidget != null) {
+              handleChange({ target: { name: 'homeWidget', value: {} } } as any);
+            }
+          }}
           disabled={!isEditable}
         >
           <option value={IntegrationMethod.WEBVIEW}>WebView (Web App)</option>
@@ -108,6 +118,19 @@ export default function IntegrationForm({
           isEditable={isEditable}
         />
       )}
+      {/* Home widget: owned by the mini-app, one field per integration method */}
+      <div className="pt-6 border-t border-slate-200 dark:border-slate-800">
+        <HomeWidgetField
+          method={formData.integrationMethod}
+          value={formData.homeWidget}
+          onChange={(v) => handleChange({ target: { name: 'homeWidget', value: v } } as any)}
+          error={allErrors?.homeWidget}
+          isEditable={isEditable}
+          detectedClasses={widgetFromGit ? flutterConfig?.gitWidgetCandidates : flutterConfig?.widgetCandidates}
+          detectedFrom={widgetFromGit ? 'git' : 'archive'}
+          detecting={widgetFromGit && Boolean(flutterConfig?.isScanningGitWidgets)}
+        />
+      </div>
     </div>
   );
 }

@@ -17,6 +17,7 @@ import { MiniAppBuild } from './miniapp-build.entity';
 import { MiniAppLegal } from './miniapp-legal.entity';
 import { Notification } from '../../notifications/entities/notification.entity';
 import { Organization } from '../../organizations/entities/organization.entity';
+import type { HomeWidget } from '../home-widget';
 
 /**
  * Application-Level Lifecycle & Governance Status Taxonomy (MiniApp Entity)
@@ -137,6 +138,13 @@ export class MiniApp {
   })
   lifecycleStatus!: string;
 
+  get status(): string {
+    return this.lifecycleStatus;
+  }
+  set status(val: string) {
+    this.lifecycleStatus = val;
+  }
+
   @Column({
     type: 'varchar',
     default: MiniAppAvailabilityStatus.TESTING,
@@ -170,6 +178,11 @@ export class MiniApp {
 
   @Column({ type: 'jsonb', nullable: true })
   integrationConfig!: any;
+
+  // The Home widget the app declares for the Widget Slot (shape depends on
+  // integrationMethod, see HOME_WIDGET_FIELD); null = no Home widget.
+  @Column({ type: 'jsonb', nullable: true })
+  homeWidget?: HomeWidget | null;
 
   @Column({ nullable: true })
   verificationToken?: string;

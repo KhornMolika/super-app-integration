@@ -37,6 +37,90 @@ describe('GitIntegrationService & Providers', () => {
     gitlabProvider = module.get<GitLabProvider>(GitLabProvider);
   });
 
+  describe('getFileContent', () => {
+    it('delegates to the provider resolved from the URL', async () => {
+      const spy = jest
+        .spyOn(gitlabProvider, 'getFileContent')
+        .mockResolvedValue('class A {}');
+
+      const text = await service.getFileContent(
+        'https://gitlab.company.com/team/pkg.git',
+        'lib/pkg.dart',
+        'main',
+        'tok',
+      );
+
+      expect(text).toBe('class A {}');
+      expect(spy).toHaveBeenCalledWith(
+        'https://gitlab.company.com/team/pkg.git',
+        'lib/pkg.dart',
+        'main',
+        'tok',
+      );
+    });
+  });
+
+  describe('detectWidgetClasses', () => {
+    const url = 'https://github.com/acme/hr_pkg';
+    const widget = (name: string) =>
+      `class ${name} extends StatelessWidget {\n  const ${name}({super.key, required this.onOpen});\n  final VoidCallback onOpen;\n}\n`;
+
+    /** The repo serves [files] (repo-relative paths); anything else is a 404. */
+    const serve = (files: Record<string, string>, packageName = 'hr_pkg') => {
+      jest
+        .spyOn(githubProvider, 'validateFlutterPackage')
+        .mockResolvedValue({ isValid: true, isFlutterPackage: true, packageName });
+      return jest
+        .spyOn(githubProvider, 'getFileContent')
+        .mockImplementation(async (_url, filePath) => {
+          if (filePath in files) return files[filePath];
+          throw new Error('404');
+        });
+    };
+
+    it('lists the widget classes the main library exports, not the private ones', async () => {
+      serve({
+        'lib/hr_pkg.dart': "export 'src/home_widget.dart';\n",
+        'lib/src/home_widget.dart': widget('HrHomeWidget'),
+        'lib/src/hidden.dart': widget('NotExported'),
+      });
+
+      await expect(service.detectWidgetClasses(url, 'v1.2.0')).resolves.toEqual({
+        packageName: 'hr_pkg',
+        widgetCandidates: ['HrHomeWidget'],
+      });
+    });
+
+    it('reads the package from its folder in the repo, at the given ref', async () => {
+      const fetch = serve({
+        'packages/hr/lib/hr_pkg.dart': widget('HrHomeWidget'),
+      });
+
+      const res = await service.detectWidgetClasses(url, 'main', undefined, 'tok', 'packages/hr');
+
+      expect(res.widgetCandidates).toEqual(['HrHomeWidget']);
+      expect(fetch).toHaveBeenCalledWith(url, 'packages/hr/lib/hr_pkg.dart', 'main', 'tok');
+    });
+
+    it('an exported library without a widget gives an empty list', async () => {
+      serve({ 'lib/hr_pkg.dart': 'class Helper {}\n' });
+
+      await expect(service.detectWidgetClasses(url)).resolves.toEqual({
+        packageName: 'hr_pkg',
+        widgetCandidates: [],
+      });
+    });
+
+    it('an unreadable main library gives null, not an empty list', async () => {
+      serve({});
+
+      await expect(service.detectWidgetClasses(url)).resolves.toEqual({
+        packageName: 'hr_pkg',
+        widgetCandidates: null,
+      });
+    });
+  });
+
   describe('URL Auto-Detection', () => {
     it('should auto-detect GitHub HTTPS URL', () => {
       const result = service.detect(

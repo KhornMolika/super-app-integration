@@ -1,5 +1,11 @@
 import { miniappsApi, integrationsApi } from '@/api';
-import { CreateMiniAppDto, IntegrationMethod, PermissionDto, SourceType } from '@/types/miniapp.types';
+import {
+  CreateMiniAppDto,
+  HOME_WIDGET_FIELD,
+  IntegrationMethod,
+  PermissionDto,
+  SourceType,
+} from '@/types/miniapp.types';
 import { validateUrlFormat } from '@/components/ui/ValidatedUrlInput';
 
 export interface ValidationResult {
@@ -380,6 +386,41 @@ export async function validateMiniAppStep(
       }
     }
   }
+
+    // Home widget: mirrors the backend's validation (messages included). The
+    // allowed-domain check for WEBVIEW stays server-side.
+    if (formData.homeWidget != null && formData.integrationMethod) {
+      const method = formData.integrationMethod;
+      const field = HOME_WIDGET_FIELD[method];
+      const raw = field ? formData.homeWidget[field.key] : undefined;
+      const value = typeof raw === 'string' ? raw.trim() : '';
+      if (field) {
+        if (!value) {
+          errors.homeWidget = `Home widget: "${field.label}" is required for ${method} apps.`;
+          isValid = false;
+        } else if (field.key === 'widgetClass') {
+          if (!/^[A-Z][A-Za-z0-9_]*$/.test(value)) {
+            errors.homeWidget = 'Home widget: Widget class must be a Dart class name (e.g. HrHomeWidget).';
+            isValid = false;
+          } else {
+            const candidates = formData.integrationConfigFlutter?.widgetCandidates;
+            if (Array.isArray(candidates) && !candidates.includes(value)) {
+              errors.homeWidget = `Home widget: ${value} was not found in your uploaded package.`;
+              isValid = false;
+            }
+          }
+        } else if (field.key === 'viewId') {
+          if (!/^[a-z][a-z0-9_]*$/.test(value)) {
+            errors.homeWidget =
+              'Home widget: Widget view ID must use lowercase letters, digits and underscores (e.g. spa_booking_widget).';
+            isValid = false;
+          }
+        } else if (!value.startsWith('https://')) {
+          errors.homeWidget = 'Home widget: Widget URL must start with https://.';
+          isValid = false;
+        }
+      }
+    }
 
   if (currentStep === 4) {
     if (formData.permissions && formData.permissions.length > 0) {

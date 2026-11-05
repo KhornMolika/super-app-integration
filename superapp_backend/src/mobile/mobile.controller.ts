@@ -36,6 +36,7 @@ import { MobileAccountService } from './mobile-account.service';
 import { MobileAuthService, isTokenResponse } from './mobile-auth.service';
 import { MobileCatalogService } from './mobile-catalog.service';
 import { MobileProfileService, toProfile } from './mobile-profile.service';
+import { MobileRegulatorsService } from './mobile-regulators.service';
 import {
   LoginDto,
   LogoutDto,
@@ -59,6 +60,7 @@ export class MobileController {
     private readonly profiles: MobileProfileService,
     private readonly avatars: MobileAvatarService,
     private readonly account: MobileAccountService,
+    private readonly regulators: MobileRegulatorsService,
   ) {}
 
   @Post('auth/register')
@@ -199,6 +201,11 @@ export class MobileController {
   @UseGuards(EndUserAuthGuard)
   async deleteAvatar(@Req() req: Request): Promise<void> {
     await this.avatars.remove(req.endUser!.id);
+  }
+
+  @Get('regulators')
+  regulatorList() {
+    return this.regulators.list();
   }
 
   @Get('mini-apps')

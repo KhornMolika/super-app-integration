@@ -1,3 +1,4 @@
+import { homeWidgetLabel, sameHomeWidget } from '../home-widget';
 export interface VersionDiffResult {
   miniAppId: string;
   appName: string;
@@ -29,6 +30,7 @@ export interface VersionDiffResult {
       teamName?: { base: string; target: string; changed: boolean };
       privacyPolicyUrl?: { base: string; target: string; changed: boolean };
       termsUrl?: { base: string; target: string; changed: boolean };
+      homeWidget?: { base: string; target: string; changed: boolean };
     };
     integration: {
       method: { base: string; target: string; changed: boolean };
@@ -139,6 +141,16 @@ export class VersionDiffHelper {
       if (!basePermTypes.has(p)) return true;
     }
 
+    // Home widget declared/changed: always requires review.
+    // Absent (undefined) means "not sent"; a missing live value means none.
+    // verifiedClass is backend-managed and ignored by the comparison.
+    if (
+      target.homeWidget !== undefined &&
+      !sameHomeWidget(target.homeWidget, base.homeWidget)
+    ) {
+      return true;
+    }
+
     // 2. Integration method check
     if (base.integrationMethod !== target.integrationMethod) return true;
 
@@ -237,6 +249,19 @@ export class VersionDiffHelper {
           changed: true,
         };
       }
+    }
+
+    // Home widget: listed with the metadata so reviewers see "none -> HrHomeWidget".
+    if (
+      baseApp.homeWidget !== undefined &&
+      targetRev.homeWidget !== undefined &&
+      !sameHomeWidget(baseApp.homeWidget, targetRev.homeWidget)
+    ) {
+      metadataDiff.homeWidget = {
+        base: homeWidgetLabel(baseApp.homeWidget),
+        target: homeWidgetLabel(targetRev.homeWidget),
+        changed: true,
+      };
     }
 
     // Integration Diff

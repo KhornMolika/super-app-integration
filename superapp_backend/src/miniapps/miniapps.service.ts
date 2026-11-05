@@ -956,7 +956,13 @@ export class MiniappsService implements OnApplicationBootstrap {
     const history = Array.isArray((app as any).versionHistory)
       ? (app as any).versionHistory
       : app.versions || [];
-    const baseRecord = history.find((h) => h.version === baseVer) || app;
+    const historyBase = history.find((h) => h.version === baseVer);
+    // A history record carries no widget. When it describes the live
+    // release, take the live row's so a widget-only revision still diffs.
+    const baseRecord =
+      historyBase && historyBase.version === app.currentReleaseVersion
+        ? { ...historyBase, homeWidget: app.homeWidget ?? null }
+        : historyBase || app;
     const targetRecord =
       history.find((h) => h.version === targetVer) ||
       (app.pendingRevision

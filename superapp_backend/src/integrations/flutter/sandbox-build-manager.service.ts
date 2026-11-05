@@ -12,6 +12,21 @@ import { extractDecryptedDeployKey } from '../../miniapps/helpers/flutter-creden
 
 export type BuildState = 'IDLE' | 'QUEUED' | 'BUILDING' | 'SUCCESS' | 'FAILED';
 
+/** The local fallback script for this OS: PowerShell on Windows, bash elsewhere. */
+export function sandboxScriptName(platform: NodeJS.Platform): string {
+  return platform === 'win32' ? 'build-sandbox.ps1' : 'build-sandbox.sh';
+}
+
+/** How to run the local fallback script on this OS. */
+export function sandboxBuildCommand(
+  platform: NodeJS.Platform,
+  scriptPath: string,
+): { command: string; args: string[] } {
+  return platform === 'win32'
+    ? { command: 'powershell.exe', args: ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath] }
+    : { command: 'bash', args: [scriptPath] };
+}
+
 export interface SandboxBuildStatus {
   state: BuildState;
   lastBuildTime?: string;

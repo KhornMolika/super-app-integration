@@ -96,6 +96,13 @@ export const integrationsApi = {
       body: data,
     }),
 
+  /** Home widget classes the Git package exports; `widgetCandidates` is null when its main library can't be read. */
+  getGitWidgetCandidates: (data: { url: string; ref?: string; token?: string; path?: string }) =>
+    apiClient<{ packageName: string | null; widgetCandidates: string[] | null }>(
+      '/api/integrations/git/widget-candidates',
+      { method: 'POST', body: data },
+    ),
+
   getGitBranches: (data: {
     url: string;
     token?: string;

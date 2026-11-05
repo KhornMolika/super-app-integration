@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { ShieldCheckIcon, BuildingIcon, DevicePhoneIcon, PackageIcon } from '@/components/ui/Icons';
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
-import { CreateMiniAppDto, IntegrationMethod } from '@/types/miniapp.types';
+import { CreateMiniAppDto, HOME_WIDGET_FIELD, IntegrationMethod } from '@/types/miniapp.types';
 import { getOrganizationCode, getOrganizationFullName } from '@/api';
 import { renderCapabilityIcon } from '@/lib/capability-visuals';
 
@@ -687,6 +687,30 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                 )}
               </div>
             )}
+            {/* Home widget */}
+            {(() => {
+              const field = formData.integrationMethod
+                ? HOME_WIDGET_FIELD[formData.integrationMethod]
+                : undefined;
+              const widgetValue = field ? formData.homeWidget?.[field.key] : undefined;
+              return (
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">
+                    Home widget
+                  </span>
+                  {formData.homeWidget != null && field ? (
+                    <div className="text-xs">
+                      <span className="text-slate-400">{field.label}: </span>
+                      <code className="font-mono font-bold text-slate-800 dark:text-slate-200 break-all">
+                        {widgetValue || '-'}
+                      </code>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-slate-500">None</span>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </div>
 

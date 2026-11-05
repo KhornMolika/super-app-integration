@@ -12,7 +12,7 @@ import {
   IsNumber,
   Matches,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 
 export enum IntegrationMethod {
   WEBVIEW = 'WEBVIEW',
@@ -20,6 +20,26 @@ export enum IntegrationMethod {
   NATIVE_SDK = 'NATIVE_SDK',
   DEEP_LINK = 'DEEP_LINK',
 }
+
+const rawValue = ({ obj, key }: { obj: any; key: string }) => obj?.[key];
+
+export class HomeWidgetDto {
+  @IsOptional()
+  @Transform(rawValue)
+  @IsString()
+  widgetClass?: string;
+
+  @IsOptional()
+  @Transform(rawValue)
+  @IsString()
+  viewId?: string;
+
+  @IsOptional()
+  @Transform(rawValue)
+  @IsString()
+  url?: string;
+}
+
 
 export enum SourceType {
   GIT = 'GIT',
@@ -502,4 +522,9 @@ export class CreateMiniAppDto {
   @IsString()
   @IsOptional()
   draftVersion?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => HomeWidgetDto)
+  homeWidget?: HomeWidgetDto | null;
 }

@@ -157,6 +157,7 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
           ...data,
           ...activeOrRev,
           pendingRevision: data.pendingRevision,
+          homeWidget: activeOrRev.homeWidget ?? null,
           permissions: Array.isArray(activeOrRev.permissions) ? activeOrRev.permissions : [],
           integrationConfigWebView: activeOrRev.integrationMethod === IntegrationMethod.WEBVIEW ? {
             ...activeOrRev.integrationConfig,
@@ -693,6 +694,7 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
       supportEmail: formData.supportEmail,
       teamTelegramChatId: formData.teamTelegramChatId,
       integrationMethod: formData.integrationMethod,
+      homeWidget: formData.homeWidget ?? null,
       permissions: cleanPermissions,
     };
 

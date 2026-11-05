@@ -1,5 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { Multer } from 'multer';
+import {
+  dartFilesFromEntries,
+  findWidgetCandidates,
+  hasWidgetClass,
+  type DartArchiveEntry,
+} from '../../miniapps/helpers/widget-class-check';
 
 export interface SanitizedArchiveResult {
   cleanBuffer: Buffer;
@@ -8,6 +14,7 @@ export interface SanitizedArchiveResult {
   isSanitized: boolean;
   strippedFilesCount: number;
   parsedPubspec: any;
+  widgetCandidates: string[];
 }
 
 export interface InspectedArchiveResult {
@@ -25,6 +32,7 @@ export interface InspectedArchiveResult {
     dependencies?: Record<string, any>;
     environment?: Record<string, any>;
   };
+  widgetCandidates: string[];
 }
 
 @Injectable()
@@ -71,6 +79,7 @@ export class ArchiveSanitizerHelper {
       const cleanZip = new AdmZip();
 
       let strippedFilesCount = 0;
+      const keptEntries: DartArchiveEntry[] = [];
       const entries = sourceZip.getEntries();
 
       for (const entry of entries) {
@@ -107,7 +116,9 @@ export class ArchiveSanitizerHelper {
         }
 
         if (!entry.isDirectory) {
-          cleanZip.addFile(normName, entry.getData(), entry.comment);
+          const data: Buffer = entry.getData();
+          cleanZip.addFile(normName, data, entry.comment);
+          keptEntries.push({ entryName: normName, getData: () => data });
         }
       }
 
@@ -129,14 +140,8 @@ export class ArchiveSanitizerHelper {
       // Safe fallback if pubspec was not parsed via entries
       if (!parsedPubspec?.name) {
         try {
-          const sampleText = rawBuffer.toString(
-            'utf8',
-            0,
-            Math.min(rawBuffer.length, 500000),
-          );
-          const nameMatch = sampleText.match(
-            /(?:^|\n)\s*name:\s*([a-zA-Z0-9_-]+)/,
-          );
+          const sampleText = rawBuffer.toString('utf8', 0, Math.min(rawBuffer.length, 500000));
+          const nameMatch = sampleText.match(/(?:^|\n)\s*name:\s*([a-zA-Z0-9_-]+)/);
           const verMatch = sampleText.match(/(?:^|\n)\s*version:\s*([^\s#]+)/);
           if (nameMatch) {
             parsedPubspec.name = nameMatch[1].trim();
@@ -161,6 +166,7 @@ export class ArchiveSanitizerHelper {
         isSanitized,
         strippedFilesCount,
         parsedPubspec,
+        widgetCandidates: this.reachableWidgetCandidates(keptEntries, yaml),
       };
     } catch (err: any) {
       this.logger.warn(
@@ -173,8 +179,38 @@ export class ArchiveSanitizerHelper {
         isSanitized: false,
         strippedFilesCount: 0,
         parsedPubspec,
+        widgetCandidates: [],
       };
     }
+  }
+
+  /**
+   * Home widget candidates the package main library really exports (the same
+   * export-reachability rule approval applies), so the portal never offers a
+   * class that would fail verification. Empty when the root pubspec has no name.
+   */
+  private reachableWidgetCandidates(
+    entries: DartArchiveEntry[],
+    yaml: { parse(text: string): any },
+  ): string[] {
+    const files = dartFilesFromEntries(entries);
+    const candidates = findWidgetCandidates(files);
+    if (candidates.length === 0) return [];
+
+    // the root pubspec is the shallowest one (not an example/ app's)
+    const rootPubspec = entries
+      .filter((e) => /(^|\/)pubspec\.yaml$/.test(e.entryName))
+      .sort((a, b) => a.entryName.split('/').length - b.entryName.split('/').length)[0];
+    let packageName: string | undefined;
+    try {
+      const name = yaml.parse(rootPubspec?.getData().toString('utf8') ?? '')?.name;
+      packageName = name ? String(name).trim() : undefined;
+    } catch {
+      packageName = undefined;
+    }
+    if (!packageName) return [];
+
+    return candidates.filter((c) => hasWidgetClass(files, packageName!, c));
   }
 
   /**
@@ -189,6 +225,7 @@ export class ArchiveSanitizerHelper {
       isSanitized,
       strippedFilesCount,
       parsedPubspec,
+      widgetCandidates,
     } = this.sanitizePackageArchive(file.buffer);
 
     const sha256 = require('crypto')
@@ -201,12 +238,8 @@ export class ArchiveSanitizerHelper {
       '_',
     );
 
-    const name = parsedPubspec?.name
-      ? String(parsedPubspec.name).trim()
-      : undefined;
-    const version = parsedPubspec?.version
-      ? String(parsedPubspec.version).trim()
-      : undefined;
+    const name = parsedPubspec?.name ? String(parsedPubspec.name).trim() : undefined;
+    const version = parsedPubspec?.version ? String(parsedPubspec.version).trim() : undefined;
 
     return {
       success: true,
@@ -223,6 +256,7 @@ export class ArchiveSanitizerHelper {
         dependencies: parsedPubspec?.dependencies,
         environment: parsedPubspec?.environment,
       },
+      widgetCandidates,
     };
   }
 }
