@@ -198,7 +198,7 @@ export class MiniappMutationHelper {
         const targetId = data.appId || `miniapp_${Date.now()}`;
         data.logo = await this.storageService.uploadBase64(
           data.logo,
-          `logos/${targetId}/logo.png`,
+          `miniapps/${targetId}/logos/logo.png`,
         );
       } catch (err: any) {
         this.logger.error(`Failed to store logo in MinIO: ${err.message}`);
@@ -481,7 +481,7 @@ export class MiniappMutationHelper {
         const targetId = data.appId || existing.appId || existing.id;
         data.logo = await this.storageService.uploadBase64(
           data.logo,
-          `logos/${targetId}/logo.png`,
+          `miniapps/${targetId}/logos/logo.png`,
         );
       } catch (err: any) {
         this.logger.error(`Failed to store logo in MinIO: ${err.message}`);

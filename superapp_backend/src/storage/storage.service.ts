@@ -61,25 +61,26 @@ export class StorageService implements OnModuleInit {
       this.configService.get<string>('MINIO_ROOT_PASSWORD') ||
       '';
 
-    this.assetsBucket = this.configService.get<string>(
+    const defaultBucket = this.configService.get<string>(
       'MINIO_BUCKET_NAME',
-      'mini-app-assets',
+      'superapp-storage',
     );
+    this.assetsBucket = defaultBucket;
     this.packageSubmissionsBucket = this.configService.get<string>(
       'MINIO_PACKAGE_SUBMISSIONS_BUCKET',
-      'package-submissions',
+      defaultBucket,
     );
     this.sdkSubmissionsBucket = this.configService.get<string>(
       'MINIO_SDK_SUBMISSIONS_BUCKET',
-      'sdk-submissions',
+      defaultBucket,
     );
     this.endUserMediaBucket = this.configService.get<string>(
       'MINIO_END_USER_MEDIA_BUCKET',
-      'end-user-media',
+      defaultBucket,
     );
     this.backofficeUserMediaBucket = this.configService.get<string>(
       'MINIO_BACKOFFICE_USER_MEDIA_BUCKET',
-      'backoffice-user-media',
+      defaultBucket,
     );
 
     this.publicUrl = this.configService

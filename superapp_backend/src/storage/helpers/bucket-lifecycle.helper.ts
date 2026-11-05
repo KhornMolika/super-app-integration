@@ -55,6 +55,10 @@ export class BucketLifecycleHelper {
           await minioClient
             .setBucketPolicy(bucketName, JSON.stringify(policy))
             .catch(() => {});
+        } else if (bucketName === 'superapp-storage') {
+          // SEC-OPS-2026-STORAGE-01: Ensure strictly private policy and initialize virtual prefix hierarchy
+          await minioClient.setBucketPolicy(bucketName, '').catch(() => {});
+          await this.ensureVirtualPrefixHierarchy(minioClient, bucketName);
         }
       } catch (err: any) {
         this.logger.warn(
@@ -67,6 +71,51 @@ export class BucketLifecycleHelper {
   /**
    * Migrate objects from legacy buckets to new standardized buckets, and delete the legacy buckets.
    */
+  /**
+   * Initializes the standard virtual prefix hierarchy inside superapp-storage:
+   * platform/ (branding/, banners/), miniapps/, organizations/, users/ (backoffice/, end-users/),
+   * quarantine/ (packages/, sdks/), reports/ (security/)
+   */
+  async ensureVirtualPrefixHierarchy(
+    minioClient: MinioClient,
+    bucketName: string,
+  ): Promise<void> {
+    const prefixes = [
+      'platform/branding/',
+      'platform/banners/',
+            'organizations/',
+      'users/backoffice/',
+      'users/end-users/',
+      'quarantine/packages/',
+      'quarantine/sdks/',
+      'reports/security/',
+    ];
+    const keepPayload = Buffer.from(
+      '# SuperApp Virtual Directory Placeholder\n# Managed automatically by SuperApp Backend\n',
+      'utf-8',
+    );
+    for (const prefix of prefixes) {
+      const keepKey = `${prefix}.keep`;
+      try {
+        await minioClient.putObject(
+          bucketName,
+          keepKey,
+          keepPayload,
+          keepPayload.length,
+          {
+            'Content-Type': 'text/plain',
+            'x-amz-meta-managed-by': 'superapp-backend',
+          },
+        );
+      } catch (err: any) {
+        this.logger.debug(
+          `Could not put virtual prefix marker ${keepKey} in ${bucketName}: ${err.message}`,
+        );
+      }
+    }
+    this.logger.log(`Initialized Virtual Prefix Hierarchy in MinIO bucket "${bucketName}".`);
+  }
+
   async migrateLegacyBuckets(
     minioClient: MinioClient,
     assetsBucket: string,
@@ -86,6 +135,24 @@ export class BucketLifecycleHelper {
         'submissions',
         packageSubmissionsBucket,
       );
+
+      // 3. SEC-OPS-2026-STORAGE-01: If target is superapp-storage, drain and remove old fragmented buckets
+      if (assetsBucket === 'superapp-storage') {
+        const oldBuckets = [
+          'mini-app-assets',
+          'package-submissions',
+          'sdk-submissions',
+          'backoffice-user-media',
+          'end-user-media',
+        ];
+        for (const oldBucket of oldBuckets) {
+          await this.drainAndRemoveBucket(
+            minioClient,
+            oldBucket,
+            'superapp-storage',
+          );
+        }
+      }
     } catch (err: any) {
       this.logger.warn(`Legacy bucket migration check skipped: ${err.message}`);
     }

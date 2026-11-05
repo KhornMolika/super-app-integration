@@ -71,7 +71,9 @@ export class QuarantineStorageHelper {
       /[^a-zA-Z0-9.-]/g,
       '_',
     );
-    const minioKey = `pending/${miniAppId}/${versionHint}/${cleanOrigName}`;
+    const minioKey = bucket === 'superapp-storage'
+      ? `quarantine/packages/${miniAppId}/${versionHint}/${cleanOrigName}`
+      : `pending/${miniAppId}/${versionHint}/${cleanOrigName}`;
 
     // 2. Write ONLY the sanitized clean buffer to MinIO
     await minioClient.putObject(
@@ -133,7 +135,9 @@ export class QuarantineStorageHelper {
       /[^a-zA-Z0-9.-]/g,
       '_',
     );
-    const minioKey = `pending/${miniAppId}/${versionHint}/${cleanOrigName}`;
+    const minioKey = bucket === 'superapp-storage'
+      ? `quarantine/sdks/${miniAppId}/${versionHint}/${cleanOrigName}`
+      : `pending/${miniAppId}/${versionHint}/${cleanOrigName}`;
 
     await minioClient.putObject(bucket, minioKey, file.buffer, file.size, {
       'Content-Type': file.mimetype || 'application/octet-stream',

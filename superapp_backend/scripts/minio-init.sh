@@ -1,32 +1,35 @@
 #!/bin/sh
 set -e
 
-USER="${MINIO_ACCESS_KEY:-${MINIO_ROOT_USER:-admin}}"
-PASS="${MINIO_SECRET_KEY:-${MINIO_ROOT_PASSWORD}}"
+# ==============================================================================
+# MinIO Initialization Script (SEC-OPS-2026-STORAGE-01)
+# Container entrypoint for superapp-minio-init using MinIO Client (/usr/bin/mc).
+# Automatically creates the unified private bucket `superapp-storage` and sets up
+# the Virtual Prefix Hierarchy.
+# ==============================================================================
 
-echo "Waiting for MinIO AIStor server at http://minio:9000..."
-until /usr/bin/mc alias set myminio http://minio:9000 "$USER" "$PASS"; do
+USER="${MINIO_ACCESS_KEY:-${MINIO_ROOT_USER:-super-app-svc}}"
+PASS="${MINIO_SECRET_KEY:-${MINIO_ROOT_PASSWORD}}"
+BUCKET="${MINIO_BUCKET_NAME:-superapp-storage}"
+ENDPOINT="${MINIO_ENDPOINT:-minio}"
+PORT="${MINIO_PORT:-9000}"
+
+echo "Waiting for MinIO server at http://${ENDPOINT}:${PORT}..."
+until /usr/bin/mc alias set myminio "http://${ENDPOINT}:${PORT}" "$USER" "$PASS"; do
   echo "MinIO server not ready yet, retrying in 2 seconds..."
   sleep 2
 done
 
 echo "Successfully connected to MinIO alias."
 
-# Handle License Registration
+# 1. Handle License Registration (if present)
 if [ -n "$MINIO_SUBNET_LICENSE" ]; then
   echo "Detected MINIO_SUBNET_LICENSE in environment."
-  
-  # 1. First write the license content to a temporary file in case it is a JWT / license content
   echo "$MINIO_SUBNET_LICENSE" > /tmp/minio.license
-
-  # 2. Try registering with --api-key
-  echo "Attempting to register license with --api-key..."
   if /usr/bin/mc license register myminio --api-key "$MINIO_SUBNET_LICENSE"; then
     echo "Successfully registered MinIO license using API key."
-  # 3. If that fails, try registering with --license file
   elif /usr/bin/mc license register myminio --license /tmp/minio.license; then
     echo "Successfully registered MinIO license using license file."
-  # 4. Try mc license update with file
   elif /usr/bin/mc license update myminio /tmp/minio.license; then
     echo "Successfully updated MinIO license from file."
   else
@@ -36,18 +39,20 @@ if [ -n "$MINIO_SUBNET_LICENSE" ]; then
   rm -f /tmp/minio.license
 fi
 
-# 1. Public bucket for UI assets (logos/banners)
-echo "Ensuring public assets bucket mini-app-assets exists..."
-/usr/bin/mc mb myminio/mini-app-assets --ignore-existing || true
-/usr/bin/mc anonymous set download myminio/mini-app-assets || true
+# 2. Ensure unified, 100% PRIVATE bucket exists
+echo "Ensuring unified private bucket ${BUCKET} exists..."
+/usr/bin/mc mb "myminio/${BUCKET}" --ignore-existing || true
 
-# 2. Strictly PRIVATE quarantine bucket for Flutter package submissions (.zip)
-echo "Ensuring quarantine bucket package-submissions exists..."
-/usr/bin/mc mb myminio/package-submissions --ignore-existing || true
+# Explicitly clear anonymous public read (Strict Zero-Trust policy)
+/usr/bin/mc anonymous set none "myminio/${BUCKET}" || true
 
-# 3. Strictly PRIVATE quarantine bucket for Native SDK submissions (.aar / .xcframework)
-echo "Ensuring quarantine bucket sdk-submissions exists..."
-/usr/bin/mc mb myminio/sdk-submissions --ignore-existing || true
+# 3. Initialize Virtual Prefix Hierarchy
+echo "Initializing Virtual Prefix Hierarchy in ${BUCKET}..."
+PREFIXES="platform/branding/ platform/banners/ organizations/ users/backoffice/ users/end-users/ quarantine/packages/ quarantine/sdks/ reports/security/"
 
-echo "MinIO AIStor initialization complete with standardized 3-bucket architecture."
+for prefix in $PREFIXES; do
+  echo "# SuperApp Virtual Directory Placeholder" | /usr/bin/mc pipe "myminio/${BUCKET}/${prefix}.keep" || true
+done
+
+echo "MinIO AIStor initialization complete: ${BUCKET} configured with virtual prefix hierarchy."
 exit 0

@@ -36,7 +36,7 @@ async function pipeAssetHelper(
   const cleanKey = decodeURIComponent(rawKey)
     .replace(/^https?:\/\/[^\/]+\//, '')
     .replace(/^\/+/, '')
-    .replace(/^(?:mini-app-assets\/|mini-app-logos\/)/, '')
+    .replace(/^(?:superapp-storage\/|mini-app-assets\/|mini-app-logos\/)/, '')
     .replace(/^\/+/, '')
     .split('?')[0];
 
@@ -45,6 +45,11 @@ async function pipeAssetHelper(
   // Candidate object keys to check in MinIO
   const candidateKeys = [
     cleanKey,
+    `miniapps/${strippedKey}/logos/logo.png`,
+    `miniapps/${strippedKey}/logos/logo.jpg`,
+    `miniapps/${strippedKey}/logos/logo.jpeg`,
+    `miniapps/${strippedKey}/logos/logo.webp`,
+    `miniapps/${cleanKey}`,
     `logos/${strippedKey}`,
     `logos/${strippedKey}/logo.png`,
     `logos/${strippedKey}/logo.jpg`,
