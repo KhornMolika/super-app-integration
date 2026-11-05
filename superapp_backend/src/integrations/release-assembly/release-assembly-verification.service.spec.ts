@@ -143,10 +143,19 @@ describe('ReleaseAssemblyVerificationService', () => {
         },
       ],
     });
-    expect(mockMiniappRepo.update).toHaveBeenCalledWith('app-1', {
-      lifecycleStatus: 'BUILDING',
-      buildStages: null,
-    });
+    expect(mockMiniappRepo.update).toHaveBeenCalledWith(
+      'app-1',
+      expect.objectContaining({
+        lifecycleStatus: 'BUILDING',
+        buildStatus: 'BUILDING',
+        buildStages: expect.objectContaining({
+          preflight: expect.objectContaining({ id: 'preflight', status: 'RUNNING' }),
+          compile: expect.objectContaining({ id: 'compile', status: 'PENDING' }),
+          publish: expect.objectContaining({ id: 'publish', status: 'PENDING' }),
+        }),
+        buildError: null,
+      }),
+    );
   });
 
   describe('codegen MR iid passed to Jenkins', () => {
@@ -206,7 +215,10 @@ describe('ReleaseAssemblyVerificationService', () => {
 
       const res = await service.handleBuildStageUpdate(dto);
 
-      expect(qb.where).toHaveBeenCalledWith("status = 'BUILDING'");
+      expect(qb.where).toHaveBeenCalledWith(
+        '"buildStatus" = :status OR "lifecycleStatus" = :status',
+        { status: 'BUILDING' },
+      );
       const setArg = qb.set.mock.calls[0][0];
       expect(setArg.buildStages()).toContain('jsonb_set');
       const params = qb.setParameters.mock.calls[0][0];

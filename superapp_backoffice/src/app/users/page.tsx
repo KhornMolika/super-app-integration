@@ -106,8 +106,6 @@ function UsersContent() {
   // Modals State
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const lastPushedUrlRef = React.useRef<string>('');
-  const fetchUsersRef = React.useRef<() => Promise<void>>(() => Promise.resolve());
-  const fetchGlobalCountsRef = React.useRef<() => Promise<void>>(() => Promise.resolve());
   const [editingUser, setEditingUser] = useState<User | null>(null);
   // Debounce search input to avoid spamming the backend on every keystroke
   useEffect(() => {
@@ -218,8 +216,6 @@ function UsersContent() {
     }
   }, [can, currentPage, pageSize, debouncedSearch, roleFilter, statusFilter]);
 
-  fetchUsersRef.current = fetchUsers;
-  fetchGlobalCountsRef.current = fetchGlobalCounts;
   // Fetch Roles and Organizations from Database via Next.js BFF proxy
   const fetchRoles = useCallback(async () => {
     if (!can('role:read') && !can('user:read')) return;

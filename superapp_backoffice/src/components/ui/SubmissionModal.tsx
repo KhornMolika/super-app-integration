@@ -92,7 +92,6 @@ export default function SubmissionModal({
   integrationMethod: propIntegrationMethod,
 }: SubmissionModalProps) {
   const router = useRouter();
-  if (!state.isOpen) return null;
 
   const stageList = React.useMemo(() => {
     const rawMethod = (propIntegrationMethod || state.integrationMethod || 'WEBVIEW').toUpperCase();
@@ -203,6 +202,8 @@ export default function SubmissionModal({
   const failedCount = stageList.filter((s) => s.status === 'FAILED').length;
   const totalStages = stageList.length;
   const progressPercent = totalStages > 0 ? Math.round((completedCount / totalStages) * 100) : 0;
+
+  if (!state.isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 sm:p-6">
