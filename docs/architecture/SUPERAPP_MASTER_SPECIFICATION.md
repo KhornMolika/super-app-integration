@@ -491,6 +491,6 @@ If an unwhitelisted, unsupported, or user-denied capability is invoked, the nati
 4. **`SECURITY_VIOLATION`**: Origin or domain verification failure.
 5. **`USER_CANCELLED`**: The user dismissed the native biometric dialog or camera viewfinder.
 
-*(Refer to [ADR-004: Capability Generator Flow, FSASuperApp SDK Runtime Contract & Rejection Protocol](file:///d:/Projects/fintect/superapp/superapp-poc/docs/ADR-004-CAPABILITY-GENERATOR-AND-SDK-RUNTIME-CONTRACT.md) for full architectural specifications.)*
+*(Refer to [ADR-004: Capability Generator Flow, FSASuperApp SDK Runtime Contract & Rejection Protocol](./ADR-004-CAPABILITY-GENERATOR-AND-SDK-RUNTIME-CONTRACT.md) for full architectural specifications.)*
 
 
