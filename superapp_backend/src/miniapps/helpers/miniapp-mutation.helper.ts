@@ -24,7 +24,6 @@ import { PermissionDetectorHelper } from './permission-detector.helper';
 import { VersionDiffHelper } from './version-diff.helper';
 import { inferPackageNameFromGitUrl } from '../../integrations/git/git-integration.service';
 import { resolveOrganizationDetails } from '../../organizations/helpers/organization-resolver.helper';
-import { FSA_ORGANIZATIONS, resolveOrganizationDetails as fsaResolveOrg } from '../../common/constants/fsa-organizations';
 import { OrganizationsService } from '../../organizations/organizations.service';
 import { secureFlutterIntegrationConfig } from './flutter-credential.helper';
 import {
@@ -63,37 +62,25 @@ export class MiniappMutationHelper {
     }
     if (this.organizationsService?.resolveOrganization) {
       const resolved = await this.organizationsService.resolveOrganization(input);
-      if (resolved && resolved.code && resolved.code !== clean?.slice(0, 4).toUpperCase()) {
+      if (resolved && resolved.code) {
         return resolved;
       }
     }
-    const fsaFallback = fsaResolveOrg(input);
-    if (fsaFallback && fsaFallback.code !== (clean ? clean.slice(0, 4).toUpperCase() : 'FTC')) {
-      return fsaFallback;
-    }
-    const dbResolved = await resolveOrganizationDetails(input);
-    return fsaFallback || dbResolved;
+    return resolveOrganizationDetails(input, this.organizationRepository);
   }
 
   private async serviceCategory(category: string | null | undefined): Promise<string | null> {
     const clean = category?.trim();
     if (!clean) return null;
-    const lower = clean.toLowerCase();
-    const builtIn = FSA_ORGANIZATIONS.some(
-      (o) =>
-        o.name.toLowerCase() === lower ||
-        o.code.toLowerCase() === lower ||
-        lower.startsWith(o.name.toLowerCase()) ||
-        lower.startsWith(o.code.toLowerCase()) ||
-        lower.includes(`(${o.code.toLowerCase()})`),
-    );
-    if (builtIn) return null;
     if (this.organizationRepository?.findOne) {
       const org = await this.organizationRepository.findOne({
         where: [{ name: clean }, { code: clean }],
       });
-      return org ? null : clean;
+      if (org) return null;
     }
+    const parenMatch = clean.match(/\(([A-Za-z0-9_-]+)\)$/);
+    if (parenMatch) return null;
+    if (clean.toLowerCase().includes('regulator')) return null;
     return clean;
   }
 

@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Organization, OrganizationStatus } from '../organizations/entities/organization.entity';
-import { SECTOR_REGULATOR_CODES } from '../common/constants/fsa-organizations';
 
 export interface RegulatorItem {
   /** Lowercased organization code; matches a catalog item's `regulator`. */
@@ -12,14 +11,13 @@ export interface RegulatorItem {
 
 /** Always first: FTC publishes the FSA's own apps. */
 const FIRST_CODE = 'FTC';
-const SECTOR_CODES_SET = new Set<string>(SECTOR_REGULATOR_CODES);
 
 /** True for the organizations the app lists as regulators. */
 function isListedRegulator(org: Organization): boolean {
   const code = org.code?.toUpperCase();
   return (
     code === FIRST_CODE ||
-    (code ? SECTOR_CODES_SET.has(code) : false) ||
+    org.name.toLowerCase().includes('regulator') ||
     (org as any).metadata?.entityType === 'SECTOR_REGULATOR'
   );
 }

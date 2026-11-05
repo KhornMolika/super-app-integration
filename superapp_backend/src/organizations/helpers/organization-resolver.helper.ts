@@ -75,18 +75,24 @@ export async function resolveOrganizationDetails(
         }
       } else {
         const lower = clean.toLowerCase();
+        const parenCode = clean.match(/\(([A-Za-z0-9_-]+)\)$/)?.[1];
+        const cleanName = clean.replace(/\s*\([A-Za-z0-9_-]+\)$/, '').trim();
 
         // 1. Exact match on code (case-insensitive)
         let matched = await repo
           .createQueryBuilder('org')
-          .where('LOWER(TRIM(org.code)) = :code', { code: lower })
+          .where('LOWER(TRIM(org.code)) = :code', {
+            code: (parenCode || clean).toLowerCase(),
+          })
           .getOne();
 
         // 2. Exact match on name (case-insensitive)
         if (!matched) {
           matched = await repo
             .createQueryBuilder('org')
-            .where('LOWER(TRIM(org.name)) = :name', { name: lower })
+            .where('LOWER(TRIM(org.name)) = :name', {
+              name: (cleanName || clean).toLowerCase(),
+            })
             .getOne();
         }
 
@@ -97,7 +103,7 @@ export async function resolveOrganizationDetails(
             .where(
               'LOWER(org.name) ILIKE :term OR LOWER(org.code) ILIKE :term',
               {
-                term: `%${lower}%`,
+                term: `%${(cleanName || lower).toLowerCase()}%`,
               },
             )
             .orderBy('org.name', 'ASC')
@@ -120,9 +126,16 @@ export async function resolveOrganizationDetails(
     }
   }
 
+  const parenCode = clean.match(/\(([A-Za-z0-9_-]+)\)$/)?.[1];
+  const cleanName = clean.replace(/\s*\([A-Za-z0-9_-]+\)$/, '').trim();
+
   return {
-    name: clean || 'Financial Technology Center',
-    code: clean ? clean.slice(0, 4).toUpperCase() : 'FTC',
+    name: cleanName || clean || 'Financial Technology Center',
+    code: parenCode
+      ? parenCode.toUpperCase()
+      : clean
+        ? clean.slice(0, 4).toUpperCase()
+        : 'FTC',
     parentAuthority: null,
     status: OrganizationStatus.ACTIVE,
   };
