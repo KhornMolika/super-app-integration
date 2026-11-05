@@ -80,7 +80,12 @@ export class MiniappMutationHelper {
     if (!clean) return null;
     const lower = clean.toLowerCase();
     const builtIn = FSA_ORGANIZATIONS.some(
-      (o) => o.name.toLowerCase() === lower || o.code.toLowerCase() === lower,
+      (o) =>
+        o.name.toLowerCase() === lower ||
+        o.code.toLowerCase() === lower ||
+        lower.startsWith(o.name.toLowerCase()) ||
+        lower.startsWith(o.code.toLowerCase()) ||
+        lower.includes(`(${o.code.toLowerCase()})`),
     );
     if (builtIn) return null;
     if (this.organizationRepository?.findOne) {
