@@ -16,6 +16,8 @@ export interface TelegramGroupAssociation {
   name?: string;
   appId?: string;
   status?: string;
+  organization?: string;
+  registrantName?: string;
   category?: string;
   logo?: string;
   label?: string;
@@ -171,6 +173,8 @@ export interface TelegramCardMetadata {
   miniAppId?: string;
   id?: string;
   integrationMethod?: string;
+  organization?: string;
+  registrantName?: string;
   category?: string;
   teamName?: string;
   score?: number;

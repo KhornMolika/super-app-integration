@@ -88,6 +88,8 @@ describe('TelegramService & Helper Modules', () => {
       expect(text).toContain('NEW MINI APP REGISTERED');
       expect(text).toContain('Demo MiniApp');
       expect(text).toContain('FLUTTER_PACKAGE');
+      expect(text).toContain('Organization:');
+      expect(text).toContain('Registrant:');
       expect(buttons).toBeDefined();
       expect(buttons?.[0][0].url).toBe(
         'http://localhost:3000/miniapps/app-123',

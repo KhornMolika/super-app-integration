@@ -294,21 +294,28 @@ export class MiniappMutationHelper {
 
     const targetUserId = savedApp.ownerId || actorId || '';
     if (targetUserId) {
+      const orgName =
+        savedApp.organizationRelation?.name ||
+        (savedApp as any).organization ||
+        'Independent Authority';
+      const registrantName =
+        savedApp.owner?.name ||
+        (savedApp as any).ownerName ||
+        'Platform Operator';
+
       if (isDraft) {
         await this.notificationsService.createNotification(
           targetUserId,
           'MiniApp Saved as Draft',
-          `MiniApp "${savedApp.name || savedApp.appId}" has been saved as a draft by ${savedApp.owner?.name || (savedApp as any).ownerName || 'Operator'}.`,
+          `MiniApp "${savedApp.name || savedApp.appId}" has been saved as a draft by ${registrantName}.`,
           'MINIAPP_DRAFT_SAVED',
           savedApp.id,
           {
             integrationMethod: savedApp.integrationMethod,
-            category:
-              savedApp.organizationRelation?.name || (savedApp as any).category,
-            teamName:
-              savedApp.organizationRelation?.name ||
-              savedApp.owner?.name ||
-              (savedApp as any).teamName,
+            organization: orgName,
+            registrantName,
+            category: orgName,
+            teamName: registrantName,
             teamTelegramChatId:
               savedApp.alertTelegramChatId ||
               (savedApp as any).teamTelegramChatId,
@@ -318,17 +325,15 @@ export class MiniappMutationHelper {
         await this.notificationsService.createNotification(
           targetUserId,
           'MiniApp Registered',
-          `MiniApp "${savedApp.name || savedApp.appId}" has been registered successfully by ${savedApp.owner?.name || (savedApp as any).ownerName || 'Operator'} and queued for security validation.`,
+          `MiniApp "${savedApp.name || savedApp.appId}" has been registered successfully by ${registrantName} and queued for security validation.`,
           'MINIAPP_REGISTERED',
           savedApp.id,
           {
             integrationMethod: savedApp.integrationMethod,
-            category:
-              savedApp.organizationRelation?.name || (savedApp as any).category,
-            teamName:
-              savedApp.organizationRelation?.name ||
-              savedApp.owner?.name ||
-              (savedApp as any).teamName,
+            organization: orgName,
+            registrantName,
+            category: orgName,
+            teamName: registrantName,
             teamTelegramChatId:
               savedApp.alertTelegramChatId ||
               (savedApp as any).teamTelegramChatId,

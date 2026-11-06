@@ -1,4 +1,4 @@
-﻿import { TelegramInlineButton, TelegramCardMetadata } from './telegram.types';
+import { TelegramInlineButton, TelegramCardMetadata } from './telegram.types';
 
 export class TelegramCardHelper {
   /**
@@ -25,15 +25,24 @@ export class TelegramCardHelper {
       case 'MINIAPP_REGISTERED':
       case 'MINIAPP_CREATED': {
         const method = (metadata?.integrationMethod as string) || 'WEBVIEW';
-        const category = (metadata?.category as string) || 'Standard';
-        const teamName = (metadata?.teamName as string) || 'Engineering Team';
+        const organization =
+          (metadata?.organization as string) ||
+          (metadata?.organizationName as string) ||
+          (metadata?.category as string) ||
+          'Independent';
+        const registrant =
+          (metadata?.registrantName as string) ||
+          (metadata?.registrant as string) ||
+          (metadata?.ownerName as string) ||
+          (metadata?.teamName as string) ||
+          'Platform User';
 
         const text = `
 🟢 <b>NEW MINI APP REGISTERED</b>
 
 📱 <b>App:</b> ${appDisplayName}
-🏷️ <b>Method:</b> <code>${method}</code>  •  <b>Category:</b> ${category}
-👥 <b>Team:</b> ${teamName}
+🏷️ <b>Method:</b> <code>${method}</code>  •  <b>Organization:</b> ${organization}
+👤 <b>Registrant:</b> ${registrant}
 
 <pre><code class="language-diff">
 + Profile      : Created & Initialized
