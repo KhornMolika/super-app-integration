@@ -144,7 +144,7 @@ if ($Target -eq 'all' -or $Target -eq 'backend') {
 
             # Run TypeScript type check
             Write-Host "Verifying TypeScript compilation..." -ForegroundColor Gray
-            pnpm exec tsc --noEmit
+            pnpm exec tsc -p tsconfig.build.json --noEmit
             if ($LASTEXITCODE -ne 0) { throw "Backend TypeScript type-check failed." }
             Write-Success "Backend TypeScript typecheck passed."
         } finally {
