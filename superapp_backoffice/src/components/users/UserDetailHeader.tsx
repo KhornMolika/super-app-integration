@@ -125,80 +125,63 @@ export function UserDetailHeader({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         {/* Left Column (8 of 12): Main User Profile Card */}
         <div className="lg:col-span-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 flex flex-col md:flex-row items-center md:items-stretch gap-6">
-          {/* Identity Sub-column (Avatar, Name, Email, Real Stats, Action Button) */}
-          <div className="w-full md:w-56 shrink-0 flex flex-col items-center justify-between text-center space-y-3.5 pr-0 md:pr-6 md:border-r border-slate-200/80 dark:border-slate-800">
-            {/* Avatar */}
-            <div className="w-20 h-20 rounded-full overflow-hidden shrink-0 shadow-md ring-4 ring-slate-100 dark:ring-slate-800 select-none">
-              {user.avatarUrl ? (
-                <img
-                  src={user.avatarUrl}
-                  alt={user.name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-brand-500 to-brand-700 text-white font-bold text-2xl flex items-center justify-center">
-                  {initials}
-                </div>
-              )}
-            </div>
-
-
-            {/* Name & Email */}
-            <div className="space-y-0.5 min-w-0 w-full">
-              <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate" title={user.name}>
-                {user.name}
-              </h1>
-              <p className="text-xs text-slate-400 dark:text-slate-500 truncate" title={user.email}>
-                {user.email}
-              </p>
-            </div>
-
-
-            {/* Real Stats Row (Real counts from API) */}
-            <div className="flex items-center justify-center w-full py-2.5 border-y border-slate-100 dark:border-slate-800/80">
-              <div className="flex-1 text-center">
-                <div className="text-base font-bold text-slate-900 dark:text-slate-100">
-                  {miniAppsCount}
-                </div>
-                <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
-                  MiniApps
-                </div>
+          {/* Identity Sub-column (Avatar, Name, Email, Action Button - Responsive) */}
+          <div className="w-full md:w-56 shrink-0 flex flex-col items-center justify-between text-center space-y-5 pr-0 md:pr-6 md:border-r border-slate-200/80 dark:border-slate-800">
+            {/* Avatar & Name Group */}
+            <div className="flex flex-col items-center space-y-3.5 w-full">
+              {/* Avatar */}
+              <div className="w-24 h-24 rounded-full overflow-hidden shrink-0 shadow-md ring-4 ring-slate-100 dark:ring-slate-800 select-none">
+                {user.avatarUrl ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt={user.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-brand-500 to-brand-700 text-white font-bold text-3xl flex items-center justify-center">
+                    {initials}
+                  </div>
+                )}
               </div>
-              <div className="w-px h-8 bg-slate-200 dark:bg-slate-800" />
-              <div className="flex-1 text-center">
-                <div className="text-base font-bold text-slate-900 dark:text-slate-100">
-                  {auditLogsCount}
-                </div>
-                <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
-                  Events
-                </div>
+
+              {/* Name & Email */}
+              <div className="space-y-1 min-w-0 w-full px-1">
+                <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100 truncate" title={user.name}>
+                  {user.name}
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 truncate" title={user.email}>
+                  {user.email}
+                </p>
+                {user.position && (
+                  <p className="text-xs font-semibold text-brand-600 dark:text-brand-400 truncate pt-0.5" title={user.position}>
+                    {user.position}
+                  </p>
+                )}
               </div>
             </div>
-
 
             {/* Action Buttons */}
             {canManage && (
-              <div className="w-full flex items-center gap-2">
+              <div className="w-full flex items-center gap-2 pt-2">
                 {canEditTarget ? (
                   <Link
                     href={`/users/${user.id}/edit`}
-                    className="w-full text-xs font-semibold py-2 px-3 rounded-xl justify-center shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 flex items-center gap-1.5 cursor-pointer transition-colors"
+                    className="w-full text-xs sm:text-sm font-semibold py-2.5 px-4 rounded-xl justify-center shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 flex items-center gap-2 cursor-pointer transition-colors"
                   >
-                    <svg className="w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
                     <span>Edit Profile</span>
                   </Link>
                 ) : (
-                  <div className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs font-semibold border border-slate-200 dark:border-slate-700 select-none">
-                    <LockIcon className="w-3.5 h-3.5 text-slate-400" />
+                  <div className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-semibold border border-slate-200 dark:border-slate-700 select-none">
+                    <LockIcon className="w-4 h-4 text-slate-400" />
                     <span>Protected Account</span>
                   </div>
                 )}
-
 
                 <ActionMenu
                   ariaLabel="More account actions"
@@ -246,118 +229,142 @@ export function UserDetailHeader({
             )}
           </div>
 
-
-          {/* Right Attributes Grid (100% Real Database Fields) */}
-          <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 gap-y-4 gap-x-6 py-1 content-center text-xs">
+          {/* Right Attributes Grid (Spacious, Legible Font & Line-Height, Responsive) */}
+          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-y-6 md:gap-y-7 gap-x-8 py-3 content-center">
             {/* 1. Role Authority */}
-            <div className="space-y-1">
-              <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">Role Authority</span>
+            <div className="space-y-1.5">
+              <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Role Authority</span>
               <div>
-                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold border ${roleTheme.badge}`}>
-                  <ShieldCheckIcon className="w-3 h-3" />
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs sm:text-sm font-semibold border ${roleTheme.badge}`}>
+                  <ShieldCheckIcon className="w-3.5 h-3.5" />
                   <span>{roleTheme.label}</span>
                 </span>
               </div>
             </div>
 
-
             {/* 2. Member Status */}
-            <div className="space-y-1">
-              <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">Member Status</span>
-              <div className="flex items-center gap-1.5 font-semibold text-slate-800 dark:text-slate-200">
-                <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : isPending ? 'bg-amber-500' : 'bg-slate-400'}`} />
+            <div className="space-y-1.5">
+              <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Member Status</span>
+              <div className="flex items-center gap-2 font-semibold text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-normal">
+                <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-emerald-500' : isPending ? 'bg-amber-500' : 'bg-slate-400'}`} />
                 <span>{isActive ? 'Active Member' : isPending ? 'Pending Approval' : 'Inactive'}</span>
               </div>
             </div>
 
+            {/* 3. Job Position / Title */}
+            <div className="space-y-1.5">
+              <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Position / Designation</span>
+              <div className="font-semibold text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-normal truncate" title={user.position || roleTheme.label || 'N/A'}>
+                {user.position || roleTheme.label || <span className="text-slate-400 font-normal italic">Unassigned</span>}
+              </div>
+            </div>
 
-            {/* 3. Organization */}
-            <div className="space-y-1">
-              <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">Organization</span>
+            {/* 4. Staff / Operator ID */}
+            <div className="space-y-1.5">
+              <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Staff ID / External Ref</span>
+              <div>
+                {user.staffId || user.externalId ? (
+                  <span className="font-mono font-bold px-2 py-0.5 rounded-md text-xs sm:text-sm bg-slate-100 dark:bg-slate-800 text-brand-600 dark:text-brand-400 border border-slate-200 dark:border-slate-700 inline-block">
+                    {user.staffId || user.externalId}
+                  </span>
+                ) : (
+                  <span className="text-xs sm:text-sm text-slate-400 font-normal italic">Not Assigned</span>
+                )}
+              </div>
+            </div>
+
+            {/* 5. Organization */}
+            <div className="space-y-1.5">
+              <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Organization</span>
               <div>
                 {user.organization ? (
                   <Link
                     href={`/organizations/${user.organization.id}`}
-                    className="text-brand-600 dark:text-brand-400 hover:underline font-semibold truncate block"
+                    className="text-brand-600 dark:text-brand-400 hover:underline font-semibold text-xs sm:text-sm leading-normal truncate block"
                     title={user.organization.name}
                   >
                     {user.organization.name}
                   </Link>
                 ) : (
-                  <span className="text-slate-500 italic">Independent</span>
+                  <span className="text-xs sm:text-sm text-slate-500 italic">Independent</span>
                 )}
               </div>
             </div>
 
-
-            {/* 4. Regulatory Code */}
-            <div className="space-y-1">
-              <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">Regulatory Code</span>
+            {/* 6. Regulatory Code */}
+            <div className="space-y-1.5">
+              <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Regulatory Code</span>
               <div>
                 {user.organization?.code ? (
-                  <span className="font-mono font-bold px-1.5 py-0.5 rounded text-[11px] bg-slate-100 dark:bg-slate-800 text-sky-600 dark:text-sky-400 border border-slate-200 dark:border-slate-700">
+                  <span className="font-mono font-bold px-2 py-0.5 rounded-md text-xs sm:text-sm bg-slate-100 dark:bg-slate-800 text-sky-600 dark:text-sky-400 border border-slate-200 dark:border-slate-700 inline-block">
                     {user.organization.code}
                   </span>
                 ) : (
-                  <span className="text-slate-400 italic">N/A</span>
+                  <span className="text-xs sm:text-sm text-slate-400 font-normal italic">N/A</span>
                 )}
               </div>
             </div>
 
-
-            {/* 5. Regulatory Authority */}
-            <div className="space-y-1">
-              <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">Regulatory Authority</span>
-              <div className="font-semibold text-slate-800 dark:text-slate-200 truncate" title={user.organization?.parentAuthority || 'N/A'}>
+            {/* 7. Regulatory Authority */}
+            <div className="space-y-1.5">
+              <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Regulatory Authority</span>
+              <div className="font-semibold text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-normal truncate" title={user.organization?.parentAuthority || 'N/A'}>
                 {user.organization?.parentAuthority || 'N/A'}
               </div>
             </div>
 
-
-            {/* 6. Organization Status */}
-            <div className="space-y-1">
-              <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">Org Tenancy Status</span>
-              <div className="font-medium text-slate-800 dark:text-slate-200">
-                {user.organization ? (
-                  <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    <span>{user.organization.status || 'Active Tenant'}</span>
-                  </span>
+            {/* 8. Contact Phone */}
+            <div className="space-y-1.5">
+              <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Contact Phone</span>
+              <div className="font-semibold text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-normal">
+                {user.phoneNumber ? (
+                  <span className="font-mono text-slate-800 dark:text-slate-200">{user.phoneNumber}</span>
                 ) : (
-                  <span className="text-slate-400 italic">Unassigned</span>
+                  <span className="text-slate-400 font-normal italic">Not Configured</span>
                 )}
               </div>
             </div>
 
+            {/* 9. Organization Status */}
+            <div className="space-y-1.5">
+              <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Org Tenancy Status</span>
+              <div className="font-medium text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-normal">
+                {user.organization ? (
+                  <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span>{user.organization.status || 'Active Tenant'}</span>
+                  </span>
+                ) : (
+                  <span className="text-slate-400 font-normal italic">Unassigned</span>
+                )}
+              </div>
+            </div>
 
-            {/* 7. SSO / External ID */}
-            <div className="space-y-1">
-              <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">Authentication Source</span>
-              <div className="font-semibold text-slate-800 dark:text-slate-200 truncate" title={user.externalId || 'Internal Platform User'}>
+            {/* 10. Authentication Source */}
+            <div className="space-y-1.5">
+              <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Authentication Source</span>
+              <div className="font-semibold text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-normal truncate" title={user.externalId || 'Internal Platform User'}>
                 {user.externalId ? `SSO: ${user.externalId}` : 'Internal Platform User'}
               </div>
             </div>
 
-
-            {/* 8. Registered Date */}
-            <div className="space-y-1">
-              <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">Registered Date</span>
-              <div className="font-semibold text-slate-800 dark:text-slate-200">
+            {/* 11. Registered Date */}
+            <div className="space-y-1.5">
+              <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Registered Date</span>
+              <div className="font-semibold text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-normal">
                 {formattedCreated}
               </div>
             </div>
 
-
-            {/* 9. Last Updated */}
-            <div className="space-y-1">
-              <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">Last Modified</span>
-              <div className="font-semibold text-slate-800 dark:text-slate-200">
+            {/* 12. Last Modified */}
+            <div className="space-y-1.5">
+              <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Last Modified</span>
+              <div className="font-semibold text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-normal">
                 {formattedUpdated}
               </div>
             </div>
           </div>
         </div>
-
 
         {/* Right Column (4 of 12): Real Alerts & Notifications Data */}
         <div className="lg:col-span-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 flex flex-col justify-between space-y-4">

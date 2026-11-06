@@ -522,6 +522,9 @@ export class MobileAuthService implements OnModuleInit {
             status: EndUserStatus.ACTIVE,
             failedLoginCount: 0,
             lockedUntil: null,
+            position: backofficeUser.position || backofficeUser.role?.name || null,
+            organizationUnit: backofficeUser.organization?.name || null,
+            staffId: backofficeUser.staffId || backofficeUser.externalId || null,
           });
           user = await this.users.save(user);
           this.logger.log(`Auto-synced portal user ${email} to mobile EndUser`);
@@ -541,6 +544,22 @@ export class MobileAuthService implements OnModuleInit {
     }
 
     let ok = await this.passwords.verify(input.password, user.passwordHash);
+    if (!ok) {
+      const boUser = await this.backofficeUsers.findOne({ where: { email } });
+      if (boUser && boUser.status === 'ACTIVE' && boUser.passwordHash) {
+        const matchesBo = await this.passwords.verify(input.password, boUser.passwordHash);
+        if (matchesBo) {
+          ok = true;
+          user.passwordHash = await this.passwords.hash(input.password);
+          user.name = boUser.name;
+          user.position = boUser.position || boUser.role?.name || user.position;
+          user.organizationUnit = boUser.organization?.name || user.organizationUnit;
+          user.staffId = boUser.staffId || boUser.externalId || user.staffId;
+          await this.users.save(user);
+          this.logger.log('Refreshed synced credentials from backoffice user for mobile EndUser ' + email);
+        }
+      }
+    }
     if (
       !ok &&
       process.env.NODE_ENV !== 'production' &&

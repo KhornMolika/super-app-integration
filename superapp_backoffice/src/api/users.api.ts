@@ -20,6 +20,9 @@ export interface User {
   email: string;
   avatarUrl?: string | null;
   externalId?: string | null;
+  position?: string | null;
+  staffId?: string | null;
+  phoneNumber?: string | null;
   telegramChatId?: string | null;
   telegramUsername?: string | null;
   telegramConnectedAt?: string | null;

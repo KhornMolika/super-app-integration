@@ -96,6 +96,9 @@ function EditUserContent() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isActive, setIsActive] = useState(true);
+  const [position, setPosition] = useState('');
+  const [staffId, setStaffId] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
 
   // Staged / Pending Avatar State (Committed to MinIO only on form submit)
   const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
@@ -167,6 +170,9 @@ function EditUserContent() {
       setSelectedRole(primaryRole);
       setOrganizationId(data.organizationId || data.organization?.id || '');
       setIsActive(data.isActive !== undefined ? data.isActive : true);
+      setPosition(data.position || '');
+      setStaffId(data.staffId || '');
+      setPhoneNumber(data.phoneNumber || '');
 
       // Reset pending avatar state
       setPendingAvatarFile(null);
@@ -312,6 +318,9 @@ function EditUserContent() {
       const payload: any = {
         name: name.trim(),
         email: email.trim().toLowerCase(),
+        position: position.trim() || undefined,
+        staffId: staffId.trim() || undefined,
+        phoneNumber: phoneNumber.trim() || undefined,
         roleNames: [selectedRole],
         organizationId: organizationId.trim() || '',
         isActive,
@@ -520,6 +529,51 @@ function EditUserContent() {
                       )}
                     </button>
                   </div>
+                </div>
+
+                {/* Position / Job Title */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="user-position" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Position / Job Title
+                  </Label>
+                  <Input
+                    id="user-position"
+                    type="text"
+                    value={position}
+                    onChange={(e) => setPosition(e.target.value)}
+                    placeholder="e.g. Senior Regulator Officer"
+                    className="w-full text-xs rounded-xl"
+                  />
+                </div>
+
+                {/* Staff ID */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="user-staffId" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Staff ID / Code
+                  </Label>
+                  <Input
+                    id="user-staffId"
+                    type="text"
+                    value={staffId}
+                    onChange={(e) => setStaffId(e.target.value)}
+                    placeholder="e.g. FSA-0129"
+                    className="w-full text-xs rounded-xl font-mono"
+                  />
+                </div>
+
+                {/* Phone Number */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="user-phone" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Contact Phone Number
+                  </Label>
+                  <Input
+                    id="user-phone"
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder="e.g. +855 12 345 678"
+                    className="w-full text-xs rounded-xl font-mono"
+                  />
                 </div>
 
 

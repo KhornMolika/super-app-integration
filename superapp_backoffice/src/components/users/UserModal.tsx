@@ -120,6 +120,9 @@ export function UserModal({
     telegramChatId: '',
     telegramUsername: '',
     isActive: true,
+    position: '',
+    staffId: '',
+    phoneNumber: '',
   });
 
 
@@ -175,6 +178,9 @@ export function UserModal({
           telegramChatId: editingUser.telegramChatId || '',
           telegramUsername: editingUser.telegramUsername || '',
           isActive: editingUser.isActive !== undefined ? editingUser.isActive : true,
+          position: editingUser.position || '',
+          staffId: editingUser.staffId || '',
+          phoneNumber: editingUser.phoneNumber || '',
         });
       } else {
         setFormData({
@@ -186,6 +192,9 @@ export function UserModal({
           telegramChatId: '',
           telegramUsername: '',
           isActive: true,
+          position: '',
+          staffId: '',
+          phoneNumber: '',
         });
       }
     }
@@ -244,6 +253,9 @@ export function UserModal({
         telegramChatId: formData.telegramChatId.trim() || undefined,
         telegramUsername: formData.telegramUsername.trim() || undefined,
         isActive: formData.isActive,
+        position: formData.position.trim() || undefined,
+        staffId: formData.staffId.trim() || undefined,
+        phoneNumber: formData.phoneNumber.trim() || undefined,
       };
 
 
@@ -409,6 +421,49 @@ export function UserModal({
             </div>
           </div>
 
+
+          {/* Position, Staff ID & Contact Phone Section */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            <div>
+              <Label htmlFor="modal-user-position" className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
+                Position / Job Title
+              </Label>
+              <Input
+                id="modal-user-position"
+                value={formData.position}
+                onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                placeholder="e.g. Senior Auditor"
+                autoComplete="off"
+              />
+            </div>
+            <div>
+              <Label htmlFor="modal-user-staffId" className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
+                Staff ID / Code
+              </Label>
+              <Input
+                id="modal-user-staffId"
+                value={formData.staffId}
+                onChange={(e) => setFormData({ ...formData, staffId: e.target.value })}
+                placeholder="e.g. FSA-0081"
+                autoComplete="off"
+                className="font-mono"
+              />
+            </div>
+            <div>
+              <Label htmlFor="modal-user-phone" className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
+                Contact Phone
+              </Label>
+              <Input
+                id="modal-user-phone"
+                type="tel"
+                value={formData.phoneNumber}
+                onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                placeholder="e.g. +855 12 345 678"
+                autoComplete="off"
+                className="font-mono"
+              />
+            </div>
+          </div>
 
           {/* Organization & Password Section */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">

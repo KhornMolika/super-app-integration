@@ -488,6 +488,9 @@ export class AccessControlService {
       telegramChatId:
         dto.telegramChatId || (dto as any).teamTelegramChatId || undefined,
       telegramUsername: dto.telegramUsername || undefined,
+      position: dto.position || undefined,
+      staffId: dto.staffId || undefined,
+      phoneNumber: dto.phoneNumber || undefined,
       status:
         dto.status ||
         (dto.isActive === false || roles.length === 0
@@ -550,6 +553,9 @@ export class AccessControlService {
     }
 
     if (dto.name !== undefined) user.name = dto.name;
+    if (dto.position !== undefined) user.position = dto.position;
+    if (dto.staffId !== undefined) user.staffId = dto.staffId;
+    if (dto.phoneNumber !== undefined) user.phoneNumber = dto.phoneNumber;
     if (dto.avatarUrl !== undefined) user.avatarUrl = dto.avatarUrl;
     if (
       dto.email !== undefined &&

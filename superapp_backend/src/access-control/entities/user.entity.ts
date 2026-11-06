@@ -30,6 +30,15 @@ export class User {
   @Column({ nullable: true, unique: true })
   externalId!: string;
 
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  position?: string | null;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  staffId?: string | null;
+
+  @Column({ type: 'varchar', length: 30, nullable: true })
+  phoneNumber?: string | null;
+
   @Column({ default: 'ACTIVE' })
   status!: string;
 

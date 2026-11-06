@@ -36,6 +36,18 @@ export class CreateUserDto {
 
   @IsString()
   @IsOptional()
+  position?: string;
+
+  @IsString()
+  @IsOptional()
+  staffId?: string;
+
+  @IsString()
+  @IsOptional()
+  phoneNumber?: string;
+
+  @IsString()
+  @IsOptional()
   telegramChatId?: string;
 
   @IsString()
