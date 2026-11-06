@@ -6,6 +6,7 @@ import { ShieldCheckIcon, BuildingIcon } from '@/components/ui/Icons';
 import { PaginationProps } from '@/components/ui/Pagination';
 import { DataTable, DataTableColumn } from '@/components/ui/DataTable';
 import { OrganizationActionMenu } from './OrganizationActionMenu';
+import { OrganizationAvatar } from './OrganizationAvatar';
 
 interface OrganizationsTableProps {
   organizations: Organization[];
@@ -41,26 +42,14 @@ export function OrganizationsTable({
           const isRoot = isRootOrganization(org);
           return (
             <div className="flex items-center gap-3.5">
-              <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center font-mono font-bold text-xs shrink-0 transition-transform group-hover:scale-105 ${
-                  isRoot
-                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25 shadow-sm'
-                    : 'bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/60'
-                }`}
-              >
-                {org.logo ? (
-                  <img
-                    src={org.logo}
-                    alt={org.name}
-                    className="w-full h-full object-contain rounded-xl p-1"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLElement).style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  org.code || org.name.substring(0, 3).toUpperCase()
-                )}
-              </div>
+              <OrganizationAvatar
+                name={org.name}
+                code={org.code}
+                logo={org.logo}
+                isRoot={isRoot}
+                size="md"
+                className="transition-transform group-hover:scale-105"
+              />
               <div className="min-w-0">
                 <div className="font-semibold text-slate-900 dark:text-slate-100 text-sm group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors flex items-center gap-2">
                   <span className="truncate">{org.name}</span>

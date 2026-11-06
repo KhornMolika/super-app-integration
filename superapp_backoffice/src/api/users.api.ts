@@ -11,6 +11,7 @@ export interface UserOrganization {
   code?: string;
   parentAuthority?: string;
   status?: string;
+  logo?: string;
 }
 
 export interface User {

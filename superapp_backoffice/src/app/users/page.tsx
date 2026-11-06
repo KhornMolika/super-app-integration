@@ -30,6 +30,7 @@ import {
   getUserRoles,
   getUserEffectiveStatus,
 } from '@/components/users';
+import { OrganizationAvatar } from '@/components/organizations';
 function UsersContent() {
   const router = useRouter();
   const pathname = usePathname();
@@ -486,10 +487,13 @@ function UsersContent() {
         }
         const orgName = user.organization?.name || 'Organization';
         return (
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center font-bold text-xs shrink-0 border border-slate-200 dark:border-slate-700">
-              {orgName.charAt(0).toUpperCase()}
-            </div>
+          <div className="flex items-center gap-2.5 min-w-0">
+            <OrganizationAvatar
+              name={orgName}
+              code={user.organization?.code}
+              logo={user.organization?.logo}
+              size="sm"
+            />
             <div className="min-w-0 truncate">
               <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
                 {orgName}

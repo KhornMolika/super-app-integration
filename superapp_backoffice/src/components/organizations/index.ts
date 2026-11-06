@@ -8,3 +8,4 @@ export * from './OrganizationOverviewCard';
 export * from './OrganizationUsersTab';
 export * from './OrganizationMiniAppsTab';
 export * from './OrganizationDetailTabs';
+export * from './OrganizationAvatar';

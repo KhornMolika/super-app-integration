@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { Organization } from '@/api/organizations.api';
 import { Button } from '@/components/ui/inputs';
 import { BuildingIcon, ShieldCheckIcon, DocumentTextIcon, XIcon } from '@/components/ui/Icons';
+import { OrganizationAvatar } from './OrganizationAvatar';
 
 interface OrganizationViewModalProps {
   organization: Organization | null;
@@ -28,9 +29,12 @@ export function OrganizationViewModal({
         {/* Header */}
         <div className="flex items-start justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center border border-brand-100 dark:border-brand-500/20">
-              <BuildingIcon className="w-5 h-5" />
-            </div>
+            <OrganizationAvatar
+              name={organization.name}
+              code={organization.code}
+              logo={organization.logo}
+              size="md"
+            />
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
                 Organization Details
