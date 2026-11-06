@@ -106,12 +106,29 @@ export class StorageService implements OnModuleInit {
   }
 
   /**
-   * Ensure standardized architecture exists with proper access policies:
-   * 1. mini-app-assets: Public Read Policy (logos, icons, banner images)
-   * 2. package-submissions: Strictly Private Quarantine (Flutter .zip packages)
-   * 3. sdk-submissions: Strictly Private Quarantine (Native .aar / .xcframework)
-   * 4. end-user-media: Strictly Private (end-user avatars; served only through the authenticated API)
-   * 5. backoffice-user-media: Public Read Policy (backoffice operator and admin profile avatars)
+   * Ensure standardized single-bucket architecture (`superapp-storage`) with strictly
+   * private access policies and virtual prefix hierarchy:
+   *
+   * superapp-storage/
+   * ├── platform/                               <-- Host SuperApp Core Shell Media
+   * │   ├── branding/                           <-- Header logo, launcher icon, splash graphic
+   * │   └── banners/                            <-- Mobile Home screen hero carousel banners
+   * ├── miniapps/                               <-- Third-Party MiniApp Public Assets
+   * │   ├── {miniAppId}/logos/                  <-- App store logos (logo.png)
+   * │   ├── {miniAppId}/screenshots/            <-- Marketplace preview screenshots
+   * │   └── {miniAppId}/legal/                  <-- Custom Terms of Service & Privacy Policy PDFs
+   * ├── organizations/                          <-- Partner & Vendor Media
+   * │   └── {orgId}/branding/                   <-- Partner bank/company logos
+   * ├── users/                                  <-- User Profiles
+   * │   ├── backoffice/{userId}/                <-- Admin / Reviewer avatars (internal)
+   * │   └── end-users/{endUserId}/              <-- Mobile consumer avatars (JWT-token protected)
+   * ├── quarantine/                             <-- Strictly Private Pre-Ingestion Quarantine
+   * │   ├── packages/{miniAppId}/{version}/     <-- Unvetted Flutter package .zip uploads
+   * │   └── sdks/{miniAppId}/{version}/         <-- Unvetted Native Android .aar / iOS .xcframework
+   * └── reports/                                <-- Automated Security & Audit Outputs
+   *     └── security/{miniAppId}/{version}/     <-- Jenkins CycloneDX SBOM, Semgrep & Trivy scan JSONs
+   *
+   * Automatically drains and permanently removes legacy fragmented buckets into superapp-storage.
    */
   private async ensureBucketsAndPolicies(): Promise<void> {
     // Single Bucket Architecture: only ensure the unified bucket

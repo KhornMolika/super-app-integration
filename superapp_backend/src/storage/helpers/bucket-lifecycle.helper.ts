@@ -14,10 +14,16 @@ export class BucketLifecycleHelper {
   private readonly logger = new Logger(BucketLifecycleHelper.name);
 
   /**
-   * Ensure standardized 3-bucket architecture exists with strictly private access policies:
-   * 1. mini-app-assets: Strictly Private Storage (logos, icons, banner images accessed via Presigned/Proxy URLs)
-   * 2. package-submissions: Strictly Private Quarantine (Flutter .zip packages)
-   * 3. sdk-submissions: Strictly Private Quarantine (Native .aar / .xcframework.zip)
+   * Ensure standardized single-bucket architecture (`superapp-storage`) exists
+   * with strictly private access policies and virtual prefix hierarchy:
+   *
+   * superapp-storage/
+   * ├── platform/ (branding/, banners/)
+   * ├── miniapps/{miniAppId}/ (logos/, screenshots/, legal/)
+   * ├── organizations/{orgId}/branding/
+   * ├── users/ (backoffice/{userId}/, end-users/{endUserId}/)
+   * ├── quarantine/ (packages/, sdks/)
+   * └── reports/security/{miniAppId}/{version}/
    */
   async ensureBucketsAndPolicies(
     minioClient: MinioClient,
