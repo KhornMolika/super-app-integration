@@ -5,7 +5,7 @@ export class AppService {
   getInfo() {
     return {
       name: 'FSA SuperApp Platform',
-      organization: 'FinTech Center General Secretariat of FSA',
+      organization: 'FinTech Center of General Secretariat of FSA',
       status: 'operational',
       health: '/health',
       liveness: '/health/liveness',

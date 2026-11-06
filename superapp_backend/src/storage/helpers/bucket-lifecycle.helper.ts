@@ -31,31 +31,7 @@ export class BucketLifecycleHelper {
           await minioClient.makeBucket(bucketName, 'us-east-1');
           this.logger.log(`Created MinIO bucket "${bucketName}"`);
         }
-        if (
-          bucketName === 'mini-app-assets' ||
-          bucketName === 'backoffice-user-media'
-        ) {
-          const policy = {
-            Version: '2012-10-17',
-            Statement: [
-              {
-                Effect: 'Allow',
-                Principal: { AWS: ['*'] },
-                Action: ['s3:GetBucketLocation', 's3:ListBucket'],
-                Resource: [`arn:aws:s3:::${bucketName}`],
-              },
-              {
-                Effect: 'Allow',
-                Principal: { AWS: ['*'] },
-                Action: ['s3:GetObject'],
-                Resource: [`arn:aws:s3:::${bucketName}/*`],
-              },
-            ],
-          };
-          await minioClient
-            .setBucketPolicy(bucketName, JSON.stringify(policy))
-            .catch(() => {});
-        } else if (bucketName === 'superapp-storage') {
+        if (bucketName === 'superapp-storage') {
           // SEC-OPS-2026-STORAGE-01: Ensure strictly private policy and initialize virtual prefix hierarchy
           await minioClient.setBucketPolicy(bucketName, '').catch(() => {});
           await this.ensureVirtualPrefixHierarchy(minioClient, bucketName);
@@ -118,38 +94,27 @@ export class BucketLifecycleHelper {
 
   async migrateLegacyBuckets(
     minioClient: MinioClient,
-    assetsBucket: string,
-    packageSubmissionsBucket: string,
+    targetBucket = 'superapp-storage',
   ): Promise<void> {
     try {
-      // 1. Migrate & delete legacy mini-app-logos
-      await this.drainAndRemoveBucket(
-        minioClient,
+      const destinationBucket = targetBucket || 'superapp-storage';
+      const legacyBuckets = [
+        'mini-app-assets',
         'mini-app-logos',
-        assetsBucket,
-      );
-
-      // 2. Migrate & delete legacy submissions
-      await this.drainAndRemoveBucket(
-        minioClient,
+        'package-submissions',
+        'sdk-submissions',
         'submissions',
-        packageSubmissionsBucket,
-      );
+        'backoffice-user-media',
+        'end-user-media',
+        'logos',
+      ];
 
-      // 3. SEC-OPS-2026-STORAGE-01: If target is superapp-storage, drain and remove old fragmented buckets
-      if (assetsBucket === 'superapp-storage') {
-        const oldBuckets = [
-          'mini-app-assets',
-          'package-submissions',
-          'sdk-submissions',
-          'backoffice-user-media',
-          'end-user-media',
-        ];
-        for (const oldBucket of oldBuckets) {
+      for (const oldBucket of legacyBuckets) {
+        if (oldBucket !== destinationBucket) {
           await this.drainAndRemoveBucket(
             minioClient,
             oldBucket,
-            'superapp-storage',
+            destinationBucket,
           );
         }
       }
@@ -188,15 +153,32 @@ export class BucketLifecycleHelper {
       for (const objName of objects) {
         try {
           const conds = new CopyConditions();
+          let targetKey = objName;
+
+          if (sourceBucket === 'package-submissions' && objName.startsWith('pending/')) {
+            targetKey = objName.replace(/^pending\//, 'quarantine/packages/');
+          } else if (sourceBucket === 'sdk-submissions' && objName.startsWith('pending/')) {
+            targetKey = objName.replace(/^pending\//, 'quarantine/sdks/');
+          } else if (sourceBucket === 'backoffice-user-media' && objName.startsWith('avatars/')) {
+            targetKey = `users/backoffice/${objName.replace(/^avatars\//, '')}`;
+          }
+
           await minioClient.copyObject(
             targetBucket,
-            objName,
+            targetKey,
             `/${sourceBucket}/${objName}`,
             conds,
           );
+
+          if (targetKey !== objName) {
+            await minioClient
+              .copyObject(targetBucket, objName, `/${sourceBucket}/${objName}`, conds)
+              .catch(() => {});
+          }
+
           await minioClient.removeObject(sourceBucket, objName).catch(() => {});
           this.logger.log(
-            `Migrated ${objName} from ${sourceBucket} to ${targetBucket}`,
+            `Migrated ${objName} from ${sourceBucket} to ${targetBucket}/${targetKey}`,
           );
         } catch (copyErr: any) {
           this.logger.warn(

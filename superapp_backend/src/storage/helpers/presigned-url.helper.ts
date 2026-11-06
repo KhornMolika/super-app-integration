@@ -87,12 +87,15 @@ export class PresignedUrlHelper {
     key = key.replace(/^https?:\/\/[^\/]+\//, '');
 
     if (key.startsWith('mini-app-logos/')) {
-      bucket = assetsBucket;
       key = key.replace(/^mini-app-logos\//, '');
+    } else if (key.startsWith('mini-app-assets/')) {
+      key = key.replace(/^mini-app-assets\//, '');
+    } else if (key.startsWith('superapp-storage/')) {
+      key = key.replace(/^superapp-storage\//, '');
     } else if (key.startsWith(`${assetsBucket}/`)) {
-      bucket = assetsBucket;
       key = key.substring(assetsBucket.length + 1);
     }
+    bucket = assetsBucket || 'superapp-storage';
 
     return this.getPresignedUrl(
       minioClient,
@@ -119,12 +122,15 @@ export class PresignedUrlHelper {
     key = key.replace(/^https?:\/\/[^\/]+\//, '');
 
     if (key.startsWith('mini-app-logos/')) {
-      bucket = assetsBucket;
       key = key.replace(/^mini-app-logos\//, '');
+    } else if (key.startsWith('mini-app-assets/')) {
+      key = key.replace(/^mini-app-assets\//, '');
+    } else if (key.startsWith('superapp-storage/')) {
+      key = key.replace(/^superapp-storage\//, '');
     } else if (key.startsWith(`${assetsBucket}/`)) {
-      bucket = assetsBucket;
       key = key.substring(assetsBucket.length + 1);
     }
+    bucket = assetsBucket || 'superapp-storage';
 
     await deleteObjectFn(bucket, key);
   }

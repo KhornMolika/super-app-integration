@@ -31,7 +31,7 @@ async function pipeAssetHelper(
 
   // Use provided bucket or fallback to mini-app-assets
   const targetBucket =
-    rawBucket || storageService.assetsBucket || 'mini-app-assets';
+    rawBucket || storageService.assetsBucket || 'superapp-storage';
 
   const cleanKey = decodeURIComponent(rawKey)
     .replace(/^https?:\/\/[^\/]+\//, '')
@@ -229,7 +229,7 @@ export class PublicAssetProxyController {
     const isBackofficeMedia = rawUrl.includes('backoffice-user-media');
     const bucket = isBackofficeMedia
       ? this.storageService.backofficeUserMediaBucket || 'backoffice-user-media'
-      : this.storageService.assetsBucket || 'mini-app-assets';
+      : this.storageService.assetsBucket || 'superapp-storage';
     const key = rawUrl.replace(
       /^\/(?:api\/)?(?:mini-app-assets|mini-app-logos|logos|backoffice-user-media)\/?/,
       '',

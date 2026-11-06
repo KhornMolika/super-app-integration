@@ -75,6 +75,7 @@ export class MiniappValidationHelper {
         app.logo.startsWith('data:') ||
         app.logo.startsWith('/uploads/') ||
         app.logo.startsWith('/fsa-logo') ||
+        app.logo.includes('superapp-storage') ||
         app.logo.includes('mini-app-assets') ||
         app.logo.includes('mini-app-logos') ||
         app.logo.includes('minio') ||

@@ -92,12 +92,12 @@ export function toCatalogItem(app: MiniApp, clientHost?: string): CatalogItem {
       // Inline base64 image data: preserve as is
     } else if (
       logo.includes(':9000') ||
-      logo.includes('mini-app-assets') ||
+      logo.includes('superapp-storage') || logo.includes('mini-app-assets') ||
       logo.includes('mini-app-logos') ||
       logo.startsWith('/logos/') ||
       logo.startsWith('logos/')
     ) {
-      const bucket = 'mini-app-assets';
+      const bucket = 'superapp-storage';
       const cleanKey = logo
         .split('?')[0]
         .replace(/^https?:\/\/[^\/]+\//, '')

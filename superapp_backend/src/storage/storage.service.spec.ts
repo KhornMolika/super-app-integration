@@ -25,10 +25,10 @@ describe('StorageService & Helpers', () => {
           process.env.MINIO_ACCESS_KEY || 'test-storage-access-key',
         MINIO_SECRET_KEY:
           process.env.MINIO_SECRET_KEY || 'test-storage-secret-key',
-        MINIO_BUCKET_NAME: 'mini-app-assets',
-        MINIO_PACKAGE_SUBMISSIONS_BUCKET: 'package-submissions',
-        MINIO_SDK_SUBMISSIONS_BUCKET: 'sdk-submissions',
-        MINIO_BACKOFFICE_USER_MEDIA_BUCKET: 'backoffice-user-media',
+        MINIO_BUCKET_NAME: 'superapp-storage',
+        MINIO_PACKAGE_SUBMISSIONS_BUCKET: 'superapp-storage',
+        MINIO_SDK_SUBMISSIONS_BUCKET: 'superapp-storage',
+        MINIO_BACKOFFICE_USER_MEDIA_BUCKET: 'superapp-storage',
         MINIO_PUBLIC_URL: 'http://localhost:9000',
       };
       return config[key] ?? defaultVal;
@@ -62,10 +62,10 @@ describe('StorageService & Helpers', () => {
 
   it('should be defined and initialize bucket configurations', () => {
     expect(service).toBeDefined();
-    expect(service.assetsBucket).toBe('mini-app-assets');
-    expect(service.packageSubmissionsBucket).toBe('package-submissions');
-    expect(service.sdkSubmissionsBucket).toBe('sdk-submissions');
-    expect(service.backofficeUserMediaBucket).toBe('backoffice-user-media');
+    expect(service.assetsBucket).toBe('superapp-storage');
+    expect(service.packageSubmissionsBucket).toBe('superapp-storage');
+    expect(service.sdkSubmissionsBucket).toBe('superapp-storage');
+    expect(service.backofficeUserMediaBucket).toBe('superapp-storage');
   });
 
   describe('License Management', () => {
@@ -73,7 +73,7 @@ describe('StorageService & Helpers', () => {
       const status = service.getLicenseStatus();
       expect(status.configured).toBe(false);
       expect(status.licenseType).toBe('Community / Free Edition');
-      expect(status.bucket).toBe('mini-app-assets');
+      expect(status.bucket).toBe('superapp-storage');
     });
 
     it('updates license key and masks it', () => {
@@ -166,7 +166,7 @@ describe('StorageService & Helpers', () => {
       });
 
       expect(removeSpy).toHaveBeenCalledWith(
-        'backoffice-user-media',
+        'superapp-storage',
         'avatars/user-123/old-avatar.png',
       );
       expect(result.url).toMatch(
@@ -174,7 +174,7 @@ describe('StorageService & Helpers', () => {
       );
       expect(result.key).toMatch(/^avatars\/user-123\/[a-f0-9-]+\.png$/);
       expect(putSpy).toHaveBeenCalledWith(
-        'backoffice-user-media',
+        'superapp-storage',
         expect.stringMatching(/^avatars\/user-123\//),
         pngMagicHeader,
         pngMagicHeader.length,
@@ -211,7 +211,7 @@ describe('StorageService & Helpers', () => {
         '/api/backoffice-user-media/avatars/user-123/abc.png',
       );
       expect(removeSpy).toHaveBeenCalledWith(
-        'backoffice-user-media',
+        'superapp-storage',
         'avatars/user-123/abc.png',
       );
     });

@@ -61,27 +61,18 @@ export class StorageService implements OnModuleInit {
       this.configService.get<string>('MINIO_ROOT_PASSWORD') ||
       '';
 
-    const defaultBucket = this.configService.get<string>(
-      'MINIO_BUCKET_NAME',
-      'superapp-storage',
-    );
+    const rawBucket = this.configService.get<string>('MINIO_BUCKET_NAME');
+    // Unified Single-Bucket Architecture: enforce 'superapp-storage' with virtual prefixes
+    const defaultBucket =
+      !rawBucket || rawBucket === 'mini-app-assets'
+        ? 'superapp-storage'
+        : rawBucket;
+
     this.assetsBucket = defaultBucket;
-    this.packageSubmissionsBucket = this.configService.get<string>(
-      'MINIO_PACKAGE_SUBMISSIONS_BUCKET',
-      defaultBucket,
-    );
-    this.sdkSubmissionsBucket = this.configService.get<string>(
-      'MINIO_SDK_SUBMISSIONS_BUCKET',
-      defaultBucket,
-    );
-    this.endUserMediaBucket = this.configService.get<string>(
-      'MINIO_END_USER_MEDIA_BUCKET',
-      defaultBucket,
-    );
-    this.backofficeUserMediaBucket = this.configService.get<string>(
-      'MINIO_BACKOFFICE_USER_MEDIA_BUCKET',
-      defaultBucket,
-    );
+    this.packageSubmissionsBucket = defaultBucket;
+    this.sdkSubmissionsBucket = defaultBucket;
+    this.endUserMediaBucket = defaultBucket;
+    this.backofficeUserMediaBucket = defaultBucket;
 
     this.publicUrl = this.configService
       .get<string>('MINIO_PUBLIC_URL', `http://${endPoint}:${port}`)
@@ -129,20 +120,15 @@ export class StorageService implements OnModuleInit {
    * 5. backoffice-user-media: Public Read Policy (backoffice operator and admin profile avatars)
    */
   private async ensureBucketsAndPolicies(): Promise<void> {
+    // Single Bucket Architecture: only ensure the unified bucket
     await this.bucketLifecycleHelper.ensureBucketsAndPolicies(
       this.minioClient,
-      [
-        this.assetsBucket,
-        this.packageSubmissionsBucket,
-        this.sdkSubmissionsBucket,
-        this.endUserMediaBucket,
-        this.backofficeUserMediaBucket,
-      ],
+      [this.assetsBucket],
     );
+    // Automatically drain and remove any legacy fragmented buckets into superapp-storage
     await this.bucketLifecycleHelper.migrateLegacyBuckets(
       this.minioClient,
       this.assetsBucket,
-      this.packageSubmissionsBucket,
     );
   }
 

@@ -18,6 +18,7 @@ export class IsUrlReachableConstraint implements ValidatorConstraintInterface {
       url.includes('gitlab.com') ||
       url.includes('bitbucket.org') ||
       url.endsWith('.git') ||
+      url.includes('superapp-storage') ||
       url.includes('mini-app-assets') ||
       url.includes('mini-app-logos') ||
       url.includes('minio') ||
