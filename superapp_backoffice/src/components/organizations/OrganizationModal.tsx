@@ -382,12 +382,12 @@ export function OrganizationModal({
               </div>
             </div>
 
-            {/* Validation Error Feedback */}
+            {/* Validation Error Feedback - Clean Red Text */}
             {logoError && (
-              <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2.5 shadow-2xs animate-in fade-in slide-in-from-top-1 duration-200">
-                <AlertTriangleIcon className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
-                <span className="leading-relaxed font-medium">{logoError}</span>
-              </div>
+              <p className="text-xs text-rose-500 dark:text-rose-400 font-medium flex items-start gap-1.5 pt-0.5 animate-in fade-in duration-150">
+                <AlertTriangleIcon className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <span>{logoError}</span>
+              </p>
             )}
           </div>
 
