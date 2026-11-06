@@ -48,7 +48,7 @@ echo "Ensuring unified private bucket ${BUCKET} exists..."
 
 # 3. Initialize Virtual Prefix Hierarchy
 echo "Initializing Virtual Prefix Hierarchy in ${BUCKET}..."
-PREFIXES="platform/branding/ platform/banners/ organizations/ users/backoffice/ users/end-users/ quarantine/packages/ quarantine/sdks/ reports/security/"
+PREFIXES="platform/branding/ platform/banners/ miniapps/ organizations/ users/backoffice/ users/end-users/ quarantine/packages/ quarantine/sdks/ reports/security/"
 
 for prefix in $PREFIXES; do
   echo "# SuperApp Virtual Directory Placeholder" | /usr/bin/mc pipe "myminio/${BUCKET}/${prefix}.keep" || true
