@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Organization } from '@/api';
 import { Button } from '@/components/ui/inputs';
@@ -15,27 +15,56 @@ export interface OrganizationDetailTabsProps {
   defaultTab?: 'users' | 'miniapps' | 'subordinates';
 }
 
+type TabType = 'users' | 'miniapps' | 'subordinates';
+
 export function OrganizationDetailTabs({
   organization,
   isSuperOrAdmin,
   defaultTab = 'users',
 }: OrganizationDetailTabsProps) {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const tabFromUrl = searchParams?.get('tab');
-  const activeTab: 'users' | 'miniapps' | 'subordinates' = (tabFromUrl === 'miniapps' || tabFromUrl === 'subordinates') ? tabFromUrl : defaultTab;
+  const parseTab = (val: string | null | undefined): TabType => {
+    if (val === 'miniapps' || val === 'subordinates') return val;
+    return defaultTab;
+  };
 
-  const handleTabChange = (tab: 'users' | 'miniapps' | 'subordinates') => {
-    const params = new URLSearchParams(searchParams?.toString() || '');
-    if (tab === 'users') {
-      params.delete('tab');
-    } else {
-      params.set('tab', tab);
+  // Local state enables instant 0ms tab transitions
+  const [activeTab, setActiveTab] = useState<TabType>(() => parseTab(searchParams?.get('tab')));
+
+  // Sync state if URL changes externally (e.g. browser back/forward or deep links)
+  useEffect(() => {
+    const fromUrl = parseTab(searchParams?.get('tab'));
+    if (fromUrl !== activeTab) {
+      setActiveTab(fromUrl);
     }
-    const query = params.toString();
-    router.replace(`${pathname}${query ? `?${query}` : ''}`, { scroll: false });
+  }, [searchParams]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      setActiveTab(parseTab(urlParams.get('tab')));
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const handleTabChange = (tab: TabType) => {
+    if (tab === activeTab) return;
+    setActiveTab(tab);
+
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (tab === 'users') {
+        params.delete('tab');
+      } else {
+        params.set('tab', tab);
+      }
+      const query = params.toString();
+      const newUrl = `${pathname}${query ? `?${query}` : ''}`;
+      window.history.replaceState(null, '', newUrl);
+    }
   };
 
   const isActive = organization.status === 'ACTIVE';
@@ -51,10 +80,10 @@ export function OrganizationDetailTabs({
           <button
             type="button"
             onClick={() => handleTabChange('users')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ease-out active:scale-[0.98] cursor-pointer ${
               activeTab === 'users'
-                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm border border-slate-200/60 dark:border-slate-700/60'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xs border border-slate-200/80 dark:border-slate-700/80 font-bold'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/40 dark:hover:bg-slate-800/40 border border-transparent'
             }`}
           >
             <UserGroupIcon className="w-4 h-4 text-brand-600 dark:text-brand-400" />
@@ -73,10 +102,10 @@ export function OrganizationDetailTabs({
           <button
             type="button"
             onClick={() => handleTabChange('miniapps')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ease-out active:scale-[0.98] cursor-pointer ${
               activeTab === 'miniapps'
-                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm border border-slate-200/60 dark:border-slate-700/60'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xs border border-slate-200/80 dark:border-slate-700/80 font-bold'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/40 dark:hover:bg-slate-800/40 border border-transparent'
             }`}
           >
             <PackageIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -96,10 +125,10 @@ export function OrganizationDetailTabs({
             <button
               type="button"
               onClick={() => handleTabChange('subordinates')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ease-out active:scale-[0.98] cursor-pointer ${
                 activeTab === 'subordinates'
-                  ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm border border-slate-200/60 dark:border-slate-700/60'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xs border border-slate-200/80 dark:border-slate-700/80 font-bold'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/40 dark:hover:bg-slate-800/40 border border-transparent'
               }`}
             >
               <BuildingIcon className="w-4 h-4 text-sky-600 dark:text-sky-400" />
@@ -128,70 +157,72 @@ export function OrganizationDetailTabs({
         )}
       </div>
 
-      {/* Tab Panels */}
-      {activeTab === 'users' && (
-        <OrganizationUsersTab
-          users={organization.users}
-          isSuperOrAdmin={isSuperOrAdmin}
-        />
-      )}
+      {/* Tab Panels with Smooth Enter Animation */}
+      <div key={activeTab} className="tab-panel-enter">
+        {activeTab === 'users' && (
+          <OrganizationUsersTab
+            users={organization.users}
+            isSuperOrAdmin={isSuperOrAdmin}
+          />
+        )}
 
-      {activeTab === 'miniapps' && (
-        <OrganizationMiniAppsTab
-          miniApps={organization.miniApps}
-          isActive={isActive}
-        />
-      )}
+        {activeTab === 'miniapps' && (
+          <OrganizationMiniAppsTab
+            miniApps={organization.miniApps}
+            isActive={isActive}
+          />
+        )}
 
-      {activeTab === 'subordinates' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in duration-200">
-          {organization.children?.map((child) => (
-            <div
-              key={child.id}
-              className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition-all flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/60">
-                    {child.code || 'ORG'}
-                  </span>
-                  <span
-                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                      child.status === 'ACTIVE'
-                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
-                        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-                    }`}
-                  >
+        {activeTab === 'subordinates' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {organization.children?.map((child) => (
+              <div
+                key={child.id}
+                className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition-all flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/60">
+                      {child.code || 'ORG'}
+                    </span>
                     <span
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        child.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-400'
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                        child.status === 'ACTIVE'
+                          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
+                          : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
                       }`}
-                    />
-                    {child.status}
-                  </span>
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          child.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-400'
+                        }`}
+                      />
+                      {child.status}
+                    </span>
+                  </div>
+                  <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100 line-clamp-1">
+                    {child.name}
+                  </h4>
+                  {child.description && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-1">
+                      {child.description}
+                    </p>
+                  )}
                 </div>
-                <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100 line-clamp-1">
-                  {child.name}
-                </h4>
-                {child.description && (
-                  <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-1">
-                    {child.description}
-                  </p>
-                )}
+                <div className="pt-3 mt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+                  <Link
+                    href={`/organizations/${child.id}`}
+                    className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-700 flex items-center gap-1"
+                  >
+                    <span>View Details</span>
+                    <ExternalLinkIcon className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
               </div>
-              <div className="pt-3 mt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end">
-                <Link
-                  href={`/organizations/${child.id}`}
-                  className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-700 flex items-center gap-1"
-                >
-                  <span>View Details</span>
-                  <ExternalLinkIcon className="w-3.5 h-3.5" />
-                </Link>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

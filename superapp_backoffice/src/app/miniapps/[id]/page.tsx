@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
@@ -47,23 +47,56 @@ function ManageMiniAppContent() {
       ? routeParams.id[0]
       : '') || '';
 
-  const rawTab = (searchParams?.get('tab') as MiniAppTabType) || 'overview';
-  const validTabs: MiniAppTabType[] = [
-    'overview',
-    'legal',
-    'team',
-    'integration',
-    'permissions',
-    'versions',
-    'report',
-    'activity',
-  ];
-  const activeTab: MiniAppTabType = validTabs.includes(rawTab) ? rawTab : 'overview';
+  const validTabs: MiniAppTabType[] = useMemo(
+    () => [
+      'overview',
+      'legal',
+      'team',
+      'integration',
+      'permissions',
+      'versions',
+      'report',
+      'activity',
+    ],
+    []
+  );
+
+  const getValidTab = (tabStr: string | null | undefined): MiniAppTabType => {
+    return tabStr && validTabs.includes(tabStr as MiniAppTabType)
+      ? (tabStr as MiniAppTabType)
+      : 'overview';
+  };
+
+  // Local state for instantaneous 0ms tab transitions
+  const [activeTab, setActiveTabState] = useState<MiniAppTabType>(() =>
+    getValidTab(searchParams?.get('tab'))
+  );
+
+  useEffect(() => {
+    const fromUrl = getValidTab(searchParams?.get('tab'));
+    if (fromUrl !== activeTab) {
+      setActiveTabState(fromUrl);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      setActiveTabState(getValidTab(urlParams.get('tab')));
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   const setActiveTab = (tab: MiniAppTabType) => {
-    const currentParams = new URLSearchParams(searchParams?.toString() || '');
-    currentParams.set('tab', tab);
-    router.replace(`/miniapps/${id}?${currentParams.toString()}`, { scroll: false });
+    if (tab === activeTab) return;
+    setActiveTabState(tab);
+    if (typeof window !== 'undefined') {
+      const currentParams = new URLSearchParams(window.location.search);
+      currentParams.set('tab', tab);
+      const newUrl = `/miniapps/${id}?${currentParams.toString()}`;
+      window.history.replaceState(null, '', newUrl);
+    }
   };
 
   const {
@@ -208,7 +241,8 @@ function ManageMiniAppContent() {
           }
         />
 
-        {/* Section Contents Router */}
+        {/* Section Contents Router with Smooth Enter Animation */}
+        <div key={activeTab} className="tab-panel-enter">
         <MiniAppSectionContent
           activeTab={activeTab}
           id={id}
@@ -230,6 +264,7 @@ function ManageMiniAppContent() {
           setCustomPermission={setCustomPermission}
           onRefreshApp={() => fetchApp(false, true)}
         />
+        </div>
 
         {/* Save Changes Floating Bottom Bar */}
         <MiniAppDetailBottomBar

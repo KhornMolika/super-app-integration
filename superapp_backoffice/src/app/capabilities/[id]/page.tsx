@@ -59,7 +59,25 @@ export default function CapabilityDetailPage({
   const { can } = useAuth();
   const canManage = can('permission:manage');
 
-  const activeTab = searchParams.get('tab') || 'specs';
+  const [activeTab, setActiveTab] = useState<string>(
+    () => searchParams.get('tab') || 'specs'
+  );
+
+  useEffect(() => {
+    const fromUrl = searchParams.get('tab') || 'specs';
+    if (fromUrl !== activeTab) {
+      setActiveTab(fromUrl);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      setActiveTab(urlParams.get('tab') || 'specs');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   const [capability, setCapability] = useState<Permission | null>(null);
   const [associatedApps, setAssociatedApps] = useState<MiniApp[]>([]);
@@ -83,14 +101,18 @@ export default function CapabilityDetailPage({
   const [isProposalModalOpen, setIsProposalModalOpen] = useState(false);
 
   const handleTabChange = (tab: string) => {
-    const p = new URLSearchParams(searchParams.toString());
-    if (tab === 'specs') {
-      p.delete('tab');
-    } else {
-      p.set('tab', tab);
+    if (tab === activeTab) return;
+    setActiveTab(tab);
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      if (tab === 'specs') {
+        p.delete('tab');
+      } else {
+        p.set('tab', tab);
+      }
+      const q = p.toString();
+      window.history.replaceState(null, '', `${pathname}${q ? `?${q}` : ''}`);
     }
-    const q = p.toString();
-    router.replace(`${pathname}${q ? `?${q}` : ''}`, { scroll: false });
   };
 
   const handleCopy = (text: string, label: string) => {
@@ -411,7 +433,7 @@ export default function CapabilityDetailPage({
             <button
               type="button"
               onClick={() => handleTabChange('specs')}
-              className={`group inline-flex items-center gap-2 py-3 px-1 border-b-2 font-medium text-xs whitespace-nowrap cursor-pointer transition-all ${
+              className={`group inline-flex items-center gap-2 py-3 px-1 border-b-2 font-medium text-xs whitespace-nowrap cursor-pointer transition-all duration-200 ease-out active:scale-[0.98] ${
                 activeTab === 'specs'
                   ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400 font-bold'
                   : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
@@ -460,6 +482,8 @@ export default function CapabilityDetailPage({
           </nav>
         </div>
 
+        {/* Tab Panels with Smooth Enter Animation */}
+        <div key={activeTab} className="tab-panel-enter">
         {/* Tab 1: Runtime & Bridge Specifications */}
         {activeTab === 'specs' && (
           <div className="space-y-6">
@@ -496,7 +520,7 @@ export default function CapabilityDetailPage({
                         key={m}
                         type="button"
                         onClick={() => setSelectedMethod(m)}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all duration-200 ease-out active:scale-[0.98] cursor-pointer whitespace-nowrap ${
                           isSelected
                             ? `${cfg.badgeColor.bg} ${cfg.badgeColor.text} ${cfg.badgeColor.border} border shadow-xs`
                             : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60'
@@ -897,6 +921,8 @@ export default function CapabilityDetailPage({
             </form>
           </Card>
         )}
+
+        </div>
 
         {/* Propose Capability Modal */}
         <CreateProposalModal

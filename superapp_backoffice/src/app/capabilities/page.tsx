@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, Suspense } from 'react';
-import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { useSearchParams, usePathname } from 'next/navigation';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/lib/auth';
 import { toast } from '@/components/ui/Toast';
@@ -25,49 +25,84 @@ import {
 import { renderCapabilityIcon } from '@/lib/capability-visuals';
 
 function CapabilitiesContent() {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const initialTab = searchParams.get('tab') === 'proposals' ? 'PROPOSALS' : 'CAPABILITIES';
-  const initialFilter = searchParams.get('filter') === 'all' ? 'ALL' : 'PENDING';
+
+  const parseTab = (t: string | null | undefined): 'CAPABILITIES' | 'PROPOSALS' =>
+    t === 'proposals' ? 'PROPOSALS' : 'CAPABILITIES';
+  const parseFilter = (f: string | null | undefined): 'PENDING' | 'ALL' =>
+    f === 'all' ? 'ALL' : 'PENDING';
 
   const { can } = useAuth();
-  const [activeTab, setActiveTab] = useState<'CAPABILITIES' | 'PROPOSALS'>(
-    initialTab as any,
+  // Local state enables instant 0ms tab transitions
+  const [activeTab, setActiveTab] = useState<'CAPABILITIES' | 'PROPOSALS'>(() =>
+    parseTab(searchParams?.get('tab'))
+  );
+  const [proposalSubFilter, setProposalSubFilter] = useState<'PENDING' | 'ALL'>(() =>
+    parseFilter(searchParams?.get('filter'))
   );
   const [loading, setLoading] = useState(true);
   const [capabilities, setCapabilities] = useState<CapabilityItem[]>([]);
   const [proposals, setProposals] = useState<PermissionProposal[]>([]);
-  const [proposalSubFilter, setProposalSubFilter] = useState<'PENDING' | 'ALL'>(initialFilter);
 
-  // Synchronize state with URL
+  // Sync state if URL changes externally (e.g. back/forward button)
   useEffect(() => {
-    const params = new URLSearchParams();
-    if (activeTab === 'PROPOSALS') {
-      params.set('tab', 'proposals');
-      if (proposalSubFilter !== 'PENDING') {
-        params.set('filter', proposalSubFilter.toLowerCase());
-      }
+    const tabFromUrl = parseTab(searchParams?.get('tab'));
+    const filterFromUrl = parseFilter(searchParams?.get('filter'));
+
+    if (tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl);
     }
-
-    const queryStr = params.toString();
-    const targetUrl = queryStr ? `${pathname}?${queryStr}` : pathname;
-    const currentQueryStr = searchParams.toString();
-    const currentUrl = currentQueryStr ? `${pathname}?${currentQueryStr}` : pathname;
-
-    if (targetUrl !== currentUrl) {
-      router.replace(targetUrl, { scroll: false });
+    if (filterFromUrl !== proposalSubFilter) {
+      setProposalSubFilter(filterFromUrl);
     }
-  }, [activeTab, proposalSubFilter, pathname, router, searchParams]);
-
-  // Sync state from URL
-  useEffect(() => {
-    const tabFromUrl = searchParams.get('tab') === 'proposals' ? 'PROPOSALS' : 'CAPABILITIES';
-    const filterFromUrl = searchParams.get('filter') === 'all' ? 'ALL' : 'PENDING';
-
-    setActiveTab((prev) => (prev !== tabFromUrl ? tabFromUrl : prev));
-    setProposalSubFilter((prev) => (prev !== filterFromUrl ? filterFromUrl : prev));
   }, [searchParams]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      setActiveTab(parseTab(urlParams.get('tab')));
+      setProposalSubFilter(parseFilter(urlParams.get('filter')));
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const handleTabChange = (newTab: 'CAPABILITIES' | 'PROPOSALS') => {
+    if (newTab === activeTab) return;
+    setActiveTab(newTab);
+
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (newTab === 'PROPOSALS') {
+        params.set('tab', 'proposals');
+        if (proposalSubFilter !== 'PENDING') {
+          params.set('filter', proposalSubFilter.toLowerCase());
+        }
+      } else {
+        params.delete('tab');
+        params.delete('filter');
+      }
+      const q = params.toString();
+      const newUrl = q ? `${pathname}?${q}` : pathname;
+      window.history.replaceState(null, '', newUrl);
+    }
+  };
+
+  const handleProposalFilterChange = (filter: 'PENDING' | 'ALL') => {
+    setProposalSubFilter(filter);
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (filter === 'ALL') {
+        params.set('filter', 'all');
+      } else {
+        params.delete('filter');
+      }
+      const q = params.toString();
+      const newUrl = q ? `${pathname}?${q}` : pathname;
+      window.history.replaceState(null, '', newUrl);
+    }
+  };
 
   // Review Modal State
   const [selectedProposal, setSelectedProposal] = useState<PermissionProposal | null>(null);
@@ -220,10 +255,10 @@ function CapabilitiesContent() {
         <div className="flex border-b border-slate-200 dark:border-slate-800 space-x-6 text-xs sm:text-sm">
           <button
             type="button"
-            onClick={() => setActiveTab('CAPABILITIES')}
-            className={`pb-3 font-semibold flex items-center gap-2 border-b-2 transition-all ${
+            onClick={() => handleTabChange('CAPABILITIES')}
+            className={`pb-3 font-semibold flex items-center gap-2 border-b-2 transition-all duration-200 ease-out active:scale-[0.98] cursor-pointer ${
               activeTab === 'CAPABILITIES'
-                ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400'
+                ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400 font-bold'
                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
@@ -236,10 +271,10 @@ function CapabilitiesContent() {
 
           <button
             type="button"
-            onClick={() => setActiveTab('PROPOSALS')}
-            className={`pb-3 font-semibold flex items-center gap-2 border-b-2 transition-all ${
+            onClick={() => handleTabChange('PROPOSALS')}
+            className={`pb-3 font-semibold flex items-center gap-2 border-b-2 transition-all duration-200 ease-out active:scale-[0.98] cursor-pointer ${
               activeTab === 'PROPOSALS'
-                ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400'
+                ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400 font-bold'
                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
           >
@@ -257,28 +292,29 @@ function CapabilitiesContent() {
           </button>
         </div>
 
-        {/* Tab 1: Capabilities */}
-        {activeTab === 'CAPABILITIES' && (
-          <CapabilitiesTab
-            capabilities={capabilities}
-            loading={loading}
-            onSyncGitLab={handleSyncGitLab}
-            isSyncingGitLab={isSyncingGitLab}
-            getPermissionIcon={getPermissionIcon}
-          />
-        )}
+        {/* Tab Panels with Smooth Enter Animation */}
+        <div key={activeTab} className="tab-panel-enter">
+          {activeTab === 'CAPABILITIES' && (
+            <CapabilitiesTab
+              capabilities={capabilities}
+              loading={loading}
+              onSyncGitLab={handleSyncGitLab}
+              isSyncingGitLab={isSyncingGitLab}
+              getPermissionIcon={getPermissionIcon}
+            />
+          )}
 
-        {/* Tab 2: Proposals */}
-        {activeTab === 'PROPOSALS' && (
-          <ProposalsTab
-            proposals={proposals}
-            proposalSubFilter={proposalSubFilter}
-            setProposalSubFilter={setProposalSubFilter}
-            pendingCount={pendingProposalsCount}
-            canReview={can('permission_proposal:review')}
-            onSelectProposal={(prop) => setSelectedProposal(prop)}
-          />
-        )}
+          {activeTab === 'PROPOSALS' && (
+            <ProposalsTab
+              proposals={proposals}
+              proposalSubFilter={proposalSubFilter}
+              setProposalSubFilter={handleProposalFilterChange}
+              pendingCount={pendingProposalsCount}
+              canReview={can('permission_proposal:review')}
+              onSelectProposal={(prop) => setSelectedProposal(prop)}
+            />
+          )}
+        </div>
 
         {/* Review Modal */}
         <ProposalReviewModal
@@ -295,7 +331,7 @@ function CapabilitiesContent() {
           onClose={() => setShowCreateModal(false)}
           onCreated={async () => {
             await loadData();
-            setActiveTab('PROPOSALS');
+            handleTabChange('PROPOSALS');
           }}
         />
       </div>

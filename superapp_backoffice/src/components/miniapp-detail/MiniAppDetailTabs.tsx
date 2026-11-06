@@ -116,7 +116,6 @@ export default function MiniAppDetailTabs({
     },
   ];
 
-
   return (
     <div className="bg-slate-100/90 dark:bg-slate-900/90 p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto no-scrollbar mb-6 shadow-xs">
       {tabs.map((tab) => {
@@ -128,9 +127,9 @@ export default function MiniAppDetailTabs({
             key={tab.id}
             type="button"
             onClick={() => onSelectTab(tab.id)}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-semibold text-xs sm:text-sm tracking-tight transition-all duration-200 whitespace-nowrap shrink-0 ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-semibold text-xs sm:text-sm tracking-tight transition-all duration-200 ease-out active:scale-[0.98] whitespace-nowrap shrink-0 cursor-pointer ${
               isActive
-                ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-300 shadow-sm border border-slate-200/70 dark:border-slate-700/70 font-bold'
+                ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-300 shadow-xs border border-slate-200/70 dark:border-slate-700/70 font-bold'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/60 dark:hover:bg-slate-800/50 border border-transparent'
             }`}
           >

@@ -136,7 +136,7 @@ export default function LegalPolicyTabField({
           <button
             type="button"
             onClick={() => setActiveTab('url')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 ease-out active:scale-[0.98] cursor-pointer ${
               activeTab === 'url'
                 ? 'bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 shadow-2xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -154,7 +154,7 @@ export default function LegalPolicyTabField({
           <button
             type="button"
             onClick={() => setActiveTab('document')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 ease-out active:scale-[0.98] cursor-pointer ${
               activeTab === 'document'
                 ? 'bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 shadow-2xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -171,6 +171,8 @@ export default function LegalPolicyTabField({
         </div>
       </div>
 
+      {/* Tab Content with Smooth Enter Animation */}
+      <div key={activeTab} className="tab-panel-enter">
       {/* Tab 1: Live Web URL */}
       {activeTab === 'url' && (
         <div className="space-y-3.5 animate-in fade-in duration-200">
@@ -294,6 +296,7 @@ export default function LegalPolicyTabField({
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }
