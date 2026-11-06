@@ -9,3 +9,4 @@ export * from './OrganizationUsersTab';
 export * from './OrganizationMiniAppsTab';
 export * from './OrganizationDetailTabs';
 export * from './OrganizationAvatar';
+export * from './OrganizationSelect';

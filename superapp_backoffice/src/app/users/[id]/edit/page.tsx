@@ -21,6 +21,7 @@ import { toast } from '@/components/ui/Toast';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { ShieldCheckIcon, CheckIcon, BuildingIcon } from '@/components/ui/Icons';
 import { getRoleTheme, getUserEffectiveStatus, getUserRoles, AvatarUpload } from '@/components/users';
+import { OrganizationSelect } from '@/components/organizations/OrganizationSelect';
 
 
 interface RoleOption {
@@ -659,19 +660,15 @@ function EditUserContent() {
                   <Label htmlFor="user-org" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                     Organization Tenant
                   </Label>
-                  <select
+                  <OrganizationSelect
                     id="user-org"
+                    organizations={organizations}
                     value={organizationId}
-                    onChange={(e) => setOrganizationId(e.target.value)}
-                    className="w-full text-xs rounded-xl px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer"
-                  >
-                    <option value="">No Organization (Independent)</option>
-                    {organizations.map((org) => (
-                      <option key={org.id} value={org.id}>
-                        {org.name} {org.code ? `(${org.code})` : ''}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="Select Organization Tenant..."
+                    allowClear={true}
+                    clearLabel="No Organization (Independent)"
+                    onChange={(orgId: string | null) => setOrganizationId(orgId || '')}
+                  />
                 </div>
 
 

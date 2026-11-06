@@ -12,9 +12,11 @@ import {
   XIcon,
   CameraIcon,
   HashIcon,
+  AlertTriangleIcon,
 } from '@/components/ui/Icons';
 import { normalizeAssetUrl } from '@/lib/asset-utils';
 import { getOrgInitialCode } from './OrganizationAvatar';
+import { OrganizationSelect } from './OrganizationSelect';
 
 export interface OrganizationFormData {
   name: string;
@@ -58,6 +60,7 @@ export function OrganizationModal({
   });
 
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoError, setLogoError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -97,6 +100,7 @@ export function OrganizationModal({
         logoFile: null,
       });
       setLogoPreview(null);
+      setLogoError(null);
     }
   }, [editingOrg, isOpen]);
 
@@ -123,17 +127,74 @@ export function OrganizationModal({
   if (!isOpen) return null;
 
   const processFile = (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      alert('Only image files (PNG, JPG, SVG, WebP) are supported.');
+    setLogoError(null);
+
+    // 1. MIME Type Validation
+    const validTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
+    if (!validTypes.includes(file.type) && !file.type.startsWith('image/')) {
+      setLogoError('Unsupported format. Please upload a valid PNG, JPG, WebP, or SVG file.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
+
+    // 2. Maximum File Size Limit (2MB standard)
     if (file.size > 2 * 1024 * 1024) {
-      alert('Logo file must be smaller than 2MB.');
+      setLogoError('Image size exceeds 2MB limit (recommended: 512×512 px square under 1MB).');
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
-    const previewUrl = URL.createObjectURL(file);
-    setLogoPreview(previewUrl);
-    setFormData((prev) => ({ ...prev, logoFile: file }));
+
+    // 3. For SVG files, accept directly as scalable vector
+    if (file.type === 'image/svg+xml') {
+      const previewUrl = URL.createObjectURL(file);
+      setLogoPreview(previewUrl);
+      setFormData((prev) => ({ ...prev, logoFile: file }));
+      setLogoError(null);
+      return;
+    }
+
+    // 4. Decode raster image to validate dimensions & aspect ratio
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+
+    img.onload = () => {
+      const width = img.naturalWidth || img.width;
+      const height = img.naturalHeight || img.height;
+      const ratio = width / height;
+
+      // Check 1: 1:1 Aspect Ratio Standard (tolerance 0.80 to 1.25)
+      if (ratio < 0.80 || ratio > 1.25) {
+        setLogoError(
+          `Non-standard aspect ratio (${width}×${height} px). Organization logos must be 1:1 square (512×512 px recommended). Please crop your logo to a square and upload again.`
+        );
+        URL.revokeObjectURL(objectUrl);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        return;
+      }
+
+      // Check 2: Minimum Resolution (128x128 px)
+      if (width < 128 || height < 128) {
+        setLogoError(
+          `Resolution too low (${width}×${height} px). Minimum required logo size is 128×128 px (512×512 px recommended). Please upload a higher resolution image.`
+        );
+        URL.revokeObjectURL(objectUrl);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        return;
+      }
+
+      // Compliant standard organization logo
+      setLogoPreview(objectUrl);
+      setFormData((prev) => ({ ...prev, logoFile: file }));
+      setLogoError(null);
+    };
+
+    img.onerror = () => {
+      setLogoError('Failed to decode image. Please upload a valid PNG, JPG, or WebP image.');
+      URL.revokeObjectURL(objectUrl);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    img.src = objectUrl;
   };
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -154,6 +215,7 @@ export function OrganizationModal({
 
   const handleRemoveLogo = () => {
     setLogoPreview(null);
+    setLogoError(null);
     setFormData((prev) => ({ ...prev, logo: null, logoFile: null }));
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -224,99 +286,109 @@ export function OrganizationModal({
             </div>
           )}
 
-          {/* Section 1: Logo & Branding (Round Avatar Preview) */}
-          <div
-            onDragOver={(e) => {
-              e.preventDefault();
-              setIsDragging(true);
-            }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={handleDrop}
-            className={`p-4 rounded-2xl border transition-all flex items-center gap-4 ${
-              isDragging
-                ? 'border-brand-500 bg-brand-50/40 dark:bg-brand-500/10 ring-2 ring-brand-500/20'
-                : 'border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-850/60'
-            }`}
-          >
-            {/* Interactive Round Avatar */}
+          {/* Section 1: Logo & Branding (Round Avatar Preview & Validation) */}
+          <div className="space-y-2">
             <div
-              onClick={() => fileInputRef.current?.click()}
-              title="Click to select logo"
-              className="relative group w-16 h-16 sm:w-18 sm:h-18 rounded-full overflow-hidden shrink-0 shadow-md ring-4 ring-white dark:ring-slate-800 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 cursor-pointer transition-transform group-hover:scale-105"
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
+              }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
+              className={`p-4 rounded-2xl border transition-all flex items-center gap-4 ${
+                isDragging
+                  ? 'border-brand-500 bg-brand-50/40 dark:bg-brand-500/10 ring-2 ring-brand-500/20'
+                  : 'border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40'
+              }`}
             >
-              {logoPreview ? (
-                <img
-                  src={logoPreview}
-                  alt="Logo preview"
-                  className="w-full h-full object-contain rounded-full p-1"
-                />
-              ) : (
-                <div
-                  className={`w-full h-full font-mono font-bold flex items-center justify-center text-base sm:text-lg select-none transition-colors ${
-                    isRoot
-                      ? 'bg-gradient-to-br from-amber-500 to-amber-700 text-white'
-                      : 'bg-gradient-to-br from-brand-600 to-brand-800 text-white'
-                  }`}
-                >
-                  {liveInitials}
+              {/* Interactive Round Avatar */}
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                title="Click to select logo"
+                className="relative group w-16 h-16 sm:w-18 sm:h-18 rounded-full overflow-hidden shrink-0 shadow-md ring-4 ring-white dark:ring-slate-800 border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 cursor-pointer transition-transform group-hover:scale-105"
+              >
+                {logoPreview ? (
+                  <img
+                    src={logoPreview}
+                    alt="Logo preview"
+                    className="w-full h-full object-cover rounded-full"
+                  />
+                ) : (
+                  <div
+                    className={`w-full h-full font-mono font-bold flex items-center justify-center text-base sm:text-lg select-none transition-colors ${
+                      isRoot
+                        ? 'bg-gradient-to-br from-amber-500 to-amber-700 text-white'
+                        : 'bg-gradient-to-br from-brand-600 to-brand-800 text-white'
+                    }`}
+                  >
+                    {liveInitials}
+                  </div>
+                )}
+
+                {/* Hover Camera Overlay */}
+                <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white">
+                  <CameraIcon className="w-4 h-4 sm:w-5 sm:h-5 mb-0.5" />
+                  <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider">
+                    {logoPreview ? 'Change' : 'Upload'}
+                  </span>
                 </div>
-              )}
-
-              {/* Hover Camera Overlay */}
-              <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white">
-                <CameraIcon className="w-4 h-4 sm:w-5 sm:h-5 mb-0.5" />
-                <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider">
-                  {logoPreview ? 'Change' : 'Upload'}
-                </span>
-              </div>
-            </div>
-
-            {/* Upload Controls & Metadata */}
-            <div className="flex-1 min-w-0 space-y-1.5">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                  Organization Logo & Avatar
-                </span>
-                <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-700 dark:text-brand-300 border border-brand-500/20">
-                  Round Avatar
-                </span>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                  onChange={handleLogoChange}
-                  className="hidden"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="h-8 px-3 text-xs font-medium rounded-xl gap-1.5 bg-white dark:bg-slate-800 shadow-2xs"
-                >
-                  <CameraIcon className="w-3.5 h-3.5 text-slate-500" />
-                  <span>{logoPreview ? 'Change Logo' : 'Select Logo'}</span>
-                </Button>
-                {logoPreview && (
+              {/* Upload Controls & Metadata */}
+              <div className="flex-1 min-w-0 space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                    Organization Logo & Avatar
+                  </span>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-700 dark:text-brand-300 border border-brand-500/20">
+                    Round Avatar
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    onChange={handleLogoChange}
+                    className="hidden"
+                  />
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    onClick={handleRemoveLogo}
-                    className="h-8 px-2.5 text-xs font-medium text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl gap-1"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="h-8 px-3 text-xs font-medium rounded-xl gap-1.5 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 shadow-2xs"
                   >
-                    <XIcon className="w-3.5 h-3.5" />
-                    <span>Remove</span>
+                    <CameraIcon className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                    <span>{logoPreview ? 'Change Logo' : 'Select Logo'}</span>
                   </Button>
-                )}
+                  {logoPreview && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleRemoveLogo}
+                      className="h-8 px-2.5 text-xs font-medium text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl gap-1"
+                    >
+                      <XIcon className="w-3.5 h-3.5" />
+                      <span>Remove</span>
+                    </Button>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-400 dark:text-slate-400 leading-tight">
+                  1:1 Square PNG, JPG, SVG, or WEBP (max 2MB). Falls back to initial code badge.
+                </p>
               </div>
-              <p className="text-[11px] text-slate-400 dark:text-slate-400 leading-tight">
-                PNG, JPG, SVG, or WEBP (max 2MB). Falls back to initial code badge.
-              </p>
             </div>
+
+            {/* Validation Error Feedback */}
+            {logoError && (
+              <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2.5 shadow-2xs animate-in fade-in slide-in-from-top-1 duration-200">
+                <AlertTriangleIcon className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                <span className="leading-relaxed font-medium">{logoError}</span>
+              </div>
+            )}
           </div>
 
           {/* Section 2: Organization Name */}
@@ -365,7 +437,7 @@ export function OrganizationModal({
               </p>
             </div>
 
-            {/* Parent Authority */}
+            {/* Parent Authority (Searchable Dropdown) */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label
@@ -383,34 +455,22 @@ export function OrganizationModal({
                   <span>Primary Authority Root</span>
                 </div>
               ) : (
-                <div className="relative">
-                  <select
-                    id="org-parent"
-                    value={formData.parentId || ''}
-                    onChange={(e) => {
-                      const selId = e.target.value;
-                      const matchedParent = availableParents.find((p) => p.id === selId);
-                      setFormData({
-                        ...formData,
-                        parentId: selId || null,
-                        parentAuthority: matchedParent?.name || '',
-                      });
-                    }}
-                    className="w-full h-11 appearance-none rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 pl-3.5 pr-9 text-xs font-medium text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all shadow-2xs cursor-pointer"
-                  >
-                    <option value="">None (No Parent / Independent)</option>
-                    {availableParents.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} {p.code ? `(${p.code})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </div>
-                </div>
+                <OrganizationSelect
+                  id="org-parent"
+                  organizations={availableParents}
+                  value={formData.parentId}
+                  placeholder="Select Parent Authority (Optional)..."
+                  allowClear={true}
+                  clearLabel="None (No Parent / Independent)"
+                  excludeOrgId={editingOrg?.id}
+                  onChange={(selId, matchedOrg) => {
+                    setFormData({
+                      ...formData,
+                      parentId: selId || null,
+                      parentAuthority: matchedOrg?.name || '',
+                    });
+                  }}
+                />
               )}
               <p className="text-[10px] text-slate-400 dark:text-slate-400 mt-1">
                 Parent regulatory or ministerial supervisory body.

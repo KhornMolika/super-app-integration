@@ -74,8 +74,55 @@ export function AvatarUpload({
     return true;
   };
 
+  const validateImageDimensions = (file: File): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const objectUrl = URL.createObjectURL(file);
+      const img = new Image();
+
+      img.onload = () => {
+        const width = img.naturalWidth || img.width;
+        const height = img.naturalHeight || img.height;
+        const ratio = width / height;
+
+        URL.revokeObjectURL(objectUrl);
+
+        if (ratio < 0.80 || ratio > 1.25) {
+          toast.error(
+            `Non-standard aspect ratio (${width}×${height} px). Profile avatars must be roughly 1:1 square. Please crop your photo and try again.`
+          );
+          resolve(false);
+          return;
+        }
+
+        if (width < 128 || height < 128) {
+          toast.error(
+            `Resolution too low (${width}×${height} px). Minimum required size is 128×128 px.`
+          );
+          resolve(false);
+          return;
+        }
+
+        resolve(true);
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        toast.error('Failed to decode image. Please upload a valid JPEG, PNG, or WebP file.');
+        resolve(false);
+      };
+
+      img.src = objectUrl;
+    });
+  };
+
   const handleIncomingFile = async (file: File) => {
     if (!validateFile(file)) {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    const isValidDimensions = await validateImageDimensions(file);
+    if (!isValidDimensions) {
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }

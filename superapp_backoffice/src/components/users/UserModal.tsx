@@ -15,6 +15,7 @@ import {
   unwrapData,
 } from '@/api';
 import { AvatarUpload } from './AvatarUpload';
+import { OrganizationSelect } from '@/components/organizations/OrganizationSelect';
 
 
 export interface UserModalProps {
@@ -425,29 +426,15 @@ export function UserModal({
                   <span className="text-[10px] text-slate-400 font-normal">Optional</span>
                 )}
               </Label>
-              <div className="relative">
-                <select
-                  id="user-organization"
-                  required={!editingUser}
-                  value={formData.organizationId}
-                  onChange={(e) => setFormData({ ...formData, organizationId: e.target.value })}
-                  className="w-full h-10 px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all appearance-none cursor-pointer"
-                >
-                  <option value="" disabled={!editingUser}>
-                    {!editingUser ? 'Select an organization...' : 'Independent / No Organization'}
-                  </option>
-                  {organizationsList.map((org) => (
-                    <option key={org.id} value={org.id}>
-                      {org.name} {org.code ? `(${org.code})` : ''}
-                    </option>
-                  ))}
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
+              <OrganizationSelect
+                id="user-organization"
+                organizations={organizationsList}
+                value={formData.organizationId}
+                placeholder={!editingUser ? 'Select an organization (Required)...' : 'Independent / No Organization'}
+                allowClear={!!editingUser}
+                clearLabel="Independent / No Organization"
+                onChange={(orgId: string | null) => setFormData({ ...formData, organizationId: orgId || '' })}
+              />
               <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
                 {loadingOrgs ? 'Loading organizations...' : 'Associates operator with regulatory or financial authority'}
               </p>
