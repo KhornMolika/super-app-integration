@@ -109,16 +109,11 @@ export class TelegramCardHelper {
       case 'VALIDATION_FAILED':
       case 'SECURITY_FAILED': {
         const score = metadata?.score ?? 0;
-        const cleanIssue = message
-          ? message
-              .split('\n')
-              .filter(Boolean)
-              .map((l) => {
-                const line = l.trim().replace(/^[-•!+]\s*/, '');
-                return `- Issue        : ${line}`;
-              })
-              .join('\n')
-          : '- Issue        : Security compliance gate requirements not satisfied';
+        const issues = TelegramCardHelper.formatFriendlyIssues(message);
+        const cleanIssue =
+          issues.length > 0
+            ? issues.map((issue) => `- Issue        : ${issue}`).join('\n')
+            : '- Issue        : Security compliance gate requirements not satisfied';
 
         const text = `
 🔴 <b>VALIDATION FAILED</b>
@@ -133,7 +128,7 @@ ${cleanIssue}
 ! Action       : Fix issues & re-submit
 </code></pre>
 
-<blockquote>Please address identified security policy violations in the portal and re-submit.</blockquote>
+<blockquote>Please address identified security policy violations in the backoffice and re-submit for validation.</blockquote>
         `.trim();
 
         buttons.push([
@@ -237,15 +232,11 @@ ${cleanIssue}
           (metadata?.version as string) ||
           (metadata?.releaseVersion as string) ||
           'latest';
-        const cleanReason = message
-          ? message
-              .split('\n')
-              .filter(Boolean)
-              .map(
-                (l) => `- Error        : ${l.trim().replace(/^[-•!+]\s*/, '')}`,
-              )
-              .join('\n')
-          : '- Error        : Fastlane packaging or Nexus publish failed';
+        const errors = TelegramCardHelper.formatFriendlyIssues(message);
+        const cleanReason =
+          errors.length > 0
+            ? errors.map((l) => `- Error        : ${l}`).join('\n')
+            : '- Error        : Fastlane packaging or Nexus publish failed';
 
         const text = `
 🔴 <b>SUPER APP BUILD ERROR</b>
@@ -398,5 +389,53 @@ ${detailLines}
       default:
         return 'SuperApp Notification';
     }
+  }
+
+  /**
+   * Sanitizes raw error messages, stripping internal backend variable paths,
+   * array indices, technical DTO names, and introductory summary lines.
+   */
+  static sanitizeErrorMessage(line: string): string {
+    if (!line) return '';
+    let text = line.trim().replace(/^[-•!*+]\s*/, '').trim();
+
+    // Skip redundant count/intro lines
+    if (
+      /has\s+\d+\s+validation\s+issue/i.test(text) ||
+      /^\d+\s+issues?\s+detected/i.test(text) ||
+      /^(\[FAIL\]\s*)?compliance gate/i.test(text)
+    ) {
+      return '';
+    }
+
+    // Strip nested dotted backend variable paths:
+    // e.g., "integrationConfigFlutter.packageName: ..."
+    // e.g., "integrationConfigDeepLink.urlScheme: ..."
+    // e.g., "permissions.0.purpose: ..."
+    // e.g., "metadata.organization.code: ..."
+    text = text.replace(/^[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+:\s*/i, '');
+
+    // Strip single camelCase or snake_case variable names followed by colon:
+    // e.g., "packageName: ..." or "termsUrl: ..." or "package_name: ..."
+    text = text.replace(/^[a-z]+[A-Z0-9][a-zA-Z0-9_]*:\s*/, '');
+    text = text.replace(/^[a-z]+_[a-z0-9_]*:\s*/, '');
+
+    // Capitalize first letter of friendly sentence if needed
+    if (text.length > 0) {
+      text = text.charAt(0).toUpperCase() + text.slice(1);
+    }
+
+    return text.trim();
+  }
+
+  /**
+   * Breaks down an error message string into clean, friendly, human-readable issue lines.
+   */
+  static formatFriendlyIssues(message?: string): string[] {
+    if (!message) return [];
+    return message
+      .split('\n')
+      .map((l) => TelegramCardHelper.sanitizeErrorMessage(l))
+      .filter((l) => l.length > 0);
   }
 }

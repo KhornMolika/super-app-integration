@@ -137,6 +137,28 @@ describe('TelegramService & Helper Modules', () => {
       expect(buttons?.[0][0].text).toContain('Remediate Violations');
     });
 
+    it('should sanitize backend variable names and remove technical paths from error messages', () => {
+      const rawMessage = '[FAIL] Compliance Gate: Action Required\nHRMIS has 1 validation issue(s):\n• integrationConfigFlutter.packageName: Package name is required for Artifact integration.';
+
+      const { text } = TelegramCardHelper.buildRichCard(
+        'Validation Failure',
+        rawMessage,
+        'VALIDATION_FAILED',
+        'HRMIS',
+        { miniAppId: 'hrmis-id', score: 0 },
+        'http://localhost:3000',
+      );
+
+      // Verify no technical backend variable paths leaked
+      expect(text).not.toContain('integrationConfigFlutter.packageName:');
+      expect(text).not.toContain('HRMIS has 1 validation issue(s):');
+      expect(text).not.toContain('[FAIL] Compliance Gate: Action Required');
+
+      // Verify clean, friendly message is present
+      expect(text).toContain('Package name is required for Artifact integration.');
+      expect(text).toContain('- Issue        : Package name is required for Artifact integration.');
+    });
+
     it('should format default headers correctly', () => {
       expect(TelegramCardHelper.formatHeader('SUCCESS')).toBe(
         'Operation Completed',

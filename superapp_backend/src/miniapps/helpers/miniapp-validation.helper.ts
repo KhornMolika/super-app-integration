@@ -355,7 +355,7 @@ export class MiniappValidationHelper {
     } else if (app.integrationMethod === 'DEEP_LINK') {
       if (!app.integrationConfig?.urlScheme) {
         errors['integrationConfigDeepLink.urlScheme'] =
-          'urlScheme is required for Deep Link integration.';
+          'URL scheme is required for Deep Link integration.';
       }
       if (
         app.integrationConfig?.appStoreUrl &&
@@ -499,10 +499,10 @@ export class MiniappValidationHelper {
       await this.issueRepository.save(issues);
 
       // Create a notification with full issue details
-      const issuesList = Object.entries(errors)
-        .map(([field, msg]) => `• ${field}: ${msg}`)
+      const issuesList = Object.values(errors)
+        .map((msg) => `• ${msg}`)
         .join('\n');
-      const notificationMessage = `${app.name || 'MiniApp'} has ${issues.length} validation issue(s):\n${issuesList}`;
+      const notificationMessage = issuesList;
 
       await this.notificationsService.createNotification(
         app.ownerId || '',
