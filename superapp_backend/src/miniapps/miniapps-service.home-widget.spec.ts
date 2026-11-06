@@ -17,6 +17,7 @@ function build(app: any) {
     {} as any,
     {} as any,
     {} as any,
+    {} as any,
   );
   return { service, miniappRepository };
 }

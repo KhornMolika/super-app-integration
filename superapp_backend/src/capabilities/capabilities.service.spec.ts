@@ -104,7 +104,7 @@ describe('CapabilitiesService', () => {
       const qb = mockRepository.createQueryBuilder();
       mockRepository.createQueryBuilder.mockReturnValue(qb);
 
-      await service.findAll({ category: 'HARDWARE' });
+      await service.findAll({ page: 1, limit: 10, category: 'HARDWARE' });
       expect(qb.andWhere).toHaveBeenCalledWith(
         'LOWER(cap.category) = LOWER(:category)',
         { category: 'HARDWARE' },
@@ -115,7 +115,7 @@ describe('CapabilitiesService', () => {
       const qb = mockRepository.createQueryBuilder();
       mockRepository.createQueryBuilder.mockReturnValue(qb);
 
-      await service.findAll({ search: 'camera' });
+      await service.findAll({ page: 1, limit: 10, search: 'camera' });
       expect(qb.andWhere).toHaveBeenCalledWith(
         expect.stringContaining('LIKE :pattern'),
         { pattern: '%camera%' },

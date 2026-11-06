@@ -3,7 +3,7 @@ import { MobileRegulatorsService } from './mobile-regulators.service';
 import { FakeRepo } from './testing/fake-repo';
 
 function org(code: string, name: string, entityType: string, status = OrganizationStatus.ACTIVE): Organization {
-  return { id: code, code, name, domain: `${code}.gov.kh`, status, metadata: { entityType } } as Organization;
+  return { id: code, code, name, domain: `${code}.gov.kh`, status, metadata: { entityType } } as unknown as Organization;
 }
 
 describe('MobileRegulatorsService.list', () => {

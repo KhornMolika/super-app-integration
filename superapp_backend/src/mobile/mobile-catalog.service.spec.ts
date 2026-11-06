@@ -1,7 +1,7 @@
 import { MiniApp } from '../miniapps/entities/miniapp.entity';
 import { MobileCatalogService, toCatalogItem } from './mobile-catalog.service';
 
-function makeApp(over: Partial<MiniApp> = {}): MiniApp {
+function makeApp(over: any = {}): MiniApp {
   return {
     id: 'id-1',
     appId: 'com.acme.pay',

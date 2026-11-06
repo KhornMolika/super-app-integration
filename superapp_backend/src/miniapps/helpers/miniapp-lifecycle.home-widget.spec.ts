@@ -81,7 +81,7 @@ describe('MiniappLifecycleHelper and homeWidget', () => {
         superAppTestVersion: 'v1.1.4',
         superAppReleaseVersion: 'v1.1.5',
       });
-      expect(result.versionHistory?.[0].saVersion).toBe('v1.1.5');
+      expect((result as any).versionHistory?.[0].saVersion).toBe('v1.1.5');
     });
 
     it('keeps the live verifiedClass when the revision widget is unchanged', async () => {
@@ -291,7 +291,7 @@ describe('MiniappLifecycleHelper and homeWidget', () => {
       return { ...ctx, storageService, nexusService, gitService, pubspecService, order, saves, registryWidgets };
     }
 
-    const pkgApp = (over: Partial<MiniApp> = {}): MiniApp =>
+    const pkgApp = (over: any = {}): MiniApp =>
       ams({
         status: 'IN_REVIEW',
         integrationMethod: 'FLUTTER_PACKAGE',

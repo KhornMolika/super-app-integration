@@ -21,11 +21,11 @@ const hr = (over: Partial<MiniApp> = {}): MiniApp =>
 
 // What PATCH /mini-apps/:id hands the helper for an HR edit
 // (extractIntegrationConfig output; the DTO whitelist strips lifecycle keys).
-const edit = (over: Partial<MiniApp> = {}): Partial<MiniApp> => ({
+const edit = (over: any = {}): Partial<MiniApp> => ({
   name: 'HR',
   integrationMethod: 'FLUTTER_PACKAGE',
   integrationConfig: { packageName: 'fsa_hr_miniapp' },
-  permissions: [],
+  capabilities: [],
   ...over,
 });
 
@@ -517,8 +517,8 @@ describe('MiniappMutationHelper and homeWidget', () => {
 
     it('on update, an organization named only in category still sets it, and category is cleared', async () => {
       const { helper } = setup();
-      const existing = hr({ status: 'DRAFT', category: 'Trust Regulator (TR)' });
-      const saved = await helper.update(existing, edit({ category: 'Insurance Regulator of Cambodia (IRC)' }), 'admin-1');
+      const existing = hr({ status: 'DRAFT', category: 'Trust Regulator (TR)' } as any);
+      const saved = await helper.update(existing, edit({ category: 'Insurance Regulator of Cambodia (IRC)' } as any), 'admin-1');
       expect(saved).toMatchObject({ organizationCode: 'IRC', category: null });
     });
 
