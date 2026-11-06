@@ -83,7 +83,7 @@ export class MobileAvatarService {
       );
 
     const user = await this.findUser(userId);
-    const key = `avatars/${userId}/${crypto.randomUUID()}.${type.ext}`;
+    const key = `users/end-users/${userId}/${crypto.randomUUID()}.${type.ext}`;
     await this.storage.putPrivateObject(
       this.storage.endUserMediaBucket,
       key,

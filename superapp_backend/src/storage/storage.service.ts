@@ -8,7 +8,6 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Client as MinioClient } from 'minio';
 import { randomUUID } from 'crypto';
-import type { Multer } from 'multer';
 import { detectImageFileType } from '../common/utils/image-type.util';
 import {
   ArchiveSanitizerHelper,
@@ -31,9 +30,8 @@ export class StorageService implements OnModuleInit {
   readonly sdkSubmissionsBucket: string;
   readonly endUserMediaBucket: string;
   readonly backofficeUserMediaBucket: string;
-  private publicUrl: string;
-  private apiBaseUrl: string;
-  private aistorLicenseKey: string;
+  private readonly publicUrl: string;
+  private readonly apiBaseUrl: string;
 
   constructor(
     private readonly configService: ConfigService,
@@ -77,12 +75,7 @@ export class StorageService implements OnModuleInit {
     this.publicUrl = this.configService
       .get<string>('MINIO_PUBLIC_URL', `http://${endPoint}:${port}`)
       .replace(/\/$/, '');
-
-    this.aistorLicenseKey =
-      this.configService.get<string>('MINIO_AISTOR_LICENSE') ||
-      this.configService.get<string>('MINIO_SUBNET_LICENSE') ||
-      this.configService.get<string>('MINIO_LICENSE') ||
-      '';
+    this.apiBaseUrl = this.configService.get<string>('CALLBACK_BASE_URL', '');
 
     this.minioClient = new MinioClient({
       endPoint,
@@ -94,16 +87,17 @@ export class StorageService implements OnModuleInit {
   }
 
   getLicenseStatus(): LicenseStatusResult {
-    return this.bucketLifecycleHelper.buildLicenseStatus(
-      this.aistorLicenseKey,
-      `${this.configService.get<string>('MINIO_ENDPOINT', 'localhost')}:${this.configService.get<string>('MINIO_PORT', '9000')}`,
-      this.assetsBucket,
-    );
+    return {
+      configured: false,
+      maskedKey: null,
+      licenseType: 'Community / Free Edition',
+      endpoint: `${this.configService.get<string>('MINIO_ENDPOINT', 'localhost')}:${this.configService.get<string>('MINIO_PORT', '9000')}`,
+      bucket: this.assetsBucket,
+    };
   }
 
-  setAistorLicense(licenseKey: string): LicenseStatusResult {
-    this.aistorLicenseKey = (licenseKey || '').trim();
-    this.logger.log('MinIO AIStor license key updated successfully.');
+  setAistorLicense(_licenseKey: string): LicenseStatusResult {
+    this.logger.log('MinIO Community Edition active: external license key registration not required.');
     return this.getLicenseStatus();
   }
 
@@ -302,7 +296,7 @@ export class StorageService implements OnModuleInit {
       );
     }
 
-    const key = `avatars/${userId}/${randomUUID().slice(0, 8)}.${detected.ext}`;
+    const key = `users/backoffice/${userId}/${randomUUID().slice(0, 8)}.${detected.ext}`;
     let bucket = this.backofficeUserMediaBucket || 'backoffice-user-media';
 
     // Prune existing avatar(s) in this user's dedicated folder (avatars/${userId}/)
@@ -310,7 +304,7 @@ export class StorageService implements OnModuleInit {
       if (typeof this.minioClient?.listObjectsV2 === 'function') {
         const stream = this.minioClient.listObjectsV2(
           bucket,
-          `avatars/${userId}/`,
+          `users/backoffice/${userId}/`,
           true,
         );
         if (stream && typeof stream.on === 'function') {
@@ -357,7 +351,7 @@ export class StorageService implements OnModuleInit {
       }
     }
 
-    const url = `/api/backoffice-user-media/${key}`;
+    const url = `/api/storage/asset?key=${encodeURIComponent(key)}`;
 
     this.logger.log(`Uploaded backoffice avatar for user ${userId}: ${key}`);
     return { url, key };
@@ -395,13 +389,21 @@ export class StorageService implements OnModuleInit {
   ): Promise<void> {
     if (!avatarUrlOrKey) return;
     const primaryBucket =
-      this.backofficeUserMediaBucket || 'backoffice-user-media';
-    let key = avatarUrlOrKey.split('?')[0];
+      this.backofficeUserMediaBucket || 'superapp-storage';
+    let key = avatarUrlOrKey;
+    if (avatarUrlOrKey.includes('key=')) {
+      const match = avatarUrlOrKey.match(/[?&]key=([^&]+)/);
+      if (match && match[1]) {
+        key = decodeURIComponent(match[1]);
+      }
+    } else {
+      key = avatarUrlOrKey.split('?')[0];
+    }
     key = decodeURIComponent(key)
       .replace(/^https?:\/\/[^\/]+\//, '')
       .replace(/^\/+/, '')
       .replace(
-        /^(?:api\/)?(?:storage\/asset\?key=|backoffice-user-media\/|mini-app-assets\/)/,
+        /^(?:api\/)?(?:backoffice-user-media\/|mini-app-assets\/)/,
         '',
       )
       .replace(/^\/+/, '');

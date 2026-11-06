@@ -44,7 +44,7 @@ describe('MobileAvatarService', () => {
     const { svc, users, storage } = build();
     const first = await svc.upload('u1', { buffer: PNG, size: PNG.length });
     const firstKey = first.avatarKey!;
-    expect(firstKey).toMatch(/^avatars\/u1\/[0-9a-f-]+\.png$/);
+    expect(firstKey).toMatch(/^users\/end-users\/u1\/[0-9a-f-]+\.png$/);
     expect(storage.putPrivateObject).toHaveBeenCalledWith(
       'end-user-media',
       firstKey,

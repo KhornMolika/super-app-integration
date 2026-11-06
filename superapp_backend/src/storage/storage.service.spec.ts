@@ -76,12 +76,10 @@ describe('StorageService & Helpers', () => {
       expect(status.bucket).toBe('superapp-storage');
     });
 
-    it('updates license key and masks it', () => {
+    it('acknowledges Community Edition when license key updated', () => {
       const status = service.setAistorLicense('AIStor-Secret-Key-1234567890');
-      expect(status.configured).toBe(true);
-      expect(status.licenseType).toBe('MinIO AIStor Enterprise');
-      expect(status.maskedKey).toContain('AIStor');
-      expect(status.maskedKey).toContain('7890');
+      expect(status.configured).toBe(false);
+      expect(status.licenseType).toBe('Community / Free Edition');
     });
   });
 
@@ -149,7 +147,7 @@ describe('StorageService & Helpers', () => {
       // Mock listObjectsV2 stream
       const mockStream = {
         on: jest.fn((event: string, cb: Function) => {
-          if (event === 'data') cb({ name: 'avatars/user-123/old-avatar.png' });
+          if (event === 'data') cb({ name: 'users/backoffice/user-123/old-avatar.png' });
           if (event === 'end') cb();
           return mockStream;
         }),
@@ -167,15 +165,15 @@ describe('StorageService & Helpers', () => {
 
       expect(removeSpy).toHaveBeenCalledWith(
         'superapp-storage',
-        'avatars/user-123/old-avatar.png',
+        'users/backoffice/user-123/old-avatar.png',
       );
       expect(result.url).toMatch(
-        /^\/api\/backoffice-user-media\/avatars\/user-123\//,
+        /^\/api\/storage\/asset\?key=users%2Fbackoffice%2Fuser-123%2F/,
       );
-      expect(result.key).toMatch(/^avatars\/user-123\/[a-f0-9-]+\.png$/);
+      expect(result.key).toMatch(/^users\/backoffice\/user-123\/[a-f0-9-]+\.png$/);
       expect(putSpy).toHaveBeenCalledWith(
         'superapp-storage',
-        expect.stringMatching(/^avatars\/user-123\//),
+        expect.stringMatching(/^users\/backoffice\/user-123\//),
         pngMagicHeader,
         pngMagicHeader.length,
         { 'Content-Type': 'image/png' },
@@ -208,11 +206,11 @@ describe('StorageService & Helpers', () => {
         .mockResolvedValue(undefined as any);
 
       await service.deleteBackofficeUserAvatar(
-        '/api/backoffice-user-media/avatars/user-123/abc.png',
+        '/api/storage/asset?key=users%2Fbackoffice%2Fuser-123%2Fabc.png',
       );
       expect(removeSpy).toHaveBeenCalledWith(
         'superapp-storage',
-        'avatars/user-123/abc.png',
+        'users/backoffice/user-123/abc.png',
       );
     });
   });
