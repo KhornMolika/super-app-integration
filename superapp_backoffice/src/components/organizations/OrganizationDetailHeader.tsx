@@ -18,6 +18,7 @@ export interface OrganizationDetailHeaderProps {
   isOwnOrg?: boolean;
 }
 
+// Helper hook or state for dynamic return URL
 export function OrganizationDetailHeader({
   organization,
   isSuperOrAdmin,
@@ -28,6 +29,19 @@ export function OrganizationDetailHeader({
 }: OrganizationDetailHeaderProps) {
   const isActive = organization.status === 'ACTIVE';
   const isRoot = isRootOrganization(organization);
+
+  // Preserve previous table state (page, filters, search) from session storage
+  const defaultBackHref = isSuperOrAdmin ? '/organizations' : '/miniapps';
+  const [backHref, setBackHref] = React.useState<string>(defaultBackHref);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && isSuperOrAdmin) {
+      const savedLastUrl = sessionStorage.getItem('superapp:organizations:last_url');
+      if (savedLastUrl && savedLastUrl.startsWith('/organizations')) {
+        setBackHref(savedLastUrl);
+      }
+    }
+  }, [isSuperOrAdmin]);
 
   const actionItems: ActionMenuItem[] = [
     {
@@ -91,7 +105,7 @@ export function OrganizationDetailHeader({
       {/* Top Navigation & Actions Bar */}
       <div className="flex justify-between items-center gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
         <div className="flex items-center gap-4 min-w-0">
-          <BackButton href={isSuperOrAdmin ? '/organizations' : '/miniapps'} />
+          <BackButton href={backHref} />
           <OrganizationAvatar
             name={organization.name}
             code={organization.code}
@@ -103,7 +117,7 @@ export function OrganizationDetailHeader({
             {/* Breadcrumb Path */}
             <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-1">
               <Link
-                href={isSuperOrAdmin ? '/organizations' : '/miniapps'}
+                href={backHref}
                 className="hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
               >
                 Organizations

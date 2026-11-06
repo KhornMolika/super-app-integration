@@ -48,6 +48,15 @@ export function AppShell({ children }: AppShellProps) {
     }
   }, [isStandalone, isLoading, isAuthenticated, pathname, router]);
 
+  // Track in-app navigation count to enable smart back button behavior
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      (window as any).__superapp_nav_count =
+        ((window as any).__superapp_nav_count || 0) + 1;
+    }
+  }, [pathname]);
+
+
   // Unauthenticated / Auth / Standalone Pages (Login, Sign-Up, Guidelines, Legal)
   if (isStandalone) {
     return (

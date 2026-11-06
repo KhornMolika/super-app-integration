@@ -158,8 +158,33 @@ function OrganizationsContent() {
       if (currentFullUrl !== targetUrl && window.history?.replaceState) {
         window.history.replaceState(null, '', targetUrl);
       }
+      try {
+        sessionStorage.setItem('superapp:organizations:last_url', targetUrl);
+      } catch (_) {}
     }
   }, [currentPage, pageSize, debouncedSearch, statusFilter, pathname]);
+
+  // Synchronize component state with searchParams when navigating via Link or router transitions
+  useEffect(() => {
+    const pageFromUrl = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const limitFromUrl = Math.max(1, parseInt(searchParams.get('limit') || '10', 10));
+    const searchFromUrl = searchParams.get('search') || '';
+    const statusFromUrl = (searchParams.get('status') as OrganizationStatusFilter) || 'ALL';
+
+    if (pageFromUrl !== currentPage) {
+      setCurrentPage(pageFromUrl);
+    }
+    if (limitFromUrl !== pageSize) {
+      setPageSize(limitFromUrl);
+    }
+    if (statusFromUrl !== statusFilter) {
+      setStatusFilter(statusFromUrl);
+    }
+    if (searchFromUrl !== searchQuery) {
+      setSearchQuery(searchFromUrl);
+      setDebouncedSearch(searchFromUrl);
+    }
+  }, [searchParams]);
 
   // Handle browser back/forward navigation smoothly via popstate
   useEffect(() => {
@@ -259,6 +284,16 @@ function OrganizationsContent() {
   };
 
   const handleOpenView = (org: Organization) => {
+    try {
+      const params = new URLSearchParams();
+      if (currentPage > 1) params.set('page', String(currentPage));
+      if (pageSize !== 10) params.set('limit', String(pageSize));
+      if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
+      if (statusFilter !== 'ALL') params.set('status', statusFilter);
+      const queryStr = params.toString();
+      const targetUrl = queryStr ? `${pathname}?${queryStr}` : pathname;
+      sessionStorage.setItem('superapp:organizations:last_url', targetUrl);
+    } catch (_) {}
     router.push(`/organizations/${org.id}`);
   };
 
