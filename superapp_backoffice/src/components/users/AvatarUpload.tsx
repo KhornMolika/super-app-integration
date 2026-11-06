@@ -244,7 +244,7 @@ export function AvatarUpload({
             onError={() => setImageError(true)}
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-tr from-brand-600 via-indigo-600 to-violet-500 text-white font-extrabold flex items-center justify-center select-none shadow-inner">
+          <div className="w-full h-full bg-gradient-to-br from-brand-500 to-brand-700 text-white font-bold flex items-center justify-center select-none shadow-inner">
             {initials}
           </div>
         )}

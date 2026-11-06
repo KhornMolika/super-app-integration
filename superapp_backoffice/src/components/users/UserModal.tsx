@@ -339,7 +339,7 @@ export function UserModal({
         </div>
 
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
           {/* Avatar management for existing user */}
           {editingUser && (
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-800">
@@ -384,6 +384,7 @@ export function UserModal({
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="e.g. John Doe"
+                autoComplete="off"
                 required
               />
             </div>
@@ -402,6 +403,7 @@ export function UserModal({
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="e.g. user@fsa.gov.kh"
+                autoComplete="off"
                 required
               />
             </div>
@@ -459,6 +461,7 @@ export function UserModal({
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder={editingUser ? 'Leave blank to keep unchanged' : 'Enter initial password'}
+                  autoComplete="new-password"
                   className="pr-10"
                 />
                 <button

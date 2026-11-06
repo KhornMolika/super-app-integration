@@ -408,7 +408,7 @@ function EditUserContent() {
       </div>
 
       {/* Main Edit Form Grid */}
-      <form id="edit-user-form" onSubmit={handleSubmit} className="space-y-6">
+      <form id="edit-user-form" onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Left Column (8 of 12): Identity & Role */}
           <div className="lg:col-span-8 space-y-6">
@@ -457,6 +457,7 @@ function EditUserContent() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. John Doe"
+                    autoComplete="off"
                     className="w-full text-xs rounded-xl"
                   />
                 </div>
@@ -480,6 +481,7 @@ function EditUserContent() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="operator@company.com"
+                    autoComplete="off"
                     className="w-full text-xs rounded-xl font-mono"
                   />
                 </div>
@@ -498,6 +500,7 @@ function EditUserContent() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Leave blank to keep unchanged"
+                      autoComplete="new-password"
                       className="w-full text-xs rounded-xl pr-10"
                     />
                     <button
