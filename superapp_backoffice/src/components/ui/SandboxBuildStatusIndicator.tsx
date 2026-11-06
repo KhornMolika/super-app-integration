@@ -342,7 +342,7 @@ export default function SandboxBuildStatusIndicator() {
               <div className="flex items-center gap-2">
                 {status.state === 'SUCCESS' && (
                   <a
-                    href="/superapp-sandbox/index.html"
+                    href={process.env.NEXT_PUBLIC_SUPERAPP_SANDBOX_URL || '/superapp-sandbox/index.html'}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-xs cursor-pointer"

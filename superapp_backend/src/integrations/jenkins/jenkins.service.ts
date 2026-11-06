@@ -38,10 +38,17 @@ export class JenkinsService {
       'https://git.fintechcenterfsa.com/frontend/super-app.git';
     this.superAppBranch =
       this.configService.get<string>('MOBILE_GIT_BRANCH') || 'main';
-    this.sandboxBaseHref = this.configService.get<string>(
+    const configuredBaseHref = this.configService.get<string>(
       'SUPERAPP_SANDBOX_BASE_HREF',
-      '/superapp-sandbox/',
     );
+    const configuredSandboxUrl = this.configService.get<string>(
+      'SUPERAPP_SANDBOX_URL',
+    );
+    this.sandboxBaseHref =
+      configuredBaseHref ||
+      (configuredSandboxUrl
+        ? configuredSandboxUrl.replace(/index\.html$/, '').replace(/\/?$/, '/')
+        : '/superapp-sandbox/');
     this.sandboxBuildMode = this.configService.get<string>(
       'SUPERAPP_SANDBOX_BUILD_MODE',
       'release',

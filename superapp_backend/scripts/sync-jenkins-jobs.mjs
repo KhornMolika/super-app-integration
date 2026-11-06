@@ -775,6 +775,7 @@ async function main() {
   await syncJob('miniapp-validation-deep-link', resolveScript('Jenkinsfile.deeplink-validation'), defaultBackendRepo, defaultBranch, 'ci/jenkins/Jenkinsfile.deeplink-validation');
   await syncJob('superapp-sandbox-build', resolveScript('Jenkinsfile.superapp-sandbox-build'), defaultBackendRepo, defaultBranch, 'ci/jenkins/Jenkinsfile.superapp-sandbox-build');
   await syncJob('superapp-test-build', resolveScript('Jenkinsfile.superapp-test-build'), defaultBackendRepo, defaultBranch, 'ci/jenkins/Jenkinsfile.superapp-test-build');
+  await syncJob('superapp-backend-ci', resolveScript('Jenkinsfile.backend-ci'), defaultBackendRepo, 'development', 'ci/jenkins/Jenkinsfile.backend-ci');
   
   // Container build pipelines retired from Jenkins due to Harbor network isolation.
   // Use scripts/publish-containers-to-harbor.ps1 for pre-flight testing and pushing to Harbor.

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
@@ -107,7 +107,9 @@ export default function MobilePreviewPage() {
   const targetWidth = isLandscape ? spec.height : spec.width;
   const targetHeight = isLandscape ? spec.width : spec.height;
 
-  const sandboxUrl = `/superapp-sandbox/index.html?t=${reloadKey}${
+  const sandboxBase =
+    process.env.NEXT_PUBLIC_SUPERAPP_SANDBOX_URL || '/superapp-sandbox/index.html';
+  const sandboxUrl = `${sandboxBase}?t=${reloadKey}${
     activeTab !== 'all' ? `#/miniapp/${activeTab}` : ''
   }`;
 

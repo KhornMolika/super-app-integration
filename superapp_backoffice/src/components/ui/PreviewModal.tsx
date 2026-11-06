@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -104,14 +104,16 @@ export default function PreviewModal({
   const pkgParam = packageName || (url.includes('packages/') ? url.split('packages/')[1] : '');
 
   // Effective SuperApp URL (Host shell container)
-  const superAppContainerUrl = `/superapp-sandbox/index.html?t=${reloadKey}`;
+  const sandboxBase =
+    process.env.NEXT_PUBLIC_SUPERAPP_SANDBOX_URL || '/superapp-sandbox/index.html';
+  const superAppContainerUrl = `${sandboxBase}?t=${reloadKey}`;
 
   // Effective MiniApp starting URL (Loads directly into the mini app's own home screen)
   const miniAppHomeUrl = isDirectWebUrl
     ? url
     : (targetAppId
-        ? `/superapp-sandbox/index.html?t=${reloadKey}#/miniapp/${encodeURIComponent(targetAppId)}?pkg=${encodeURIComponent(pkgParam)}&name=${encodeURIComponent(title)}&method=${encodeURIComponent(methodUpper)}`
-        : `/superapp-sandbox/index.html?t=${reloadKey}`);
+        ? `${sandboxBase}?t=${reloadKey}#/miniapp/${encodeURIComponent(targetAppId)}?pkg=${encodeURIComponent(pkgParam)}&name=${encodeURIComponent(title)}&method=${encodeURIComponent(methodUpper)}`
+        : `${sandboxBase}?t=${reloadKey}`);
 
   const displayMiniAppSubtitle = isDirectWebUrl
     ? url.replace(/^https?:\/\//, '')
