@@ -61,7 +61,7 @@ export const usersApi = {
     apiClient<PaginatedResponse<User> | User[]>('/api/users', { params }),
 
   getStats: () =>
-    apiClient<{ total: number; active: number; pending: number; inactive: number }>('/api/users/stats'),
+    apiClient<{ total: number; active: number; pending: number; unverified?: number; inactive: number }>('/api/users/stats'),
 
   getById: (id: string) =>
     apiClient<User>(`/api/users/${id}`),
@@ -110,6 +110,11 @@ export const usersApi = {
     apiClient<User>(`/api/users/${id}/approve`, {
       method: 'POST',
       body: { roleName },
+    }),
+
+  verifyEmail: (id: string) =>
+    apiClient<User>(`/api/users/${id}/verify-email`, {
+      method: 'POST',
     }),
 
   uploadMyAvatar: (file: File) => {

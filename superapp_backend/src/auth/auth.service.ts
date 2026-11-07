@@ -761,16 +761,31 @@ export class AuthService implements OnModuleInit {
     // Verify user exists
     const user =
       await this.accessControlService.findByEmailWithPermissions(rawEmail);
-    if (purpose === 'PASSWORD_RESET' && !user) {
-      this.logger.warn(
-        `[OTP] Password reset requested for non-existent user: ${rawEmail}`,
-      );
-      return {
-        success: true,
-        message:
-          'If this email is registered, a 6-digit recovery code has been dispatched.',
-        expiresInSeconds: 300,
-      };
+    if (purpose === 'PASSWORD_RESET') {
+      if (!user) {
+        this.logger.warn(
+          `[OTP] Password reset requested for non-existent user: ${rawEmail}`,
+        );
+        return {
+          success: true,
+          message:
+            'If this email is registered, a 6-digit recovery code has been dispatched.',
+          expiresInSeconds: 300,
+        };
+      }
+
+      // Enforce QA requirement: Require email verification first before accessing password recovery
+      if (user.status === 'PENDING_EMAIL_VERIFICATION') {
+        this.logger.warn(
+          `[OTP] Password reset blocked for unverified user: ${rawEmail}`,
+        );
+        throw new BadRequestException({
+          statusCode: 400,
+          code: 'EMAIL_NOT_VERIFIED',
+          message:
+            'Your email address has not been verified yet. Please verify your email before resetting your password.',
+        });
+      }
     }
 
     if (purpose === 'EMAIL_VERIFICATION') {
@@ -978,6 +993,19 @@ export class AuthService implements OnModuleInit {
       };
     }
 
+    if (purpose === 'PASSWORD_RESET') {
+      const user =
+        await this.accessControlService.findByEmailWithPermissions(rawEmail);
+      if (user && user.status === 'PENDING_EMAIL_VERIFICATION') {
+        throw new BadRequestException({
+          statusCode: 400,
+          code: 'EMAIL_NOT_VERIFIED',
+          message:
+            'Your email address has not been verified yet. Please verify your email before resetting your password.',
+        });
+      }
+    }
+
     // Generate short-lived signed reset token (10 mins)
     const resetPayload = {
       sub: rawEmail,
@@ -1024,6 +1052,15 @@ export class AuthService implements OnModuleInit {
       await this.accessControlService.findByEmailWithPermissions(email);
     if (!user) {
       throw new BadRequestException('User account not found');
+    }
+
+    if (user.status === 'PENDING_EMAIL_VERIFICATION') {
+      throw new BadRequestException({
+        statusCode: 400,
+        code: 'EMAIL_NOT_VERIFIED',
+        message:
+          'Your email address has not been verified yet. Please verify your email before resetting your password.',
+      });
     }
 
     // Hash new password using Scrypt

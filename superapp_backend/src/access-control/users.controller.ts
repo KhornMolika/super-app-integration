@@ -197,6 +197,12 @@ export class UsersController {
     );
   }
 
+  @Post(':id/verify-email')
+  @RequirePermissions('user:manage')
+  async verifyEmail(@Param('id') id: string, @Req() req: any) {
+    return this.accessControlService.manuallyVerifyEmail(id, req?.user);
+  }
+
   @Delete(':id')
   @RequirePermissions('user:manage')
   async remove(@Param('id') id: string, @Req() req: any) {

@@ -127,8 +127,15 @@ export const getUserRoles = (user: User): { id?: string; name: string }[] => {
   return [];
 };
 
+export type UserEffectiveStatus =
+  | 'ACTIVE'
+  | 'PENDING_APPROVAL'
+  | 'PENDING_EMAIL_VERIFICATION'
+  | 'INACTIVE';
+
 // Pure helper: Determine effective status directly from database record
-export const getUserEffectiveStatus = (user: User): 'ACTIVE' | 'PENDING_APPROVAL' | 'INACTIVE' => {
+export const getUserEffectiveStatus = (user: User): UserEffectiveStatus => {
+  if (user.status === 'PENDING_EMAIL_VERIFICATION') return 'PENDING_EMAIL_VERIFICATION';
   if (user.status === 'PENDING_APPROVAL' || user.status === 'PENDING') return 'PENDING_APPROVAL';
   if (
     user.status === 'DEACTIVATED' ||

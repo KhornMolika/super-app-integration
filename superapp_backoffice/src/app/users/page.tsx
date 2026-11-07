@@ -10,6 +10,7 @@ import {
   usersApi,
   rolesApi,
   organizationsApi,
+  authApi,
   User,
   Role,
   Organization,
@@ -72,6 +73,7 @@ function UsersContent() {
     total: 0,
     active: 0,
     pending: 0,
+    unverified: 0,
     inactive: 0,
   });
   const fetchGlobalCounts = useCallback(async () => {
@@ -84,6 +86,7 @@ function UsersContent() {
           total: stats.total,
           active: stats.active,
           pending: stats.pending,
+          unverified: stats.unverified || 0,
           inactive: stats.inactive,
         });
         return;
@@ -98,6 +101,7 @@ function UsersContent() {
         total: list.length,
         active: list.filter((u) => getUserEffectiveStatus(u) === 'ACTIVE').length,
         pending: list.filter((u) => getUserEffectiveStatus(u) === 'PENDING_APPROVAL').length,
+        unverified: list.filter((u) => getUserEffectiveStatus(u) === 'PENDING_EMAIL_VERIFICATION').length,
         inactive: list.filter((u) => getUserEffectiveStatus(u) === 'INACTIVE').length,
       });
     } catch (err) {
@@ -197,6 +201,7 @@ function UsersContent() {
           total: meta?.totalItems ?? userList.length,
           active: userList.filter((u) => getUserEffectiveStatus(u) === 'ACTIVE').length,
           pending: userList.filter((u) => getUserEffectiveStatus(u) === 'PENDING_APPROVAL').length,
+          unverified: userList.filter((u) => getUserEffectiveStatus(u) === 'PENDING_EMAIL_VERIFICATION').length,
           inactive: userList.filter((u) => getUserEffectiveStatus(u) === 'INACTIVE').length,
         });
       } else if (statusFilter === 'ACTIVE' && !debouncedSearch.trim() && roleFilter === 'ALL') {
@@ -353,7 +358,8 @@ function UsersContent() {
   const statusDropdownOptions: CleanDropdownOption[] = useMemo(() => [
     { value: 'ALL', label: 'All Statuses' },
     { value: 'ACTIVE', label: 'Active', dotColor: 'bg-emerald-500' },
-    { value: 'PENDING_APPROVAL', label: 'Pending Approval', dotColor: 'bg-amber-500' },
+    { value: 'PENDING_APPROVAL', label: 'Pending Review', dotColor: 'bg-amber-500' },
+    { value: 'PENDING_EMAIL_VERIFICATION', label: 'Unverified Email', dotColor: 'bg-sky-500' },
     { value: 'INACTIVE', label: 'Inactive', dotColor: 'bg-slate-400' },
   ], []);
   // Filter change handlers that automatically reset pagination to page 1
@@ -569,6 +575,20 @@ function UsersContent() {
       sortValue: (user) => getUserEffectiveStatus(user),
       cell: (user) => {
         const effectiveStatus = getUserEffectiveStatus(user);
+        if (effectiveStatus === 'PENDING_EMAIL_VERIFICATION') {
+          return (
+            <button
+              type="button"
+              onClick={() => handleStatusFilterChange(statusFilter === 'PENDING_EMAIL_VERIFICATION' ? 'ALL' : 'PENDING_EMAIL_VERIFICATION')}
+              title="Click to filter by Unverified Email status"
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-400 border border-sky-200 dark:border-sky-500/20 cursor-pointer hover:opacity-85 transition-all ${statusFilter === 'PENDING_EMAIL_VERIFICATION' ? 'ring-2 ring-sky-500 shadow-xs' : ''
+                }`}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse" />
+              <span>Unverified</span>
+            </button>
+          );
+        }
         if (effectiveStatus === 'PENDING_APPROVAL') {
           return (
             <button
@@ -620,6 +640,7 @@ function UsersContent() {
       cell: (user) => {
         const effectiveStatus = getUserEffectiveStatus(user);
         const isPending = effectiveStatus === 'PENDING_APPROVAL';
+        const isUnverified = effectiveStatus === 'PENDING_EMAIL_VERIFICATION';
         const isActive = effectiveStatus === 'ACTIVE';
         const isTargetSuperAdmin =
           Boolean((user.roles && user.roles.some((r: any) => (typeof r === 'string' ? r : r?.name) === 'SUPER_ADMIN')) ||
@@ -640,6 +661,43 @@ function UsersContent() {
                 label: 'View',
                 href: `/users/${user.id}`,
                 icon: <ArrowRightIcon className="w-4 h-4 text-slate-400" />,
+              },
+              {
+                label: 'Resend Verification',
+                variant: 'primary',
+                hidden: !isUnverified || !canManageUsers,
+                icon: (
+                  <svg className="w-4 h-4 text-sky-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                ),
+                onClick: async () => {
+                  try {
+                    await authApi.requestOtp({ email: user.email, purpose: 'EMAIL_VERIFICATION' });
+                    toast.success(`Verification code dispatched to ${user.email}!`);
+                  } catch (err: any) {
+                    toast.error(err.message || 'Failed to dispatch verification code');
+                  }
+                },
+              },
+              {
+                label: 'Manually Verify',
+                hidden: !isUnverified || !canManageUsers,
+                icon: (
+                  <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ),
+                onClick: async () => {
+                  try {
+                    await usersApi.verifyEmail(user.id);
+                    toast.success(`Email for ${user.name} marked as verified!`);
+                    fetchUsers();
+                    fetchGlobalCounts();
+                  } catch (err: any) {
+                    toast.error(err.message || 'Failed to manually verify user');
+                  }
+                },
               },
               {
                 label: 'Approve',
@@ -674,7 +732,7 @@ function UsersContent() {
                     },
                   ]
                 : []),
-              ...(!isTargetSuperAdmin && canManageUsers && !isPending
+              ...(!isTargetSuperAdmin && canManageUsers && !isPending && !isUnverified
                 ? [
                     {
                       label: isActive ? 'Deactivate' : 'Activate',
@@ -763,7 +821,7 @@ function UsersContent() {
           )}
         </div>
         {/* KPI Quick Status Filters Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           <button
             type="button"
             onClick={() => handleStatusFilterChange('ALL')}
@@ -809,6 +867,22 @@ function UsersContent() {
             </div>
             <span className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-0.5 block">
               {globalCounts.pending}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleStatusFilterChange('PENDING_EMAIL_VERIFICATION')}
+            className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${statusFilter === 'PENDING_EMAIL_VERIFICATION'
+                ? 'bg-sky-50/50 dark:bg-sky-500/10 border-sky-300 dark:border-sky-500/30 ring-2 ring-sky-500/20 shadow-xs'
+                : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-xs'
+              }`}
+          >
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-sky-600 dark:text-sky-400 uppercase tracking-wider">
+              <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse" />
+              <span>Unverified Email</span>
+            </div>
+            <span className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-0.5 block">
+              {globalCounts.unverified}
             </span>
           </button>
           <button

@@ -4,6 +4,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Optional,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
@@ -41,6 +42,8 @@ export const OFFICIAL_SEEDS: Record<
 
 @Injectable()
 export class AccessControlService {
+  private readonly logger = new Logger(AccessControlService.name);
+
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
@@ -208,8 +211,12 @@ export class AccessControlService {
       .leftJoinAndSelect('role.permissions', 'permission')
       .leftJoinAndSelect('user.organization', 'organization');
 
-    if (!includeUnverified) {
-      // Stop unverified self-registered emails from cluttering the Super Admin's pending review list
+    const isUnverifiedQuery =
+      query?.status === 'PENDING_EMAIL_VERIFICATION';
+    const isAllStatusQuery = query?.status === 'ALL';
+
+    if (!includeUnverified && !isUnverifiedQuery && !isAllStatusQuery) {
+      // Stop unverified self-registered emails from cluttering default list
       qb.where('user.status != :unverifiedStatus', {
         unverifiedStatus: 'PENDING_EMAIL_VERIFICATION',
       });
@@ -275,6 +282,10 @@ export class AccessControlService {
         qb.andWhere('user.status IN (:...pendingStatuses)', {
           pendingStatuses: ['PENDING_APPROVAL', 'PENDING'],
         });
+      } else if (upperStatus === 'PENDING_EMAIL_VERIFICATION') {
+        qb.andWhere('user.status = :status', {
+          status: 'PENDING_EMAIL_VERIFICATION',
+        });
       } else {
         qb.andWhere('user.status = :status', { status: upperStatus });
       }
@@ -311,13 +322,10 @@ export class AccessControlService {
     total: number;
     active: number;
     pending: number;
+    unverified: number;
     inactive: number;
   }> {
     const qb = this.userRepository.createQueryBuilder('user');
-
-    qb.where('user.status != :unverifiedStatus', {
-      unverifiedStatus: 'PENDING_EMAIL_VERIFICATION',
-    });
 
     const userPerms = new Set<string>(
       Array.isArray(requester?.permissions) ? requester.permissions : [],
@@ -350,6 +358,7 @@ export class AccessControlService {
 
     let active = 0;
     let pending = 0;
+    let unverified = 0;
     let inactive = 0;
     let total = 0;
 
@@ -363,6 +372,8 @@ export class AccessControlService {
         row.status === 'PENDING'
       ) {
         pending += c;
+      } else if (row.status === 'PENDING_EMAIL_VERIFICATION') {
+        unverified += c;
       } else if (
         row.status === 'INACTIVE' ||
         row.status === 'DEACTIVATED' ||
@@ -374,7 +385,7 @@ export class AccessControlService {
       }
     }
 
-    return { total, active, pending, inactive };
+    return { total, active, pending, unverified, inactive };
   }
 
   async findUserById(id: string): Promise<User> {
@@ -679,6 +690,33 @@ export class AccessControlService {
     user.status = 'ACTIVE';
 
     const saved = await this.userRepository.save(user);
+    return this.findUserById(saved.id);
+  }
+
+  async manuallyVerifyEmail(id: string, requester?: any): Promise<User> {
+    const isSuperAdmin = this.isRequesterSuperAdmin(requester);
+    if (!isSuperAdmin) {
+      throw new ForbiddenException(
+        'Only Super Administrators can manually verify user email addresses',
+      );
+    }
+
+    const user = await this.findUserById(id);
+    if (user.status !== 'PENDING_EMAIL_VERIFICATION') {
+      throw new BadRequestException(
+        `User is not pending email verification (current status: ${user.status}).`,
+      );
+    }
+
+    const isPrivileged =
+      user.role?.name === 'SUPER_ADMIN' || user.role?.name === 'ADMIN';
+    const nextStatus = isPrivileged ? 'ACTIVE' : 'PENDING_APPROVAL';
+    user.status = nextStatus;
+
+    const saved = await this.userRepository.save(user);
+    this.logger.log(
+      `[ADMIN] SuperAdmin manually verified email for ${user.email} (id: ${user.id}). Status -> ${nextStatus}`,
+    );
     return this.findUserById(saved.id);
   }
 

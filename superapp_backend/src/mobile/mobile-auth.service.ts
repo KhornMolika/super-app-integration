@@ -522,7 +522,7 @@ export class MobileAuthService implements OnModuleInit {
             status: EndUserStatus.ACTIVE,
             failedLoginCount: 0,
             lockedUntil: null,
-            position: backofficeUser.position || backofficeUser.role?.name || null,
+            position: backofficeUser.position || null,
             organizationUnit: backofficeUser.organization?.name || null,
             staffId: backofficeUser.staffId || backofficeUser.externalId || null,
           });
@@ -552,7 +552,7 @@ export class MobileAuthService implements OnModuleInit {
           ok = true;
           user.passwordHash = await this.passwords.hash(input.password);
           user.name = boUser.name;
-          user.position = boUser.position || boUser.role?.name || user.position;
+          user.position = boUser.position || null;
           user.organizationUnit = boUser.organization?.name || user.organizationUnit;
           user.staffId = boUser.staffId || boUser.externalId || user.staffId;
           await this.users.save(user);

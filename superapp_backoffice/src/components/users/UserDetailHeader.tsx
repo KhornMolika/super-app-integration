@@ -57,6 +57,7 @@ export function UserDetailHeader({
 
   const effectiveStatus = getUserEffectiveStatus(user);
   const isPending = effectiveStatus === 'PENDING_APPROVAL';
+  const isUnverified = effectiveStatus === 'PENDING_EMAIL_VERIFICATION';
   const isActive = effectiveStatus === 'ACTIVE';
 
 
@@ -246,8 +247,8 @@ export function UserDetailHeader({
             <div className="space-y-1.5">
               <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Member Status</span>
               <div className="flex items-center gap-2 font-semibold text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-normal">
-                <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-emerald-500' : isPending ? 'bg-amber-500' : 'bg-slate-400'}`} />
-                <span>{isActive ? 'Active Member' : isPending ? 'Pending Approval' : 'Inactive'}</span>
+                <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-emerald-500' : isUnverified ? 'bg-sky-500 animate-pulse' : isPending ? 'bg-amber-500 animate-pulse' : 'bg-slate-400'}`} />
+                <span>{isActive ? 'Active Member' : isUnverified ? 'Unverified Email (Pending)' : isPending ? 'Pending Approval' : 'Inactive'}</span>
               </div>
             </div>
 
