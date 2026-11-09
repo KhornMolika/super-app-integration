@@ -1,3 +1,4 @@
+import { CapabilitiesModule } from '../capabilities/capabilities.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module';
@@ -31,6 +32,7 @@ import { PasswordService } from './password.service';
   imports: [
     AuthModule,
     StorageModule,
+    CapabilitiesModule,
     TypeOrmModule.forFeature([
       Identity,
       StaffProfile,

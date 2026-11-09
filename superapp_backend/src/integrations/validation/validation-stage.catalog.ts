@@ -105,7 +105,7 @@ export const SECURITY_CHECK_METADATA: Record<string, SecurityCheckMetadata> = {
     icon: 'shield-check',
     description:
       'Verifies declared host capabilities against platform policies and app store guidelines.',
-    methods: ['FLUTTER_PACKAGE', 'NATIVE_SDK', 'DEEP_LINK'],
+    methods: ['WEBVIEW', 'FLUTTER_PACKAGE', 'NATIVE_SDK', 'DEEP_LINK'],
   },
   ssrf: {
     id: 'ssrf',
@@ -306,7 +306,7 @@ export function getDefaultChecksForMethod(method: string): string[] {
   if (norm === 'DEEP_LINK') {
     return ['scheme_audit', 'store_url_audit', 'capability_gate'];
   }
-  return ['domain_tls_audit', 'csp_headers_audit', 'dast_zap'];
+  return ['domain_tls_audit', 'csp_headers_audit', 'dast_zap', 'capability_gate'];
 }
 
 export function buildDynamicValidationStages(
@@ -316,7 +316,13 @@ export function buildDynamicValidationStages(
   const norm = (method || 'WEBVIEW').toUpperCase();
 
   const METHOD_PIPELINE_STAGES: Record<string, string[]> = {
-    WEBVIEW: ['ssrf', 'domain_tls_audit', 'csp_headers_audit', 'dast_zap'],
+    WEBVIEW: [
+      'ssrf',
+      'domain_tls_audit',
+      'csp_headers_audit',
+      'dast_zap',
+      'capability_gate',
+    ],
     FLUTTER_PACKAGE: [
       'ingest',
       'secret_scan',
@@ -345,7 +351,9 @@ export function buildDynamicValidationStages(
       : pipelineSequence;
 
   const baseKey = pipelineSequence[0];
-  const userSet = new Set([...rawChecks, baseKey]);
+  // capability_gate is mandatory for every method (ADR-004 Section 5): the report
+  // must always say which capabilities are disabled and whether the app is launchable.
+  const userSet = new Set([...rawChecks, baseKey, 'capability_gate']);
   const stageKeys = pipelineSequence.filter((k) => userSet.has(k));
 
   const stages: Record<string, any> = {};

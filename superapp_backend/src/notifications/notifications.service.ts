@@ -1,3 +1,4 @@
+import { isPgUuid } from '../common/utils/uuid.util';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -94,7 +95,10 @@ export class NotificationsService {
                 relations: { owner: true },
               })
             : await this.miniAppRepository.findOne({
-                where: [{ id: miniAppId }, { appId: miniAppId }],
+                where: [
+                  ...(isPgUuid(miniAppId) ? [{ id: miniAppId }] : []),
+                  { appId: miniAppId },
+                ],
                 relations: { owner: true },
               });
 

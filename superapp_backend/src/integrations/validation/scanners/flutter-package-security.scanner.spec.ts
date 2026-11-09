@@ -1,10 +1,10 @@
+import { CapabilityGateService } from '../../../capabilities/capability-gate.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { FlutterPackageSecurityScanner } from './flutter-package-security.scanner';
 import { MiniApp } from '../../../miniapps/entities/miniapp.entity';
 import { MiniAppIssue } from '../../../miniapps/entities/miniapp-issue.entity';
 import { NotificationsService, PipelinePacerService } from '../../../notifications';
-import { CapabilitiesService } from '../../../capabilities/capabilities.service';
 import { ScanFinalizerService } from '../scan-finalizer.service';
 import { PubVulnerabilityScannerService } from '../pub-vulnerability-scanner.service';
 
@@ -13,7 +13,6 @@ describe('FlutterPackageSecurityScanner', () => {
   let mockMiniappRepo: any;
   let mockIssueRepo: any;
   let mockNotificationsService: any;
-  let mockCapabilitiesService: any;
   let mockPipelinePacerService: any;
   let mockScanFinalizer: any;
   let mockPubVulnerabilityScanner: any;
@@ -31,10 +30,6 @@ describe('FlutterPackageSecurityScanner', () => {
 
     mockNotificationsService = {
       emitStageUpdate: jest.fn(),
-    };
-
-    mockCapabilitiesService = {
-      findAll: jest.fn().mockResolvedValue([]),
     };
 
     mockPipelinePacerService = {
@@ -56,9 +51,16 @@ describe('FlutterPackageSecurityScanner', () => {
         { provide: getRepositoryToken(MiniApp), useValue: mockMiniappRepo },
         { provide: getRepositoryToken(MiniAppIssue), useValue: mockIssueRepo },
         { provide: NotificationsService, useValue: mockNotificationsService },
-        { provide: CapabilitiesService, useValue: mockCapabilitiesService },
         { provide: PipelinePacerService, useValue: mockPipelinePacerService },
         { provide: ScanFinalizerService, useValue: mockScanFinalizer },
+        {
+          provide: CapabilityGateService,
+          // real gate over an empty catalog (no capabilities declared => passes)
+          useValue: new CapabilityGateService(
+            { find: async () => [] } as any,
+            { find: async () => [] } as any,
+          ),
+        },
         { provide: PubVulnerabilityScannerService, useValue: mockPubVulnerabilityScanner },
       ],
     }).compile();

@@ -1,3 +1,4 @@
+import { isPgUuid } from '../../../common/utils/uuid.util';
 import { Repository } from 'typeorm';
 import { Identity } from '../../../identities/entities/identity.entity';
 import { MiniApp } from '../../../miniapps/entities/miniapp.entity';
@@ -556,7 +557,10 @@ export class TelegramGroupHelper {
     const app = isUuid
       ? await miniAppRepository.findOne({ where: { id: miniAppId } })
       : await miniAppRepository.findOne({
-          where: [{ id: miniAppId }, { appId: miniAppId }],
+          where: [
+            ...(isPgUuid(miniAppId) ? [{ id: miniAppId }] : []),
+            { appId: miniAppId },
+          ],
         });
 
     if (!app) {

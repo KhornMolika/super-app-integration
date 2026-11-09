@@ -11,6 +11,7 @@ import {
   getDefaultChecksForMethod,
   buildDynamicValidationStages,
 } from '../validation-stage.catalog';
+import { CapabilityGateService } from '../../../capabilities/capability-gate.service';
 import { ScanFinalizerService } from '../scan-finalizer.service';
 
 @Injectable()
@@ -24,6 +25,7 @@ export class NativeSdkSecurityScanner {
     private readonly notificationsService: NotificationsService,
     private readonly pipelinePacerService: PipelinePacerService,
     private readonly scanFinalizer: ScanFinalizerService,
+    private readonly capabilityGate: CapabilityGateService,
   ) {}
 
   private async delay(ms: number): Promise<void> {
@@ -135,21 +137,8 @@ export class NativeSdkSecurityScanner {
       await emitUpdate('dependency_scan');
     }
 
-    if (stages.capability_gate) {
-      stages.capability_gate.status = 'RUNNING';
-      stages.capability_gate.details =
-        'Verifying native bridge capabilities against SuperApp host catalog...';
-      await emitUpdate('capability_gate');
-      await this.delay(400);
-      stages.capability_gate.status = 'COMPLETED';
-      stages.capability_gate.details =
-        'Declared capabilities comply with platform policies.';
-      checks.capability_gate = {
-        passed: true,
-        details: stages.capability_gate.details,
-      };
-      await emitUpdate('capability_gate');
-    }
+    // --- STAGE: Host Capability Gatekeeper (shared, ADR-004 Section 5) ---
+    await this.capabilityGate.runStage(app, stages, checks, findings, emitUpdate);
 
     const hasCriticalOrHigh = findings.some(
       (f) => f.severity === 'CRITICAL' || f.severity === 'HIGH',

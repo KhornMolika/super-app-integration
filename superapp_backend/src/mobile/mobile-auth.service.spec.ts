@@ -961,6 +961,47 @@ describe('MobileAuthService login failure bookkeeping vs concurrent writes', () 
       ).rejects.toThrow(ForbiddenException);
     });
 
+    it('never compares a non-UUID identifier against the uuid id column (Postgres rejects it)', async () => {
+      const c = build();
+      await c.users.save({ id: 'u-1', email: 'x@y.z', name: 'X', status: IdentityStatus.ACTIVE } as any);
+      await c.miniApps.save({ id: 'ma-1', appId: 'kh.gov.fsa.tr', slug: 'tr', targetAudience: 'PUBLIC' } as any);
+      const spy = jest.spyOn(c.miniApps, 'findOne');
+
+      await c.svc.tokenExchange('u-1', 'kh.gov.fsa.tr');
+      const where = (spy.mock.calls[0][0] as any).where as Record<string, string>[];
+      expect(where.some((w) => 'id' in w)).toBe(false);
+
+      spy.mockClear();
+      await c.svc.tokenExchange('u-1', '3f1c2a9e-0000-4000-8000-000000000001').catch(() => undefined);
+      const whereUuid = (spy.mock.calls[0][0] as any).where as Record<string, string>[];
+      expect(whereUuid.some((w) => 'id' in w)).toBe(true);
+    });
+
+    it('refuses to launch a Mini App whose required capability is unsupported (ADR-004 §5)', async () => {
+      const c = build();
+      const gate = {
+        evaluate: jest.fn().mockResolvedValue({
+          launchable: false,
+          unavailableReason: 'Unavailable until Super App v1.4.0',
+          capabilities: [],
+          hostVersion: 'v1.2.0',
+        }),
+      };
+      const svc = new MobileAuthService(
+        c.users as any, c.vTokens as any, c.rTokens as any, c.miniApps as any,
+        c.passwords, c.authService, c.mail as any, c.limiter,
+        undefined, undefined, gate as any,
+      );
+      await c.users.save({ id: 'u-2', email: 'q@y.z', name: 'Q', status: IdentityStatus.ACTIVE } as any);
+      await c.miniApps.save({ id: 'ma-2', appId: 'kh.gov.fsa.bio', slug: 'bio', targetAudience: 'PUBLIC',
+        capabilities: [{ type: 'biometrics', required: true }] } as any);
+
+      await expect(svc.tokenExchange('u-2', 'kh.gov.fsa.bio')).rejects.toThrow(
+        /Unavailable until Super App v1\.4\.0/,
+      );
+      expect(gate.evaluate).toHaveBeenCalledWith([{ type: 'biometrics', required: true }]);
+    });
+
     it('rejects exchange with 400 BadRequest when MiniApp is not found', async () => {
       const c = build();
       const citizen = {

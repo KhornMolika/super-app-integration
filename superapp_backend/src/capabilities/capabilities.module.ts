@@ -6,11 +6,13 @@ import { CapabilityDefinition } from './entities/capability-definition.entity';
 import { CapabilitiesController } from './capabilities.controller';
 import { CapabilitiesService } from './capabilities.service';
 import { CapabilityCodeGeneratorService } from './capability-code-generator.service';
+import { CapabilityGateService } from './capability-gate.service';
+import { SuperAppCapability } from '../super-app/entities/super-app-capability.entity';
 import { GitLabProvider } from '../integrations/git/providers/gitlab.provider';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([CapabilityDefinition]),
+    TypeOrmModule.forFeature([CapabilityDefinition, SuperAppCapability]),
     forwardRef(() => AuthModule),
     ConfigModule,
   ],
@@ -18,9 +20,14 @@ import { GitLabProvider } from '../integrations/git/providers/gitlab.provider';
   providers: [
     CapabilitiesService,
     CapabilityCodeGeneratorService,
+    CapabilityGateService,
     GitLabProvider,
   ],
-  exports: [CapabilitiesService, CapabilityCodeGeneratorService],
+  exports: [
+    CapabilitiesService,
+    CapabilityCodeGeneratorService,
+    CapabilityGateService,
+  ],
 })
 export class CapabilitiesModule {}
 

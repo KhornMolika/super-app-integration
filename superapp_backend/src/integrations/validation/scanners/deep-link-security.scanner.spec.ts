@@ -1,3 +1,4 @@
+import { CapabilityGateService } from '../../../capabilities/capability-gate.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DeepLinkSecurityScanner } from './deep-link-security.scanner';
@@ -38,6 +39,14 @@ describe('DeepLinkSecurityScanner', () => {
         { provide: NotificationsService, useValue: mockNotificationsService },
         { provide: PipelinePacerService, useValue: mockPipelinePacerService },
         { provide: ScanFinalizerService, useValue: mockScanFinalizer },
+        {
+          provide: CapabilityGateService,
+          // real gate over an empty catalog (no capabilities declared => passes)
+          useValue: new CapabilityGateService(
+            { find: async () => [] } as any,
+            { find: async () => [] } as any,
+          ),
+        },
       ],
     }).compile();
 

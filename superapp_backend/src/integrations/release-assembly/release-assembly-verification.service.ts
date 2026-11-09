@@ -1,3 +1,4 @@
+import { isPgUuid } from '../../common/utils/uuid.util';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
@@ -445,7 +446,10 @@ export class ReleaseAssemblyVerificationService {
     // Check by miniAppId
     if (body.miniAppId) {
       const byId = await this.miniappRepository.findOne({
-        where: [{ id: body.miniAppId }, { appId: body.miniAppId }],
+        where: [
+          ...(isPgUuid(body.miniAppId) ? [{ id: body.miniAppId }] : []),
+          { appId: body.miniAppId },
+        ],
         relations: { owner: true },
       });
       if (byId && !apps.some((a) => a.id === byId.id)) {

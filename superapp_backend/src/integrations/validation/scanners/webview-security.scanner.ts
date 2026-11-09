@@ -13,6 +13,7 @@ import {
   getDefaultChecksForMethod,
   buildDynamicValidationStages,
 } from '../validation-stage.catalog';
+import { CapabilityGateService } from '../../../capabilities/capability-gate.service';
 import { ScanFinalizerService } from '../scan-finalizer.service';
 
 @Injectable()
@@ -26,6 +27,7 @@ export class WebViewSecurityScanner {
     private readonly notificationsService: NotificationsService,
     private readonly pipelinePacerService: PipelinePacerService,
     private readonly scanFinalizer: ScanFinalizerService,
+    private readonly capabilityGate: CapabilityGateService,
   ) {}
 
   private async delay(ms: number): Promise<void> {
@@ -390,6 +392,9 @@ export class WebViewSecurityScanner {
     }
 
     // Calculate score
+    // --- STAGE: Host Capability Gatekeeper (shared, ADR-004 Section 5) ---
+    await this.capabilityGate.runStage(app, stages, checks, findings, emitUpdate);
+
     let score = 100;
     findings.forEach((f) => {
       if (f.severity === 'CRITICAL') score -= 35;

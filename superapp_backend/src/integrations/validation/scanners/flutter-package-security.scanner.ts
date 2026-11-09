@@ -7,7 +7,7 @@ import {
   NotificationsService,
   PipelinePacerService,
 } from '../../../notifications';
-import { CapabilitiesService } from '../../../capabilities/capabilities.service';
+import { CapabilityGateService } from '../../../capabilities/capability-gate.service';
 import { ValidationFindingDto } from '../validation-callback.controller';
 import { PubVulnerabilityScannerService } from '../pub-vulnerability-scanner.service';
 import {
@@ -28,7 +28,7 @@ export class FlutterPackageSecurityScanner {
     private readonly issueRepository: Repository<MiniAppIssue>,
 
     private readonly notificationsService: NotificationsService,
-    private readonly capabilitiesService: CapabilitiesService,
+    private readonly capabilityGate: CapabilityGateService,
     private readonly pipelinePacerService: PipelinePacerService,
     private readonly scanFinalizer: ScanFinalizerService,
     @Optional()
@@ -378,81 +378,10 @@ export class FlutterPackageSecurityScanner {
       await emitUpdate('license_compliance');
     }
 
-    // --- STAGE: Host Capability Gatekeeper Audit ---
-    if (stages.capability_gate) {
-      stages.capability_gate.status = 'RUNNING';
-      stages.capability_gate.details =
-        'Auditing declared permissions against SuperApp capability boundary...';
-      await emitUpdate('capability_gate');
-      await this.delay(500);
-
-      const perms = Array.isArray(app.capabilities || (app as any).permissions)
-        ? app.capabilities || (app as any).permissions
-        : [];
-      let hasUnsupportedRequired = false;
-      for (const p of perms) {
-        const permName = typeof p === 'string' ? p : p.name || p.type;
-        const isSupported =
-          !!(await this.capabilitiesService.findByKey(permName));
-        if (!isSupported) {
-          hasUnsupportedRequired = true;
-          findings.push({
-            id: `CAP_UNSUPPORTED_${permName.toUpperCase()}`,
-            severity: 'CRITICAL',
-            category: 'Capability Compliance',
-            title: `Unsupported Platform Capability: ${permName}`,
-            description: `The MiniApp requires capability "${permName}" which is not supported or whitelisted by the SuperApp host catalog.`,
-            recommendation:
-              'Either submit a capability whitelist proposal or remove the unsupported capability.',
-          });
-        }
-      }
-
-      const packageName = (
-        app.integrationConfig?.packageName || ''
-      ).toLowerCase();
-      const detectedStoragePath = (
-        app.integrationConfig?.packageStoragePath || ''
-      ).toLowerCase();
-      const appName = (app.name || '').toLowerCase();
-      if (
-        packageName.includes('trust_regulator') ||
-        appName.includes('trust regulator') ||
-        detectedStoragePath.includes('trust_regulator')
-      ) {
-        const restrictedPlugins = [
-          { name: 'NFC Manager (nfc_manager: ^3.3.0)', cap: 'NFC_MANAGER' },
-          {
-            name: 'Bluetooth BLE (flutter_blue_plus: ^1.35.4)',
-            cap: 'BLUETOOTH',
-          },
-          { name: 'Address Book (flutter_contacts: ^1.1.9)', cap: 'CONTACTS' },
-        ];
-        hasUnsupportedRequired = true;
-        for (const r of restrictedPlugins) {
-          findings.push({
-            id: `CAPABILITY_GATE_${r.cap}`,
-            severity: 'CRITICAL',
-            category: 'CAPABILITY_VIOLATION',
-            title: `Unauthorized Platform Capability: ${r.name}`,
-            description: `MiniApp package includes dependency "${r.name}" which is not whitelisted by the SuperApp host platform.`,
-            recommendation: `Remove requirement for unsupported capability "${r.name}" or request host capability whitelist approval.`,
-          });
-        }
-      }
-
-      stages.capability_gate.status = hasUnsupportedRequired
-        ? 'FAILED'
-        : 'COMPLETED';
-      stages.capability_gate.details = hasUnsupportedRequired
-        ? 'Blocking capability mismatch: MiniApp contains unsupported host capabilities (NFC, Bluetooth, Contacts).'
-        : 'All declared native plugins comply with host platform capability gate.';
-      checks.capability_gate = {
-        passed: !hasUnsupportedRequired,
-        details: stages.capability_gate.details,
-      };
-      await emitUpdate('capability_gate');
-    }
+    // --- STAGE: Host Capability Gatekeeper (shared, ADR-004 Section 5) ---
+    // Unsupported capabilities never fail the scan: optional ones are disabled,
+    // required ones make the Mini App "not launchable" until the host supports them.
+    await this.capabilityGate.runStage(app, stages, checks, findings, emitUpdate);
 
     const hasCriticalOrHigh = findings.some(
       (f) => f.severity === 'CRITICAL' || f.severity === 'HIGH',

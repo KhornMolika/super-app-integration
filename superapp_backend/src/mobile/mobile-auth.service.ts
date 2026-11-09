@@ -1,3 +1,6 @@
+import { isPgUuid } from '../common/utils/uuid.util';
+import { CapabilityGateService } from '../capabilities/capability-gate.service';
+import { loadPasswordHash } from '../identities/identity-credentials.helper';
 import {
   BadRequestException,
   ConflictException,
@@ -97,6 +100,8 @@ export class MobileAuthService {
     @Optional()
     @InjectRepository(ConsumerProfile)
     private readonly consumerProfiles?: Repository<ConsumerProfile>,
+    @Optional()
+    private readonly capabilityGate?: CapabilityGateService,
   ) {}
 
   get accessTtlSeconds(): number {
@@ -339,7 +344,10 @@ export class MobileAuthService {
     }
     if (
       password &&
-      !(await this.passwords.verify(password, user.passwordHash))
+      !(await this.passwords.verify(
+        password,
+        (await loadPasswordHash(this.users, user.id)) ?? '',
+      ))
     ) {
       const attempts = (record.failedAttempts ?? 0) + 1;
       await this.verificationTokens.update(
@@ -390,7 +398,11 @@ export class MobileAuthService {
       throw new UnauthorizedException(INVALID_CREDENTIALS);
     }
 
-    let ok = await this.passwords.verify(input.password, user.passwordHash);
+    // passwordHash is select:false; load it explicitly for the check
+    let ok = await this.passwords.verify(
+      input.password,
+      (await loadPasswordHash(this.users, user.id)) ?? '',
+    );
     if (
       !ok &&
       process.env.NODE_ENV !== 'production' &&
@@ -705,10 +717,13 @@ export class MobileAuthService {
     const name = identity.name;
     const staffProfile = identity.staffProfile;
 
-    // 2. Resolve MiniApp by UUID id or appId slug (e.g. 'kh.gov.fsa.tr')
+    // 2. Resolve MiniApp by UUID id or appId slug (e.g. 'kh.gov.fsa.tr').
+    // Only compare against the uuid `id` column when the value is uuid-shaped:
+    // Postgres rejects the whole query ("invalid input syntax for type uuid") otherwise,
+    // which made every appId-based exchange fail with 500.
     const miniApp = await this.miniApps.findOne({
       where: [
-        { id: miniAppIdentifier },
+        ...(isPgUuid(miniAppIdentifier) ? [{ id: miniAppIdentifier }] : []),
         { appId: miniAppIdentifier },
         { slug: miniAppIdentifier },
       ],
@@ -723,6 +738,18 @@ export class MobileAuthService {
       throw new ForbiddenException(
         'MiniApp is currently suspended by regulatory authority',
       );
+    }
+
+    // ADR-004 Section 5: a required capability the host does not support yet
+    // keeps the Mini App registered but not launchable. Enforced server-side,
+    // so an outdated client that ignores `launchable` still cannot open it.
+    if (this.capabilityGate) {
+      const availability = await this.capabilityGate.evaluate(miniApp.capabilities);
+      if (!availability.launchable) {
+        throw new ForbiddenException(
+          `${availability.unavailableReason}: this Mini App needs a capability the Super App does not provide yet.`,
+        );
+      }
     }
 
     // 3. Verify Target Audience entitlement

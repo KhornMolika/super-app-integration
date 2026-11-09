@@ -17,6 +17,7 @@ import {
   Res,
   UseInterceptors,
   UploadedFile,
+  Optional,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { MiniappsService } from './miniapps.service';
@@ -41,6 +42,7 @@ import {
   AddCollaboratorDto,
 } from './dto/miniapp-actions.dto';
 import { CollaboratorRole } from './entities/miniapp-collaborator.entity';
+import { CapabilityGateService } from '../capabilities/capability-gate.service';
 import { QueryMiniAppsDto } from './dto/query-miniapps.dto';
 import { QueryIssuesDto } from './dto/query-issues.dto';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
@@ -56,6 +58,7 @@ export class MiniappsController {
   constructor(
     private readonly miniappService: MiniappsService,
     private readonly urlProbeHelper: UrlProbeHelper,
+    @Optional() private readonly capabilityGate?: CapabilityGateService,
   ) {}
 
   @Get('issues/all')
@@ -470,7 +473,14 @@ export class MiniappsController {
       );
     }
 
-    return maskMiniAppCredentials(app);
+    const masked = maskMiniAppCredentials(app);
+    // ADR-004 Section 5: which capabilities are disabled and whether it can launch
+    return this.capabilityGate
+      ? {
+          ...masked,
+          capabilityAvailability: await this.capabilityGate.evaluate(app.capabilities),
+        }
+      : masked;
   }
 
   @Patch(':id')

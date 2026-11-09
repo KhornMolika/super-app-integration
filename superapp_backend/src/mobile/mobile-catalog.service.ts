@@ -1,10 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MiniApp, MiniAppStatus } from '../miniapps/entities/miniapp.entity';
 import { buildPaginationMeta } from '../common/utils/pagination.util';
 import { PaginationMeta } from '../common/interfaces/paginated-result.interface';
 import { CatalogQueryDto } from './dto/catalog-query.dto';
+import {
+  CapabilityAvailability,
+  CapabilityEvaluation,
+  CapabilityGateService,
+  evaluateAgainstCatalog,
+} from '../capabilities/capability-gate.service';
 
 export interface CatalogItem {
   id: string;
@@ -25,6 +31,14 @@ export interface CatalogItem {
   nativeSdk?: { available: true };
   /** The app's Home widget (public fields only, never verifiedClass); omitted when it has none. */
   widget?: { widgetClass?: string; viewId?: string; url?: string };
+  /**
+   * ADR-004 Section 5. false when a required capability is not supported by the
+   * host yet: show the app with `unavailableReason`, but do not open it.
+   */
+  launchable?: boolean;
+  unavailableReason?: string | null;
+  /** Per-capability support, computed against the live catalog (permissions is unchanged). */
+  capabilities?: CapabilityEvaluation[];
 }
 
 export interface CatalogPage {
@@ -36,7 +50,11 @@ export interface CatalogPage {
 }
 
 /** Explicit allowlist: nothing sensitive from the row can ever leak. */
-export function toCatalogItem(app: MiniApp, clientHost?: string): CatalogItem {
+export function toCatalogItem(
+  app: MiniApp,
+  clientHost?: string,
+  availability?: CapabilityAvailability,
+): CatalogItem {
   const host = clientHost || process.env.HOST_IP || 'localhost';
   const isProduction =
     host === 'app.fintechcenterfsa.com' ||
@@ -162,6 +180,11 @@ export function toCatalogItem(app: MiniApp, clientHost?: string): CatalogItem {
   if (app.integrationMethod === 'NATIVE_SDK') {
     item.nativeSdk = { available: true };
   }
+  if (availability) {
+    item.launchable = availability.launchable;
+    item.unavailableReason = availability.unavailableReason;
+    item.capabilities = availability.capabilities;
+  }
   const hw = app.homeWidget;
   if (hw && (hw.widgetClass || hw.viewId || hw.url)) {
     item.widget = {};
@@ -176,6 +199,7 @@ export function toCatalogItem(app: MiniApp, clientHost?: string): CatalogItem {
 export class MobileCatalogService {
   constructor(
     @InjectRepository(MiniApp) private readonly miniApps: Repository<MiniApp>,
+    @Optional() private readonly capabilityGate?: CapabilityGateService,
   ) {}
 
   async list(
@@ -253,6 +277,8 @@ export class MobileCatalogService {
       .take(limit)
       .skip(offset)
       .getManyAndCount();
+    // One catalog read for the whole page; launchability is computed, never stored
+    const snapshot = this.capabilityGate ? await this.capabilityGate.snapshot() : null;
 
     const effectivePage = page || Math.floor(offset / limit) + 1;
     const baseMeta = buildPaginationMeta(total, effectivePage, limit);
@@ -268,7 +294,13 @@ export class MobileCatalogService {
     };
 
     return {
-      items: rows.map((r) => toCatalogItem(r, clientHost)),
+      items: rows.map((r) =>
+        toCatalogItem(
+          r,
+          clientHost,
+          snapshot ? evaluateAgainstCatalog(r.capabilities, snapshot) : undefined,
+        ),
+      ),
       total,
       limit,
       offset,
