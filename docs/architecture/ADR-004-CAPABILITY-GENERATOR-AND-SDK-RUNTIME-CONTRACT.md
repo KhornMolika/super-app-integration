@@ -200,7 +200,75 @@ try {
 
 ---
 
-## 5. Security & Isolation Invariants
+## 5. Registration Policy for Unsupported Capabilities (Graceful Degradation)
+
+> [!NOTE]
+> **Status: Proposed, implementation pending.** This section is the target behavior. The current code still marks the `capability_gate` stage as `FAILED` for any unsupported capability, and it only checks capability keys for Flutter Package submissions. See [Current vs Target Behavior](#current-vs-target-behavior).
+
+### Principle
+A Mini App that declares a capability the Super App host does not support yet is **not rejected at registration**. It registers normally, and the unsupported capability is **disabled** until a Super App release adds it. This mirrors the runtime rule in Section 4: the platform degrades gracefully instead of failing.
+
+### How a Declared Capability Is Classified
+Each capability a Mini App declares (`PermissionDto`: `type`, `purpose`, `termsUrl`, `required`) is checked against the `capability_definitions` catalog. It is **supported** only when all of these hold:
+1. A catalog row exists with a matching `key` (case-insensitive).
+2. `isActive = true` and `isDeprecated = false`.
+3. The target Super App version is within `minSuperAppVersion` and `maxSuperAppVersion`, where set.
+
+Otherwise it is **unsupported**. An unsupported capability that is not in the catalog at all is also offered as a capability proposal to the partner (Section 2).
+
+### Policy Matrix
+
+| Declared capability | Security gate (`capability_gate`) | Registration | Mobile runtime |
+| :--- | :--- | :--- | :--- |
+| **Supported** | Passes | Allowed | Enabled; bridge call works |
+| **Unsupported, optional** (`required: false`) | Passes with a **WARNING** finding `CAP_UNSUPPORTED_<KEY>` | Allowed | **Disabled**: `canIUse(key)` returns `false`, and a call returns the `CAPABILITY_UNSUPPORTED` rejection envelope (Section 4). The Mini App must use its fallback flow. |
+| **Unsupported, required** (`required: true`) | **Open decision**, see below | **Open decision**, see below | **Open decision**, see below |
+
+### Automatic Enablement
+The supported/disabled state is **computed when it is read, never stored** on the Mini App. The catalog syncs from the Super App source repository on every backend start (`CapabilitiesService`). When a later Super App release adds the capability, it becomes supported on the next sync. Every Mini App that declared it then gets it enabled automatically, without re-submission or manual approval. No database flag can go stale.
+
+### API Contract Addition
+Capability lists returned to the Backoffice and the mobile catalog keep their current shape, plus two read-only fields per item:
+
+```json
+{
+  "type": "nfc",
+  "purpose": "Read the staff ID card chip for attendance",
+  "required": false,
+  "supported": false,
+  "availableFrom": null
+}
+```
+
+* `supported`: result of the classification above.
+* `availableFrom`: the `minSuperAppVersion` from the catalog when the capability exists but needs a newer host. It is `null` when the capability is not in the catalog yet.
+
+### One Shared Check for All Integration Methods
+All four integration methods (WEBVIEW, FLUTTER_PACKAGE, NATIVE_SDK, DEEP_LINK) use **one shared capability check** that implements this policy. No scanner keeps its own logic. This closes the current gap where WEBVIEW, NATIVE_SDK and DEEP_LINK submissions are not checked at all.
+
+### Open Decision: Unsupported Required Capability
+The partner marks a capability `required: true` when the Mini App cannot work without it. Two options:
+
+| Option | Behavior | Trade-off |
+| :--- | :--- | :--- |
+| **A. Block** (current behavior) | Gate fails with a CRITICAL finding; the Mini App cannot proceed past validation. | Users never see a broken app, but the partner cannot test or prepare until the host ships the capability. |
+| **B. Register disabled** | Gate passes with a WARNING. The Mini App can register, build and be tested in the sandbox, but is **not launchable** in the mobile catalog. It shows an *"Unavailable until Super App vX"* label (`availableFrom`) and becomes launchable automatically once the capability is supported. | Partners can work ahead of the host release, and users are still protected from an app that cannot work. Needs a "not launchable" state in the mobile catalog. |
+
+**Recommendation: Option B.** It matches the "disable, don't fail" principle and still keeps a non-working app away from users. *Decision owner: Platform / SA Admin.*
+
+### Current vs Target Behavior
+
+| Aspect | Current code | Target (this ADR) |
+| :--- | :--- | :--- |
+| Optional unsupported capability | Gate `FAILED`, CRITICAL finding (Flutter Package only) | Gate passes, WARNING finding, capability disabled |
+| Required unsupported capability | Gate `FAILED` (Flutter Package only) | Per the open decision above |
+| `required` flag | Accepted by `PermissionDto` but ignored by the scanner | Drives the policy matrix |
+| WEBVIEW / NATIVE_SDK / DEEP_LINK | Not checked against the catalog | Same shared check as Flutter Package |
+| `supported` / `availableFrom` in API | Not returned | Returned per capability |
+
+---
+
+## 6. Security & Isolation Invariants
 
 1. **Zero Raw Native Access**: MiniApps run in sandboxed processes or restricted WebViews. They cannot invoke arbitrary Android Java reflection or iOS Objective-C selectors.
 2. **Pre-Flight Validation**: Static analysis (Semgrep Scanner #1) inspects MiniApp code at CI/CD submission time. Any calls to capabilities not declared in BackOffice fail Stage 1 immediately.
@@ -209,6 +277,7 @@ try {
 
 ---
 
-## 6. Document History
+## 7. Document History
 
 * **2026-10-22:** Initial approved specification of Capability Generator flow, Rejection Protocol, and unified SDK contracts across Web, Flutter, and Native.
+* **2026-11-09:** Added Section 5, Registration Policy for Unsupported Capabilities (proposed): optional unsupported capabilities register disabled and enable automatically on catalog sync, one shared check covers all four integration methods, and the required-capability behavior is an open decision.

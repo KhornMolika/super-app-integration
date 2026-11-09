@@ -38,37 +38,49 @@ The FSA SuperApp ecosystem serves as a multi-agency digital governance and MiniA
 
 ### Version A: Conceptual ERD (Entities & Relationships Only — No Attributes)
 
-This high-level diagram depicts the structural boundaries, agency multi-tenancy, and relationship cardinalities across the platform:
+This high-level diagram shows the same 20 entities and the same relationship cardinalities as Version B, without attributes:
+
+* **Solid lines** are enforced foreign keys.
+* **Dotted lines** are logical links with no foreign key (see [Section 4](#4-why-some-tables-have-no-direct-foreign-keys)): capabilities are referenced by `key`, and audit actors are snapshots.
+* `SYSTEM_SETTINGS` is a global key-value store that no entity owns.
 
 ```mermaid
 erDiagram
-    %% Core Identity & Profile Separation
-    IDENTITIES ||--o| STAFF_PROFILES : "has profile (1:0..1)"
-    IDENTITIES ||--o| CONSUMER_PROFILES : "has profile (1:0..1)"
-    IDENTITIES ||--o{ REFRESH_TOKENS : "issues sessions"
+    %% 1. Core Identity & Profile Separation
+    IDENTITIES ||--o| STAFF_PROFILES : "has"
+    IDENTITIES ||--o| CONSUMER_PROFILES : "has"
+    IDENTITIES ||--o{ REFRESH_TOKENS : "has active sessions"
     IDENTITIES ||--o{ NOTIFICATIONS : "receives"
-    IDENTITIES ||--o{ DEVELOPER_TOKENS : "holds API tokens"
+    IDENTITIES ||--o{ DEVELOPER_TOKENS : "issues"
 
-    %% Multi-Agency Tenancy & Staff RBAC
+    %% 2. Multi-Agency Tenancy & Staff RBAC
     ORGANIZATIONS ||--o{ STAFF_PROFILES : "employs"
-    ORGANIZATIONS ||--o{ MINI_APPS : "legally owns"
-    ORGANIZATIONS ||--o{ ORGANIZATIONS : "parent authority of"
-    ROLES ||--o{ STAFF_PROFILES : "governs"
+    ORGANIZATIONS ||--o{ MINI_APPS : "owns"
+    ORGANIZATIONS |o--o{ ORGANIZATIONS : "parent authority of (parentId)"
+    ROLES ||--o{ STAFF_PROFILES : "authorizes"
     ROLES ||--|{ ROLE_PERMISSIONS : "configures"
-    PERMISSIONS ||--|{ ROLE_PERMISSIONS : "granted to"
+    PERMISSIONS ||--|{ ROLE_PERMISSIONS : "granted"
 
-    %% MiniApp Master Registry & Governance
-    IDENTITIES ||--o{ MINI_APPS : "maintains as lead (ownerId)"
-    MINI_APPS ||--o{ MINI_APP_COLLABORATORS : "has team"
-    IDENTITIES ||--o{ MINI_APP_COLLABORATORS : "collaborates on"
-    MINI_APPS ||--|{ MINI_APP_VERSIONS : "releases"
-    MINI_APPS ||--|| MINI_APP_LEGAL : "compliance terms"
+    %% 3. MiniApp Registry, Releases & CI/CD
+    IDENTITIES ||--o{ MINI_APPS : "maintains (ownerId)"
+    MINI_APPS ||--o{ MINI_APP_COLLABORATORS : "has collaborators"
+    IDENTITIES ||--o{ MINI_APP_COLLABORATORS : "contributes to"
+    MINI_APPS ||--|{ MINI_APP_VERSIONS : "contains"
+    MINI_APPS ||--|| MINI_APP_LEGAL : "compliance"
     MINI_APPS ||--o{ MINI_APP_ISSUES : "security gates"
     MINI_APPS ||--o{ MINI_APP_BUILDS : "build history"
-    MINI_APP_VERSIONS ||--o{ MINI_APP_BUILDS : "compiles from"
-    MINI_APPS ||--o{ NOTIFICATIONS : "triggers alerts"
-    MINI_APPS ||--o{ CAPABILITY_PROPOSALS : "requests bridge"
+    MINI_APP_VERSIONS ||--o{ MINI_APP_BUILDS : "compiled in"
+    MINI_APPS ||--o{ NOTIFICATIONS : "triggers"
+
+    %% 4. Native Capability Governance
+    MINI_APPS ||--o{ CAPABILITY_PROPOSALS : "requests"
     IDENTITIES ||--o{ CAPABILITY_PROPOSALS : "submitted by"
+    MINI_APP_VERSIONS }o..o{ CAPABILITY_DEFINITIONS : "requests by key (JSONB, no FK)"
+    CAPABILITY_PROPOSALS }o..o| CAPABILITY_DEFINITIONS : "proposes new key (no FK)"
+
+    %% 5. Forensic Audit & Global Configuration (no FKs)
+    IDENTITIES |o..o{ AUDIT_LOGS : "actor snapshot (actorId, no FK)"
+    SYSTEM_SETTINGS
 ```
 
 ---
@@ -340,6 +352,7 @@ erDiagram
 
     ORGANIZATIONS ||--o{ STAFF_PROFILES : "employs"
     ORGANIZATIONS ||--o{ MINI_APPS : "owns"
+    ORGANIZATIONS |o--o{ ORGANIZATIONS : "parent authority of (parentId)"
     ROLES ||--o{ STAFF_PROFILES : "authorizes"
     ROLES ||--|{ ROLE_PERMISSIONS : "configures"
     PERMISSIONS ||--|{ ROLE_PERMISSIONS : "granted"
@@ -536,6 +549,20 @@ In enterprise systems, omitting foreign keys is done deliberately for resilience
 2. **`capability_definitions` (`key`, `name`)**:
    - Functions as a dynamic system catalog / dictionary of bridge APIs (Camera, Biometrics, Payment) supported by the Flutter host shell.
    - Version records request capabilities via `mini_app_versions.capabilities` (JSONB array), which is validated dynamically during CI/CD builds rather than through a rigid join table.
+   - **Linked by `key`, enforced by the security gate (deliberate design decision)**:
+     - **Where keys are referenced**: `mini_apps.capabilities` (working copy), `miniapp_versions.permissions` (frozen per release), and `pendingRevision.capabilities`. Each item is either a key string or an object `{ type, purpose, termsUrl }`, and keys are matched case-insensitively.
+     - **Why there is no FK**:
+       - PostgreSQL cannot put a foreign key on elements inside a JSONB array.
+       - `capability_proposals.capabilityKey` names a capability that does not exist yet, until it is approved and shipped.
+       - The catalog is synced from the Super App source on boot and is never hard-deleted: retired capabilities get `isActive = false` / `isDeprecated = true`, so historical versions keep pointing at a real row.
+     - **Why a FK is also undesirable**: the platform policy is *disable, don't fail*. A Mini App may register with a capability the Super App does not support yet, and that capability stays disabled until a host release adds it ([ADR-004 Section 5](./ADR-004-CAPABILITY-GENERATOR-AND-SDK-RUNTIME-CONTRACT.md#5-registration-policy-for-unsupported-capabilities-graceful-degradation)). A foreign key would reject such a registration outright.
+     - **How unsupported keys are handled**: the `capability_gate` stage checks every declared key with `CapabilitiesService.findByKey()` and reports `CAP_UNSUPPORTED_<KEY>`. Under the proposed policy, an optional capability gets a WARNING and is disabled, and a required one follows the open decision in ADR-004. Supported/disabled is computed when read, never stored, so a capability switches on automatically once the catalog sync adds it.
+     - **Current coverage gap (to fix)**: only `flutter-package-security.scanner.ts` performs the key check today.
+       - `deep-link-security.scanner.ts` and `native-sdk-security.scanner.ts` run a `capability_gate` stage that always passes without checking keys.
+       - `webview-security.scanner.ts` has no `capability_gate` stage at all, although WebView apps request bridge capabilities.
+
+       Until those scanners call `findByKey()`, unknown keys on WEBVIEW, NATIVE_SDK and DEEP_LINK mini apps are not caught anywhere.
+     - **Accepted trade-off**: the database itself does not reject an unknown key; integrity depends on the gate, so the gate must cover every integration method. If database enforcement is ever required, the preferred option is a `miniapp_version_capabilities` link table (`versionId`, `capabilityKey` FK to `capability_definitions.key`, `purpose`, `termsUrl`) filled at version promotion. It enforces released versions only, so drafts keep the friendly findings.
 3. **`system_settings` (`key`, `value`)**:
    - Global key-value environment configuration (pipeline timeouts, MinIO retention rules, Telegram bot webhooks). It is not owned by any entity.
 
@@ -899,12 +926,29 @@ To transition safely without corrupting existing data or causing downtime, the m
   - [x] Handle dual-profile resolution (if same email exists in both, link both staff & consumer profiles to one identity).
 
 - [x] **Phase 3: Foreign Key Re-Anchoring**
-  - [x] Repoint `mini_apps.ownerId` -> `identities(id)`.
+  - [x] Missing `identities` columns added and all identity FKs repointed from legacy `"user"` / `end_users` to `identities(id)`, with legacy ids remapped by email: `1794300000000-AlignIdentitiesColumnsAndForeignKeys.ts`.
+  - [x] Repoint `mini_apps.ownerId` -> `identities(id)` (`ON DELETE SET NULL`).
   - [x] Repoint `mini_app_collaborators.userId` -> `identityId REFERENCES identities(id)`.
   - [x] Repoint `notifications.userId` -> `identityId REFERENCES identities(id)`.
-  - [x] Repoint `developer_tokens.userId` -> `identityId REFERENCES identities(id)`.
-  - [x] Repoint `end_user_refresh_tokens.endUserId` -> `identityId REFERENCES identities(id)`.
-  - [x] Repoint `access_tokens.userId` -> `identities(id)`.
+  - [x] Repoint `developer_tokens.userId` -> `identityId REFERENCES identities(id)`. Developer and personal access tokens share this table; there is no separate `access_tokens` table.
+  - [x] Repoint `end_user_refresh_tokens.endUserId` -> `refresh_tokens.identityId REFERENCES identities(id)`.
+  - [x] Repoint `capability_proposals.requestedById` -> `identities(id)` (`ON DELETE SET NULL`).
+
+- [x] **Phase 3b: Physical Schema Alignment** (`1794400000000-MatchSchemaMasterPlan.ts`)
+  - [x] Tables renamed to the documented names: `roles`, `permissions`, `notifications`, `mini_app_versions`, `mini_app_builds`, `mini_app_legal`, `mini_app_issues`, `refresh_tokens`.
+  - [x] Identity FK columns renamed to `identityId`. Entity properties keep their old names (`userId`, `endUserId`) through column mapping, so API responses are unchanged.
+  - [x] `mini_apps.organizationId` is `NOT NULL` with `ON DELETE RESTRICT`. Legacy rows were resolved by organization code, then name, then the owner's agency, then the root FSA authority.
+  - [x] `organizations.code` is `NOT NULL UNIQUE`. Missing codes were generated from name initials and duplicates suffixed (`-2`, `-3`, ...). New organizations get a generated code when none is supplied.
+  - [x] `organizations.status` gained `SUSPENDED`. It is still a PostgreSQL enum rather than `VARCHAR`; the allowed values match the doc.
+  - [x] `UQ_staff_agency_staffId` (unique `organizationId` + `staffId`). Existing duplicates were suffixed.
+  - [x] Legacy tables dropped after a final copy of legacy capability rows: `user`, `end_users`, `user_roles`, `permission_proposals`, `permission_definitions`, `miniapp_activities`. **Irreversible: take a database backup before deploying.**
+  - [x] Kept because live entities still use them: `auth_otps`, `superapp_capabilities`, `end_user_email_verification_tokens`.
+
+- [ ] **Phase 3c: Remaining Differences From This Specification** (not yet implemented)
+  - [ ] `mini_apps` slimming (Section 8): about 20 legacy technical columns (`integrationConfig`, `validation*`, `build*`, `verificationToken`, `isDomainVerified`, `status`, `version`, `versionHistory`, `permissions`, `capabilities`, `organization`, `organizationCode`, `teamName`, `teamTelegramChatId`, `sharingScope`, and others) still live on `mini_apps` instead of `mini_app_versions.integrationConfig`. Touches about 500 code references; planned as a separate refactor.
+  - [ ] `mini_app_versions` still has top-level `packageName`, `gitRef`, `artifactUrl`, `checksum`, `apkSize`, `type`, and stores capabilities in `permissions` (doc: `capabilities`).
+  - [ ] `organizations` still has `domain`, `contactEmail`, `contactPhone`, `metadata`.
+  - [ ] `identities` additionally has `deletionRequestedAt`, `purgeAfter` (also on `consumer_profiles`) and `telegramChatId`, `telegramUsername`, `telegramConnectedAt`.
 
 - [x] **Phase 4: NestJS Backend Entity & Service Refactor**
   - [x] Implement `Identity`, `StaffProfile`, and `ConsumerProfile` TypeORM entities.

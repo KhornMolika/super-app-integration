@@ -238,7 +238,7 @@ flowchart TD
 1. **Stage 1 (Ingestion & Integrity):** Ingests submission from MinIO or locks Git repo to exact commit SHA; computes SHA-256 integrity hash.
 2. **Stage 2 (Network & Web Security):** Enforces SSRF defense (blocking `localhost`, `127.0.0.1`, `192.168.x`, `10.x`), verifies HTTPS TLS configuration and allowed navigation domains.
 3. **Stage 3 (Static Code & Secret Scans):** Scans for high-entropy API keys, private keys, database credentials, and deprecated packages.
-4. **Stage 4 (Capability Gatekeeper):** Validates requested native permissions against the Super App container allowlist.
+4. **Stage 4 (Capability Gatekeeper):** Validates requested native permissions against the Super App capability catalog for **all four integration methods**. Unsupported capabilities follow the graceful-degradation policy in [ADR-004 Section 5](./ADR-004-CAPABILITY-GENERATOR-AND-SDK-RUNTIME-CONTRACT.md#5-registration-policy-for-unsupported-capabilities-graceful-degradation) (proposed): an **optional** unsupported capability passes with a WARNING and is disabled until the host supports it. A **required** one follows the open decision recorded there.
 5. **Stage 5 (Malware & License Compliance):** Executes ClamAV binary signature analysis and ensures open-source license compliance.
 6. **Stage 6 (Backend Callback):** Aggregates all JSON reports into a single normalized payload, calculates a Security Score (0–100), and posts results to NestJS backend for real-time display in the Back-Office.
 
@@ -255,7 +255,7 @@ Executed automatically by Jenkins on every **Flutter Package** (`FLUTTER_PACKAGE
 | **02** | **Secret & API Key Leak Detection** | `secret_scan` | `Gitleaks` / `TruffleHog` | Scans source code and configs for leaked private keys, JWT secrets, and hardcoded API tokens. |
 | **03** | **Static Analysis (SAST)** | `sast` | `Semgrep` / `SonarQube` / AST Guard | Analyzes source code for security flaws, unsafe memory operations, and forbidden platform APIs. |
 | **04** | **Dependency Vulnerability Scan (SCA)** | `dependency_scan` | `Trivy` / `OSV Audit` (CVE Database) | Audits direct and transitive dependencies against known CVE security vulnerability databases. |
-| **05** | **Super App Capability Gatekeeper** | `capability_gate` | Super App Container Policy Engine | Enforces container boundary, verifying declared host capabilities against platform allowlists. |
+| **05** | **Super App Capability Gatekeeper** | `capability_gate` | Super App Container Policy Engine | Enforces container boundary, verifying declared host capabilities against the capability catalog. Optional unsupported capabilities produce a WARNING and are disabled, not rejected ([ADR-004 §5](./ADR-004-CAPABILITY-GENERATOR-AND-SDK-RUNTIME-CONTRACT.md#5-registration-policy-for-unsupported-capabilities-graceful-degradation)). |
 | **06** | **Software Bill of Materials (SBOM)** | `sbom` | `Syft` / CycloneDX 1.5 & SPDX | Generates cryptographic CycloneDX & SPDX manifests tracking all packages and sub-dependencies. |
 | **07** | **Open Source License Compliance** | `license_compliance` | `FOSSA` / License-Checker | Audits dependency licenses to prevent copyleft contamination and legal IP infringements. |
 | **08** | **Malware & Binary Signature Scan** | `malware_scan` | `ClamAV` / `YARA` Rules Engine | Deep signature inspection of compiled platform binaries (`.aar`, `.xcframework`) for malware payloads. |
@@ -269,6 +269,11 @@ Executed automatically by Jenkins on every **WebView** (`WEBVIEW`) and **Deep Li
 | **10** | **Domain TLS/SSL Transport Security** | `domain_tls_audit` | `testssl.sh` / SSL Labs Analyzer | Audits TLS 1.2/1.3 cipher suites, HTTPS certificates, HSTS headers, and transport encryption. |
 | **11** | **Security Headers & CSP Audit** | `csp_headers_audit` | Content-Security-Policy & CORS Validator | Verifies Content-Security-Policy (CSP), X-Frame-Options, CORS origins, and cookie security flags. |
 | **12** | **Dynamic Security Probing (DAST)** | `dast_zap` | OWASP ZAP DAST Scanner | Dynamic probing of web endpoints for cross-site scripting (XSS), CSRF, and unprotected APIs. |
+
+> [!IMPORTANT]
+> **Capability check applies to WebView and Deep Link too.** WebView Mini Apps request bridge capabilities (`camera`, `location`, `biometrics`) just like packages do. So the shared **Capability Gatekeeper** (`capability_gate`, Scanner 05) also runs for `WEBVIEW` and `DEEP_LINK` submissions, with the same policy as Group A.
+>
+> *Current gap:* today only the Flutter Package scanner checks capability keys. The Deep Link and Native SDK gates always pass, and the WebView scanner has no capability gate. Implementing the shared check closes this gap.
 
 ---
 
@@ -354,6 +359,15 @@ Platform capabilities and hardware permissions are centrally registered in the P
 
 #### Automated Permission Detection
 During CI/CD Stage 4 validation, `PermissionDetectorHelper` statically analyzes submitted package source code and bundle assets to verify that declared capabilities in the manifest match actual code usage of `@fsasuperapp/sdk` and native APIs.
+
+#### Unsupported Capabilities: Disable, Don't Fail (Proposed)
+A Mini App may declare a capability the Super App does not support yet. It is **not rejected at registration**:
+* **Optional (`required: false`)**: the scan passes with a WARNING and the capability is **disabled**. On mobile, `canIUse(key)` returns `false`, and calling it returns the `CAPABILITY_UNSUPPORTED` rejection envelope ([Section 10](#10-fsasuperapp-sdk-runtime-contract--rejection-protocol)). The Mini App uses its fallback flow.
+* **Automatic enablement**: supported/disabled is computed when read, against the catalog that syncs from the Super App repository on every backend start. When a later Super App release adds the capability, it switches on automatically for every Mini App that declared it, with no re-submission.
+* **Required (`required: true`)**: open decision between blocking the Mini App (current behavior) and registering it as not launchable, with an *"Unavailable until Super App vX"* label (recommended).
+* **One shared check** covers WebView, Flutter Package, Native SDK and Deep Link.
+
+Full policy, API fields (`supported`, `availableFrom`) and current-vs-target comparison: [ADR-004 Section 5](./ADR-004-CAPABILITY-GENERATOR-AND-SDK-RUNTIME-CONTRACT.md#5-registration-policy-for-unsupported-capabilities-graceful-degradation).
 
 ---
 
