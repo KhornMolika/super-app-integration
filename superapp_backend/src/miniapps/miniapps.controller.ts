@@ -38,7 +38,9 @@ import {
   VerifyDomainStandaloneDto,
   DetectPermissionsDto,
   RescanDto,
+  AddCollaboratorDto,
 } from './dto/miniapp-actions.dto';
+import { CollaboratorRole } from './entities/miniapp-collaborator.entity';
 import { QueryMiniAppsDto } from './dto/query-miniapps.dto';
 import { QueryIssuesDto } from './dto/query-issues.dto';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
@@ -111,6 +113,16 @@ export class MiniappsController {
   @Post('draft')
   @RequirePermissions('miniapp:create')
   async createDraft(@Body() createData: any, @Req() req: any) {
+    // The draft body is intentionally not DTO-validated (partial forms are allowed),
+    // but appId and name are NOT NULL columns: reject early with a 400, not a DB 500.
+    const missing = ['appId', 'name'].filter(
+      (k) => typeof createData?.[k] !== 'string' || !createData[k].trim(),
+    );
+    if (missing.length) {
+      throw new BadRequestException(
+        `${missing.join(' and ')} ${missing.length > 1 ? 'are' : 'is'} required to save a draft.`,
+      );
+    }
     const dataToSave = this.extractIntegrationConfig(createData);
     dataToSave.lifecycleStatus = 'DRAFT';
     dataToSave.status = 'DRAFT';
@@ -415,12 +427,12 @@ export class MiniappsController {
   @RequirePermissions('miniapp:update')
   async addCollaborator(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: { userId: string; role?: any },
+    @Body() body: AddCollaboratorDto,
   ) {
     return this.miniappService.addCollaborator(
       id,
       body.userId,
-      body.role || 'DEVELOPER',
+      body.role || CollaboratorRole.DEVELOPER,
     );
   }
 

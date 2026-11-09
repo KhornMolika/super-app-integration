@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Logger,
   NotFoundException,
+  BadRequestException,
   Optional,
 } from '@nestjs/common';
 import { StorageService } from '../../storage/storage.service';
@@ -15,6 +16,7 @@ import {
 } from './helpers/malware-purge.helper';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { isPgUuid } from '../../common/utils/uuid.util';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 import { MiniAppIssue } from '../../miniapps/entities/miniapp-issue.entity';
 import { NotificationsService, MailService } from '../../notifications';
@@ -143,6 +145,14 @@ export class ValidationCallbackController {
   @Post('callback')
   @HttpCode(HttpStatus.OK)
   async handleValidationCallback(@Body() dto: ValidationCallbackDto) {
+    // Checked here rather than with a class DTO: the global ValidationPipe uses
+    // whitelist, which would strip the free-form report fields Jenkins sends.
+    if (!dto || !isPgUuid(dto.miniAppId)) {
+      throw new BadRequestException('miniAppId must be a valid MiniApp UUID');
+    }
+    if (dto.status !== 'PASSED' && dto.status !== 'FAILED') {
+      throw new BadRequestException("status must be 'PASSED' or 'FAILED'");
+    }
     this.logger.log(
       `Received validation callback for MiniApp ${dto.miniAppId}: status = ${dto.status}, score = ${dto.score}`,
     );

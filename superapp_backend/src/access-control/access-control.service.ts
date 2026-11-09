@@ -671,7 +671,22 @@ export class AccessControlService {
       }
     }
 
-    // Update staff profile fields
+    // A staff profile (organizationId + roleId are NOT NULL) is only touched when the
+    // identity already has one or the request sets staff fields. Editing a consumer's
+    // name or status must not try to create an incomplete staff profile.
+    const touchesStaff =
+      dto.position !== undefined ||
+      dto.staffId !== undefined ||
+      dto.phoneNumber !== undefined ||
+      dto.organizationId !== undefined ||
+      dto.roleIds !== undefined ||
+      dto.roleNames !== undefined;
+
+    if (!staffProfile && !touchesStaff) {
+      await this.identityRepository.save(identity);
+      return this.findUserById(identity.id);
+    }
+
     if (!staffProfile) {
       staffProfile = this.staffProfileRepository.create({
         identityId: identity.id,
@@ -735,8 +750,23 @@ export class AccessControlService {
       }
     }
 
-    await this.identityRepository.save(identity);
-    await this.staffProfileRepository.save(staffProfile);
+    // Validate before writing anything, so a rejected request never half-saves
+    if (!staffProfile.organizationId) {
+      throw new BadRequestException(
+        'A staff member must belong to an organization. Provide a valid organizationId.',
+      );
+    }
+    if (!staffProfile.roleId) {
+      throw new BadRequestException(
+        'A staff member must have a role. Provide roleIds or roleNames.',
+      );
+    }
+
+    const profileToSave = staffProfile;
+    await this.identityRepository.manager.transaction(async (manager) => {
+      await manager.save(identity);
+      await manager.save(profileToSave);
+    });
     return this.findUserById(identity.id);
   }
 
@@ -744,6 +774,7 @@ export class AccessControlService {
     id: string,
     roleName = 'MA_DEVELOPER',
     requester?: any,
+    organizationId?: string,
   ): Promise<FormattedUserResponse> {
     const isSuperAdmin = this.isRequesterSuperAdmin(requester);
     if (!isSuperAdmin) {
@@ -775,16 +806,29 @@ export class AccessControlService {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
 
-    identity.status = 'ACTIVE';
-    await this.identityRepository.save(identity);
-
     let staffProfile = identity.staffProfile;
     if (!staffProfile) {
+      // staff_profiles.organizationId is NOT NULL: an account without an agency
+      // (e.g. a legacy user migrated without one) cannot be approved as staff yet.
+      const targetOrgId = organizationId?.trim();
+      if (!targetOrgId) {
+        throw new BadRequestException(
+          'This account has no organization. Provide organizationId when approving it, or assign one with PUT /users/:id first.',
+        );
+      }
+      const org = await this.identityRepository.manager
+        .getRepository(Organization)
+        .findOne({ where: { id: targetOrgId } });
+      if (!org) {
+        throw new BadRequestException(`Organization with ID '${targetOrgId}' not found.`);
+      }
       staffProfile = this.staffProfileRepository.create({
         identityId: identity.id,
         identity: identity,
         roleId: role.id,
         role: role,
+        organizationId: org.id,
+        organization: org,
         status: 'ACTIVE',
       });
     } else {
@@ -792,7 +836,13 @@ export class AccessControlService {
       staffProfile.roleId = role.id;
       staffProfile.status = 'ACTIVE';
     }
-    await this.staffProfileRepository.save(staffProfile);
+
+    identity.status = 'ACTIVE';
+    const profileToSave = staffProfile;
+    await this.identityRepository.manager.transaction(async (manager) => {
+      await manager.save(identity);
+      await manager.save(profileToSave);
+    });
 
     return this.findUserById(identity.id);
   }

@@ -187,13 +187,14 @@ export class UsersController {
   @RequirePermissions('user:manage')
   async approve(
     @Param('id') id: string,
-    @Body() body: { role?: string; roleName?: string },
+    @Body() body: { role?: string; roleName?: string; organizationId?: string },
     @Req() req: any,
   ) {
     return this.accessControlService.approveUser(
       id,
       body?.roleName || body?.role || 'MA_DEVELOPER',
       req?.user,
+      body?.organizationId,
     );
   }
 

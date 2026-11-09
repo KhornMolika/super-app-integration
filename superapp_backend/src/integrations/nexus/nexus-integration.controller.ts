@@ -9,6 +9,7 @@ import {
   Post,
 } from '@nestjs/common';
 import { NexusIntegrationService } from './nexus-integration.service';
+import { NexusPackageDto, NexusSnippetDto } from './nexus-integration.dto';
 
 @Controller(['integrations/nexus', 'api/integrations/nexus'])
 export class NexusIntegrationController {
@@ -21,15 +22,13 @@ export class NexusIntegrationController {
 
   @Post('validate')
   @HttpCode(HttpStatus.OK)
-  validatePackage(@Body() body: { packageName: string }) {
+  validatePackage(@Body() body: NexusPackageDto) {
     return this.nexusService.getPackageInfo(body.packageName);
   }
 
   @Post('snippet')
   @HttpCode(HttpStatus.OK)
-  generateSnippet(
-    @Body() body: { packageName: string; versionConstraint?: string },
-  ) {
+  generateSnippet(@Body() body: NexusSnippetDto) {
     const snippet = this.nexusService.generateSnippet(body);
     return { snippet };
   }

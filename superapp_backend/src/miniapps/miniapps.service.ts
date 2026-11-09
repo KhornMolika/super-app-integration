@@ -15,6 +15,7 @@ import { MiniAppCollaborator } from './entities/miniapp-collaborator.entity';
 import { MiniAppVersion } from './entities/miniapp-version.entity';
 import { MiniAppBuild } from './entities/miniapp-build.entity';
 import { MiniAppLegal } from './entities/miniapp-legal.entity';
+import { Identity } from '../identities/entities/identity.entity';
 import { AuditService } from '../audit/audit.service';
 import { PermissionDetectorHelper } from './helpers/permission-detector.helper';
 import { MiniappValidationHelper } from './helpers/miniapp-validation.helper';
@@ -292,6 +293,14 @@ export class MiniappsService implements OnApplicationBootstrap {
   }
 
   async addCollaborator(miniAppId: string, userId: string, role: any) {
+    // Both are FK targets: return 404 rather than a foreign-key violation (500)
+    const manager = this.collaboratorRepository.manager;
+    if (!(await manager.exists(MiniApp, { where: { id: miniAppId } }))) {
+      throw new NotFoundException(`MiniApp ${miniAppId} not found`);
+    }
+    if (!(await manager.exists(Identity, { where: { id: userId } }))) {
+      throw new NotFoundException(`User ${userId} not found`);
+    }
     const existing = await this.collaboratorRepository.findOne({
       where: { miniAppId, userId },
     });

@@ -1,4 +1,13 @@
-import { IsArray, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+} from 'class-validator';
+import { PG_UUID_PATTERN } from '../../common/utils/uuid.util';
+import { CollaboratorRole } from '../entities/miniapp-collaborator.entity';
 
 export class ReasonDto {
   @IsString()
@@ -55,4 +64,15 @@ export class DetectPermissionsDto {
   @IsString()
   @IsOptional()
   gitPath?: string;
+}
+
+export class AddCollaboratorDto {
+  @Matches(PG_UUID_PATTERN, { message: 'userId must be a valid identity UUID' })
+  userId!: string;
+
+  @IsOptional()
+  @IsEnum(CollaboratorRole, {
+    message: `role must be one of: ${Object.values(CollaboratorRole).join(', ')}`,
+  })
+  role?: CollaboratorRole;
 }

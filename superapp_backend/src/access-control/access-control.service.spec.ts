@@ -72,6 +72,16 @@ describe('AccessControlService - User Organization Updates & Creation', () => {
         ),
       manager: {
         getRepository: jest.fn().mockReturnValue(mockOrgRepo),
+        // updateUser/approveUser save identity + staff profile in one transaction;
+        // route each entity to its repository mock so assertions stay per-repo.
+        transaction: jest.fn().mockImplementation(async (cb) =>
+          cb({
+            save: (entity: any) =>
+              'identityId' in entity
+                ? mockStaffProfileRepo.save(entity)
+                : mockIdentityRepo.save(entity),
+          }),
+        ),
       },
     };
 
@@ -148,17 +158,31 @@ describe('AccessControlService - User Organization Updates & Creation', () => {
       );
     });
 
-    it('should successfully detach organization when organizationId is empty string', async () => {
-      await service.updateUser('user-uuid-1', {
-        organizationId: '',
-      });
+    // staff_profiles.organizationId is NOT NULL: a staff member cannot be detached
+    // from their agency, and the rejected request must not half-save the identity.
+    it('rejects detaching the organization (empty organizationId) with 400 and saves nothing', async () => {
+      await expect(
+        service.updateUser('user-uuid-1', { organizationId: '' }),
+      ).rejects.toThrow(/must belong to an organization/);
 
-      expect(mockStaffProfileRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          organizationId: null,
-          organization: null,
-        }),
+      expect(mockStaffProfileRepo.save).not.toHaveBeenCalled();
+      expect(mockIdentityRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('updates a consumer (no staff profile) without creating an incomplete staff profile', async () => {
+      mockIdentityRepo.findOne.mockImplementation(({ where }: any) =>
+        where.email
+          ? Promise.resolve(null)
+          : Promise.resolve({ id: 'consumer-1', name: 'Old', email: 'c@example.com', status: 'ACTIVE' }),
       );
+
+      await service.updateUser('consumer-1', { name: 'New Name' }).catch(() => undefined);
+
+      expect(mockIdentityRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'consumer-1', name: 'New Name' }),
+      );
+      expect(mockStaffProfileRepo.create).not.toHaveBeenCalled();
+      expect(mockStaffProfileRepo.save).not.toHaveBeenCalled();
     });
 
     it('should throw BadRequestException if target organization is not found', async () => {
