@@ -15,6 +15,8 @@ import {
   ArtifactRetentionPolicy,
 } from './artifact-retention.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RbacGuard } from '../access-control/guards/rbac.guard';
+import { RequirePermissions } from '../access-control/decorators/require-permissions.decorator';
 import { UpdatePipelineTimingDto } from './dto/pipeline-timing-settings.dto';
 import { UpdateArtifactRetentionDto } from './dto/artifact-retention-policy.dto';
 import { UpdateSystemSettingDto } from './dto/update-system-setting.dto';
@@ -98,8 +100,11 @@ export class SettingsController {
     return this.artifactRetentionService.executePruning('MANUAL');
   }
 
+  // Generic key/value store: it holds internal state such as every partner's
+  // discovered Telegram groups, so reading it is limited to settings admins.
   @Get(':key')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RbacGuard)
+  @RequirePermissions('settings:manage')
   async getSetting(@Param('key') key: string) {
     const value = await this.settingsService.getSetting(key);
     return { key, value };

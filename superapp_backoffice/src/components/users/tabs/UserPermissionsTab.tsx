@@ -39,8 +39,7 @@ export function UserPermissionsTab({ user, roles = [] }: UserPermissionsTabProps
   const isSuperAdmin =
     primaryRole.toUpperCase() === 'SUPER_ADMIN' ||
     primaryRole.toUpperCase() === 'SUPERADMIN' ||
-    userRoles.some((r) => r.name?.toUpperCase() === 'SUPER_ADMIN') ||
-    user.email?.toLowerCase().includes('superadmin');
+    userRoles.some((r) => r.name?.toUpperCase() === 'SUPER_ADMIN');
 
   // Real granted permissions set resolved directly from Database Role & User record
   const grantedPermissionKeys = useMemo(() => {

@@ -27,6 +27,7 @@ describe('capability gate (ADR-004 Section 5: disable, don\'t fail)', () => {
     const r = evaluateAgainstCatalog(['camera', { type: 'location', required: true }], catalog);
     expect(r.launchable).toBe(true);
     expect(r.unavailableReason).toBeNull();
+    expect(r.availableFrom).toBeNull();
     expect(r.capabilities.every((c) => c.supported)).toBe(true);
     expect(capabilityFindings(r)).toEqual([]);
   });
@@ -44,6 +45,7 @@ describe('capability gate (ADR-004 Section 5: disable, don\'t fail)', () => {
     expect(r.launchable).toBe(false);
     expect(r.capabilities[0]).toMatchObject({ reason: 'REQUIRES_NEWER_SUPER_APP', availableFrom: 'v1.4.0' });
     expect(r.unavailableReason).toBe('Unavailable until Super App v1.4.0');
+    expect(r.availableFrom).toBe('1.4.0');
     const [f] = capabilityFindings(r);
     expect(f.severity).toBe('MEDIUM'); // reported, never CRITICAL/HIGH: the scan does not fail
   });
@@ -52,6 +54,7 @@ describe('capability gate (ADR-004 Section 5: disable, don\'t fail)', () => {
     const r = evaluateAgainstCatalog([{ type: 'nfc', required: true }], catalog);
     expect(r.launchable).toBe(false);
     expect(r.unavailableReason).toBe('Unavailable until a future Super App release');
+    expect(r.availableFrom).toBeNull();
   });
 
   it('names the latest version when several required capabilities wait on different releases', () => {

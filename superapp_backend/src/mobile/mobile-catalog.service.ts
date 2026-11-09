@@ -37,6 +37,8 @@ export interface CatalogItem {
    */
   launchable?: boolean;
   unavailableReason?: string | null;
+  /** Version (e.g. "1.4.0") from which it becomes launchable; null when unknown. */
+  availableFrom?: string | null;
   /** Per-capability support, computed against the live catalog (permissions is unchanged). */
   capabilities?: CapabilityEvaluation[];
 }
@@ -183,6 +185,7 @@ export function toCatalogItem(
   if (availability) {
     item.launchable = availability.launchable;
     item.unavailableReason = availability.unavailableReason;
+    item.availableFrom = availability.availableFrom;
     item.capabilities = availability.capabilities;
   }
   const hw = app.homeWidget;

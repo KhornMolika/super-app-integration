@@ -36,6 +36,11 @@ export interface CapabilityAvailability {
   launchable: boolean;
   /** e.g. "Unavailable until Super App v1.4.0"; null when launchable */
   unavailableReason: string | null;
+  /**
+   * Super App version (no "v" prefix) from which the app becomes launchable, so
+   * clients can build a localised message; null when launchable or unknown.
+   */
+  availableFrom: string | null;
   hostVersion: string | null;
 }
 
@@ -120,12 +125,14 @@ export function evaluateAgainstCatalog(
 
   const blocking = capabilities.filter((c) => c.required && !c.supported);
   let unavailableReason: string | null = null;
+  let availableFrom: string | null = null;
   if (blocking.length) {
     const versions = blocking.map((c) => c.availableFrom);
     // Only name a version when every blocking capability has a known one
     const until = versions.every(Boolean)
       ? versions.reduce((max, v) => (compareVersions(v!, max!) > 0 ? v : max))
       : null;
+    availableFrom = until ? until.replace(/^v/i, '') : null;
     unavailableReason = until
       ? `Unavailable until Super App ${until.startsWith('v') ? until : `v${until}`}`
       : 'Unavailable until a future Super App release';
@@ -135,6 +142,7 @@ export function evaluateAgainstCatalog(
     capabilities,
     launchable: blocking.length === 0,
     unavailableReason,
+    availableFrom,
     hostVersion: snapshot.hostVersion,
   };
 }

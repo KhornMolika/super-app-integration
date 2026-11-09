@@ -1,3 +1,4 @@
+import { isPlatformAdmin } from './helpers/platform-admin.helper';
 import {
   Controller,
   Get,
@@ -89,15 +90,7 @@ export class UsersController {
     const userPerms = new Set<string>(
       Array.isArray(requester?.permissions) ? requester.permissions : [],
     );
-    const isSuperOrAdmin =
-      requester?.email?.includes('superadmin') ||
-      requester?.email?.includes('admin') ||
-      (Array.isArray(requester?.roles) &&
-        requester.roles.some((r: any) =>
-          typeof r === 'string'
-            ? r === 'SUPER_ADMIN' || r === 'ADMIN'
-            : r?.name === 'SUPER_ADMIN' || r?.name === 'ADMIN',
-        ));
+    const isSuperOrAdmin = isPlatformAdmin(requester);
 
     // If requester does not have user:read, enforce their own organizationId
     if (!userPerms.has('user:read') && !isSuperOrAdmin) {
@@ -125,15 +118,7 @@ export class UsersController {
     const isSelf = requester && (requester.id === id || requester.sub === id);
     if (!isSelf) {
       const userPerms = new Set<string>(requester?.permissions || []);
-      const isSuperOrAdmin =
-        requester?.email?.includes('superadmin') ||
-        requester?.email?.includes('admin') ||
-        (Array.isArray(requester?.roles) &&
-          requester.roles.some((r: any) =>
-            typeof r === 'string'
-              ? r === 'SUPER_ADMIN' || r === 'ADMIN'
-              : r?.name === 'SUPER_ADMIN' || r?.name === 'ADMIN',
-          ));
+      const isSuperOrAdmin = isPlatformAdmin(requester);
 
       if (!userPerms.has('user:read') && !isSuperOrAdmin) {
         throw new ForbiddenException('Insufficient permissions');
@@ -165,15 +150,7 @@ export class UsersController {
 
     if (!isSelf) {
       const userPerms = new Set<string>(requester?.permissions || []);
-      const isSuperOrAdmin =
-        requester?.email?.includes('superadmin') ||
-        requester?.email?.includes('admin') ||
-        (Array.isArray(requester?.roles) &&
-          requester.roles.some((r: any) =>
-            typeof r === 'string'
-              ? r === 'SUPER_ADMIN' || r === 'ADMIN'
-              : r?.name === 'SUPER_ADMIN' || r?.name === 'ADMIN',
-          ));
+      const isSuperOrAdmin = isPlatformAdmin(requester);
 
       if (!userPerms.has('user:manage') && !isSuperOrAdmin) {
         throw new ForbiddenException('Insufficient permissions');
@@ -240,15 +217,7 @@ export class UsersController {
     if (isSelf) return;
 
     const userPerms = new Set<string>(requester?.permissions || []);
-    const isSuperOrAdmin =
-      requester?.email?.includes('superadmin') ||
-      requester?.email?.includes('admin') ||
-      (Array.isArray(requester?.roles) &&
-        requester.roles.some((r: any) =>
-          typeof r === 'string'
-            ? r === 'SUPER_ADMIN' || r === 'ADMIN'
-            : r?.name === 'SUPER_ADMIN' || r?.name === 'ADMIN',
-        ));
+    const isSuperOrAdmin = isPlatformAdmin(requester);
 
     if (!userPerms.has('user:manage') && !isSuperOrAdmin) {
       throw new ForbiddenException(

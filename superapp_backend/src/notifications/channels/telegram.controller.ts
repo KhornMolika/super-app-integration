@@ -9,6 +9,7 @@ import {
   BadRequestException,
   Headers,
   UnauthorizedException,
+  NotFoundException,
 } from '@nestjs/common';
 import { timingSafeEqual } from 'crypto';
 import { TelegramService } from './telegram.service';
@@ -88,11 +89,15 @@ export class TelegramController {
     @Body() update: TelegramUpdate,
     @Headers('x-telegram-bot-api-secret-token') secretToken?: string,
   ) {
-    // Telegram echoes the secret_token given to setWebhook in this header. When
-    // TELEGRAM_WEBHOOK_SECRET is configured, reject updates that do not carry it,
-    // so nobody can forge bot commands. Unset = previous (open) behaviour.
+    // Telegram echoes the secret_token given to setWebhook in this header.
+    // Fail closed: the backend reads updates by polling (getUpdates), so the
+    // webhook only exists once TELEGRAM_WEBHOOK_SECRET is configured. Without
+    // it the route is off, so nobody can forge bot commands.
     const expected = process.env.TELEGRAM_WEBHOOK_SECRET?.trim();
-    if (expected && !safeEqual(secretToken ?? '', expected)) {
+    if (!expected) {
+      throw new NotFoundException();
+    }
+    if (!safeEqual(secretToken ?? '', expected)) {
       throw new UnauthorizedException('Invalid Telegram webhook secret');
     }
     return this.telegramService.handleWebhookUpdate(update);

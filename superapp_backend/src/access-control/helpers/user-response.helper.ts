@@ -42,7 +42,11 @@ export function formatUserResponse(user: any): FormattedUserResponse {
     email: user.email,
     name: user.name,
     honorific: user.honorific || null,
-    avatarUrl: user.avatarKey ? `/api/avatars/${user.avatarKey}` : (user.avatarUrl || null),
+    // Served by the asset proxy; AssetUrlSigningInterceptor signs it on the way out.
+    // (There is no /api/avatars route: links of that form always returned 404.)
+    avatarUrl: user.avatarKey
+      ? `/api/storage/asset?key=${encodeURIComponent(user.avatarKey)}`
+      : user.avatarUrl || null,
     status,
     isActive: status === 'ACTIVE',
     roleId: staffProfile?.roleId || user.roleId || role?.id || null,

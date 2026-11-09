@@ -1,3 +1,5 @@
+import { randomBytes } from 'crypto';
+import { isPlatformAdmin } from './helpers/platform-admin.helper';
 import {
   Injectable,
   NotFoundException,
@@ -382,15 +384,7 @@ export class AccessControlService {
     const userPerms = new Set<string>(
       Array.isArray(requester?.permissions) ? requester.permissions : [],
     );
-    const isSuperOrAdmin =
-      requester?.email?.includes('superadmin') ||
-      requester?.email?.includes('admin') ||
-      (Array.isArray(requester?.roles) &&
-        requester.roles.some((r: any) =>
-          typeof r === 'string'
-            ? r === 'SUPER_ADMIN' || r === 'ADMIN'
-            : r?.name === 'SUPER_ADMIN' || r?.name === 'ADMIN',
-        ));
+    const isSuperOrAdmin = isPlatformAdmin(requester);
 
     if (
       !userPerms.has('user:read') &&
@@ -529,6 +523,13 @@ export class AccessControlService {
     let passwordHash = dto.passwordHash || undefined;
     if (dto.password && dto.password.trim()) {
       passwordHash = await hashPassword(dto.password.trim());
+    }
+    if (!passwordHash) {
+      // The backoffice lets an admin create a user without a password, but
+      // identities.passwordHash is NOT NULL. Store a hash of a random secret
+      // nobody knows: the account cannot be logged into until the user sets a
+      // password (reset flow).
+      passwordHash = await hashPassword(randomBytes(32).toString('hex'));
     }
 
     let organization: Organization | null = null;

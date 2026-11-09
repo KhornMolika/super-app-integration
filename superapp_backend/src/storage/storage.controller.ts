@@ -20,12 +20,15 @@ import { UpdateLicenseDto, UploadBase64Dto } from './dto/storage.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RbacGuard } from '../access-control/guards/rbac.guard';
 import { RequirePermissions } from '../access-control/decorators/require-permissions.decorator';
+import { verifyAssetSignature } from './asset-url-signer';
 
 /**
- * The public asset routes (/storage/asset, /logos/*, /mini-app-assets/*, ...)
- * read from one bucket that also holds partner package sources, SDK uploads,
- * security reports and end-user avatars. Only images under these prefixes may
- * be served without authentication.
+ * The asset routes (/storage/asset, /logos/*, /mini-app-assets/*, ...) need a
+ * backend-issued signature (see asset-url-signer.ts). As a second layer, since
+ * the bucket also holds partner package sources, SDK uploads, security reports
+ * and end-user avatars, only images under these prefixes are ever served, even
+ * with a valid signature: a partner could otherwise put a crafted asset link in
+ * a field the backend echoes back signed.
  */
 export const PUBLIC_ASSET_PREFIXES = [
   'miniapps/',
@@ -177,8 +180,16 @@ export class StorageController {
   async getAsset(
     @Query('key') key: string,
     @Query('bucket') bucket: string,
+    @Query('exp') exp: string,
+    @Query('sig') sig: string,
     @Res() res: Response,
   ) {
+    // Only links the backend issued (AssetUrlSigningInterceptor) are served.
+    if (!verifyAssetSignature(key, bucket ?? '', exp, sig)) {
+      return res
+        .status(HttpStatus.FORBIDDEN)
+        .json({ message: 'Invalid or expired asset link' });
+    }
     return pipeAssetHelper(this.storageService, key, bucket, res);
   }
 
@@ -268,6 +279,19 @@ export class PublicAssetProxyController {
 
   @Get('*path')
   async serveAsset(@Req() req: Request, @Res() res: Response) {
+    // Legacy path-style routes. The backend never issues these links (it signs
+    // /storage/asset links only), so they serve nothing without a valid signature
+    // over the path key, and MinIO keys cannot be guessed through them.
+    const pathKey = (req.path || '').replace(
+      /^\/(?:api\/)?(?:mini-app-assets|mini-app-logos|logos|backoffice-user-media)\/?/,
+      '',
+    );
+    const { exp, sig } = req.query as Record<string, string | undefined>;
+    if (!verifyAssetSignature(pathKey, '', exp, sig)) {
+      return res
+        .status(HttpStatus.FORBIDDEN)
+        .json({ message: 'Invalid or expired asset link' });
+    }
     const rawUrl = req.originalUrl || req.url || '';
     const isBackofficeMedia = rawUrl.includes('backoffice-user-media');
     const bucket = isBackofficeMedia

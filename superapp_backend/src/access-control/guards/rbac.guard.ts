@@ -36,13 +36,12 @@ export class RbacGuard implements CanActivate {
         : [];
 
     const normalizedRoles = userRoles.map((r) => r.toUpperCase().trim());
-    const email = (user.email || '').toLowerCase().trim();
+
+    // Authority comes from roles and permissions only, never from the email
+    // address: anyone can self-register "superadmin.x@..." or "admin.x@...".
 
     // SUPER_ADMIN role has unrestricted platform-wide access
-    if (
-      normalizedRoles.some((r) => r === 'SUPER_ADMIN' || r === 'SUPERADMIN') ||
-      email.includes('superadmin')
-    ) {
+    if (normalizedRoles.some((r) => r === 'SUPER_ADMIN' || r === 'SUPERADMIN')) {
       return true;
     }
 
@@ -51,10 +50,7 @@ export class RbacGuard implements CanActivate {
     );
 
     // Role-based fallback permissions (for legacy tokens or unseeded DB relations)
-    if (
-      normalizedRoles.some((r) => r === 'ADMIN' || r === 'ADMINISTRATOR') ||
-      email.startsWith('admin')
-    ) {
+    if (normalizedRoles.some((r) => r === 'ADMIN' || r === 'ADMINISTRATOR')) {
       [
         'miniapp:create',
         'miniapp:read',
@@ -89,9 +85,7 @@ export class RbacGuard implements CanActivate {
           r.includes('DEVELOPER') ||
           r.includes('DEV') ||
           r.includes('MINI_APP'),
-      ) ||
-      email.includes('dev') ||
-      normalizedRoles.length === 0
+      ) || normalizedRoles.length === 0
     ) {
       [
         'miniapp:create',

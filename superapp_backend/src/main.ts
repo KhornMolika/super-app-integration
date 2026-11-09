@@ -4,6 +4,7 @@ import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { SensitiveFieldsInterceptor } from './common/interceptors/sensitive-fields.interceptor';
+import { AssetUrlSigningInterceptor } from './common/interceptors/asset-url-signing.interceptor';
 import { json, urlencoded } from 'express';
 import { types } from 'pg';
 import {
@@ -44,8 +45,11 @@ async function bootstrap() {
   app.useGlobalFilters(new AllExceptionsFilter());
   // SensitiveFieldsInterceptor is registered first, so it is the outermost layer and
   // sees the final response body (after TransformInterceptor's envelope).
+  // AssetUrlSigningInterceptor signs every image link in that body (MinIO is private;
+  // /storage/asset only serves links carrying a backend signature).
   app.useGlobalInterceptors(
     new SensitiveFieldsInterceptor(),
+    new AssetUrlSigningInterceptor(),
     new TransformInterceptor(app.get(Reflector)),
   );
   const port = process.env.PORT ?? 3000;

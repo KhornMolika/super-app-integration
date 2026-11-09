@@ -1,6 +1,11 @@
 /**
  * Normalizes asset URLs to ensure they are always loaded securely over HTTPS
  * and routes legacy HTTP / private IP MinIO URLs through the secure backend proxy.
+ *
+ * The backend signs every image link it returns (exp + sig query params) and the
+ * proxy refuses unsigned links, so `/api/storage/...` links must pass through
+ * unchanged. The raw-MinIO conversion below is only a fallback: the backend
+ * already rewrites raw MinIO image URLs into signed proxy links.
  */
 export function normalizeAssetUrl(url?: string | null): string | undefined {
   if (!url) return undefined;
