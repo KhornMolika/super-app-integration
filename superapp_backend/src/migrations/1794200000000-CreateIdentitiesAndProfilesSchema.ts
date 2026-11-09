@@ -78,92 +78,87 @@ export class CreateIdentitiesAndProfilesSchema1794200000000
       ALTER TABLE "mini_apps" ADD COLUMN IF NOT EXISTS "targetAudience" VARCHAR(50) NOT NULL DEFAULT 'PUBLIC';
     `);
 
-    // 5. Safe idempotent data migration from legacy `user` or `users`
-    const hasUsersTable = await queryRunner.hasTable('users');
-    const hasUserTable = await queryRunner.hasTable('user');
-    const legacyUserTable = hasUsersTable ? 'users' : hasUserTable ? 'user' : null;
-
+    // 5/6. Backfill from legacy tables. Legacy schemas drifted across
+    // environments (e.g. "user" never had staffId/position/phoneNumber, and
+    // end_users never had phoneNumber), so every legacy column is resolved
+    // against information_schema and falls back to NULL/default when absent.
+    const legacyUserTable = await this.firstExistingTable(queryRunner, ['users', 'user']);
     if (legacyUserTable) {
+      const u = await this.columnResolver(queryRunner, legacyUserTable, 'u');
+
       await queryRunner.query(`
         INSERT INTO "identities" ("id", "email", "name", "passwordHash", "status", "failedLoginCount", "lockedUntil", "createdAt", "updatedAt")
-        SELECT 
+        SELECT DISTINCT ON (lower(trim(u."email")))
           u."id",
           lower(trim(u."email")),
-          u."name",
-          COALESCE(u."passwordHash", ''),
-          COALESCE(u."status", 'ACTIVE'),
+          COALESCE(${u('name', 'NULL')}, lower(trim(u."email"))),
+          COALESCE(${u('passwordHash')}, ''),
+          COALESCE(${u('status')}::text, 'ACTIVE'),
           0,
           NULL,
-          COALESCE(u."createdAt", NOW()),
-          COALESCE(u."updatedAt", NOW())
+          COALESCE(${u('createdAt')}, NOW()),
+          COALESCE(${u('updatedAt')}, NOW())
         FROM "${legacyUserTable}" u
-        ON CONFLICT ("email") DO NOTHING;
+        WHERE u."email" IS NOT NULL
+        ORDER BY lower(trim(u."email")), ${u('createdAt', 'NOW()')} ASC
+        ON CONFLICT DO NOTHING;
       `);
 
       const hasUserRolesTable = await queryRunner.hasTable('user_roles');
-      if (hasUserRolesTable) {
-        await queryRunner.query(`
-          INSERT INTO "staff_profiles" ("identityId", "organizationId", "roleId", "staffId", "position", "phoneNumber", "externalId", "status", "createdAt", "updatedAt")
-          SELECT 
-            i."id",
-            u."organizationId",
-            COALESCE(u."roleId", ur."roleId"),
-            u."staffId",
-            u."position",
-            u."phoneNumber",
-            u."externalId",
-            'ACTIVE',
-            COALESCE(u."createdAt", NOW()),
-            COALESCE(u."updatedAt", NOW())
-          FROM "${legacyUserTable}" u
-          JOIN "identities" i ON lower(trim(u."email")) = i."email"
-          LEFT JOIN "user_roles" ur ON ur."userId" = u."id"
-          WHERE u."organizationId" IS NOT NULL AND COALESCE(u."roleId", ur."roleId") IS NOT NULL
-          ON CONFLICT ("identityId") DO NOTHING;
-        `);
-      } else {
-        await queryRunner.query(`
-          INSERT INTO "staff_profiles" ("identityId", "organizationId", "roleId", "staffId", "position", "phoneNumber", "externalId", "status", "createdAt", "updatedAt")
-          SELECT 
-            i."id",
-            u."organizationId",
-            u."roleId",
-            u."staffId",
-            u."position",
-            u."phoneNumber",
-            u."externalId",
-            'ACTIVE',
-            COALESCE(u."createdAt", NOW()),
-            COALESCE(u."updatedAt", NOW())
-          FROM "${legacyUserTable}" u
-          JOIN "identities" i ON lower(trim(u."email")) = i."email"
-          WHERE u."organizationId" IS NOT NULL AND u."roleId" IS NOT NULL
-          ON CONFLICT ("identityId") DO NOTHING;
-        `);
-      }
+      const roleExpr = hasUserRolesTable
+        ? `COALESCE(${u('roleId')}, ur."roleId")`
+        : u('roleId');
+      const roleJoin = hasUserRolesTable
+        ? `LEFT JOIN "user_roles" ur ON ur."userId" = u."id"`
+        : '';
+
+      await queryRunner.query(`
+        INSERT INTO "staff_profiles" ("identityId", "organizationId", "roleId", "staffId", "position", "phoneNumber", "externalId", "status", "createdAt", "updatedAt")
+        SELECT DISTINCT ON (i."id")
+          i."id",
+          ${u('organizationId')},
+          ${roleExpr},
+          ${u('staffId')},
+          ${u('position')},
+          ${u('phoneNumber')},
+          ${u('externalId')},
+          'ACTIVE',
+          COALESCE(${u('createdAt')}, NOW()),
+          COALESCE(${u('updatedAt')}, NOW())
+        FROM "${legacyUserTable}" u
+        JOIN "identities" i ON lower(trim(u."email")) = i."email"
+        ${roleJoin}
+        WHERE ${u('organizationId')} IS NOT NULL AND ${roleExpr} IS NOT NULL
+        ORDER BY i."id"
+        ON CONFLICT ("identityId") DO NOTHING;
+      `);
     }
 
-    // 6. Safe idempotent data migration from legacy `end_users` or `end_user`
-    const hasEndUsersTable = await queryRunner.hasTable('end_users');
-    const hasEndUserTable = await queryRunner.hasTable('end_user');
-    const legacyEndUsersTable = hasEndUsersTable ? 'end_users' : hasEndUserTable ? 'end_user' : null;
-
+    const legacyEndUsersTable = await this.firstExistingTable(queryRunner, ['end_users', 'end_user']);
     if (legacyEndUsersTable) {
+      const eu = await this.columnResolver(queryRunner, legacyEndUsersTable, 'eu');
+
       await queryRunner.query(`
-        INSERT INTO "identities" ("id", "email", "name", "passwordHash", "status", "emailVerifiedAt", "failedLoginCount", "lockedUntil", "sessionsRevokedAt", "createdAt", "updatedAt")
-        SELECT 
+        INSERT INTO "identities" ("id", "email", "name", "honorific", "avatarKey", "avatarUpdatedAt", "passwordHash", "status", "emailVerifiedAt", "failedLoginCount", "lockedUntil", "sessionsRevokedAt", "createdAt", "updatedAt")
+        SELECT DISTINCT ON (lower(trim(eu."email")))
           eu."id",
           lower(trim(eu."email")),
-          eu."name",
-          eu."passwordHash",
-          COALESCE(eu."status", 'ACTIVE'),
-          eu."emailVerifiedAt",
-          COALESCE(eu."failedLoginCount", 0),
-          eu."lockedUntil",
-          eu."sessionsRevokedAt",
-          COALESCE(eu."createdAt", NOW()),
-          COALESCE(eu."updatedAt", NOW())
+          COALESCE(${eu('name', 'NULL')}, lower(trim(eu."email"))),
+          ${eu('honorific')},
+          ${eu('avatarKey')},
+          ${eu('avatarUpdatedAt')},
+          COALESCE(${eu('passwordHash')}, ''),
+          COALESCE(${eu('status')}::text, 'ACTIVE'),
+          ${eu('emailVerifiedAt')},
+          COALESCE(${eu('failedLoginCount')}, 0),
+          ${eu('lockedUntil')},
+          ${eu('sessionsRevokedAt')},
+          COALESCE(${eu('createdAt')}, NOW()),
+          COALESCE(${eu('updatedAt')}, NOW())
         FROM "${legacyEndUsersTable}" eu
+        WHERE eu."email" IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM "identities" x WHERE x."id" = eu."id" AND x."email" <> lower(trim(eu."email")))
+        ORDER BY lower(trim(eu."email")), ${eu('createdAt', 'NOW()')} ASC
         ON CONFLICT ("email") DO UPDATE SET
           "emailVerifiedAt" = COALESCE("identities"."emailVerifiedAt", EXCLUDED."emailVerifiedAt"),
           "sessionsRevokedAt" = COALESCE("identities"."sessionsRevokedAt", EXCLUDED."sessionsRevokedAt");
@@ -171,18 +166,47 @@ export class CreateIdentitiesAndProfilesSchema1794200000000
 
       await queryRunner.query(`
         INSERT INTO "consumer_profiles" ("identityId", "phoneNumber", "deletionRequestedAt", "purgeAfter", "createdAt", "updatedAt")
-        SELECT 
+        SELECT DISTINCT ON (i."id")
           i."id",
-          eu."phoneNumber",
-          eu."deletionRequestedAt",
-          eu."purgeAfter",
-          COALESCE(eu."createdAt", NOW()),
-          COALESCE(eu."updatedAt", NOW())
+          ${eu('phoneNumber')},
+          ${eu('deletionRequestedAt')},
+          ${eu('purgeAfter')},
+          COALESCE(${eu('createdAt')}, NOW()),
+          COALESCE(${eu('updatedAt')}, NOW())
         FROM "${legacyEndUsersTable}" eu
         JOIN "identities" i ON lower(trim(eu."email")) = i."email"
+        ORDER BY i."id"
         ON CONFLICT ("identityId") DO NOTHING;
       `);
     }
+  }
+
+  private async firstExistingTable(
+    queryRunner: QueryRunner,
+    candidates: string[],
+  ): Promise<string | null> {
+    for (const table of candidates) {
+      if (await queryRunner.hasTable(table)) return table;
+    }
+    return null;
+  }
+
+  /**
+   * Returns a function that renders `alias."column"` when the column exists on
+   * the legacy table, or the given fallback SQL (default NULL) when it does not.
+   */
+  private async columnResolver(
+    queryRunner: QueryRunner,
+    table: string,
+    alias: string,
+  ): Promise<(column: string, fallback?: string) => string> {
+    const rows: Array<{ column_name: string }> = await queryRunner.query(
+      `SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = $1`,
+      [table],
+    );
+    const columns = new Set(rows.map((r) => r.column_name));
+    return (column: string, fallback = 'NULL') =>
+      columns.has(column) ? `${alias}."${column}"` : fallback;
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
