@@ -183,6 +183,12 @@ function buildJobParametersXml(jobName, branch = defaultBranch) {
           <trim>true</trim>
         </hudson.model.StringParameterDefinition>
         <hudson.model.StringParameterDefinition>
+          <name>CALLBACK_TOKEN</name>
+          <description>Sent as x-callback-token on stage/result callbacks. Left empty here: the backend passes RELEASE_CALLBACK_TOKEN on every run, and Jenkins drops parameters a job does not declare.</description>
+          <defaultValue></defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
           <name>TARGET_URL</name>
           <defaultValue></defaultValue>
           <trim>true</trim>
