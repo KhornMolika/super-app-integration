@@ -6,6 +6,12 @@ export class CreateIdentitiesAndProfilesSchema1794200000000
   name = 'CreateIdentitiesAndProfilesSchema1794200000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    const hasRoleTable = await queryRunner.hasTable('role');
+    const roleTable = hasRoleTable ? 'role' : 'roles';
+
+    const hasOrgTable = await queryRunner.hasTable('organizations');
+    const orgTable = hasOrgTable ? 'organizations' : 'organization';
+
     // 1. Create identities table
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS "identities" (
@@ -46,8 +52,8 @@ export class CreateIdentitiesAndProfilesSchema1794200000000
         CONSTRAINT "PK_staff_profiles_id" PRIMARY KEY ("id"),
         CONSTRAINT "UQ_staff_profiles_identityId" UNIQUE ("identityId"),
         CONSTRAINT "FK_staff_profiles_identity" FOREIGN KEY ("identityId") REFERENCES "identities"("id") ON DELETE CASCADE,
-        CONSTRAINT "FK_staff_profiles_organization" FOREIGN KEY ("organizationId") REFERENCES "organizations"("id") ON DELETE RESTRICT,
-        CONSTRAINT "FK_staff_profiles_role" FOREIGN KEY ("roleId") REFERENCES "roles"("id") ON DELETE RESTRICT
+        CONSTRAINT "FK_staff_profiles_organization" FOREIGN KEY ("organizationId") REFERENCES "${orgTable}"("id") ON DELETE RESTRICT,
+        CONSTRAINT "FK_staff_profiles_role" FOREIGN KEY ("roleId") REFERENCES "${roleTable}"("id") ON DELETE RESTRICT
       );
     `);
 
@@ -72,9 +78,12 @@ export class CreateIdentitiesAndProfilesSchema1794200000000
       ALTER TABLE "mini_apps" ADD COLUMN IF NOT EXISTS "targetAudience" VARCHAR(50) NOT NULL DEFAULT 'PUBLIC';
     `);
 
-    // 5. Safe idempotent data migration from legacy `users`
+    // 5. Safe idempotent data migration from legacy `user` or `users`
     const hasUsersTable = await queryRunner.hasTable('users');
-    if (hasUsersTable) {
+    const hasUserTable = await queryRunner.hasTable('user');
+    const legacyUserTable = hasUsersTable ? 'users' : hasUserTable ? 'user' : null;
+
+    if (legacyUserTable) {
       await queryRunner.query(`
         INSERT INTO "identities" ("id", "email", "name", "passwordHash", "status", "failedLoginCount", "lockedUntil", "createdAt", "updatedAt")
         SELECT 
@@ -87,33 +96,59 @@ export class CreateIdentitiesAndProfilesSchema1794200000000
           NULL,
           COALESCE(u."createdAt", NOW()),
           COALESCE(u."updatedAt", NOW())
-        FROM "users" u
+        FROM "${legacyUserTable}" u
         ON CONFLICT ("email") DO NOTHING;
       `);
 
-      await queryRunner.query(`
-        INSERT INTO "staff_profiles" ("identityId", "organizationId", "roleId", "staffId", "position", "phoneNumber", "externalId", "status", "createdAt", "updatedAt")
-        SELECT 
-          i."id",
-          u."organizationId",
-          u."roleId",
-          u."staffId",
-          u."position",
-          u."phoneNumber",
-          u."externalId",
-          'ACTIVE',
-          COALESCE(u."createdAt", NOW()),
-          COALESCE(u."updatedAt", NOW())
-        FROM "users" u
-        JOIN "identities" i ON lower(trim(u."email")) = i."email"
-        WHERE u."organizationId" IS NOT NULL AND u."roleId" IS NOT NULL
-        ON CONFLICT ("identityId") DO NOTHING;
-      `);
+      const hasUserRolesTable = await queryRunner.hasTable('user_roles');
+      if (hasUserRolesTable) {
+        await queryRunner.query(`
+          INSERT INTO "staff_profiles" ("identityId", "organizationId", "roleId", "staffId", "position", "phoneNumber", "externalId", "status", "createdAt", "updatedAt")
+          SELECT 
+            i."id",
+            u."organizationId",
+            COALESCE(u."roleId", ur."roleId"),
+            u."staffId",
+            u."position",
+            u."phoneNumber",
+            u."externalId",
+            'ACTIVE',
+            COALESCE(u."createdAt", NOW()),
+            COALESCE(u."updatedAt", NOW())
+          FROM "${legacyUserTable}" u
+          JOIN "identities" i ON lower(trim(u."email")) = i."email"
+          LEFT JOIN "user_roles" ur ON ur."userId" = u."id"
+          WHERE u."organizationId" IS NOT NULL AND COALESCE(u."roleId", ur."roleId") IS NOT NULL
+          ON CONFLICT ("identityId") DO NOTHING;
+        `);
+      } else {
+        await queryRunner.query(`
+          INSERT INTO "staff_profiles" ("identityId", "organizationId", "roleId", "staffId", "position", "phoneNumber", "externalId", "status", "createdAt", "updatedAt")
+          SELECT 
+            i."id",
+            u."organizationId",
+            u."roleId",
+            u."staffId",
+            u."position",
+            u."phoneNumber",
+            u."externalId",
+            'ACTIVE',
+            COALESCE(u."createdAt", NOW()),
+            COALESCE(u."updatedAt", NOW())
+          FROM "${legacyUserTable}" u
+          JOIN "identities" i ON lower(trim(u."email")) = i."email"
+          WHERE u."organizationId" IS NOT NULL AND u."roleId" IS NOT NULL
+          ON CONFLICT ("identityId") DO NOTHING;
+        `);
+      }
     }
 
-    // 6. Safe idempotent data migration from legacy `end_users`
+    // 6. Safe idempotent data migration from legacy `end_users` or `end_user`
     const hasEndUsersTable = await queryRunner.hasTable('end_users');
-    if (hasEndUsersTable) {
+    const hasEndUserTable = await queryRunner.hasTable('end_user');
+    const legacyEndUsersTable = hasEndUsersTable ? 'end_users' : hasEndUserTable ? 'end_user' : null;
+
+    if (legacyEndUsersTable) {
       await queryRunner.query(`
         INSERT INTO "identities" ("id", "email", "name", "passwordHash", "status", "emailVerifiedAt", "failedLoginCount", "lockedUntil", "sessionsRevokedAt", "createdAt", "updatedAt")
         SELECT 
@@ -128,7 +163,7 @@ export class CreateIdentitiesAndProfilesSchema1794200000000
           eu."sessionsRevokedAt",
           COALESCE(eu."createdAt", NOW()),
           COALESCE(eu."updatedAt", NOW())
-        FROM "end_users" eu
+        FROM "${legacyEndUsersTable}" eu
         ON CONFLICT ("email") DO UPDATE SET
           "emailVerifiedAt" = COALESCE("identities"."emailVerifiedAt", EXCLUDED."emailVerifiedAt"),
           "sessionsRevokedAt" = COALESCE("identities"."sessionsRevokedAt", EXCLUDED."sessionsRevokedAt");
@@ -143,7 +178,7 @@ export class CreateIdentitiesAndProfilesSchema1794200000000
           eu."purgeAfter",
           COALESCE(eu."createdAt", NOW()),
           COALESCE(eu."updatedAt", NOW())
-        FROM "end_users" eu
+        FROM "${legacyEndUsersTable}" eu
         JOIN "identities" i ON lower(trim(eu."email")) = i."email"
         ON CONFLICT ("identityId") DO NOTHING;
       `);

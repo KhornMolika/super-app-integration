@@ -86,8 +86,25 @@ async function run() {
       );
     `);
 
+    // Dynamic table name checks for relations
+    const checkRole = await client.query(`
+      SELECT table_name FROM information_schema.tables 
+      WHERE table_schema = 'public' AND table_name IN ('role', 'roles');
+    `);
+    const roleTable = checkRole.rows.some((r) => r.table_name === 'role')
+      ? 'role'
+      : (checkRole.rows[0]?.table_name || 'role');
+
+    const checkOrg = await client.query(`
+      SELECT table_name FROM information_schema.tables 
+      WHERE table_schema = 'public' AND table_name IN ('organizations', 'organization');
+    `);
+    const orgTable = checkOrg.rows.some((r) => r.table_name === 'organizations')
+      ? 'organizations'
+      : (checkOrg.rows[0]?.table_name || 'organizations');
+
     // 2. Create staff_profiles table
-    console.log('2️⃣ Creating "staff_profiles" table if not exists...');
+    console.log(`2️⃣ Creating "staff_profiles" table if not exists (referencing "${roleTable}" and "${orgTable}")...`);
     await client.query(`
       CREATE TABLE IF NOT EXISTS "staff_profiles" (
         "id" UUID NOT NULL DEFAULT gen_random_uuid(),
@@ -104,8 +121,8 @@ async function run() {
         CONSTRAINT "PK_staff_profiles_id" PRIMARY KEY ("id"),
         CONSTRAINT "UQ_staff_profiles_identityId" UNIQUE ("identityId"),
         CONSTRAINT "FK_staff_profiles_identity" FOREIGN KEY ("identityId") REFERENCES "identities"("id") ON DELETE CASCADE,
-        CONSTRAINT "FK_staff_profiles_organization" FOREIGN KEY ("organizationId") REFERENCES "organizations"("id") ON DELETE RESTRICT,
-        CONSTRAINT "FK_staff_profiles_role" FOREIGN KEY ("roleId") REFERENCES "roles"("id") ON DELETE RESTRICT
+        CONSTRAINT "FK_staff_profiles_organization" FOREIGN KEY ("organizationId") REFERENCES "${orgTable}"("id") ON DELETE RESTRICT,
+        CONSTRAINT "FK_staff_profiles_role" FOREIGN KEY ("roleId") REFERENCES "${roleTable}"("id") ON DELETE RESTRICT
       );
     `);
 
@@ -132,16 +149,19 @@ async function run() {
       ALTER TABLE "mini_apps" ADD COLUMN IF NOT EXISTS "targetAudience" VARCHAR(50) NOT NULL DEFAULT 'PUBLIC';
     `);
 
-    // 5. Migrate users -> identities & staff_profiles
-    const checkUsers = await client.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' AND table_name = 'users'
-      );
+    // 5. Migrate user / users -> identities & staff_profiles
+    const checkUserTables = await client.query(`
+      SELECT table_name FROM information_schema.tables 
+      WHERE table_schema = 'public' AND table_name IN ('user', 'users');
     `);
+    const legacyUserTable = checkUserTables.rows.some((r) => r.table_name === 'users')
+      ? 'users'
+      : checkUserTables.rows.some((r) => r.table_name === 'user')
+      ? 'user'
+      : null;
 
-    if (checkUsers.rows[0].exists) {
-      console.log('5️⃣ Migrating legacy "users" to "identities" and "staff_profiles"...');
+    if (legacyUserTable) {
+      console.log(`5️⃣ Migrating legacy "${legacyUserTable}" to "identities" and "staff_profiles"...`);
       const resIdentities = await client.query(`
         INSERT INTO "identities" ("id", "email", "name", "passwordHash", "status", "failedLoginCount", "lockedUntil", "createdAt", "updatedAt")
         SELECT 
@@ -154,42 +174,75 @@ async function run() {
           NULL,
           COALESCE(u."createdAt", NOW()),
           COALESCE(u."updatedAt", NOW())
-        FROM "users" u
+        FROM "${legacyUserTable}" u
         ON CONFLICT ("email") DO NOTHING;
       `);
-      console.log(`   ↳ Migrated/Ensured identities from users: ${resIdentities.rowCount || 0}`);
+      console.log(`   ↳ Migrated/Ensured identities from ${legacyUserTable}: ${resIdentities.rowCount || 0}`);
 
-      const resStaff = await client.query(`
-        INSERT INTO "staff_profiles" ("identityId", "organizationId", "roleId", "staffId", "position", "phoneNumber", "externalId", "status", "createdAt", "updatedAt")
-        SELECT 
-          i."id",
-          u."organizationId",
-          u."roleId",
-          u."staffId",
-          u."position",
-          u."phoneNumber",
-          u."externalId",
-          'ACTIVE',
-          COALESCE(u."createdAt", NOW()),
-          COALESCE(u."updatedAt", NOW())
-        FROM "users" u
-        JOIN "identities" i ON lower(trim(u."email")) = i."email"
-        WHERE u."organizationId" IS NOT NULL AND u."roleId" IS NOT NULL
-        ON CONFLICT ("identityId") DO NOTHING;
+      const checkUserRoles = await client.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' AND table_name = 'user_roles'
+        );
       `);
+
+      let resStaff;
+      if (checkUserRoles.rows[0].exists) {
+        resStaff = await client.query(`
+          INSERT INTO "staff_profiles" ("identityId", "organizationId", "roleId", "staffId", "position", "phoneNumber", "externalId", "status", "createdAt", "updatedAt")
+          SELECT 
+            i."id",
+            u."organizationId",
+            COALESCE(u."roleId", ur."roleId"),
+            u."staffId",
+            u."position",
+            u."phoneNumber",
+            u."externalId",
+            'ACTIVE',
+            COALESCE(u."createdAt", NOW()),
+            COALESCE(u."updatedAt", NOW())
+          FROM "${legacyUserTable}" u
+          JOIN "identities" i ON lower(trim(u."email")) = i."email"
+          LEFT JOIN "user_roles" ur ON ur."userId" = u."id"
+          WHERE u."organizationId" IS NOT NULL AND COALESCE(u."roleId", ur."roleId") IS NOT NULL
+          ON CONFLICT ("identityId") DO NOTHING;
+        `);
+      } else {
+        resStaff = await client.query(`
+          INSERT INTO "staff_profiles" ("identityId", "organizationId", "roleId", "staffId", "position", "phoneNumber", "externalId", "status", "createdAt", "updatedAt")
+          SELECT 
+            i."id",
+            u."organizationId",
+            u."roleId",
+            u."staffId",
+            u."position",
+            u."phoneNumber",
+            u."externalId",
+            'ACTIVE',
+            COALESCE(u."createdAt", NOW()),
+            COALESCE(u."updatedAt", NOW())
+          FROM "${legacyUserTable}" u
+          JOIN "identities" i ON lower(trim(u."email")) = i."email"
+          WHERE u."organizationId" IS NOT NULL AND u."roleId" IS NOT NULL
+          ON CONFLICT ("identityId") DO NOTHING;
+        `);
+      }
       console.log(`   ↳ Created staff_profiles: ${resStaff.rowCount || 0}`);
     }
 
-    // 6. Migrate end_users -> identities & consumer_profiles
-    const checkEndUsers = await client.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' AND table_name = 'end_users'
-      );
+    // 6. Migrate end_users / end_user -> identities & consumer_profiles
+    const checkEndUserTables = await client.query(`
+      SELECT table_name FROM information_schema.tables 
+      WHERE table_schema = 'public' AND table_name IN ('end_users', 'end_user');
     `);
+    const legacyEndUsersTable = checkEndUserTables.rows.some((r) => r.table_name === 'end_users')
+      ? 'end_users'
+      : checkEndUserTables.rows.some((r) => r.table_name === 'end_user')
+      ? 'end_user'
+      : null;
 
-    if (checkEndUsers.rows[0].exists) {
-      console.log('6️⃣ Migrating legacy "end_users" to "identities" and "consumer_profiles"...');
+    if (legacyEndUsersTable) {
+      console.log(`6️⃣ Migrating legacy "${legacyEndUsersTable}" to "identities" and "consumer_profiles"...`);
       const resEndIdentities = await client.query(`
         INSERT INTO "identities" ("id", "email", "name", "passwordHash", "status", "emailVerifiedAt", "failedLoginCount", "lockedUntil", "sessionsRevokedAt", "createdAt", "updatedAt")
         SELECT 
@@ -198,6 +251,34 @@ async function run() {
           eu."name",
           eu."passwordHash",
           COALESCE(eu."status", 'ACTIVE'),
+          eu."emailVerifiedAt",
+          COALESCE(eu."failedLoginCount", 0),
+          eu."lockedUntil",
+          eu."sessionsRevokedAt",
+          COALESCE(eu."createdAt", NOW()),
+          COALESCE(eu."updatedAt", NOW())
+        FROM "${legacyEndUsersTable}" eu
+        ON CONFLICT ("email") DO UPDATE SET
+          "emailVerifiedAt" = COALESCE("identities"."emailVerifiedAt", EXCLUDED."emailVerifiedAt"),
+          "sessionsRevokedAt" = COALESCE("identities"."sessionsRevokedAt", EXCLUDED."sessionsRevokedAt");
+      `);
+      console.log(`   ↳ Migrated/Ensured identities from ${legacyEndUsersTable}: ${resEndIdentities.rowCount || 0}`);
+
+      const resConsumer = await client.query(`
+        INSERT INTO "consumer_profiles" ("identityId", "phoneNumber", "deletionRequestedAt", "purgeAfter", "createdAt", "updatedAt")
+        SELECT 
+          i."id",
+          eu."phoneNumber",
+          eu."deletionRequestedAt",
+          eu."purgeAfter",
+          COALESCE(eu."createdAt", NOW()),
+          COALESCE(eu."updatedAt", NOW())
+        FROM "${legacyEndUsersTable}" eu
+        JOIN "identities" i ON lower(trim(eu."email")) = i."email"
+        ON CONFLICT ("identityId") DO NOTHING;
+      `);
+      console.log(`   ↳ Created consumer_profiles: ${resConsumer.rowCount || 0}`);
+    }
           eu."emailVerifiedAt",
           COALESCE(eu."failedLoginCount", 0),
           eu."lockedUntil",
