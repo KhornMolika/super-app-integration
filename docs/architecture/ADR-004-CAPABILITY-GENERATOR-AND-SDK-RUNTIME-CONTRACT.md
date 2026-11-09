@@ -203,68 +203,51 @@ try {
 ## 5. Registration Policy for Unsupported Capabilities (Graceful Degradation)
 
 > [!NOTE]
-> **Status: Proposed, implementation pending.** This section is the target behavior. The current code still marks the `capability_gate` stage as `FAILED` for any unsupported capability, and it only checks capability keys for Flutter Package submissions. See [Current vs Target Behavior](#current-vs-target-behavior).
+> **Status: Implemented (2026-11-09).** Decision on required capabilities: **Option B, register but not launchable.** Implementation: `superapp_backend/src/capabilities/capability-gate.service.ts`.
 
 ### Principle
 A Mini App that declares a capability the Super App host does not support yet is **not rejected at registration**. It registers normally, and the unsupported capability is **disabled** until a Super App release adds it. This mirrors the runtime rule in Section 4: the platform degrades gracefully instead of failing.
 
 ### How a Declared Capability Is Classified
-Each capability a Mini App declares (`PermissionDto`: `type`, `purpose`, `termsUrl`, `required`) is checked against the `capability_definitions` catalog. It is **supported** only when all of these hold:
-1. A catalog row exists with a matching `key` (case-insensitive).
+Each declared capability (`PermissionDto`: `type`, `purpose`, `termsUrl`, `required`; `required` defaults to `false`) is checked against the `capability_definitions` catalog by `key` (case-insensitive). It is **supported** only when all of these hold:
+1. A catalog row exists with that `key`.
 2. `isActive = true` and `isDeprecated = false`.
-3. The target Super App version is within `minSuperAppVersion` and `maxSuperAppVersion`, where set.
+3. The current host version (newest `superapp_capabilities.superAppVersion`) is within `minSuperAppVersion` and `maxSuperAppVersion`, where set. If no Super App release is recorded yet, the version range is not checked.
 
-Otherwise it is **unsupported**. An unsupported capability that is not in the catalog at all is also offered as a capability proposal to the partner (Section 2).
+Otherwise it is **unsupported**, with a reason: `NOT_IN_CATALOG`, `RETIRED` (inactive, deprecated or past `maxSuperAppVersion`) or `REQUIRES_NEWER_SUPER_APP`.
 
 ### Policy Matrix
 
 | Declared capability | Security gate (`capability_gate`) | Registration | Mobile runtime |
 | :--- | :--- | :--- | :--- |
 | **Supported** | Passes | Allowed | Enabled; bridge call works |
-| **Unsupported, optional** (`required: false`) | Passes with a **WARNING** finding `CAP_UNSUPPORTED_<KEY>` | Allowed | **Disabled**: `canIUse(key)` returns `false`, and a call returns the `CAPABILITY_UNSUPPORTED` rejection envelope (Section 4). The Mini App must use its fallback flow. |
-| **Unsupported, required** (`required: true`) | **Open decision**, see below | **Open decision**, see below | **Open decision**, see below |
+| **Unsupported, optional** (`required: false`) | Passes; **LOW** finding `CAP_UNSUPPORTED_<KEY>` | Allowed | **Disabled**: `canIUse(key)` returns `false`, and a call returns the `CAPABILITY_UNSUPPORTED` envelope (Section 4). The Mini App uses its fallback flow. |
+| **Unsupported, required** (`required: true`) | Passes; **MEDIUM** finding `CAP_UNSUPPORTED_<KEY>` | Allowed: can be built and tested in the sandbox | **Not launchable**: listed in the catalog with `launchable: false` and *"Unavailable until Super App vX"*; `POST /mobile/auth/token-exchange` refuses it with **403**. |
+
+The gate never produces CRITICAL or HIGH findings for capabilities, so it never fails a scan. When several required capabilities are missing, the label names the highest `minSuperAppVersion`; when any of them has no known version, it reads *"Unavailable until a future Super App release"*.
 
 ### Automatic Enablement
-The supported/disabled state is **computed when it is read, never stored** on the Mini App. The catalog syncs from the Super App source repository on every backend start (`CapabilitiesService`). When a later Super App release adds the capability, it becomes supported on the next sync. Every Mini App that declared it then gets it enabled automatically, without re-submission or manual approval. No database flag can go stale.
+Support is **computed when it is read, never stored** on the Mini App. The catalog syncs from the Super App repository on every backend start (`CapabilitiesService`). When a Super App release adds the capability, or the host version reaches `minSuperAppVersion`, every Mini App that declared it is enabled automatically, without re-submission or manual approval.
 
 ### API Contract Addition
-Capability lists returned to the Backoffice and the mobile catalog keep their current shape, plus two read-only fields per item:
+Existing fields are unchanged (the mobile catalog keeps its `permissions` array exactly as stored). New read-only fields:
+
+* **Mobile catalog item** (`GET /mobile/mini-apps`): `launchable`, `unavailableReason`, `capabilities[]`.
+* **Backoffice detail** (`GET /mini-apps/:id`): `capabilityAvailability { capabilities[], launchable, unavailableReason, hostVersion }`.
+* **Validation report**: `checks.capability_gate` includes `launchable`, `unavailableReason` and `capabilities[]`.
+
+Each `capabilities[]` entry:
 
 ```json
-{
-  "type": "nfc",
-  "purpose": "Read the staff ID card chip for attendance",
-  "required": false,
-  "supported": false,
-  "availableFrom": null
-}
+{ "key": "biometrics", "required": true, "supported": false,
+  "reason": "REQUIRES_NEWER_SUPER_APP", "availableFrom": "v1.4.0" }
 ```
 
-* `supported`: result of the classification above.
-* `availableFrom`: the `minSuperAppVersion` from the catalog when the capability exists but needs a newer host. It is `null` when the capability is not in the catalog yet.
-
 ### One Shared Check for All Integration Methods
-All four integration methods (WEBVIEW, FLUTTER_PACKAGE, NATIVE_SDK, DEEP_LINK) use **one shared capability check** that implements this policy. No scanner keeps its own logic. This closes the current gap where WEBVIEW, NATIVE_SDK and DEEP_LINK submissions are not checked at all.
+All four integration methods (WEBVIEW, FLUTTER_PACKAGE, NATIVE_SDK, DEEP_LINK) call `CapabilityGateService.runStage()`. `capability_gate` is a mandatory stage for every method, even when a user selects a custom set of checks. The previous per-scanner logic was removed: the Native SDK and Deep Link gates that always passed, the missing WebView gate, and a hard-coded "trust regulator" plugin block in the Flutter scanner.
 
-### Open Decision: Unsupported Required Capability
-The partner marks a capability `required: true` when the Mini App cannot work without it. Two options:
-
-| Option | Behavior | Trade-off |
-| :--- | :--- | :--- |
-| **A. Block** (current behavior) | Gate fails with a CRITICAL finding; the Mini App cannot proceed past validation. | Users never see a broken app, but the partner cannot test or prepare until the host ships the capability. |
-| **B. Register disabled** | Gate passes with a WARNING. The Mini App can register, build and be tested in the sandbox, but is **not launchable** in the mobile catalog. It shows an *"Unavailable until Super App vX"* label (`availableFrom`) and becomes launchable automatically once the capability is supported. | Partners can work ahead of the host release, and users are still protected from an app that cannot work. Needs a "not launchable" state in the mobile catalog. |
-
-**Recommendation: Option B.** It matches the "disable, don't fail" principle and still keeps a non-working app away from users. *Decision owner: Platform / SA Admin.*
-
-### Current vs Target Behavior
-
-| Aspect | Current code | Target (this ADR) |
-| :--- | :--- | :--- |
-| Optional unsupported capability | Gate `FAILED`, CRITICAL finding (Flutter Package only) | Gate passes, WARNING finding, capability disabled |
-| Required unsupported capability | Gate `FAILED` (Flutter Package only) | Per the open decision above |
-| `required` flag | Accepted by `PermissionDto` but ignored by the scanner | Drives the policy matrix |
-| WEBVIEW / NATIVE_SDK / DEEP_LINK | Not checked against the catalog | Same shared check as Flutter Package |
-| `supported` / `availableFrom` in API | Not returned | Returned per capability |
+### Client Follow-up
+The Flutter host should read `launchable` / `unavailableReason` from the catalog to show the label and disable the launch button. Until it does, the server-side token-exchange refusal still prevents a non-launchable Mini App from starting.
 
 ---
 
@@ -280,4 +263,4 @@ The partner marks a capability `required: true` when the Mini App cannot work wi
 ## 7. Document History
 
 * **2026-10-22:** Initial approved specification of Capability Generator flow, Rejection Protocol, and unified SDK contracts across Web, Flutter, and Native.
-* **2026-11-09:** Added Section 5, Registration Policy for Unsupported Capabilities (proposed): optional unsupported capabilities register disabled and enable automatically on catalog sync, one shared check covers all four integration methods, and the required-capability behavior is an open decision.
+* **2026-11-09:** Added and implemented Section 5, Registration Policy for Unsupported Capabilities: optional unsupported capabilities register disabled; required ones register but are not launchable (Option B); support is computed on read and enables automatically; one shared check covers all four integration methods.
