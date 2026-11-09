@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { FakeRepo } from './testing/fake-repo';
 import { JPEG, PNG, WEBP, fakeStorage } from './testing/fake-storage';
-import { EndUser } from './entities/end-user.entity';
+import { Identity } from '../identities/entities/identity.entity';
 import {
   AVATAR_MAX_BYTES,
   MobileAvatarService,
@@ -14,13 +14,13 @@ import {
 } from './mobile-avatar.service';
 
 function build() {
-  const users = new FakeRepo<EndUser>(['email']);
+  const users = new FakeRepo<Identity>(['email']);
   users.rows.push({
     id: 'u1',
     email: 'a@b.io',
     avatarKey: null,
     avatarUpdatedAt: null,
-  } as unknown as EndUser);
+  } as unknown as Identity);
   const storage = fakeStorage();
   return {
     users,

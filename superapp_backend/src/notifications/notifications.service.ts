@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from './entities/notification.entity';
-import { User } from '../access-control/entities/user.entity';
+import { Identity } from '../identities/entities/identity.entity';
 import { MiniApp } from '../miniapps/entities/miniapp.entity';
 import { NotificationGateway } from './notification.gateway';
 import { TelegramService } from './channels/telegram.service';
@@ -20,8 +20,8 @@ export class NotificationsService {
   constructor(
     @InjectRepository(Notification)
     private notificationRepository: Repository<Notification>,
-    @InjectRepository(User)
-    private userRepository: Repository<User>,
+    @InjectRepository(Identity)
+    private userRepository: Repository<Identity>,
     @InjectRepository(MiniApp)
     private miniAppRepository: Repository<MiniApp>,
     private notificationGateway: NotificationGateway,
@@ -70,7 +70,7 @@ export class NotificationsService {
         if (userId) {
           const user = await this.userRepository.findOne({
             where: { id: userId },
-            relations: { role: true },
+            relations: { staffProfile: { role: true } },
           });
           if (
             user?.telegramChatId &&
@@ -139,10 +139,10 @@ export class NotificationsService {
 
         // Check Super Admins & Platform Admins personal Telegram and Ops Group
         const allUsers = await this.userRepository.find({
-          relations: { role: true },
+          relations: { staffProfile: { role: true } },
         });
         const adminUsers = allUsers.filter((u) => {
-          const rList = (u as any).roles || (u.role ? [u.role] : []);
+          const rList = (u as any).roles || (u.staffProfile?.role ? [u.staffProfile.role] : []);
           return rList.some(
             (r: any) => r.name === 'SUPER_ADMIN' || r.name === 'ADMIN',
           );
@@ -193,10 +193,10 @@ export class NotificationsService {
   ) {
     try {
       const allUsers = await this.userRepository.find({
-        relations: { role: true },
+        relations: { staffProfile: { role: true } },
       });
       const admins = allUsers.filter((u) => {
-        const rList = (u as any).roles || (u.role ? [u.role] : []);
+        const rList = (u as any).roles || (u.staffProfile?.role ? [u.staffProfile.role] : []);
         return rList.some(
           (r: any) => r.name === 'SUPER_ADMIN' || r.name === 'ADMIN',
         );

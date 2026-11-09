@@ -3,12 +3,17 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MailService } from '../notifications/channels/mail.service';
-import { EndUser, EndUserStatus } from './entities/end-user.entity';
+import {
+  Identity,
+  IdentityStatus,
+} from '../identities/entities/identity.entity';
+import { ConsumerProfile } from '../consumers/entities/consumer-profile.entity';
 import {
   intEnv,
   MobileAuthService,
@@ -31,20 +36,23 @@ export class MobileAccountService {
   private readonly logger = new Logger(MobileAccountService.name);
 
   constructor(
-    @InjectRepository(EndUser) private readonly users: Repository<EndUser>,
+    @InjectRepository(Identity) private readonly users: Repository<Identity>,
     private readonly passwords: PasswordService,
     private readonly auth: MobileAuthService,
     private readonly mail: MailService,
+    @Optional()
+    @InjectRepository(ConsumerProfile)
+    private readonly consumerProfiles?: Repository<ConsumerProfile>,
   ) {}
 
-  private async loadUser(userId: string): Promise<EndUser> {
+  private async loadUser(userId: string): Promise<Identity> {
     const user = await this.users.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException();
     return user;
   }
 
   private async verifyPassword(
-    user: EndUser,
+    user: Identity,
     password: string,
     wrongPasswordMessage: string,
   ): Promise<void> {
@@ -98,14 +106,41 @@ export class MobileAccountService {
     const purgeAfter = new Date(now.getTime() + deletionGraceMs());
     // Only an ACTIVE account can be scheduled: one disabled meanwhile stays DISABLED.
     const res = await this.users.update(
-      { id: user.id, status: EndUserStatus.ACTIVE },
+      { id: user.id, status: IdentityStatus.ACTIVE },
       {
-        status: EndUserStatus.PENDING_DELETION,
+        status: IdentityStatus.PENDING_DELETION,
         deletionRequestedAt: now,
         purgeAfter,
-      },
+      } as any,
     );
     if (!res.affected) throw new UnauthorizedException();
+
+    // Also update consumerProfile deletionRequestedAt and purgeAfter
+    try {
+      if (this.consumerProfiles) {
+        const cpRepo = this.consumerProfiles;
+        let cp = await cpRepo.findOne({
+          where: { identityId: user.id },
+        });
+        if (cp) {
+          await cpRepo.update(
+            { identityId: user.id },
+            { deletionRequestedAt: now, purgeAfter },
+          );
+        } else {
+          cp = cpRepo.create({
+            identityId: user.id,
+            identity: user,
+            deletionRequestedAt: now,
+            purgeAfter,
+          });
+          await cpRepo.save(cp);
+        }
+      }
+    } catch {
+      // Safe fallback
+    }
+
     await this.auth.revokeAllSessions(user.id, now);
     // Fire and forget: the notice must not delay or fail the request.
     void this.mail

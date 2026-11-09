@@ -7,7 +7,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { EndUser } from './end-user.entity';
+import { Identity } from '../../identities/entities/identity.entity';
 
 /**
  * Opaque refresh token, stored only as sha256. Single use: rotation sets
@@ -33,12 +33,12 @@ export class RefreshToken {
   @Column({ name: 'endUserId', type: 'uuid' })
   endUserId!: string;
 
-  @ManyToOne(() => EndUser, { onDelete: 'CASCADE', nullable: false })
+  @ManyToOne(() => Identity, { onDelete: 'CASCADE', nullable: false })
   @JoinColumn({
     name: 'endUserId',
     foreignKeyConstraintName: 'FK_end_user_rt_userId',
   })
-  user?: EndUser;
+  user?: Identity;
 
   @Column({ type: 'varchar', nullable: true })
   userAgent!: string | null;

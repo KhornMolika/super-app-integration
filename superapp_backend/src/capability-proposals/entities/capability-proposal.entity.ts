@@ -7,7 +7,7 @@ import {
   ManyToOne,
 } from 'typeorm';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
-import { User } from '../../access-control/entities/user.entity';
+import { Identity } from '../../identities/entities/identity.entity';
 
 @Entity('capability_proposals')
 export class CapabilityProposal {
@@ -26,8 +26,8 @@ export class CapabilityProposal {
   @ManyToOne(() => MiniApp, { nullable: true, onDelete: 'CASCADE' })
   miniApp!: MiniApp;
 
-  @ManyToOne(() => User, { nullable: true })
-  requestedBy!: User;
+  @ManyToOne(() => Identity, { nullable: true })
+  requestedBy!: Identity;
 
   @Column({ default: 'PENDING_REVIEW' })
   status!: string;

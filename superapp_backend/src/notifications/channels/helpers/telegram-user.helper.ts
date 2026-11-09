@@ -1,5 +1,5 @@
 import { Repository } from 'typeorm';
-import { User } from '../../../access-control/entities/user.entity';
+import { Identity } from '../../../identities/entities/identity.entity';
 import { TelegramApiHelper } from './telegram-api.helper';
 import { TelegramSyncUserResult, TelegramLogger } from './telegram.types';
 
@@ -12,10 +12,10 @@ export class TelegramUserHelper {
     chatId: string | number,
     username: string | undefined,
     firstName: string | undefined,
-    userRepository: Repository<User>,
+    userRepository: Repository<Identity>,
     sendMessageFn?: (text: string, chatId: string) => Promise<boolean>,
     logger?: TelegramLogger,
-  ): Promise<User | null> {
+  ): Promise<Identity | null> {
     const user = await userRepository.findOne({ where: { id: userId } });
     if (!user) {
       logger?.warn?.(`Cannot link Telegram: User ${userId} not found.`);
@@ -54,7 +54,7 @@ export class TelegramUserHelper {
    */
   static async unlinkTelegramAccount(
     userId: string,
-    userRepository: Repository<User>,
+    userRepository: Repository<Identity>,
   ): Promise<boolean> {
     const user = await userRepository.findOne({ where: { id: userId } });
     if (!user) return false;
@@ -72,8 +72,8 @@ export class TelegramUserHelper {
   static async saveUserTeamChatId(
     userId: string,
     teamChatId: string | null | undefined,
-    userRepository: Repository<User>,
-  ): Promise<User | null> {
+    userRepository: Repository<Identity>,
+  ): Promise<Identity | null> {
     const user = await userRepository.findOne({ where: { id: userId } });
     if (!user) return null;
 
@@ -88,13 +88,13 @@ export class TelegramUserHelper {
   static async checkAndSyncUserUpdates(
     userId: string,
     botToken: string | undefined,
-    userRepository: Repository<User>,
+    userRepository: Repository<Identity>,
     linkAccountFn: (
       userId: string,
       chatId: string | number,
       username?: string,
       firstName?: string,
-    ) => Promise<User | null>,
+    ) => Promise<Identity | null>,
   ): Promise<TelegramSyncUserResult> {
     if (!botToken) {
       return {

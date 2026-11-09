@@ -1,11 +1,17 @@
-import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnApplicationBootstrap,
+  Optional,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
-  EndUser,
-  EndUserHonorific,
-  EndUserStatus,
-} from './entities/end-user.entity';
+  Identity,
+  IdentityHonorific,
+  IdentityStatus,
+} from '../identities/entities/identity.entity';
+import { StaffProfile } from '../staff/entities/staff-profile.entity';
 import { PasswordService } from './password.service';
 
 /** Override with MOBILE_DEMO_USER_EMAIL / MOBILE_DEMO_USER_PASSWORD (see .env.example). */
@@ -23,8 +29,11 @@ export class DemoUserSeeder implements OnApplicationBootstrap {
   private readonly logger = new Logger(DemoUserSeeder.name);
 
   constructor(
-    @InjectRepository(EndUser) private readonly users: Repository<EndUser>,
+    @InjectRepository(Identity) private readonly users: Repository<Identity>,
     private readonly passwords: PasswordService,
+    @Optional()
+    @InjectRepository(StaffProfile)
+    private readonly staffProfiles?: Repository<StaffProfile>,
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
@@ -56,14 +65,28 @@ export class DemoUserSeeder implements OnApplicationBootstrap {
       name: 'Sok Dara',
       passwordHash: await this.passwords.hash(password),
       emailVerifiedAt: new Date(),
-      status: EndUserStatus.ACTIVE,
-      honorific: EndUserHonorific.MR,
+      status: IdentityStatus.ACTIVE,
+      honorific: IdentityHonorific.MR,
       position: 'Officer',
       organizationUnit: 'Non-Bank Financial Services Authority',
       staffId: 'FSA-0001',
-    });
+    } as any);
     try {
-      await this.users.save(user);
+      const savedUser: Identity = (await this.users.save(user)) as any;
+      if (this.staffProfiles) {
+        try {
+          const staffProfile = this.staffProfiles.create({
+            identityId: savedUser.id,
+            identity: savedUser,
+            position: 'Officer',
+            staffId: 'FSA-0001',
+            status: 'ACTIVE',
+          });
+          await this.staffProfiles.save(staffProfile);
+        } catch {
+          // Safe fallback
+        }
+      }
     } catch (err) {
       // Another instance seeded it first.
       if ((err as { code?: string }).code === '23505') return false;

@@ -6,7 +6,7 @@ import * as path from 'path';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
-import { User } from '../../access-control/entities/user.entity';
+import { Identity } from '../../identities/entities/identity.entity';
 import { JenkinsService } from '../jenkins/jenkins.service';
 import { latestCodegenMrIid } from '../../miniapps/helpers/native-sdk-config.helper';
 import { NexusIntegrationService } from '../nexus/nexus-integration.service';
@@ -43,8 +43,8 @@ export class ReleaseAssemblyVerificationService {
     private readonly pubspecService: PubspecInjectorService,
     @InjectRepository(MiniApp)
     private readonly miniappRepository: Repository<MiniApp>,
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+    @InjectRepository(Identity)
+    private readonly userRepository: Repository<Identity>,
   ) {}
 
   /**

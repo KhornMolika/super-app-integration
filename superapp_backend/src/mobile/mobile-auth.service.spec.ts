@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -10,10 +11,11 @@ import {
   END_USER_TYP,
 } from '../auth/auth.service';
 import { FakeRepo } from './testing/fake-repo';
-import { EndUser, EndUserStatus } from './entities/end-user.entity';
+import { Identity, IdentityStatus } from '../identities/entities/identity.entity';
 import { EmailVerificationToken } from './entities/email-verification-token.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
-import { User } from '../access-control/entities/user.entity';
+
+import { MiniApp } from '../miniapps/entities/miniapp.entity';
 import {
   MobileAuthService,
   REGISTER_MESSAGE,
@@ -26,10 +28,11 @@ import { AuthRateLimiter, RateLimitedException } from './auth-rate-limiter';
 const PW = 'a-very-good-password';
 
 function build() {
-  const users = new FakeRepo<EndUser>(['email']);
+  const users = new FakeRepo<Identity>(['email']);
   const backofficeUsers = new FakeRepo<User>(['email']);
   const vTokens = new FakeRepo<EmailVerificationToken>();
   const rTokens = new FakeRepo<RefreshToken>();
+  const miniApps = new FakeRepo<MiniApp>(['appId', 'slug']);
   const sent: { to: string; name: string; url: string }[] = [];
   const mail = {
     sendEmailVerification: jest.fn(
@@ -44,9 +47,10 @@ function build() {
   const limiter = new AuthRateLimiter();
   const svc = new MobileAuthService(
     users as any,
-    backofficeUsers as any,
+
     vTokens as any,
     rTokens as any,
+    miniApps as any,
     passwords,
     authService,
     mail as any,
@@ -60,6 +64,7 @@ function build() {
     backofficeUsers,
     vTokens,
     rTokens,
+    miniApps,
     sent,
     mail,
     authService,
@@ -141,11 +146,11 @@ describe('MobileAuthService', () => {
     it('never touches a DISABLED account', async () => {
       const c = build();
       await c.svc.register({ email: 'a@example.io', password: PW, name: 'A' });
-      c.users.rows[0].status = EndUserStatus.DISABLED;
+      c.users.rows[0].status = IdentityStatus.DISABLED;
       await expect(
         c.svc.register({ email: 'a@example.io', password: PW, name: 'B' }),
       ).rejects.toThrow(ConflictException);
-      expect(c.users.rows[0].status).toBe(EndUserStatus.DISABLED);
+      expect(c.users.rows[0].status).toBe(IdentityStatus.DISABLED);
     });
 
     it('claims a leftover UNVERIFIED row from the verification era', async () => {
@@ -534,7 +539,7 @@ describe('MobileAuthService', () => {
       });
       await registerAndVerify(c, 'dis@example.io');
       c.users.rows.find((u) => u.email === 'dis@example.io')!.status =
-        EndUserStatus.DISABLED;
+        IdentityStatus.DISABLED;
       const dummy = jest.spyOn(c.passwords, 'verifyDummy');
 
       const attempts = [
@@ -665,11 +670,11 @@ describe('MobileAuthService', () => {
       await expect(c.svc.refresh('unknown')).rejects.toThrow(
         'Invalid refresh token',
       );
-      c.users.rows[0].status = EndUserStatus.DISABLED;
+      c.users.rows[0].status = IdentityStatus.DISABLED;
       await expect(c.svc.refresh(t.refresh_token)).rejects.toThrow(
         'Invalid refresh token',
       );
-      c.users.rows[0].status = EndUserStatus.ACTIVE;
+      c.users.rows[0].status = IdentityStatus.ACTIVE;
       await expect(c.svc.refresh(t.refresh_token)).rejects.toThrow(); // family already revoked
       const u = await c.svc.login({ email: 'jane@example.io', password: PW });
       const base = Date.now();
@@ -783,7 +788,7 @@ describe('MobileAuthService login failure bookkeeping vs concurrent writes', () 
    * password is being verified (scrypt) is then visible in the row but not in
    * the copy login holds.
    */
-  function detach(users: FakeRepo<EndUser>) {
+  function detach(users: FakeRepo<Identity>) {
     const findOne = users.findOne.bind(users);
     const save = users.save.bind(users);
     users.findOne = async (opts) => {
@@ -801,7 +806,7 @@ describe('MobileAuthService login failure bookkeeping vs concurrent writes', () 
   /** Lands [patch] on the stored user while the password check is in flight. */
   function concurrentWriteDuringVerify(
     c: ReturnType<typeof build>,
-    patch: Partial<EndUser>,
+    patch: Partial<Identity>,
   ) {
     const verify = c.passwords.verify.bind(c.passwords);
     jest
@@ -838,13 +843,238 @@ describe('MobileAuthService login failure bookkeeping vs concurrent writes', () 
     await registerAndVerify(c);
     c.users.rows[0].failedLoginCount = 2;
     detach(c.users);
-    concurrentWriteDuringVerify(c, { status: EndUserStatus.DISABLED });
+    concurrentWriteDuringVerify(c, { status: IdentityStatus.DISABLED });
 
     await c.svc.login({ email: 'jane@example.io', password: PW });
 
     const row = c.users.rows[0];
-    expect(row.status).toBe(EndUserStatus.DISABLED);
+    expect(row.status).toBe(IdentityStatus.DISABLED);
     expect(row.failedLoginCount).toBe(0);
     expect(row.lockedUntil).toBeNull();
+  });
+
+  describe('tokenExchange (SSO)', () => {
+    it('issues scoped RS256 token with staff claims and audience lock for staff user', async () => {
+      const c = build();
+      const staffUser = {
+        id: 'staff-uuid-1',
+        email: 'staff@tr.gov.kh',
+        name: 'Inspector Vanna',
+        status: IdentityStatus.ACTIVE,
+        staffProfile: {
+          staffId: 'FSA-TR-007',
+          position: 'Lead Auditor',
+          organizationId: 'org-tr-id',
+          organization: { code: 'TR', name: 'Trust Regulator' },
+          role: { name: 'STAFF' },
+        },
+      };
+      await c.users.save(staffUser as any);
+
+      const miniApp = {
+        id: 'ma-tr-uuid',
+        appId: 'kh.gov.fsa.tr',
+        slug: 'tr',
+        targetAudience: 'PUBLIC',
+        availabilityStatus: 'ENABLED',
+        organizationId: 'org-tr-id',
+      };
+      await c.miniApps.save(miniApp as any);
+
+      const res = await c.svc.tokenExchange(
+        staffUser.id,
+        'kh.gov.fsa.tr',
+        'openid profile fsa:staff',
+      );
+
+      expect(res.token_type).toBe('Bearer');
+      expect(res.issued_token_type).toBe('urn:ietf:params:oauth:token-type:access_token');
+      expect(res.scope).toBe('openid profile fsa:staff');
+      expect(res.expires_in).toBe(600);
+
+      const payload = c.authService.verifyMiniAppToken(res.access_token, 'kh.gov.fsa.tr');
+      expect(payload.sub).toBe(staffUser.id);
+      expect(payload.aud).toBe('kh.gov.fsa.tr');
+      expect(payload.email).toBe('staff@tr.gov.kh');
+      expect(payload.name).toBe('Inspector Vanna');
+      expect(payload.staffId).toBe('FSA-TR-007');
+      expect(payload.position).toBe('Lead Auditor');
+      expect(payload.organizationCode).toBe('TR');
+      expect(payload.organizationName).toBe('Trust Regulator');
+      expect(payload.role).toBe('STAFF');
+    });
+
+    it('issues scoped token for citizen/consumer user on public MiniApp', async () => {
+      const c = build();
+      const citizen = {
+        id: 'consumer-uuid-1',
+        email: 'citizen@example.com',
+        name: 'Sokha Chan',
+        passwordHash: 'dummy-hash',
+        status: IdentityStatus.ACTIVE,
+      };
+      await c.users.save(citizen as any);
+
+      const miniApp = {
+        id: 'ma-public-uuid',
+        appId: 'kh.gov.fsa.publicservice',
+        slug: 'publicservice',
+        targetAudience: 'PUBLIC',
+        availabilityStatus: 'ENABLED',
+      };
+      await c.miniApps.save(miniApp as any);
+
+      const res = await c.svc.tokenExchange(citizen.id, 'kh.gov.fsa.publicservice');
+      expect(res.token_type).toBe('Bearer');
+      expect(res.scope).toBe('openid profile');
+
+      const payload = c.authService.verifyMiniAppToken(res.access_token, 'kh.gov.fsa.publicservice');
+      expect(payload.sub).toBe(citizen.id);
+      expect(payload.aud).toBe('kh.gov.fsa.publicservice');
+      expect(payload.email).toBe('citizen@example.com');
+      expect(payload.name).toBe('Sokha Chan');
+      expect(payload.staffId).toBeUndefined();
+    });
+
+    it('rejects exchange with 403 Forbidden when MiniApp is SUSPENDED', async () => {
+      const c = build();
+      const citizen = {
+        id: 'user-uuid-2',
+        email: 'user@example.com',
+        name: 'User',
+        passwordHash: 'dummy-hash',
+        status: IdentityStatus.ACTIVE,
+      };
+      await c.users.save(citizen as any);
+
+      const miniApp = {
+        id: 'ma-suspended-uuid',
+        appId: 'kh.gov.fsa.suspendedapp',
+        slug: 'suspendedapp',
+        targetAudience: 'PUBLIC',
+        availabilityStatus: 'SUSPENDED',
+      };
+      await c.miniApps.save(miniApp as any);
+
+      await expect(
+        c.svc.tokenExchange(citizen.id, 'kh.gov.fsa.suspendedapp'),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('rejects exchange with 400 BadRequest when MiniApp is not found', async () => {
+      const c = build();
+      const citizen = {
+        id: 'user-uuid-3',
+        email: 'user3@example.com',
+        name: 'User3',
+        passwordHash: 'dummy-hash',
+        status: IdentityStatus.ACTIVE,
+      };
+      await c.users.save(citizen as any);
+
+      await expect(
+        c.svc.tokenExchange(citizen.id, 'kh.gov.fsa.nonexistent'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('enforces ORGANIZATION_ONLY restriction strictly to home organization staff', async () => {
+      const c = build();
+      const trStaff = {
+        id: 'staff-tr-uuid',
+        email: 'tr-staff@tr.gov.kh',
+        name: 'TR Staff',
+        status: IdentityStatus.ACTIVE,
+        staffProfile: {
+          organizationId: 'org-tr-id',
+          organization: { code: 'TR', name: 'Trust Regulator' },
+        },
+      };
+      const sercStaff = {
+        id: 'staff-serc-uuid',
+        email: 'serc-staff@serc.gov.kh',
+        name: 'SERC Staff',
+        status: IdentityStatus.ACTIVE,
+        staffProfile: {
+          organizationId: 'org-serc-id',
+          organization: { code: 'SERC', name: 'Securities and Exchange Regulator' },
+        },
+      };
+      const citizen = {
+        id: 'citizen-uuid',
+        email: 'citizen@example.com',
+        name: 'Citizen',
+        passwordHash: 'dummy',
+        status: IdentityStatus.ACTIVE,
+      };
+      await c.users.save(trStaff as any);
+      await c.users.save(sercStaff as any);
+      await c.users.save(citizen as any);
+
+      const internalApp = {
+        id: 'ma-tr-internal',
+        appId: 'kh.gov.fsa.tr.internal',
+        slug: 'tr-internal',
+        targetAudience: 'ORGANIZATION_ONLY',
+        availabilityStatus: 'ENABLED',
+        organizationId: 'org-tr-id',
+      };
+      await c.miniApps.save(internalApp as any);
+
+      // Home regulator staff succeeds
+      const trRes = await c.svc.tokenExchange(trStaff.id, 'kh.gov.fsa.tr.internal');
+      expect(trRes.access_token).toBeDefined();
+
+      // Outside regulator staff is rejected
+      await expect(
+        c.svc.tokenExchange(sercStaff.id, 'kh.gov.fsa.tr.internal'),
+      ).rejects.toThrow(ForbiddenException);
+
+      // Citizen is rejected
+      await expect(
+        c.svc.tokenExchange(citizen.id, 'kh.gov.fsa.tr.internal'),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('enforces ALL_FSA_STAFF restriction allowing any FSA staff but rejecting citizens', async () => {
+      const c = build();
+      const sercStaff = {
+        id: 'staff-serc-2',
+        email: 'serc2@serc.gov.kh',
+        name: 'SERC Staff 2',
+        status: IdentityStatus.ACTIVE,
+        staffProfile: {
+          organizationId: 'org-serc-id',
+          organization: { code: 'SERC', name: 'Securities and Exchange Regulator' },
+        },
+      };
+      const citizen = {
+        id: 'citizen-2',
+        email: 'citizen2@example.com',
+        name: 'Citizen 2',
+        passwordHash: 'dummy',
+        status: IdentityStatus.ACTIVE,
+      };
+      await c.users.save(sercStaff as any);
+      await c.users.save(citizen as any);
+
+      const fsaApp = {
+        id: 'ma-fsa-hrmis',
+        appId: 'kh.gov.fsa.hrmis',
+        slug: 'fsa-hrmis',
+        targetAudience: 'ALL_FSA_STAFF',
+        availabilityStatus: 'ENABLED',
+        organizationId: 'org-fsa-id',
+      };
+      await c.miniApps.save(fsaApp as any);
+
+      // Any FSA staff succeeds
+      const staffRes = await c.svc.tokenExchange(sercStaff.id, 'kh.gov.fsa.hrmis');
+      expect(staffRes.access_token).toBeDefined();
+
+      // Non-staff citizen is rejected
+      await expect(
+        c.svc.tokenExchange(citizen.id, 'kh.gov.fsa.hrmis'),
+      ).rejects.toThrow(ForbiddenException);
+    });
   });
 });

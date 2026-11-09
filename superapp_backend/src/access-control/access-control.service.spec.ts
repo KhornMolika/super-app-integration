@@ -2,13 +2,15 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { BadRequestException } from '@nestjs/common';
 import { AccessControlService } from './access-control.service';
-import { User } from './entities/user.entity';
+import { Identity } from '../identities/entities/identity.entity';
+import { StaffProfile } from '../staff/entities/staff-profile.entity';
 import { Role } from './entities/role.entity';
 import { Permission } from './entities/permission.entity';
 
 describe('AccessControlService - User Organization Updates & Creation', () => {
   let service: AccessControlService;
-  let mockUserRepo: any;
+  let mockIdentityRepo: any;
+  let mockStaffProfileRepo: any;
   let mockRoleRepo: any;
   let mockPermRepo: any;
   let mockOrgRepo: any;
@@ -25,15 +27,20 @@ describe('AccessControlService - User Organization Updates & Creation', () => {
     code: 'NEW',
   };
 
-  const mockUserEntity = {
+  const mockIdentityEntity = {
     id: 'user-uuid-1',
     name: 'John Doe',
     email: 'john@example.com',
-    roleId: 'role-dev-id',
-    role: { id: 'role-dev-id', name: 'MA_DEVELOPER', permissions: [] },
-    organizationId: 'org-old-111',
-    organization: mockExistingOrg,
     status: 'ACTIVE',
+    staffProfile: {
+      id: 'staff-uuid-1',
+      identityId: 'user-uuid-1',
+      roleId: 'role-dev-id',
+      role: { id: 'role-dev-id', name: 'MA_DEVELOPER', permissions: [] },
+      organizationId: 'org-old-111',
+      organization: mockExistingOrg,
+      status: 'ACTIVE',
+    },
   };
 
   beforeEach(async () => {
@@ -49,11 +56,11 @@ describe('AccessControlService - User Organization Updates & Creation', () => {
       delete: jest.fn().mockResolvedValue({ affected: 1 }),
     };
 
-    mockUserRepo = {
+    mockIdentityRepo = {
       count: jest.fn().mockResolvedValue(0),
       findOne: jest.fn().mockImplementation(({ where }) => {
         if (where.email) return Promise.resolve(null); // No existing email conflict for creation
-        return Promise.resolve({ ...mockUserEntity });
+        return Promise.resolve({ ...mockIdentityEntity });
       }),
       create: jest
         .fn()
@@ -66,6 +73,21 @@ describe('AccessControlService - User Organization Updates & Creation', () => {
       manager: {
         getRepository: jest.fn().mockReturnValue(mockOrgRepo),
       },
+    };
+
+    mockStaffProfileRepo = {
+      count: jest.fn().mockResolvedValue(0),
+      findOne: jest.fn().mockImplementation(({ where }) => {
+        return Promise.resolve({ ...mockIdentityEntity.staffProfile });
+      }),
+      create: jest
+        .fn()
+        .mockImplementation((dto) => ({ ...dto, id: 'staff-created-1' })),
+      save: jest
+        .fn()
+        .mockImplementation((entity) =>
+          Promise.resolve({ ...entity, id: entity.id || 'staff-saved-1' }),
+        ),
     };
 
     mockRoleRepo = {
@@ -88,8 +110,12 @@ describe('AccessControlService - User Organization Updates & Creation', () => {
       providers: [
         AccessControlService,
         {
-          provide: getRepositoryToken(User),
-          useValue: mockUserRepo,
+          provide: getRepositoryToken(Identity),
+          useValue: mockIdentityRepo,
+        },
+        {
+          provide: getRepositoryToken(StaffProfile),
+          useValue: mockStaffProfileRepo,
         },
         {
           provide: getRepositoryToken(Role),
@@ -114,7 +140,7 @@ describe('AccessControlService - User Organization Updates & Creation', () => {
       expect(mockOrgRepo.findOne).toHaveBeenCalledWith({
         where: { id: 'org-new-222' },
       });
-      expect(mockUserRepo.save).toHaveBeenCalledWith(
+      expect(mockStaffProfileRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({
           organizationId: 'org-new-222',
           organization: mockTargetOrg,
@@ -127,7 +153,7 @@ describe('AccessControlService - User Organization Updates & Creation', () => {
         organizationId: '',
       });
 
-      expect(mockUserRepo.save).toHaveBeenCalledWith(
+      expect(mockStaffProfileRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({
           organizationId: null,
           organization: null,
@@ -173,10 +199,14 @@ describe('AccessControlService - User Organization Updates & Creation', () => {
         roleNames: ['MA_DEVELOPER'],
       });
 
-      expect(mockUserRepo.create).toHaveBeenCalledWith(
+      expect(mockIdentityRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
           name: 'Alice',
           email: 'alice@example.com',
+        }),
+      );
+      expect(mockStaffProfileRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
           organizationId: 'org-new-222',
           organization: mockTargetOrg,
         }),
@@ -217,7 +247,7 @@ describe('AccessControlService - User Organization Updates & Creation', () => {
         id: 'custom-role-id',
         name: 'CUSTOM_AUDITOR',
       });
-      mockUserRepo.count.mockResolvedValueOnce(3);
+      mockStaffProfileRepo.count.mockResolvedValueOnce(3);
 
       await expect(service.deleteRole('custom-role-id')).rejects.toThrow(
         /currently assigned to 3 active user\(s\)/,
@@ -229,7 +259,7 @@ describe('AccessControlService - User Organization Updates & Creation', () => {
         id: 'custom-role-id',
         name: 'CUSTOM_AUDITOR',
       });
-      mockUserRepo.count.mockResolvedValueOnce(0);
+      mockStaffProfileRepo.count.mockResolvedValueOnce(0);
 
       const result = await service.deleteRole('custom-role-id');
       expect(result).toEqual({

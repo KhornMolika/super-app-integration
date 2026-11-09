@@ -12,7 +12,9 @@ import { StorageService } from '../storage/storage.service';
 import { AuthRateLimitGuard, AuthRateLimiter } from './auth-rate-limiter';
 import { EndUserAuthGuard } from './end-user-auth.guard';
 import { EmailVerificationToken } from './entities/email-verification-token.entity';
-import { EndUser } from './entities/end-user.entity';
+import { Identity } from '../identities/entities/identity.entity';
+import { StaffProfile } from '../staff/entities/staff-profile.entity';
+import { ConsumerProfile } from '../consumers/entities/consumer-profile.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { MobileAccountService } from './mobile-account.service';
 import { MobileAppConfigService } from './mobile-app-config.service';
@@ -25,7 +27,7 @@ import { Organization } from '../organizations/entities/organization.entity';
 import { MobileController } from './mobile.controller';
 import { PasswordService } from './password.service';
 import { FakeRepo } from './testing/fake-repo';
-import { User } from '../access-control/entities/user.entity';
+
 import { hashPassword } from '../common/utils/password.util';
 import { PNG, fakeStorage } from './testing/fake-storage';
 
@@ -37,13 +39,13 @@ describe('Mobile HTTP (in-process)', () => {
   let server: any;
   let sent: { url: string }[];
   let authService: AuthService;
-  let users: FakeRepo<EndUser>;
+  let users: FakeRepo<Identity>;
   let settingValue: unknown;
 
   beforeEach(async () => {
     sent = [];
     settingValue = undefined;
-    users = new FakeRepo<EndUser>(['email']);
+    users = new FakeRepo<Identity>(['email']);
     const miniRows = [
       {
         id: 'm1',
@@ -115,8 +117,9 @@ describe('Mobile HTTP (in-process)', () => {
             sendAccountDeletionScheduled: async () => undefined,
           },
         },
-        { provide: getRepositoryToken(EndUser), useValue: users },
-        { provide: getRepositoryToken(User), useValue: new FakeRepo() },
+        { provide: getRepositoryToken(Identity), useValue: users },
+        { provide: getRepositoryToken(StaffProfile), useValue: new FakeRepo() },
+        { provide: getRepositoryToken(ConsumerProfile), useValue: new FakeRepo() },
         {
           provide: getRepositoryToken(EmailVerificationToken),
           useValue: new FakeRepo(),

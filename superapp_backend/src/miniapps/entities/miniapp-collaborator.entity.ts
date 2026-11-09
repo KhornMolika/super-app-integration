@@ -8,7 +8,7 @@ import {
   Unique,
 } from 'typeorm';
 import { MiniApp } from './miniapp.entity';
-import { User } from '../../access-control/entities/user.entity';
+import { Identity } from '../../identities/entities/identity.entity';
 
 export enum CollaboratorRole {
   DEVELOPER = 'DEVELOPER',
@@ -34,9 +34,9 @@ export class MiniAppCollaborator {
   @Column({ type: 'uuid' })
   userId!: string;
 
-  @ManyToOne(() => User, { onDelete: 'CASCADE', eager: true })
+  @ManyToOne(() => Identity, { onDelete: 'CASCADE', eager: true })
   @JoinColumn({ name: 'userId' })
-  user!: User;
+  user!: Identity;
 
   @Column({ default: CollaboratorRole.DEVELOPER })
   role!: CollaboratorRole;

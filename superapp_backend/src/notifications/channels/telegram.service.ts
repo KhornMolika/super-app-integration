@@ -7,7 +7,7 @@
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from '../../access-control/entities/user.entity';
+import { Identity } from '../../identities/entities/identity.entity';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 import { SettingsService } from '../../settings/settings.service';
 import { resolveBackofficeBaseUrl } from '../../common/utils/network.utils';
@@ -65,8 +65,8 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   }
 
   constructor(
-    @InjectRepository(User)
-    private userRepository: Repository<User>,
+    @InjectRepository(Identity)
+    private userRepository: Repository<Identity>,
     @InjectRepository(MiniApp)
     private miniAppRepository: Repository<MiniApp>,
     @Optional()
@@ -127,7 +127,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     return `https://t.me/${this.botUsername}?start=${userId}`;
   }
 
-  async getUser(userId: string): Promise<User | null> {
+  async getUser(userId: string): Promise<Identity | null> {
     return this.userRepository.findOne({ where: { id: userId } });
   }
 
@@ -356,7 +356,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     chatId: string | number,
     username?: string,
     firstName?: string,
-  ): Promise<User | null> {
+  ): Promise<Identity | null> {
     return TelegramUserHelper.linkTelegramAccount(
       userId,
       chatId,
@@ -443,7 +443,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   async saveUserTeamChatId(
     userId: string,
     teamChatId?: string | null,
-  ): Promise<User | null> {
+  ): Promise<Identity | null> {
     return TelegramUserHelper.saveUserTeamChatId(
       userId,
       teamChatId,

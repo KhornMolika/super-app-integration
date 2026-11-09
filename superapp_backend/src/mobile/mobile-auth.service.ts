@@ -1,9 +1,10 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   Logger,
-  OnModuleInit,
+  Optional,
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -11,8 +12,13 @@ import { IsNull, Repository } from 'typeorm';
 import * as crypto from 'crypto';
 import { AuthService } from '../auth/auth.service';
 import { MailService } from '../notifications/channels/mail.service';
-import { User } from '../access-control/entities/user.entity';
-import { EndUser, EndUserStatus } from './entities/end-user.entity';
+import {
+  Identity,
+  IdentityStatus,
+} from '../identities/entities/identity.entity';
+import { StaffProfile } from '../staff/entities/staff-profile.entity';
+import { ConsumerProfile } from '../consumers/entities/consumer-profile.entity';
+import { MiniApp } from '../miniapps/entities/miniapp.entity';
 import { EmailVerificationToken } from './entities/email-verification-token.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { PasswordService } from './password.service';
@@ -31,7 +37,6 @@ export const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
 /** Max registration/verification mails per email address per window (any IP). */
 export const REGISTER_MAIL_MAX_PER_EMAIL = 5;
 export const REGISTER_MAIL_WINDOW_MS = 60 * 60 * 1000;
-/** A rotated refresh token replayed within this window is a benign race, not theft. */
 /** Wrong-password attempts allowed per verification token. */
 export const VERIFY_MAX_FAILED_ATTEMPTS = 5;
 export const REFRESH_GRACE_MS = 10 * 1000;
@@ -71,122 +76,28 @@ export function intEnv(
 }
 
 @Injectable()
-export class MobileAuthService implements OnModuleInit {
+export class MobileAuthService {
   private readonly logger = new Logger(MobileAuthService.name);
 
   constructor(
-    @InjectRepository(EndUser) private readonly users: Repository<EndUser>,
-    @InjectRepository(User) private readonly backofficeUsers: Repository<User>,
+    @InjectRepository(Identity) private readonly users: Repository<Identity>,
     @InjectRepository(EmailVerificationToken)
     private readonly verificationTokens: Repository<EmailVerificationToken>,
     @InjectRepository(RefreshToken)
     private readonly refreshTokens: Repository<RefreshToken>,
+    @InjectRepository(MiniApp)
+    private readonly miniApps: Repository<MiniApp>,
     private readonly passwords: PasswordService,
     private readonly authService: AuthService,
     private readonly mail: MailService,
     private readonly limiter: AuthRateLimiter,
+    @Optional()
+    @InjectRepository(StaffProfile)
+    private readonly staffProfiles?: Repository<StaffProfile>,
+    @Optional()
+    @InjectRepository(ConsumerProfile)
+    private readonly consumerProfiles?: Repository<ConsumerProfile>,
   ) {}
-
-  async onModuleInit() {
-    await this.seedDefaultEndUsers();
-  }
-
-  private async seedDefaultEndUsers(): Promise<void> {
-    if (
-      process.env.NODE_ENV === 'test' ||
-      process.env.NODE_ENV === 'production' ||
-      process.env.ENVIRONMENT === 'PROD'
-    ) {
-      return;
-    }
-    const adminPass = process.env.SUPERADMIN_PASSWORD;
-    if (!adminPass) {
-      return;
-    }
-    const defaultUsers = [
-      {
-        email: process.env.SUPERADMIN_EMAIL || 'superadmin@superapp.gov.kh',
-        name: 'Super Admin',
-        password: adminPass,
-      },
-      {
-        email: process.env.ADMIN_EMAIL || 'admin@superapp.gov.kh',
-        name: 'Admin User',
-        password: adminPass,
-      },
-      {
-        email: process.env.DEV_EMAIL || 'ma-developer@superapp.gov.kh',
-        name: 'MiniApp Developer',
-        password: adminPass,
-      },
-      {
-        email: 'qa@superapp.gov.kh',
-        name: 'QA Test Engineer',
-        password: adminPass,
-      },
-    ];
-
-    for (const u of defaultUsers) {
-      try {
-        const email = normalizeEmail(u.email);
-        const existing = await this.users.findOne({ where: { email } });
-        if (!existing) {
-          const passwordHash = await this.passwords.hash(u.password);
-          const endUser = this.users.create({
-            email,
-            name: u.name,
-            passwordHash,
-            emailVerifiedAt: new Date(),
-            status: EndUserStatus.ACTIVE,
-          });
-          await this.users.save(endUser);
-          this.logger.log(`Seeded default mobile EndUser account: ${email}`);
-        } else {
-          const matches = await this.passwords.verify(
-            u.password,
-            existing.passwordHash,
-          );
-          if (!matches) {
-            existing.passwordHash = await this.passwords.hash(u.password);
-          }
-          existing.lockedUntil = null;
-          existing.failedLoginCount = 0;
-          existing.status = EndUserStatus.ACTIVE;
-          if (!existing.emailVerifiedAt) {
-            existing.emailVerifiedAt = new Date();
-          }
-          await this.users.save(existing);
-        }
-      } catch (err: any) {
-        this.logger.warn(
-          `Could not seed default mobile user ${u.email}: ${err?.message}`,
-        );
-      }
-    }
-
-    // Purge any legacy @example.com end-users
-    try {
-      const exampleEndUsers = await this.users
-        .createQueryBuilder('end_user')
-        .where('end_user.email LIKE :pattern', { pattern: '%@example.com' })
-        .getMany();
-
-      if (exampleEndUsers.length > 0) {
-        await this.users.remove(exampleEndUsers);
-        this.logger.log(
-          `Purged ${exampleEndUsers.length} legacy @example.com mobile end-user account(s)`,
-        );
-      }
-    } catch (err: any) {
-      this.logger.warn(
-        `Could not purge @example.com mobile end-users: ${err?.message}`,
-      );
-    }
-
-    this.logger.log(
-      `Mobile accounts ready: ${defaultUsers.map((u) => u.email).join(', ')}`,
-    );
-  }
 
   get accessTtlSeconds(): number {
     return intEnv('MOBILE_ACCESS_TOKEN_TTL_SECONDS', 900, 60, 86_400);
@@ -200,13 +111,6 @@ export class MobileAuthService implements OnModuleInit {
 
   // ---------------------------------------------------------------- register
 
-  /**
-   * MOBILE_REQUIRE_EMAIL_VERIFICATION (default true). Set to `false` to skip the
-   * email step: accounts are created verified and registration returns a session.
-   * Trade-off: nobody proves they own the address, so anyone can register any
-   * email; only use it where the email is not trusted as an identity (local dev,
-   * closed pilots).
-   */
   private requireEmailVerification(): boolean {
     return (
       (process.env.MOBILE_REQUIRE_EMAIL_VERIFICATION ?? 'true')
@@ -225,8 +129,6 @@ export class MobileAuthService implements OnModuleInit {
     const violation = this.passwords.validatePolicy(input.password, email);
     if (violation) throw new BadRequestException(violation);
 
-    // Hash unconditionally so the response time does not reveal whether the
-    // address is already registered.
     const passwordHash = await this.passwords.hash(input.password);
 
     if (!this.requireEmailVerification()) {
@@ -238,13 +140,7 @@ export class MobileAuthService implements OnModuleInit {
       );
     }
 
-    // Per-address mail bucket (independent of IP) so an address cannot be
-    // mail-bombed from many IPs. Consumed for every registration attempt
-    // (existing or not) so the behaviour does not reveal existence. When
-    // exceeded we still answer with the generic 202 but change/send nothing.
-    // Trade-off: an attacker can burn a victim's hourly registration budget.
     const bucketKey = `register-mail|${email}`;
-    // Limiter out of capacity (flood): explicit 429 like every other path.
     if (this.limiter.isFull(bucketKey)) {
       throw new RateLimitedException(FULL_RETRY_AFTER_SECONDS);
     }
@@ -267,13 +163,24 @@ export class MobileAuthService implements OnModuleInit {
             name: input.name.trim(),
             passwordHash,
             emailVerifiedAt: null,
-            status: EndUserStatus.ACTIVE,
+            status: IdentityStatus.ACTIVE,
             failedLoginCount: 0,
             lockedUntil: null,
           }),
         );
+        // Create consumer profile
+        try {
+        if (this.consumerProfiles) {
+          const cpRepo = this.consumerProfiles;
+          const cp = cpRepo.create({
+            identityId: user.id,
+            identity: user,
+          });
+          await cpRepo.save(cp);
+        }
+      } catch {}
       } catch (err: any) {
-        if (err?.code !== '23505') throw err; // unique violation = lost a race
+        if (err?.code !== '23505') throw err;
         user = await this.users.findOne({ where: { email } });
         if (user)
           user = await this.takeOverUnverified(user, input.name, passwordHash);
@@ -282,19 +189,12 @@ export class MobileAuthService implements OnModuleInit {
       user = await this.takeOverUnverified(user, input.name, passwordHash);
     }
 
-    // Verified accounts are never modified and get no mail; unverified
-    // (incl. brand new) get a fresh link.
-    if (user && !user.emailVerifiedAt && user.status === EndUserStatus.ACTIVE) {
+    if (user && !user.emailVerifiedAt && user.status === IdentityStatus.ACTIVE) {
       await this.issueVerification(user);
     }
     return { message: REGISTER_MESSAGE };
   }
 
-  /**
-   * Verification disabled: create the account already verified and sign the user
-   * in. Without a mailbox proof the response necessarily reveals whether the
-   * address is taken (409), which is the accepted trade-off of this mode.
-   */
   private async registerWithoutVerification(
     email: string,
     name: string,
@@ -314,16 +214,14 @@ export class MobileAuthService implements OnModuleInit {
 
     let user = await this.users.findOne({ where: { email } });
     if (user) {
-      // Verified/disabled accounts are never touched. A leftover UNVERIFIED row
-      // (registered while verification was on) is claimed by this registrant.
-      if (user.emailVerifiedAt || user.status !== EndUserStatus.ACTIVE) {
+      if (user.emailVerifiedAt || user.status !== IdentityStatus.ACTIVE) {
         throw taken;
       }
       const res = await this.users.update(
         { id: user.id, emailVerifiedAt: IsNull() },
         { name: name.trim(), passwordHash, emailVerifiedAt: new Date() },
       );
-      if (!res.affected) throw taken; // verified concurrently
+      if (!res.affected) throw taken;
       user = await this.users.findOne({ where: { id: user.id } });
       if (!user) throw taken;
     } else {
@@ -334,32 +232,35 @@ export class MobileAuthService implements OnModuleInit {
             name: name.trim(),
             passwordHash,
             emailVerifiedAt: new Date(),
-            status: EndUserStatus.ACTIVE,
+            status: IdentityStatus.ACTIVE,
             failedLoginCount: 0,
             lockedUntil: null,
           }),
         );
+        try {
+        if (this.consumerProfiles) {
+          const cpRepo = this.consumerProfiles;
+          const cp = cpRepo.create({
+            identityId: user.id,
+            identity: user,
+          });
+          await cpRepo.save(cp);
+        }
+      } catch {}
       } catch (err: any) {
-        if (err?.code === '23505') throw taken; // lost a registration race
+        if (err?.code === '23505') throw taken;
         throw err;
       }
     }
     return this.issueTokens(user, crypto.randomUUID(), userAgent);
   }
 
-  /**
-   * Re-registering an UNVERIFIED email replaces name + password hash
-   * (last-writer-wins). This is safe against squatting because the account can
-   * only be activated with a token that is mailed to the address AND the
-   * password matching the current hash (see verifyEmail). A VERIFIED or
-   * DISABLED account is never touched.
-   */
   private async takeOverUnverified(
-    user: EndUser,
+    user: Identity,
     name: string,
     passwordHash: string,
-  ): Promise<EndUser> {
-    if (user.emailVerifiedAt || user.status !== EndUserStatus.ACTIVE)
+  ): Promise<Identity> {
+    if (user.emailVerifiedAt || user.status !== IdentityStatus.ACTIVE)
       return user;
     const res = await this.users.update(
       { id: user.id, emailVerifiedAt: IsNull() },
@@ -372,18 +273,12 @@ export class MobileAuthService implements OnModuleInit {
     return user;
   }
 
-  private async issueVerification(user: EndUser): Promise<void> {
-    // Invalidate every older unused token for this user (they belong to the
-    // previous password / registrant).
+  private async issueVerification(user: Identity): Promise<void> {
     await this.verificationTokens.delete({ userId: user.id, usedAt: IsNull() });
 
-    // 1. Generate clean 6-digit numeric OTP code
     const otpCode = Math.floor(100000 + crypto.randomInt(900000)).toString();
-
-    // 2. Generate opaque URL token for backward-compatible deep linking
     const token = newOpaqueToken();
 
-    // 3. Save BOTH records into database so both 6-digit code and legacy token work seamlessly
     const expiresAt = new Date(Date.now() + VERIFICATION_TTL_MS);
     await this.verificationTokens.save([
       this.verificationTokens.create({
@@ -400,7 +295,6 @@ export class MobileAuthService implements OnModuleInit {
       }),
     ]);
 
-    // Fire and forget: mail latency must not differ between the branches.
     void this.mail
       .sendEmailVerification(
         user.email,
@@ -423,15 +317,6 @@ export class MobileAuthService implements OnModuleInit {
 
   // ------------------------------------------------------------ verify email
 
-  /**
-   * Dual-Support Verification:
-   * Accepts EITHER:
-   * 1. 6-digit numeric OTP code (e.g. 582914)
-   * 2. Legacy opaque URL token string (or deep link URL)
-   *
-   * Verifies password if supplied (preserving backward compatibility with mobile app).
-   * Atomically burns all active tokens for the user upon claim.
-   */
   async verifyEmail(
     token: string,
     password?: string,
@@ -456,9 +341,6 @@ export class MobileAuthService implements OnModuleInit {
       password &&
       !(await this.passwords.verify(password, user.passwordHash))
     ) {
-      // A token holder must not be able to use this endpoint as an unmetered
-      // password oracle: after VERIFY_MAX_FAILED_ATTEMPTS wrong passwords the
-      // token is invalidated (the user has to register again for a new one).
       const attempts = (record.failedAttempts ?? 0) + 1;
       await this.verificationTokens.update(
         { id: record.id, usedAt: IsNull() },
@@ -471,7 +353,6 @@ export class MobileAuthService implements OnModuleInit {
       );
       throw fail();
     }
-    // Atomic single-use claim: Burn ALL active tokens for this user so neither OTP nor token can be reused!
     const claimed = await this.verificationTokens.update(
       { userId: user.id, usedAt: IsNull() },
       { usedAt: new Date() },
@@ -491,46 +372,13 @@ export class MobileAuthService implements OnModuleInit {
     userAgent?: string,
   ): Promise<TokenResponse> {
     const email = normalizeEmail(input.email);
-    let user = await this.users.findOne({ where: { email } });
-
-    // Auto-sync backoffice portal developer/admin accounts if not yet in EndUser
-    if (!user) {
-      const backofficeUser = await this.backofficeUsers.findOne({
-        where: { email },
-      });
-      if (backofficeUser && backofficeUser.status === 'ACTIVE') {
-        let matchesPass = false;
-        if (backofficeUser.passwordHash) {
-          matchesPass = await this.passwords.verify(
-            input.password,
-            backofficeUser.passwordHash,
-          );
-        } else if (
-          process.env.SUPERADMIN_PASSWORD &&
-          input.password === process.env.SUPERADMIN_PASSWORD
-        ) {
-          matchesPass = true;
-        }
-
-        if (matchesPass) {
-          const passwordHash = await this.passwords.hash(input.password);
-          user = this.users.create({
-            email,
-            name: backofficeUser.name,
-            passwordHash,
-            emailVerifiedAt: new Date(),
-            status: EndUserStatus.ACTIVE,
-            failedLoginCount: 0,
-            lockedUntil: null,
-            position: backofficeUser.position || null,
-            organizationUnit: backofficeUser.organization?.name || null,
-            staffId: backofficeUser.staffId || backofficeUser.externalId || null,
-          });
-          user = await this.users.save(user);
-          this.logger.log(`Auto-synced portal user ${email} to mobile EndUser`);
-        }
-      }
-    }
+    const user = await this.users.findOne({
+      where: { email },
+      relations: {
+        staffProfile: { organization: true, role: true },
+        consumerProfile: true,
+      },
+    });
 
     if (!user) {
       await this.burnDummy(input.password);
@@ -538,28 +386,11 @@ export class MobileAuthService implements OnModuleInit {
     }
 
     if (user.lockedUntil && new Date(user.lockedUntil).getTime() > Date.now()) {
-      // Locked: same generic error, same CPU cost, and no further counting.
       await this.burnDummy(input.password);
       throw new UnauthorizedException(INVALID_CREDENTIALS);
     }
 
     let ok = await this.passwords.verify(input.password, user.passwordHash);
-    if (!ok) {
-      const boUser = await this.backofficeUsers.findOne({ where: { email } });
-      if (boUser && boUser.status === 'ACTIVE' && boUser.passwordHash) {
-        const matchesBo = await this.passwords.verify(input.password, boUser.passwordHash);
-        if (matchesBo) {
-          ok = true;
-          user.passwordHash = await this.passwords.hash(input.password);
-          user.name = boUser.name;
-          user.position = boUser.position || null;
-          user.organizationUnit = boUser.organization?.name || user.organizationUnit;
-          user.staffId = boUser.staffId || boUser.externalId || user.staffId;
-          await this.users.save(user);
-          this.logger.log('Refreshed synced credentials from backoffice user for mobile EndUser ' + email);
-        }
-      }
-    }
     if (
       !ok &&
       process.env.NODE_ENV !== 'production' &&
@@ -582,7 +413,7 @@ export class MobileAuthService implements OnModuleInit {
     }
 
     const restore = this.isRestorable(user);
-    if (!restore && user.status !== EndUserStatus.ACTIVE) {
+    if (!restore && user.status !== IdentityStatus.ACTIVE) {
       throw new UnauthorizedException(INVALID_CREDENTIALS);
     }
 
@@ -592,8 +423,6 @@ export class MobileAuthService implements OnModuleInit {
     }
 
     if (user.failedLoginCount || user.lockedUntil) {
-      // Patch only the counter: save() would write back fields read before the
-      // password check, undoing any concurrent change (status, hash, revocation).
       await this.users.update(
         { id: user.id },
         { failedLoginCount: 0, lockedUntil: null },
@@ -606,7 +435,6 @@ export class MobileAuthService implements OnModuleInit {
     return restore ? { ...tokens, account_restored: true } : tokens;
   }
 
-  /** Timing-parity scrypt; an internal failure must not turn into a 500. */
   private async burnDummy(password: string): Promise<void> {
     try {
       await this.passwords.verifyDummy(password);
@@ -615,10 +443,7 @@ export class MobileAuthService implements OnModuleInit {
     }
   }
 
-  // NOTE: read-modify-write; concurrent guesses can under-count by a few. The
-  // IP/email rate limiter bounds the burst, so this is acceptable. Patch only the
-  // counter fields so a concurrent change to the rest of the row survives.
-  private async registerFailure(user: EndUser): Promise<void> {
+  private async registerFailure(user: Identity): Promise<void> {
     const patch = failurePatch(user, Date.now());
     await this.users.update({ id: user.id }, patch);
     Object.assign(user, patch);
@@ -635,9 +460,6 @@ export class MobileAuthService implements OnModuleInit {
 
     if (record.revokedAt) throw fail();
     if (record.rotatedAt) {
-      // Within the grace window this is almost certainly the losing side of a
-      // benign race (double-tap / retry after a lost response): plain 401, the
-      // family stays alive. Older reuse is treated as theft: revoke the family.
       if (
         Date.now() - new Date(record.rotatedAt).getTime() >
         REFRESH_GRACE_MS
@@ -648,30 +470,23 @@ export class MobileAuthService implements OnModuleInit {
     }
     if (new Date(record.expiresAt).getTime() <= Date.now()) throw fail();
 
-    // Atomic claim so two concurrent refreshes cannot both succeed.
     const claimed = await this.refreshTokens.update(
       { id: record.id, rotatedAt: IsNull(), revokedAt: IsNull() },
       { rotatedAt: new Date() },
     );
     if (!claimed.affected) {
-      // Lost a concurrent rotation to the winner (just now): grace, no revoke.
       throw fail();
     }
 
     const user = await this.users.findOne({ where: { id: record.endUserId } });
     if (
       !user ||
-      user.status !== EndUserStatus.ACTIVE ||
+      user.status !== IdentityStatus.ACTIVE ||
       !user.emailVerifiedAt
     ) {
       await this.revokeFamily(record.familyId);
       throw fail();
     }
-    // A family that began before the user's last global sign-out is dead, even
-    // when this refresh claimed its token before revokeAllSessions revoked the
-    // rows and inserts the successor after it. Accepted residual (no locking): a
-    // refresh already in flight when the revocation lands still returns one
-    // access token, valid until its TTL; the family dies on its next refresh.
     const started = record.familyStartedAt ?? record.createdAt;
     if (
       user.sessionsRevokedAt &&
@@ -702,15 +517,10 @@ export class MobileAuthService implements OnModuleInit {
 
   // ---------------------------------------------------------------- sessions
 
-  /** Starts a new refresh-token family for [user], e.g. this device after a password change. */
-  startSession(user: EndUser, userAgent?: string): Promise<TokenResponse> {
+  startSession(user: Identity, userAgent?: string): Promise<TokenResponse> {
     return this.issueTokens(user, crypto.randomUUID(), userAgent);
   }
 
-  /**
-   * Signs the user out everywhere: every refresh family is revoked and
-   * EndUserAuthGuard refuses access tokens issued before [at].
-   */
   async revokeAllSessions(
     userId: string,
     at = new Date(Date.now()),
@@ -722,41 +532,46 @@ export class MobileAuthService implements OnModuleInit {
     await this.users.update({ id: userId }, { sessionsRevokedAt: at });
   }
 
-  /** A PENDING_DELETION account inside its grace window is restored by signing in. */
-  isRestorable(user: EndUser, now = Date.now()): boolean {
+  isRestorable(user: Identity, now = Date.now()): boolean {
+    const cp = user.consumerProfile;
+    const purgeAfter = cp?.purgeAfter || (user as any).purgeAfter;
     return (
-      user.status === EndUserStatus.PENDING_DELETION &&
-      !!user.purgeAfter &&
-      new Date(user.purgeAfter).getTime() > now
+      user.status === IdentityStatus.PENDING_DELETION &&
+      !!purgeAfter &&
+      new Date(purgeAfter).getTime() > now
     );
   }
 
-  /**
-   * Also moves `sessionsRevokedAt` to now: access tokens issued in the second of
-   * the deletion request would otherwise pass the guard again once ACTIVE. When
-   * the account is no longer pending deletion (purged, disabled, restored
-   * concurrently) the sign-in fails with the generic invalid-credentials error.
-   */
-  async restoreAccount(user: EndUser): Promise<void> {
+  async restoreAccount(user: Identity): Promise<void> {
     const patch = {
-      status: EndUserStatus.ACTIVE,
+      status: IdentityStatus.ACTIVE,
       deletionRequestedAt: null,
       purgeAfter: null,
       sessionsRevokedAt: new Date(Date.now()),
     };
     const res = await this.users.update(
-      { id: user.id, status: EndUserStatus.PENDING_DELETION },
+      { id: user.id, status: IdentityStatus.PENDING_DELETION },
       patch,
     );
     if (!res.affected) throw new UnauthorizedException(INVALID_CREDENTIALS);
+
+    try {
+      if (this.consumerProfiles) {
+        const cpRepo = this.consumerProfiles;
+        await cpRepo.update(
+          { identityId: user.id },
+          { deletionRequestedAt: null, purgeAfter: null },
+        );
+      }
+    } catch {}
+
     Object.assign(user, patch);
   }
 
   // ------------------------------------------------------------------ tokens
 
-  /** [familyStartedAt] is passed on rotation; a new family starts now. */
   private async issueTokens(
-    user: EndUser,
+    user: Identity,
     familyId: string,
     userAgent?: string,
     familyStartedAt?: Date,
@@ -830,14 +645,25 @@ export class MobileAuthService implements OnModuleInit {
         email,
         name,
         passwordHash,
-        status: EndUserStatus.ACTIVE,
+        status: IdentityStatus.ACTIVE,
         emailVerifiedAt: new Date(),
         failedLoginCount: 0,
         lockedUntil: null,
       });
       user = await this.users.save(user);
+
+      try {
+        if (this.consumerProfiles) {
+          const cpRepo = this.consumerProfiles;
+          const cp = cpRepo.create({
+            identityId: user.id,
+            identity: user,
+          });
+          await cpRepo.save(cp);
+        }
+      } catch {}
     } else {
-      if (user.status !== EndUserStatus.ACTIVE) {
+      if (user.status !== IdentityStatus.ACTIVE) {
         throw new UnauthorizedException('User account is disabled');
       }
       if (!user.emailVerifiedAt) {
@@ -847,5 +673,108 @@ export class MobileAuthService implements OnModuleInit {
     }
 
     return this.issueTokens(user, crypto.randomUUID(), userAgent);
+  }
+
+  // -------------------------------------------------------- token exchange (SSO)
+
+  async tokenExchange(
+    userId: string,
+    miniAppIdentifier: string,
+    requestedScope?: string,
+  ): Promise<{
+    access_token: string;
+    token_type: string;
+    expires_in: number;
+    issued_token_type: string;
+    scope: string;
+  }> {
+    // 1. Resolve unified Identity with staff and consumer profiles
+    const identity = await this.users.findOne({
+      where: { id: userId },
+      relations: {
+        staffProfile: { organization: true, role: true },
+        consumerProfile: true,
+      },
+    });
+
+    if (!identity) {
+      throw new UnauthorizedException('User identity not found');
+    }
+
+    const email = identity.email;
+    const name = identity.name;
+    const staffProfile = identity.staffProfile;
+
+    // 2. Resolve MiniApp by UUID id or appId slug (e.g. 'kh.gov.fsa.tr')
+    const miniApp = await this.miniApps.findOne({
+      where: [
+        { id: miniAppIdentifier },
+        { appId: miniAppIdentifier },
+        { slug: miniAppIdentifier },
+      ],
+      relations: { organizationRelation: true },
+    });
+
+    if (!miniApp) {
+      throw new BadRequestException(`MiniApp '${miniAppIdentifier}' not found`);
+    }
+
+    if (miniApp.availabilityStatus === 'SUSPENDED') {
+      throw new ForbiddenException(
+        'MiniApp is currently suspended by regulatory authority',
+      );
+    }
+
+    // 3. Verify Target Audience entitlement
+    if (miniApp.targetAudience === 'ORGANIZATION_ONLY') {
+      if (
+        !staffProfile ||
+        !staffProfile.organizationId ||
+        staffProfile.organizationId !== miniApp.organizationId
+      ) {
+        throw new ForbiddenException(
+          'Access restricted to internal staff of the publishing regulatory authority',
+        );
+      }
+    } else if (miniApp.targetAudience === 'ALL_FSA_STAFF') {
+      if (!staffProfile || !staffProfile.organizationId) {
+        throw new ForbiddenException(
+          'Access restricted to verified FSA personnel',
+        );
+      }
+    }
+
+    // 4. Build Audience-Restricted Claims
+    const scope = requestedScope || 'openid profile';
+    const expiresIn = 600; // 10 minutes
+    const claims: Record<string, any> = {
+      sub: userId,
+      email,
+      name,
+      scope,
+    };
+
+    if (staffProfile) {
+      claims.staffId = staffProfile.staffId || null;
+      claims.position = staffProfile.position || null;
+      claims.organizationCode = staffProfile.organization?.code || null;
+      claims.organizationName = staffProfile.organization?.name || null;
+      claims.role = staffProfile.role?.name || null;
+    }
+
+    // 5. Sign Scoped RS256 JWT
+    const scopedToken = this.authService.signMiniAppToken(
+      claims,
+      miniApp.appId,
+      expiresIn,
+    );
+
+    return {
+      access_token: scopedToken,
+      token_type: 'Bearer',
+      expires_in: expiresIn,
+      issued_token_type: 'urn:ietf:params:oauth:token-type:access_token',
+      scope,
+    };
   }
 }

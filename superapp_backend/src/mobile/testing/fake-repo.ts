@@ -6,7 +6,13 @@ export class FakeRepo<T extends Record<string, any>> {
   rows: T[] = [];
   constructor(private readonly uniqueKeys: string[] = []) {}
 
-  private matches(row: T, criteria: Record<string, any>): boolean {
+  private matches(
+    row: T,
+    criteria: Record<string, any> | Array<Record<string, any>>,
+  ): boolean {
+    if (Array.isArray(criteria)) {
+      return criteria.some((c) => this.matches(row, c));
+    }
     const num = (x: any) =>
       x instanceof Date
         ? x.getTime()

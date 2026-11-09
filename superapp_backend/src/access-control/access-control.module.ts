@@ -1,7 +1,8 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module';
-import { User } from './entities/user.entity';
+import { Identity } from '../identities/entities/identity.entity';
+import { StaffProfile } from '../staff/entities/staff-profile.entity';
 import { Role } from './entities/role.entity';
 import { Permission } from './entities/permission.entity';
 import { AccessToken } from './entities/access-token.entity';
@@ -15,7 +16,8 @@ import { StorageModule } from '../storage/storage.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      User,
+      Identity,
+      StaffProfile,
       Role,
       Permission,
       AccessToken,

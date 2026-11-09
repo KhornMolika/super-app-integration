@@ -5,7 +5,8 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { AuthService } from '../src/auth/auth.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { User } from '../src/access-control/entities/user.entity';
+import { Identity } from '../src/identities/entities/identity.entity';
+import { StaffProfile } from '../src/staff/entities/staff-profile.entity';
 import { Role } from '../src/access-control/entities/role.entity';
 import { Organization } from '../src/organizations/entities/organization.entity';
 import { MiniApp, MiniAppStatus } from '../src/miniapps/entities/miniapp.entity';
@@ -16,12 +17,13 @@ import { SourceType } from '../src/miniapps/dto/create-miniapp.dto';
 describe('End-to-End Home Widget Feature Testing (M5/Step 4)', () => {
   let app: INestApplication;
   let authService: AuthService;
-  let userRepo: Repository<User>;
+  let identityRepo: Repository<Identity>;
+  let staffProfileRepo: Repository<StaffProfile>;
   let roleRepo: Repository<Role>;
   let orgRepo: Repository<Organization>;
   let miniAppRepo: Repository<MiniApp>;
 
-  let testAdminUser: User;
+  let testAdminUser: Identity;
   let adminToken: string;
   let testOrg: Organization;
   const createdAppIds: string[] = [];
@@ -42,7 +44,8 @@ describe('End-to-End Home Widget Feature Testing (M5/Step 4)', () => {
     await app.init();
 
     authService = app.get(AuthService);
-    userRepo = app.get<Repository<User>>(getRepositoryToken(User));
+    identityRepo = app.get<Repository<Identity>>(getRepositoryToken(Identity));
+    staffProfileRepo = app.get<Repository<StaffProfile>>(getRepositoryToken(StaffProfile));
     roleRepo = app.get<Repository<Role>>(getRepositoryToken(Role));
     orgRepo = app.get<Repository<Organization>>(getRepositoryToken(Organization));
     miniAppRepo = app.get<Repository<MiniApp>>(getRepositoryToken(MiniApp));
@@ -71,17 +74,19 @@ describe('End-to-End Home Widget Feature Testing (M5/Step 4)', () => {
     const testPassword = 'TestHomeWidgetPass_2026!';
     const pwHash = await hashPassword(testPassword);
 
-    testAdminUser = await userRepo.save(
-      userRepo.create({
+    testAdminUser = await identityRepo.save(
+      identityRepo.create({
         email: `hw.admin.${Date.now()}@ftc.gov.kh`,
         name: 'Home Widget Test Admin',
-        roleId: adminRole!.id,
-        role: adminRole!,
-        organizationId: testOrg.id,
-        organization: testOrg,
         passwordHash: pwHash,
         status: 'ACTIVE',
-        isActive: true,
+      }),
+    );
+    await staffProfileRepo.save(
+      staffProfileRepo.create({
+        identityId: testAdminUser.id,
+        roleId: adminRole!.id,
+        organizationId: testOrg.id,
       }),
     );
 
@@ -101,7 +106,8 @@ describe('End-to-End Home Widget Feature Testing (M5/Step 4)', () => {
     }
     if (testAdminUser?.id) {
       try {
-        await userRepo.delete({ id: testAdminUser.id });
+        await staffProfileRepo.delete({ identityId: testAdminUser.id });
+        await identityRepo.delete({ id: testAdminUser.id });
       } catch {}
     }
     await app.close();

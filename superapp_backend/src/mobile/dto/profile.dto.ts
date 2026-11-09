@@ -7,7 +7,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { EndUserHonorific } from '../entities/end-user.entity';
+import { IdentityHonorific } from '../../identities/entities/identity.entity';
 
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
@@ -30,8 +30,8 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @Transform(trimToNull)
-  @IsIn(Object.values(EndUserHonorific))
-  honorific?: EndUserHonorific | null;
+  @IsIn(Object.values(IdentityHonorific))
+  honorific?: IdentityHonorific | string | null;
 
   @IsOptional()
   @Transform(trimToNull)
@@ -48,7 +48,7 @@ export class UpdateProfileDto {
   @IsOptional()
   @Transform(trimToNull)
   @IsString()
-  @MaxLength(32)
+  @MaxLength(50)
   @Matches(/^[A-Za-z0-9-]+$/, {
     message: 'Staff ID may contain letters, digits and dashes only',
   })

@@ -1,10 +1,10 @@
 import { FakeRepo } from './testing/fake-repo';
-import { EndUser, EndUserStatus } from './entities/end-user.entity';
+import { Identity, IdentityStatus } from '../identities/entities/identity.entity';
 import { AccountPurgeService } from './account-purge.service';
 
 describe('AccountPurgeService.purgeDue', () => {
   it('hard-deletes only PENDING_DELETION accounts past purgeAfter, and their avatars', async () => {
-    const users = new FakeRepo<EndUser>(['email']);
+    const users = new FakeRepo<Identity>(['email']);
     const now = new Date('2026-12-01T00:00:00Z');
     const past = new Date('2026-11-30T00:00:00Z');
     const future = new Date('2026-12-15T00:00:00Z');
@@ -12,21 +12,21 @@ describe('AccountPurgeService.purgeDue', () => {
       {
         id: 'due',
         email: 'a@x.io',
-        status: EndUserStatus.PENDING_DELETION,
+        status: IdentityStatus.PENDING_DELETION,
         purgeAfter: past,
         avatarKey: 'avatars/due/a.png',
       } as any,
       {
         id: 'later',
         email: 'b@x.io',
-        status: EndUserStatus.PENDING_DELETION,
+        status: IdentityStatus.PENDING_DELETION,
         purgeAfter: future,
         avatarKey: null,
       } as any,
       {
         id: 'active',
         email: 'c@x.io',
-        status: EndUserStatus.ACTIVE,
+        status: IdentityStatus.ACTIVE,
         purgeAfter: past,
         avatarKey: null,
       } as any,
@@ -40,12 +40,12 @@ describe('AccountPurgeService.purgeDue', () => {
   });
 
   it('respects the batch size', async () => {
-    const users = new FakeRepo<EndUser>(['email']);
+    const users = new FakeRepo<Identity>(['email']);
     for (let i = 0; i < 5; i++) {
       users.rows.push({
         id: `u${i}`,
         email: `u${i}@x.io`,
-        status: EndUserStatus.PENDING_DELETION,
+        status: IdentityStatus.PENDING_DELETION,
         purgeAfter: new Date(0),
         avatarKey: null,
       } as any);
@@ -60,7 +60,7 @@ describe('AccountPurgeService.purgeDue', () => {
 
   it('does not start a timer under NODE_ENV=test', () => {
     const svc = new AccountPurgeService(
-      new FakeRepo<EndUser>() as any,
+      new FakeRepo<Identity>() as any,
       {} as any,
     );
     svc.onModuleInit();

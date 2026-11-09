@@ -11,9 +11,10 @@ import {
 import { AccountPurgeService } from './account-purge.service';
 import { DemoUserSeeder } from './demo-user.seeder';
 import { EmailVerificationToken } from './entities/email-verification-token.entity';
-import { EndUser } from './entities/end-user.entity';
+import { Identity } from '../identities/entities/identity.entity';
+import { StaffProfile } from '../staff/entities/staff-profile.entity';
+import { ConsumerProfile } from '../consumers/entities/consumer-profile.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
-import { User } from '../access-control/entities/user.entity';
 import { MobileAccountService } from './mobile-account.service';
 import { MobileAppConfigService } from './mobile-app-config.service';
 import { MobileAvatarService } from './mobile-avatar.service';
@@ -31,11 +32,12 @@ import { PasswordService } from './password.service';
     AuthModule,
     StorageModule,
     TypeOrmModule.forFeature([
-      EndUser,
+      Identity,
+      StaffProfile,
+      ConsumerProfile,
       EmailVerificationToken,
       RefreshToken,
       MiniApp,
-      User,
       Organization,
     ]),
   ],

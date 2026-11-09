@@ -6,7 +6,7 @@ import {
   END_USER_TYP,
 } from '../auth/auth.service';
 import { FakeRepo } from './testing/fake-repo';
-import { EndUser, EndUserStatus } from './entities/end-user.entity';
+import { Identity, IdentityStatus } from '../identities/entities/identity.entity';
 import { EmailVerificationToken } from './entities/email-verification-token.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { MobileAuthService } from './mobile-auth.service';
@@ -19,7 +19,7 @@ export const PW = 'a-very-good-password';
 export const NEW_PW = 'another-very-good-password';
 
 export async function buildAccount() {
-  const users = new FakeRepo<EndUser>(['email']);
+  const users = new FakeRepo<Identity>(['email']);
   const rTokens = new FakeRepo<RefreshToken>();
   const passwords = new PasswordService();
   const authService = new AuthService(new JwtService({}), {} as any);
@@ -30,9 +30,11 @@ export async function buildAccount() {
   };
   const auth = new MobileAuthService(
     users as any,
-    new FakeRepo() as any,
+
     new FakeRepo<EmailVerificationToken>() as any,
     rTokens as any,
+    new FakeRepo() as any,
+
     passwords,
     authService,
     mail as any,
@@ -44,14 +46,15 @@ export async function buildAccount() {
     name: 'Jane',
     passwordHash: await passwords.hash(PW),
     emailVerifiedAt: new Date(),
-    status: EndUserStatus.ACTIVE,
+    status: IdentityStatus.ACTIVE,
     failedLoginCount: 0,
     lockedUntil: null,
     createdAt: new Date(),
-  } as unknown as EndUser;
+  } as unknown as Identity;
   users.rows.push(user);
   const account = new MobileAccountService(
     users as any,
+
     passwords,
     auth,
     mail as any,
@@ -142,7 +145,7 @@ describe('MobileAccountService.requestDeletion', () => {
     ).rejects.toThrow('Password is incorrect');
     const res = await c.account.requestDeletion('u1', { password: PW });
     const u = c.users.rows[0];
-    expect(u.status).toBe(EndUserStatus.PENDING_DELETION);
+    expect(u.status).toBe(IdentityStatus.PENDING_DELETION);
     const days = (new Date(res.purgeAfter).getTime() - Date.now()) / 86_400_000;
     expect(days).toBeGreaterThan(29.9);
     expect(days).toBeLessThanOrEqual(30);
@@ -163,13 +166,13 @@ describe('MobileAccountService.requestDeletion', () => {
     jest.spyOn(c.users, 'findOne').mockImplementationOnce(async (opts) => {
       const live = (await findOne(opts))!;
       const loaded = { ...live }; // what the service read
-      live.status = EndUserStatus.DISABLED; // an admin disables the account right after
+      live.status = IdentityStatus.DISABLED; // an admin disables the account right after
       return loaded;
     });
     await expect(
       c.account.requestDeletion('u1', { password: PW }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
-    expect(c.users.rows[0]).toMatchObject({ status: EndUserStatus.DISABLED });
+    expect(c.users.rows[0]).toMatchObject({ status: IdentityStatus.DISABLED });
     expect(c.users.rows[0].purgeAfter).toBeUndefined();
     expect(c.users.rows[0].sessionsRevokedAt).toBeUndefined();
     expect(c.mail.sendAccountDeletionScheduled).not.toHaveBeenCalled();
@@ -211,7 +214,7 @@ describe('MobileAccountService.requestDeletion', () => {
     });
     expect(restored.account_restored).toBe(true);
     expect(c.users.rows[0]).toMatchObject({
-      status: EndUserStatus.ACTIVE,
+      status: IdentityStatus.ACTIVE,
       purgeAfter: null,
       deletionRequestedAt: null,
     });
@@ -245,7 +248,7 @@ describe('MobileAccountService.requestDeletion', () => {
       jest.spyOn(c.users, 'findOne').mockImplementationOnce(async (opts) => {
         const live = (await findOne(opts))!;
         const loaded = { ...live };
-        live.status = EndUserStatus.DISABLED;
+        live.status = IdentityStatus.DISABLED;
         return loaded;
       });
     };
@@ -258,7 +261,7 @@ describe('MobileAccountService.requestDeletion', () => {
     await expect(
       c.auth.login({ email: 'jane@example.io', password: PW }),
     ).rejects.toThrow('Invalid credentials');
-    expect(c.users.rows[0].status).toBe(EndUserStatus.DISABLED);
+    expect(c.users.rows[0].status).toBe(IdentityStatus.DISABLED);
     expect(alive(c)).toHaveLength(0);
   });
 });

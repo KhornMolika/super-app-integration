@@ -9,7 +9,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { User } from '../../access-control/entities/user.entity';
+import { Identity } from '../../identities/entities/identity.entity';
 import { MiniAppCollaborator } from './miniapp-collaborator.entity';
 import { MiniAppIssue } from './miniapp-issue.entity';
 import { MiniAppVersion } from './miniapp-version.entity';
@@ -78,6 +78,12 @@ export enum MiniAppAvailabilityStatus {
   SUSPENDED = 'SUSPENDED',
 }
 
+export enum MiniAppTargetAudience {
+  PUBLIC = 'PUBLIC',
+  ALL_FSA_STAFF = 'ALL_FSA_STAFF',
+  ORGANIZATION_ONLY = 'ORGANIZATION_ONLY',
+}
+
 export enum MiniAppSharingScope {
   GLOBAL = 'GLOBAL',
   RESTRICTED_DEPARTMENT = 'RESTRICTED_DEPARTMENT',
@@ -134,6 +140,12 @@ export class MiniApp {
 
   @Column({
     type: 'varchar',
+    default: MiniAppTargetAudience.PUBLIC,
+  })
+  targetAudience!: string;
+
+  @Column({
+    type: 'varchar',
     default: MiniAppLifecycleStatus.DRAFT,
   })
   lifecycleStatus!: string;
@@ -157,12 +169,12 @@ export class MiniApp {
   })
   legal?: MiniAppLegal;
 
-  @ManyToOne(() => User, (user) => user.ownedMiniApps, {
+  @ManyToOne(() => Identity, {
     nullable: true,
     eager: true,
   })
   @JoinColumn({ name: 'ownerId' })
-  owner!: User;
+  owner!: Identity;
 
   @Column({ nullable: true })
   ownerId!: string;

@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TelegramService } from './telegram.service';
-import { User } from '../../access-control/entities/user.entity';
+import { Identity } from '../../identities/entities/identity.entity';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 import { SettingsService } from '../../settings/settings.service';
 import { TelegramCardHelper } from './helpers/telegram-card.helper';
@@ -28,7 +28,7 @@ describe('TelegramService & Helper Modules', () => {
     getPipelineTiming: jest.Mock;
   };
 
-  const getUserRepo = () => mockUserRepo as unknown as Repository<User>;
+  const getUserRepo = () => mockUserRepo as unknown as Repository<Identity>;
   const getMiniAppRepo = () =>
     mockMiniAppRepo as unknown as Repository<MiniApp>;
 
@@ -57,7 +57,7 @@ describe('TelegramService & Helper Modules', () => {
       providers: [
         TelegramService,
         {
-          provide: getRepositoryToken(User),
+          provide: getRepositoryToken(Identity),
           useValue: mockUserRepo,
         },
         {

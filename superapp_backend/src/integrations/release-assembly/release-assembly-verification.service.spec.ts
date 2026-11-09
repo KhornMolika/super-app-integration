@@ -6,7 +6,7 @@ import { JenkinsService } from '../jenkins/jenkins.service';
 import { NotificationsService, MailService } from '../../notifications';
 import { ConfigService } from '@nestjs/config';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
-import { User } from '../../access-control/entities/user.entity';
+import { Identity } from '../../identities/entities/identity.entity';
 import { PubspecInjectorService } from '../flutter/pubspec-injector.service';
 
 describe('ReleaseAssemblyVerificationService', () => {
@@ -98,7 +98,7 @@ describe('ReleaseAssemblyVerificationService', () => {
           },
         },
         { provide: getRepositoryToken(MiniApp), useValue: mockMiniappRepo },
-        { provide: getRepositoryToken(User), useValue: mockUserRepo },
+        { provide: getRepositoryToken(Identity), useValue: mockUserRepo },
       ],
     }).compile();
 

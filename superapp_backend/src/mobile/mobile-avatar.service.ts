@@ -9,7 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
 import { StorageService } from '../storage/storage.service';
-import { EndUser } from './entities/end-user.entity';
+import { Identity } from '../identities/entities/identity.entity';
 
 export const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
 
@@ -63,14 +63,14 @@ export class MobileAvatarService {
   private readonly logger = new Logger(MobileAvatarService.name);
 
   constructor(
-    @InjectRepository(EndUser) private readonly users: Repository<EndUser>,
+    @InjectRepository(Identity) private readonly users: Repository<Identity>,
     private readonly storage: StorageService,
   ) {}
 
   async upload(
     userId: string,
     file: { buffer?: Buffer; size?: number } | undefined,
-  ): Promise<EndUser> {
+  ): Promise<Identity> {
     const buf = file?.buffer;
     if (!buf || buf.length === 0)
       throw new BadRequestException('Choose an image to upload');
@@ -151,7 +151,7 @@ export class MobileAvatarService {
     }
   }
 
-  private async findUser(userId: string): Promise<EndUser> {
+  private async findUser(userId: string): Promise<Identity> {
     const user = await this.users.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException();
     return user;

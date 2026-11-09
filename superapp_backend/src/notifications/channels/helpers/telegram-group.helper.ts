@@ -1,5 +1,5 @@
 import { Repository } from 'typeorm';
-import { User } from '../../../access-control/entities/user.entity';
+import { Identity } from '../../../identities/entities/identity.entity';
 import { MiniApp } from '../../../miniapps/entities/miniapp.entity';
 import { SettingsService } from '../../../settings/settings.service';
 import { TelegramApiHelper } from './telegram-api.helper';
@@ -20,7 +20,7 @@ export class TelegramGroupHelper {
    */
   static async getUserTelegramGroups(
     userId?: string,
-    userRepository?: Repository<User>,
+    userRepository?: Repository<Identity>,
     miniAppRepository?: Repository<MiniApp>,
     settingsService?: SettingsService,
     botToken?: string,
@@ -30,11 +30,11 @@ export class TelegramGroupHelper {
   ): Promise<TelegramGroupItem[]> {
     const groupsMap = new Map<string, TelegramGroupItem>();
 
-    let dbUser: User | null = null;
+    let dbUser: Identity | null = null;
     if (userId && userRepository) {
       dbUser = await userRepository.findOne({
         where: { id: userId },
-        relations: { role: true },
+        relations: { staffProfile: { role: true } },
       });
     }
 
@@ -58,11 +58,8 @@ export class TelegramGroupHelper {
     }
 
     // 2. Scan all mini apps owned by this user (or all mini apps if SUPER_ADMIN / ADMIN)
-    const userRoleList =
-      (dbUser as any)?.roles || (dbUser?.role ? [dbUser.role] : []);
-    const isAdmin = userRoleList.some(
-      (r: any) => r.name === 'SUPER_ADMIN' || r.name === 'ADMIN',
-    );
+    const staffRole = dbUser?.staffProfile?.role;
+    const isAdmin = staffRole?.name === 'SUPER_ADMIN' || staffRole?.name === 'ADMIN';
 
     let miniApps: MiniApp[] = [];
     if (miniAppRepository) {
@@ -288,7 +285,7 @@ export class TelegramGroupHelper {
    * Retrieves recent direct contacts and groups who interacted with the bot for Auto-Detection
    */
   static async getRecentBotChats(
-    userRepository?: Repository<User>,
+    userRepository?: Repository<Identity>,
     settingsService?: SettingsService,
     botToken?: string,
     logger?: TelegramLogger,
@@ -388,7 +385,7 @@ export class TelegramGroupHelper {
               chatId: u.telegramChatId,
               type: 'private',
               name: u.name || 'Registered Operator',
-              username: u.telegramUsername,
+              username: u.telegramUsername || undefined,
               lastActive: u.updatedAt ? u.updatedAt.toISOString() : undefined,
               isDirectUser: true,
             });
@@ -453,7 +450,7 @@ export class TelegramGroupHelper {
     oldChatId: string,
     newChatId: string | null,
     userId: string | undefined,
-    userRepository: Repository<User>,
+    userRepository: Repository<Identity>,
     miniAppRepository: Repository<MiniApp>,
   ): Promise<TelegramReassignResult> {
     if (!oldChatId) {
@@ -473,12 +470,10 @@ export class TelegramGroupHelper {
     if (userId) {
       const user = await userRepository.findOne({
         where: { id: userId },
-        relations: { role: true },
+        relations: { staffProfile: { role: true } },
       });
-      const userRoles = (user as any)?.roles || (user?.role ? [user.role] : []);
-      const isAdmin = userRoles.some(
-        (r: any) => r.name === 'SUPER_ADMIN' || r.name === 'ADMIN',
-      );
+      const staffRole = user?.staffProfile?.role;
+      const isAdmin = staffRole?.name === 'SUPER_ADMIN' || staffRole?.name === 'ADMIN';
       userApps = isAdmin
         ? await miniAppRepository.find()
         : await miniAppRepository.find({ where: { ownerId: userId } });
@@ -551,7 +546,7 @@ export class TelegramGroupHelper {
     miniAppId: string,
     newChatId: string | null,
     userId: string | undefined,
-    userRepository: Repository<User>,
+    userRepository: Repository<Identity>,
     miniAppRepository: Repository<MiniApp>,
   ): Promise<TelegramAssignAppResult> {
     const isUuid =
@@ -571,12 +566,10 @@ export class TelegramGroupHelper {
     if (userId) {
       const user = await userRepository.findOne({
         where: { id: userId },
-        relations: { role: true },
+        relations: { staffProfile: { role: true } },
       });
-      const userRoles = (user as any)?.roles || (user?.role ? [user.role] : []);
-      const isAdmin = userRoles.some(
-        (r: any) => r.name === 'SUPER_ADMIN' || r.name === 'ADMIN',
-      );
+      const staffRole = user?.staffProfile?.role;
+      const isAdmin = staffRole?.name === 'SUPER_ADMIN' || staffRole?.name === 'ADMIN';
       if (!isAdmin && app.ownerId !== userId) {
         return {
           success: false,

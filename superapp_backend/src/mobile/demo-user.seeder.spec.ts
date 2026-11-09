@@ -1,5 +1,5 @@
 import { FakeRepo } from './testing/fake-repo';
-import { EndUser, EndUserStatus } from './entities/end-user.entity';
+import { Identity, IdentityStatus } from '../identities/entities/identity.entity';
 import { PasswordService } from './password.service';
 import {
   DEFAULT_DEMO_USER_EMAIL,
@@ -11,11 +11,11 @@ const dev = { NODE_ENV: 'development' } as NodeJS.ProcessEnv;
 
 describe('DemoUserSeeder', () => {
   const passwords = new PasswordService();
-  let users: FakeRepo<EndUser>;
+  let users: FakeRepo<Identity>;
   let seeder: DemoUserSeeder;
 
   beforeEach(() => {
-    users = new FakeRepo<EndUser>(['email']);
+    users = new FakeRepo<Identity>(['email']);
     seeder = new DemoUserSeeder(users as any, passwords);
   });
 
@@ -24,7 +24,7 @@ describe('DemoUserSeeder', () => {
     expect(users.rows).toHaveLength(1);
     const user = users.rows[0];
     expect(user.email).toBe(DEFAULT_DEMO_USER_EMAIL);
-    expect(user.status).toBe(EndUserStatus.ACTIVE);
+    expect(user.status).toBe(IdentityStatus.ACTIVE);
     expect(user.emailVerifiedAt).toBeInstanceOf(Date);
     expect(user.name).toBeTruthy();
     expect(user.honorific).toBeTruthy();
@@ -47,7 +47,7 @@ describe('DemoUserSeeder', () => {
       id: 'u1',
       email: DEFAULT_DEMO_USER_EMAIL,
       passwordHash: 'changed-in-app',
-    } as EndUser);
+    } as Identity);
     expect(await seeder.seed(dev)).toBe(false);
     expect(users.rows).toHaveLength(1);
     expect(users.rows[0].passwordHash).toBe('changed-in-app');
@@ -89,7 +89,7 @@ describe('DemoUserSeeder', () => {
   it('treats losing a duplicate-key race to another instance as already seeded', async () => {
     const racing = {
       findOne: jest.fn(async () => null),
-      create: (data: Partial<EndUser>) => data,
+      create: (data: Partial<Identity>) => data,
       save: jest.fn(async () => {
         throw Object.assign(new Error('duplicate key'), { code: '23505' });
       }),

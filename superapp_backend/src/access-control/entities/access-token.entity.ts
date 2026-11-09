@@ -8,7 +8,7 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
-import { User } from './user.entity';
+import { Identity } from '../../identities/entities/identity.entity';
 
 @Entity('developer_tokens')
 export class AccessToken {
@@ -19,9 +19,9 @@ export class AccessToken {
   @Column()
   userId!: string;
 
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Identity, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
-  user!: User;
+  user!: Identity;
 
   @Column()
   name!: string;

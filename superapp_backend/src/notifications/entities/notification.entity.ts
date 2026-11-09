@@ -8,7 +8,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
-import { User } from '../../access-control/entities/user.entity';
+import { Identity } from '../../identities/entities/identity.entity';
 
 @Entity()
 export class Notification {
@@ -30,12 +30,12 @@ export class Notification {
   @Column({ type: 'jsonb', nullable: true })
   metadata!: any;
 
-  @ManyToOne(() => User, (user) => user.notifications, {
+  @ManyToOne(() => Identity, {
     nullable: true,
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'userId' })
-  user!: User;
+  user!: Identity;
 
   @Column({ nullable: true })
   userId!: string;

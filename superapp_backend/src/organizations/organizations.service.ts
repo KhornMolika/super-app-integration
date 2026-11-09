@@ -20,7 +20,8 @@ import {
 } from './helpers/organization-resolver.helper';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
-import { User } from '../access-control/entities/user.entity';
+import { StaffProfile } from '../staff/entities/staff-profile.entity';
+import { Identity } from '../identities/entities/identity.entity';
 import { MiniApp } from '../miniapps/entities/miniapp.entity';
 import { QueryOrganizationsDto } from './dto/query-organizations.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
@@ -190,12 +191,12 @@ export class OrganizationsService implements OnApplicationBootstrap {
     });
     if (!org) return null;
 
-    const users = await this.organizationRepository.manager
-      .getRepository(User)
+    const staffProfiles = await this.organizationRepository.manager
+      .getRepository(StaffProfile)
       .find({
         where: { organizationId: id },
-        relations: { role: true },
-        order: { name: 'ASC' },
+        relations: { identity: true, role: true },
+        order: { identity: { name: 'ASC' } },
       });
 
     const miniApps = await this.organizationRepository.manager
@@ -205,9 +206,24 @@ export class OrganizationsService implements OnApplicationBootstrap {
         order: { name: 'ASC' },
       });
 
-    const safeUsers = users.map((u) => {
-      const { passwordHash, organization, ...rest } = u as any;
-      return rest;
+    const safeUsers = staffProfiles.map((sp) => {
+      const identity = sp.identity;
+      return {
+        id: identity?.id ?? sp.id,
+        identityId: sp.identityId,
+        staffProfileId: sp.id,
+        name: identity?.name ?? '',
+        email: identity?.email ?? '',
+        status: identity?.status ?? sp.status,
+        position: sp.position,
+        staffId: sp.staffId,
+        phoneNumber: sp.phoneNumber,
+        roleId: sp.roleId,
+        role: sp.role,
+        organizationId: sp.organizationId,
+        createdAt: sp.createdAt,
+        updatedAt: sp.updatedAt,
+      };
     });
 
     const safeMiniApps = miniApps.map((m) => {
@@ -219,7 +235,7 @@ export class OrganizationsService implements OnApplicationBootstrap {
       ...org,
       users: safeUsers,
       miniApps: safeMiniApps,
-    };
+    } as any;
   }
 
   async findByNameOrCode(term?: string): Promise<Organization | null> {
@@ -385,7 +401,7 @@ export class OrganizationsService implements OnApplicationBootstrap {
       );
     }
 
-    const hasUsers = (org.users?.length ?? 0) > 0;
+    const hasUsers = ((org as any).users?.length ?? (org as any).staffProfiles?.length ?? 0) > 0;
     const hasMiniApps = (org.miniApps?.length ?? 0) > 0;
     const hasChildren = (org.children?.length ?? 0) > 0;
     if (hasUsers || hasMiniApps || hasChildren) {

@@ -12,7 +12,10 @@ import {
   END_USER_AUDIENCE,
   END_USER_TYP,
 } from '../auth/auth.service';
-import { EndUser, EndUserStatus } from './entities/end-user.entity';
+import {
+  Identity,
+  IdentityStatus,
+} from '../identities/entities/identity.entity';
 
 export interface AuthenticatedEndUser {
   id: string;
@@ -38,7 +41,7 @@ declare global {
 export class EndUserAuthGuard implements CanActivate {
   constructor(
     private readonly authService: AuthService,
-    @InjectRepository(EndUser) private readonly users: Repository<EndUser>,
+    @InjectRepository(Identity) private readonly users: Repository<Identity>,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -54,7 +57,7 @@ export class EndUserAuthGuard implements CanActivate {
     if (typeof payload?.sub !== 'string' || !payload.sub) {
       throw new UnauthorizedException();
     }
-    let user: EndUser | null = null;
+    let user: Identity | null = null;
     try {
       user = await this.users.findOne({
         where: { id: payload.sub },
@@ -69,7 +72,7 @@ export class EndUserAuthGuard implements CanActivate {
       // Malformed sub etc. -> treat as unauthenticated.
       throw new UnauthorizedException();
     }
-    if (!user || user.status !== EndUserStatus.ACTIVE) {
+    if (!user || user.status !== IdentityStatus.ACTIVE) {
       throw new UnauthorizedException();
     }
     // Password change / deletion sign the user out everywhere:
@@ -95,7 +98,7 @@ export class EndUserAuthGuard implements CanActivate {
 export class OptionalEndUserAuthGuard implements CanActivate {
   constructor(
     private readonly authService: AuthService,
-    @InjectRepository(EndUser) private readonly users: Repository<EndUser>,
+    @InjectRepository(Identity) private readonly users: Repository<Identity>,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -116,7 +119,7 @@ export class OptionalEndUserAuthGuard implements CanActivate {
     if (typeof payload?.sub !== 'string' || !payload.sub) {
       throw new UnauthorizedException();
     }
-    let user: EndUser | null = null;
+    let user: Identity | null = null;
     try {
       user = await this.users.findOne({
         where: { id: payload.sub },
@@ -125,7 +128,7 @@ export class OptionalEndUserAuthGuard implements CanActivate {
     } catch {
       throw new UnauthorizedException();
     }
-    if (!user || user.status !== EndUserStatus.ACTIVE) {
+    if (!user || user.status !== IdentityStatus.ACTIVE) {
       throw new UnauthorizedException();
     }
     request.endUser = { id: user.id, email: user.email };

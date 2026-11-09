@@ -1,7 +1,7 @@
 import { Module, Global, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Notification } from './entities/notification.entity';
-import { User } from '../access-control/entities/user.entity';
+import { Identity } from '../identities/entities/identity.entity';
 import { MiniApp } from '../miniapps/entities/miniapp.entity';
 import { NotificationGateway } from './notification.gateway';
 import { NotificationsService } from './notifications.service';
@@ -16,7 +16,7 @@ import { AuthModule } from '../auth/auth.module';
 @Global()
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Notification, User, MiniApp]),
+    TypeOrmModule.forFeature([Notification, Identity, MiniApp]),
     forwardRef(() => AuthModule),
   ],
   controllers: [NotificationsController, TelegramController, MailController],

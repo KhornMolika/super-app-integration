@@ -3,12 +3,12 @@ import { JwtService } from '@nestjs/jwt';
 import { AuthService } from '../auth/auth.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { EndUserAuthGuard } from './end-user-auth.guard';
-import { EndUserStatus } from './entities/end-user.entity';
+import { IdentityStatus } from '../identities/entities/identity.entity';
 import { hashPassword } from '../common/utils/password.util';
 
 describe('EndUserAuthGuard', () => {
   let authService: AuthService;
-  let status: EndUserStatus | null;
+  let status: IdentityStatus | null;
   let revokedAt: Date | null;
   let guard: EndUserAuthGuard;
   const jwt = new JwtService({});
@@ -29,7 +29,7 @@ describe('EndUserAuthGuard', () => {
       }),
     } as any);
     authService.onModuleInit();
-    status = EndUserStatus.ACTIVE;
+    status = IdentityStatus.ACTIVE;
     revokedAt = null;
     const users = {
       findOne: async ({ where }: any) =>
@@ -162,7 +162,7 @@ describe('EndUserAuthGuard', () => {
 
   it('rejects disabled or deleted users even with a valid token', async () => {
     const t = endUserToken();
-    status = EndUserStatus.DISABLED;
+    status = IdentityStatus.DISABLED;
     await expect(guard.canActivate(ctx(bearer(t)).ctx)).rejects.toBeInstanceOf(
       UnauthorizedException,
     );

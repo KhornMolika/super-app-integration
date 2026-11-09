@@ -8,7 +8,7 @@ import {
   OneToMany,
   JoinTable,
 } from 'typeorm';
-import { User } from './user.entity';
+import { StaffProfile } from '../../staff/entities/staff-profile.entity';
 import { Permission } from './permission.entity';
 
 @Entity()
@@ -25,8 +25,8 @@ export class Role {
   @Column({ default: true })
   isActive!: boolean;
 
-  @OneToMany(() => User, (user) => user.role)
-  users!: User[];
+  @OneToMany(() => StaffProfile, (sp) => sp.role)
+  staffProfiles!: StaffProfile[];
 
   @ManyToMany(() => Permission, (permission) => permission.roles, {
     cascade: true,

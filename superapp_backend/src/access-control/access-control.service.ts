@@ -8,7 +8,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import { User } from './entities/user.entity';
+import { Identity } from '../identities/entities/identity.entity';
+import { StaffProfile } from '../staff/entities/staff-profile.entity';
 import { Role } from './entities/role.entity';
 import { Permission } from './entities/permission.entity';
 import { Organization } from '../organizations/entities/organization.entity';
@@ -18,8 +19,11 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 
-import { hashPassword, verifyPassword } from '../common/utils/password.util';
-import { formatUserResponse } from './helpers/user-response.helper';
+import { hashPassword } from '../common/utils/password.util';
+import {
+  formatUserResponse,
+  FormattedUserResponse,
+} from './helpers/user-response.helper';
 import { QueryUsersDto } from './dto/query-users.dto';
 import { QueryRolesDto } from './dto/query-roles.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
@@ -45,8 +49,10 @@ export class AccessControlService {
   private readonly logger = new Logger(AccessControlService.name);
 
   constructor(
-    @InjectRepository(User)
-    private userRepository: Repository<User>,
+    @InjectRepository(Identity)
+    private identityRepository: Repository<Identity>,
+    @InjectRepository(StaffProfile)
+    private staffProfileRepository: Repository<StaffProfile>,
     @InjectRepository(Role)
     private roleRepository: Repository<Role>,
     @InjectRepository(Permission)
@@ -59,41 +65,47 @@ export class AccessControlService {
     userId: string,
     passwordHash: string,
   ): Promise<void> {
-    await this.userRepository.update(
+    await this.identityRepository.update(
       { id: userId },
       { passwordHash, status: 'ACTIVE' },
     );
   }
 
-  async findByEmailWithPermissions(email: string): Promise<User | null> {
+  async findByEmailWithPermissions(
+    email: string,
+  ): Promise<FormattedUserResponse | null> {
     const normalized = (email || '').toLowerCase().trim();
     if (!normalized) return null;
 
-    let user = await this.userRepository
-      .createQueryBuilder('user')
-      .leftJoinAndSelect('user.role', 'role')
+    let identity = await this.identityRepository
+      .createQueryBuilder('ident')
+      .leftJoinAndSelect('ident.staffProfile', 'staffProfile')
+      .leftJoinAndSelect('staffProfile.role', 'role')
       .leftJoinAndSelect('role.permissions', 'permission')
-      .leftJoinAndSelect('user.organization', 'organization')
-      .where('LOWER(TRIM(user.email)) = :email', { email: normalized })
+      .leftJoinAndSelect('staffProfile.organization', 'organization')
+      .where('LOWER(TRIM(ident.email)) = :email', { email: normalized })
       .getOne();
 
-    if (!user && OFFICIAL_SEEDS[normalized]) {
-      user = await this.ensureSeedAccount(normalized);
-    } else if (user && OFFICIAL_SEEDS[normalized]) {
-      let userChanged = false;
+    if (!identity && OFFICIAL_SEEDS[normalized]) {
+      identity = await this.ensureSeedAccount(normalized);
+    } else if (identity && OFFICIAL_SEEDS[normalized]) {
+      let identityChanged = false;
 
       // Only initialize default seed password if account has NO password hash yet.
       // If user already has a passwordHash, preserve it so user can update their password later.
-      if (!user.passwordHash) {
+      if (!identity.passwordHash) {
         const defaultPassword = process.env.SUPERADMIN_PASSWORD;
         if (defaultPassword) {
-          user.passwordHash = await hashPassword(defaultPassword);
-          userChanged = true;
+          identity.passwordHash = await hashPassword(defaultPassword);
+          identityChanged = true;
         }
       }
-      if (user.status !== 'ACTIVE') {
-        user.status = 'ACTIVE';
-        userChanged = true;
+      if (identity.status !== 'ACTIVE') {
+        identity.status = 'ACTIVE';
+        identityChanged = true;
+      }
+      if (identityChanged) {
+        await this.identityRepository.save(identity);
       }
 
       const targetRoleName = OFFICIAL_SEEDS[normalized].roleName;
@@ -110,40 +122,62 @@ export class AccessControlService {
         role = await this.roleRepository.save(role);
       }
 
-      if (!user.role || user.role.name !== targetRoleName) {
-        user.role = role;
-        user.roleId = role.id;
-        userChanged = true;
-      }
-
-      if (!user.organizationId) {
+      let staffProfile = identity.staffProfile;
+      if (!staffProfile) {
+        let ftcOrgId: string | null = null;
         try {
-          const ftcOrgs = await this.userRepository.manager.query(
+          const ftcOrgs = await this.identityRepository.manager.query(
             "SELECT id, name, code FROM organizations WHERE code = 'FTC' OR name ILIKE '%Financial Technology Center%' LIMIT 1",
           );
-          if (ftcOrgs && ftcOrgs.length > 0) {
-            user.organizationId = ftcOrgs[0].id;
-            userChanged = true;
-          }
+          if (ftcOrgs && ftcOrgs.length > 0) ftcOrgId = ftcOrgs[0].id;
         } catch (_) {}
+
+        staffProfile = this.staffProfileRepository.create({
+          identityId: identity.id,
+          identity: identity,
+          roleId: role.id,
+          role: role,
+          organizationId: ftcOrgId!,
+          status: 'ACTIVE',
+        });
+        await this.staffProfileRepository.save(staffProfile);
+      } else {
+        let spChanged = false;
+        if (!staffProfile.role || staffProfile.role.name !== targetRoleName) {
+          staffProfile.role = role;
+          staffProfile.roleId = role.id;
+          spChanged = true;
+        }
+        if (!staffProfile.organizationId) {
+          try {
+            const ftcOrgs = await this.identityRepository.manager.query(
+              "SELECT id, name, code FROM organizations WHERE code = 'FTC' OR name ILIKE '%Financial Technology Center%' LIMIT 1",
+            );
+            if (ftcOrgs && ftcOrgs.length > 0) {
+              staffProfile.organizationId = ftcOrgs[0].id;
+              spChanged = true;
+            }
+          } catch (_) {}
+        }
+        if (spChanged) {
+          await this.staffProfileRepository.save(staffProfile);
+        }
       }
 
-      if (userChanged) {
-        await this.userRepository.save(user);
-        user = await this.userRepository
-          .createQueryBuilder('user')
-          .leftJoinAndSelect('user.role', 'role')
-          .leftJoinAndSelect('role.permissions', 'permission')
-          .leftJoinAndSelect('user.organization', 'organization')
-          .where('LOWER(TRIM(user.email)) = :email', { email: normalized })
-          .getOne();
-      }
+      identity = await this.identityRepository
+        .createQueryBuilder('ident')
+        .leftJoinAndSelect('ident.staffProfile', 'staffProfile')
+        .leftJoinAndSelect('staffProfile.role', 'role')
+        .leftJoinAndSelect('role.permissions', 'permission')
+        .leftJoinAndSelect('staffProfile.organization', 'organization')
+        .where('LOWER(TRIM(ident.email)) = :email', { email: normalized })
+        .getOne();
     }
 
-    return user ? formatUserResponse(user) : null;
+    return identity ? formatUserResponse(identity) : null;
   }
 
-  private async ensureSeedAccount(email: string): Promise<User | null> {
+  private async ensureSeedAccount(email: string): Promise<Identity | null> {
     const seedInfo = OFFICIAL_SEEDS[email];
     if (!seedInfo) return null;
 
@@ -171,45 +205,51 @@ export class AccessControlService {
 
     let ftcOrgId: string | null = null;
     try {
-      const ftcOrgs = await this.userRepository.manager.query(
+      const ftcOrgs = await this.identityRepository.manager.query(
         "SELECT id, name, code FROM organizations WHERE code = 'FTC' OR name ILIKE '%Financial Technology Center%' LIMIT 1",
       );
       if (ftcOrgs && ftcOrgs.length > 0) ftcOrgId = ftcOrgs[0].id;
     } catch (_) {}
 
-    const user = this.userRepository.create({
+    let identity = this.identityRepository.create({
       email,
       name: seedInfo.name,
-      roleId: role.id,
-      role: role,
-      organizationId: ftcOrgId,
       status: 'ACTIVE',
       passwordHash,
     });
+    identity = await this.identityRepository.save(identity);
 
-    await this.userRepository.save(user);
+    const staffProfile = this.staffProfileRepository.create({
+      identityId: identity.id,
+      identity: identity,
+      roleId: role.id,
+      role: role,
+      organizationId: ftcOrgId!,
+      status: 'ACTIVE',
+    });
+    await this.staffProfileRepository.save(staffProfile);
 
-    const created = await this.userRepository
-      .createQueryBuilder('user')
-      .leftJoinAndSelect('user.role', 'role')
+    return this.identityRepository
+      .createQueryBuilder('ident')
+      .leftJoinAndSelect('ident.staffProfile', 'staffProfile')
+      .leftJoinAndSelect('staffProfile.role', 'role')
       .leftJoinAndSelect('role.permissions', 'permission')
-      .leftJoinAndSelect('user.organization', 'organization')
-      .where('LOWER(TRIM(user.email)) = :email', { email })
+      .leftJoinAndSelect('staffProfile.organization', 'organization')
+      .where('LOWER(TRIM(ident.email)) = :email', { email })
       .getOne();
-
-    return created ? formatUserResponse(created) : null;
   }
 
   // --- User Management ---
   async findAllUsers(
     query?: QueryUsersDto,
     includeUnverified = false,
-  ): Promise<PaginatedResult<User> | User[]> {
-    const qb = this.userRepository
-      .createQueryBuilder('user')
-      .leftJoinAndSelect('user.role', 'role')
+  ): Promise<PaginatedResult<FormattedUserResponse> | FormattedUserResponse[]> {
+    const qb = this.identityRepository
+      .createQueryBuilder('ident')
+      .leftJoinAndSelect('ident.staffProfile', 'staffProfile')
+      .leftJoinAndSelect('staffProfile.role', 'role')
       .leftJoinAndSelect('role.permissions', 'permission')
-      .leftJoinAndSelect('user.organization', 'organization');
+      .leftJoinAndSelect('staffProfile.organization', 'organization');
 
     const isUnverifiedQuery =
       query?.status === 'PENDING_EMAIL_VERIFICATION';
@@ -217,15 +257,15 @@ export class AccessControlService {
 
     if (!includeUnverified && !isUnverifiedQuery && !isAllStatusQuery) {
       // Stop unverified self-registered emails from cluttering default list
-      qb.where('user.status != :unverifiedStatus', {
+      qb.where('ident.status != :unverifiedStatus', {
         unverifiedStatus: 'PENDING_EMAIL_VERIFICATION',
       });
     }
 
     if (!query) {
-      qb.orderBy('user.createdAt', 'DESC');
-      const users = await qb.getMany();
-      return users.map((u) => formatUserResponse(u) as User);
+      qb.orderBy('ident.createdAt', 'DESC');
+      const identities = await qb.getMany();
+      return identities.map(formatUserResponse);
     }
 
     const {
@@ -243,7 +283,7 @@ export class AccessControlService {
     if (search?.trim()) {
       const sanitized = escapeLikeString(search.trim());
       qb.andWhere(
-        '(user.name ILIKE :search OR user.email ILIKE :search OR user.telegramUsername ILIKE :search)',
+        '(ident.name ILIKE :search OR ident.email ILIKE :search OR ident.telegramUsername ILIKE :search)',
         { search: `%${sanitized}%` },
       );
     }
@@ -272,48 +312,50 @@ export class AccessControlService {
         upperStatus === 'DEACTIVATED' ||
         upperStatus === 'SUSPENDED'
       ) {
-        qb.andWhere('user.status IN (:...inactiveStatuses)', {
+        qb.andWhere('ident.status IN (:...inactiveStatuses)', {
           inactiveStatuses: ['INACTIVE', 'DEACTIVATED', 'SUSPENDED'],
         });
       } else if (
         upperStatus === 'PENDING_APPROVAL' ||
         upperStatus === 'PENDING'
       ) {
-        qb.andWhere('user.status IN (:...pendingStatuses)', {
+        qb.andWhere('ident.status IN (:...pendingStatuses)', {
           pendingStatuses: ['PENDING_APPROVAL', 'PENDING'],
         });
       } else if (upperStatus === 'PENDING_EMAIL_VERIFICATION') {
-        qb.andWhere('user.status = :status', {
+        qb.andWhere('ident.status = :status', {
           status: 'PENDING_EMAIL_VERIFICATION',
         });
       } else {
-        qb.andWhere('user.status = :status', { status: upperStatus });
+        qb.andWhere('ident.status = :status', { status: upperStatus });
       }
     }
 
     // Filter by Organization
     if (organizationId && organizationId !== 'ALL') {
-      qb.andWhere('user.organizationId = :organizationId', { organizationId });
+      qb.andWhere('staffProfile.organizationId = :organizationId', {
+        organizationId,
+      });
     }
 
     // Allowlisted Sorting
     const sortColumns: Record<string, string> = {
-      createdAt: 'user.createdAt',
-      updatedAt: 'user.updatedAt',
-      name: 'user.name',
-      email: 'user.email',
-      status: 'user.status',
+      createdAt: 'ident.createdAt',
+      updatedAt: 'ident.updatedAt',
+      name: 'ident.name',
+      email: 'ident.email',
+      status: 'ident.status',
     };
-    const orderColumn = sortColumns[sortBy] || 'user.createdAt';
+    const orderColumn = sortColumns[sortBy] || 'ident.createdAt';
     const direction = sortOrder === SortOrder.ASC ? 'ASC' : 'DESC';
 
-    qb.orderBy(orderColumn, direction).addOrderBy('user.id', 'ASC');
+    qb.orderBy(orderColumn, direction).addOrderBy('ident.id', 'ASC');
 
     // Safe offset pagination via TypeORM .skip() & .take()
     qb.skip((page - 1) * limit).take(limit);
 
-    const [users, totalItems] = await qb.getManyAndCount();
-    const formatted = users.map((u) => formatUserResponse(u) as User);
+    const [identities, totalItems] = await qb.getManyAndCount();
+    const formatted = identities.map(formatUserResponse);
 
     return createPaginatedResponse(formatted, totalItems, page, limit);
   }
@@ -325,7 +367,9 @@ export class AccessControlService {
     unverified: number;
     inactive: number;
   }> {
-    const qb = this.userRepository.createQueryBuilder('user');
+    const qb = this.identityRepository
+      .createQueryBuilder('ident')
+      .leftJoin('ident.staffProfile', 'staffProfile');
 
     const userPerms = new Set<string>(
       Array.isArray(requester?.permissions) ? requester.permissions : [],
@@ -345,15 +389,15 @@ export class AccessControlService {
       !isSuperOrAdmin &&
       requester?.organizationId
     ) {
-      qb.andWhere('user.organizationId = :orgId', {
+      qb.andWhere('staffProfile.organizationId = :orgId', {
         orgId: requester.organizationId,
       });
     }
 
     const rawCounts = await qb
-      .select('user.status', 'status')
-      .addSelect('COUNT(user.id)', 'count')
-      .groupBy('user.status')
+      .select('ident.status', 'status')
+      .addSelect('COUNT(ident.id)', 'count')
+      .groupBy('ident.status')
       .getRawMany();
 
     let active = 0;
@@ -388,15 +432,20 @@ export class AccessControlService {
     return { total, active, pending, unverified, inactive };
   }
 
-  async findUserById(id: string): Promise<User> {
-    const user = await this.userRepository.findOne({
+  async findUserById(id: string): Promise<FormattedUserResponse> {
+    const identity = await this.identityRepository.findOne({
       where: { id },
-      relations: { role: { permissions: true }, organization: true },
+      relations: {
+        staffProfile: {
+          role: { permissions: true },
+          organization: true,
+        },
+      },
     });
-    if (!user) {
+    if (!identity) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
-    return formatUserResponse(user);
+    return formatUserResponse(identity);
   }
 
   private isRequesterSuperAdmin(requester?: any): boolean {
@@ -417,8 +466,11 @@ export class AccessControlService {
     );
   }
 
-  async createUser(dto: CreateUserDto, requester?: any): Promise<User> {
-    const existing = await this.userRepository.findOne({
+  async createUser(
+    dto: CreateUserDto,
+    requester?: any,
+  ): Promise<FormattedUserResponse> {
+    const existing = await this.identityRepository.findOne({
       where: { email: dto.email.toLowerCase().trim() },
     });
     if (existing) {
@@ -481,7 +533,8 @@ export class AccessControlService {
         'Organization is required when creating a user.',
       );
     }
-    const orgRepo = this.userRepository.manager.getRepository(Organization);
+    const orgRepo =
+      this.identityRepository.manager.getRepository(Organization);
     organization = await orgRepo.findOne({ where: { id: targetOrgId } });
     if (!organization) {
       throw new BadRequestException(
@@ -489,41 +542,55 @@ export class AccessControlService {
       );
     }
 
-    const user = this.userRepository.create({
+    const identityStatus =
+      dto.status ||
+      (dto.isActive === false || roles.length === 0
+        ? 'PENDING_APPROVAL'
+        : 'ACTIVE');
+
+    const identity = this.identityRepository.create({
       name: dto.name,
       email: dto.email.toLowerCase().trim(),
+      telegramChatId:
+        dto.telegramChatId || (dto as any).teamTelegramChatId || undefined,
+      telegramUsername: dto.telegramUsername || undefined,
+      status: identityStatus,
+      passwordHash,
+    });
+    const savedIdentity = await this.identityRepository.save(identity);
+
+    const staffProfile = this.staffProfileRepository.create({
+      identityId: savedIdentity.id,
+      identity: savedIdentity,
       roleId: roles[0]?.id,
       role: roles[0],
       organizationId: targetOrgId,
       organization: organization,
-      telegramChatId:
-        dto.telegramChatId || (dto as any).teamTelegramChatId || undefined,
-      telegramUsername: dto.telegramUsername || undefined,
       position: dto.position || undefined,
       staffId: dto.staffId || undefined,
       phoneNumber: dto.phoneNumber || undefined,
-      status:
-        dto.status ||
-        (dto.isActive === false || roles.length === 0
-          ? 'PENDING_APPROVAL'
-          : 'ACTIVE'),
-      passwordHash,
+      status: identityStatus,
     });
+    await this.staffProfileRepository.save(staffProfile);
 
-    const saved = await this.userRepository.save(user);
-    return this.findUserById(saved.id);
+    return this.findUserById(savedIdentity.id);
   }
 
   async updateUser(
     id: string,
     dto: UpdateUserDto,
     requester?: any,
-  ): Promise<User> {
-    const user = await this.userRepository.findOne({
+  ): Promise<FormattedUserResponse> {
+    const identity = await this.identityRepository.findOne({
       where: { id },
-      relations: { role: { permissions: true }, organization: true },
+      relations: {
+        staffProfile: {
+          role: { permissions: true },
+          organization: true,
+        },
+      },
     });
-    if (!user) {
+    if (!identity) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
     const isSuperAdmin = this.isRequesterSuperAdmin(requester);
@@ -532,9 +599,11 @@ export class AccessControlService {
       (requester.id === id ||
         requester.sub === id ||
         (requester.email &&
-          requester.email.toLowerCase() === user.email.toLowerCase()));
+          requester.email.toLowerCase() === identity.email.toLowerCase()));
 
-    const targetRoles = (user as any).roles || (user.role ? [user.role] : []);
+    let staffProfile = identity.staffProfile;
+    const targetRoles =
+      (staffProfile as any)?.roles || (staffProfile?.role ? [staffProfile.role] : []);
     const isTargetSuperAdmin = targetRoles.some(
       (r: any) => r.name === 'SUPER_ADMIN',
     );
@@ -563,17 +632,13 @@ export class AccessControlService {
       }
     }
 
-    if (dto.name !== undefined) user.name = dto.name;
-    if (dto.position !== undefined) user.position = dto.position;
-    if (dto.staffId !== undefined) user.staffId = dto.staffId;
-    if (dto.phoneNumber !== undefined) user.phoneNumber = dto.phoneNumber;
-    if (dto.avatarUrl !== undefined) user.avatarUrl = dto.avatarUrl;
+    if (dto.name !== undefined) identity.name = dto.name;
     if (
       dto.email !== undefined &&
-      dto.email.toLowerCase().trim() !== user.email
+      dto.email.toLowerCase().trim() !== identity.email
     ) {
       const targetEmail = dto.email.toLowerCase().trim();
-      const existing = await this.userRepository.findOne({
+      const existing = await this.identityRepository.findOne({
         where: { email: targetEmail },
       });
       if (existing && existing.id !== id) {
@@ -581,47 +646,62 @@ export class AccessControlService {
           `Email '${dto.email}' is already in use.`,
         );
       }
-      user.email = targetEmail;
+      identity.email = targetEmail;
     }
     if (dto.telegramChatId !== undefined)
-      user.telegramChatId = dto.telegramChatId;
+      identity.telegramChatId = dto.telegramChatId;
     if (dto.telegramUsername !== undefined)
-      user.telegramUsername = dto.telegramUsername;
+      identity.telegramUsername = dto.telegramUsername;
     if (dto.teamTelegramChatId !== undefined && !dto.telegramChatId) {
-      user.telegramChatId = dto.teamTelegramChatId;
+      identity.telegramChatId = dto.teamTelegramChatId;
     }
+    if (dto.status !== undefined)
+      identity.status = dto.status === 'DEACTIVATED' ? 'INACTIVE' : dto.status;
+
+    if (dto.password && dto.password.trim()) {
+      identity.passwordHash = await hashPassword(dto.password.trim());
+    } else if (dto.passwordHash) {
+      identity.passwordHash = dto.passwordHash;
+    }
+
+    // Only administrators or superadmins can modify account active status and roles
+    if (!isSelf || isSuperAdmin) {
+      if (dto.isActive !== undefined) {
+        identity.status = dto.isActive ? 'ACTIVE' : 'INACTIVE';
+      }
+    }
+
+    // Update staff profile fields
+    if (!staffProfile) {
+      staffProfile = this.staffProfileRepository.create({
+        identityId: identity.id,
+        identity: identity,
+        status: identity.status,
+      });
+    }
+
+    if (dto.position !== undefined) staffProfile.position = dto.position;
+    if (dto.staffId !== undefined) staffProfile.staffId = dto.staffId;
+    if (dto.phoneNumber !== undefined) staffProfile.phoneNumber = dto.phoneNumber;
+
     if (dto.organizationId !== undefined) {
       const targetOrgId =
         dto.organizationId && dto.organizationId.trim()
           ? dto.organizationId.trim()
           : null;
-      user.organizationId = targetOrgId;
+      staffProfile.organizationId = targetOrgId as any;
       if (targetOrgId) {
-        const orgRepo = this.userRepository.manager.getRepository(Organization);
+        const orgRepo =
+          this.identityRepository.manager.getRepository(Organization);
         const org = await orgRepo.findOne({ where: { id: targetOrgId } });
         if (!org) {
           throw new BadRequestException(
             `Organization with ID '${targetOrgId}' not found.`,
           );
         }
-        user.organization = org;
+        staffProfile.organization = org;
       } else {
-        user.organization = null;
-      }
-    }
-    if (dto.status !== undefined)
-      user.status = dto.status === 'DEACTIVATED' ? 'INACTIVE' : dto.status;
-
-    if (dto.password && dto.password.trim()) {
-      user.passwordHash = await hashPassword(dto.password.trim());
-    } else if (dto.passwordHash) {
-      user.passwordHash = dto.passwordHash;
-    }
-
-    // Only administrators or superadmins can modify account active status and roles
-    if (!isSelf || isSuperAdmin) {
-      if (dto.isActive !== undefined) {
-        user.status = dto.isActive ? 'ACTIVE' : 'INACTIVE';
+        staffProfile.organization = null as any;
       }
     }
 
@@ -647,22 +727,24 @@ export class AccessControlService {
           'Only Super Administrators can assign the Super Admin role',
         );
       }
-      user.role = newRoles[0];
-      user.roleId = newRoles[0]?.id;
-      if (newRoles.length > 0 && user.status === 'PENDING_APPROVAL') {
-        user.status = 'ACTIVE';
+      staffProfile.role = newRoles[0];
+      staffProfile.roleId = newRoles[0]?.id;
+      if (newRoles.length > 0 && identity.status === 'PENDING_APPROVAL') {
+        identity.status = 'ACTIVE';
+        staffProfile.status = 'ACTIVE';
       }
     }
 
-    const saved = await this.userRepository.save(user);
-    return this.findUserById(saved.id);
+    await this.identityRepository.save(identity);
+    await this.staffProfileRepository.save(staffProfile);
+    return this.findUserById(identity.id);
   }
 
   async approveUser(
     id: string,
     roleName = 'MA_DEVELOPER',
     requester?: any,
-  ): Promise<User> {
+  ): Promise<FormattedUserResponse> {
     const isSuperAdmin = this.isRequesterSuperAdmin(requester);
     if (!isSuperAdmin) {
       throw new ForbiddenException(
@@ -685,15 +767,40 @@ export class AccessControlService {
       throw new BadRequestException(`Role '${targetRoleName}' does not exist.`);
     }
 
-    user.role = role;
-    user.roleId = role.id;
-    user.status = 'ACTIVE';
+    const identity = await this.identityRepository.findOne({
+      where: { id },
+      relations: { staffProfile: true },
+    });
+    if (!identity) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
 
-    const saved = await this.userRepository.save(user);
-    return this.findUserById(saved.id);
+    identity.status = 'ACTIVE';
+    await this.identityRepository.save(identity);
+
+    let staffProfile = identity.staffProfile;
+    if (!staffProfile) {
+      staffProfile = this.staffProfileRepository.create({
+        identityId: identity.id,
+        identity: identity,
+        roleId: role.id,
+        role: role,
+        status: 'ACTIVE',
+      });
+    } else {
+      staffProfile.role = role;
+      staffProfile.roleId = role.id;
+      staffProfile.status = 'ACTIVE';
+    }
+    await this.staffProfileRepository.save(staffProfile);
+
+    return this.findUserById(identity.id);
   }
 
-  async manuallyVerifyEmail(id: string, requester?: any): Promise<User> {
+  async manuallyVerifyEmail(
+    id: string,
+    requester?: any,
+  ): Promise<FormattedUserResponse> {
     const isSuperAdmin = this.isRequesterSuperAdmin(requester);
     if (!isSuperAdmin) {
       throw new ForbiddenException(
@@ -701,21 +808,29 @@ export class AccessControlService {
       );
     }
 
-    const user = await this.findUserById(id);
-    if (user.status !== 'PENDING_EMAIL_VERIFICATION') {
+    const identity = await this.identityRepository.findOne({
+      where: { id },
+      relations: { staffProfile: { role: true } },
+    });
+    if (!identity) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    if (identity.status !== 'PENDING_EMAIL_VERIFICATION') {
       throw new BadRequestException(
-        `User is not pending email verification (current status: ${user.status}).`,
+        `User is not pending email verification (current status: ${identity.status}).`,
       );
     }
 
-    const isPrivileged =
-      user.role?.name === 'SUPER_ADMIN' || user.role?.name === 'ADMIN';
+    const roleName = identity.staffProfile?.role?.name;
+    const isPrivileged = roleName === 'SUPER_ADMIN' || roleName === 'ADMIN';
     const nextStatus = isPrivileged ? 'ACTIVE' : 'PENDING_APPROVAL';
-    user.status = nextStatus;
+    identity.status = nextStatus;
+    identity.emailVerifiedAt = new Date();
 
-    const saved = await this.userRepository.save(user);
+    const saved = await this.identityRepository.save(identity);
     this.logger.log(
-      `[ADMIN] SuperAdmin manually verified email for ${user.email} (id: ${user.id}). Status -> ${nextStatus}`,
+      `[ADMIN] SuperAdmin manually verified email for ${saved.email} (id: ${saved.id}). Status -> ${nextStatus}`,
     );
     return this.findUserById(saved.id);
   }
@@ -724,8 +839,17 @@ export class AccessControlService {
     id: string,
     requester?: any,
   ): Promise<{ success: boolean; message: string }> {
-    const user = await this.findUserById(id);
-    const targetRoles = (user as any).roles || (user.role ? [user.role] : []);
+    const identity = await this.identityRepository.findOne({
+      where: { id },
+      relations: { staffProfile: { role: true } },
+    });
+    if (!identity) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    const targetRoles =
+      (identity.staffProfile as any)?.roles ||
+      (identity.staffProfile?.role ? [identity.staffProfile.role] : []);
     const isTargetSuperAdmin = targetRoles.some(
       (r: any) => r.name === 'SUPER_ADMIN',
     );
@@ -742,7 +866,7 @@ export class AccessControlService {
       (requester.id === id ||
         requester.sub === id ||
         (requester.email &&
-          requester.email.toLowerCase() === user.email.toLowerCase()));
+          requester.email.toLowerCase() === identity.email.toLowerCase()));
 
     if (isSelf) {
       throw new ForbiddenException(
@@ -750,16 +874,28 @@ export class AccessControlService {
       );
     }
 
-    await this.userRepository.remove(user);
+    await this.identityRepository.remove(identity);
     return {
       success: true,
-      message: `User ${user.name} removed successfully.`,
+      message: `User ${identity.name} removed successfully.`,
     };
   }
 
-  async updateUserStatus(id: string, status: string): Promise<User> {
-    const user = await this.findUserById(id);
-    const targetRoles = (user as any).roles || (user.role ? [user.role] : []);
+  async updateUserStatus(
+    id: string,
+    status: string,
+  ): Promise<FormattedUserResponse> {
+    const identity = await this.identityRepository.findOne({
+      where: { id },
+      relations: { staffProfile: { role: true } },
+    });
+    if (!identity) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    const targetRoles =
+      (identity.staffProfile as any)?.roles ||
+      (identity.staffProfile?.role ? [identity.staffProfile.role] : []);
     const isTargetSuperAdmin = targetRoles.some(
       (r: any) => r.name === 'SUPER_ADMIN',
     );
@@ -775,8 +911,8 @@ export class AccessControlService {
       );
     }
 
-    user.status = status;
-    const saved = await this.userRepository.save(user);
+    identity.status = status;
+    const saved = await this.identityRepository.save(identity);
     return this.findUserById(saved.id);
   }
 
@@ -791,7 +927,7 @@ export class AccessControlService {
     const qb = this.roleRepository
       .createQueryBuilder('role')
       .leftJoinAndSelect('role.permissions', 'permission')
-      .leftJoinAndSelect('role.users', 'user');
+      .leftJoinAndSelect('role.staffProfiles', 'staffProfile');
 
     if (query.isActive !== undefined) {
       qb.andWhere('role.isActive = :isActive', { isActive: query.isActive });
@@ -824,7 +960,7 @@ export class AccessControlService {
       name: r.name,
       description: r.description,
       isActive: r.isActive,
-      userCount: r.users?.length || 0,
+      userCount: (r as any).staffProfiles?.length || 0,
       permissions: r.permissions?.map((p) => p.name) || [],
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,
@@ -836,7 +972,7 @@ export class AccessControlService {
   async findRoleById(id: string): Promise<Role> {
     const role = await this.roleRepository.findOne({
       where: { id },
-      relations: { permissions: true, users: true },
+      relations: { permissions: true, staffProfiles: true },
     });
     if (!role) {
       throw new NotFoundException(`Role with ID ${id} not found`);
@@ -903,7 +1039,7 @@ export class AccessControlService {
       );
     }
 
-    const assignedUsersCount = await this.userRepository.count({
+    const assignedUsersCount = await this.staffProfileRepository.count({
       where: { roleId: id },
     });
     if (assignedUsersCount > 0) {
@@ -914,11 +1050,6 @@ export class AccessControlService {
 
     try {
       await this.roleRepository.manager.transaction(async (manager) => {
-        // Clean up legacy user_roles join table if it exists
-        await manager
-          .query(`DELETE FROM "user_roles" WHERE "roleId" = $1`, [id])
-          .catch(() => {});
-
         // Clean up role_permissions join table
         await manager
           .query(`DELETE FROM "role_permissions" WHERE "roleId" = $1`, [id])
@@ -948,9 +1079,12 @@ export class AccessControlService {
     userId: string,
     file: Express.Multer.File,
     currentUser?: any,
-  ): Promise<User> {
-    const user = await this.findUserById(userId);
-    if (!user) {
+  ): Promise<FormattedUserResponse> {
+    const identity = await this.identityRepository.findOne({
+      where: { id: userId },
+      relations: { staffProfile: { role: true, organization: true } },
+    });
+    if (!identity) {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
@@ -959,36 +1093,38 @@ export class AccessControlService {
     }
 
     // Clean up previous avatar if it exists
-    if (user.avatarUrl) {
-      await this.storageService.deleteBackofficeUserAvatar(user.avatarUrl);
+    if (identity.avatarKey) {
+      await this.storageService.deleteBackofficeUserAvatar(identity.avatarKey);
     }
 
-    const { url } = await this.storageService.uploadBackofficeUserAvatar(
+    const { key, url } = await this.storageService.uploadBackofficeUserAvatar(
       userId,
       file,
     );
-    user.avatarUrl = url;
-    const saved = await this.userRepository.save(user);
+    identity.avatarKey = key || url;
+    identity.avatarUpdatedAt = new Date();
+    const saved = await this.identityRepository.save(identity);
     return formatUserResponse(saved);
   }
 
-  async deleteUserAvatar(userId: string, currentUser?: any): Promise<User> {
-    const user = await this.findUserById(userId);
-    if (!user) {
+  async deleteUserAvatar(
+    userId: string,
+    currentUser?: any,
+  ): Promise<FormattedUserResponse> {
+    const identity = await this.identityRepository.findOne({
+      where: { id: userId },
+      relations: { staffProfile: { role: true, organization: true } },
+    });
+    if (!identity) {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
-    if (user.avatarUrl && this.storageService) {
-      await this.storageService.deleteBackofficeUserAvatar(user.avatarUrl);
-      user.avatarUrl = null as any;
-      const saved = await this.userRepository.save(user);
-      return formatUserResponse(saved);
-    } else if (user.avatarUrl) {
-      user.avatarUrl = null as any;
-      const saved = await this.userRepository.save(user);
-      return formatUserResponse(saved);
+    if (identity.avatarKey && this.storageService) {
+      await this.storageService.deleteBackofficeUserAvatar(identity.avatarKey);
     }
-
-    return formatUserResponse(user);
+    identity.avatarKey = null;
+    identity.avatarUpdatedAt = new Date();
+    const saved = await this.identityRepository.save(identity);
+    return formatUserResponse(saved);
   }
 }

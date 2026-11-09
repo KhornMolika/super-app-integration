@@ -1,11 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
-  EndUser,
-  EndUserHonorific,
-  EndUserStatus,
-} from './entities/end-user.entity';
+  Identity,
+  IdentityHonorific,
+  IdentityStatus,
+} from '../identities/entities/identity.entity';
+import { StaffProfile } from '../staff/entities/staff-profile.entity';
+import { ConsumerProfile } from '../consumers/entities/consumer-profile.entity';
 import { UpdateProfileDto } from './dto/profile.dto';
 
 export interface ProfileResponse {
@@ -14,8 +16,8 @@ export interface ProfileResponse {
   name: string;
   emailVerified: boolean;
   createdAt: Date;
-  status: EndUserStatus;
-  honorific: EndUserHonorific | null;
+  status: any;
+  honorific: string | null;
   position: string | null;
   organizationUnit: string | null;
   staffId: string | null;
@@ -23,19 +25,24 @@ export interface ProfileResponse {
   avatarVersion: string | null;
 }
 
-/** The ONLY projection of EndUser sent to the app (no hashes, secrets or object keys). */
-export function toProfile(user: EndUser): ProfileResponse {
+/** The ONLY projection of Identity sent to the mobile app (no hashes, secrets or object keys). */
+export function toProfile(user: Identity): ProfileResponse {
+  const staffProfile = user.staffProfile;
   return {
     id: user.id,
     email: user.email,
     name: user.name,
     emailVerified: !!user.emailVerifiedAt,
     createdAt: user.createdAt,
-    status: user.status,
+    status: user.status as any,
     honorific: user.honorific ?? null,
-    position: user.position ?? null,
-    organizationUnit: user.organizationUnit ?? null,
-    staffId: user.staffId ?? null,
+    position: staffProfile?.position ?? (user as any).position ?? null,
+    organizationUnit:
+      staffProfile?.organization?.name ??
+      (staffProfile as any)?.organizationUnit ??
+      (user as any).organizationUnit ??
+      null,
+    staffId: staffProfile?.staffId ?? (user as any).staffId ?? null,
     avatarVersion:
       user.avatarKey && user.avatarUpdatedAt
         ? new Date(user.avatarUpdatedAt).toISOString()
@@ -43,8 +50,7 @@ export function toProfile(user: EndUser): ProfileResponse {
   };
 }
 
-const NULLABLE_FIELDS = [
-  'honorific',
+const NULLABLE_STAFF_FIELDS = [
   'position',
   'organizationUnit',
   'staffId',
@@ -53,11 +59,20 @@ const NULLABLE_FIELDS = [
 @Injectable()
 export class MobileProfileService {
   constructor(
-    @InjectRepository(EndUser) private readonly users: Repository<EndUser>,
+    @InjectRepository(Identity) private readonly users: Repository<Identity>,
+    @Optional()
+    @InjectRepository(StaffProfile)
+    private readonly staffProfiles?: Repository<StaffProfile>,
   ) {}
 
-  async getUser(userId: string): Promise<EndUser> {
-    const user = await this.users.findOne({ where: { id: userId } });
+  async getUser(userId: string): Promise<Identity> {
+    const user = await this.users.findOne({
+      where: { id: userId },
+      relations: {
+        staffProfile: { organization: true },
+        consumerProfile: true,
+      },
+    });
     if (!user) throw new NotFoundException();
     return user;
   }
@@ -71,16 +86,49 @@ export class MobileProfileService {
     dto: UpdateProfileDto,
   ): Promise<ProfileResponse> {
     const user = await this.getUser(userId);
-    const patch: Partial<EndUser> = {};
-    if (typeof dto.name === 'string') patch.name = dto.name;
-    for (const key of NULLABLE_FIELDS) {
-      if (dto[key] !== undefined)
-        (patch as Record<string, unknown>)[key] = dto[key];
+    const identityPatch: Partial<Identity> = {};
+
+    if (typeof dto.name === 'string') {
+      identityPatch.name = dto.name;
     }
-    if (Object.keys(patch).length) {
-      await this.users.update({ id: userId }, patch);
-      Object.assign(user, patch);
+    if (dto.honorific !== undefined) {
+      identityPatch.honorific = dto.honorific;
     }
+    if (dto.position !== undefined) {
+      (user as any).position = dto.position;
+    }
+    if (dto.organizationUnit !== undefined) {
+      (user as any).organizationUnit = dto.organizationUnit;
+    }
+    if (dto.staffId !== undefined) {
+      (user as any).staffId = dto.staffId;
+    }
+
+    if (Object.keys(identityPatch).length > 0) {
+      await this.users.update({ id: userId }, identityPatch);
+      Object.assign(user, identityPatch);
+    }
+
+    if (this.staffProfiles) {
+      let staffProfile = user.staffProfile;
+      if (!staffProfile) {
+        staffProfile = this.staffProfiles.create({
+          identityId: userId,
+          identity: user,
+          position: dto.position ?? null,
+          staffId: dto.staffId ?? null,
+          status: 'ACTIVE',
+        });
+      } else {
+        if (dto.position !== undefined) staffProfile.position = dto.position;
+        if (dto.staffId !== undefined) staffProfile.staffId = dto.staffId;
+      }
+      try {
+        await this.staffProfiles.save(staffProfile);
+        user.staffProfile = staffProfile;
+      } catch {}
+    }
+
     return toProfile(user);
   }
 }

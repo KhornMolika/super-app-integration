@@ -2,7 +2,8 @@ import { Injectable, OnApplicationBootstrap, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
-import { User } from './entities/user.entity';
+import { Identity } from '../identities/entities/identity.entity';
+import { StaffProfile } from '../staff/entities/staff-profile.entity';
 import { Role } from './entities/role.entity';
 import { Permission } from './entities/permission.entity';
 import { AccessToken, DeveloperToken } from './entities/access-token.entity';
@@ -26,7 +27,8 @@ export class SeederService implements OnApplicationBootstrap {
 
   constructor(
     private readonly dataSource: DataSource,
-    @InjectRepository(User) private userRepository: Repository<User>,
+    @InjectRepository(Identity) private identityRepository: Repository<Identity>,
+    @InjectRepository(StaffProfile) private staffProfileRepository: Repository<StaffProfile>,
     @InjectRepository(Role) private roleRepository: Repository<Role>,
     @InjectRepository(Permission)
     private permissionRepository: Repository<Permission>,
@@ -144,6 +146,16 @@ export class SeederService implements OnApplicationBootstrap {
           'miniapp:submit',
           'permission_proposal:read',
           'permission:read',
+          'super_app:read',
+          'organization:read',
+        ],
+      },
+      {
+        name: 'STAFF',
+        description:
+          'General FSA and sector regulatory personnel for mobile staff services (HR, attendance, announcements)',
+        perms: [
+          'miniapp:read',
           'super_app:read',
           'organization:read',
         ],
@@ -449,7 +461,7 @@ export class SeederService implements OnApplicationBootstrap {
       });
       if (mockFintechCenter) {
         if (ftcOrg && ftcOrg.id !== mockFintechCenter.id) {
-          await this.userRepository.update(
+          await this.staffProfileRepository.update(
             { organizationId: mockFintechCenter.id },
             { organizationId: ftcOrg.id },
           );
@@ -495,74 +507,101 @@ export class SeederService implements OnApplicationBootstrap {
       },
     ];
 
-    let primarySuperAdmin: User | null = null;
+    let primarySuperAdmin: Identity | null = null;
 
     for (const acc of officialAccounts) {
       const email = acc.email.toLowerCase().trim();
-      let user = await this.userRepository.findOne({
+      let identity = await this.identityRepository.findOne({
         where: { email },
-        relations: { role: true, organization: true },
+        relations: { staffProfile: { role: true, organization: true } },
       });
 
-      if (!user) {
+      if (!identity) {
         if (!defaultPasswordHash) {
           throw new Error(
             'SUPERADMIN_PASSWORD environment variable is required to bootstrap official accounts. Please configure it in Kubernetes Secret "super-app-backend-secret".',
           );
         }
-        user = this.userRepository.create({
+        identity = this.identityRepository.create({
           email,
           name: acc.name,
-          roleId: acc.role.id,
-          role: acc.role,
-          organizationId: ftcOrg?.id,
-          organization: ftcOrg,
           status: 'ACTIVE',
           passwordHash: defaultPasswordHash,
         });
-        user = await this.userRepository.save(user);
+        identity = await this.identityRepository.save(identity);
+
+        const staffProfile = this.staffProfileRepository.create({
+          identityId: identity.id,
+          identity,
+          roleId: acc.role.id,
+          role: acc.role,
+          organizationId: ftcOrg?.id,
+          organization: ftcOrg || undefined,
+          status: 'ACTIVE',
+        });
+        await this.staffProfileRepository.save(staffProfile);
         this.logger.log(
           `Created official account: ${email} (${acc.role.name})`,
         );
       } else {
         let changed = false;
-        if (user.roleId !== acc.role.id) {
-          user.roleId = acc.role.id;
-          user.role = acc.role;
-          changed = true;
-        }
-        if (ftcOrg && user.organizationId !== ftcOrg.id) {
-          user.organizationId = ftcOrg.id;
-          user.organization = ftcOrg;
-          changed = true;
-        }
-        if (!user.passwordHash) {
+        if (!identity.passwordHash) {
           if (!defaultPasswordHash) {
             throw new Error(
               `SUPERADMIN_PASSWORD is required to initialize password for official account ${email}. Please configure it in Kubernetes Secret "super-app-backend-secret".`,
             );
           }
-          user.passwordHash = defaultPasswordHash;
+          identity.passwordHash = defaultPasswordHash;
           changed = true;
         }
-        if (user.status !== 'ACTIVE') {
-          user.status = 'ACTIVE';
+        if (identity.status !== 'ACTIVE') {
+          identity.status = 'ACTIVE';
           changed = true;
         }
-        if (user.name !== acc.name) {
-          user.name = acc.name;
+        if (identity.name !== acc.name) {
+          identity.name = acc.name;
           changed = true;
         }
         if (changed) {
-          user = await this.userRepository.save(user);
-          this.logger.log(
-            `Synchronized credentials and role for official account: ${email}`,
-          );
+          identity = await this.identityRepository.save(identity);
+        }
+
+        let staffProfile = identity.staffProfile;
+        if (!staffProfile) {
+          staffProfile = this.staffProfileRepository.create({
+            identityId: identity.id,
+            identity,
+            roleId: acc.role.id,
+            role: acc.role,
+            organizationId: ftcOrg?.id,
+            organization: ftcOrg || undefined,
+            status: 'ACTIVE',
+          });
+          await this.staffProfileRepository.save(staffProfile);
+          this.logger.log(`Attached staff profile for official account: ${email}`);
+        } else {
+          let spChanged = false;
+          if (staffProfile.roleId !== acc.role.id) {
+            staffProfile.roleId = acc.role.id;
+            staffProfile.role = acc.role;
+            spChanged = true;
+          }
+          if (ftcOrg && staffProfile.organizationId !== ftcOrg.id) {
+            staffProfile.organizationId = ftcOrg.id;
+            staffProfile.organization = ftcOrg;
+            spChanged = true;
+          }
+          if (spChanged) {
+            await this.staffProfileRepository.save(staffProfile);
+            this.logger.log(
+              `Synchronized credentials and role for official account: ${email}`,
+            );
+          }
         }
       }
 
       if (email === 'molikakhorn71@gmail.com') {
-        primarySuperAdmin = user;
+        primarySuperAdmin = identity;
       }
     }
 
@@ -570,6 +609,14 @@ export class SeederService implements OnApplicationBootstrap {
     const officialEmails = officialAccounts.map((a) =>
       a.email.toLowerCase().trim(),
     );
+    if (process.env.NODE_ENV === 'development') {
+      const demoEmail = (
+        process.env.MOBILE_DEMO_USER_EMAIL || 'demo@example.com'
+      )
+        .toLowerCase()
+        .trim();
+      officialEmails.push(demoEmail);
+    }
     await this.purgeMockData(officialEmails);
 
     this.logger.log(
@@ -586,7 +633,7 @@ export class SeederService implements OnApplicationBootstrap {
       await this.dataSource.transaction(async (manager) => {
         // 1. Identify mock accounts using case-insensitive ILIKE, strictly excluding official accounts
         const mockUsers = await manager
-          .createQueryBuilder(User, 'user')
+          .createQueryBuilder(Identity, 'user')
           .where(
             '(user.email ILIKE :govPattern OR user.email ILIKE :examplePattern OR user.email ILIKE :testPattern)',
             {
@@ -706,7 +753,7 @@ export class SeederService implements OnApplicationBootstrap {
         await manager
           .createQueryBuilder()
           .delete()
-          .from(User)
+          .from(Identity)
           .where('id IN (:...mockUserIds)', { mockUserIds })
           .execute();
 

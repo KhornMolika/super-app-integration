@@ -18,8 +18,8 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request, Response } from 'express';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+
+
 import {
   AuthRateLimitGuard,
   AuthRateLimiter,
@@ -42,19 +42,20 @@ import {
   LogoutDto,
   RefreshDto,
   RegisterDto,
+  TokenExchangeDto,
   VerifyEmailDto,
 } from './dto/mobile-auth.dto';
 import { ChangePasswordDto, DeleteAccountDto } from './dto/account.dto';
 import { CatalogQueryDto } from './dto/catalog-query.dto';
 import { UpdateProfileDto } from './dto/profile.dto';
-import { EndUser } from './entities/end-user.entity';
+
 
 @Controller(['mobile', 'api/mobile'])
 export class MobileController {
   constructor(
     private readonly auth: MobileAuthService,
     private readonly catalog: MobileCatalogService,
-    @InjectRepository(EndUser) private readonly users: Repository<EndUser>,
+
     private readonly limiter: AuthRateLimiter,
     private readonly appConfigService: MobileAppConfigService,
     private readonly profiles: MobileProfileService,
@@ -115,6 +116,13 @@ export class MobileController {
   @RateLimit({ scope: 'logout', ipMax: 30 })
   async logout(@Body() dto?: LogoutDto): Promise<void> {
     await this.auth.logout(dto?.refresh_token);
+  }
+
+  @Post('auth/token-exchange')
+  @HttpCode(200)
+  @UseGuards(EndUserAuthGuard)
+  tokenExchange(@Req() req: Request, @Body() dto: TokenExchangeDto) {
+    return this.auth.tokenExchange(req.endUser!.id, dto.miniAppId, dto.scope);
   }
 
   /** Public: force-update rules and legal URLs. Fails open (see sanitizeMobileAppConfig). */

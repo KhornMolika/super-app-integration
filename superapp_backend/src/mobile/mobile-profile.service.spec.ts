@@ -1,27 +1,27 @@
 import { NotFoundException } from '@nestjs/common';
 import { FakeRepo } from './testing/fake-repo';
 import {
-  EndUser,
-  EndUserHonorific,
-  EndUserStatus,
-} from './entities/end-user.entity';
+  Identity,
+  IdentityHonorific,
+  IdentityStatus,
+} from '../identities/entities/identity.entity';
 import { MobileProfileService, toProfile } from './mobile-profile.service';
 
 function seed() {
-  const users = new FakeRepo<EndUser>(['email']);
+  const users = new FakeRepo<Identity>(['email']);
   const user = {
     id: 'u1',
     email: 'jane@example.io',
     name: 'Jane',
     passwordHash: 'scrypt$secret',
     emailVerifiedAt: new Date('2026-01-01'),
-    status: EndUserStatus.ACTIVE,
+    status: IdentityStatus.ACTIVE,
     createdAt: new Date('2026-01-01'),
     avatarKey: 'avatars/u1/a.png',
     avatarUpdatedAt: new Date('2026-10-02T09:41:00.000Z'),
-  } as unknown as EndUser;
+  } as unknown as Identity;
   users.rows.push(user);
-  return { users, svc: new MobileProfileService(users as any), user };
+  return { users, svc: new MobileProfileService(users as any, new FakeRepo() as any), user };
 }
 
 describe('toProfile', () => {
@@ -54,7 +54,7 @@ describe('MobileProfileService.updateProfile', () => {
   it('applies only provided fields; null clears; name null is ignored', async () => {
     const { svc, users } = seed();
     await svc.updateProfile('u1', {
-      honorific: EndUserHonorific.MRS,
+      honorific: IdentityHonorific.MRS,
       position: 'Officer',
       staffId: '1870200369',
     });

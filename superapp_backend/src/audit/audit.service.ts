@@ -4,7 +4,7 @@ import { Repository, In, IsNull } from 'typeorm';
 import * as fs from 'fs';
 import * as path from 'path';
 import { AuditLog } from './entities/audit-log.entity';
-import { User } from '../access-control/entities/user.entity';
+import { Identity } from '../identities/entities/identity.entity';
 import { QueryAuditLogDto } from './dto/query-audit-log.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 import { createPaginatedResponse } from '../common/utils/pagination.util';
@@ -19,8 +19,8 @@ export class AuditService implements OnApplicationBootstrap {
     @InjectRepository(AuditLog)
     private auditLogRepository: Repository<AuditLog>,
 
-    @InjectRepository(User)
-    private userRepository: Repository<User>,
+    @InjectRepository(Identity)
+    private userRepository: Repository<Identity>,
   ) {}
 
   async onApplicationBootstrap() {
@@ -51,7 +51,7 @@ export class AuditService implements OnApplicationBootstrap {
         actorIds.length > 0
           ? await this.userRepository.find({
               where: { id: In(actorIds) },
-              relations: { role: true },
+              relations: { staffProfile: { role: true } },
             })
           : [];
 
@@ -68,7 +68,7 @@ export class AuditService implements OnApplicationBootstrap {
           const user = userMap.get(log.actorId)!;
           log.actorName = user.name;
           log.actorEmail = user.email;
-          log.actorRole = user.role?.name || log.actorRole;
+          log.actorRole = user.staffProfile?.role?.name || log.actorRole;
           changed = true;
         } else if (log.newValue?.owner?.name) {
           log.actorName = log.newValue.owner.name;
@@ -182,12 +182,12 @@ export class AuditService implements OnApplicationBootstrap {
         try {
           const u = await this.userRepository.findOne({
             where: { id: data.actorId },
-            relations: { role: true },
+            relations: { staffProfile: { role: true } },
           });
           if (u) {
             data.actorName = u.name;
             data.actorEmail = u.email;
-            data.actorRole = u.role?.name || data.actorRole;
+            data.actorRole = u.staffProfile?.role?.name || data.actorRole;
           }
         } catch (_) {}
       }
@@ -284,7 +284,7 @@ export class AuditService implements OnApplicationBootstrap {
       try {
         const users = await this.userRepository.find({
           where: { id: In(unresolvedActorIds) },
-          relations: { role: true },
+          relations: { staffProfile: { role: true } },
         });
         const uMap = new Map(users.map((u) => [u.id, u]));
 
@@ -293,7 +293,7 @@ export class AuditService implements OnApplicationBootstrap {
             const u = uMap.get(item.actorId)!;
             item.actorName = u.name;
             item.actorEmail = u.email;
-            item.actorRole = u.role?.name || item.actorRole;
+            item.actorRole = u.staffProfile?.role?.name || item.actorRole;
           } else if (!item.actorName && item.newValue?.owner?.name) {
             item.actorName = item.newValue.owner.name;
             item.actorEmail = item.newValue.owner.email || item.actorEmail;

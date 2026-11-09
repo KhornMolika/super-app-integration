@@ -63,6 +63,19 @@ export class LogoutDto {
   refresh_token?: string;
 }
 
+export class TokenExchangeDto {
+  @Transform(trim)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(255)
+  miniAppId!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  scope?: string;
+}
+
 export class RefreshDto {
   @IsString()
   @IsNotEmpty()

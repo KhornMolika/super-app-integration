@@ -3,10 +3,15 @@ import {
   Logger,
   OnModuleDestroy,
   OnModuleInit,
+  Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LessThanOrEqual, Repository } from 'typeorm';
-import { EndUser, EndUserStatus } from './entities/end-user.entity';
+import {
+  Identity,
+  IdentityStatus,
+} from '../identities/entities/identity.entity';
+import { ConsumerProfile } from '../consumers/entities/consumer-profile.entity';
 import { MobileAvatarService } from './mobile-avatar.service';
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -24,8 +29,11 @@ export class AccountPurgeService implements OnModuleInit, OnModuleDestroy {
   private running = false;
 
   constructor(
-    @InjectRepository(EndUser) private readonly users: Repository<EndUser>,
+    @InjectRepository(Identity) private readonly users: Repository<Identity>,
     private readonly avatars: MobileAvatarService,
+    @Optional()
+    @InjectRepository(ConsumerProfile)
+    private readonly consumerProfiles?: Repository<ConsumerProfile>,
   ) {}
 
   onModuleInit(): void {
@@ -58,17 +66,16 @@ export class AccountPurgeService implements OnModuleInit, OnModuleDestroy {
   async purgeDue(now = new Date(), batch = PURGE_BATCH_SIZE): Promise<number> {
     const due = await this.users.find({
       where: {
-        status: EndUserStatus.PENDING_DELETION,
+        status: IdentityStatus.PENDING_DELETION,
         purgeAfter: LessThanOrEqual(now),
       },
       take: batch,
     });
     let purged = 0;
     for (const user of due) {
-      // Guarded by status: a user who restored meanwhile is not deleted.
       const res = await this.users.delete({
         id: user.id,
-        status: EndUserStatus.PENDING_DELETION,
+        status: IdentityStatus.PENDING_DELETION,
       });
       if (!res.affected) continue;
       purged += res.affected;

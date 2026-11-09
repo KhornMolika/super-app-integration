@@ -5,7 +5,8 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { AuthService } from '../src/auth/auth.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { User } from '../src/access-control/entities/user.entity';
+import { Identity } from '../src/identities/entities/identity.entity';
+import { StaffProfile } from '../src/staff/entities/staff-profile.entity';
 import { Role } from '../src/access-control/entities/role.entity';
 import { Organization } from '../src/organizations/entities/organization.entity';
 import { MiniApp } from '../src/miniapps/entities/miniapp.entity';
@@ -15,7 +16,8 @@ import { hashPassword } from '../src/common/utils/password.util';
 describe('Phase 6: Tasks 6.2, 6.3 & 6.4 Governance & Isolation Verification', () => {
   let app: INestApplication;
   let authService: AuthService;
-  let userRepo: Repository<User>;
+  let identityRepo: Repository<Identity>;
+  let staffProfileRepo: Repository<StaffProfile>;
   let roleRepo: Repository<Role>;
   let orgRepo: Repository<Organization>;
   let miniAppRepo: Repository<MiniApp>;
@@ -25,13 +27,13 @@ describe('Phase 6: Tasks 6.2, 6.3 & 6.4 Governance & Isolation Verification', ()
   let devRole: Role;
 
   let leadDevToken: string;
-  let leadDevUser: User;
+  let leadDevUser: Identity;
 
   let teammateToken: string;
-  let teammateUser: User;
+  let teammateUser: Identity;
 
   let foreignDevToken: string;
-  let foreignDevUser: User;
+  let foreignDevUser: Identity;
 
   let superAdminToken: string;
 
@@ -54,7 +56,8 @@ describe('Phase 6: Tasks 6.2, 6.3 & 6.4 Governance & Isolation Verification', ()
     await app.init();
 
     authService = app.get(AuthService);
-    userRepo = app.get<Repository<User>>(getRepositoryToken(User));
+    identityRepo = app.get<Repository<Identity>>(getRepositoryToken(Identity));
+    staffProfileRepo = app.get<Repository<StaffProfile>>(getRepositoryToken(StaffProfile));
     roleRepo = app.get<Repository<Role>>(getRepositoryToken(Role));
     orgRepo = app.get<Repository<Organization>>(getRepositoryToken(Organization));
     miniAppRepo = app.get<Repository<MiniApp>>(getRepositoryToken(MiniApp));
@@ -72,17 +75,19 @@ describe('Phase 6: Tasks 6.2, 6.3 & 6.4 Governance & Isolation Verification', ()
     const superAdminPassword = process.env.SUPERADMIN_PASSWORD || '';
 
     // 1. Lead Developer under FTC
-    leadDevUser = await userRepo.save(
-      userRepo.create({
+    leadDevUser = await identityRepo.save(
+      identityRepo.create({
         email: `lead.dev.${Date.now()}@ftc.gov.kh`,
         name: 'FTC Lead Developer',
-        roleId: devRole.id,
-        role: devRole,
-        organizationId: ftcOrg.id,
-        organization: ftcOrg,
         passwordHash: defaultPwHash,
         status: 'ACTIVE',
-        isActive: true,
+      }),
+    );
+    await staffProfileRepo.save(
+      staffProfileRepo.create({
+        identityId: leadDevUser.id,
+        roleId: devRole.id,
+        organizationId: ftcOrg.id,
       }),
     );
     const leadLogin: any = await authService.login({
@@ -92,17 +97,19 @@ describe('Phase 6: Tasks 6.2, 6.3 & 6.4 Governance & Isolation Verification', ()
     leadDevToken = leadLogin.access_token;
 
     // 2. Teammate Developer under same FTC organization
-    teammateUser = await userRepo.save(
-      userRepo.create({
+    teammateUser = await identityRepo.save(
+      identityRepo.create({
         email: `teammate.${Date.now()}@ftc.gov.kh`,
         name: 'FTC Teammate Developer',
-        roleId: devRole.id,
-        role: devRole,
-        organizationId: ftcOrg.id,
-        organization: ftcOrg,
         passwordHash: defaultPwHash,
         status: 'ACTIVE',
-        isActive: true,
+      }),
+    );
+    await staffProfileRepo.save(
+      staffProfileRepo.create({
+        identityId: teammateUser.id,
+        roleId: devRole.id,
+        organizationId: ftcOrg.id,
       }),
     );
     const teammateLogin: any = await authService.login({
@@ -112,17 +119,19 @@ describe('Phase 6: Tasks 6.2, 6.3 & 6.4 Governance & Isolation Verification', ()
     teammateToken = teammateLogin.access_token;
 
     // 3. Foreign Developer under SERC organization (different agency)
-    foreignDevUser = await userRepo.save(
-      userRepo.create({
+    foreignDevUser = await identityRepo.save(
+      identityRepo.create({
         email: `serc.dev.${Date.now()}@serc.gov.kh`,
         name: 'SERC Agency Developer',
-        roleId: devRole.id,
-        role: devRole,
-        organizationId: sercOrg.id,
-        organization: sercOrg,
         passwordHash: defaultPwHash,
         status: 'ACTIVE',
-        isActive: true,
+      }),
+    );
+    await staffProfileRepo.save(
+      staffProfileRepo.create({
+        identityId: foreignDevUser.id,
+        roleId: devRole.id,
+        organizationId: sercOrg.id,
       }),
     );
     const foreignLogin: any = await authService.login({
@@ -144,9 +153,18 @@ describe('Phase 6: Tasks 6.2, 6.3 & 6.4 Governance & Isolation Verification', ()
     if (testMiniAppId) {
       await miniAppRepo.delete({ id: testMiniAppId }).catch(() => undefined);
     }
-    if (leadDevUser) await userRepo.delete({ id: leadDevUser.id }).catch(() => undefined);
-    if (teammateUser) await userRepo.delete({ id: teammateUser.id }).catch(() => undefined);
-    if (foreignDevUser) await userRepo.delete({ id: foreignDevUser.id }).catch(() => undefined);
+    if (leadDevUser) {
+      await staffProfileRepo.delete({ identityId: leadDevUser.id }).catch(() => undefined);
+      await identityRepo.delete({ id: leadDevUser.id }).catch(() => undefined);
+    }
+    if (teammateUser) {
+      await staffProfileRepo.delete({ identityId: teammateUser.id }).catch(() => undefined);
+      await identityRepo.delete({ id: teammateUser.id }).catch(() => undefined);
+    }
+    if (foreignDevUser) {
+      await staffProfileRepo.delete({ identityId: foreignDevUser.id }).catch(() => undefined);
+      await identityRepo.delete({ id: foreignDevUser.id }).catch(() => undefined);
+    }
     if (app) await app.close();
   });
 

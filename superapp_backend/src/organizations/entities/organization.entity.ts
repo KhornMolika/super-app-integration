@@ -8,7 +8,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { User } from '../../access-control/entities/user.entity';
+import { StaffProfile } from '../../staff/entities/staff-profile.entity';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 
 export enum OrganizationStatus {
@@ -60,8 +60,8 @@ export class Organization {
   })
   status!: OrganizationStatus;
 
-  @OneToMany(() => User, (user) => user.organization)
-  users!: User[];
+  @OneToMany(() => StaffProfile, (sp) => sp.organization)
+  staffProfiles!: StaffProfile[];
 
   @OneToMany(() => MiniApp, (miniApp) => miniApp.organizationRelation)
   miniApps!: MiniApp[];

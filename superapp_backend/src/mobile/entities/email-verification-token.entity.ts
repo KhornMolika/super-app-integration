@@ -7,7 +7,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { EndUser } from './end-user.entity';
+import { Identity } from '../../identities/entities/identity.entity';
 
 /** Only the sha256 of the emailed token is stored. Single use, 24h expiry. */
 @Entity('end_user_email_verification_tokens')
@@ -21,12 +21,12 @@ export class EmailVerificationToken {
   @Column({ type: 'uuid' })
   userId!: string;
 
-  @ManyToOne(() => EndUser, { onDelete: 'CASCADE', nullable: false })
+  @ManyToOne(() => Identity, { onDelete: 'CASCADE', nullable: false })
   @JoinColumn({
     name: 'userId',
     foreignKeyConstraintName: 'FK_end_user_evt_userId',
   })
-  user?: EndUser;
+  user?: Identity;
 
   @Index('IDX_end_user_evt_tokenHash', { unique: true })
   @Column()

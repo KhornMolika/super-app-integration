@@ -1,4 +1,4 @@
-import { EndUser } from './entities/end-user.entity';
+import { Identity } from '../identities/entities/identity.entity';
 
 /** Consecutive failed sign-in attempts before a lockout. */
 export const MAX_FAILED_LOGINS = 5;
@@ -10,9 +10,9 @@ export const LOCKOUT_MS = 15 * 60 * 1000;
  * restarts the count.
  */
 export function failurePatch(
-  user: Pick<EndUser, 'failedLoginCount' | 'lockedUntil'>,
+  user: Pick<Identity, 'failedLoginCount' | 'lockedUntil'>,
   now: number,
-): Pick<EndUser, 'failedLoginCount' | 'lockedUntil'> {
+): Pick<Identity, 'failedLoginCount' | 'lockedUntil'> {
   const failedLoginCount = (user.failedLoginCount ?? 0) + 1;
   if (failedLoginCount >= MAX_FAILED_LOGINS) {
     return { failedLoginCount: 0, lockedUntil: new Date(now + LOCKOUT_MS) };

@@ -174,6 +174,28 @@ export class AuthService implements OnModuleInit {
     };
   }
 
+  signMiniAppToken(
+    payload: Record<string, any>,
+    audience: string,
+    expiresInSeconds = 600,
+  ): string {
+    return this.jwtService.sign(
+      { ...payload, typ: 'miniapp_token' },
+      {
+        privateKey: this.privateKey,
+        algorithm: 'RS256',
+        keyid: this.keyId,
+        issuer: this.issuer,
+        audience,
+        expiresIn: expiresInSeconds,
+      },
+    );
+  }
+
+  verifyMiniAppToken(token: string, audience: string): any {
+    return this.verifyToken(token, { audience, typ: 'miniapp_token' });
+  }
+
   /**
    * Issues Access & Refresh token pair for a verified user
    */
