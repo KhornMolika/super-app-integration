@@ -1,4 +1,5 @@
-import { Module } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module';
+import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { GitIntegrationController } from './git/git-integration.controller';
 import { GitIntegrationService } from './git/git-integration.service';
@@ -37,6 +38,7 @@ import { PubspecInjectorController } from './flutter/pubspec-injector.controller
 @Module({
   imports: [
     ConfigModule,
+    forwardRef(() => AuthModule),
     TypeOrmModule.forFeature([MiniApp, MiniAppIssue, Identity]),
     NotificationsModule,
     AuditModule,

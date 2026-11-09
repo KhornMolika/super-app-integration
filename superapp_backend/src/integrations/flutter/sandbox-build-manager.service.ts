@@ -1,3 +1,7 @@
+import {
+  LOCAL_BUILDS_DISABLED_MESSAGE,
+  localBuildsEnabled,
+} from '../../common/utils/local-workspace.util';
 ﻿import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -187,12 +191,14 @@ export class SandboxBuildManagerService {
     this.message = `Triggering Jenkins SuperApp Web Sandbox pipeline (triggered by ${triggeredBy})...`;
     this.appendLog(`=== Sandbox Build Started by ${triggeredBy} ===`);
 
+    let jenkinsTriggered = false;
     try {
       this.appendLog(
         'Connecting to Jenkins to trigger superapp-sandbox-build...',
       );
       const jenkinsRes =
         await this.jenkinsService.triggerSuperAppSandboxBuild();
+      jenkinsTriggered = !!jenkinsRes.success;
       if (jenkinsRes.success) {
         this.appendLog(`✅ Jenkins pipeline triggered: ${jenkinsRes.message}`);
         this.monitorJenkinsBuild(this.lastBuildStartTime);
@@ -203,6 +209,22 @@ export class SandboxBuildManagerService {
       }
     } catch (err: any) {
       this.appendLog(`[WARN] Failed to trigger Jenkins: ${err.message}`);
+    }
+
+    // The local build-sandbox.ps1 compiles in the live super-app checkout: opt-in only.
+    // Jenkins (triggered above) remains the build path on servers.
+    if (!localBuildsEnabled()) {
+      this.appendLog(`Local sandbox build skipped. ${LOCAL_BUILDS_DISABLED_MESSAGE}`);
+      if (!jenkinsTriggered) {
+        this.state = 'FAILED';
+        this.message = LOCAL_BUILDS_DISABLED_MESSAGE;
+      }
+      return {
+        success: jenkinsTriggered,
+        message: jenkinsTriggered
+          ? 'Jenkins sandbox pipeline triggered (local build disabled on this server).'
+          : LOCAL_BUILDS_DISABLED_MESSAGE,
+      };
     }
 
     const candidates = [

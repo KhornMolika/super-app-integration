@@ -13,7 +13,11 @@ describe('PubspecInjectorService', () => {
   let tempDir: string;
   let tempPubspecPath: string;
 
+  const originalLocalBuilds = process.env.LOCAL_BUILDS_ENABLED;
+
   beforeEach(async () => {
+    // These tests write to an isolated temp workspace, so local writes are enabled here
+    process.env.LOCAL_BUILDS_ENABLED = 'true';
     // Create temporary workspace directory for safe isolated testing
     tempDir = path.join(__dirname, '../../../test-scratch-' + Date.now());
     fs.mkdirSync(tempDir, { recursive: true });
@@ -75,6 +79,8 @@ dev_dependencies:
   });
 
   afterEach(() => {
+    if (originalLocalBuilds === undefined) delete process.env.LOCAL_BUILDS_ENABLED;
+    else process.env.LOCAL_BUILDS_ENABLED = originalLocalBuilds;
     try {
       if (fs.existsSync(tempDir)) {
         fs.rmSync(tempDir, { recursive: true, force: true });
@@ -116,6 +122,32 @@ dev_dependencies:
     expect(updatedContent).toContain('dps_core_package:');
     expect(updatedContent).toContain('hosted:');
     expect(updatedContent).toContain('http://localhost:8081/repository/pub-group');
+  });
+
+  describe('with LOCAL_BUILDS_ENABLED off (the default on servers)', () => {
+    beforeEach(() => {
+      delete process.env.LOCAL_BUILDS_ENABLED;
+    });
+
+    it('never touches pubspec.yaml: inject/remove/sync/restore are skipped, not thrown', async () => {
+      const before = fs.readFileSync(tempPubspecPath, 'utf-8');
+
+      const inject = await service.injectDependency({ packageName: 'evil_pkg', version: '^1.0.0' });
+      const remove = await service.removeDependency('flutter');
+      const sync = await service.syncAllApprovedMiniApps();
+      const restore = service.restoreBackup();
+      await service.regenerateRegistry();
+
+      for (const r of [inject, remove, sync, restore]) expect(r.success).toBe(false);
+      expect(inject.message).toMatch(/LOCAL_BUILDS_ENABLED=true/);
+      expect(fs.readFileSync(tempPubspecPath, 'utf-8')).toBe(before);
+      expect(mockMiniappRepo.find).not.toHaveBeenCalled(); // sync never even read the DB
+    });
+
+    it('does not run a real (non dry-run) flutter pub get', async () => {
+      const res = await service.validateDependencies({ dryRun: false });
+      expect(res.message).toMatch(/LOCAL_BUILDS_ENABLED=true/);
+    });
   });
 
   it('should remove a dependency cleanly and create backup', async () => {

@@ -1,3 +1,7 @@
+import {
+  LOCAL_BUILDS_DISABLED_MESSAGE,
+  localBuildsEnabled,
+} from '../../common/utils/local-workspace.util';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -92,6 +96,10 @@ export class ApkBuildManagerService {
     appName?: string;
     apiBaseUrl?: string;
   }): Promise<{ success: boolean; message: string; apkUrl?: string }> {
+    // Runs `flutter build` in the live super-app checkout: opt-in per machine only
+    if (!localBuildsEnabled()) {
+      return { success: false, message: LOCAL_BUILDS_DISABLED_MESSAGE };
+    }
     const releaseVersion = options.releaseVersion || 'v0.0.1';
     const defaultBuildType =
       process.env.SUPERAPP_TEST_APK_BUILD_MODE || 'release';

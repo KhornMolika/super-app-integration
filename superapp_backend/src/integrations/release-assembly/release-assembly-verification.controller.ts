@@ -16,6 +16,11 @@ import {
   BuildCallbackDto,
 } from './dto/release-assembly-verification.dto';
 import { CallbackTokenGuard } from './callback-token.guard';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RbacGuard } from '../../access-control/guards/rbac.guard';
+import { RequirePermissions } from '../../access-control/decorators/require-permissions.decorator';
+import { LocalBuildsGuard } from '../../common/guards/local-builds.guard';
+
 
 @Controller(['release-assembly', 'api/release-assembly'])
 export class ReleaseAssemblyVerificationController {
@@ -25,6 +30,8 @@ export class ReleaseAssemblyVerificationController {
   ) {}
 
   @Post('verify')
+  @UseGuards(JwtAuthGuard, RbacGuard)
+  @RequirePermissions('super_app:manage')
   @HttpCode(HttpStatus.OK)
   async verify(
     @Body() dto: VerifyAndAssembleReleaseDto,
@@ -33,6 +40,8 @@ export class ReleaseAssemblyVerificationController {
   }
 
   @Post('stage')
+  @UseGuards(JwtAuthGuard, RbacGuard)
+  @RequirePermissions('super_app:manage')
   @HttpCode(HttpStatus.OK)
   async stageUpdate(@Body() body: any) {
     return this.releaseService.handleStageUpdate(body);
@@ -53,6 +62,9 @@ export class ReleaseAssemblyVerificationController {
   }
 
   @Post('compile-apk')
+  // auth and RBAC first, then the local-build switch (409 when disabled)
+  @UseGuards(JwtAuthGuard, RbacGuard, LocalBuildsGuard)
+  @RequirePermissions('super_app:manage')
   @HttpCode(HttpStatus.OK)
   async compileApk(
     @Body()
@@ -72,6 +84,8 @@ export class ReleaseAssemblyVerificationController {
   }
 
   @Get('apk-status')
+  @UseGuards(JwtAuthGuard, RbacGuard)
+  @RequirePermissions('super_app:read')
   getApkStatus() {
     return this.apkBuildManager.getStatus();
   }

@@ -1,4 +1,8 @@
 import {
+  LOCAL_BUILDS_DISABLED_MESSAGE,
+  localBuildsEnabled,
+} from '../../common/utils/local-workspace.util';
+import {
   Injectable,
   Logger,
   BadRequestException,
@@ -180,6 +184,10 @@ export class PubspecInjectorService {
    * Restores pubspec.yaml from pubspec.yaml.bak if available.
    */
   restoreBackup(): { success: boolean; message: string } {
+    if (!localBuildsEnabled()) {
+      this.logger.warn(`Skipped: ${LOCAL_BUILDS_DISABLED_MESSAGE}`);
+      return { success: false, message: LOCAL_BUILDS_DISABLED_MESSAGE };
+    }
     const src = this.getBackupPath();
     const dst = this.getPubspecPath();
     if (!fs.existsSync(src)) {
@@ -203,6 +211,15 @@ export class PubspecInjectorService {
     injectedConfig: any;
     message: string;
   }> {
+    if (!localBuildsEnabled()) {
+      this.logger.warn(`Skipped: ${LOCAL_BUILDS_DISABLED_MESSAGE}`);
+      return {
+        success: false,
+        packageName: dto?.packageName,
+        injectedConfig: null,
+        message: LOCAL_BUILDS_DISABLED_MESSAGE,
+      };
+    }
     const {
       packageName,
       gitUrl,
@@ -368,6 +385,14 @@ export class PubspecInjectorService {
   async injectMiniApp(
     miniApp: MiniApp,
   ): Promise<{ success: boolean; packageName: string; injectedConfig: any }> {
+    if (!localBuildsEnabled()) {
+      this.logger.warn(`Skipped: ${LOCAL_BUILDS_DISABLED_MESSAGE}`);
+      return {
+        success: false,
+        packageName: this.inferCanonicalPackageName(miniApp),
+        injectedConfig: null,
+      };
+    }
     const cfg = miniApp.integrationConfig || {};
     const packageName = this.inferCanonicalPackageName(miniApp);
     const repoUrl =
@@ -439,6 +464,10 @@ export class PubspecInjectorService {
   async removeDependency(
     packageName: string,
   ): Promise<{ success: boolean; message: string }> {
+    if (!localBuildsEnabled()) {
+      this.logger.warn(`Skipped: ${LOCAL_BUILDS_DISABLED_MESSAGE}`);
+      return { success: false, message: LOCAL_BUILDS_DISABLED_MESSAGE };
+    }
     if (!packageName) {
       throw new BadRequestException(
         'Package name is required to remove dependency',
@@ -475,6 +504,15 @@ export class PubspecInjectorService {
     injectedPackages: string[];
     validationResult: any;
   }> {
+    if (!localBuildsEnabled()) {
+      this.logger.warn(`Skipped: ${LOCAL_BUILDS_DISABLED_MESSAGE}`);
+      return {
+        success: false,
+        syncedCount: 0,
+        injectedPackages: [],
+        validationResult: { message: LOCAL_BUILDS_DISABLED_MESSAGE },
+      };
+    }
     this.logger.log(
       'Synchronizing all approved Flutter Package MiniApps into pubspec.yaml...',
     );
@@ -578,6 +616,10 @@ export class PubspecInjectorService {
    * Never throws.
    */
   async regenerateRegistry(): Promise<void> {
+    if (!localBuildsEnabled()) {
+      this.logger.warn(`Skipped: ${LOCAL_BUILDS_DISABLED_MESSAGE}`);
+      return;
+    }
     try {
       const approvedMiniApps = await this.miniappRepository.find({
         where: {
@@ -737,6 +779,18 @@ ${registrations.join('\n\n')}
     const mobileAppDir = this.getMobileAppDir(false);
     const isDryRun = dto.dryRun !== false;
     const command = isDryRun ? 'flutter pub get --dry-run' : 'flutter pub get';
+
+    if (!isDryRun && !localBuildsEnabled()) {
+      return {
+        success: true,
+        dryRun: false,
+        exitCode: 0,
+        stdout: LOCAL_BUILDS_DISABLED_MESSAGE,
+        stderr: '',
+        message: LOCAL_BUILDS_DISABLED_MESSAGE,
+        conflicts: [],
+      };
+    }
 
     if (!mobileAppDir || !fs.existsSync(mobileAppDir)) {
       return {
@@ -993,6 +1047,9 @@ ${registrations.join('\n\n')}
   ): Promise<{ success: boolean; message: string }> {
     if (this.sandboxBuildManager) {
       return this.sandboxBuildManager.triggerBuild(triggeredBy);
+    }
+    if (!localBuildsEnabled()) {
+      return { success: false, message: LOCAL_BUILDS_DISABLED_MESSAGE };
     }
 
     const candidates = [
