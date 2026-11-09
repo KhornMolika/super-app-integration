@@ -7,7 +7,10 @@ import {
   Query,
   UseGuards,
   BadRequestException,
+  Headers,
+  UnauthorizedException,
 } from '@nestjs/common';
+import { timingSafeEqual } from 'crypto';
 import { TelegramService } from './telegram.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import {
@@ -81,7 +84,17 @@ export class TelegramController {
   }
 
   @Post('webhook')
-  async handleWebhook(@Body() update: TelegramUpdate) {
+  async handleWebhook(
+    @Body() update: TelegramUpdate,
+    @Headers('x-telegram-bot-api-secret-token') secretToken?: string,
+  ) {
+    // Telegram echoes the secret_token given to setWebhook in this header. When
+    // TELEGRAM_WEBHOOK_SECRET is configured, reject updates that do not carry it,
+    // so nobody can forge bot commands. Unset = previous (open) behaviour.
+    const expected = process.env.TELEGRAM_WEBHOOK_SECRET?.trim();
+    if (expected && !safeEqual(secretToken ?? '', expected)) {
+      throw new UnauthorizedException('Invalid Telegram webhook secret');
+    }
     return this.telegramService.handleWebhookUpdate(update);
   }
 
@@ -304,4 +317,10 @@ export class TelegramController {
     const userId = req.user?.sub || req.user?.id;
     return this.telegramService.cleanupInactiveGroups(userId);
   }
+}
+
+function safeEqual(a: string, b: string): boolean {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  return ab.length === bb.length && timingSafeEqual(ab, bb);
 }

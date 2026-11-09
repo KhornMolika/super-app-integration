@@ -184,6 +184,8 @@ export class JenkinsService {
       GIT_ACCESS_TOKEN: options.gitAccessToken || '',
       GIT_DEPLOY_KEY: options.deployKey || '',
       CALLBACK_URL: callbackUrl,
+      // Validation results are trusted to mark a scan PASSED: authenticate them
+      CALLBACK_TOKEN: process.env.RELEASE_CALLBACK_TOKEN || '',
       ALLOW_LOCAL: allowLocalStr,
     });
 

@@ -8,7 +8,9 @@ import {
   NotFoundException,
   BadRequestException,
   Optional,
+  UseGuards,
 } from '@nestjs/common';
+import { CallbackTokenGuard } from '../release-assembly/callback-token.guard';
 import { StorageService } from '../../storage/storage.service';
 import {
   detectMalwareFindings,
@@ -71,6 +73,8 @@ export class ValidationCallbackController {
 
   @Post('stage')
   @HttpCode(HttpStatus.OK)
+  // Only Jenkins may report results: an open callback let anyone mark a scan PASSED
+  @UseGuards(CallbackTokenGuard)
   async handleStageUpdate(
     @Body()
     body: {
@@ -144,6 +148,8 @@ export class ValidationCallbackController {
 
   @Post('callback')
   @HttpCode(HttpStatus.OK)
+  // Only Jenkins may report results: an open callback let anyone mark a scan PASSED
+  @UseGuards(CallbackTokenGuard)
   async handleValidationCallback(@Body() dto: ValidationCallbackDto) {
     // Checked here rather than with a class DTO: the global ValidationPipe uses
     // whitelist, which would strip the free-form report fields Jenkins sends.

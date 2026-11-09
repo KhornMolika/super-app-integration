@@ -41,9 +41,9 @@ import { PubspecInjectorController } from './flutter/pubspec-injector.controller
     forwardRef(() => AuthModule),
     TypeOrmModule.forFeature([MiniApp, MiniAppIssue, Identity]),
     NotificationsModule,
-    AuditModule,
+    forwardRef(() => AuditModule),
     CapabilitiesModule,
-    StorageModule,
+    forwardRef(() => StorageModule),
   ],
   controllers: [
     GitIntegrationController,

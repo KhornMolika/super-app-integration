@@ -11,6 +11,7 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CapabilitiesService } from './capabilities.service';
 import { RequirePermissions } from '../access-control/decorators/require-permissions.decorator';
+import { RbacGuard } from '../access-control/guards/rbac.guard';
 import { UpdateCapabilityDefinitionDto } from './dto/update-capability-definition.dto';
 import { QueryCapabilitiesDto } from './dto/query-capabilities.dto';
 
@@ -46,7 +47,7 @@ export class CapabilitiesController {
   }
 
   @Post('sync-gitlab')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RbacGuard)
   @RequirePermissions('permission:manage')
   async syncGitLab() {
     return this.capabilitiesService.syncCapabilitiesFromGitLab();
@@ -57,6 +58,8 @@ export class CapabilitiesController {
    * Triggered by GitLab CI/CD pipeline automated capability extraction job
    */
   @Post('sync')
+  @UseGuards(JwtAuthGuard, RbacGuard)
+  @RequirePermissions('super_app:manage')
   async syncWebhook(@Body() body?: { targetBranch?: string }) {
     return this.capabilitiesService.syncCapabilitiesFromGitLab();
   }
@@ -68,7 +71,7 @@ export class CapabilitiesController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RbacGuard)
   @RequirePermissions('permission:manage')
   async update(
     @Param('id') id: string,

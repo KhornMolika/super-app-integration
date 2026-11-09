@@ -11,11 +11,41 @@ import {
   HttpCode,
   HttpStatus,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { StorageService } from './storage.service';
 import { UpdateLicenseDto, UploadBase64Dto } from './dto/storage.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RbacGuard } from '../access-control/guards/rbac.guard';
+import { RequirePermissions } from '../access-control/decorators/require-permissions.decorator';
+
+/**
+ * The public asset routes (/storage/asset, /logos/*, /mini-app-assets/*, ...)
+ * read from one bucket that also holds partner package sources, SDK uploads,
+ * security reports and end-user avatars. Only images under these prefixes may
+ * be served without authentication.
+ */
+export const PUBLIC_ASSET_PREFIXES = [
+  'miniapps/',
+  'organizations/',
+  'logos/',
+  'platform/',
+  'users/backoffice/',
+  'avatars/', // legacy backoffice-user-media layout
+];
+const PUBLIC_IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'webp', 'svg', 'gif', 'ico']);
+
+export function isPublicAssetKey(key: string): boolean {
+  const normalized = key.replace(/^\/+/, '');
+  if (normalized.split('/').some((seg) => seg === '..')) return false;
+  const ext = normalized.split('?')[0].split('.').pop()?.toLowerCase() ?? '';
+  return (
+    PUBLIC_IMAGE_EXTENSIONS.has(ext) &&
+    PUBLIC_ASSET_PREFIXES.some((prefix) => normalized.startsWith(prefix))
+  );
+}
 
 async function pipeAssetHelper(
   storageService: StorageService,
@@ -30,8 +60,13 @@ async function pipeAssetHelper(
   }
 
   // Use provided bucket or fallback to mini-app-assets
+  // Callers cannot choose arbitrary buckets: only the backoffice media bucket may be
+  // named explicitly; any other value (incl. legacy names) maps to the asset bucket.
+  const defaultBucket = storageService.assetsBucket || 'superapp-storage';
   const targetBucket =
-    rawBucket || storageService.assetsBucket || 'superapp-storage';
+    rawBucket && rawBucket === storageService.backofficeUserMediaBucket
+      ? rawBucket
+      : defaultBucket;
 
   const cleanKey = decodeURIComponent(rawKey)
     .replace(/^https?:\/\/[^\/]+\//, '')
@@ -77,6 +112,7 @@ async function pipeAssetHelper(
 
   for (const b of bucketsToCheck) {
     for (const candidate of candidateKeys) {
+      if (!isPublicAssetKey(candidate)) continue;
       try {
         await storageService.statObject(b, candidate);
         resolvedKey = candidate;
@@ -147,6 +183,7 @@ export class StorageController {
   }
 
   @Get('presign')
+  @UseGuards(JwtAuthGuard)
   async getPresignedUrl(@Query('key') key?: string) {
     if (!key) {
       throw new BadRequestException('Query parameter "key" is required');
@@ -159,11 +196,15 @@ export class StorageController {
   }
 
   @Get('license-status')
+  @UseGuards(JwtAuthGuard, RbacGuard)
+  @RequirePermissions('settings:manage')
   getLicenseStatus() {
     return this.storageService.getLicenseStatus();
   }
 
   @Post('update-license')
+  @UseGuards(JwtAuthGuard, RbacGuard)
+  @RequirePermissions('settings:manage')
   @HttpCode(HttpStatus.OK)
   updateLicense(@Body() body: UpdateLicenseDto) {
     const status = this.storageService.setAistorLicense(body.licenseKey);
@@ -175,6 +216,7 @@ export class StorageController {
   }
 
   @Post('upload')
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('file'))
   async uploadFile(@UploadedFile() file: Express.Multer.File) {
@@ -197,6 +239,7 @@ export class StorageController {
   }
 
   @Post('upload-base64')
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   async uploadBase64(@Body() body: UploadBase64Dto) {
     const url = await this.storageService.uploadBase64(

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MulterModule } from '@nestjs/platform-express';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -24,7 +24,7 @@ import { PubRegistryProxyController } from './pub-registry-proxy.controller';
     TypeOrmModule.forFeature([MiniApp]),
     AuthModule,
     IntegrationsModule,
-    StorageModule,
+    forwardRef(() => StorageModule),
   ],
   controllers: [
     SdkArtifactsController,

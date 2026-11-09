@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MiniappsService } from './miniapps.service';
 import { MiniappsController } from './miniapps.controller';
@@ -45,9 +45,9 @@ import { UrlProbeHelper } from './helpers/url-probe.helper';
     CapabilitiesModule,
     CapabilityProposalsModule,
     SuperAppModule,
-    AuditModule,
+    forwardRef(() => AuditModule),
     IntegrationsModule,
-    StorageModule,
+    forwardRef(() => StorageModule),
     NativeSdkCodegenModule,
     SdkArtifactsModule,
     OrganizationsModule,

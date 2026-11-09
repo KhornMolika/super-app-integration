@@ -24,7 +24,7 @@ import { StorageModule } from '../storage/storage.module';
       Organization,
     ]),
     forwardRef(() => AuthModule),
-    StorageModule,
+    forwardRef(() => StorageModule),
   ],
   controllers: [UsersController, RolesController],
   providers: [AccessControlService, SeederService],

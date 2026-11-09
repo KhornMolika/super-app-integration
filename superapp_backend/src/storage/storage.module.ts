@@ -1,4 +1,5 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module';
 import { StorageService } from './storage.service';
 import {
   StorageController,
@@ -12,6 +13,7 @@ import {
 } from './helpers';
 
 @Module({
+  imports: [forwardRef(() => AuthModule)],
   controllers: [StorageController, PublicAssetProxyController],
   providers: [
     StorageService,

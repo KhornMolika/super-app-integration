@@ -1,5 +1,5 @@
 import { CapabilitiesModule } from '../capabilities/capabilities.module';
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module';
 import { MiniApp } from '../miniapps/entities/miniapp.entity';
@@ -31,7 +31,7 @@ import { PasswordService } from './password.service';
 @Module({
   imports: [
     AuthModule,
-    StorageModule,
+    forwardRef(() => StorageModule),
     CapabilitiesModule,
     TypeOrmModule.forFeature([
       Identity,

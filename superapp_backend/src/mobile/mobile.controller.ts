@@ -15,6 +15,7 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
+  NotFoundException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request, Response } from 'express';
@@ -232,6 +233,11 @@ export class MobileController {
   @Post('auth/dev-reset-limits')
   @HttpCode(200)
   devResetLimits() {
+    // Resets brute-force protection for every account: developer convenience only.
+    // Previously callable by anyone in production.
+    if (process.env.NODE_ENV === 'production') {
+      throw new NotFoundException();
+    }
     this.limiter.reset();
     return { ok: true, message: 'Mobile rate limits reset successfully' };
   }

@@ -9,6 +9,7 @@ pipeline {
         booleanParam(name: 'ALLOW_LOCAL', defaultValue: false, description: 'Permit localhost/private IP for local testing')
         string(name: 'CHECKS', defaultValue: '', description: 'Comma-separated selected security check IDs')
         string(name: 'CALLBACK_URL', defaultValue: 'http://host.docker.internal:3000/api/integrations/validation/callback', description: 'NestJS Backend Webhook Callback URL')
+        string(name: 'CALLBACK_TOKEN', defaultValue: '', description: 'NestJS Backend Webhook Callback Auth Token')
     }
 
     environment {
@@ -241,7 +242,7 @@ pipeline {
                                 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
                                 const res = await fetch(callbackUrl, {
                                     method: "POST",
-                                    headers: { "Content-Type": "application/json" },
+                                    headers: Object.assign({ "Content-Type": "application/json" }, "${params.CALLBACK_TOKEN ?: ''}" ? { "x-callback-token": "${params.CALLBACK_TOKEN ?: ''}" } : {}),
                                     body: JSON.stringify(payload)
                                 });
                                 console.log("Final callback HTTP status:", res.status);
@@ -266,7 +267,7 @@ def notifyStage(String stageId, String stageName, String status, String details)
                 const callbackUrl = "${params.CALLBACK_URL}".replace("/callback", "/stage");
                 const res = await fetch(callbackUrl, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: Object.assign({ "Content-Type": "application/json" }, "${params.CALLBACK_TOKEN ?: ''}" ? { "x-callback-token": "${params.CALLBACK_TOKEN ?: ''}" } : {}),
                     body: JSON.stringify({
                         miniAppId: "${params.MINIAPP_ID}",
                         stageId: "${stageId}",

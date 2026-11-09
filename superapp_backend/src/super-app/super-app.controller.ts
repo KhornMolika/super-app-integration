@@ -1,7 +1,9 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { SuperAppService } from './super-app.service';
 
 @Controller(['super-app', 'api/super-app'])
+@UseGuards(JwtAuthGuard)
 export class SuperAppController {
   constructor(private readonly superAppService: SuperAppService) {}
 

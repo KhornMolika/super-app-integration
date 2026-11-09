@@ -1,3 +1,4 @@
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import {
   Body,
   Controller,
@@ -6,6 +7,7 @@ import {
   HttpStatus,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   DetectGitProviderDto,
@@ -18,6 +20,8 @@ import {
 import { GitIntegrationService } from './git-integration.service';
 
 @Controller(['integrations/git', 'api/integrations/git'])
+// Uses server Git credentials and generates deploy keys: previously open to anyone
+@UseGuards(JwtAuthGuard)
 export class GitIntegrationController {
   constructor(private readonly gitService: GitIntegrationService) {}
 

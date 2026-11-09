@@ -99,6 +99,7 @@ export class SettingsController {
   }
 
   @Get(':key')
+  @UseGuards(JwtAuthGuard)
   async getSetting(@Param('key') key: string) {
     const value = await this.settingsService.getSetting(key);
     return { key, value };

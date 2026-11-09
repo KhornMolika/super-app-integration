@@ -1,3 +1,6 @@
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RbacGuard } from '../../access-control/guards/rbac.guard';
+import { RequirePermissions } from '../../access-control/decorators/require-permissions.decorator';
 import {
   Body,
   Controller,
@@ -7,11 +10,14 @@ import {
   HttpStatus,
   Param,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import { NexusIntegrationService } from './nexus-integration.service';
 import { NexusPackageDto, NexusSnippetDto } from './nexus-integration.dto';
 
 @Controller(['integrations/nexus', 'api/integrations/nexus'])
+// Previously open to anyone, including artifact deletion
+@UseGuards(JwtAuthGuard, RbacGuard)
 export class NexusIntegrationController {
   constructor(private readonly nexusService: NexusIntegrationService) {}
 
@@ -39,16 +45,19 @@ export class NexusIntegrationController {
   }
 
   @Delete('components/:id')
+  @RequirePermissions('super_app:manage')
   deleteComponent(@Param('id') id: string) {
     return this.nexusService.deleteComponent(id);
   }
 
   @Delete('assets/:id')
+  @RequirePermissions('super_app:manage')
   deleteAsset(@Param('id') id: string) {
     return this.nexusService.deleteAsset(id);
   }
 
   @Delete('packages/:name')
+  @RequirePermissions('super_app:manage')
   deletePubPackage(@Param('name') name: string) {
     return this.nexusService.deletePubPackage(name);
   }
