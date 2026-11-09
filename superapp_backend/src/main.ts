@@ -54,4 +54,10 @@ async function bootstrap() {
     `Auto-detected Backoffice URL for notifications: ${backofficeUrl}`,
   );
 }
-bootstrap();
+bootstrap().catch((err: unknown) => {
+  new Logger('Bootstrap').error(
+    'Backend failed to start',
+    err instanceof Error ? err.stack : String(err),
+  );
+  process.exit(1);
+});
