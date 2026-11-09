@@ -126,7 +126,8 @@ export class MiniApp {
   organizationId!: string;
 
   @ManyToOne(() => Organization, (org) => org.miniApps, {
-    nullable: true,
+    nullable: false,
+    onDelete: 'RESTRICT',
     eager: true,
   })
   @JoinColumn({ name: 'organizationId' })
@@ -171,6 +172,7 @@ export class MiniApp {
 
   @ManyToOne(() => Identity, {
     nullable: true,
+    onDelete: 'SET NULL',
     eager: true,
   })
   @JoinColumn({ name: 'ownerId' })

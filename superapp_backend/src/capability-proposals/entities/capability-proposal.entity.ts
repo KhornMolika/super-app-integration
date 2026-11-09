@@ -26,7 +26,7 @@ export class CapabilityProposal {
   @ManyToOne(() => MiniApp, { nullable: true, onDelete: 'CASCADE' })
   miniApp!: MiniApp;
 
-  @ManyToOne(() => Identity, { nullable: true })
+  @ManyToOne(() => Identity, { nullable: true, onDelete: 'SET NULL' })
   requestedBy!: Identity;
 
   @Column({ default: 'PENDING_REVIEW' })

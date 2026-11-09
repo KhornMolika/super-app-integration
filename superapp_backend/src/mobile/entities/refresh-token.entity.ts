@@ -14,7 +14,7 @@ import { Identity } from '../../identities/entities/identity.entity';
  * `rotatedAt` and issues a successor in the same `familyId`. Presenting a
  * rotated token again (outside the grace window) revokes the whole family.
  */
-@Entity('end_user_refresh_tokens')
+@Entity('refresh_tokens')
 export class RefreshToken {
   @PrimaryGeneratedColumn('uuid', {
     primaryKeyConstraintName: 'PK_end_user_refresh_tokens_id',
@@ -30,12 +30,13 @@ export class RefreshToken {
   tokenHash!: string;
 
   @Index('IDX_end_user_rt_endUserId')
-  @Column({ name: 'endUserId', type: 'uuid' })
+  /** DB column "identityId" (schema master plan); property name kept for compatibility. */
+  @Column({ name: 'identityId', type: 'uuid' })
   endUserId!: string;
 
   @ManyToOne(() => Identity, { onDelete: 'CASCADE', nullable: false })
   @JoinColumn({
-    name: 'endUserId',
+    name: 'identityId',
     foreignKeyConstraintName: 'FK_end_user_rt_userId',
   })
   user?: Identity;

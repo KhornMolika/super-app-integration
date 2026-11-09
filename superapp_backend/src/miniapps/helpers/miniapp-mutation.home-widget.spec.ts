@@ -29,7 +29,12 @@ const edit = (over: any = {}): Partial<MiniApp> => ({
   ...over,
 });
 
-function setup(orgs: { name: string; code: string }[] = []) {
+function setup(
+  orgs: { name: string; code: string }[] = [],
+  // mini_apps.organizationId is NOT NULL: the helper falls back to the creator's
+  // staff profile agency when the organization name does not resolve to a row.
+  creatorOrgId: string | null = 'org-of-admin-1',
+) {
   const repo = {
     create: jest.fn((data: Partial<MiniApp>) => ({ ...data })),
     save: jest.fn((entity: Partial<MiniApp>) =>
@@ -67,6 +72,11 @@ function setup(orgs: { name: string; code: string }[] = []) {
           orgs.find((o) => where.some((w) => (w.name ?? w.code) === (w.name ? o.name : o.code))) ?? null,
         ),
       ),
+      manager: {
+        findOne: jest.fn(() =>
+          Promise.resolve(creatorOrgId ? { organizationId: creatorOrgId } : null),
+        ),
+      },
     } as any,
   );
   return { helper, repo, validationHelper };
@@ -526,6 +536,20 @@ describe('MiniappMutationHelper and homeWidget', () => {
       const { helper, repo } = setup();
       await create(helper, 'Insurance Regulator of Cambodia (IRC)');
       expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({ organizationCode: 'IRC' }));
+    });
+
+    it("assigns the creator's agency when the organization does not resolve to a row", async () => {
+      const { helper, repo } = setup([], 'org-of-admin-1');
+      await create(helper, 'Insurance Regulator of Cambodia (IRC)');
+      expect(repo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ organizationId: 'org-of-admin-1' }),
+      );
+    });
+
+    it('rejects with 400 when no owning organization can be determined', async () => {
+      const { helper, repo } = setup([], null);
+      await expect(create(helper, 'Unknown Agency')).rejects.toThrow(/owning organization is required/);
+      expect(repo.save).not.toHaveBeenCalled();
     });
   });
 });

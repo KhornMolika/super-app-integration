@@ -15,12 +15,13 @@ export class AccessToken {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
+  /** DB column "identityId" (schema master plan); property name kept for API compatibility. */
   @Index()
-  @Column()
+  @Column({ name: 'identityId' })
   userId!: string;
 
   @ManyToOne(() => Identity, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'userId' })
+  @JoinColumn({ name: 'identityId' })
   user!: Identity;
 
   @Column()

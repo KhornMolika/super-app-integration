@@ -10,7 +10,7 @@ import {
 } from 'typeorm';
 import { MiniApp } from './miniapp.entity';
 
-@Entity('miniapp_legal')
+@Entity('mini_app_legal')
 export class MiniAppLegal {
   @PrimaryGeneratedColumn('uuid')
   id!: string;

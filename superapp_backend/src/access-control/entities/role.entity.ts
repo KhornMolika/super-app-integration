@@ -11,7 +11,7 @@ import {
 import { StaffProfile } from '../../staff/entities/staff-profile.entity';
 import { Permission } from './permission.entity';
 
-@Entity()
+@Entity('roles')
 export class Role {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
@@ -32,7 +32,13 @@ export class Role {
     cascade: true,
     eager: true,
   })
-  @JoinTable({ name: 'role_permissions' })
+  // Explicit column names: TypeORM otherwise derives them from the table name
+  // ("rolesId"/"permissionsId") now that the tables are plural.
+  @JoinTable({
+    name: 'role_permissions',
+    joinColumn: { name: 'roleId', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'permissionId', referencedColumnName: 'id' },
+  })
   permissions!: Permission[];
 
   @CreateDateColumn({ type: 'timestamptz' })

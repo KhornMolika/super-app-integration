@@ -11,7 +11,7 @@ import {
 import { MiniApp } from './miniapp.entity';
 import { MiniAppVersion } from './miniapp-version.entity';
 
-@Entity('miniapp_builds')
+@Entity('mini_app_builds')
 export class MiniAppBuild {
   @PrimaryGeneratedColumn('uuid')
   id!: string;

@@ -30,7 +30,7 @@ export enum MiniAppVersionStatus {
   DEPRECATED = 'DEPRECATED',
 }
 
-@Entity('miniapp_versions')
+@Entity('mini_app_versions')
 export class MiniAppVersion {
   @PrimaryGeneratedColumn('uuid')
   id!: string;

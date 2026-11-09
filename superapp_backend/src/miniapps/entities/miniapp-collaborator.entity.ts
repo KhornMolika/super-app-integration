@@ -31,11 +31,12 @@ export class MiniAppCollaborator {
   @JoinColumn({ name: 'miniAppId' })
   miniApp!: MiniApp;
 
-  @Column({ type: 'uuid' })
+  /** DB column "identityId" (schema master plan); property name kept for API compatibility. */
+  @Column({ name: 'identityId', type: 'uuid' })
   userId!: string;
 
   @ManyToOne(() => Identity, { onDelete: 'CASCADE', eager: true })
-  @JoinColumn({ name: 'userId' })
+  @JoinColumn({ name: 'identityId' })
   user!: Identity;
 
   @Column({ default: CollaboratorRole.DEVELOPER })

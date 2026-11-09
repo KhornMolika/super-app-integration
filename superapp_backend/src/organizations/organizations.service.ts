@@ -285,6 +285,7 @@ export class OrganizationsService implements OnApplicationBootstrap {
 
     const org = this.organizationRepository.create({
       ...data,
+      code: await this.resolveUniqueCode(data.code, data.name),
       parentId: data.parentId || null,
       parentAuthority: parentAuthority || null,
       status: data.status || OrganizationStatus.ACTIVE,
@@ -329,10 +330,21 @@ export class OrganizationsService implements OnApplicationBootstrap {
       org.parentAuthority = null;
     }
 
-    // Guard: Prevent deactivating Primary Authority (FTC, FSA)
+    // organizations.code is NOT NULL + UNIQUE: ignore a blank code, reject a taken one
+    if ('code' in data) {
+      if (!data.code || !String(data.code).trim()) {
+        delete (data as any).code;
+      } else {
+        data.code = await this.resolveUniqueCode(data.code, org.name, org.id);
+      }
+    }
+
+    // Guard: Prevent deactivating or suspending Primary Authority (FTC, FSA)
     if (
       data.status === OrganizationStatus.INACTIVE ||
-      (data.status as any) === 'INACTIVE'
+      data.status === OrganizationStatus.SUSPENDED ||
+      (data.status as any) === 'INACTIVE' ||
+      (data.status as any) === 'SUSPENDED'
     ) {
       const code = (org.code || '').trim().toUpperCase();
       const name = (org.name || '').toLowerCase();
@@ -379,6 +391,45 @@ export class OrganizationsService implements OnApplicationBootstrap {
 
     const merged = this.organizationRepository.merge(org, data);
     return this.organizationRepository.save(merged);
+  }
+
+  /**
+   * organizations.code is NOT NULL + UNIQUE. Uses the requested code when given;
+   * otherwise derives one from the name's initials (e.g. "Trust Regulator" -> "TR"),
+   * adding a numeric suffix until it is unique. A requested code that is already
+   * taken is rejected, never silently changed.
+   */
+  private async resolveUniqueCode(
+    requested: string | undefined | null,
+    name: string,
+    excludeId?: string,
+  ): Promise<string> {
+    const wanted = requested?.trim();
+    const base =
+      wanted ||
+      (name || '')
+        .split(/[^A-Za-z0-9]+/)
+        .filter(Boolean)
+        .map((w) => w[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 10) ||
+      'ORG';
+
+    const isTaken = async (code: string) => {
+      const existing = await this.organizationRepository.findOne({ where: { code } });
+      return !!existing && existing.id !== excludeId;
+    };
+
+    if (!(await isTaken(base))) return base;
+    // An explicitly requested code is never silently changed
+    if (wanted) {
+      throw new BadRequestException(`Organization code "${wanted}" is already in use.`);
+    }
+    for (let n = 2; ; n++) {
+      const candidate = `${base}-${n}`;
+      if (!(await isTaken(candidate))) return candidate;
+    }
   }
 
   async remove(id: string, currentUser?: any): Promise<boolean> {

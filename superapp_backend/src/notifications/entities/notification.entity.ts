@@ -10,7 +10,7 @@ import {
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 import { Identity } from '../../identities/entities/identity.entity';
 
-@Entity()
+@Entity('notifications')
 export class Notification {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
@@ -34,10 +34,11 @@ export class Notification {
     nullable: true,
     onDelete: 'CASCADE',
   })
-  @JoinColumn({ name: 'userId' })
+  @JoinColumn({ name: 'identityId' })
   user!: Identity;
 
-  @Column({ nullable: true })
+  /** DB column "identityId" (schema master plan); property name kept for API compatibility. */
+  @Column({ name: 'identityId', nullable: true })
   userId!: string;
 
   @ManyToOne(() => MiniApp, (miniApp) => miniApp.notifications, {

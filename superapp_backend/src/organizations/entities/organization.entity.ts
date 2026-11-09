@@ -14,6 +14,7 @@ import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 export enum OrganizationStatus {
   ACTIVE = 'ACTIVE',
   INACTIVE = 'INACTIVE',
+  SUSPENDED = 'SUSPENDED',
 }
 
 @Entity('organizations')
@@ -24,8 +25,9 @@ export class Organization {
   @Column({ unique: true })
   name!: string;
 
-  @Column({ nullable: true })
-  code?: string;
+  /** Unique short agency code (e.g. FSA, SERC). Generated from the name when not supplied. */
+  @Column({ unique: true })
+  code!: string;
 
   @Column({ type: 'uuid', nullable: true })
   parentId?: string | null;

@@ -16,6 +16,7 @@ import {
 } from '../entities/miniapp.entity';
 import { MiniAppLegal } from '../entities/miniapp-legal.entity';
 import { Organization } from '../../organizations/entities/organization.entity';
+import { StaffProfile } from '../../staff/entities/staff-profile.entity';
 import { StorageService } from '../../storage/storage.service';
 import { DomainAssociationHelper } from './domain-association.helper';
 import { NotificationsService, MailService } from '../../notifications';
@@ -176,6 +177,18 @@ export class MiniappMutationHelper {
     data.category = await this.serviceCategory(data.category);
     if (orgInfo.id && !data.organizationId) {
       data.organizationId = orgInfo.id;
+    }
+    // mini_apps.organizationId is NOT NULL: fall back to the creator's agency
+    if (!data.organizationId && actorId && this.organizationRepository?.manager) {
+      const profile = await this.organizationRepository.manager.findOne(StaffProfile, {
+        where: { identityId: actorId },
+      });
+      if (profile?.organizationId) data.organizationId = profile.organizationId;
+    }
+    if (!data.organizationId) {
+      throw new BadRequestException(
+        'An owning organization is required. Select the regulatory authority that publishes this Mini App.',
+      );
     }
 
     // Ensure slug is populated

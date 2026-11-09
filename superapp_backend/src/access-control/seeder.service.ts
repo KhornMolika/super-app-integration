@@ -692,7 +692,7 @@ export class SeederService implements OnApplicationBootstrap {
             .delete()
             .from(MiniAppCollaborator)
             .where(
-              '"miniAppId" IN (:...mockAppIds) OR "userId" IN (:...mockUserIds)',
+              '"miniAppId" IN (:...mockAppIds) OR "identityId" IN (:...mockUserIds)',
               {
                 mockAppIds,
                 mockUserIds,
@@ -721,14 +721,14 @@ export class SeederService implements OnApplicationBootstrap {
           .createQueryBuilder()
           .delete()
           .from(DeveloperToken)
-          .where('"userId" IN (:...mockUserIds)', { mockUserIds })
+          .where('"identityId" IN (:...mockUserIds)', { mockUserIds })
           .execute();
 
         await manager
           .createQueryBuilder()
           .delete()
           .from(Notification)
-          .where('"userId" IN (:...mockUserIds)', { mockUserIds })
+          .where('"identityId" IN (:...mockUserIds)', { mockUserIds })
           .execute();
 
         // 6. Delete legacy audit logs generated from mock accounts

@@ -8,7 +8,7 @@ import {
 } from 'typeorm';
 import { Role } from './role.entity';
 
-@Entity()
+@Entity('permissions')
 export class Permission {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
