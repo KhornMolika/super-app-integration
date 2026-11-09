@@ -29,7 +29,7 @@ export class EmailVerificationToken {
   user?: Identity;
 
   @Index('IDX_end_user_evt_tokenHash', { unique: true })
-  @Column()
+  @Column({ select: false }) // lookups use it in WHERE only
   tokenHash!: string;
 
   @Column({ type: 'timestamptz' })

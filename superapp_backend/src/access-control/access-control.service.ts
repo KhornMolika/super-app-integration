@@ -30,6 +30,7 @@ import { PaginatedResult } from '../common/interfaces/paginated-result.interface
 import { createPaginatedResponse } from '../common/utils/pagination.util';
 import { escapeLikeString } from '../common/utils/sql.util';
 import { SortOrder } from '../common/dto/pagination-query.dto';
+import { loadPasswordHash } from '../identities/identity-credentials.helper';
 
 export const OFFICIAL_SEEDS: Record<
   string,
@@ -60,6 +61,11 @@ export class AccessControlService {
     @Optional()
     private storageService?: StorageService,
   ) {}
+
+  /** The stored password hash, for credential checks only. Never put it in a response. */
+  async getPasswordHash(identityId: string): Promise<string | null> {
+    return loadPasswordHash(this.identityRepository, identityId);
+  }
 
   async updatePasswordDirectly(
     userId: string,
@@ -93,7 +99,9 @@ export class AccessControlService {
 
       // Only initialize default seed password if account has NO password hash yet.
       // If user already has a passwordHash, preserve it so user can update their password later.
-      if (!identity.passwordHash) {
+      // passwordHash is select:false, so it must be read explicitly — an unloaded
+      // (undefined) hash would otherwise reset the password on every lookup.
+      if (!(await loadPasswordHash(this.identityRepository, identity.id))) {
         const defaultPassword = process.env.SUPERADMIN_PASSWORD;
         if (defaultPassword) {
           identity.passwordHash = await hashPassword(defaultPassword);

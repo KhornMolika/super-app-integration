@@ -375,8 +375,13 @@ export class AuthService implements OnModuleInit {
     const user =
       await this.accessControlService.findByEmailWithPermissions(rawEmail);
 
+    // passwordHash is select:false and never part of the user response; fetch it explicitly
+    const storedHash = user
+      ? await this.accessControlService.getPasswordHash(user.id)
+      : null;
+
     this.logger.log(
-      `[AUTH] Login attempt for: ${rawEmail}. User found: ${Boolean(user)}, hasHash: ${Boolean(user?.passwordHash)}, status: ${user?.status}, role: ${(user as any)?.role?.name || (user as any)?.roleId || 'none'}`,
+      `[AUTH] Login attempt for: ${rawEmail}. User found: ${Boolean(user)}, hasHash: ${Boolean(storedHash)}, status: ${user?.status}, role: ${(user as any)?.role?.name || (user as any)?.roleId || 'none'}`,
     );
 
     if (!user) {
@@ -392,10 +397,10 @@ export class AuthService implements OnModuleInit {
     let isMatch = false;
 
     // Check against stored password hash (allows users to update their password later)
-    if (user.passwordHash) {
-      isMatch = await verifyPassword(rawPassword, user.passwordHash);
+    if (storedHash) {
+      isMatch = await verifyPassword(rawPassword, storedHash);
       if (!isMatch && rawPassword.trim() !== rawPassword) {
-        isMatch = await verifyPassword(rawPassword.trim(), user.passwordHash);
+        isMatch = await verifyPassword(rawPassword.trim(), storedHash);
       }
     }
 
@@ -417,7 +422,6 @@ export class AuthService implements OnModuleInit {
           user.id,
           initialHash,
         );
-        user.passwordHash = initialHash;
         this.logger.log(
           `[AUTH] Authenticated with configured seed password for: ${rawEmail}`,
         );
@@ -665,15 +669,7 @@ export class AuthService implements OnModuleInit {
         isActive: true,
       });
       const saved = await this.developerTokenRepo.save(entity);
-      savedItem = {
-        id: saved.id,
-        name: saved.name,
-        tokenPrefix: saved.tokenPrefix,
-        scopes: saved.scopes,
-        expiresAt: saved.expiresAt,
-        createdAt: saved.createdAt,
-        isActive: saved.isActive,
-      };
+      savedItem = toDeveloperTokenResponse(saved);
     }
 
     return {
@@ -685,10 +681,11 @@ export class AuthService implements OnModuleInit {
 
   async listAccessTokens(userId: string) {
     if (!this.developerTokenRepo) return [];
-    return this.developerTokenRepo.find({
+    const tokens = await this.developerTokenRepo.find({
       where: { userId, isActive: true },
       order: { createdAt: 'DESC' },
     });
+    return tokens.map(toDeveloperTokenResponse);
   }
 
   async revokeAccessToken(userId: string, tokenId: string) {
@@ -732,13 +729,11 @@ export class AuthService implements OnModuleInit {
     const defaultSeedPassword = process.env.SUPERADMIN_PASSWORD;
     let isOldValid = false;
 
-    if (user.passwordHash) {
-      isOldValid = await verifyPassword(body.oldPassword, user.passwordHash);
+    const storedHash = await this.accessControlService.getPasswordHash(user.id);
+    if (storedHash) {
+      isOldValid = await verifyPassword(body.oldPassword, storedHash);
       if (!isOldValid && body.oldPassword.trim() !== body.oldPassword) {
-        isOldValid = await verifyPassword(
-          body.oldPassword.trim(),
-          user.passwordHash,
-        );
+        isOldValid = await verifyPassword(body.oldPassword.trim(), storedHash);
       }
     }
 
@@ -1099,4 +1094,31 @@ export class AuthService implements OnModuleInit {
       message: 'Your password has been changed successfully. Please Login.',
     };
   }
+}
+
+/**
+ * Public shape of a developer / personal access token. An explicit allowlist:
+ * the token hash and owner id never leave the API, and a column added to
+ * developer_tokens later stays private until someone adds it here on purpose.
+ */
+export function toDeveloperTokenResponse(token: {
+  id: string;
+  name: string;
+  tokenPrefix: string;
+  scopes: string[];
+  expiresAt?: Date | null;
+  lastUsedAt?: Date | null;
+  createdAt: Date;
+  isActive: boolean;
+}) {
+  return {
+    id: token.id,
+    name: token.name,
+    tokenPrefix: token.tokenPrefix,
+    scopes: token.scopes,
+    expiresAt: token.expiresAt ?? null,
+    lastUsedAt: token.lastUsedAt ?? null,
+    createdAt: token.createdAt,
+    isActive: token.isActive,
+  };
 }

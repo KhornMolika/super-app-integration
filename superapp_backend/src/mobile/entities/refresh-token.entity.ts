@@ -26,7 +26,7 @@ export class RefreshToken {
   familyId!: string;
 
   @Index('IDX_end_user_rt_tokenHash', { unique: true })
-  @Column()
+  @Column({ select: false }) // lookups use it in WHERE only
   tokenHash!: string;
 
   @Index('IDX_end_user_rt_endUserId')

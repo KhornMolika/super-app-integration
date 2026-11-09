@@ -22,11 +22,11 @@ describe('EndUserAuthGuard', () => {
         id: 'admin-1',
         email: 'admin@x.io',
         name: 'Admin',
-        passwordHash: adminPasswordHash,
         isActive: true,
         status: 'ACTIVE',
         roles: [{ name: 'ADMIN', permissions: [{ name: 'p' }] }],
       }),
+      getPasswordHash: async () => adminPasswordHash,
     } as any);
     authService.onModuleInit();
     status = IdentityStatus.ACTIVE;

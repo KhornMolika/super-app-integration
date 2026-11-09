@@ -20,6 +20,7 @@ import { CapabilityProposal } from '../capability-proposals/entities/capability-
 import { Notification } from '../notifications/entities/notification.entity';
 import { AuditLog } from '../audit/entities/audit-log.entity';
 import { hashPassword } from '../common/utils/password.util';
+import { loadPasswordHash } from '../identities/identity-credentials.helper';
 
 @Injectable()
 export class SeederService implements OnApplicationBootstrap {
@@ -545,7 +546,9 @@ export class SeederService implements OnApplicationBootstrap {
         );
       } else {
         let changed = false;
-        if (!identity.passwordHash) {
+        // passwordHash is select:false: read it explicitly, or every boot would
+        // treat it as missing and reset the official account's password.
+        if (!(await loadPasswordHash(this.identityRepository, identity.id))) {
           if (!defaultPasswordHash) {
             throw new Error(
               `SUPERADMIN_PASSWORD is required to initialize password for official account ${email}. Please configure it in Kubernetes Secret "super-app-backend-secret".`,

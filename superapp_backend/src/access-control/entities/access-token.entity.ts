@@ -30,7 +30,8 @@ export class AccessToken {
   @Column()
   tokenPrefix!: string;
 
-  @Column()
+  /** SHA-256 of the token. `select: false`: lookups use it in WHERE only, never in responses. */
+  @Column({ select: false })
   tokenHash!: string;
 
   @Column({ type: 'jsonb', default: () => '\'["sdk:read", "packages:read"]\'' })

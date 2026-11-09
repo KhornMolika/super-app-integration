@@ -3,6 +3,7 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { SensitiveFieldsInterceptor } from './common/interceptors/sensitive-fields.interceptor';
 import { json, urlencoded } from 'express';
 import { types } from 'pg';
 import {
@@ -41,7 +42,12 @@ async function bootstrap() {
     }),
   );
   app.useGlobalFilters(new AllExceptionsFilter());
-  app.useGlobalInterceptors(new TransformInterceptor(app.get(Reflector)));
+  // SensitiveFieldsInterceptor is registered first, so it is the outermost layer and
+  // sees the final response body (after TransformInterceptor's envelope).
+  app.useGlobalInterceptors(
+    new SensitiveFieldsInterceptor(),
+    new TransformInterceptor(app.get(Reflector)),
+  );
   const port = process.env.PORT ?? 3000;
   await app.listen(port, '0.0.0.0');
 

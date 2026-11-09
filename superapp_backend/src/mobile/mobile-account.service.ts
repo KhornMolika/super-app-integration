@@ -20,6 +20,7 @@ import {
   TokenResponse,
 } from './mobile-auth.service';
 import { PasswordService } from './password.service';
+import { loadPasswordHash } from '../identities/identity-credentials.helper';
 
 export const CURRENT_PASSWORD_INCORRECT = 'Current password is incorrect';
 export const PASSWORD_INCORRECT = 'Password is incorrect';
@@ -56,7 +57,9 @@ export class MobileAccountService {
     password: string,
     wrongPasswordMessage: string,
   ): Promise<void> {
-    if (!(await this.passwords.verify(password, user.passwordHash))) {
+    // passwordHash is select:false; load it explicitly for the check
+    const storedHash = await loadPasswordHash(this.users, user.id);
+    if (!(await this.passwords.verify(password, storedHash ?? ''))) {
       throw new BadRequestException(wrongPasswordMessage);
     }
   }

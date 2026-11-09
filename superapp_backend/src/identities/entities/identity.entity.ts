@@ -51,8 +51,11 @@ export class Identity {
   @Column({ type: 'timestamptz', nullable: true })
   avatarUpdatedAt?: Date | null;
 
-  /** Cryptographic password hash (never returned in responses) */
-  @Column()
+  /**
+   * Cryptographic password hash. `select: false`: never loaded by ordinary queries,
+   * so it cannot leak through responses. Read it via loadPasswordHash().
+   */
+  @Column({ select: false })
   passwordHash!: string;
 
   @Column({ type: 'varchar', default: IdentityStatus.ACTIVE })

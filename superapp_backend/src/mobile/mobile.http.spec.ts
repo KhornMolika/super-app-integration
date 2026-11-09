@@ -78,11 +78,11 @@ describe('Mobile HTTP (in-process)', () => {
         id: 'a',
         email: 'admin@x.io',
         name: 'Admin',
-        passwordHash: adminPasswordHash,
         isActive: true,
         status: 'ACTIVE',
         roles: [{ name: 'R', permissions: [] }],
       }),
+      getPasswordHash: async () => adminPasswordHash,
     } as any);
     authInstance.onModuleInit();
 

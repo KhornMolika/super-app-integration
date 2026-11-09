@@ -197,11 +197,12 @@ describe('AuthService / JwtAuthGuard', () => {
         id: 7,
         email: 'a@b.c',
         name: 'A',
-        passwordHash,
         isActive: true,
         status: 'ACTIVE',
         roles: [{ name: 'r', permissions: [{ name: 'p' }] }],
       }),
+      // the profile never carries the hash; login fetches it separately
+      getPasswordHash: async () => passwordHash,
     } as any);
     s.onModuleInit();
     const res: any = await s.login({ email: 'a@b.c', password: testPassword });

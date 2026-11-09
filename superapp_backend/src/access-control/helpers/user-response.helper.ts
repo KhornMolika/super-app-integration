@@ -33,8 +33,11 @@ export function formatUserResponse(user: any): FormattedUserResponse {
   const roles = (user as any).roles || (role ? [role] : []);
   const status = user.status || 'ACTIVE';
   const org = staffProfile?.organization || user.organization;
+  // Never forward credentials, even if a caller loaded them explicitly
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { passwordHash: _passwordHash, ...safeUser } = user;
   return {
-    ...user,
+    ...safeUser,
     id: user.id,
     email: user.email,
     name: user.name,
