@@ -267,7 +267,12 @@ export class MobileCatalogService {
           MiniAppStatus.APPROVED,
         ],
       },
-    );
+    )
+      // Suspended and archived apps leave the phones at once
+      .andWhere(
+        `(m.availabilityStatus IS NULL OR m.availabilityStatus <> 'SUSPENDED')`,
+      )
+      .andWhere(`m.lifecycleStatus <> 'ARCHIVED'`);
 
     if (q) {
       const escaped = q.replace(/[\\%_]/g, (c) => `\\${c}`);

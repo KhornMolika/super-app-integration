@@ -99,6 +99,36 @@ export const MiniAppStatus = {
   ARCHIVED: 'ARCHIVED',
 };
 
+export interface MiniAppSuspension {
+  reason: string;
+  suspendedById?: string;
+  suspendedByName?: string;
+  suspendedAt: string;
+  /** Availability before the suspension, restored by Resume. */
+  previousAvailability?: string;
+  /** Set when the app was archived (reason kept in `reason`). */
+  archivedAt?: string;
+}
+
+export interface MiniAppArchiveRequest {
+  reason: string;
+  requestedById?: string;
+  requestedByName?: string;
+  requestedAt: string;
+}
+
+/** Live in the catalog: ACTIVE, or older rows activated as APPROVED + PRODUCTION. */
+export function isMiniAppLive(app: {
+  lifecycleStatus?: string | null;
+  availabilityStatus?: string | null;
+}): boolean {
+  return (
+    app.availabilityStatus !== 'SUSPENDED' &&
+    (app.lifecycleStatus === 'ACTIVE' ||
+      app.availabilityStatus === 'PRODUCTION')
+  );
+}
+
 @Entity('mini_apps')
 export class MiniApp {
   @PrimaryGeneratedColumn('uuid')
@@ -215,6 +245,14 @@ export class MiniApp {
 
   @Column({ type: 'jsonb', nullable: true })
   pendingRevision?: any;
+
+  /** Set while availability is SUSPENDED (or the app is ARCHIVED). */
+  @Column({ type: 'jsonb', nullable: true })
+  suspension?: MiniAppSuspension | null;
+
+  /** An ADMIN asked a SUPER_ADMIN to archive this app; cleared on archive/decline. */
+  @Column({ type: 'jsonb', nullable: true })
+  archiveRequest?: MiniAppArchiveRequest | null;
 
   @Column({ nullable: true })
   currentReleaseVersion?: string;

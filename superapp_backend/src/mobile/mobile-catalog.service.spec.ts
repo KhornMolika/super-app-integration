@@ -107,13 +107,17 @@ describe('MobileCatalogService.list', () => {
     expect(calls.take).toBe(20);
     expect(calls.skip).toBe(40);
     expect(page).toMatchObject({ total: 7, limit: 20, offset: 40 });
-    expect(calls.and).toHaveLength(0);
+    // Only the suspended / archived exclusions, no name search
+    expect(calls.and.map((c: any[]) => c[0])).toEqual([
+      expect.stringContaining("<> 'SUSPENDED'"),
+      expect.stringContaining("<> 'ARCHIVED'"),
+    ]);
   });
 
   it('escapes LIKE wildcards in the name search', async () => {
     const { repo, calls } = qbFor([]);
     await new MobileCatalogService(repo).list('50%_off\\', 10, 0);
-    expect(calls.and[0][1]).toEqual({ q: '%50\\%\\_off\\\\%' });
+    expect(calls.and[2][1]).toEqual({ q: '%50\\%\\_off\\\\%' });
   });
 
   it('selects homeWidget and returns it as widget', async () => {

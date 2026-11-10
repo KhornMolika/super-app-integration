@@ -13,6 +13,7 @@ import {
   MiniAppStatus,
   MiniAppLifecycleStatus,
   MiniAppAvailabilityStatus,
+  isMiniAppLive,
 } from '../entities/miniapp.entity';
 import { MiniAppLegal } from '../entities/miniapp-legal.entity';
 import { Organization } from '../../organizations/entities/organization.entity';
@@ -474,9 +475,18 @@ export class MiniappMutationHelper {
       );
     }
 
+    if (existing.lifecycleStatus === 'ARCHIVED') {
+      throw new BadRequestException(
+        'This mini app is archived. A Super Admin must restore it before it can be edited.',
+      );
+    }
+
+    // Live, testing or suspended (only those can be suspended): edits become a revision
     const isLive =
-      existing.lifecycleStatus === 'ACTIVE' ||
+      isMiniAppLive(existing) ||
       (existing as any).status === 'ACTIVE' ||
+      existing.availabilityStatus === MiniAppAvailabilityStatus.SUSPENDED ||
+      existing.lifecycleStatus === 'TESTING' ||
       (existing as any).status === 'TESTING';
 
     // Unchanged input keeps its backend-set verification: the client never
@@ -1060,7 +1070,7 @@ export class MiniappMutationHelper {
       !deletableStatuses.includes(existing.lifecycleStatus as any)
     ) {
       throw new BadRequestException(
-        `Cannot delete MiniApp in '${existing.lifecycleStatus}' status. Only mini-apps in DRAFT or REJECTED status can be permanently deleted. Active, submitted, or in-testing applications must be archived instead.`,
+        `Cannot delete MiniApp in '${existing.lifecycleStatus}' status. Only mini-apps in DRAFT or REJECTED status can be permanently deleted. Submitted, in-testing and live mini apps can only be suspended, or archived by a Super Admin.`,
       );
     }
 

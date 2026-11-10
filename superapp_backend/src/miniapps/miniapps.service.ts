@@ -20,6 +20,10 @@ import { AuditService } from '../audit/audit.service';
 import { PermissionDetectorHelper } from './helpers/permission-detector.helper';
 import { MiniappValidationHelper } from './helpers/miniapp-validation.helper';
 import { MiniappLifecycleHelper } from './helpers/miniapp-lifecycle.helper';
+import {
+  MiniappRetirementHelper,
+  RetirementActor,
+} from './helpers/miniapp-retirement.helper';
 import { VersionDiffHelper } from './helpers/version-diff.helper';
 import { ArtifactDistributionHelper } from './helpers/artifact-distribution.helper';
 import { DomainAssociationHelper } from './helpers/domain-association.helper';
@@ -82,6 +86,9 @@ export class MiniappsService implements OnApplicationBootstrap {
 
     @Optional()
     private organizationsService?: OrganizationsService,
+
+    @Optional()
+    private retirementHelper?: MiniappRetirementHelper,
   ) {}
 
   async onApplicationBootstrap() {
@@ -830,15 +837,60 @@ export class MiniappsService implements OnApplicationBootstrap {
     );
   }
 
-  async suspend(id: string, actorId: string) {
+  private retirementLog = (
+    mId: string,
+    aId: string,
+    aType: string,
+    t: string,
+    d: string,
+    aAction: string,
+    oVal?: any,
+    nVal?: any,
+  ) => this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal);
+
+  private retirement(): MiniappRetirementHelper {
+    if (!this.retirementHelper) throw new BadRequestException('Archive actions are not available');
+    return this.retirementHelper;
+  }
+
+  private async findOrThrow(id: string) {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
-    return this.lifecycleHelper.suspend(
-      app,
-      actorId,
-      (mId, aId, aType, t, d, aAction, oVal, nVal) =>
-        this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal),
-    );
+    return app;
+  }
+
+  async suspend(
+    id: string,
+    actor: RetirementActor,
+    body: { reason?: string; requestArchive?: boolean },
+  ) {
+    const app = await this.findOrThrow(id);
+    return this.retirement().suspend(app, actor, body, this.retirementLog);
+  }
+
+  async resume(id: string, actor: RetirementActor) {
+    const app = await this.findOrThrow(id);
+    return this.retirement().resume(app, actor, this.retirementLog);
+  }
+
+  async requestArchive(id: string, actor: RetirementActor, reason?: string) {
+    const app = await this.findOrThrow(id);
+    return this.retirement().requestArchive(app, actor, reason, this.retirementLog);
+  }
+
+  async archive(id: string, actor: RetirementActor, reason?: string) {
+    const app = await this.findOrThrow(id);
+    return this.retirement().archive(app, actor, reason, this.retirementLog);
+  }
+
+  async declineArchive(id: string, actor: RetirementActor, note?: string) {
+    const app = await this.findOrThrow(id);
+    return this.retirement().declineArchive(app, actor, note, this.retirementLog);
+  }
+
+  async restore(id: string, actor: RetirementActor) {
+    const app = await this.findOrThrow(id);
+    return this.retirement().restore(app, actor, this.retirementLog);
   }
 
   async verifyDomain(id: string, overrideUrl?: string) {

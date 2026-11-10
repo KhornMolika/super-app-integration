@@ -34,6 +34,7 @@ import {
 } from './helpers/flutter-credential.helper';
 
 import { RequirePermissions } from '../access-control/decorators/require-permissions.decorator';
+import { RetirementActor } from './helpers/miniapp-retirement.helper';
 
 import {
   VerifyDomainStandaloneDto,
@@ -46,6 +47,15 @@ import { CapabilityGateService } from '../capabilities/capability-gate.service';
 import { QueryMiniAppsDto } from './dto/query-miniapps.dto';
 import { QueryIssuesDto } from './dto/query-issues.dto';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+
+function retirementActor(req: any): RetirementActor {
+  const user = req?.user ?? {};
+  return {
+    id: user.sub || user.id,
+    name: user.name || user.email,
+    roles: Array.isArray(user.roles) ? user.roles : [],
+  };
+}
 
 @UseGuards(JwtAuthGuard, RbacGuard)
 @Controller([
@@ -408,10 +418,58 @@ export class MiniappsController {
     return this.miniappService.discardRevision(id, req.user.sub, reason);
   }
 
+  // Suspend / resume: ADMIN and SUPER_ADMIN (miniapp:suspend). Archive, decline
+  // and restore: SUPER_ADMIN only (checked in MiniappRetirementHelper).
   @Post(':id/suspend')
   @RequirePermissions('miniapp:suspend')
-  suspend(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
-    return this.miniappService.suspend(id, req.user.sub);
+  suspend(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: { reason?: string; requestArchive?: boolean },
+    @Req() req: any,
+  ) {
+    return this.miniappService.suspend(id, retirementActor(req), body ?? {});
+  }
+
+  @Post(':id/resume')
+  @RequirePermissions('miniapp:suspend')
+  resume(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    return this.miniappService.resume(id, retirementActor(req));
+  }
+
+  @Post(':id/request-archive')
+  @RequirePermissions('miniapp:suspend')
+  requestArchive(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body('reason') reason: string,
+    @Req() req: any,
+  ) {
+    return this.miniappService.requestArchive(id, retirementActor(req), reason);
+  }
+
+  @Post(':id/archive')
+  @RequirePermissions('miniapp:suspend')
+  archive(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body('reason') reason: string,
+    @Req() req: any,
+  ) {
+    return this.miniappService.archive(id, retirementActor(req), reason);
+  }
+
+  @Post(':id/decline-archive')
+  @RequirePermissions('miniapp:suspend')
+  declineArchive(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body('reason') reason: string,
+    @Req() req: any,
+  ) {
+    return this.miniappService.declineArchive(id, retirementActor(req), reason);
+  }
+
+  @Post(':id/restore')
+  @RequirePermissions('miniapp:suspend')
+  restore(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    return this.miniappService.restore(id, retirementActor(req));
   }
 
   @Get(':id/activities')
@@ -520,8 +578,9 @@ export class MiniappsController {
     return maskMiniAppCredentials(updated);
   }
 
+  // Owners may delete their own DRAFT/REJECTED apps; the helper checks owner or admin.
   @Delete(':id')
-  @RequirePermissions('miniapp:delete')
+  @RequirePermissions('miniapp:update')
   remove(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
     return this.miniappService.remove(id, req.user?.sub, req.user);
   }

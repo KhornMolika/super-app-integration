@@ -1364,7 +1364,7 @@ export class MiniappLifecycleHelper {
       );
     }
 
-    app.lifecycleStatus = MiniAppLifecycleStatus.APPROVED;
+    app.lifecycleStatus = MiniAppLifecycleStatus.ACTIVE;
     app.availabilityStatus = MiniAppAvailabilityStatus.PRODUCTION;
     await this.miniappRepository.save(app);
 
@@ -1400,35 +1400,6 @@ export class MiniappLifecycleHelper {
       app,
     );
 
-    return app;
-  }
-
-  async suspend(
-    app: MiniApp,
-    actorId: string,
-    logActivityFn: (
-      miniAppId: string,
-      actorId: string,
-      actionType: string,
-      title: string,
-      description: string,
-      auditAction: string,
-      oldVal?: any,
-      newVal?: any,
-    ) => Promise<void>,
-  ) {
-    app.availabilityStatus = MiniAppAvailabilityStatus.SUSPENDED;
-    await this.miniappRepository.save(app);
-    await logActivityFn(
-      app.id,
-      actorId,
-      'STATUS_CHANGE',
-      'MiniApp Suspended',
-      'App suspended',
-      'SUSPEND_MINI_APP',
-      null,
-      app,
-    );
     return app;
   }
 

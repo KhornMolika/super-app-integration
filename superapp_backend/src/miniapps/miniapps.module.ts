@@ -25,6 +25,7 @@ import { OrganizationsModule } from '../organizations/organizations.module';
 import { PermissionDetectorHelper } from './helpers/permission-detector.helper';
 import { MiniappValidationHelper } from './helpers/miniapp-validation.helper';
 import { MiniappLifecycleHelper } from './helpers/miniapp-lifecycle.helper';
+import { MiniappRetirementHelper } from './helpers/miniapp-retirement.helper';
 import { ArtifactDistributionHelper } from './helpers/artifact-distribution.helper';
 import { DomainAssociationHelper } from './helpers/domain-association.helper';
 import { MiniappMutationHelper } from './helpers/miniapp-mutation.helper';
@@ -58,6 +59,7 @@ import { UrlProbeHelper } from './helpers/url-probe.helper';
     PermissionDetectorHelper,
     MiniappValidationHelper,
     MiniappLifecycleHelper,
+    MiniappRetirementHelper,
     ArtifactDistributionHelper,
     DomainAssociationHelper,
     MiniappMutationHelper,
