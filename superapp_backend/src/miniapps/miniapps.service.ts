@@ -399,6 +399,7 @@ export class MiniappsService implements OnApplicationBootstrap {
       status,
       integrationMethod,
       organizationId,
+      includeArchived,
       sortBy = 'createdAt',
       sortOrder = SortOrder.DESC,
     } = query;
@@ -445,6 +446,10 @@ export class MiniappsService implements OnApplicationBootstrap {
         '(app.lifecycleStatus = :reqStatus OR app.availabilityStatus = :reqStatus)',
         { reqStatus: status },
       );
+    }
+
+    if (!includeArchived && status !== 'ARCHIVED') {
+      qb.andWhere(`app.lifecycleStatus <> 'ARCHIVED'`);
     }
 
     // Filter Integration Method

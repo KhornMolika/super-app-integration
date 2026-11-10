@@ -243,7 +243,8 @@ export class MiniappRetirementHelper {
         `A ${lifecycle} mini app was never released; delete it instead.`,
       );
     }
-    const reason = requireReason(reasonInput ?? app.archiveRequest?.reason, 'archive');
+    // No reason given when approving a request: use the requester's reason
+    const reason = requireReason(reasonInput?.trim() || app.archiveRequest?.reason, 'archive');
     const request = app.archiveRequest;
     const before = { lifecycleStatus: lifecycle, availabilityStatus: app.availabilityStatus };
     const now = new Date().toISOString();

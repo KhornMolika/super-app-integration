@@ -254,8 +254,10 @@ export class MiniappLifecycleHelper {
     const currentStatus = (
       app.lifecycleStatus || (app as any).status
     )?.toUpperCase();
-    if (currentStatus !== 'DRAFT' && currentStatus !== 'REJECTED') {
-      throw new BadRequestException('App is not in DRAFT or REJECTED status');
+    if (!['DRAFT', 'REJECTED', 'CHANGES_REQUESTED'].includes(currentStatus)) {
+      throw new BadRequestException(
+        'Only DRAFT, REJECTED or CHANGES_REQUESTED mini apps can be submitted',
+      );
     }
 
     const id = app.id;

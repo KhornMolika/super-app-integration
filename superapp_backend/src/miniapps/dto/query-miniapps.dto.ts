@@ -19,4 +19,10 @@ export class QueryMiniAppsDto extends PaginationQueryDto {
   @Transform(({ value }) => value === true || value === 'true' || value === '1')
   @IsBoolean()
   mine?: boolean;
+
+  /** Archived apps are left out of the list unless asked for. */
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true' || value === '1')
+  @IsBoolean()
+  includeArchived?: boolean;
 }
