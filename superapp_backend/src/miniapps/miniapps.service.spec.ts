@@ -68,8 +68,9 @@ const uploaded = {
 describe('MiniappsService.approve NATIVE_SDK gate', () => {
   it.each([
     ['both missing', {}],
-    ['ios missing', { androidNexusMavenUrl: 'http://n/x.aar' }],
-    ['android missing', { iosNexusZipUrl: 'http://n/x.zip' }],
+    // A platform is required when the SDK declares it (names) without its file
+    ['ios declared, file missing', { androidNexusMavenUrl: 'http://n/x.aar', iosTypeName: 'PermitCheck' }],
+    ['android declared, file missing', { iosNexusZipUrl: 'http://n/x.zip', androidPackageName: 'com.x.permit' }],
   ])('rejects with 400 and does not approve (%s)', async (_n, cfg) => {
     const { service, lifecycleHelper, codegen } = build({
       id: '1',
@@ -187,7 +188,7 @@ describe('MiniappsService.publishRevision NATIVE_SDK gate', () => {
 
   it('rejects with 400 when the revision config lacks artifact URLs', async () => {
     const { service, lifecycleHelper, codegen } = build(
-      rev({ iosNexusZipUrl: 'http://n/x.zip' }),
+      rev({ iosNexusZipUrl: 'http://n/x.zip', androidPackageName: 'com.x.permit' }),
     );
     await expect(service.publishRevision('1', 'admin')).rejects.toThrow(
       BadRequestException,
@@ -259,7 +260,7 @@ describe('MiniappsService.rerunNativeSdkCodegen', () => {
     ['not yet approved', app({ status: 'IN_REVIEW' }), BadRequestException],
     [
       'artifacts missing',
-      app({ integrationConfig: { androidNexusMavenUrl: 'x' } }),
+      app({ integrationConfig: { androidNexusMavenUrl: 'x', iosTypeName: 'PermitCheck' } }),
       BadRequestException,
     ],
   ])('rejects (%s) without running codegen', async (_n, a, err) => {

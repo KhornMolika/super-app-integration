@@ -30,6 +30,7 @@ import { getInitialRegisterFormData } from '../constants';
 import {
   prepareDraftPayload,
   prepareSubmitPayload,
+  uploadPendingSdkFiles,
   extractValidationErrors,
 } from '../utils/registerPayload.utils';
 import {
@@ -720,12 +721,33 @@ export function useMiniAppRegister() {
 
   const prevStep = () => setStep((prev) => prev - 1);
 
+  /**
+   * Sends the chosen Native SDK files to MinIO quarantine once the mini app
+   * exists, then forgets them so a retry does not send them twice.
+   */
+  const sendSdkFiles = async (appId: string, payload: Partial<CreateMiniAppDto>) => {
+    if (payload.integrationMethod !== IntegrationMethod.NATIVE_SDK) return;
+    if (!pendingIosFile && !pendingAndroidFile) return;
+    const failed = await uploadPendingSdkFiles(
+      appId,
+      { ios: pendingIosFile, android: pendingAndroidFile },
+      payload.integrationConfigNativeSdk as any,
+    );
+    if (!failed.includes('iOS')) setPendingIosFile(null);
+    if (!failed.includes('Android')) setPendingAndroidFile(null);
+    if (failed.length) {
+      toast.error(`The ${failed.join(' and ')} SDK file could not be uploaded. Open the mini app and upload it again.`);
+    }
+  };
+
   const handleSaveDraft = async () => {
     setIsSubmitting(true);
-    const payload = await prepareDraftPayload(formData, pendingArchiveFile);
+    const sdkFiles = { ios: pendingIosFile, android: pendingAndroidFile };
+    const payload = await prepareDraftPayload(formData, pendingArchiveFile, sdkFiles);
 
     try {
-      await miniappsApi.createDraft(payload);
+      const draft = await miniappsApi.createDraft(payload);
+      if (draft?.id) await sendSdkFiles(draft.id, payload);
       router.push('/miniapps');
     } catch (_) {
       setIsSubmitting(false);
@@ -746,7 +768,10 @@ export function useMiniAppRegister() {
     }
 
     setModalState((prev) => ({ isOpen: true, status: 'loading', createdId: prev.createdId }));
-    const payload = await prepareSubmitPayload(formData, pendingArchiveFile);
+    const payload = await prepareSubmitPayload(formData, pendingArchiveFile, {
+      ios: pendingIosFile,
+      android: pendingAndroidFile,
+    });
 
     try {
       const resData = modalState.createdId
@@ -755,6 +780,7 @@ export function useMiniAppRegister() {
 
       if (resData) {
         const appId = modalState.createdId || resData.id;
+        await sendSdkFiles(appId, payload);
         let attempts = 0;
 
         const pollTimer = setInterval(async () => {

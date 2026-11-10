@@ -40,6 +40,15 @@ export interface SdkUploadResult {
   detectedPermissions?: string[];
 }
 
+/** What the registration form learns from an SDK file before anything is stored. */
+export interface SdkInspectResult {
+  scannedFields: ScannedNativeSdkResult;
+  sha256: string;
+  filename: string;
+  size: number;
+  detectedPermissions?: string[];
+}
+
 const DEFAULT_IOS_VERSION = '1.0.0';
 const DEFAULT_MAVEN_GROUP_ID = 'com.fsa.sdk';
 const SAFE_TOKEN = /^[A-Za-z0-9][A-Za-z0-9._+-]*$/;
@@ -57,6 +66,26 @@ export class SdkArtifactUploadService {
     @InjectRepository(MiniApp)
     private readonly miniappRepository: Repository<MiniApp>,
   ) {}
+
+  /**
+   * STAGE 0: Reads an SDK file in memory for the registration form (module
+   * names, permissions, checksum). Nothing is stored: the file stays in the
+   * browser until the mini app is submitted, then goes to MinIO quarantine
+   * through upload().
+   */
+  async inspect(platform: 'IOS' | 'ANDROID', buffer: Buffer, filename: string): Promise<SdkInspectResult> {
+    const scannedFields =
+      platform === 'IOS'
+        ? await this.scanner.scanXcframework(buffer, filename)
+        : await this.scanner.scanAar(buffer, filename);
+    return {
+      scannedFields,
+      sha256: createHash('sha256').update(buffer).digest('hex'),
+      filename,
+      size: buffer.length,
+      detectedPermissions: scannedFields.detectedPermissions,
+    };
+  }
 
   /**
    * STAGE 1: Uploads uploaded SDK artifacts directly to MinIO quarantine (sdk-submissions).

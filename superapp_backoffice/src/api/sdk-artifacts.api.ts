@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient, unwrapItem } from './client';
 
 export interface SdkArtifactUploadResponse {
   minioUrl: string;
@@ -41,7 +41,30 @@ export interface SdkArtifactStatusResponse {
   };
 }
 
+/** What the server reads from an SDK file before anything is stored. */
+export interface SdkArtifactInspectResponse {
+  scannedFields?: Record<string, any>;
+  sha256: string;
+  filename: string;
+  size: number;
+  detectedPermissions?: string[];
+}
+
 export const sdkArtifactsApi = {
+  /** Scans an iOS SDK for the form; the file stays in the browser. */
+  inspectIos: (formData: FormData) =>
+    apiClient<SdkArtifactInspectResponse>('/api/sdk-artifacts/inspect/ios', {
+      method: 'POST',
+      body: formData,
+    }).then((res) => unwrapItem<SdkArtifactInspectResponse>(res)),
+
+  /** Scans an Android SDK for the form; the file stays in the browser. */
+  inspectAndroid: (formData: FormData) =>
+    apiClient<SdkArtifactInspectResponse>('/api/sdk-artifacts/inspect/android', {
+      method: 'POST',
+      body: formData,
+    }).then((res) => unwrapItem<SdkArtifactInspectResponse>(res)),
+
   uploadIos: (miniAppId: string = 'draft', formData: FormData) =>
     apiClient<SdkArtifactUploadResponse>(`/api/sdk-artifacts/${miniAppId}/upload/ios`, {
       method: 'POST',

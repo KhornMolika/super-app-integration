@@ -84,8 +84,9 @@ describe('All Tasks Verification - Multi-Method MiniApps & Enterprise Plan', () 
       );
     });
 
-    it('rejects approval if Android or iOS artifacts are missing', async () => {
-      const incompleteApp = createSpaNativeApp({ androidMinioKey: null });
+    it('rejects approval when a platform the SDK declares has no artifact', async () => {
+      // Declares Android (package name) but its AAR is missing
+      const incompleteApp = createSpaNativeApp({ androidMinioKey: null, androidPackageName: 'com.fintech.vendor.spa' });
       mockRepo.findOne.mockResolvedValue(incompleteApp);
 
       await expect(

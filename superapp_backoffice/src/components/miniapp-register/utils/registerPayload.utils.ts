@@ -1,9 +1,70 @@
 import { IntegrationMethod, SourceType, CreateMiniAppDto } from '@/types/miniapp.types';
 import { miniappsApi } from '@/api';
+import { sdkArtifactsApi } from '@/api/sdk-artifacts.api';
+import { nativeSdkShipsAndroid, nativeSdkShipsIos } from '@/lib/miniapp-form.validator';
+
+/** Native SDK files chosen in the form; they stay in the browser until submit. */
+export interface PendingSdkFiles {
+  ios?: File | null;
+  android?: File | null;
+}
+
+const IOS_KEYS = [
+  'iosModuleName', 'iosTypeName', 'iosArtifactFilename', 'iosMinioKey', 'iosMinioUrl', 'iosSha256',
+  'iosStoragePath', 'iosChecksum', 'iosSize', 'iosVersion', 'iosDetectedPermissions',
+];
+const ANDROID_KEYS = [
+  'androidPackageName', 'androidObjectName', 'androidArtifactFilename', 'androidMinioKey', 'androidMinioUrl',
+  'androidSha256', 'androidStoragePath', 'androidChecksum', 'androidSize', 'androidMinSdkVersion',
+  'androidDetectedPermissions', 'androidMavenGroupId', 'androidMavenArtifactId', 'androidMavenVersion',
+];
+
+/**
+ * Drops the fields of a platform the SDK does not ship. The form auto-fills
+ * names for both platforms; only the chosen files say which ones ship.
+ */
+function keepShippedNativePlatforms(payload: Partial<CreateMiniAppDto>, files: PendingSdkFiles) {
+  const conf: Record<string, unknown> | undefined = payload.integrationConfigNativeSdk as any;
+  if (!conf) return;
+  const next = { ...conf };
+  if (!nativeSdkShipsIos(conf, files.ios)) IOS_KEYS.forEach((k) => delete next[k]);
+  if (!nativeSdkShipsAndroid(conf, files.android)) ANDROID_KEYS.forEach((k) => delete next[k]);
+  payload.integrationConfigNativeSdk = next as any;
+}
+
+/**
+ * Sends the chosen SDK files to MinIO quarantine, now that the mini app
+ * exists. The server records them on the mini app; they reach Nexus only
+ * when it is approved. Returns the platforms that failed.
+ */
+export async function uploadPendingSdkFiles(
+  miniAppId: string,
+  files: PendingSdkFiles,
+  conf?: Record<string, any>,
+): Promise<string[]> {
+  const failed: string[] = [];
+  const send = async (platform: 'iOS' | 'Android', file: File, call: (fd: FormData) => Promise<unknown>) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    const version = platform === 'iOS' ? conf?.iosVersion : conf?.androidMavenVersion;
+    if (version) fd.append('version', String(version));
+    if (platform === 'Android' && conf?.androidMavenGroupId) fd.append('groupId', String(conf.androidMavenGroupId));
+    try {
+      await call(fd);
+    } catch (err) {
+      console.error(`Uploading the ${platform} SDK failed:`, err);
+      failed.push(platform);
+    }
+  };
+  if (files.ios) await send('iOS', files.ios, (fd) => sdkArtifactsApi.uploadIos(miniAppId, fd));
+  if (files.android) await send('Android', files.android, (fd) => sdkArtifactsApi.uploadAndroid(miniAppId, fd));
+  return failed;
+}
 
 export async function prepareDraftPayload(
   formData: Partial<CreateMiniAppDto>,
-  pendingArchiveFile: File | null
+  pendingArchiveFile: File | null,
+  sdkFiles: PendingSdkFiles = {},
 ): Promise<Partial<CreateMiniAppDto>> {
   const payload = { ...formData, homeWidget: formData.homeWidget ?? null };
   if (payload.integrationMethod !== IntegrationMethod.WEBVIEW) {
@@ -11,6 +72,8 @@ export async function prepareDraftPayload(
   }
   if (payload.integrationMethod !== IntegrationMethod.NATIVE_SDK) {
     delete payload.integrationConfigNativeSdk;
+  } else {
+    keepShippedNativePlatforms(payload, sdkFiles);
   }
   if (payload.integrationMethod !== IntegrationMethod.FLUTTER_PACKAGE) {
     delete payload.integrationConfigFlutter;
@@ -50,7 +113,8 @@ export async function prepareDraftPayload(
 
 export async function prepareSubmitPayload(
   formData: Partial<CreateMiniAppDto>,
-  pendingArchiveFile: File | null
+  pendingArchiveFile: File | null,
+  sdkFiles: PendingSdkFiles = {},
 ): Promise<Partial<CreateMiniAppDto>> {
   const payload = { ...formData, homeWidget: formData.homeWidget ?? null };
 
@@ -102,6 +166,8 @@ export async function prepareSubmitPayload(
 
   if (payload.integrationMethod !== IntegrationMethod.NATIVE_SDK) {
     delete payload.integrationConfigNativeSdk;
+  } else {
+    keepShippedNativePlatforms(payload, sdkFiles);
   }
   if (payload.integrationMethod !== IntegrationMethod.DEEP_LINK) {
     delete payload.integrationConfigDeepLink;

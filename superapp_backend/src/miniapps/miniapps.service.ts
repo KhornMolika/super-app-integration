@@ -594,9 +594,22 @@ export class MiniappsService implements OnApplicationBootstrap {
     const hasAndroid = Boolean(
       effectiveConfig?.androidNexusMavenUrl || effectiveConfig?.androidMinioKey,
     );
-    if (!hasIos || !hasAndroid) {
+    // An SDK may ship one platform or both; each platform it declares needs its file.
+    const declaresIos = Boolean(effectiveConfig?.iosTypeName || effectiveConfig?.iosModuleName);
+    const declaresAndroid = Boolean(
+      effectiveConfig?.androidPackageName || effectiveConfig?.androidObjectName,
+    );
+    const missing: string[] = [];
+    if (declaresIos && !hasIos) missing.push('iOS (.xcframework.zip)');
+    if (declaresAndroid && !hasAndroid) missing.push('Android (.aar)');
+    if (!hasIos && !hasAndroid) {
       throw new BadRequestException(
-        'Both iOS and Android artifacts must be uploaded before approval.',
+        'Upload the SDK for at least one platform (iOS or Android) before approval.',
+      );
+    }
+    if (missing.length > 0) {
+      throw new BadRequestException(
+        `The SDK file is missing for: ${missing.join(', ')}. Upload it, or clear that platform's fields.`,
       );
     }
     return true;

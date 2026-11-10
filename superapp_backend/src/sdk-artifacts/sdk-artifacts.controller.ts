@@ -21,6 +21,24 @@ import { SdkArtifactUploadService } from './sdk-artifact-upload.service';
 export class SdkArtifactsController {
   constructor(private readonly uploads: SdkArtifactUploadService) {}
 
+  /** Scans an iOS SDK for the registration form; stores nothing. */
+  @Post('inspect/ios')
+  @RequirePermissions('miniapp:create')
+  @UseInterceptors(FileInterceptor('file'))
+  inspectIos(@UploadedFile() file: Express.Multer.File) {
+    this.assertFile(file, /\.xcframework\.zip$/i, '.xcframework.zip');
+    return this.uploads.inspect('IOS', file.buffer, file.originalname);
+  }
+
+  /** Scans an Android SDK for the registration form; stores nothing. */
+  @Post('inspect/android')
+  @RequirePermissions('miniapp:create')
+  @UseInterceptors(FileInterceptor('file'))
+  inspectAndroid(@UploadedFile() file: Express.Multer.File) {
+    this.assertFile(file, /\.aar$/i, '.aar');
+    return this.uploads.inspect('ANDROID', file.buffer, file.originalname);
+  }
+
   @Post(':miniAppId/upload/ios')
   @RequirePermissions('miniapp:update')
   @UseInterceptors(FileInterceptor('file'))

@@ -160,8 +160,8 @@ export default function NativeSdkIntegrationForm({
     uploadFormData.append('file', file);
 
     try {
-      const targetId = formData.id || formData.appId || 'draft';
-      const res = await sdkArtifactsApi.uploadIos(targetId, uploadFormData);
+      // Scanned only: the file is kept here and sent to quarantine on submit
+      const res: any = await sdkArtifactsApi.inspectIos(uploadFormData);
       setIosUploadSuccess(res);
 
       // Auto-derive iOS module name from scanned metadata or filename
@@ -191,10 +191,7 @@ export default function NativeSdkIntegrationForm({
 
       const updates: Partial<NativeSdkConfigDto> = {
         iosArtifactFilename: res.filename || file.name,
-        iosMinioKey: res.minioKey,
-        iosMinioUrl: res.minioUrl,
         iosSha256: res.sha256,
-        iosStoragePath: res.minioUrl || res.artifactUrl || res.minioKey,
         iosChecksum: res.sha256,
         iosSize: res.size || file.size,
         iosDetectedPermissions: detected,
@@ -205,7 +202,7 @@ export default function NativeSdkIntegrationForm({
       if (onUpdateNativeSdkConfig) {
         onUpdateNativeSdkConfig(updates, {
           iosFile: file,
-          detectedPermissions: detected.map((p) => ({
+          detectedPermissions: detected.map((p: string) => ({
             type: p,
             purpose: `Required for native SDK capability: ${p}`,
           })),
@@ -213,12 +210,12 @@ export default function NativeSdkIntegrationForm({
       }
 
       setDetectedNotice(
-        `✨ Auto-detected iOS Module (${derivedModuleName}) & View (${derivedTypeName}) from archive!`,
+        `Auto-detected iOS Module (${derivedModuleName}) & View (${derivedTypeName}) from archive!`,
       );
       setTimeout(() => setDetectedNotice(null), 4500);
     } catch (err: any) {
       setIosUploadError(
-        err.message || 'Failed to stage iOS SDK archive in MinIO quarantine.',
+        err.message || 'Could not read the iOS SDK archive.',
       );
     } finally {
       setIsUploadingIos(false);
@@ -247,8 +244,8 @@ export default function NativeSdkIntegrationForm({
     uploadFormData.append('file', file);
 
     try {
-      const targetId = formData.id || formData.appId || 'draft';
-      const res = await sdkArtifactsApi.uploadAndroid(targetId, uploadFormData);
+      // Scanned only: the file is kept here and sent to quarantine on submit
+      const res: any = await sdkArtifactsApi.inspectAndroid(uploadFormData);
       setAndroidUploadSuccess(res);
 
       const scanned = res.scannedFields || {};
@@ -293,10 +290,7 @@ export default function NativeSdkIntegrationForm({
 
       const updates: Partial<NativeSdkConfigDto> = {
         androidArtifactFilename: res.filename || file.name,
-        androidMinioKey: res.minioKey,
-        androidMinioUrl: res.minioUrl,
         androidSha256: res.sha256,
-        androidStoragePath: res.minioUrl || res.artifactUrl || res.minioKey,
         androidChecksum: res.sha256,
         androidSize: res.size || file.size,
         androidMinSdkVersion:
@@ -312,7 +306,7 @@ export default function NativeSdkIntegrationForm({
       if (onUpdateNativeSdkConfig) {
         onUpdateNativeSdkConfig(updates, {
           androidFile: file,
-          detectedPermissions: detected.map((p) => ({
+          detectedPermissions: detected.map((p: string) => ({
             type: p,
             purpose: `Required for native SDK capability: ${p}`,
           })),
@@ -320,12 +314,12 @@ export default function NativeSdkIntegrationForm({
       }
 
       setDetectedNotice(
-        `✨ Auto-detected Android package (${finalPackageName}) & class (${finalObjectName}) from AAR!`,
+        `Auto-detected Android package (${finalPackageName}) & class (${finalObjectName}) from AAR!`,
       );
       setTimeout(() => setDetectedNotice(null), 4500);
     } catch (err: any) {
       setAndroidUploadError(
-        err.message || 'Failed to stage Android AAR in MinIO quarantine.',
+        err.message || 'Could not read the Android AAR.',
       );
     } finally {
       setIsUploadingAndroid(false);
@@ -446,7 +440,7 @@ export default function NativeSdkIntegrationForm({
                 <div className="flex items-center justify-between font-semibold flex-wrap gap-1">
                   <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
                     <CheckCircleIcon className="w-4 h-4 text-emerald-600" />
-                    <span>Archive Staged &amp; Auto-Scanned</span>
+                    <span>Scanned. Uploaded when you submit</span>
                   </span>
                   {(iosUploadSuccess?.sha256 || nativeConfig.iosChecksum) && (
                     <span className="font-mono text-[10px] text-slate-500 bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
@@ -638,7 +632,7 @@ export default function NativeSdkIntegrationForm({
                 <div className="flex items-center justify-between font-semibold flex-wrap gap-1">
                   <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
                     <CheckCircleIcon className="w-4 h-4 text-emerald-600" />
-                    <span>Quarantine Staged &amp; Auto-Scanned</span>
+                    <span>Scanned. Uploaded when you submit</span>
                   </span>
                   {(androidUploadSuccess?.sha256 ||
                     nativeConfig.androidChecksum) && (

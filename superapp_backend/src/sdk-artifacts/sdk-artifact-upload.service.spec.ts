@@ -86,6 +86,21 @@ describe('SdkArtifactUploadService (MinIO Quarantine & Nexus Flow)', () => {
     );
   });
 
+  it("inspect scans in memory and stores nothing (no MinIO, no Nexus, no database)", async () => {
+    scanner.scanAar.mockResolvedValue({ androidPackageName: "com.x.spa", detectedPermissions: ["CAMERA"] });
+    const r = await service.inspect("ANDROID", buffer, "spa.aar");
+    expect(r).toEqual({
+      scannedFields: { androidPackageName: "com.x.spa", detectedPermissions: ["CAMERA"] },
+      sha256: sha,
+      filename: "spa.aar",
+      size: buffer.length,
+      detectedPermissions: ["CAMERA"],
+    });
+    expect(storage.uploadSdkArchive).not.toHaveBeenCalled();
+    expect(nexus.uploadMavenAar).not.toHaveBeenCalled();
+    expect(repo.createQueryBuilder).not.toHaveBeenCalled();
+  });
+
   describe('STAGE 1: upload() into MinIO quarantine', () => {
     it('uploads iOS xcframework to MinIO and extracts metadata without touching Nexus', async () => {
       scanner.scanXcframework.mockResolvedValue({
