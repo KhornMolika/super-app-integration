@@ -77,7 +77,7 @@ if (-not $NexusUrl) { $NexusUrl = "http://localhost:8081" }
 $NexusUrl = $NexusUrl.TrimEnd('/')
 
 $NexusUser = if ($env:NEXUS_ADMIN_USER) { $env:NEXUS_ADMIN_USER } else { "admin" }
-$NexusPass = if ($env:NEXUS_ADMIN_PASSWORD) { $env:NEXUS_ADMIN_PASSWORD } elseif ($env:NEXUS_PASSWORD) { $env:NEXUS_PASSWORD } else { "admin123" }
+$NexusPass = if ($env:NEXUS_ADMIN_PASSWORD) { $env:NEXUS_ADMIN_PASSWORD } elseif ($env:NEXUS_PASSWORD) { $env:NEXUS_PASSWORD } else { "" }
 
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host " [BUILD] Compiling Size-Optimized FSA Super App APK" -ForegroundColor Cyan
@@ -191,6 +191,21 @@ if (Test-Path $OutputApk) {
                 Invoke-RestMethod -Uri $destUrl -Method Put -Headers $headers -InFile $OutputApk -ErrorAction SilentlyContinue | Out-Null
             }
             Write-Host "[OK] Published ($targetName) to Nexus: $destUrl" -ForegroundColor Cyan
+        }
+
+        # Keep the Native SDK list beside the APK: which SDK versions this build contains
+        if (Test-Path $NativeSdkFile) {
+            $sdkListUrl = "$NexusUrl/repository/$repoName/$AppName/$ReleaseVersion/native_sdks.json"
+            if ($curlCmd) {
+                if ($NexusPass) {
+                    & $curlCmd.Source -s -S -f -u "${NexusUser}:${NexusPass}" --upload-file "$NativeSdkFile" "$sdkListUrl"
+                } else {
+                    & $curlCmd.Source -s -S -f --upload-file "$NativeSdkFile" "$sdkListUrl"
+                }
+            } else {
+                Invoke-RestMethod -Uri $sdkListUrl -Method Put -Headers @{ Authorization = "Basic $b64"; "Content-Type" = "application/json" } -InFile $NativeSdkFile | Out-Null
+            }
+            Write-Host "[OK] Native SDK list saved: $sdkListUrl" -ForegroundColor Cyan
         }
     } catch {
         Write-Host "[WARN] Could not publish to Nexus: $($_.Exception.Message)" -ForegroundColor Yellow
