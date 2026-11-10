@@ -3,6 +3,14 @@
 import React from 'react';
 import { Button } from '@/components/ui/inputs';
 import { ClipboardCheckIcon, SettingsIcon, PackageIcon } from '@/components/ui/Icons';
+import type { MiniAppAllowedActions } from './miniappActions';
+import type { LifecycleActionType, MiniAppDetailFormData } from './types';
+
+function formatWhen(iso?: string) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleString();
+}
 
 export interface MiniAppLifecycleBannersProps {
   status: string;
@@ -10,8 +18,12 @@ export interface MiniAppLifecycleBannersProps {
   role?: string;
   testVersion?: string;
   isSubmitting: boolean;
-  onLifecycleAction: (action: 'submit' | 'approve' | 'reject' | 'request-changes' | 'start-testing' | 'activate' | 'suspend' | 'publish-revision' | 'discard-revision') => void;
-  onOpenSandbox: () => void;
+  /** What this user can do now (see getAllowedActions). */
+  actions: MiniAppAllowedActions;
+  suspension?: MiniAppDetailFormData['suspension'];
+  archiveRequest?: MiniAppDetailFormData['archiveRequest'];
+  onLifecycleAction: (action: LifecycleActionType) => void;
+  onOpenSandbox?: () => void;
   onOpenReviewDiff?: () => void;
   pendingRevision?: any;
   buildStages?: any;
@@ -29,8 +41,10 @@ export default function MiniAppLifecycleBanners({
   role,
   testVersion = 'v0.0.1',
   isSubmitting,
+  actions,
+  suspension,
+  archiveRequest,
   onLifecycleAction,
-  onOpenSandbox,
   onOpenReviewDiff,
   pendingRevision,
   buildStages,
@@ -50,14 +64,146 @@ export default function MiniAppLifecycleBanners({
   const currentStages = buildStages || {};
   const isUpdateProposal = Boolean(
     hasActiveProduction ||
-    (pendingRevision && (status === 'ACTIVE' || status === 'Published')) ||
+    (pendingRevision && actions.isLive) ||
     (status === 'IN_REVIEW' && hasActiveProduction)
   );
 
+  const btn = 'text-sm px-4 py-2 font-semibold rounded-xl shadow-sm flex items-center gap-1.5';
+
   return (
     <>
-      {/* 0. Staged Revision in Review Banner for ACTIVE Apps */}
-      {status === 'ACTIVE' && pendingRevision && (
+      {/* Archived: stopped for good, kept on record */}
+      {actions.phase === 'archived' && (
+        <div className="mb-6 p-4 rounded-2xl border border-slate-300 dark:border-slate-700 bg-slate-100/80 dark:bg-slate-900/60 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm animate-in fade-in">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0 border border-slate-300 dark:border-slate-700">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">Archived</h4>
+              <p className="text-sm text-slate-700 dark:text-slate-300 mt-1 leading-relaxed">
+                This mini app is stopped for good and hidden from users. It is kept as a record, and its App ID stays taken.
+                {suspension?.reason && <> Reason: <strong>{suspension.reason}</strong>.</>}
+                {suspension?.archivedAt && <> Archived {formatWhen(suspension.archivedAt)}.</>}
+              </p>
+            </div>
+          </div>
+          {actions.restore && (
+            <div className="flex items-center gap-2 shrink-0">
+              <Button type="button" variant="outline" onClick={() => onLifecycleAction('restore')} disabled={isSubmitting} className={btn}>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                </svg>
+                <span>Restore as Draft</span>
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Archive requested by an ADMIN: a SUPER_ADMIN decides */}
+      {actions.archiveRequested && actions.phase !== 'archived' && (
+        <div className="mb-6 p-4 rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/80 dark:bg-rose-950/40 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm animate-in fade-in">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-900/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 border border-rose-200 dark:border-rose-800">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="text-base font-bold text-rose-900 dark:text-rose-200">Archive requested</h4>
+              <p className="text-sm text-rose-800 dark:text-rose-200 mt-1 leading-relaxed">
+                {archiveRequest?.requestedByName || 'An admin'} asked to archive this mini app
+                {archiveRequest?.requestedAt && <> on {formatWhen(archiveRequest.requestedAt)}</>}
+                {archiveRequest?.reason && <>: <strong>{archiveRequest.reason}</strong></>}.
+                {!actions.decideArchive && ' A Super Admin will decide.'}
+              </p>
+            </div>
+          </div>
+          {actions.decideArchive && (
+            <div className="flex items-center gap-2 shrink-0">
+              <Button type="button" onClick={() => onLifecycleAction('archive')} disabled={isSubmitting} className={'bg-rose-600 hover:bg-rose-700 text-white ' + btn}>
+                <span>Archive</span>
+              </Button>
+              <Button type="button" variant="outline" onClick={() => onLifecycleAction('decline-archive')} disabled={isSubmitting} className={btn}>
+                <span>Decline</span>
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Suspended: hidden from users until resumed */}
+      {actions.phase === 'suspended' && (
+        <div className="mb-6 p-4 rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/80 dark:bg-amber-950/40 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm animate-in fade-in">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-200 dark:border-amber-800">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="text-base font-bold text-amber-900 dark:text-amber-200">Suspended</h4>
+              <p className="text-sm text-amber-800 dark:text-amber-200 mt-1 leading-relaxed">
+                Hidden from users and cannot be opened.
+                {suspension?.reason && <> Reason: <strong>{suspension.reason}</strong>.</>}
+                {suspension?.suspendedByName && <> By {suspension.suspendedByName}</>}
+                {suspension?.suspendedAt && <> on {formatWhen(suspension.suspendedAt)}</>}
+                {suspension?.suspendedByName || suspension?.suspendedAt ? '.' : ''}
+              </p>
+            </div>
+          </div>
+          {actions.resume && (
+            <div className="flex items-center gap-2 shrink-0">
+              <Button type="button" onClick={() => onLifecycleAction('resume')} disabled={isSubmitting} className={'bg-emerald-600 hover:bg-emerald-700 text-white ' + btn}>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Resume</span>
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Draft, rejected or changes requested: the developer submits it */}
+      {actions.phase === 'draft' && (
+        <div className="mb-6 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm animate-in fade-in">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0 border border-brand-200 dark:border-brand-800">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                {status === 'REJECTED' ? 'Rejected' : status === 'CHANGES_REQUESTED' ? 'Changes requested' : 'Draft'}
+              </h4>
+              <p className="text-sm text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+                {status === 'DRAFT'
+                  ? 'Not sent for review yet. Finish the details, then submit it.'
+                  : 'Fix what the reviewer asked for (see the Activity tab), then submit it again.'}
+              </p>
+            </div>
+          </div>
+          {actions.submit && (
+            <div className="flex items-center gap-2 shrink-0">
+              <Button type="button" onClick={() => onLifecycleAction('submit')} disabled={isSubmitting} className={'bg-brand-600 hover:bg-brand-700 text-white ' + btn}>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+                <span>Submit for Review</span>
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 0. Staged Revision in Review Banner for live Apps */}
+      {actions.isLive && pendingRevision && (
         <div className="mb-6 p-4 rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/80 dark:bg-amber-950/40 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm animate-in fade-in">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-200 dark:border-amber-800">
@@ -95,7 +241,7 @@ export default function MiniAppLifecycleBanners({
                 <span>Compare &amp; Review Revision</span>
               </Button>
             )}
-            {can('miniapp:approve') && (
+            {actions.publishRevision && (
               <Button
                 type="button"
                 onClick={() => onLifecycleAction('publish-revision')}
@@ -108,6 +254,7 @@ export default function MiniAppLifecycleBanners({
                 <span>Publish Revision to Live</span>
               </Button>
             )}
+            {actions.discardRevision && (
             <Button
               type="button"
               variant="outline"
@@ -120,6 +267,7 @@ export default function MiniAppLifecycleBanners({
               </svg>
               <span>Discard Revision</span>
             </Button>
+            )}
           </div>
         </div>
       )}
@@ -195,8 +343,7 @@ export default function MiniAppLifecycleBanners({
                 <span>Review Changes Diff</span>
               </Button>
             )}
-            {can('miniapp:approve') && (
-              <>
+            {actions.approve && (
                 <Button
                   type="button"
                   onClick={() => onLifecycleAction('approve')}
@@ -208,6 +355,8 @@ export default function MiniAppLifecycleBanners({
                   </svg>
                   <span>{isUpdateProposal ? 'Approve Update' : 'Approve MiniApp'}</span>
                 </Button>
+            )}
+            {actions.requestChanges && (
                 <Button
                   type="button"
                   variant="outline"
@@ -220,6 +369,8 @@ export default function MiniAppLifecycleBanners({
                   </svg>
                   <span>Request Changes</span>
                 </Button>
+            )}
+            {actions.reject && (
                 <Button
                   type="button"
                   variant="outline"
@@ -232,14 +383,13 @@ export default function MiniAppLifecycleBanners({
                   </svg>
                   <span>Reject</span>
                 </Button>
-              </>
             )}
           </div>
         </div>
       )}
 
       {/* 2. SA Admin Banner for APPROVED */}
-      {can('miniapp:approve') && status === 'APPROVED' && (
+      {actions.startTesting && (
         <div className="mb-6 p-4 rounded-2xl border border-teal-200 dark:border-teal-900/50 bg-teal-50/80 dark:bg-teal-950/40 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm animate-in fade-in">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-xl bg-teal-100 dark:bg-teal-900/60 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0 border border-teal-200 dark:border-teal-800">
@@ -375,7 +525,7 @@ export default function MiniAppLifecycleBanners({
       )}
 
       {/* 3.5 Build Failed Banner */}
-      {(status === 'BUILD_FAILED' || (buildStatus === 'FAILED' && status !== 'TESTING')) && (
+      {actions.phase === 'build-failed' && (
         <div className="mb-6 p-5 rounded-2xl border border-rose-200 dark:border-rose-900/60 bg-rose-50/80 dark:bg-rose-950/40 shadow-sm animate-in fade-in space-y-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-start gap-3.5">
@@ -397,7 +547,7 @@ export default function MiniAppLifecycleBanners({
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              {can('miniapp:approve') && (
+              {actions.retryBuild && (
                 <Button
                   type="button"
                   onClick={() => onLifecycleAction('start-testing')}
@@ -429,7 +579,7 @@ export default function MiniAppLifecycleBanners({
       )}
 
       {/* 4. Manual Sandbox Testing Phase Banner */}
-      {status === 'TESTING' && (
+      {actions.phase === 'testing' && (
         <div className="mb-6 p-4 rounded-2xl border border-accent-200 dark:border-accent-900/50 bg-accent-50/80 dark:bg-accent-950/40 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm animate-in fade-in">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-xl bg-accent-100 dark:bg-accent-900/60 text-accent-600 dark:text-accent-400 flex items-center justify-center shrink-0 border border-accent-200 dark:border-accent-800">
@@ -447,25 +597,13 @@ export default function MiniAppLifecycleBanners({
                 Manual Sandbox Testing Phase
               </h4>
               <p className="text-sm text-accent-800 dark:text-accent-200 mt-1 leading-relaxed">
-                The test container has been compiled. Test the MiniApp using the <strong>Sandbox Preview</strong> or{' '}
-                <strong>Download Test APK</strong> on Android devices. When verified, SA Admin can Activate the app.
+                The test build is ready. Test the MiniApp with <strong>Launch Sandbox Preview</strong> (in the ... menu) or
+                the test APK on an Android phone. When it works, a reviewer activates it.
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onOpenSandbox}
-              className="border-accent-300 text-accent-800 dark:text-accent-300 hover:bg-accent-100 dark:hover:bg-accent-950/50 text-sm px-3.5 py-2 font-medium flex items-center gap-1.5"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-              <span>Launch Sandbox</span>
-            </Button>
-            {can('miniapp:activate') && (
+            {actions.activate && (
               <Button
                 type="button"
                 onClick={() => onLifecycleAction('activate')}

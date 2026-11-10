@@ -24,6 +24,19 @@ export type MiniAppDetailFormData = Partial<CreateMiniAppDto> & {
   isDomainVerified?: boolean;
   domainVerifiedAt?: string;
   updatedAt?: string;
+  ownerId?: string;
+  availabilityStatus?: string;
+  suspension?: {
+    reason: string;
+    suspendedByName?: string;
+    suspendedAt?: string;
+    archivedAt?: string;
+  } | null;
+  archiveRequest?: {
+    reason: string;
+    requestedByName?: string;
+    requestedAt?: string;
+  } | null;
 };
 
 export type LifecycleActionType =
@@ -35,17 +48,26 @@ export type LifecycleActionType =
   | 'activate'
   | 'suspend'
   | 'publish-revision'
-  | 'discard-revision';
+  | 'discard-revision'
+  | 'resume'
+  | 'request-archive'
+  | 'archive'
+  | 'decline-archive'
+  | 'restore';
 
 export interface LifecycleReasonModalState {
   isOpen: boolean;
-  action: 'reject' | 'request-changes' | 'discard-revision';
+  action: 'reject' | 'request-changes' | 'discard-revision' | 'suspend' | 'request-archive' | 'archive' | 'decline-archive';
   title: string;
   description: string;
   confirmText: string;
   confirmVariant: 'danger' | 'warning';
   quickSuggestions: string[];
   placeholder: string;
+  required?: boolean;
+  checkboxLabel?: string;
+  checkboxHint?: string;
+  audienceNote?: string;
 }
 
 export const INITIAL_MINIAPP_FORM_DATA: MiniAppDetailFormData = {

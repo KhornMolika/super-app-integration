@@ -22,6 +22,7 @@ import {
   useMiniAppDetail,
   useMiniAppLifecycle,
 } from '@/components/miniapp-detail';
+import { getAllowedActions } from '@/components/miniapp-detail/miniappActions';
 
 const TAB_TITLES: Record<MiniAppTabType, string> = {
   overview: 'General Information',
@@ -154,7 +155,10 @@ function ManageMiniAppContent() {
     setIsSubmitting,
     setBuildModalState,
     setActiveTab,
+    role,
   });
+
+  const actions = getAllowedActions(formData, { role, userId: user?.id, can });
 
   if (isLoading || fetchError || !formData.id) {
     return (
@@ -202,6 +206,7 @@ function ManageMiniAppContent() {
             }
           }}
           onOpenSandbox={openSandboxPreview}
+          actions={actions}
           onLifecycleAction={handleLifecycleAction}
           onDelete={handleDelete}
           isSubmitting={isSubmitting}
@@ -214,8 +219,10 @@ function ManageMiniAppContent() {
           role={role}
           testVersion={formData.activeTestVersion || latestTestVersion || (formData as any).integrationConfig?.superAppTestVersion || 'v0.0.1'}
           isSubmitting={isSubmitting}
+          actions={actions}
+          suspension={formData.suspension}
+          archiveRequest={formData.archiveRequest}
           onLifecycleAction={handleLifecycleAction}
-          onOpenSandbox={openSandboxPreview}
           onOpenReviewDiff={() => setIsReviewDiffOpen(true)}
           pendingRevision={formData.pendingRevision}
           buildStages={formData.buildStages}
@@ -223,7 +230,7 @@ function ManageMiniAppContent() {
           buildError={formData.buildError}
           currentReleaseVersion={formData.currentReleaseVersion || ((formData as any).versionHistory?.find((v: any) => v.type === 'PRODUCTION' && v.status === 'ACTIVE')?.version)}
           draftVersion={formData.pendingRevision?.version || (formData as any).draftVersion || formData.version}
-          hasActiveProduction={Boolean((formData.status === 'ACTIVE' || formData.status === 'Published') && ((formData as any).versionHistory?.some((v: any) => v.type === 'PRODUCTION' && (v.status === 'ACTIVE' || v.status === 'PREVIOUS')) || formData.currentReleaseVersion))}
+          hasActiveProduction={Boolean(actions.isLive && ((formData as any).versionHistory?.some((v: any) => v.type === 'PRODUCTION' && (v.status === 'ACTIVE' || v.status === 'PREVIOUS')) || formData.currentReleaseVersion))}
           onOpenBuildModal={() =>
             setBuildModalState({
               isOpen: true,
@@ -269,7 +276,7 @@ function ManageMiniAppContent() {
         {/* Save Changes Floating Bottom Bar */}
         <MiniAppDetailBottomBar
           isEditingUnlocked={isEditingUnlocked}
-          canEdit={can('miniapp:update')}
+          canEdit={actions.edit}
           activeTab={activeTab}
           isSubmitting={isSubmitting}
           onCancelEdit={handleCancelEdit}
@@ -367,12 +374,20 @@ function ManageMiniAppContent() {
           confirmText={lifecycleReasonModal.confirmText}
           confirmVariant={lifecycleReasonModal.confirmVariant}
           quickSuggestions={lifecycleReasonModal.quickSuggestions}
+          required={lifecycleReasonModal.required ?? true}
+          checkboxLabel={lifecycleReasonModal.checkboxLabel}
+          checkboxHint={lifecycleReasonModal.checkboxHint}
+          audienceNote={lifecycleReasonModal.audienceNote}
           isLoading={isSubmitting}
           onClose={() => setLifecycleReasonModal(null)}
-          onConfirm={(reason) => {
+          onConfirm={(reason, checked) => {
             const action = lifecycleReasonModal.action;
             setLifecycleReasonModal(null);
-            handleLifecycleAction(action, reason);
+            handleLifecycleAction(
+              action,
+              reason,
+              action === 'suspend' && checked ? { requestArchive: true } : undefined,
+            );
           }}
         />
       )}

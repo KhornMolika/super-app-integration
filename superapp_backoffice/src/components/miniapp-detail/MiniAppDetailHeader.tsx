@@ -5,6 +5,8 @@ import { IntegrationMethod } from '@/types/miniapp.types';
 import { BuildingIcon } from '@/components/ui/Icons';
 import { AppLogoAvatar } from '@/components/ui/AppLogoAvatar';
 import { getOrganizationCode, getOrganizationFullName } from '@/api';
+import type { MiniAppAllowedActions } from './miniappActions';
+import type { LifecycleActionType } from './types';
 
 export interface MiniAppDetailHeaderProps {
   formData: any;
@@ -14,7 +16,9 @@ export interface MiniAppDetailHeaderProps {
   isEditingUnlocked: boolean;
   onToggleEditing: () => void;
   onOpenSandbox?: () => void;
-  onLifecycleAction: (action: 'suspend' | 'approve' | 'reject' | 'request-changes' | 'start-testing' | 'activate') => void;
+  /** What this user can do now (see getAllowedActions). */
+  actions: MiniAppAllowedActions;
+  onLifecycleAction: (action: LifecycleActionType) => void;
   onDelete: () => void;
   isSubmitting: boolean;
 }
@@ -27,6 +31,7 @@ export default function MiniAppDetailHeader({
   isEditingUnlocked,
   onToggleEditing,
   onOpenSandbox,
+  actions,
   onLifecycleAction,
   onDelete,
   isSubmitting,
@@ -53,7 +58,9 @@ export default function MiniAppDetailHeader({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const status = formData.status || 'DRAFT';
+  // Suspension is an availability flag; show it in the pill like a status
+  const status =
+    actions.phase === 'suspended' ? 'SUSPENDED' : (formData.status || 'DRAFT');
   const testVersion =
     formData.activeTestVersion ||
     formData.integrationConfig?.superAppTestVersion ||
@@ -82,6 +89,8 @@ export default function MiniAppDetailHeader({
                   ? 'bg-accent-50 text-accent-800 border border-accent-200 dark:bg-accent-950/40 dark:text-accent-300 dark:border-accent-800'
                   : status === 'REJECTED' || status === 'SUSPENDED'
                   ? 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
+                  : status === 'ARCHIVED'
+                  ? 'bg-slate-200 text-slate-600 border border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-600'
                   : 'bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
               }`}
             >
@@ -100,7 +109,7 @@ export default function MiniAppDetailHeader({
                     : 'bg-slate-400'
                 }`}
               />
-              <span>{status}</span>
+              <span>{status.replace(/_/g, ' ')}</span>
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-2 mt-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
@@ -172,68 +181,49 @@ export default function MiniAppDetailHeader({
 
           {showActionsMenu && (
             <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 divide-y divide-slate-100 dark:divide-slate-800/60">
-              {/* Section 1: Edit Configuration */}
-              {can('miniapp:update') && onToggleEditing && (
+              {(actions.edit || (actions.sandbox && onOpenSandbox)) && (
                 <div className="py-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowActionsMenu(false);
-                      onToggleEditing();
-                    }}
-                    className="w-full text-left px-3.5 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center space-x-2.5 font-medium transition-colors cursor-pointer"
-                  >
-                    <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      {isEditingUnlocked ? (
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                        />
-                      ) : (
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                        />
-                      )}
-                    </svg>
-                    <span>{isEditingUnlocked ? 'Lock Configuration' : 'Edit Configuration'}</span>
-                  </button>
+                  {actions.edit && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowActionsMenu(false);
+                        onToggleEditing();
+                      }}
+                      disabled={isSubmitting}
+                      className="w-full text-left px-3.5 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center space-x-2.5 font-medium transition-colors disabled:opacity-50"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={isEditingUnlocked ? 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' : 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'} />
+                      </svg>
+                      <span>{isEditingUnlocked ? 'Lock Configuration' : 'Edit Configuration'}</span>
+                    </button>
+                  )}
+                  {actions.sandbox && onOpenSandbox && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowActionsMenu(false);
+                        onOpenSandbox?.();
+                      }}
+                      disabled={isSubmitting}
+                      className="w-full text-left px-3.5 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center space-x-2.5 font-medium transition-colors disabled:opacity-50"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                      <span>Launch Sandbox Preview</span>
+                    </button>
+                  )}
                 </div>
               )}
 
-              {/* Section 2: Testing & Simulation Actions */}
-              {onOpenSandbox && (
-                <div className="py-1">
-                  <div className="px-3.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                    Testing & Simulation
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowActionsMenu(false);
-                      onOpenSandbox();
-                    }}
-                    className="w-full text-left px-3.5 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center space-x-2.5 font-medium transition-colors cursor-pointer"
-                  >
-                    <svg className="w-4 h-4 text-accent-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                    </svg>
-                    <span>Launch Sandbox Preview</span>
-                  </button>
-                </div>
-              )}
-
-              {/* Section 2: Administrative Actions */}
-              {((can('miniapp:suspend') && (status === 'APPROVED' || status === 'ACTIVE')) || can('miniapp:delete')) && (
+              {(actions.suspend || actions.requestArchive || actions.archive || actions.delete) && (
                 <div className="py-1">
                   <div className="px-3.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                     Administration
                   </div>
-                  {can('miniapp:suspend') && (status === 'APPROVED' || status === 'ACTIVE') && (
+                  {actions.suspend && (
                     <button
                       type="button"
                       onClick={() => {
@@ -241,16 +231,47 @@ export default function MiniAppDetailHeader({
                         onLifecycleAction('suspend');
                       }}
                       disabled={isSubmitting}
-                      className="w-full text-left px-3.5 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 flex items-center space-x-2.5 font-medium transition-colors"
+                      className="w-full text-left px-3.5 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 flex items-center space-x-2.5 font-medium transition-colors disabled:opacity-50"
                     >
-                      <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       <span>Suspend MiniApp</span>
                     </button>
                   )}
-
-                  {can('miniapp:delete') && (
+                  {actions.requestArchive && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowActionsMenu(false);
+                        onLifecycleAction('request-archive');
+                      }}
+                      disabled={isSubmitting}
+                      className="w-full text-left px-3.5 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 flex items-center space-x-2.5 font-medium transition-colors disabled:opacity-50"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                      </svg>
+                      <span>Ask Super Admin to Archive</span>
+                    </button>
+                  )}
+                  {actions.archive && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowActionsMenu(false);
+                        onLifecycleAction('archive');
+                      }}
+                      disabled={isSubmitting}
+                      className="w-full text-left px-3.5 py-2 text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center space-x-2.5 font-medium transition-colors disabled:opacity-50"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                      </svg>
+                      <span>Archive MiniApp</span>
+                    </button>
+                  )}
+                  {actions.delete && (
                     <button
                       type="button"
                       onClick={() => {
@@ -258,19 +279,20 @@ export default function MiniAppDetailHeader({
                         onDelete();
                       }}
                       disabled={isSubmitting}
-                      className="w-full text-left px-3.5 py-2 text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center space-x-2.5 font-medium transition-colors"
+                      className="w-full text-left px-3.5 py-2 text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center space-x-2.5 font-medium transition-colors disabled:opacity-50"
                     >
-                      <svg className="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
-                      <span>Delete App</span>
+                      <span>Delete MiniApp</span>
                     </button>
                   )}
+                </div>
+              )}
+
+              {!actions.edit && !(actions.sandbox && onOpenSandbox) && !actions.suspend && !actions.requestArchive && !actions.archive && !actions.delete && (
+                <div className="px-3.5 py-2.5 text-xs text-slate-500 dark:text-slate-400">
+                  No actions available in this status.
                 </div>
               )}
             </div>

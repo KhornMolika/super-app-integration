@@ -17,6 +17,7 @@ import {
   unwrapMeta,
   PaginationMeta,
 } from '@/api';
+import { getMiniAppPhase } from '@/components/miniapp-detail/miniappActions';
 import { BackendServiceOfflineNotice } from '@/components/ui/BackendServiceOfflineNotice';
 import { useAuth } from '@/lib/auth';
 import { toast } from '@/components/ui/Toast';
@@ -48,6 +49,7 @@ function MiniAppsContent() {
   const initialScope = (searchParams.get('scope') as 'all' | 'mine') || (isSuper ? 'all' : 'mine');
 
   const [scope, setScope] = useState<'all' | 'mine'>(initialScope);
+  const [showArchived, setShowArchived] = useState(false);
   const [miniApps, setMiniApps] = useState<MiniApp[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -132,6 +134,7 @@ function MiniAppsContent() {
         page: currentPage,
         limit: pageSize,
         mine: scope === 'mine' || !isSuper,
+        includeArchived: showArchived,
       };
       if (debouncedSearch.trim()) {
         queryParams.search = debouncedSearch.trim();
@@ -165,7 +168,7 @@ function MiniAppsContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [scope, isSuper, currentPage, pageSize, debouncedSearch, methodFilter]);
+  }, [showArchived, scope, isSuper, currentPage, pageSize, debouncedSearch, methodFilter]);
 
   useEffect(() => {
     fetchMiniApps();
@@ -253,7 +256,10 @@ function MiniAppsContent() {
       sortable: true,
       sortValue: (app) => app.status || 'DRAFT',
       cell: (app) => {
-        const isLiveProduction = app.status === 'ACTIVE' || app.status === 'Published';
+        const phase = getMiniAppPhase(app as any);
+        const isLiveProduction = phase === 'live';
+        const label =
+          phase === 'suspended' ? 'SUSPENDED' : (app.status || 'DRAFT').replace(/_/g, ' ');
         const hasProductionHistory = Boolean(
           app.versionHistory?.some(
             (v: any) => v.type === 'PRODUCTION' && (v.status === 'ACTIVE' || v.status === 'PREVIOUS')
@@ -270,14 +276,18 @@ function MiniAppsContent() {
         return (
           <span
             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-              isLiveProduction
+              phase === 'suspended'
+                ? 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400'
+                : phase === 'archived'
+                ? 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                : isLiveProduction
                 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
                 : isNewAppInReview
                 ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400'
                 : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
             }`}
           >
-            {app.status || 'DRAFT'}
+            {label}
           </span>
         );
       },
@@ -344,6 +354,7 @@ function MiniAppsContent() {
               },
               {
                 label: 'Test APK',
+                hidden: !['testing', 'live'].includes(getMiniAppPhase(app as any)),
                 icon: <DevicePhoneIcon className="w-4 h-4 text-emerald-500" />,
                 onClick: () => {
                   const testVersion =
@@ -356,7 +367,7 @@ function MiniAppsContent() {
               },
               {
                 label: 'Inspect Capabilities',
-                href: `/miniapps/${app.id}?tab=capabilities`,
+                href: `/miniapps/${app.id}?tab=permissions`,
                 icon: (
                   <svg className="w-4 h-4 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -441,6 +452,18 @@ function MiniAppsContent() {
               </button>
             </div>
           )}
+          <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={(e) => {
+                setShowArchived(e.target.checked);
+                setCurrentPage(1);
+              }}
+              className="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+            />
+            <span>Show archived</span>
+          </label>
           <RegisterMiniAppButton />
         </div>
       </div>

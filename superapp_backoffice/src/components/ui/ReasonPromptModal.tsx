@@ -12,7 +12,12 @@ export interface ReasonPromptModalProps {
   confirmVariant?: 'danger' | 'warning' | 'primary';
   required?: boolean;
   quickSuggestions?: string[];
-  onConfirm: (reason: string) => void;
+  /** Optional yes/no option shown under the reason, passed to onConfirm. */
+  checkboxLabel?: string;
+  checkboxHint?: string;
+  /** Who reads the reason, shown under the text box. */
+  audienceNote?: string;
+  onConfirm: (reason: string, checked: boolean) => void;
   onClose: () => void;
   isLoading?: boolean;
 }
@@ -26,16 +31,21 @@ export default function ReasonPromptModal({
   confirmVariant = 'warning',
   required = true,
   quickSuggestions = [],
+  checkboxLabel,
+  checkboxHint,
+  audienceNote = 'This feedback will be notified directly to the developer',
   onConfirm,
   onClose,
   isLoading = false,
 }: ReasonPromptModalProps) {
   const [reason, setReason] = useState('');
+  const [checked, setChecked] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (isOpen) {
       setReason('');
+      setChecked(false);
       setTimeout(() => {
         textareaRef.current?.focus();
       }, 100);
@@ -50,7 +60,7 @@ export default function ReasonPromptModal({
       toast.warning('A reason or description is required.', 'Input Required');
       return;
     }
-    onConfirm(reason.trim());
+    onConfirm(reason.trim(), checked);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -177,9 +187,26 @@ export default function ReasonPromptModal({
             />
             <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center justify-between pt-1">
               <span>Press <kbd className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-mono text-xs font-semibold border border-slate-200 dark:border-slate-700">Ctrl</kbd> + <kbd className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-mono text-xs font-semibold border border-slate-200 dark:border-slate-700">Enter</kbd> to submit</span>
-              <span>This feedback will be notified directly to the developer</span>
+              <span>{audienceNote}</span>
             </p>
           </div>
+
+          {checkboxLabel && (
+            <label className="flex items-start gap-3 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={(e) => setChecked(e.target.checked)}
+                className="mt-1 w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+              />
+              <span>
+                <span className="block text-sm font-bold text-slate-800 dark:text-slate-200">{checkboxLabel}</span>
+                {checkboxHint && (
+                  <span className="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">{checkboxHint}</span>
+                )}
+              </span>
+            </label>
+          )}
 
           {/* Actions */}
           <div className="flex items-center justify-end gap-3.5 pt-4 border-t border-slate-100 dark:border-slate-800">

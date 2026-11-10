@@ -7,6 +7,7 @@ import { RevisionReviewModal } from '@/components/review/RevisionReviewModal';
 import { miniappsApi } from '@/api';
 import { Select } from '@/components/ui/inputs';
 import { DotBadge } from '@/components/ui/Icons';
+import { useAuth } from '@/lib/auth';
 
 export interface VersionRecord {
   version: string;
@@ -58,6 +59,9 @@ export default function VersionHistoryTab({
   pendingRevision,
   onOpenReviewDiff,
 }: VersionHistoryTabProps) {
+  // Rolling back changes what users get: admins only, and never on an archived app
+  const { role } = useAuth();
+  const canRollback = (role === 'SUPER_ADMIN' || role === 'ADMIN') && currentStatus !== 'ARCHIVED';
   const [data, setData] = useState<VersionHistoryData | null>(null);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<'ALL' | 'PRODUCTION' | 'TEST'>('ALL');
@@ -593,7 +597,7 @@ export default function VersionHistoryTab({
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
                           </svg>
                         </button>
-                        {rec.version !== data?.currentReleaseVersion && (
+                        {canRollback && rec.version !== data?.currentReleaseVersion && (
                           <button
                             type="button"
                             onClick={() =>

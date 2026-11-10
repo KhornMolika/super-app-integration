@@ -3,6 +3,7 @@ import { toast } from '@/components/ui/Toast';
 import ReasonPromptModal from '@/components/ui/ReasonPromptModal';
 import { DotBadge, ZapIcon } from '@/components/ui/Icons';
 import { miniappsApi } from '@/api';
+import { useAuth } from '@/lib/auth';
 
 export interface RevisionReviewModalProps {
   isOpen: boolean;
@@ -23,6 +24,10 @@ export function RevisionReviewModal({
   targetVersion,
   onSuccess,
 }: RevisionReviewModalProps) {
+  // Only reviewers decide; the developer sees the comparison only
+  const { can } = useAuth();
+  const canApprove = can('miniapp:approve');
+  const canReject = can('miniapp:reject');
   const [diffData, setDiffData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<'DIFF' | 'PERMISSIONS' | 'NETWORK' | 'METADATA'>('DIFF');
@@ -104,7 +109,7 @@ export function RevisionReviewModal({
     const reason = explicitReason || '';
     setActionLoading(action);
     try {
-      await miniappsApi.executeAction(miniAppId, action, reason);
+      await miniappsApi.triggerAction(miniAppId, action, reason);
 
       const actionLabels: Record<string, string> = {
         'publish-revision': 'Revision published live to SuperApp catalog!',
@@ -468,7 +473,11 @@ export function RevisionReviewModal({
             <span>Cancel</span>
           </button>
 
+          {!canApprove && !canReject && (
+            <p className="text-sm text-slate-500 dark:text-slate-400">A reviewer will approve or return this revision.</p>
+          )}
           <div className="flex flex-wrap items-center gap-3">
+            {canReject && (
             <button
               type="button"
               disabled={Boolean(actionLoading)}
@@ -480,7 +489,9 @@ export function RevisionReviewModal({
               </svg>
               <span>{actionLoading === 'discard-revision' ? 'Rejecting...' : 'Reject Revision'}</span>
             </button>
+            )}
 
+            {canReject && (
             <button
               type="button"
               disabled={Boolean(actionLoading)}
@@ -492,7 +503,9 @@ export function RevisionReviewModal({
               </svg>
               <span>{actionLoading === 'request-changes' ? 'Sending...' : 'Request Changes'}</span>
             </button>
+            )}
 
+            {canApprove && (
             <button
               type="button"
               disabled={Boolean(actionLoading)}
@@ -504,7 +517,9 @@ export function RevisionReviewModal({
               </svg>
               <span>{actionLoading === 'start-testing' ? 'Triggering...' : 'Approve for Test Build'}</span>
             </button>
+            )}
 
+            {canApprove && (
             <button
               type="button"
               disabled={Boolean(actionLoading)}
@@ -516,6 +531,7 @@ export function RevisionReviewModal({
               </svg>
               <span>{actionLoading === 'publish-revision' ? 'Publishing...' : 'Approve & Publish Live'}</span>
             </button>
+            )}
           </div>
         </div>
       </div>

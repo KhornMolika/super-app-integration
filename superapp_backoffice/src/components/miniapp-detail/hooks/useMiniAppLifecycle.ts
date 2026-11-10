@@ -17,6 +17,7 @@ interface UseMiniAppLifecycleProps {
   setIsSubmitting: React.Dispatch<React.SetStateAction<boolean>>;
   setBuildModalState: React.Dispatch<React.SetStateAction<BuildProgressModalState>>;
   setActiveTab?: (tab: MiniAppTabType) => void;
+  role?: string;
 }
 
 export function useMiniAppLifecycle({
@@ -27,6 +28,7 @@ export function useMiniAppLifecycle({
   setIsSubmitting,
   setBuildModalState,
   setActiveTab,
+  role,
 }: UseMiniAppLifecycleProps) {
   const router = useRouter();
   const confirm = useConfirm();
@@ -34,9 +36,100 @@ export function useMiniAppLifecycle({
 
   const handleLifecycleAction = async (
     action: LifecycleActionType,
-    explicitReason?: string
+    explicitReason?: string,
+    extra?: Record<string, unknown>
   ) => {
     const isLiveWithRevision = formData.status === 'ACTIVE' && Boolean(formData.pendingRevision);
+    const appLabel = formData.name || formData.appId || 'this mini app';
+
+    if (action === 'suspend' && explicitReason === undefined) {
+      const isSuperAdmin = role === 'SUPER_ADMIN';
+      setLifecycleReasonModal({
+        isOpen: true,
+        action: 'suspend',
+        title: 'Suspend MiniApp',
+        description: `"${appLabel}" will be hidden from users at once and can no longer be opened. You can resume it later.`,
+        confirmText: 'Suspend Now',
+        confirmVariant: 'warning',
+        placeholder: 'Why must this mini app be stopped now?',
+        quickSuggestions: [
+          'Security issue reported; stopped while it is investigated',
+          'Partner breached the terms of service',
+          'Mini app is broken for users',
+          'Requested by the partner',
+        ],
+        checkboxLabel: isSuperAdmin ? undefined : 'Also ask a Super Admin to archive it',
+        checkboxHint: 'A Super Admin decides. Archived mini apps stop for good but stay on record.',
+        audienceNote: 'The reason is shown to the developer and in the activity log',
+      });
+      return;
+    }
+
+    if (action === 'request-archive' && explicitReason === undefined) {
+      setLifecycleReasonModal({
+        isOpen: true,
+        action: 'request-archive',
+        title: 'Ask to Archive',
+        description: `A Super Admin will be asked to archive "${appLabel}". It stays suspended until they decide.`,
+        confirmText: 'Send Request',
+        confirmVariant: 'warning',
+        placeholder: 'Why should this mini app be stopped for good?',
+        quickSuggestions: [
+          'Partner has ended the service',
+          'Serious security issue that cannot be fixed',
+          'Replaced by a newer mini app',
+        ],
+        audienceNote: 'Sent to Super Admins and kept in the activity log',
+      });
+      return;
+    }
+
+    if (action === 'archive' && explicitReason === undefined) {
+      if (formData.archiveRequest) {
+        const ok = await confirm({
+          title: 'Archive MiniApp',
+          message: `Archive "${appLabel}" as requested by ${formData.archiveRequest.requestedByName || 'an admin'}? It stops for good, its App ID stays taken, and a Super Admin can restore it as a draft later.`,
+          confirmText: 'Archive',
+          confirmVariant: 'danger',
+          cancelText: 'Cancel',
+        });
+        if (!ok) return;
+        return handleLifecycleAction('archive', '');
+      }
+      setLifecycleReasonModal({
+        isOpen: true,
+        action: 'archive',
+        title: 'Archive MiniApp',
+        description: `"${appLabel}" stops for good and is hidden from users. It stays on record with its App ID, and can be restored as a draft later.`,
+        confirmText: 'Archive',
+        confirmVariant: 'danger',
+        placeholder: 'Why is this mini app being archived?',
+        quickSuggestions: [
+          'Partner has ended the service',
+          'Serious security issue that cannot be fixed',
+          'Replaced by a newer mini app',
+          'Test registration, no longer needed',
+        ],
+        audienceNote: 'The reason is shown to the developer and in the activity log',
+      });
+      return;
+    }
+
+    if (action === 'decline-archive' && explicitReason === undefined) {
+      setLifecycleReasonModal({
+        isOpen: true,
+        action: 'decline-archive',
+        title: 'Decline Archive Request',
+        description: 'The mini app stays as it is (still suspended if it was). The admin who asked will be told.',
+        confirmText: 'Decline',
+        confirmVariant: 'warning',
+        placeholder: 'Optional note for the admin who asked',
+        quickSuggestions: [],
+        required: false,
+        audienceNote: 'Sent to the admin who asked',
+      });
+      return;
+    }
 
     if (action === 'discard-revision' && explicitReason === undefined) {
       setLifecycleReasonModal({
@@ -146,6 +239,10 @@ export function useMiniAppLifecycle({
         ? 'discard the pending revision'
         : action === 'activate'
         ? 'activate'
+        : action === 'submit'
+        ? 'submit for review'
+        : action === 'restore'
+        ? 'restore (it comes back as a DRAFT and must be submitted again)'
         : action;
 
       const isConfirmed = await confirm({
@@ -222,7 +319,7 @@ export function useMiniAppLifecycle({
         }));
       }
 
-      const res = await miniappsApi.triggerAction(id, action, reason);
+      const res = await miniappsApi.triggerAction(id, action, reason || undefined, extra);
       const msg =
         action === 'start-testing'
           ? 'SuperApp test build pipeline triggered in Jenkins! Packaging test APK for Nexus store...'
@@ -232,6 +329,20 @@ export function useMiniAppLifecycle({
           ? 'Pending draft revision has been discarded.'
           : action === 'approve'
           ? 'MiniApp approved successfully! Redirecting to Security & Compliance scan...'
+          : action === 'suspend'
+          ? extra?.requestArchive
+            ? 'MiniApp suspended. A Super Admin was asked to archive it.'
+            : 'MiniApp suspended and hidden from users.'
+          : action === 'resume'
+          ? 'MiniApp resumed and available again.'
+          : action === 'request-archive'
+          ? 'A Super Admin was asked to archive this mini app.'
+          : action === 'archive'
+          ? 'MiniApp archived.'
+          : action === 'decline-archive'
+          ? 'Archive request declined.'
+          : action === 'restore'
+          ? 'MiniApp restored as a draft.'
           : res?.message || 'MiniApp status successfully updated!';
       toast.success(msg, 'Lifecycle Updated');
       fetchApp();

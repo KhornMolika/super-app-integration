@@ -113,16 +113,10 @@ export const miniappsApi = {
     });
   },
 
-  triggerAction: (id: string, action: string, reason?: string) =>
+  triggerAction: (id: string, action: string, reason?: string, extra?: Record<string, unknown>) =>
     apiClient<{ success: boolean; message?: string }>(`/api/mini-apps/${id}/${action}`, {
       method: 'POST',
-      body: { reason },
-    }),
-
-  executeAction: (id: string, action: string, reason?: string) =>
-    apiClient<{ success: boolean; message?: string }>(`/api/mini-apps/${id}/${action}`, {
-      method: 'POST',
-      body: { reason },
+      body: { reason, ...(extra || {}) },
     }),
 
   getDiff: (id: string, baseVersion?: string, targetVersion?: string) =>

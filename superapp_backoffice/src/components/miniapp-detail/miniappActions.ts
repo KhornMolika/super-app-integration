@@ -1,0 +1,136 @@
+/**
+ * Which mini app actions the current user can take, in one place.
+ *
+ * The status banner shows the next step (submit, review, build, activate,
+ * resume, archive decision, restore). The header "..." menu holds the rest
+ * (edit, sandbox, suspend, archive, delete). Each flag here matches the rule
+ * the backend applies, so a button is only shown when it can work.
+ */
+
+export type MiniAppPhase =
+  | 'draft'
+  | 'review'
+  | 'approved'
+  | 'building'
+  | 'build-failed'
+  | 'testing'
+  | 'live'
+  | 'suspended'
+  | 'archived';
+
+export interface MiniAppActionSubject {
+  status?: string;
+  availabilityStatus?: string;
+  ownerId?: string;
+  buildStatus?: string;
+  pendingRevision?: unknown;
+  archiveRequest?: unknown;
+}
+
+export interface MiniAppActionUser {
+  role?: string;
+  userId?: string;
+  can: (permission: string) => boolean;
+}
+
+export interface MiniAppAllowedActions {
+  phase: MiniAppPhase;
+  isLive: boolean;
+  isOwner: boolean;
+  archiveRequested: boolean;
+  // Banner: next step
+  submit: boolean;
+  approve: boolean;
+  requestChanges: boolean;
+  reject: boolean;
+  startTesting: boolean;
+  retryBuild: boolean;
+  activate: boolean;
+  publishRevision: boolean;
+  discardRevision: boolean;
+  resume: boolean;
+  decideArchive: boolean;
+  restore: boolean;
+  // Header menu
+  edit: boolean;
+  sandbox: boolean;
+  suspend: boolean;
+  archive: boolean;
+  requestArchive: boolean;
+  delete: boolean;
+  rollback: boolean;
+  downloadTestApk: boolean;
+}
+
+/** Never released: delete instead of archiving. */
+const DELETABLE = ['DRAFT', 'REJECTED'];
+const NEEDS_SUBMIT = ['DRAFT', 'REJECTED', 'CHANGES_REQUESTED'];
+const IN_REVIEW = ['SUBMITTED', 'IN_REVIEW'];
+const NOT_EDITABLE = ['ARCHIVED', 'BUILDING', 'SUBMITTED', 'IN_REVIEW'];
+
+export function getMiniAppPhase(app: MiniAppActionSubject): MiniAppPhase {
+  const status = (app.status || 'DRAFT').toUpperCase();
+  const availability = (app.availabilityStatus || '').toUpperCase();
+  if (status === 'ARCHIVED') return 'archived';
+  if (availability === 'SUSPENDED') return 'suspended';
+  if (NEEDS_SUBMIT.includes(status)) return 'draft';
+  if (IN_REVIEW.includes(status)) return 'review';
+  if (status === 'BUILD_FAILED' || (app.buildStatus === 'FAILED' && status !== 'TESTING' && status !== 'ACTIVE')) {
+    return 'build-failed';
+  }
+  if (status === 'BUILDING') return 'building';
+  // ACTIVE, or older rows activated as APPROVED + PRODUCTION
+  if (status === 'ACTIVE' || availability === 'PRODUCTION') return 'live';
+  if (status === 'TESTING') return 'testing';
+  return 'approved';
+}
+
+export function getAllowedActions(
+  app: MiniAppActionSubject,
+  user: MiniAppActionUser,
+): MiniAppAllowedActions {
+  const status = (app.status || 'DRAFT').toUpperCase();
+  const availability = (app.availabilityStatus || '').toUpperCase();
+  const phase = getMiniAppPhase(app);
+  const isSuper = user.role === 'SUPER_ADMIN';
+  const isAdmin = user.role === 'ADMIN';
+  const isOwner = Boolean(user.userId && app.ownerId && user.userId === app.ownerId);
+  const canUpdate = user.can('miniapp:update');
+  const canApprove = user.can('miniapp:approve');
+  const canReject = user.can('miniapp:reject');
+  const canSuspend = user.can('miniapp:suspend');
+  const isLive = phase === 'live';
+  const archiveRequested = Boolean(app.archiveRequest);
+  const hasRevision = Boolean(app.pendingRevision);
+  const ownerOrAdmin = isOwner || isSuper || isAdmin;
+
+  return {
+    phase,
+    isLive,
+    isOwner,
+    archiveRequested,
+    submit: phase === 'draft' && canUpdate && ownerOrAdmin,
+    approve: phase === 'review' && canApprove,
+    requestChanges: phase === 'review' && canReject,
+    reject: phase === 'review' && canReject,
+    startTesting: phase === 'approved' && canApprove,
+    retryBuild: phase === 'build-failed' && canApprove,
+    activate: phase === 'testing' && canApprove,
+    publishRevision: isLive && hasRevision && canApprove,
+    discardRevision: isLive && hasRevision && canUpdate && (ownerOrAdmin || canApprove),
+    resume: phase === 'suspended' && canSuspend,
+    decideArchive: isSuper && archiveRequested && phase !== 'archived',
+    restore: phase === 'archived' && isSuper,
+    edit: canUpdate && !NOT_EDITABLE.includes(status),
+    sandbox: phase !== 'archived' && phase !== 'draft',
+    suspend:
+      canSuspend &&
+      (phase === 'live' || phase === 'testing' || (phase === 'approved' && status === 'APPROVED') ||
+        (phase === 'review' && availability === 'PRODUCTION')),
+    archive: isSuper && phase !== 'archived' && !DELETABLE.includes(status),
+    requestArchive: !isSuper && canSuspend && phase === 'suspended' && !archiveRequested,
+    delete: DELETABLE.includes(status) && canUpdate && ownerOrAdmin,
+    rollback: (isSuper || isAdmin) && phase !== 'archived',
+    downloadTestApk: phase === 'testing' || phase === 'live',
+  };
+}
