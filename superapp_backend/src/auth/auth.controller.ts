@@ -1,3 +1,4 @@
+import { BypassTransform } from '../common/decorators/bypass-transform.decorator';
 import {
   Controller,
   Post,
@@ -114,7 +115,10 @@ export class AuthController {
     return { success: true, message: 'Logged out successfully' };
   }
 
+  // Standard JWKS shape ({ keys: [...] } at the top level): JWT libraries
+  // (jose, OIDC clients) cannot read it inside the usual { success, data } wrapper.
   @Get('jwks')
+  @BypassTransform()
   getJwks() {
     return this.authService.getJwks();
   }
