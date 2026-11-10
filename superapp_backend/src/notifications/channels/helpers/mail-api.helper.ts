@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import { Resend } from 'resend';
 import * as dns from 'dns';
 import { MailSendResult, SendEmailOptions } from './mail.types';
+import { MailTemplateHelper } from './mail-template.helper';
 
 export class MailApiHelper {
   private readonly logger: Logger;
@@ -208,6 +209,8 @@ export class MailApiHelper {
         to: options.to,
         subject: options.subject,
         html: options.html,
+        text: MailTemplateHelper.htmlToText(options.html),
+        replyTo: (process.env.RESEND_REPLY_TO || '').trim() || fromDomain,
       });
 
       if (result.error) {

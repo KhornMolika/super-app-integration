@@ -15,6 +15,43 @@ export class MailTemplateHelper {
   }
 
   /**
+   * Plain-text version of an HTML email, sent alongside the HTML. Mail filters
+   * score HTML-only messages lower, and text-only clients need it.
+   * Links become "label (url)"; block elements become line breaks.
+   */
+  public static htmlToText(html: string): string {
+    if (!html) return '';
+    const decode = (s: string) =>
+      s
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&#(\d+);/g, (_, n: string) => String.fromCharCode(Number(n)))
+        .replace(/&amp;/g, '&');
+    const text = html
+      .replace(/<(style|script|head)[^>]*>[\s\S]*?<\/\1>/gi, '')
+      .replace(
+        /<a\s[^>]*href\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi,
+        (_, href: string, label: string) => {
+          const l = label.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+          return l && l !== href ? `${l} (${href})` : href;
+        },
+      )
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<li[^>]*>/gi, '\n- ')
+      .replace(/<\/(p|div|h[1-6]|tr|li|table|ul|ol|blockquote)>/gi, '\n')
+      .replace(/<[^>]+>/g, '');
+    return decode(text)
+      .split('\n')
+      .map((line) => line.replace(/[ \t]+/g, ' ').trim())
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
+  /**
    * Standardizes the outer responsive email card structure.
    */
   public static renderEmailLayout(options: EmailLayoutOptions): string {

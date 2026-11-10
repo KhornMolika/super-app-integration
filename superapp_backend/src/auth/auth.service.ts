@@ -5,6 +5,7 @@ import {
   UnauthorizedException,
   BadRequestException,
   NotFoundException,
+  ServiceUnavailableException,
   Optional,
   Inject,
   forwardRef,
@@ -22,7 +23,10 @@ import {
   DeveloperToken,
 } from '../access-control/entities/access-token.entity';
 import { AuthOtp, OtpPurpose } from './entities/auth-otp.entity';
-import { MailService } from '../notifications/channels/mail.service';
+import {
+  MailService,
+  type MailDispatchResult,
+} from '../notifications/channels/mail.service';
 import { verifyPassword, hashPassword } from '../common/utils/password.util';
 import {
   LoginDto,
@@ -498,17 +502,15 @@ export class AuthService implements OnModuleInit {
           passwordHash,
           organizationId,
         });
-        const otpResult = await this.requestOtp({
-          email,
-          purpose: 'EMAIL_VERIFICATION',
-        });
+        const otpResult = await this.sendRegistrationOtp(email);
         return {
           success: true,
           pendingEmailVerification: true,
           email,
           emailDispatched: otpResult.emailDispatched,
-          message:
-            'A 6-digit verification code has been dispatched to your email address.',
+          message: otpResult.emailDispatched
+            ? 'A 6-digit verification code has been sent to your email address.'
+            : otpResult.message,
         };
       }
       throw new BadRequestException(
@@ -528,20 +530,42 @@ export class AuthService implements OnModuleInit {
       organizationId,
     });
 
-    // Dispatch 6-digit OTP to the recipient
-    const otpResult = await this.requestOtp({
-      email,
-      purpose: 'EMAIL_VERIFICATION',
-    });
+    // Send the 6-digit OTP. The account exists either way; if the email
+    // could not be sent, say so and let the user request a new code.
+    const otpResult = await this.sendRegistrationOtp(email);
 
     return {
       success: true,
       pendingEmailVerification: true,
       email,
       emailDispatched: otpResult.emailDispatched,
-      message:
-        'Registration submitted. Please enter the 6-digit verification code sent to your email to confirm your identity.',
+      message: otpResult.emailDispatched
+        ? 'Registration submitted. Please enter the 6-digit verification code sent to your email to confirm your identity.'
+        : otpResult.message,
     };
+  }
+
+  /**
+   * requestOtp for a just-registered account. A failed send must not turn a
+   * successful registration into an error: the account is created, so report
+   * emailDispatched=false with a message pointing to "Resend code".
+   */
+  private async sendRegistrationOtp(
+    email: string,
+  ): Promise<{ emailDispatched: boolean; message: string }> {
+    try {
+      const r = await this.requestOtp({ email, purpose: 'EMAIL_VERIFICATION' });
+      return { emailDispatched: Boolean(r.emailDispatched), message: r.message };
+    } catch (err) {
+      if (err instanceof ServiceUnavailableException) {
+        return {
+          emailDispatched: false,
+          message:
+            'Your account was created, but we could not send the verification code. Please use "Resend code" to try again.',
+        };
+      }
+      throw err;
+    }
   }
 
   /**
@@ -854,10 +878,11 @@ export class AuthService implements OnModuleInit {
       `[OTP] Generated 6-digit code for ${rawEmail} (${purpose}), expires at ${expiresAt.toISOString()}`,
     );
 
-    // 3. Dispatch Live Email via Resend
-    let emailDispatched = false;
-    let emailError: string | undefined;
-
+    // 3. Send the code. Only report success when Resend accepted the email.
+    let delivery: MailDispatchResult = {
+      status: 'skipped',
+      reason: 'not_configured',
+    };
     if (this.mailService) {
       try {
         if (purpose === 'EMAIL_VERIFICATION') {
@@ -866,7 +891,7 @@ export class AuthService implements OnModuleInit {
             process.env.WEBAPP_URL ||
             'http://localhost:3002';
           const verifyUrl = `${backofficeBase}/verify-otp?email=${encodeURIComponent(rawEmail)}`;
-          await this.mailService.sendBackofficeEmailVerification(
+          delivery = await this.mailService.sendBackofficeEmailVerification(
             rawEmail,
             user?.name || 'Developer',
             code,
@@ -874,33 +899,57 @@ export class AuthService implements OnModuleInit {
             5,
           );
         } else {
-          await this.mailService.sendPasswordResetOtp(
+          delivery = await this.mailService.sendPasswordResetOtp(
             rawEmail,
             user?.name || 'Developer',
             code,
             5,
           );
         }
-        emailDispatched = true;
-        this.logger.log(
-          `[OTP] Successfully dispatched email via Resend to ${rawEmail}`,
-        );
-      } catch (err: any) {
-        emailError = err.message || String(err);
-        this.logger.error(
-          `[OTP] Resend dispatch error for ${rawEmail}: ${emailError}`,
-        );
+      } catch (err) {
+        delivery = {
+          status: 'failed',
+          reason: err instanceof Error ? err.message : String(err),
+        };
       }
     } else {
       this.logger.warn(`[OTP] MailService is not wired into AuthService.`);
     }
 
+    const emailDispatched = delivery.status === 'sent';
+    if (emailDispatched) {
+      this.logger.log(
+        `[OTP] Email accepted by Resend for ${rawEmail} (ID: ${delivery.id})`,
+      );
+    } else {
+      this.logger.error(
+        `[OTP] Code NOT emailed to ${rawEmail}: ${delivery.status} (${delivery.reason})`,
+      );
+      // Outside development a code nobody received is useless: burn it and
+      // tell the user, instead of claiming it was sent. (In development an
+      // unconfigured mailer is normal; the code is in the DUMMY log line.)
+      const devSkip =
+        delivery.status === 'skipped' &&
+        process.env.NODE_ENV !== 'production';
+      if (!devSkip) {
+        await this.otpRepo.update({ id: otpRecord.id }, { isUsed: true });
+        throw new ServiceUnavailableException({
+          statusCode: 503,
+          code: 'OTP_EMAIL_NOT_SENT',
+          message:
+            'We could not send the verification code right now. Please try again in a moment.',
+        });
+      }
+    }
+
     return {
       success: true,
-      message: `A 6-digit recovery code was dispatched to ${rawEmail}.`,
+      message:
+        purpose === 'EMAIL_VERIFICATION'
+          ? `A 6-digit verification code was sent to ${rawEmail}.`
+          : `A 6-digit recovery code was sent to ${rawEmail}.`,
       expiresInSeconds: 300,
       emailDispatched,
-      emailError,
     };
   }
 
