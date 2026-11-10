@@ -269,6 +269,27 @@ if ($Target -eq 'all' -or $Target -eq 'client') {
     $imgClient = "$HarborRegistry/$HarborProject/client:$Tag"
     $imgClientLatest = "$HarborRegistry/$HarborProject/client:latest"
 
+    # The image copies build/web from this machine: the Docker build cannot fetch
+    # the private Git packages in pubspec.yaml (no credentials inside Docker).
+    # Build it fresh here, with this machine's Git access, so the image never
+    # ships a stale or missing build.
+    Write-Host "Building Flutter web (base href /preview/)..." -ForegroundColor Yellow
+    Push-Location $clientDir
+    try {
+        flutter pub get
+        if ($LASTEXITCODE -eq 0) {
+            flutter build web --release `
+                --base-href=/preview/ `
+                --dart-define=API_BASE_URL=https://app.fintechcenterfsa.com/api
+        }
+    } finally {
+        Pop-Location
+    }
+    if ($LASTEXITCODE -ne 0) {
+        Write-Failure "Flutter web build failed (check Git access to the private mini app packages)."
+        exit 1
+    }
+
     Write-Host "Building Docker Image: $imgClient" -ForegroundColor Yellow
     docker build --platform linux/amd64 `
         --build-arg BASE_HREF=/preview/ `
