@@ -3,12 +3,17 @@ kind: Ingress
 metadata:
   name: super-app-backend-ingress
   namespace: super-app
+# Only machine-to-machine routes go straight to the backend. Everything else under
+# /api must reach the Back Office (Next.js), whose proxy turns the login cookie into
+# a bearer token. A broad rule such as /api/integrations or /api/release-assembly here
+# sends Back Office calls to the backend without a token: 401, and the page reloads.
 spec:
   ingressClassName: traefik
   rules:
   - host: app.fintechcenterfsa.com
     http:
       paths:
+      # Mobile Super App (sends its own bearer token)
       - path: /api/mobile
         pathType: Prefix
         backend:
@@ -23,8 +28,24 @@ spec:
             name: super-app-backend-svc
             port:
               number: 3000
-      - path: /api/release-assembly
+      # Jenkins validation callbacks: /stage and /callback (callback token)
+      - path: /api/integrations/validation
         pathType: Prefix
+        backend:
+          service:
+            name: super-app-backend-svc
+            port:
+              number: 3000
+      # Jenkins build callbacks (callback token)
+      - path: /api/release-assembly/build-callback
+        pathType: Exact
+        backend:
+          service:
+            name: super-app-backend-svc
+            port:
+              number: 3000
+      - path: /api/release-assembly/build-stage-update
+        pathType: Exact
         backend:
           service:
             name: super-app-backend-svc

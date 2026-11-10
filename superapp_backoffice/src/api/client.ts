@@ -228,6 +228,17 @@ export async function apiClient<T = any>(endpoint: string, options: RequestOptio
       }
     }
 
+    // A request already retried after a successful session refresh: the session is
+    // fine, this route refused it. Show the error and keep the page (and any
+    // unsaved form) instead of sending the user to /login, which bounces back here.
+    if (response.status === 401 && _retry) {
+      throw new ApiError(
+        'The server refused this request although your session is valid. Please try again or contact support.',
+        401,
+        data,
+      );
+    }
+
     if (response.status === 401 && !isAuthPage && typeof window !== 'undefined' && !window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/signup')) {
       const currentPath = window.location.pathname;
       const redirectParam = currentPath && currentPath !== '/' ? `?redirect=${encodeURIComponent(currentPath)}&expired=true` : '?expired=true';
