@@ -207,14 +207,6 @@ async function handleProxy(request: Request, { params }: { params: Promise<{ pro
       } catch (_) {}
     }
 
-    // If still 401 after retry or without refresh token, clear dead cookies
-    if (res.status === 401 && !clientAuth) {
-      const unauth = NextResponse.json({ error: 'Session expired' }, { status: 401 });
-      unauth.cookies.delete('auth_token');
-      unauth.cookies.delete('refresh_token');
-      return unauth;
-    }
-
     const applyAuthCookie = (response: NextResponse) => {
       if (newRefreshedToken) {
         const envVal = (
@@ -243,6 +235,30 @@ async function handleProxy(request: Request, { params }: { params: Promise<{ pro
       }
       return response;
     };
+
+    // The session was just renewed and this call is still refused: the session
+    // is fine, this route will not accept it. Answer 403 and keep the cookies,
+    // so the page shows an error instead of signing the user out mid-task.
+    if (res.status === 401 && !clientAuth && newRefreshedToken) {
+      const forbidden = NextResponse.json(
+        {
+          statusCode: 403,
+          code: 'REFUSED_AFTER_SESSION_REFRESH',
+          message: 'The server refused this request although your session is valid. Please try again or contact support.',
+        },
+        { status: 403 },
+      );
+      return applyAuthCookie(forbidden);
+    }
+
+    // If still 401 after retry or without refresh token, clear dead cookies
+    if (res.status === 401 && !clientAuth) {
+      const unauth = NextResponse.json({ error: 'Session expired' }, { status: 401 });
+      unauth.cookies.delete('auth_token');
+      unauth.cookies.delete('refresh_token');
+      return unauth;
+    }
+
 
     // If the response has no content
     if (res.status === 204) {
