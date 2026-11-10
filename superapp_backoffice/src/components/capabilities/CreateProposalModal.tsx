@@ -177,7 +177,7 @@ export function CreateProposalModal({
       const finalName = permissionName.trim() || autoName || permissionKey.trim();
       const visual = getCapabilityVisual(permissionKey, finalName, description);
 
-      await permissionsApi.createProposal({
+      const created = await permissionsApi.createProposal({
         permissionKey: permissionKey.trim(),
         permissionName: finalName,
         description: description.trim() || `Capability proposal for ${permissionKey.trim()}`,
@@ -192,7 +192,16 @@ export function CreateProposalModal({
         },
       });
 
-      toast.success(`Capability proposal for '${permissionKey}' created successfully!`);
+      if (created?.duplicate) {
+        // Someone already asked for it: this mini app was added to that request
+        toast.info(
+          created.message || 'Someone already asked for this capability. We added your mini app to that request.',
+          'Already requested',
+          6000,
+        );
+      } else {
+        toast.success(`Capability proposal for '${permissionKey}' created successfully!`);
+      }
       setPermissionKey('');
       setPermissionName('');
       setDescription('');

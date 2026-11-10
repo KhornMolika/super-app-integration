@@ -429,8 +429,9 @@ The platform defines four primary system roles in `access-control/seeder.service
 | `miniapp:delete` | ✅ | ✅ | ❌ | ❌ |
 | `miniapp:approve` / `reject` / `suspend` | ✅ | ✅ | ❌ | ❌ |
 | `miniapp_permission:approve` | ✅ | ✅ | ❌ | ❌ |
-| `permission_proposal:read` | ✅ | ✅ | ✅ (Own Proposals) | ❌ |
-| `permission_proposal:review` / `approve` | ✅ | ✅ | ❌ | ❌ |
+| `permission_proposal:read` | ✅ | ✅ (all, read only) | ✅ (own requests and own organization) | ❌ |
+| `permission_proposal:create` (request a capability) | ✅ | ❌ | ✅ | ❌ |
+| `permission_proposal:review` / `approve` (decide, create the Super App code change) | ✅ | ❌ (regulatory admin) | ❌ | ❌ |
 | `issue:resolve` | ✅ | ✅ | ❌ | ❌ |
 | `super_app:read` | ✅ | ✅ | ❌ | ✅ |
 | `super_app:manage` | ✅ | ❌ | ❌ | ❌ |

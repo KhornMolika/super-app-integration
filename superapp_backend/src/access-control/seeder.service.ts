@@ -68,6 +68,7 @@ export class SeederService implements OnApplicationBootstrap {
       'miniapp_permission:approve',
       'issue:resolve',
       'permission_proposal:read',
+      'permission_proposal:create',
       'permission_proposal:review',
       'permission_proposal:approve',
       'super_app:read',
@@ -121,9 +122,9 @@ export class SeederService implements OnApplicationBootstrap {
           'miniapp:submit',
           'miniapp_permission:approve',
           'issue:resolve',
+          // Regulatory admin: sees capability requests, cannot decide them
+          // (only SUPER_ADMIN reviews and approves Super App capabilities)
           'permission_proposal:read',
-          'permission_proposal:review',
-          'permission_proposal:approve',
           'super_app:read',
           'super_app:manage',
           'user:read',
@@ -146,6 +147,7 @@ export class SeederService implements OnApplicationBootstrap {
           'miniapp:update',
           'miniapp:submit',
           'permission_proposal:read',
+          'permission_proposal:create',
           'permission:read',
           'super_app:read',
           'organization:read',

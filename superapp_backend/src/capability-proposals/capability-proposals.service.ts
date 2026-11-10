@@ -7,6 +7,18 @@ import { QueryCapabilityProposalsDto } from './dto/query-capability-proposals.dt
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
 import { createPaginatedResponse } from '../common/utils/pagination.util';
 import { escapeLikeString } from '../common/utils/sql.util';
+import { isPlatformAdmin } from '../access-control/helpers/platform-admin.helper';
+
+/** Someone who added their mini app to a pending request for the same key. */
+export interface ProposalSupporter {
+  userId: string;
+  miniAppId?: string;
+  at: string;
+}
+
+function requesterId(requester: any): string {
+  return requester?.sub || requester?.id || '';
+}
 
 @Injectable()
 export class CapabilityProposalsService {
@@ -17,6 +29,7 @@ export class CapabilityProposalsService {
 
   async findAll(
     query: QueryCapabilityProposalsDto = new QueryCapabilityProposalsDto(),
+    requester?: any,
   ): Promise<PaginatedResult<CapabilityProposal>> {
     const page = Math.max(1, query.page || 1);
     const limit = Math.max(1, query.limit || 20);
@@ -26,6 +39,13 @@ export class CapabilityProposalsService {
       .createQueryBuilder('proposal')
       .leftJoinAndSelect('proposal.miniApp', 'miniApp')
       .leftJoinAndSelect('proposal.requestedBy', 'requestedBy');
+
+    // 0. Who may see what: platform staff see every request; anyone else
+    // only requests they made or support, or for their own mini apps.
+    const mine = query.mine === 'true';
+    if (requester !== undefined && (mine || !isPlatformAdmin(requester))) {
+      this.applyScope(qb, requester, mine);
+    }
 
     // 1. Status Filter
     if (query.status && query.status.toUpperCase() !== 'ALL') {
@@ -75,17 +95,79 @@ export class CapabilityProposalsService {
     return createPaginatedResponse(formatted, totalItems, page, limit);
   }
 
-  async findOne(id: string): Promise<CapabilityProposal | null> {
-    const p = await this.capabilityProposalRepository.findOne({
-      where: { id },
-      relations: { miniApp: true, requestedBy: true },
-    });
+  /**
+   * One request. With a requester, returns null when that person may not see
+   * it (the controller answers 404, so other partners' requests stay hidden).
+   */
+  async findOne(id: string, requester?: any): Promise<CapabilityProposal | null> {
+    const qb = this.capabilityProposalRepository
+      .createQueryBuilder('proposal')
+      .leftJoinAndSelect('proposal.miniApp', 'miniApp')
+      .leftJoinAndSelect('proposal.requestedBy', 'requestedBy')
+      .where('proposal.id = :id', { id });
+    if (requester !== undefined && !isPlatformAdmin(requester)) {
+      this.applyScope(qb, requester, false);
+    }
+    const p = await qb.getOne();
     return p ? formatCapabilityProposalResponse(p) : null;
+  }
+
+  private applyScope(qb: any, requester: any, mineOnly: boolean): void {
+    const userId = requesterId(requester);
+    const orgId = mineOnly ? undefined : requester?.organizationId;
+    if (!userId && !orgId) {
+      qb.andWhere('1 = 0');
+      return;
+    }
+    const clauses: string[] = [];
+    if (userId) {
+      clauses.push('requestedBy.id = :scopeUserId');
+      clauses.push(
+        "COALESCE(proposal.metadata->'supporters', '[]'::jsonb) @> CAST(:scopeSupporter AS jsonb)",
+      );
+      if (!mineOnly) clauses.push('miniApp.ownerId = :scopeUserId');
+    }
+    if (orgId) clauses.push('miniApp.organizationId = :scopeOrgId');
+    qb.andWhere('(' + clauses.join(' OR ') + ')', {
+      scopeUserId: userId,
+      scopeSupporter: JSON.stringify([{ userId }]),
+      scopeOrgId: orgId,
+    });
+  }
+
+  /**
+   * Adds someone to a pending request for the same capability. Returns false
+   * when they already made or support it.
+   */
+  async addSupporter(
+    proposal: CapabilityProposal,
+    supporter: { userId: string; miniAppId?: string },
+  ): Promise<boolean> {
+    const metadata = { ...(proposal.metadata || {}) };
+    const supporters: ProposalSupporter[] = Array.isArray(metadata.supporters)
+      ? metadata.supporters
+      : [];
+    const already =
+      (!!proposal.requestedBy?.id && proposal.requestedBy.id === supporter.userId) ||
+      supporters.some(
+        (s) =>
+          s.userId === supporter.userId &&
+          (s.miniAppId || null) === (supporter.miniAppId || null),
+      );
+    if (already) return false;
+    metadata.supporters = [
+      ...supporters,
+      { ...supporter, at: new Date().toISOString() },
+    ];
+    await this.capabilityProposalRepository.update(proposal.id, { metadata });
+    proposal.metadata = metadata;
+    return true;
   }
 
   async findPendingByKey(capabilityKey: string): Promise<CapabilityProposal[]> {
     const list = await this.capabilityProposalRepository.find({
       where: [{ capabilityKey, status: 'PENDING_REVIEW' }],
+      relations: { requestedBy: true, miniApp: true },
     });
     return list.map(
       (p) => formatCapabilityProposalResponse(p) as CapabilityProposal,

@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/inputs';
-import { ExternalLink, User, Smartphone, Search, X, Globe, Tag, FileCode, ClipboardCheck } from 'lucide-react';
+import { ExternalLink, User, Users, Smartphone, Search, X, Globe, Tag, FileCode, ClipboardCheck, ListChecks } from 'lucide-react';
 import { PermissionProposal } from '@/api/permissions.api';
 import { Pagination } from '@/components/ui/Pagination';
 import { getCapabilityVisual } from '@/lib/capability-visuals';
@@ -15,6 +15,17 @@ interface ProposalsTabProps {
   pendingCount: number;
   canReview: boolean;
   onSelectProposal: (proposal: PermissionProposal) => void;
+  /** Opens the read-only progress view (for people who cannot review) */
+  onViewProgress?: (proposal: PermissionProposal) => void;
+  /** Signed-in user, for the "Mine" filter */
+  currentUserId?: string;
+}
+
+/** True when the user made the request or added their mini app to it. */
+export function isMine(p: PermissionProposal, userId?: string): boolean {
+  if (!userId) return false;
+  if (p.requestedBy?.id === userId) return true;
+  return (p.metadata?.supporters || []).some((s) => s?.userId === userId);
 }
 
 /** Where a proposal is in its life, from the reviewer's point of view. */
@@ -85,13 +96,19 @@ export function ProposalsTab({
   setProposalSubFilter,
   canReview,
   onSelectProposal,
+  onViewProgress,
+  currentUserId,
 }: ProposalsTabProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [mineOnly, setMineOnly] = useState(false);
   const [filter, setFilter] = useState<FilterKey>(proposalSubFilter === 'PENDING' ? 'pending' : 'ALL');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  const safeProposals = useMemo(() => (Array.isArray(proposals) ? proposals : []), [proposals]);
+  const safeProposals = useMemo(() => {
+    const list = Array.isArray(proposals) ? proposals : [];
+    return mineOnly ? list.filter((p) => isMine(p, currentUserId)) : list;
+  }, [proposals, mineOnly, currentUserId]);
 
   const counts = useMemo(() => {
     const c: Record<FilterKey, number> = {
@@ -179,31 +196,52 @@ export function ProposalsTab({
         ))}
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => {
-            setSearchQuery(e.target.value);
-            setCurrentPage(1);
-          }}
-          placeholder="Search by capability, mini app or requester..."
-          aria-label="Search proposals"
-          className="w-full pl-9 pr-8 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-slate-800 dark:text-slate-200 transition-all placeholder:text-slate-400"
-        />
-        {searchQuery && (
+      {/* Search, and "Mine" */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
+            placeholder="Search by capability, mini app or requester..."
+            aria-label="Search proposals"
+            className="w-full pl-9 pr-8 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-slate-800 dark:text-slate-200 transition-all placeholder:text-slate-400"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setCurrentPage(1);
+              }}
+              aria-label="Clear search"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+        {currentUserId && (
           <button
             type="button"
             onClick={() => {
-              setSearchQuery('');
+              setMineOnly((v) => !v);
               setCurrentPage(1);
             }}
-            aria-label="Clear search"
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+            aria-pressed={mineOnly}
+            title="Only requests you made or added your mini app to"
+            className={`shrink-0 inline-flex items-center gap-1.5 h-[34px] px-3 text-xs font-semibold rounded-xl border transition-all cursor-pointer ${
+              mineOnly
+                ? 'bg-brand-600 border-brand-600 text-white'
+                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300'
+            }`}
           >
-            <X className="w-3.5 h-3.5" />
+            <User className="w-3.5 h-3.5" />
+            Mine
           </button>
         )}
       </div>
@@ -216,16 +254,17 @@ export function ProposalsTab({
           <div>
             <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">No capability proposals found</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
-              {searchQuery || filter !== 'ALL'
+              {searchQuery || filter !== 'ALL' || mineOnly
                 ? 'Nothing matches this search or filter.'
                 : 'When developers or partners ask for a device feature the Super App does not support yet, the request appears here for review and an automatic Super App update.'}
             </p>
           </div>
-          {(searchQuery || filter !== 'ALL') && (
+          {(searchQuery || filter !== 'ALL' || mineOnly) && (
             <button
               type="button"
               onClick={() => {
                 setSearchQuery('');
+                setMineOnly(false);
                 changeFilter('ALL');
               }}
               className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline cursor-pointer"
@@ -244,6 +283,7 @@ export function ProposalsTab({
             const state = proposalState(prop);
             const chip = STATE_CHIP[state];
             const codeUrl = prop.metadata?.codeChange?.mrUrl || prop.metadata?.mrUrl;
+            const supporterCount = prop.metadata?.supporters?.length ?? 0;
 
             return (
               <Card
@@ -279,6 +319,14 @@ export function ProposalsTab({
                         <User className="w-3 h-3 text-slate-400" />
                         {prop.requestedBy?.name || 'Developer'}
                       </span>
+                      {supporterCount > 0 && (
+                        <span
+                          className="inline-flex items-center gap-1"
+                          title="Other mini apps that asked for the same capability"
+                        >
+                          <Users className="w-3 h-3 text-slate-400" />+{supporterCount} more asked
+                        </span>
+                      )}
                       {prop.targetSuperAppVersion && (
                         <span className="inline-flex items-center gap-1 font-mono text-[10px]">
                           <Tag className="w-3 h-3 text-slate-400" />v{prop.targetSuperAppVersion}
@@ -302,6 +350,17 @@ export function ProposalsTab({
                       <ExternalLink className="w-3.5 h-3.5" />
                       <span>View code change</span>
                     </a>
+                  )}
+                  {!canReview && onViewProgress && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => onViewProgress(prop)}
+                      className="text-xs font-semibold px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <ListChecks className="w-3.5 h-3.5" />
+                      <span>Progress</span>
+                    </Button>
                   )}
                   {canReview && (
                     <Button

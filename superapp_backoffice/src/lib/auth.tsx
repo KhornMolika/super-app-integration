@@ -11,7 +11,7 @@ const ROLE_PERMISSIONS: Record<Role, string[]> = {
   SUPER_ADMIN: [
     'miniapp:create', 'miniapp:read', 'miniapp:update', 'miniapp:submit', 'miniapp:delete', 'miniapp:approve', 'miniapp:reject', 'miniapp:suspend',
     'miniapp_permission:approve', 'issue:resolve',
-    'permission_proposal:read', 'permission_proposal:review', 'permission_proposal:approve',
+    'permission_proposal:read', 'permission_proposal:create', 'permission_proposal:review', 'permission_proposal:approve',
     'super_app:read', 'super_app:manage',
     'user:read', 'user:manage',
     'role:read', 'role:manage',
@@ -22,7 +22,7 @@ const ROLE_PERMISSIONS: Record<Role, string[]> = {
   ADMIN: [
     'miniapp:create', 'miniapp:read', 'miniapp:update', 'miniapp:submit', 'miniapp:delete', 'miniapp:approve', 'miniapp:reject', 'miniapp:suspend',
     'miniapp_permission:approve', 'issue:resolve',
-    'permission_proposal:read', 'permission_proposal:review', 'permission_proposal:approve',
+    'permission_proposal:read', // regulatory admin: sees requests, only SUPER_ADMIN decides
     'super_app:read', 'super_app:manage',
     'user:read', 'user:manage',
     'role:read',
@@ -32,7 +32,7 @@ const ROLE_PERMISSIONS: Record<Role, string[]> = {
   ],
   MA_DEVELOPER: [
     'miniapp:create', 'miniapp:read', 'miniapp:update', 'miniapp:submit',
-    'permission_proposal:read',
+    'permission_proposal:read', 'permission_proposal:create',
     'permission:read',
     'super_app:read',
     'organization:read'

@@ -74,6 +74,8 @@ export interface PermissionProposal {
     targetBranch?: string;
     /** Outcome of the Super App code change made on approval */
     codeChange?: CodeChange;
+    /** Others who asked for the same capability while it was pending */
+    supporters?: Array<{ userId: string; miniAppId?: string; at: string }>;
     [key: string]: any;
   };
 }
@@ -107,6 +109,34 @@ export interface CodePreview {
   manualSteps?: string[];
   note?: string;
 }
+
+/** A request that matched one already pending (see createProposal). */
+export type CreatedProposal = PermissionProposal & {
+  duplicate?: boolean;
+  supporterAdded?: boolean;
+  message?: string;
+};
+
+export type ProgressState = 'done' | 'current' | 'pending' | 'failed' | 'skipped' | 'unknown';
+
+export interface ProgressStep {
+  key: 'requested' | 'review' | 'decision' | 'code_change' | 'merged' | 'release';
+  label: string;
+  state: ProgressState;
+  detail?: string;
+  at?: string;
+  links?: Array<{ label: string; url: string }>;
+}
+
+export interface ProposalProgressInfo {
+  proposalId: string;
+  capabilityKey: string;
+  status: string;
+  steps: ProgressStep[];
+}
+
+/** Shortest rejection reason the backend accepts. */
+export const MIN_REJECT_REASON_LENGTH = 10;
 
 export interface KeySuggestion {
   key: string;
@@ -160,6 +190,8 @@ export const permissionsApi = {
     limit?: number;
     search?: string;
     status?: string;
+    /** 'true': only requests I made or support */
+    mine?: string;
   }) =>
     apiClient<PaginatedResponse<PermissionProposal> | PermissionProposal[]>(
       '/api/permission-proposals',
@@ -173,10 +205,16 @@ export const permissionsApi = {
     miniAppId?: string;
     metadata?: any;
   }) =>
-    apiClient<PermissionProposal>('/api/permission-proposals', {
+    apiClient<CreatedProposal>('/api/permission-proposals', {
       method: 'POST',
       body: data,
-    }),
+    }).then((res) => unwrapItem<CreatedProposal>(res)),
+
+  /** Steps from request to release, with the live state of the code change. */
+  getProposalProgress: (id: string) =>
+    apiClient<ProposalProgressInfo>(`/api/permission-proposals/${id}/progress`).then((res) =>
+      unwrapItem<ProposalProgressInfo>(res),
+    ),
 
   reviewProposal: (
     id: string,

@@ -371,4 +371,36 @@ describe('CapabilityCodeGeneratorService', () => {
       });
     });
   });
+
+  describe('getMergeRequestState', () => {
+    const mrUrl = 'https://git.fintechcenterfsa.com/frontend/super-app/-/merge_requests/42';
+
+    it('reads the state of a Super App merge request from GitLab', async () => {
+      const fetchMock = jest.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ state: 'merged' }) });
+      global.fetch = fetchMock as any;
+      expect(await service.getMergeRequestState(mrUrl)).toBe('merged');
+      expect(fetchMock.mock.calls[0][0]).toBe(
+        'https://git.fintechcenterfsa.com/api/v4/projects/frontend%2Fsuper-app/merge_requests/42',
+      );
+    });
+
+    it('maps opened and closed, and never throws', async () => {
+      global.fetch = jest.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ state: 'opened' }) }) as any;
+      expect(await service.getMergeRequestState(mrUrl)).toBe('opened');
+      global.fetch = jest.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ state: 'closed' }) }) as any;
+      expect(await service.getMergeRequestState(mrUrl)).toBe('closed');
+      global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 404 }) as any;
+      expect(await service.getMergeRequestState(mrUrl)).toBe('unknown');
+      global.fetch = jest.fn().mockRejectedValue(new Error('down')) as any;
+      expect(await service.getMergeRequestState(mrUrl)).toBe('unknown');
+    });
+
+    it('does not look up links of another project', async () => {
+      const fetchMock = jest.fn();
+      global.fetch = fetchMock as any;
+      expect(await service.getMergeRequestState('https://git.fintechcenterfsa.com/other/repo/-/merge_requests/42')).toBe('unknown');
+      expect(await service.getMergeRequestState(undefined)).toBe('unknown');
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+  });
 });

@@ -396,15 +396,17 @@ export default function CapabilityDetailPage({
               <span>Copy SDK Call</span>
             </Button>
 
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => setIsProposalModalOpen(true)}
-              className="text-xs font-semibold gap-1.5 rounded-xl cursor-pointer shadow-xs"
-            >
-              <GitPullRequest className="w-4 h-4" />
-              <span>Propose Revision</span>
-            </Button>
+            {can('permission_proposal:create') && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setIsProposalModalOpen(true)}
+                className="text-xs font-semibold gap-1.5 rounded-xl cursor-pointer shadow-xs"
+              >
+                <GitPullRequest className="w-4 h-4" />
+                <span>Propose Revision</span>
+              </Button>
+            )}
 
             {canManage && (
               <Button

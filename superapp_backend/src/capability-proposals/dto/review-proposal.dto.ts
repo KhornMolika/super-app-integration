@@ -1,4 +1,15 @@
-import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MinLength,
+  ValidateIf,
+} from 'class-validator';
+import { Transform } from 'class-transformer';
+
+/** Shortest rejection reason accepted, so the developer learns why. */
+export const MIN_REJECT_REASON_LENGTH = 10;
 
 export enum ProposalDecision {
   APPROVED = 'APPROVED',
@@ -13,8 +24,12 @@ export class ReviewProposalDto {
   @IsNotEmpty({ message: 'Decision is required' })
   decision!: ProposalDecision;
 
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @ValidateIf((o) => o.decision === ProposalDecision.REJECTED)
   @IsString()
-  @IsOptional()
+  @MinLength(MIN_REJECT_REASON_LENGTH, {
+    message: `Please give a reason of at least ${MIN_REJECT_REASON_LENGTH} characters so the developer knows why.`,
+  })
   reason?: string;
 
   @IsString()

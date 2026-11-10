@@ -26,9 +26,11 @@ import {
   CodeChange,
   CodePreview,
   KeySuggestion,
+  MIN_REJECT_REASON_LENGTH,
   PermissionProposal,
   permissionsApi,
 } from '@/api/permissions.api';
+import { ProposalProgress } from '@/components/capabilities/ProposalProgress';
 import { superAppApi } from '@/api/super-app.api';
 import { getCapabilityVisual } from '@/lib/capability-visuals';
 
@@ -45,6 +47,8 @@ interface ProposalReviewModalProps {
   /** Called after a retry so the list can refresh. */
   onChanged?: () => void;
   isSubmitting: boolean;
+  /** false: the viewer may reject but not approve (approving is Super Admin only) */
+  canApprove?: boolean;
 }
 
 type DecisionTab = 'APPROVE' | 'REJECT';
@@ -281,6 +285,7 @@ export function ProposalReviewModal({
   onReject,
   onChanged,
   isSubmitting,
+  canApprove: mayApprove = true,
 }: ProposalReviewModalProps) {
   const [targetVersion, setTargetVersion] = useState('');
   const [targetBranch, setTargetBranch] = useState('development');
@@ -307,7 +312,7 @@ export function ProposalReviewModal({
   useEffect(() => {
     if (!proposal) return;
     let cancelled = false;
-    setDecisionTab('APPROVE');
+    setDecisionTab(mayApprove ? 'APPROVE' : 'REJECT');
     setRejectReason('');
     setCopiedKey(false);
     setShowAdvanced(false);
@@ -374,7 +379,8 @@ export function ProposalReviewModal({
   const miniAppName = proposal.miniApp?.name || (proposal.metadata as any)?.miniAppName || 'Platform / Core Shell';
   const isPending = proposal.status === 'PENDING_REVIEW' && !result;
   const versionValid = VERSION_PATTERN.test(targetVersion.trim());
-  const canApprove = versionValid && !!targetBranch && !previewLoading && !isSubmitting;
+  const canApprove = mayApprove && versionValid && !!targetBranch && !previewLoading && !isSubmitting;
+  const rejectReasonOk = rejectReason.trim().length >= MIN_REJECT_REASON_LENGTH;
   const shownCodeChange: CodeChange | null | undefined = result
     ? result.codeChange
     : proposal.metadata?.codeChange;
@@ -577,7 +583,7 @@ export function ProposalReviewModal({
         {isPending ? (
           <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700" role="tablist">
-              {(['APPROVE', 'REJECT'] as DecisionTab[]).map((tab) => (
+              {((mayApprove ? ['APPROVE', 'REJECT'] : ['REJECT']) as DecisionTab[]).map((tab) => (
                 <button
                   key={tab}
                   type="button"
@@ -598,7 +604,7 @@ export function ProposalReviewModal({
               ))}
             </div>
 
-            {decisionTab === 'APPROVE' && (
+            {decisionTab === 'APPROVE' && mayApprove && (
               <div className="space-y-3 animate-in fade-in duration-150">
                 <div className="space-y-1">
                   <label htmlFor="release-version" className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
@@ -724,9 +730,20 @@ export function ProposalReviewModal({
                     rows={2}
                     value={rejectReason}
                     onChange={(e) => setRejectReason(e.target.value)}
-                    placeholder="Explain why this capability is declined..."
+                    placeholder="Explain why this capability is declined, so the developer knows what to do next..."
+                    aria-describedby="reject-reason-help"
                     className="w-full text-xs p-2.5 rounded-xl border border-rose-200 dark:border-rose-900/60 bg-rose-50/20 dark:bg-rose-950/20 text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 resize-none leading-relaxed placeholder:text-slate-400"
                   />
+                  <p
+                    id="reject-reason-help"
+                    className={`text-[10px] tabular-nums ${
+                      rejectReasonOk ? 'text-slate-400' : 'text-rose-500 dark:text-rose-400'
+                    }`}
+                  >
+                    {rejectReasonOk
+                      ? 'The developer sees this reason on the request and in the notification.'
+                      : `${rejectReason.trim().length}/${MIN_REJECT_REASON_LENGTH} characters minimum`}
+                  </p>
                 </div>
                 <div className="flex items-center justify-end gap-2.5 pt-1">
                   <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={isSubmitting} className="text-xs font-semibold px-4 py-2 rounded-xl">
@@ -737,7 +754,7 @@ export function ProposalReviewModal({
                     variant="danger"
                     size="sm"
                     onClick={() => onReject(proposal, rejectReason)}
-                    disabled={isSubmitting || !rejectReason.trim()}
+                    disabled={isSubmitting || !rejectReasonOk}
                     className="inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white shadow-xs cursor-pointer disabled:opacity-50"
                   >
                     <XCircle className="w-3.5 h-3.5" />
@@ -749,6 +766,7 @@ export function ProposalReviewModal({
           </div>
         ) : (
           <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <ProposalProgress proposalId={proposal.id} refreshKey={result} />
             {proposal.status === 'REJECTED' && !result ? (
               <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-800 dark:text-rose-300 space-y-1">
                 <div className="flex items-center gap-2 font-bold">

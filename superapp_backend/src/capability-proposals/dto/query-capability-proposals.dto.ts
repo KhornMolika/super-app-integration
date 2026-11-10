@@ -9,6 +9,11 @@ export class QueryCapabilityProposalsDto extends PaginationQueryDto {
   @IsOptional()
   @IsUUID()
   miniAppId?: string;
+
+  /** "true": only requests the caller made or supports */
+  @IsOptional()
+  @IsString()
+  mine?: string;
 }
 
 // Backwards-compatible alias

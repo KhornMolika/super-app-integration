@@ -15,6 +15,7 @@ import { unwrapData } from '@/api';
 import { CapabilitiesTab } from '@/components/capabilities/CapabilitiesTab';
 import { ProposalsTab } from '@/components/capabilities/ProposalsTab';
 import { ProposalReviewModal } from '@/components/capabilities/ProposalReviewModal';
+import { ProposalProgressModal } from '@/components/capabilities/ProposalProgress';
 import { CreateProposalModal } from '@/components/capabilities/CreateProposalModal';
 import { Button } from '@/components/ui/inputs';
 import {
@@ -34,7 +35,7 @@ function CapabilitiesContent() {
   const parseFilter = (f: string | null | undefined): 'PENDING' | 'ALL' =>
     f === 'all' ? 'ALL' : 'PENDING';
 
-  const { can } = useAuth();
+  const { can, user } = useAuth();
   // Local state enables instant 0ms tab transitions
   const [activeTab, setActiveTab] = useState<'CAPABILITIES' | 'PROPOSALS'>(() =>
     parseTab(searchParams?.get('tab'))
@@ -107,6 +108,8 @@ function CapabilitiesContent() {
 
   // Review Modal State
   const [selectedProposal, setSelectedProposal] = useState<PermissionProposal | null>(null);
+  // Read-only progress view for people who cannot review
+  const [progressProposal, setProgressProposal] = useState<PermissionProposal | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSyncingGitLab, setIsSyncingGitLab] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -246,16 +249,18 @@ function CapabilitiesContent() {
               <span>{isSyncingGitLab ? 'Syncing...' : 'Sync from GitLab'}</span>
             </Button>
 
-            <Button
-              type="button"
-              variant="primary"
-              size="sm"
-              onClick={() => setShowCreateModal(true)}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold h-8 px-3"
-            >
-              <PlusCircle className="w-3.5 h-3.5" />
-              <span>Propose Capability</span>
-            </Button>
+            {can('permission_proposal:create') && (
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={() => setShowCreateModal(true)}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold h-8 px-3"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                <span>Propose Capability</span>
+              </Button>
+            )}
           </div>
         </div>
 
@@ -320,6 +325,8 @@ function CapabilitiesContent() {
               pendingCount={pendingProposalsCount}
               canReview={can('permission_proposal:review')}
               onSelectProposal={(prop) => setSelectedProposal(prop)}
+              onViewProgress={(prop) => setProgressProposal(prop)}
+              currentUserId={user?.id}
             />
           )}
         </div>
@@ -332,7 +339,10 @@ function CapabilitiesContent() {
           onReject={handleReject}
           onChanged={() => void loadData()}
           isSubmitting={isSubmitting}
+          canApprove={can('permission_proposal:approve')}
         />
+
+        <ProposalProgressModal proposal={progressProposal} onClose={() => setProgressProposal(null)} />
 
         {/* Create Proposal Modal */}
         <CreateProposalModal

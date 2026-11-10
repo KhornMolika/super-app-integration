@@ -72,8 +72,6 @@ export function UserPermissionsTab({ user, roles = [] }: UserPermissionsTabProps
           'miniapp:reject',
           'permission:read',
           'permission_proposal:read',
-          'permission_proposal:review',
-          'permission_proposal:approve',
           'super_app:read',
           'organization:read',
           'organization:manage',
@@ -89,6 +87,7 @@ export function UserPermissionsTab({ user, roles = [] }: UserPermissionsTabProps
           'miniapp:submit',
           'permission:read',
           'permission_proposal:read',
+          'permission_proposal:create',
           'super_app:read',
         ].forEach((k) => set.add(k));
       }

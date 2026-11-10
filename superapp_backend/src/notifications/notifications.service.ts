@@ -194,20 +194,26 @@ export class NotificationsService {
     type: string,
     miniAppId?: string,
     metadata?: any,
+    options?: { roles?: string[] },
   ) {
     try {
+      const roleNames = options?.roles ?? ['SUPER_ADMIN', 'ADMIN'];
       const allUsers = await this.userRepository.find({
         relations: { staffProfile: { role: true } },
       });
       const admins = allUsers.filter((u) => {
         const rList = (u as any).roles || (u.staffProfile?.role ? [u.staffProfile.role] : []);
-        return rList.some(
-          (r: any) => r.name === 'SUPER_ADMIN' || r.name === 'ADMIN',
-        );
+        return rList.some((r: any) => roleNames.includes(r?.name));
       });
 
+      // An explicit role filter reaches only those roles; nobody else is
+      // told instead.
       const targets =
-        admins.length > 0 ? admins : allUsers.length > 0 ? [allUsers[0]] : [];
+        admins.length > 0 || options?.roles
+          ? admins
+          : allUsers.length > 0
+            ? [allUsers[0]]
+            : [];
 
       for (let i = 0; i < targets.length; i++) {
         await this.createNotification(

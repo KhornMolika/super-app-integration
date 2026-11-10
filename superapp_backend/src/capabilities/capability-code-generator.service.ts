@@ -1,4 +1,5 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
+import type { MergeRequestState } from '../capability-proposals/helpers/proposal-progress.helper';
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -324,6 +325,44 @@ export class CapabilityCodeGeneratorService {
     } catch (err) {
       this.logger.warn(`Listing Super App branches failed: ${fetchErrorReason(err)}`);
       return fallback;
+    }
+  }
+
+  /**
+   * Live state of a code change created by the generator. Only merge requests
+   * of the configured Super App project are looked up; never throws.
+   */
+  async getMergeRequestState(mrUrl: string | undefined | null): Promise<MergeRequestState> {
+    if (!mrUrl) return 'unknown';
+    const { token, projectApiUrl, webUrl } = this.gitlabProject();
+    const match = /\/-\/merge_requests\/(\d+)\/?$/.exec(mrUrl.trim());
+    // Same project path, whatever host name the link uses
+    let projectPath = '';
+    try {
+      projectPath = new URL(webUrl).pathname.replace(/\/+$/, '');
+    } catch {
+      return 'unknown';
+    }
+    if (!token || !match || !mrUrl.includes(`${projectPath}/-/merge_requests/`)) {
+      return 'unknown';
+    }
+    try {
+      const res = await fetch(`${projectApiUrl}/merge_requests/${match[1]}`, {
+        headers: this.gitlabHeaders(token),
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!res.ok) {
+        this.logger.warn(`Looking up merge request ${match[1]} returned ${res.status}`);
+        return 'unknown';
+      }
+      const { state } = (await res.json()) as { state?: string };
+      if (state === 'merged') return 'merged';
+      if (state === 'opened' || state === 'locked') return 'opened';
+      if (state === 'closed') return 'closed';
+      return 'unknown';
+    } catch (err) {
+      this.logger.warn(`Looking up merge request failed: ${fetchErrorReason(err)}`);
+      return 'unknown';
     }
   }
 

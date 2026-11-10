@@ -9,20 +9,26 @@ import {
   Request,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RbacGuard } from '../access-control/guards/rbac.guard';
+import { RbacGuard, userHasPermissions } from '../access-control/guards/rbac.guard';
 import { RequirePermissions } from '../access-control/decorators/require-permissions.decorator';
 import { CapabilityProposalsService } from './capability-proposals.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CapabilityCodeGeneratorService } from '../capabilities/capability-code-generator.service';
-import { ReviewProposalDto } from './dto/review-proposal.dto';
+import { ProposalDecision, ReviewProposalDto } from './dto/review-proposal.dto';
 import { CreateCapabilityProposalDto } from './dto/create-capability-proposal.dto';
 import { QueryCapabilityProposalsDto } from './dto/query-capability-proposals.dto';
 import { CapabilityProposal } from './entities/capability-proposal.entity';
 import { CapabilitiesService } from '../capabilities/capabilities.service';
 import { suggestCapabilityKeys } from '../capabilities/capability-platform-map';
+import { buildProposalProgress } from './helpers/proposal-progress.helper';
+
+function requesterId(req: any): string | undefined {
+  return req?.user?.sub || req?.user?.id || undefined;
+}
 
 /** Outcome of the Super App code change, stored in proposal.metadata.codeChange. */
 export interface StoredCodeChange {
@@ -60,12 +66,12 @@ export class CapabilityProposalsController {
 
   @Get()
   @RequirePermissions('permission_proposal:read')
-  async getProposals(@Query() query: QueryCapabilityProposalsDto) {
-    return this.capabilityProposalsService.findAll(query);
+  async getProposals(@Request() req: any, @Query() query: QueryCapabilityProposalsDto) {
+    return this.capabilityProposalsService.findAll(query, req.user);
   }
 
   @Post()
-  @RequirePermissions('permission_proposal:read')
+  @RequirePermissions('permission_proposal:create')
   async createProposal(
     @Request() req: any,
     @Body() body: CreateCapabilityProposalDto,
@@ -85,11 +91,28 @@ export class CapabilityProposalsController {
       .trim()
       .replace(/[^a-z0-9_]/g, '_');
 
-    // Check if there is already a pending proposal for this key
+    const userId = requesterId(req);
+
+    // Someone already asked for this capability: add this mini app to that
+    // request and say so, instead of opening a second one.
     const existing =
       await this.capabilityProposalsService.findPendingByKey(cleanKey);
     if (existing.length > 0) {
-      return existing[0];
+      const pending = existing[0];
+      const added = userId
+        ? await this.capabilityProposalsService.addSupporter(pending, {
+            userId,
+            miniAppId: miniAppId || undefined,
+          })
+        : false;
+      return {
+        ...pending,
+        duplicate: true,
+        supporterAdded: added,
+        message: added
+          ? 'Someone already asked for this capability. We added your mini app to that request.'
+          : 'You have already asked for this capability. It is waiting for review.',
+      };
     }
 
     const proposal = await this.capabilityProposalsService.create({
@@ -97,19 +120,24 @@ export class CapabilityProposalsController {
       capabilityName: rawName || cleanKey,
       description: description || `Capability proposal for ${cleanKey}`,
       status: 'PENDING_REVIEW',
-      requestedBy: req.user,
+      requestedBy: userId ? ({ id: userId } as any) : undefined,
       miniApp: miniAppId ? ({ id: miniAppId } as any) : undefined,
       metadata: metadata || {},
     });
 
+    // Tell the people who decide (Super Admins), not the requester
     try {
-      await this.notificationsService.createNotification(
-        req.user?.id || 'system',
-        'New Capability Proposed',
-        `Proposal submitted for capability: "${cleanKey}". Ready for review & injection.`,
+      await this.notificationsService.notifyAdmins(
+        'New capability request',
+        `${req.user?.name || req.user?.email || 'A developer'} asked for the Super App capability "${cleanKey}". It is waiting for your review.`,
         'PROPOSAL_CREATED',
+        miniAppId || undefined,
+        { proposalId: proposal.id, capabilityKey: cleanKey },
+        { roles: ['SUPER_ADMIN'] },
       );
-    } catch (_) {}
+    } catch (err) {
+      this.logger.warn(`Could not notify reviewers of proposal ${proposal.id}: ${(err as Error)?.message}`);
+    }
 
     return proposal;
   }
@@ -124,21 +152,34 @@ export class CapabilityProposalsController {
 
   /** Branches of the Super App repository for the approve form. */
   @Get('target-branches')
-  @RequirePermissions('permission_proposal:review')
+  @RequirePermissions('permission_proposal:approve')
   async targetBranches() {
     return this.capabilityCodeGenerator.listTargetBranches();
   }
 
   @Get(':id/preview')
   @RequirePermissions('permission_proposal:read')
-  async previewProposalCode(@Param('id') id: string) {
-    const proposal = await this.capabilityProposalsService.findOne(id);
+  async previewProposalCode(@Request() req: any, @Param('id') id: string) {
+    const proposal = await this.capabilityProposalsService.findOne(id, req.user);
     if (!proposal) throw new NotFoundException('Proposal not found');
 
     return this.capabilityCodeGenerator.preview(
       proposal.capabilityKey,
       proposal.metadata,
     );
+  }
+
+  /** Steps from request to release, with the live state of the code change. */
+  @Get(':id/progress')
+  @RequirePermissions('permission_proposal:read')
+  async getProgress(@Request() req: any, @Param('id') id: string) {
+    const proposal = await this.capabilityProposalsService.findOne(id, req.user);
+    if (!proposal) throw new NotFoundException('Proposal not found');
+    const mrUrl = proposal.metadata?.codeChange?.mrUrl as string | undefined;
+    const mrState = mrUrl
+      ? await this.capabilityCodeGenerator.getMergeRequestState(mrUrl)
+      : null;
+    return buildProposalProgress(proposal, mrState);
   }
 
   /** Runs the code generator and stores its outcome on the proposal. */
@@ -180,13 +221,23 @@ export class CapabilityProposalsController {
   @Post(':id/review')
   @RequirePermissions('permission_proposal:review')
   async reviewProposal(
+    @Request() req: any,
     @Param('id') id: string,
     @Body() body: ReviewProposalDto,
   ) {
+    const { decision, reason, targetVersion, targetBranch, createMr } = body;
+
+    // Approving changes the Super App itself: it needs the approve permission
+    // (Super Admin only), not just review.
+    if (
+      decision === ProposalDecision.APPROVED &&
+      !userHasPermissions(req.user, ['permission_proposal:approve'])
+    ) {
+      throw new ForbiddenException('Only a Super Admin can approve a capability.');
+    }
+
     const proposal = await this.capabilityProposalsService.findOne(id);
     if (!proposal) throw new NotFoundException('Proposal not found');
-
-    const { decision, reason, targetVersion, targetBranch, createMr } = body;
 
     // Approval is recorded even when the code step fails; the outcome is
     // returned and stored, so the reviewer sees it and can retry.
@@ -204,7 +255,13 @@ export class CapabilityProposalsController {
         : proposal.metadata,
     });
 
-    if (proposal.requestedBy) {
+    const recipients = new Set<string>();
+    if (proposal.requestedBy?.id) recipients.add(proposal.requestedBy.id);
+    for (const s of (proposal.metadata?.supporters || []) as Array<{ userId?: string }>) {
+      if (s?.userId) recipients.add(s.userId);
+    }
+
+    if (recipients.size > 0) {
       let message = '';
       let type = 'proposal_reviewed';
 
@@ -225,12 +282,18 @@ export class CapabilityProposalsController {
         type = 'proposal_rejected';
       }
 
-      await this.notificationsService.createNotification(
-        proposal.requestedBy.id,
-        `Capability Proposal ${decision === 'IN_DEVELOPMENT' ? 'In Development' : decision}`,
-        message,
-        type,
-      );
+      for (const userId of recipients) {
+        try {
+          await this.notificationsService.createNotification(
+            userId,
+            `Capability Proposal ${decision === 'IN_DEVELOPMENT' ? 'In Development' : decision}`,
+            message,
+            type,
+          );
+        } catch (err) {
+          this.logger.warn(`Could not notify ${userId} about proposal ${id}: ${(err as Error)?.message}`);
+        }
+      }
     }
 
     return {
@@ -246,7 +309,7 @@ export class CapabilityProposalsController {
 
   /** Re-runs a failed code change for an approved proposal (same release and branch). */
   @Post(':id/retry-code-change')
-  @RequirePermissions('permission_proposal:review')
+  @RequirePermissions('permission_proposal:approve')
   async retryCodeChange(@Param('id') id: string) {
     const proposal = await this.capabilityProposalsService.findOne(id);
     if (!proposal) throw new NotFoundException('Proposal not found');
