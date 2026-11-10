@@ -674,6 +674,108 @@ export class NexusIntegrationService {
   }
 
   /**
+   * Nexus search (components or assets), following continuation tokens.
+   * `query` is passed as-is (repository, group, name, ...).
+   */
+  async search(
+    kind: 'components' | 'assets',
+    query: Record<string, string>,
+  ): Promise<any[]> {
+    const authHeader = this.getAuthHeader();
+    const base = `${this.getBaseUrl()}/service/rest/v1/search${kind === 'assets' ? '/assets' : ''}`;
+    const items: any[] = [];
+    let token: string | undefined;
+    for (let page = 0; page < 50; page++) {
+      const params = new URLSearchParams(query);
+      if (token) params.set('continuationToken', token);
+      const res = await fetch(`${base}?${params.toString()}`, {
+        headers: { ...authHeader, Accept: 'application/json' },
+      });
+      if (!res.ok) {
+        throw new Error(`Nexus search failed (HTTP ${res.status})`);
+      }
+      const data: any = await res.json();
+      items.push(...(data.items || []));
+      token = data.continuationToken || undefined;
+      if (!token) break;
+    }
+    return items;
+  }
+
+  /**
+   * Removes what one mini app published to Nexus: its Flutter package, its
+   * Android SDK (Maven) and its iOS SDK (zip + podspec). Best effort: each
+   * target is tried on its own and reported. Super App APK repositories are
+   * shared by every mini app and are never touched.
+   */
+  async deleteMiniAppArtifacts(targets: {
+    pubPackage?: string;
+    maven?: { groupId: string; artifactId: string };
+    ios?: { module: string; version: string };
+  }): Promise<{ removed: string[]; failed: string[] }> {
+    const removed: string[] = [];
+    const failed: string[] = [];
+    const repo = (key: string, fallback: string) =>
+      this.configService.get<string>(key) || fallback;
+
+    const removeComponents = async (label: string, query: Record<string, string>) => {
+      try {
+        const found = await this.search('components', query);
+        for (const c of found) {
+          try {
+            await this.deleteComponent(c.id);
+            removed.push(`${label}${c.version ? `@${c.version}` : ''}`);
+          } catch (err) {
+            failed.push(`${label}${c.version ? `@${c.version}` : ''}: ${(err as Error).message}`);
+          }
+        }
+      } catch (err) {
+        failed.push(`${label}: ${(err as Error).message}`);
+      }
+    };
+
+    const removeAsset = async (label: string, repository: string, name: string) => {
+      try {
+        const found = await this.search('assets', { repository, name });
+        for (const a of found) {
+          try {
+            await this.deleteAsset(a.id);
+            removed.push(label);
+          } catch (err) {
+            failed.push(`${label}: ${(err as Error).message}`);
+          }
+        }
+      } catch (err) {
+        failed.push(`${label}: ${(err as Error).message}`);
+      }
+    };
+
+    if (targets.pubPackage) {
+      const name = targets.pubPackage.trim().replace(/-/g, '_').toLowerCase();
+      await removeComponents(`pub-hosted/${name}`, { repository: 'pub-hosted', name });
+    }
+    if (targets.maven) {
+      const repository = repo('NEXUS_MAVEN_SDK_REPO', 'maven-sdk-hosted');
+      const { groupId, artifactId } = targets.maven;
+      await removeComponents(`${repository}/${groupId}:${artifactId}`, {
+        repository,
+        group: groupId,
+        name: artifactId,
+      });
+    }
+    if (targets.ios) {
+      const { module, version } = targets.ios;
+      const rawRepo = repo('NEXUS_RAW_SDK_REPO', 'raw-sdk-artifacts');
+      const specsRepo = repo('NEXUS_COCOAPODS_SPECS_REPO', 'cocoapods-specs');
+      const zip = `${module}/${version}/${module}.xcframework.zip`;
+      const spec = `Specs/${module}/${version}/${module}.podspec`;
+      await removeAsset(`${rawRepo}/${zip}`, rawRepo, zip);
+      await removeAsset(`${specsRepo}/${spec}`, specsRepo, spec);
+    }
+    return { removed, failed };
+  }
+
+  /**
    * Deletes a published Flutter package and all its versions from the pub-hosted repository.
    */
   async deletePubPackage(

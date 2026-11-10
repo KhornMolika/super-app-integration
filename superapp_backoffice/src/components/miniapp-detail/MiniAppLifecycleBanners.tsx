@@ -84,7 +84,7 @@ export default function MiniAppLifecycleBanners({
             <div>
               <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">Archived</h4>
               <p className="text-sm text-slate-700 dark:text-slate-300 mt-1 leading-relaxed">
-                This mini app is stopped for good and hidden from users. It is kept as a record, and its App ID stays taken.
+                This mini app is stopped for good and hidden from users. It is kept as a record, and its App ID stays taken. A Super Admin can restore it, or delete it permanently from the ... menu.
                 {suspension?.reason && <> Reason: <strong>{suspension.reason}</strong>.</>}
                 {suspension?.archivedAt && <> Archived {formatWhen(suspension.archivedAt)}.</>}
               </p>

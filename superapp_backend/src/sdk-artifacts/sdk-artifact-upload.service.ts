@@ -49,8 +49,8 @@ export interface SdkInspectResult {
   detectedPermissions?: string[];
 }
 
-const DEFAULT_IOS_VERSION = '1.0.0';
-const DEFAULT_MAVEN_GROUP_ID = 'com.fsa.sdk';
+export const DEFAULT_IOS_VERSION = '1.0.0';
+export const DEFAULT_MAVEN_GROUP_ID = 'com.fsa.sdk';
 const SAFE_TOKEN = /^[A-Za-z0-9][A-Za-z0-9._+-]*$/;
 const SAFE_GROUP = /^[A-Za-z0-9][A-Za-z0-9_-]*(\.[A-Za-z0-9][A-Za-z0-9_-]*)*$/;
 

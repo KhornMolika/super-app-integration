@@ -57,7 +57,7 @@ export type LifecycleActionType =
 
 export interface LifecycleReasonModalState {
   isOpen: boolean;
-  action: 'reject' | 'request-changes' | 'discard-revision' | 'suspend' | 'request-archive' | 'archive' | 'decline-archive';
+  action: 'reject' | 'request-changes' | 'discard-revision' | 'suspend' | 'request-archive' | 'archive' | 'decline-archive' | 'delete-permanently';
   title: string;
   description: string;
   confirmText: string;

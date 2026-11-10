@@ -384,10 +384,55 @@ export function useMiniAppLifecycle({
     }
   };
 
+  /** Step 1: ask for the App ID. Step 2 (typed): delete and report Nexus cleanup. */
+  const handleDeletePermanently = async (typedAppId?: string) => {
+    const appId = formData.appId || '';
+    if (typedAppId === undefined) {
+      setLifecycleReasonModal({
+        isOpen: true,
+        action: 'delete-permanently',
+        title: 'Delete Permanently',
+        description: `This removes "${formData.name || appId}" with its versions, builds and files, and its published packages in Nexus. It cannot be undone. Type the App ID ${appId} to confirm.`,
+        confirmText: 'Delete Permanently',
+        confirmVariant: 'danger',
+        placeholder: appId,
+        quickSuggestions: [],
+        audienceNote: 'The App ID becomes free to register again',
+      });
+      return;
+    }
+    if (typedAppId.trim() !== appId) {
+      toast.error('The App ID does not match. Nothing was deleted.', 'Not Deleted');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await miniappsApi.delete(id, appId);
+      const nexus = res?.nexus;
+      const removed = nexus?.removed?.length || 0;
+      toast.success(
+        removed ? `Deleted. Removed ${removed} file${removed === 1 ? '' : 's'} from Nexus.` : 'Deleted.',
+        'MiniApp Deleted',
+      );
+      if (nexus?.failed?.length) {
+        toast.warning(`Remove by hand in Nexus: ${nexus.failed.join('; ')}`, 'Nexus Cleanup Incomplete');
+      }
+      if (nexus?.kept?.length) {
+        toast.info(`Kept in Nexus: ${nexus.kept.join('; ')}`, 'Shared Packages Kept');
+      }
+      router.push('/miniapps');
+    } catch (error: any) {
+      toast.error(error?.message || 'Could not delete the mini app.', 'Delete Failed');
+      setIsSubmitting(false);
+    }
+  };
+
   return {
     lifecycleReasonModal,
     setLifecycleReasonModal,
     handleLifecycleAction,
     handleDelete,
+    handleDeletePermanently,
   };
 }

@@ -41,6 +41,12 @@ export interface MiniApp {
   [key: string]: any;
 }
 
+export interface MiniAppDeleteResult {
+  success?: boolean;
+  appId?: string;
+  nexus?: { removed: string[]; failed: string[]; kept: string[] };
+}
+
 export const miniappsApi = {
   getAll: (
     filterOrStatus?:
@@ -88,8 +94,12 @@ export const miniappsApi = {
     return unwrapItem<MiniApp>(res);
   },
 
-  delete: (id: string) =>
-    apiClient<void>(`/api/mini-apps/${id}`, { method: 'DELETE' }),
+  /** `confirm` (the App ID) is required to permanently delete an archived app. */
+  delete: (id: string, confirm?: string) =>
+    apiClient<MiniAppDeleteResult>(`/api/mini-apps/${id}`, {
+      method: 'DELETE',
+      params: confirm ? { confirm } : undefined,
+    }),
 
   checkExists: (params: { appId?: string; name?: string; excludeId?: string }) =>
     apiClient<{ appIdExists: boolean; nameExists: boolean }>('/api/mini-apps/check-exists', { params }),

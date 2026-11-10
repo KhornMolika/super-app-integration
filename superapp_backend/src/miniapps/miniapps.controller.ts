@@ -581,8 +581,12 @@ export class MiniappsController {
   // Owners may delete their own DRAFT/REJECTED apps; the helper checks owner or admin.
   @Delete(':id')
   @RequirePermissions('miniapp:update')
-  remove(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
-    return this.miniappService.remove(id, req.user?.sub, req.user);
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('confirm') confirm: string | undefined,
+    @Req() req: any,
+  ) {
+    return this.miniappService.remove(id, req.user?.sub, req.user, confirm);
   }
 
   @Get(':id/versions')

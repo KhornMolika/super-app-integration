@@ -58,6 +58,8 @@ export interface MiniAppAllowedActions {
   archive: boolean;
   requestArchive: boolean;
   delete: boolean;
+  /** Archived apps only, Super Admin, App ID typed to confirm. */
+  deletePermanently: boolean;
   rollback: boolean;
   downloadTestApk: boolean;
 }
@@ -130,6 +132,7 @@ export function getAllowedActions(
     archive: isSuper && phase !== 'archived' && !DELETABLE.includes(status),
     requestArchive: !isSuper && canSuspend && phase === 'suspended' && !archiveRequested,
     delete: DELETABLE.includes(status) && canUpdate && ownerOrAdmin,
+    deletePermanently: phase === 'archived' && isSuper,
     rollback: (isSuper || isAdmin) && phase !== 'archived',
     downloadTestApk: phase === 'testing' || phase === 'live',
   };

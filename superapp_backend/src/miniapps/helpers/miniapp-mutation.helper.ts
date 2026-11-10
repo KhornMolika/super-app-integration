@@ -27,6 +27,40 @@ import { VersionDiffHelper } from './version-diff.helper';
 import { inferPackageNameFromGitUrl } from '../../integrations/git/git-integration.service';
 import { resolveOrganizationDetails } from '../../organizations/helpers/organization-resolver.helper';
 import { OrganizationsService } from '../../organizations/organizations.service';
+import { NexusIntegrationService } from '../../integrations/nexus/nexus-integration.service';
+import {
+  DEFAULT_IOS_VERSION,
+  DEFAULT_MAVEN_GROUP_ID,
+} from '../../sdk-artifacts/sdk-artifact-upload.service';
+
+/** Where one mini app's published files live in Nexus. */
+export function nexusTargetsFor(app: MiniApp): {
+  pubPackage?: string;
+  maven?: { groupId: string; artifactId: string };
+  ios?: { module: string; version: string };
+} {
+  const cfg = app.integrationConfig || {};
+  const method = String(app.integrationMethod || '').toUpperCase();
+  if (method === 'FLUTTER_PACKAGE') {
+    // Only uploaded archives are published to pub-hosted; Git sources are not
+    const source = String(cfg.sourceType || 'ARTIFACT').toUpperCase();
+    const fromGit = source.includes('GIT') || source.includes('SOURCE') || Boolean(cfg.repoUrl || cfg.gitUrl);
+    return !fromGit && cfg.packageName ? { pubPackage: String(cfg.packageName) } : {};
+  }
+  if (method === 'NATIVE_SDK') {
+    return {
+      maven: {
+        groupId: cfg.androidMavenGroupId || DEFAULT_MAVEN_GROUP_ID,
+        artifactId: cfg.androidMavenArtifactId || app.appId,
+      },
+      ios: {
+        module: cfg.iosModuleName || app.appId,
+        version: cfg.iosVersion || DEFAULT_IOS_VERSION,
+      },
+    };
+  }
+  return {};
+}
 import { secureFlutterIntegrationConfig } from './flutter-credential.helper';
 import {
   HOME_WIDGET_FIELD,
@@ -52,7 +86,45 @@ export class MiniappMutationHelper {
     private organizationRepository?: Repository<Organization> | any,
     @Optional()
     private organizationsService?: OrganizationsService,
+    @Optional()
+    private nexusService?: NexusIntegrationService,
   ) {}
+
+  /**
+   * Removes this app's files from Nexus, keeping any package or SDK
+   * coordinate that another mini app still uses.
+   */
+  private async cleanUpNexus(app: MiniApp) {
+    const result = { removed: [] as string[], failed: [] as string[], kept: [] as string[] };
+    const targets = nexusTargetsFor(app);
+    if (!this.nexusService || (!targets.pubPackage && !targets.maven && !targets.ios)) {
+      return result;
+    }
+
+    const others = (await this.miniappRepository.find()).filter((o) => o.id !== app.id);
+    const usedBy = (pick: (t: ReturnType<typeof nexusTargetsFor>) => string | undefined, value?: string) =>
+      value ? others.find((o) => pick(nexusTargetsFor(o)) === value)?.appId : undefined;
+
+    const pubKey = targets.pubPackage?.trim().replace(/-/g, '_').toLowerCase();
+    const mavenKey = targets.maven ? `${targets.maven.groupId}:${targets.maven.artifactId}` : undefined;
+    const iosKey = targets.ios ? `${targets.ios.module}@${targets.ios.version}` : undefined;
+
+    const pubOwner = usedBy((t) => t.pubPackage?.trim().replace(/-/g, '_').toLowerCase(), pubKey);
+    const mavenOwner = usedBy((t) => (t.maven ? `${t.maven.groupId}:${t.maven.artifactId}` : undefined), mavenKey);
+    const iosOwner = usedBy((t) => (t.ios ? `${t.ios.module}@${t.ios.version}` : undefined), iosKey);
+    if (pubOwner) { result.kept.push(`${pubKey}: still used by ${pubOwner}`); delete targets.pubPackage; }
+    if (mavenOwner) { result.kept.push(`${mavenKey}: still used by ${mavenOwner}`); delete targets.maven; }
+    if (iosOwner) { result.kept.push(`${iosKey}: still used by ${iosOwner}`); delete targets.ios; }
+
+    try {
+      const res = await this.nexusService.deleteMiniAppArtifacts(targets);
+      result.removed.push(...res.removed);
+      result.failed.push(...res.failed);
+    } catch (err) {
+      result.failed.push(`Nexus: ${(err as Error).message}`);
+    }
+    return result;
+  }
 
   private async resolveOrganization(input?: string): Promise<{ name: string; code: string; id?: string }> {
     const clean = input?.trim();
@@ -1029,6 +1101,7 @@ export class MiniappMutationHelper {
       oldVal?: any,
       newVal?: any,
     ) => Promise<void>,
+    confirm?: string,
   ) {
     const isUuid =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
@@ -1058,19 +1131,24 @@ export class MiniappMutationHelper {
       }
     }
 
-    // 2. Status guard: Only apps in DRAFT or REJECTED status can be deleted
-    const deletableStatuses = [
-      MiniAppLifecycleStatus.DRAFT,
-      MiniAppLifecycleStatus.REJECTED,
-      'DRAFT',
-      'REJECTED',
-    ];
-    if (
-      existing.lifecycleStatus &&
-      !deletableStatuses.includes(existing.lifecycleStatus as any)
-    ) {
+    // 2. Status guard: DRAFT/REJECTED (owner or admin), or ARCHIVED (Super Admin,
+    // typing the App ID to confirm). Anything else must be archived first.
+    const status = String(existing.lifecycleStatus || 'DRAFT');
+    if (status === MiniAppLifecycleStatus.ARCHIVED) {
+      const roles: string[] = Array.isArray(user?.roles) ? user.roles : user?.role ? [user.role] : [];
+      if (!roles.includes('SUPER_ADMIN')) {
+        throw new ForbiddenException(
+          'Only a Super Admin can permanently delete an archived mini app.',
+        );
+      }
+      if (!confirm || confirm.trim() !== existing.appId) {
+        throw new BadRequestException(
+          `Type the App ID (${existing.appId}) to confirm the permanent delete.`,
+        );
+      }
+    } else if (status !== 'DRAFT' && status !== 'REJECTED') {
       throw new BadRequestException(
-        `Cannot delete MiniApp in '${existing.lifecycleStatus}' status. Only mini-apps in DRAFT or REJECTED status can be permanently deleted. Submitted, in-testing and live mini apps can only be suspended, or archived by a Super Admin.`,
+        `A mini app in ${status} cannot be deleted. A Super Admin must archive it first, then delete it permanently.`,
       );
     }
 
@@ -1101,18 +1179,27 @@ export class MiniappMutationHelper {
       await this.storageService.deleteLogo(existing.logo);
     }
 
+    // 6. Remove what it published to Nexus (never the shared Super App APKs)
+    const nexus = await this.cleanUpNexus(existing);
+
     if (logActivityFn) {
+      const nexusNote = [
+        nexus.removed.length ? `Nexus removed: ${nexus.removed.join(', ')}` : '',
+        nexus.kept.length ? `Nexus kept: ${nexus.kept.join(', ')}` : '',
+        nexus.failed.length ? `Nexus failed: ${nexus.failed.join(', ')}` : '',
+      ].filter(Boolean).join('. ');
       await logActivityFn(
         existing.id,
         actorId || user?.sub || 'system',
         'DELETE',
         `App ${existing.name || existing.appId} Deleted`,
-        'App removed and MinIO objects purged',
+        `App removed and MinIO objects purged${nexusNote ? `. ${nexusNote}` : ''}`,
         'DELETE_MINI_APP',
         existing,
         null,
       );
     }
-    return this.miniappRepository.delete(existing.id);
+    await this.miniappRepository.delete(existing.id);
+    return { success: true, appId: existing.appId, nexus };
   }
 }

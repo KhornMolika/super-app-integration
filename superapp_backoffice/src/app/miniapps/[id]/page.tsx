@@ -147,6 +147,7 @@ function ManageMiniAppContent() {
     setLifecycleReasonModal,
     handleLifecycleAction,
     handleDelete,
+    handleDeletePermanently,
   } = useMiniAppLifecycle({
     id,
     formData,
@@ -209,6 +210,7 @@ function ManageMiniAppContent() {
           actions={actions}
           onLifecycleAction={handleLifecycleAction}
           onDelete={handleDelete}
+          onDeletePermanently={() => handleDeletePermanently()}
           isSubmitting={isSubmitting}
         />
 
@@ -383,6 +385,10 @@ function ManageMiniAppContent() {
           onConfirm={(reason, checked) => {
             const action = lifecycleReasonModal.action;
             setLifecycleReasonModal(null);
+            if (action === 'delete-permanently') {
+              handleDeletePermanently(reason);
+              return;
+            }
             handleLifecycleAction(
               action,
               reason,
