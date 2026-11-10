@@ -556,6 +556,34 @@ describe('MobileAuthService', () => {
       expect(dummy).toHaveBeenCalledTimes(1); // unknown email burns a dummy scrypt
     });
 
+    it('logs the real reason for support, never the password', async () => {
+      const c = build();
+      await registerAndVerify(c);
+      await c.svc.register({ email: 'unv@example.io', password: PW, name: 'U' });
+      await registerAndVerify(c, 'dis@example.io');
+      c.users.rows.find((u) => u.email === 'dis@example.io')!.status = IdentityStatus.DISABLED;
+      const warn = jest.spyOn((c.svc as any).logger, 'warn').mockImplementation(() => undefined);
+
+      const reasons: string[] = [];
+      for (const a of [
+        { email: 'ghost@example.io', password: PW },
+        { email: 'jane@example.io', password: 'wrong-password-x' },
+        { email: 'unv@example.io', password: PW },
+        { email: 'dis@example.io', password: PW },
+      ]) {
+        await c.svc.login(a).catch(() => undefined);
+        reasons.push(String(warn.mock.calls.at(-1)?.[0]));
+      }
+      expect(reasons[0]).toContain('no account with this email');
+      expect(reasons[1]).toContain('wrong password');
+      expect(reasons[2]).toContain('email not verified');
+      expect(reasons[3]).toContain('account status is DISABLED');
+      const logged = JSON.stringify(warn.mock.calls);
+      expect(logged).not.toContain(PW);
+      expect(logged).not.toContain('wrong-password-x');
+      expect(logged).not.toContain('ghost@example.io');
+    });
+
     it('locks out after 5 consecutive failures for 15 minutes (generic message), then recovers', async () => {
       const c = build();
       await registerAndVerify(c);

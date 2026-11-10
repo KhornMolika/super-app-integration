@@ -8,6 +8,12 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 
+/** e.g. 401 -> UNAUTHORIZED, 404 -> NOT_FOUND (used when the exception names no code). */
+function codeForStatus(status: number): string {
+  const name = (HttpStatus as unknown as Record<number, string>)[status];
+  return typeof name === 'string' ? name : 'HTTP_' + status;
+}
+
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
@@ -24,6 +30,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
+      code = codeForStatus(status);
       const res = exception.getResponse();
       if (typeof res === 'string') {
         message = res;

@@ -388,14 +388,23 @@ export class MobileAuthService {
       },
     });
 
+    // The client always gets the same answer (no account enumeration); the
+    // real reason is logged so support can tell why a sign-in failed.
+    const reject = (reason: string, who?: Identity): never => {
+      this.logger.warn(
+        `Mobile sign-in refused (${reason})${who ? ` for user ${who.id}` : ''}`,
+      );
+      throw new UnauthorizedException(INVALID_CREDENTIALS);
+    };
+
     if (!user) {
       await this.burnDummy(input.password);
-      throw new UnauthorizedException(INVALID_CREDENTIALS);
+      return reject('no account with this email');
     }
 
     if (user.lockedUntil && new Date(user.lockedUntil).getTime() > Date.now()) {
       await this.burnDummy(input.password);
-      throw new UnauthorizedException(INVALID_CREDENTIALS);
+      return reject(`locked after repeated failures until ${new Date(user.lockedUntil).toISOString()}`, user);
     }
 
     // passwordHash is select:false; load it explicitly for the check
@@ -417,16 +426,16 @@ export class MobileAuthService {
 
     if (!ok) {
       await this.registerFailure(user);
-      throw new UnauthorizedException(INVALID_CREDENTIALS);
+      return reject('wrong password', user);
     }
 
     if (this.requireEmailVerification() && !user.emailVerifiedAt) {
-      throw new UnauthorizedException(INVALID_CREDENTIALS);
+      return reject('email not verified', user);
     }
 
     const restore = this.isRestorable(user);
     if (!restore && user.status !== IdentityStatus.ACTIVE) {
-      throw new UnauthorizedException(INVALID_CREDENTIALS);
+      return reject(`account status is ${user.status}, not ACTIVE`, user);
     }
 
     if (!user.emailVerifiedAt && !this.requireEmailVerification()) {
