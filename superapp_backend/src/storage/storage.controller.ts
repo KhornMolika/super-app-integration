@@ -79,10 +79,17 @@ async function pipeAssetHelper(
     .split('?')[0];
 
   const strippedKey = cleanKey.replace(/^logos\//, '');
+  // Older records store "logos/<appId>/logo.png"; uploads now go to
+  // "miniapps/<appId>/logos/logo.<ext>".
+  const ownerDir = strippedKey.split('/')[0];
 
   // Candidate object keys to check in MinIO
   const candidateKeys = [
     cleanKey,
+    `miniapps/${ownerDir}/logos/logo.png`,
+    `miniapps/${ownerDir}/logos/logo.jpg`,
+    `miniapps/${ownerDir}/logos/logo.jpeg`,
+    `miniapps/${ownerDir}/logos/logo.webp`,
     `miniapps/${strippedKey}/logos/logo.png`,
     `miniapps/${strippedKey}/logos/logo.jpg`,
     `miniapps/${strippedKey}/logos/logo.jpeg`,
