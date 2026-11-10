@@ -34,6 +34,69 @@ export interface NativeSdkIntegrationFormProps {
   isEditable?: boolean;
 }
 
+interface EntryScan {
+  detection: 'contract' | 'guess' | 'none';
+  candidates: string[];
+}
+
+function toEntryScan(detection?: string, candidates?: string[]): EntryScan | null {
+  if (!detection) return null;
+  return { detection: detection as EntryScan['detection'], candidates: candidates || [] };
+}
+
+/** What the scan found for the entry class, under the class name field. */
+function EntryClassHint({
+  scan,
+  contract,
+  current,
+  onPick,
+  disabled,
+}: {
+  scan: EntryScan | null;
+  contract: string;
+  current: string;
+  onPick: (value: string) => void;
+  disabled?: boolean;
+}) {
+  if (!scan) return null;
+  if (scan.detection === 'contract' && scan.candidates.length > 1) {
+    return (
+      <div className="mt-1.5 space-y-1">
+        <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+          {scan.candidates.length} classes implement {contract}. Pick the entry class:
+        </span>
+        <select
+          value={scan.candidates.includes(current) ? current : ''}
+          onChange={(e) => e.target.value && onPick(e.target.value)}
+          disabled={disabled}
+          className="w-full font-mono text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5"
+        >
+          <option value="">Choose...</option>
+          {scan.candidates.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+      </div>
+    );
+  }
+  if (scan.detection === 'contract') {
+    const ok = scan.candidates.includes(current);
+    return (
+      <p className={`text-[11px] mt-1 ${ok ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>
+        {ok
+          ? `Detected: implements ${contract}.`
+          : `This name does not match the class that implements ${contract}: ${scan.candidates[0]}`}
+      </p>
+    );
+  }
+  return (
+    <p className="text-[11px] mt-1 text-amber-700 dark:text-amber-400">
+      No class in this file implements {contract}, so the name above is only a guess. The SDK must implement the
+      contract from the FSA native SDK package (see its README), or the Super App cannot open it.
+    </p>
+  );
+}
+
 export default function NativeSdkIntegrationForm({
   formData,
   allErrors = {},
@@ -60,6 +123,9 @@ export default function NativeSdkIntegrationForm({
 
   // Scanned / auto-detected notice
   const [detectedNotice, setDetectedNotice] = useState<string | null>(null);
+  // Classes in the uploaded file that implement the FSA host contract
+  const [androidEntry, setAndroidEntry] = useState<EntryScan | null>(null);
+  const [iosEntry, setIosEntry] = useState<EntryScan | null>(null);
 
   // Compute smart standard defaults based on MiniApp name, appId, organization & organizationCode
   const derivedDefaults = useMemo(() => {
@@ -166,7 +232,11 @@ export default function NativeSdkIntegrationForm({
 
       // Auto-derive iOS module name from scanned metadata or filename
       const scannedMod = res.scannedFields?.iosModuleName;
-      const scannedType = res.scannedFields?.iosTypeName;
+      const iosScan = toEntryScan(res.scannedFields?.iosEntryDetection, res.scannedFields?.iosEntryCandidates);
+      setIosEntry(iosScan);
+      const scannedType =
+        res.scannedFields?.iosTypeName ||
+        (iosScan?.detection === 'contract' ? iosScan.candidates[0] : undefined);
       const fallbackMod = file.name
         .replace(/\.xcframework\.zip$/i, '')
         .replace(/\.zip$/i, '')
@@ -274,12 +344,20 @@ export default function NativeSdkIntegrationForm({
         nativeConfig.androidMavenVersion ||
         '1.0.0';
 
+      const androidScan = toEntryScan(scanned.androidEntryDetection, scanned.androidEntryCandidates);
+      setAndroidEntry(androidScan);
+      const firstContract =
+        androidScan?.detection === 'contract' ? androidScan.candidates[0] : undefined;
+      const firstDot = firstContract ? firstContract.lastIndexOf('.') : -1;
+
       const finalPackageName =
+        (firstContract && firstDot > 0 ? firstContract.slice(0, firstDot) : undefined) ||
         scanned.androidPackageName ||
         nativeConfig.androidPackageName ||
         derivedDefaults.androidPackageName;
 
       const finalObjectName =
+        (firstContract ? firstContract.slice(firstDot + 1) : undefined) ||
         scanned.androidObjectName ||
         nativeConfig.androidObjectName ||
         baseName
@@ -520,6 +598,13 @@ export default function NativeSdkIntegrationForm({
                 Class responding to <code>.initialize()</code> &amp;{' '}
                 <code>.present()</code>
               </span>
+              <EntryClassHint
+                scan={iosEntry}
+                contract="FSAMiniAppNativeProtocol"
+                current={nativeConfig.iosTypeName || ''}
+                onPick={(v) => handleFieldChange('iosTypeName', v)}
+                disabled={!isEditable}
+              />
               {allErrors['integrationConfigNativeSdk.iosTypeName'] && (
                 <p className="text-[11px] text-rose-600 mt-1 flex items-center gap-1">
                   <AlertTriangleIcon className="w-3 h-3 shrink-0" />
@@ -790,6 +875,22 @@ export default function NativeSdkIntegrationForm({
                 Entry object responding to <code>.initialize()</code> &amp;{' '}
                 <code>.present()</code>
               </span>
+              <EntryClassHint
+                scan={androidEntry}
+                contract="FSAMiniAppNativeEntry"
+                current={[nativeConfig.androidPackageName, nativeConfig.androidObjectName].filter(Boolean).join('.')}
+                onPick={(fq) => {
+                  if (!isEditable) return;
+                  const dot = fq.lastIndexOf('.');
+                  const pick = { androidPackageName: fq.slice(0, dot), androidObjectName: fq.slice(dot + 1) };
+                  if (onUpdateNativeSdkConfig) onUpdateNativeSdkConfig(pick);
+                  else {
+                    handleFieldChange('androidPackageName', pick.androidPackageName);
+                    handleFieldChange('androidObjectName', pick.androidObjectName);
+                  }
+                }}
+                disabled={!isEditable}
+              />
               {allErrors['integrationConfigNativeSdk.androidObjectName'] && (
                 <p className="text-[11px] text-rose-600 mt-1">
                   {allErrors['integrationConfigNativeSdk.androidObjectName']}

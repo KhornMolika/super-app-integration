@@ -1,8 +1,25 @@
 import { Injectable, Logger } from '@nestjs/common';
 import AdmZip from 'adm-zip';
 import { NativeSdkConfigDto } from '../miniapps/dto/create-miniapp.dto';
+import {
+  ANDROID_ENTRY_INTERFACE,
+  findSwiftEntryTypes,
+  readJavaClassHeader,
+} from './java-class-header';
 
 const MAX_ENTRY_BYTES = 2 * 1024 * 1024;
+/** classes.jar holds all compiled code, so it may be larger. */
+const MAX_CLASSES_JAR_BYTES = 64 * 1024 * 1024;
+/** Stop reading after this many .class files (zip bomb guard). */
+const MAX_CLASS_FILES = 20000;
+
+/**
+ * How the entry class was found:
+ * - contract: it implements the FSA host contract (exact)
+ * - guess: picked by name (please check)
+ * - none: nothing found
+ */
+export type EntryDetection = 'contract' | 'guess' | 'none';
 
 /**
  * Extracts native SDK metadata (module/package names) from uploaded vendor
@@ -14,6 +31,12 @@ export interface ScannedNativeSdkResult extends Partial<NativeSdkConfigDto> {
   minSdkVersion?: number;
   targetSdkVersion?: number;
   minIosVersion?: string;
+  /** Fully qualified classes implementing FSAMiniAppNativeEntry (Kotlin objects). */
+  androidEntryCandidates?: string[];
+  androidEntryDetection?: EntryDetection;
+  /** Swift types conforming to FSAMiniAppNativeProtocol. */
+  iosEntryCandidates?: string[];
+  iosEntryDetection?: EntryDetection;
 }
 
 @Injectable()
@@ -21,6 +44,90 @@ export class ArtifactScannerService {
   private readonly logger = new Logger(ArtifactScannerService.name);
 
   async scanXcframework(
+    buffer: Buffer,
+    filename: string,
+  ): Promise<ScannedNativeSdkResult> {
+    const result = await this.scanXcframeworkBasic(buffer, filename);
+    const candidates = this.findIosEntryTypes(buffer, filename);
+    result.iosEntryCandidates = candidates;
+    if (candidates.length > 0) {
+      result.iosEntryDetection = 'contract';
+      if (candidates.length === 1) result.iosTypeName = candidates[0];
+      // Several: leave the choice to the developer (do not overwrite it with a guess)
+      else delete result.iosTypeName;
+    } else {
+      result.iosEntryDetection = result.iosTypeName ? 'guess' : 'none';
+    }
+    return result;
+  }
+
+  async scanAar(
+    buffer: Buffer,
+    filename: string,
+  ): Promise<ScannedNativeSdkResult> {
+    const result = await this.scanAarBasic(buffer, filename);
+    const candidates = this.findAndroidEntryClasses(buffer, filename);
+    result.androidEntryCandidates = candidates;
+    if (candidates.length > 0) {
+      result.androidEntryDetection = 'contract';
+      if (candidates.length === 1) {
+        const fq = candidates[0];
+        const dot = fq.lastIndexOf('.');
+        result.androidPackageName = dot > 0 ? fq.slice(0, dot) : result.androidPackageName;
+        result.androidObjectName = fq.slice(dot + 1);
+      } else {
+        // Several: leave the choice to the developer (do not overwrite it with a guess)
+        delete result.androidObjectName;
+      }
+    } else {
+      result.androidEntryDetection = result.androidObjectName ? 'guess' : 'none';
+    }
+    return result;
+  }
+
+  /** Kotlin objects in classes.jar that implement the host contract. */
+  findAndroidEntryClasses(buffer: Buffer, filename: string): string[] {
+    try {
+      const jarEntry = new AdmZip(buffer)
+        .getEntries()
+        .find((e) => e.entryName.replace(/\\/g, '/') === 'classes.jar');
+      if (!jarEntry || jarEntry.header.size > MAX_CLASSES_JAR_BYTES) return [];
+      const jar = new AdmZip(jarEntry.getData());
+      const found: string[] = [];
+      let seen = 0;
+      for (const e of jar.getEntries()) {
+        if (!e.entryName.endsWith('.class') || e.header.size > MAX_ENTRY_BYTES) continue;
+        if (++seen > MAX_CLASS_FILES) break;
+        const header = readJavaClassHeader(e.getData());
+        if (header?.hasStaticInstance && header.interfaces.includes(ANDROID_ENTRY_INTERFACE)) {
+          found.push(header.className);
+        }
+      }
+      return found.sort();
+    } catch (err) {
+      this.logger.warn(`Cannot read classes.jar in ${filename}: ${err}`);
+      return [];
+    }
+  }
+
+  /** Swift types that conform to the host contract, from .swiftinterface files. */
+  findIosEntryTypes(buffer: Buffer, filename: string): string[] {
+    try {
+      const found = new Set<string>();
+      for (const e of new AdmZip(buffer).getEntries()) {
+        const name = e.entryName.replace(/\\/g, '/');
+        if (e.isDirectory || name.startsWith('__MACOSX/') || !name.endsWith('.swiftinterface')) continue;
+        const data = this.readEntry(e, filename);
+        if (data) findSwiftEntryTypes(data.toString('utf8')).forEach((t) => found.add(t));
+      }
+      return [...found].sort();
+    } catch (err) {
+      this.logger.warn(`Cannot read Swift interfaces in ${filename}: ${err}`);
+      return [];
+    }
+  }
+
+  private async scanXcframeworkBasic(
     buffer: Buffer,
     filename: string,
   ): Promise<ScannedNativeSdkResult> {
@@ -113,7 +220,7 @@ export class ArtifactScannerService {
     return result;
   }
 
-  async scanAar(
+  private async scanAarBasic(
     buffer: Buffer,
     filename: string,
   ): Promise<ScannedNativeSdkResult> {

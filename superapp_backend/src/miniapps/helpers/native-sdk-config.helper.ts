@@ -83,3 +83,29 @@ export function latestCodegenMrIid(configs: unknown[]): string | undefined {
   }
   return best === undefined ? undefined : String(best);
 }
+
+/**
+ * When the uploaded SDK was scanned and classes implementing the host contract
+ * were found, the stated entry class must be one of them. Returns a message
+ * for the developer, or null when the names are fine (or could not be checked).
+ */
+export function nativeEntryClassProblems(config: any): string[] {
+  const problems: string[] = [];
+  const c = config || {};
+  if (c.androidEntryDetection === 'contract' && Array.isArray(c.androidEntryCandidates)) {
+    const stated = [c.androidPackageName, c.androidObjectName].filter(Boolean).join('.');
+    if (stated && !c.androidEntryCandidates.includes(stated)) {
+      problems.push(
+        `Android: ${stated} does not implement FSAMiniAppNativeEntry. Found: ${c.androidEntryCandidates.join(', ')}`,
+      );
+    }
+  }
+  if (c.iosEntryDetection === 'contract' && Array.isArray(c.iosEntryCandidates)) {
+    if (c.iosTypeName && !c.iosEntryCandidates.includes(c.iosTypeName)) {
+      problems.push(
+        `iOS: ${c.iosTypeName} does not conform to FSAMiniAppNativeProtocol. Found: ${c.iosEntryCandidates.join(', ')}`,
+      );
+    }
+  }
+  return problems;
+}

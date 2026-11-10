@@ -19,6 +19,7 @@ import { Identity } from '../identities/entities/identity.entity';
 import { AuditService } from '../audit/audit.service';
 import { PermissionDetectorHelper } from './helpers/permission-detector.helper';
 import { MiniappValidationHelper } from './helpers/miniapp-validation.helper';
+import { nativeEntryClassProblems } from './helpers/native-sdk-config.helper';
 import { MiniappLifecycleHelper } from './helpers/miniapp-lifecycle.helper';
 import {
   MiniappRetirementHelper,
@@ -624,6 +625,10 @@ export class MiniappsService implements OnApplicationBootstrap {
       throw new BadRequestException(
         `The SDK file is missing for: ${missing.join(', ')}. Upload it, or clear that platform's fields.`,
       );
+    }
+    const entryProblems = nativeEntryClassProblems(effectiveConfig);
+    if (entryProblems.length > 0) {
+      throw new BadRequestException(entryProblems.join(' '));
     }
     return true;
   }

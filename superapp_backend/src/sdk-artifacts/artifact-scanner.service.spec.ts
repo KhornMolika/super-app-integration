@@ -167,7 +167,7 @@ describe('ArtifactScannerService', () => {
       });
       await expect(
         svc.scanXcframework(buf, 'S.xcframework.zip'),
-      ).resolves.toEqual({
+      ).resolves.toMatchObject({
         iosArtifactFilename: 'S.xcframework.zip',
         iosModuleName: 'SpaBookingSDK',
         iosTypeName: 'SpaBookingSDKView',
@@ -209,7 +209,7 @@ describe('ArtifactScannerService', () => {
         zipOf({ 'X.xcframework/Info.plist': plist({ CFBundleName: 'X' }) }),
         'X.xcframework/Info.plist',
       );
-      await expect(svc.scanXcframework(buf, 'x.zip')).resolves.toEqual({
+      await expect(svc.scanXcframework(buf, 'x.zip')).resolves.toMatchObject({
         iosArtifactFilename: 'x.zip',
       });
     });
@@ -217,7 +217,7 @@ describe('ArtifactScannerService', () => {
     it('skips oversize plist entry', async () => {
       const big = plist({ CFBundleName: 'X' }) + ' '.repeat(3 * 1024 * 1024);
       const buf = zipOf({ 'X.xcframework/Info.plist': big });
-      await expect(svc.scanXcframework(buf, 'x.zip')).resolves.toEqual({
+      await expect(svc.scanXcframework(buf, 'x.zip')).resolves.toMatchObject({
         iosArtifactFilename: 'x.zip',
       });
     });
@@ -225,10 +225,10 @@ describe('ArtifactScannerService', () => {
     it('returns only filename when plist missing or zip invalid', async () => {
       await expect(
         svc.scanXcframework(zipOf({ 'a.txt': 'x' }), 'a.zip'),
-      ).resolves.toEqual({ iosArtifactFilename: 'a.zip' });
+      ).resolves.toMatchObject({ iosArtifactFilename: 'a.zip' });
       await expect(
         svc.scanXcframework(Buffer.from('not a zip'), 'b.zip'),
-      ).resolves.toEqual({ iosArtifactFilename: 'b.zip' });
+      ).resolves.toMatchObject({ iosArtifactFilename: 'b.zip' });
     });
   });
 
@@ -240,7 +240,7 @@ describe('ArtifactScannerService', () => {
       });
       await expect(
         svc.scanAar(buf, 'spa-booking-sdk-1.0.0.aar'),
-      ).resolves.toEqual({
+      ).resolves.toMatchObject({
         androidArtifactFilename: 'spa-booking-sdk-1.0.0.aar',
         androidMavenArtifactId: 'spa-booking-sdk',
         androidMavenVersion: '1.0.0',
@@ -283,7 +283,7 @@ describe('ArtifactScannerService', () => {
         zipOf({ 'AndroidManifest.xml': '<manifest package="a.b"/>' }),
         'AndroidManifest.xml',
       );
-      await expect(svc.scanAar(buf, 'q-1.0.aar')).resolves.toEqual({
+      await expect(svc.scanAar(buf, 'q-1.0.aar')).resolves.toMatchObject({
         androidArtifactFilename: 'q-1.0.aar',
         androidMavenArtifactId: 'q',
         androidMavenVersion: '1.0',
@@ -302,7 +302,7 @@ describe('ArtifactScannerService', () => {
     });
 
     it('degrades gracefully on invalid zip', async () => {
-      await expect(svc.scanAar(Buffer.from('nope'), 'z.aar')).resolves.toEqual({
+      await expect(svc.scanAar(Buffer.from('nope'), 'z.aar')).resolves.toMatchObject({
         androidArtifactFilename: 'z.aar',
       });
     });
