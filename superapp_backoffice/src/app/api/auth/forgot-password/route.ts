@@ -25,10 +25,6 @@ export async function POST(request: Request) {
           error: message,
           message,
           code: data?.code,
-          requiresVerification:
-            data?.code === 'EMAIL_NOT_VERIFIED' ||
-            (typeof message === 'string' &&
-              message.toLowerCase().includes('not been verified')),
         },
         { status: res.status || 400 },
       );

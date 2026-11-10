@@ -69,14 +69,17 @@ export class AccessControlService {
     return loadPasswordHash(this.identityRepository, identityId);
   }
 
+  /**
+   * Sets a new password hash and nothing else. It used to also set
+   * status ACTIVE, so a password reset let a PENDING_APPROVAL, SUSPENDED or
+   * INACTIVE account skip Super Administrator approval. Status changes go
+   * through updateUserStatus.
+   */
   async updatePasswordDirectly(
     userId: string,
     passwordHash: string,
   ): Promise<void> {
-    await this.identityRepository.update(
-      { id: userId },
-      { passwordHash, status: 'ACTIVE' },
-    );
+    await this.identityRepository.update({ id: userId }, { passwordHash });
   }
 
   async findByEmailWithPermissions(

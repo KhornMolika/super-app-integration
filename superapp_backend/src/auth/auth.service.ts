@@ -426,6 +426,8 @@ export class AuthService implements OnModuleInit {
           user.id,
           initialHash,
         );
+        // Official seed accounts are always active (non-production sync only)
+        await this.accessControlService.updateUserStatus(user.id, 'ACTIVE');
         this.logger.log(
           `[AUTH] Authenticated with configured seed password for: ${rawEmail}`,
         );
@@ -819,19 +821,10 @@ export class AuthService implements OnModuleInit {
           expiresInSeconds: 300,
         };
       }
-
-      // Enforce QA requirement: Require email verification first before accessing password recovery
-      if (user.status === 'PENDING_EMAIL_VERIFICATION') {
-        this.logger.warn(
-          `[OTP] Password reset blocked for unverified user: ${rawEmail}`,
-        );
-        throw new BadRequestException({
-          statusCode: 400,
-          code: 'EMAIL_NOT_VERIFIED',
-          message:
-            'Your email address has not been verified yet. Please verify your email before resetting your password.',
-        });
-      }
+      // Unverified accounts may reset too: the recovery code goes to the same
+      // mailbox, so a correct code also verifies the email (see verifyOtp).
+      // Answering exactly as for any other account also avoids revealing that
+      // an unverified account exists.
     }
 
     if (purpose === 'EMAIL_VERIFICATION') {
@@ -1047,18 +1040,9 @@ export class AuthService implements OnModuleInit {
         await this.accessControlService.findByEmailWithPermissions(rawEmail);
       // nextStatus tells the UI whether the user can sign in now (ACTIVE) or
       // still waits for a Super Administrator (PENDING_APPROVAL).
-      let nextStatus: string | undefined = user?.status;
-      if (user && user.status === 'PENDING_EMAIL_VERIFICATION') {
-        const isSuperOrAdmin =
-          user.role?.name === 'SUPER_ADMIN' ||
-          user.role?.name === 'ADMIN' ||
-          Boolean(OFFICIAL_SEEDS[rawEmail]);
-        nextStatus = isSuperOrAdmin ? 'ACTIVE' : 'PENDING_APPROVAL';
-        await this.accessControlService.updateUserStatus(user.id, nextStatus);
-        this.logger.log(
-          `[AUTH] User ${rawEmail} successfully verified email. Transitioned to ${nextStatus}`,
-        );
-      }
+      const nextStatus = user
+        ? await this.markEmailVerified(user, rawEmail)
+        : undefined;
       return {
         success: true,
         verified: true,
@@ -1071,16 +1055,12 @@ export class AuthService implements OnModuleInit {
     }
 
     if (purpose === 'PASSWORD_RESET') {
+      // The recovery code was emailed to this address, so entering it proves
+      // mailbox ownership exactly like the verification code: verify an
+      // unverified account here instead of blocking its password reset.
       const user =
         await this.accessControlService.findByEmailWithPermissions(rawEmail);
-      if (user && user.status === 'PENDING_EMAIL_VERIFICATION') {
-        throw new BadRequestException({
-          statusCode: 400,
-          code: 'EMAIL_NOT_VERIFIED',
-          message:
-            'Your email address has not been verified yet. Please verify your email before resetting your password.',
-        });
-      }
+      if (user) await this.markEmailVerified(user, rawEmail);
     }
 
     // Generate short-lived signed reset token (10 mins)
@@ -1131,14 +1111,9 @@ export class AuthService implements OnModuleInit {
       throw new BadRequestException('User account not found');
     }
 
-    if (user.status === 'PENDING_EMAIL_VERIFICATION') {
-      throw new BadRequestException({
-        statusCode: 400,
-        code: 'EMAIL_NOT_VERIFIED',
-        message:
-          'Your email address has not been verified yet. Please verify your email before resetting your password.',
-      });
-    }
+    // The reset token comes from a verified recovery code, so an account that
+    // is somehow still unverified is verified now (normally verifyOtp did it).
+    const status = await this.markEmailVerified(user, email);
 
     // Hash new password using Scrypt
     const passwordHash = await hashPassword(newPassword.trim() || newPassword);
@@ -1149,10 +1124,38 @@ export class AuthService implements OnModuleInit {
 
     this.logger.log(`[AUTH] Password successfully reset for: ${email}`);
 
+    const pendingApproval = status === 'PENDING_APPROVAL';
     return {
       success: true,
-      message: 'Your password has been changed successfully. Please Login.',
+      nextStatus: pendingApproval ? 'PENDING_APPROVAL' : 'ACTIVE',
+      message: pendingApproval
+        ? 'Your password has been changed and your email is verified. Your account is pending Super Administrator approval.'
+        : 'Your password has been changed successfully. Please sign in.',
     };
+  }
+
+  /**
+   * Marks an account's email as verified after the user proved mailbox
+   * ownership (verification code or password-recovery code). Moves
+   * PENDING_EMAIL_VERIFICATION to ACTIVE for admins and seed accounts, else to
+   * PENDING_APPROVAL. Returns the resulting status; other statuses are left
+   * unchanged.
+   */
+  private async markEmailVerified(
+    user: { id: string; status?: string; role?: { name?: string } | null },
+    rawEmail: string,
+  ): Promise<string | undefined> {
+    if (user.status !== 'PENDING_EMAIL_VERIFICATION') return user.status;
+    const isSuperOrAdmin =
+      user.role?.name === 'SUPER_ADMIN' ||
+      user.role?.name === 'ADMIN' ||
+      Boolean(OFFICIAL_SEEDS[rawEmail]);
+    const nextStatus = isSuperOrAdmin ? 'ACTIVE' : 'PENDING_APPROVAL';
+    await this.accessControlService.updateUserStatus(user.id, nextStatus);
+    this.logger.log(
+      `[AUTH] User ${rawEmail} successfully verified email. Transitioned to ${nextStatus}`,
+    );
+    return nextStatus;
   }
 }
 

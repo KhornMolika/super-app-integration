@@ -156,7 +156,12 @@ export const authApi = {
     }),
 
   resetPassword: (resetToken: string, newPassword: string) =>
-    apiClient<{ success: boolean; message: string }>('/api/auth/reset-password', {
+    apiClient<{
+      success: boolean;
+      message: string;
+      /** PENDING_APPROVAL: the reset also verified the email of an account still awaiting approval */
+      nextStatus?: 'ACTIVE' | 'PENDING_APPROVAL';
+    }>('/api/auth/reset-password', {
       method: 'POST',
       body: { resetToken, newPassword },
     }),

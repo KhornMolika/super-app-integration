@@ -8,6 +8,7 @@ import { AuthCenteredLayout } from '@/components/auth/AuthCenteredLayout';
 import { OtpInputGroup } from '@/components/auth/OtpInputGroup';
 import { PasswordStrengthMeter, getPasswordStrength } from '@/components/auth/PasswordStrengthMeter';
 import { authApi } from '@/api/auth.api';
+import { maskEmail } from '@/lib/mask-email';
 
 type RecoveryStep = 'email' | 'otp' | 'new-password' | 'success';
 
@@ -21,8 +22,6 @@ export default function ForgotPasswordPage() {
   // Step 1: Email
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
-  const [isUnverifiedEmail, setIsUnverifiedEmail] = useState(false);
-  const [resendingVerification, setResendingVerification] = useState(false);
 
   // Step 2: 6-Digit OTP & Expiration Timer
   const [otp, setOtp] = useState<string[]>(Array(6).fill(''));
@@ -38,16 +37,10 @@ export default function ForgotPasswordPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [resetToken, setResetToken] = useState('');
+  // After the reset: can sign in now, or (newly verified developer) awaits approval
+  const [nextStatus, setNextStatus] = useState<'ACTIVE' | 'PENDING_APPROVAL'>('ACTIVE');
 
   const [loading, setLoading] = useState(false);
-
-  // Mask email for privacy (e.g. m••••••••n@gmail.com)
-  const maskEmail = (str: string) => {
-    if (!str || !str.includes('@')) return str;
-    const [user, domain] = str.split('@');
-    if (user.length <= 2) return `${user[0]}*@${domain}`;
-    return `${user[0]}${'•'.repeat(Math.min(user.length - 2, 7))}${user[user.length - 1]}@${domain}`;
-  };
 
   // Timer countdown for OTP step
   useEffect(() => {
@@ -86,7 +79,6 @@ export default function ForgotPasswordPage() {
 
     setLoading(true);
     setEmailError('');
-    setIsUnverifiedEmail(false);
 
     try {
       const res = await authApi.requestRecoveryOtp(trimmed);
@@ -102,44 +94,10 @@ export default function ForgotPasswordPage() {
     } catch (err: any) {
       const message =
         err?.message || 'Failed to dispatch recovery code. Please check your email and try again.';
-      const isUnverified =
-        err?.code === 'EMAIL_NOT_VERIFIED' ||
-        err?.data?.code === 'EMAIL_NOT_VERIFIED' ||
-        err?.data?.requiresVerification === true ||
-        message.toLowerCase().includes('not been verified') ||
-        message.toLowerCase().includes('verify your email');
-
-      if (isUnverified) {
-        setIsUnverifiedEmail(true);
-        setEmailError('Your email address has not been verified yet.');
-        toast.error(
-          'Please verify your email before resetting your password.',
-          'Verification Required',
-        );
-      } else {
-        setIsUnverifiedEmail(false);
-        setEmailError(message);
-        toast.error(message, 'Request Failed');
-      }
+      setEmailError(message);
+      toast.error(message, 'Request Failed');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleResendVerificationFromForgot = async () => {
-    const trimmed = email.trim().toLowerCase();
-    if (!trimmed) return;
-    setResendingVerification(true);
-    try {
-      await authApi.requestOtp({ email: trimmed, purpose: 'EMAIL_VERIFICATION' });
-      toast.success(
-        `A 6-digit verification code has been dispatched to ${trimmed}. Check your inbox!`,
-        'Verification Code Sent',
-      );
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to dispatch verification code.', 'Resend Failed');
-    } finally {
-      setResendingVerification(false);
     }
   };
 
@@ -226,7 +184,8 @@ export default function ForgotPasswordPage() {
     setPasswordError('');
 
     try {
-      await authApi.resetPassword(resetToken, newPassword);
+      const res = await authApi.resetPassword(resetToken, newPassword);
+      setNextStatus(res?.nextStatus === 'PENDING_APPROVAL' ? 'PENDING_APPROVAL' : 'ACTIVE');
       setStep('success');
       toast.success('Your password has been changed securely.', 'Password Updated');
     } catch (err: any) {
@@ -261,16 +220,33 @@ export default function ForgotPasswordPage() {
           <div className="space-y-1.5">
             <h3 className="text-lg font-bold text-white">All Sessions Secured</h3>
             <p className="text-xs text-slate-400 leading-relaxed max-w-sm mx-auto">
-              Your password has been updated. You can now Login to the FSA SuperApp Platform with your new credentials.
+              {nextStatus === 'PENDING_APPROVAL'
+                ? 'Your password has been updated and your email address is now verified.'
+                : 'Your password has been updated. You can now Login to the FSA SuperApp Platform with your new credentials.'}
             </p>
           </div>
 
+          {/* A newly verified developer account still needs a Super Administrator */}
+          {nextStatus === 'PENDING_APPROVAL' && (
+            <div className="p-4 rounded-2xl bg-accent-500/10 border border-accent-500/25 text-left space-y-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-accent-300">
+                <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span>Super Administrator Review Required</span>
+              </div>
+              <p className="text-[11px] text-slate-300/90 leading-relaxed">
+                Your account is pending Super Administrator approval. You can sign in once a Super Administrator activates it.
+              </p>
+            </div>
+          )}
+
           <div className="pt-2">
             <Link
-              href="/login"
+              href={`/login?email=${encodeURIComponent(email.trim().toLowerCase())}`}
               className="w-full py-3.5 px-4 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-brand-600 via-brand-500 to-brand-600 hover:from-brand-500 hover:to-brand-500 shadow-lg shadow-brand-500/25 border border-brand-400/30 transition-all duration-200 flex items-center justify-center gap-2"
             >
-              <span>Login</span>
+              <span>{nextStatus === 'PENDING_APPROVAL' ? 'Return to Login' : 'Login'}</span>
               <span className="text-accent-300">→</span>
             </Link>
           </div>
@@ -532,7 +508,6 @@ export default function ForgotPasswordPage() {
             onChange={(e) => {
               setEmail(e.target.value);
               if (emailError) setEmailError('');
-              if (isUnverifiedEmail) setIsUnverifiedEmail(false);
             }}
             placeholder="name@company.com"
             disabled={loading}
@@ -547,38 +522,6 @@ export default function ForgotPasswordPage() {
             </p>
           )}
         </div>
-
-        {isUnverifiedEmail && (
-          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs space-y-3 animate-in fade-in">
-            <div className="flex items-start gap-2.5">
-              <svg className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              <div className="min-w-0">
-                <p className="font-semibold text-amber-300">Email Verification Required</p>
-                <p className="text-amber-200/90 mt-0.5 leading-relaxed">
-                  Your email address has not been verified yet. Please verify your email before resetting your password.
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1 border-t border-amber-500/20">
-              <Link
-                href={`/verify-otp?email=${encodeURIComponent(email.trim().toLowerCase())}`}
-                className="px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-amber-600 hover:bg-amber-500 transition-colors text-center shadow-xs cursor-pointer"
-              >
-                Verify Email Now →
-              </Link>
-              <button
-                type="button"
-                onClick={handleResendVerificationFromForgot}
-                disabled={resendingVerification}
-                className="px-3 py-2 rounded-xl text-xs font-medium text-amber-300 hover:text-white hover:bg-amber-500/20 transition-colors text-center cursor-pointer disabled:opacity-50"
-              >
-                {resendingVerification ? 'Sending code...' : 'Resend Verification Code'}
-              </button>
-            </div>
-          </div>
-        )}
 
         <button
           type="submit"
