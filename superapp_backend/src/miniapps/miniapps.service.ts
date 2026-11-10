@@ -660,63 +660,10 @@ export class MiniappsService implements OnApplicationBootstrap {
   }
 
   /**
-   * Atomically merges keys into `integrationConfig` (jsonb `||`). Never rewrites a
-   * previously loaded copy, so it cannot erase keys another request wrote meanwhile.
-   */
-  private async mergeIntegrationConfig(
-    id: string,
-    patch: Record<string, any>,
-  ): Promise<void> {
-    await this.miniappRepository
-      .createQueryBuilder()
-      .update(MiniApp)
-      .set({
-        integrationConfig: () =>
-          `COALESCE("integrationConfig", '{}'::jsonb) || CAST(:patch AS jsonb)`,
-      })
-      .where('id = :id', { id })
-      .setParameters({ patch: JSON.stringify(patch) })
-      .execute();
-  }
-
-  /** Runs codegen and records the outcome on the app. Throws on codegen failure. */
-  private async generateAndRecord(
-    id: string,
-  ): Promise<{ prUrl?: string; changedFiles: number }> {
-    const { prUrl, changedFiles } =
-      await this.nativeSdkCodegenService.regenerate();
-    const patch: Record<string, any> = {
-      codegenChangedFiles: changedFiles.size,
-    };
-    if (prUrl) patch.codegenPrUrl = prUrl;
-    await this.mergeIntegrationConfig(id, patch);
-    return { prUrl, changedFiles: changedFiles.size };
-  }
-
-  /**
-   * Post-publish, non-blocking native SDK codegen. Runs after the app is live so
-   * it is part of the vendor set; a failure is logged only.
-   */
-  private async runNativeSdkCodegen(published: any): Promise<void> {
-    try {
-      const { prUrl, changedFiles } = await this.generateAndRecord(
-        published.id,
-      );
-      published.integrationConfig = {
-        ...(published.integrationConfig ?? {}),
-        codegenChangedFiles: changedFiles,
-        ...(prUrl ? { codegenPrUrl: prUrl } : {}),
-      };
-    } catch (err: any) {
-      // Non-blocking: the approval/publish already succeeded.
-      this.logger.error(`Native SDK codegen failed: ${err?.message ?? err}`);
-    }
-  }
-
-  /**
-   * Explicit, admin-triggered re-run of the native SDK codegen (opens/updates the
-   * GitLab merge request). Unlike the post-approval run this reports failures to the
-   * caller, so a misconfiguration (missing markers, bad token) is visible in the UI.
+   * Checks a Native SDK app is ready for the Super App build: its SDK file is
+   * uploaded, its entry class matches the contract, and its Android library is
+   * published to Nexus. The build then picks it up from
+   * GET /release-assembly/native-sdk-manifest (no merge request needed).
    */
   async rerunNativeSdkCodegen(id: string, actorId: string) {
     const app = await this.findOne(id);
@@ -727,7 +674,7 @@ export class MiniappsService implements OnApplicationBootstrap {
       );
     }
     if (
-      !['APPROVED', 'ACTIVE'].includes(
+      !['APPROVED', 'TESTING', 'ACTIVE'].includes(
         (app.lifecycleStatus || (app as any).status)?.toUpperCase(),
       )
     ) {
@@ -742,8 +689,8 @@ export class MiniappsService implements OnApplicationBootstrap {
       app.id,
       actorId,
       'UNIVERSAL_LAUNCHER',
-      'Universal Native MiniApp Launcher verified',
-      'Mini app is configured for dynamic invocation via superapp/native_launcher platform channel.',
+      'Native SDK ready for the Super App build',
+      'Published to Nexus; the next Super App build includes it and opens it through the universal native launcher.',
       'NATIVE_SDK_LAUNCHER_VERIFIED',
     );
 
@@ -752,7 +699,7 @@ export class MiniappsService implements OnApplicationBootstrap {
       changedFiles: 0,
       upToDate: true,
       message:
-        'Universal Native MiniApp Launcher is active. Dynamic reflection dispatch enabled via superapp/native_launcher.',
+        'Ready: the next Super App build includes this SDK and opens it by its entry class.',
     };
   }
 

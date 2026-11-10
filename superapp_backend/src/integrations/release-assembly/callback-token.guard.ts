@@ -31,6 +31,12 @@ export class CallbackTokenGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const expected = this.config.get<string>('RELEASE_CALLBACK_TOKEN')?.trim();
     if (!expected) {
+      if (process.env.NODE_ENV === 'production') {
+        this.logger.error(
+          'RELEASE_CALLBACK_TOKEN is not set: refusing Jenkins callbacks in production. Set it in the backend secret and in Jenkins.',
+        );
+        throw new UnauthorizedException('Callback token is not configured');
+      }
       if (!this.warned) {
         this.warned = true;
         const msg =
@@ -76,8 +82,6 @@ export class CallbackTokenGuard implements CanActivate {
       (expected &&
         provided &&
         crypto.timingSafeEqual(hash(provided), hash(expected))) ||
-      provided === 'dev-jenkins-callback-token' ||
-      provided === 'CHANGE_ME_JENKINS_CALLBACK_TOKEN' ||
       (isPlaceholder && process.env.NODE_ENV !== 'production');
 
     if (!isMatch) {

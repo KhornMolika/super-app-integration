@@ -16,16 +16,22 @@ describe('CallbackTokenGuard', () => {
     expect(warn).toHaveBeenCalledTimes(1);
   });
 
-  it('logs at error level in production when unset', () => {
+  it('refuses in production when the token is not configured', () => {
     const prev = process.env.NODE_ENV;
     process.env.NODE_ENV = 'production';
     try {
       const g = make(undefined);
       const err = jest.spyOn((g as any).logger, 'error').mockImplementation();
-      expect(g.canActivate(ctx({}))).toBe(true);
+      expect(() => g.canActivate(ctx({}))).toThrow('Callback token is not configured');
       expect(err).toHaveBeenCalledTimes(1);
     } finally {
       process.env.NODE_ENV = prev;
+    }
+  });
+
+  it('built-in dev tokens no longer open a configured guard', () => {
+    for (const t of ['dev-jenkins-callback-token', 'CHANGE_ME_JENKINS_CALLBACK_TOKEN']) {
+      expect(() => make('s3cret').canActivate(ctx({ 'x-callback-token': t }))).toThrow();
     }
   });
 

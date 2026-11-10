@@ -238,14 +238,14 @@ describe('MiniappsService.rerunNativeSdkCodegen', () => {
       prUrl: null,
       changedFiles: 0,
       upToDate: true,
-      message: expect.stringContaining('Universal Native MiniApp Launcher'),
+      message: expect.stringContaining('next Super App build includes this SDK'),
     });
     expect(log).toHaveBeenCalledWith(
       '1',
       'admin',
       'UNIVERSAL_LAUNCHER',
-      'Universal Native MiniApp Launcher verified',
-      expect.stringContaining('superapp/native_launcher'),
+      'Native SDK ready for the Super App build',
+      expect.stringContaining('universal native launcher'),
       'NATIVE_SDK_LAUNCHER_VERIFIED',
     );
   });

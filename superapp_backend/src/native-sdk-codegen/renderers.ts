@@ -135,8 +135,8 @@ export const NATIVE_SDK_MARKED_REGIONS: Record<
 // allow-list and the renderer THROWS (naming the field) instead of escaping.
 const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const DOTTED_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$/;
-const MAVEN_COORD = /^[A-Za-z0-9_.-]+$/;
-const VERSION = /^[A-Za-z0-9_.+-]+$/;
+export const MAVEN_COORD = /^[A-Za-z0-9_.-]+$/;
+export const VERSION = /^[A-Za-z0-9_.+-]+$/;
 const HTTP_URL = /^https?:\/\/[^\s"'`\\$]+$/;
 
 function check(

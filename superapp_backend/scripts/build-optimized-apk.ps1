@@ -102,6 +102,22 @@ try {
     }
 } catch {}
 
+# Native SDK mini apps for this build (android/app/build.gradle.kts reads the file)
+$NativeSdkFile = Join-Path $MobileAppDir "android/native_sdks.json"
+$BackendPort = if ($env:PORT) { $env:PORT } else { "3000" }
+$ManifestUrl = if ($env:NATIVE_SDK_MANIFEST_URL) { $env:NATIVE_SDK_MANIFEST_URL } else { "http://localhost:$BackendPort/api/release-assembly/native-sdk-manifest" }
+try {
+    $headers = @{}
+    if ($env:RELEASE_CALLBACK_TOKEN) { $headers["x-callback-token"] = $env:RELEASE_CALLBACK_TOKEN }
+    $manifest = Invoke-RestMethod -Uri $ManifestUrl -Headers $headers -TimeoutSec 20
+    $manifest | ConvertTo-Json -Depth 5 | Out-File -FilePath $NativeSdkFile -Encoding utf8
+    Write-Host "Native SDKs in this build: $(@($manifest.dependencies).Count)" -ForegroundColor Cyan
+    foreach ($s in @($manifest.skipped)) { if ($s) { Write-Host "  skipped $($s.appId): $($s.reason)" -ForegroundColor DarkYellow } }
+} catch {
+    if (Test-Path $NativeSdkFile) { Remove-Item $NativeSdkFile -Force }
+    Write-Host "Could not read the Native SDK list ($ManifestUrl): $($_.Exception.Message). Building without Native SDK mini apps." -ForegroundColor DarkYellow
+}
+
 Write-Host "Resolving Flutter dependencies with $FlutterBin..." -ForegroundColor Yellow
 & $FlutterBin pub get
 

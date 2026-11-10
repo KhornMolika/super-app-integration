@@ -38,10 +38,9 @@ describe('toCatalogItem', () => {
       regulator: null,
       status: 'ACTIVE',
       integrationMethod: 'WEBVIEW',
+      // nexusUrl and token are server-only and never reach phones
       integrationConfig: {
         webviewUrl: 'https://nexus.corp.io/repository/x',
-        nexusUrl: 'https://nexus.corp.io/repository/y',
-        token: 'super-secret',
       },
       permissions: [],
       termsAndConditions: null,
@@ -130,5 +129,27 @@ describe('MobileCatalogService.list', () => {
     expect(calls.select).toContain('m.homeWidget');
     expect(calls.select).toContain('m.organizationId');
     expect(page.items[0].widget).toEqual({ widgetClass: 'HrHomeWidget' });
+  });
+});
+
+import { stripServerOnlyConfig } from './mobile-catalog.service';
+
+describe('stripServerOnlyConfig', () => {
+  it('keeps what phones read and drops server-only settings, also nested', () => {
+    const out = stripServerOnlyConfig({
+      productionUrl: 'https://x', urlScheme: 'tax://', packageName: 'p', bundleUrl: 'https://b',
+      androidPackageName: 'com.v', androidObjectName: 'Sdk', iosTypeName: 'T', iosModuleName: 'M',
+      androidMavenArtifactId: 'a', androidMavenVersion: '1.0.0',
+      deployKey: { encrypted: 'x' }, deployKeyFingerprint: 'f', gitAccessToken: 'g', encryptedToken: 'e',
+      verificationToken: 'v', packageStoragePath: 'p/x.zip', androidMinioKey: 'k', iosMinioUrl: 'u',
+      androidNexusMavenUrl: 'n', iosNexusZipUrl: 'z', codegenPrUrl: 'c', token: 't',
+      nested: { clientSecret: 's', keep: 1 },
+    });
+    expect(out).toEqual({
+      productionUrl: 'https://x', urlScheme: 'tax://', packageName: 'p', bundleUrl: 'https://b',
+      androidPackageName: 'com.v', androidObjectName: 'Sdk', iosTypeName: 'T', iosModuleName: 'M',
+      androidMavenArtifactId: 'a', androidMavenVersion: '1.0.0',
+      nested: { keep: 1 },
+    });
   });
 });

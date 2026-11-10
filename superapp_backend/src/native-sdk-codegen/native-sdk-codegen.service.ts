@@ -17,6 +17,8 @@ import {
   REGION_PODS,
   REGION_SOURCES,
   identifierFor,
+  MAVEN_COORD,
+  VERSION,
   podspecUrlFor,
   renderAndroidHandlers,
   renderAndroidImports,
@@ -50,6 +52,17 @@ const IOS_CONFIG_FIELDS = ['iosModuleName', 'iosTypeName', 'iosNexusZipUrl'] as 
 
 function isFilled(value: unknown): value is string {
   return typeof value === 'string' && value.trim() !== '';
+}
+
+/** Statuses whose Android SDK goes into a Super App build (see buildManifest). */
+const MANIFEST_STATUSES = ['APPROVED', 'BUILDING', 'BUILD_FAILED', 'TESTING', 'ACTIVE'];
+
+export interface NativeSdkManifest {
+  repositories: string[];
+  /** group:artifact:version */
+  dependencies: string[];
+  /** Apps left out, and why (shown in the build log). */
+  skipped: { appId: string; reason: string }[];
 }
 
 /** Mini-app statuses whose native SDK must stay wired into the mobile app. */
@@ -125,6 +138,51 @@ export class NativeSdkCodegenService {
    * with an error naming it. Skipping it would silently delete an already
    * shipped vendor's glue from the regenerated files.
    */
+  /**
+   * What a Super App build must include for Native SDK mini apps: the Nexus
+   * Maven repository and one dependency per app that is approved, building,
+   * in testing or live. Archived, rejected, draft and deleted apps are left
+   * out, so they drop out of the next build. Suspended apps stay in (their
+   * lifecycle is unchanged), so Resume works without a new build.
+   * Read by Jenkins (callback token) before `flutter build`.
+   */
+  async buildManifest(): Promise<NativeSdkManifest> {
+    const apps = await this.miniappRepository.find({
+      where: {
+        integrationMethod: 'NATIVE_SDK',
+        lifecycleStatus: In(MANIFEST_STATUSES),
+      },
+      order: { appId: 'ASC' },
+    });
+    const dependencies = new Set<string>();
+    const skipped: { appId: string; reason: string }[] = [];
+    for (const app of apps) {
+      const c = app.integrationConfig || {};
+      const group = c.androidMavenGroupId;
+      const artifact = c.androidMavenArtifactId;
+      const version = c.androidMavenVersion;
+      if (!group && !artifact && !c.androidPackageName) continue; // iOS-only SDK
+      if (!isFilled(group) || !isFilled(artifact) || !isFilled(version)) {
+        skipped.push({ appId: app.appId, reason: 'Android Maven group, artifact or version missing' });
+        continue;
+      }
+      if (!MAVEN_COORD.test(group) || !MAVEN_COORD.test(artifact) || !VERSION.test(version)) {
+        skipped.push({ appId: app.appId, reason: 'invalid characters in Maven coordinates' });
+        continue;
+      }
+      if (!isFilled(c.androidNexusMavenUrl)) {
+        skipped.push({ appId: app.appId, reason: 'Android SDK not published to Nexus yet' });
+        continue;
+      }
+      dependencies.add(`${group}:${artifact}:${version}`);
+    }
+    return {
+      repositories: [this.nexusRepoUrl('NEXUS_MAVEN_SDK_REPO', 'maven-sdk-hosted')],
+      dependencies: [...dependencies],
+      skipped,
+    };
+  }
+
   async loadVendors(): Promise<NativeSdkVendor[]> {
     const apps = await this.miniappRepository.find({
       where: {

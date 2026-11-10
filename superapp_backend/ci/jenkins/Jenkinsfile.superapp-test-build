@@ -9,7 +9,7 @@ pipeline {
         string(name: 'NEXUS_URL', defaultValue: 'http://host.docker.internal:8081', description: 'Sonatype Nexus URL')
         string(name: 'CALLBACK_TOKEN', defaultValue: '', description: 'NestJS Backend Webhook Callback Auth Token')
         string(name: 'NEXUS_USER', defaultValue: 'admin', description: 'Sonatype Nexus Username')
-        string(name: 'NEXUS_PASSWORD', defaultValue: 'admin123', description: 'Sonatype Nexus Password')
+        password(name: 'NEXUS_PASSWORD', defaultValue: '', description: 'Sonatype Nexus Password (passed by the backend; no default)')
     }
 
     environment {
@@ -17,7 +17,7 @@ pipeline {
         PUB_HOSTED_URL = "${params.NEXUS_URL}/repository/pub-group"
         CALLBACK_TOKEN = "${params.CALLBACK_TOKEN ?: ''}"
         NEXUS_USER = "${params.NEXUS_USER ?: 'admin'}"
-        NEXUS_PASSWORD = "${params.NEXUS_PASSWORD ?: 'admin123'}"
+        NEXUS_PASSWORD = "${params.NEXUS_PASSWORD ?: ''}"
     }
 
     stages {
@@ -192,7 +192,7 @@ pipeline {
                     sh """
                     APK_FILE="/var/reports/${filename}"
                     NEXUS_USER="${env.NEXUS_USER ?: 'admin'}"
-                    NEXUS_PASSWORD="${env.NEXUS_PASSWORD ?: 'admin123'}"
+                    NEXUS_PASSWORD="${env.NEXUS_PASSWORD ?: ''}"
                     AUTH_OPT="-u \${NEXUS_USER}:\${NEXUS_PASSWORD}"
 
                     # Sync newly compiled APK from host/backend/nexus into Jenkins reports volume

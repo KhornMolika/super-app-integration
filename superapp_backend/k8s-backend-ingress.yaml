@@ -51,6 +51,14 @@ spec:
             name: super-app-backend-svc
             port:
               number: 3000
+      # Super App build (Jenkins) reads which Native SDK libraries to include
+      - path: /api/release-assembly/native-sdk-manifest
+        pathType: Exact
+        backend:
+          service:
+            name: super-app-backend-svc
+            port:
+              number: 3000
       - path: /release-assembly
         pathType: Prefix
         backend:

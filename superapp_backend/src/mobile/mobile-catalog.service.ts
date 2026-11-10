@@ -52,6 +52,24 @@ export interface CatalogPage {
 }
 
 /** Explicit allowlist: nothing sensitive from the row can ever leak. */
+/**
+ * Settings phones never need: credentials, storage paths, Nexus and pipeline
+ * URLs. The app only reads URLs, deep link and package/class names.
+ */
+const SERVER_ONLY_KEY =
+  /^(deployKey|gitAccessToken|gitToken|encryptedToken|verificationToken|packageStoragePath|sourceStoragePath|codegen)|(MinioKey|MinioUrl|NexusUrl|NexusZipUrl|NexusMavenUrl|Fingerprint)$|secret|password|privateKey|^(token|accessToken|apiKey)$/i;
+
+export function stripServerOnlyConfig<T>(value: T): T {
+  if (Array.isArray(value)) return value.map(stripServerOnlyConfig) as unknown as T;
+  if (!value || typeof value !== 'object') return value;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+    if (SERVER_ONLY_KEY.test(k)) continue;
+    out[k] = stripServerOnlyConfig(v);
+  }
+  return out as T;
+}
+
 export function toCatalogItem(
   app: MiniApp,
   clientHost?: string,
@@ -69,7 +87,7 @@ export function toCatalogItem(
 
   let config = app.integrationConfig;
   if (config && typeof config === 'object') {
-    config = JSON.parse(JSON.stringify(config));
+    config = stripServerOnlyConfig(JSON.parse(JSON.stringify(config)));
     const urlKeys = [
       'webUrl',
       'productionUrl',

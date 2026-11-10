@@ -511,7 +511,7 @@ mkdir -p "$BUILD_DIR"
 FILENAME="superapp-test-\${RELEASE_VERSION}.apk"
 APK_FILE="\${BUILD_DIR}/\${FILENAME}"
 NEXUS_AUTH_USER="\${NEXUS_USER:-admin}"
-NEXUS_AUTH_PASS="\${NEXUS_PASSWORD:-ctKGr4x447yCsljwmy8pXopVpYVVt2}"
+NEXUS_AUTH_PASS="\${NEXUS_PASSWORD}"
 AUTH_OPT="-u \${NEXUS_AUTH_USER}:\${NEXUS_AUTH_PASS}"
 NEXUS_TARGET_URL="\${NEXUS_URL:-https://app.fintechcenterfsa.com/nexus}/repository/apk-test-builds/\${APP_NAME}/\${RELEASE_VERSION}/\${FILENAME}"
 

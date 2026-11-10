@@ -128,7 +128,7 @@ describe('All Tasks Verification - Multi-Method MiniApps & Enterprise Plan', () 
       expect(result.changedFiles).toBe(0);
       expect(result.prUrl).toBeNull();
       expect(result.message).toContain(
-        'Universal Native MiniApp Launcher is active',
+        'next Super App build includes this SDK',
       );
     });
   });
