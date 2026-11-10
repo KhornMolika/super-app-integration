@@ -1,6 +1,10 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, IsNull } from 'typeorm';
+import { Repository, In, IsNull, Brackets } from 'typeorm';
+import {
+  SENSITIVE_RESPONSE_KEYS,
+  stripSensitiveFields,
+} from '../common/interceptors/sensitive-fields.interceptor';
 import * as fs from 'fs';
 import * as path from 'path';
 import { AuditLog } from './entities/audit-log.entity';
@@ -26,6 +30,52 @@ export class AuditService implements OnApplicationBootstrap {
   async onApplicationBootstrap() {
     await this.seedInitialLogs();
     await this.backfillActorDetails();
+    await this.scrubStoredSecrets();
+  }
+
+  /**
+   * Older entries stored whole entities, including password hashes, in
+   * oldValue/newValue/metadata. Removes them from rows already saved; new rows
+   * are cleaned in log().
+   */
+  async scrubStoredSecrets(): Promise<number> {
+    let cleaned = 0;
+    try {
+      const keys = [...SENSITIVE_RESPONSE_KEYS];
+      const pattern = keys.map((k) => `"${k}"`);
+      for (;;) {
+        const qb = this.auditLogRepository.createQueryBuilder('log');
+        qb.where(
+          new Brackets((w) => {
+            pattern.forEach((needle, i) => {
+              for (const col of ['oldValue', 'newValue', 'metadata']) {
+                w.orWhere(`CAST(log."${col}" AS text) LIKE :n${i}`, { [`n${i}`]: `%${needle}%` });
+              }
+            });
+          }),
+        ).take(200);
+        const rows = await qb.getMany();
+        if (rows.length === 0) break;
+        let changed = 0;
+        for (const row of rows) {
+          const before = JSON.stringify([row.oldValue, row.newValue, row.metadata]);
+          row.oldValue = stripSensitiveFields(row.oldValue);
+          row.newValue = stripSensitiveFields(row.newValue);
+          row.metadata = stripSensitiveFields(row.metadata);
+          if (JSON.stringify([row.oldValue, row.newValue, row.metadata]) !== before) {
+            await this.auditLogRepository.save(row);
+            changed++;
+          }
+        }
+        cleaned += changed;
+        // A row can match the text search without holding a value (e.g. "passwordHash": null)
+        if (changed === 0) break;
+      }
+      if (cleaned > 0) this.logger.log(`Removed secrets from ${cleaned} stored audit log entries`);
+    } catch (err) {
+      this.logger.warn(`Could not scrub stored audit log secrets: ${(err as Error).message}`);
+    }
+    return cleaned;
   }
 
   private async backfillActorDetails() {
@@ -197,6 +247,11 @@ export class AuditService implements OnApplicationBootstrap {
       data.actorName = data.newValue.owner.name;
       data.actorEmail = data.newValue.owner.email || data.actorEmail;
     }
+
+    // Values often carry whole entities: never store their secrets
+    data.oldValue = stripSensitiveFields(data.oldValue);
+    data.newValue = stripSensitiveFields(data.newValue);
+    data.metadata = stripSensitiveFields(data.metadata);
 
     const entry = this.auditLogRepository.create(data);
     return this.auditLogRepository.save(entry);
