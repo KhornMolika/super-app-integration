@@ -109,6 +109,12 @@ export async function apiClient<T = any>(endpoint: string, options: RequestOptio
     url = `/api/${url.replace(/^\/+/, '')}`;
   }
 
+  // The production ingress sends /api/integrations/* and /api/release-assembly/*
+  // straight to the backend (Jenkins callbacks live there), skipping the Next.js
+  // proxy that adds the bearer token. Prefix /bff so these calls reach the proxy;
+  // it strips the prefix again before calling the backend.
+  url = url.replace(/^\/api\/(integrations|release-assembly)(?=\/|\?|$)/, '/api/bff/$1');
+
   if (params) {
     const searchParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {

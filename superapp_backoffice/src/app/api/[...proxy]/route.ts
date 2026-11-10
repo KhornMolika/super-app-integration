@@ -40,7 +40,10 @@ const ALLOWED_ROUTES = [
 async function handleProxy(request: Request, { params }: { params: Promise<{ proxy: string[] }> }) {
   try {
     const proxyParams = await params;
-    const pathParts = proxyParams.proxy || [];
+    let pathParts = proxyParams.proxy || [];
+    // /api/bff/<route>: same as /api/<route>. The client uses it for routes the
+    // production ingress would otherwise send straight to the backend (see apiClient).
+    if (pathParts[0] === 'bff') pathParts = pathParts.slice(1);
     
     // Check allowlist
     const baseRoute = pathParts[0];
