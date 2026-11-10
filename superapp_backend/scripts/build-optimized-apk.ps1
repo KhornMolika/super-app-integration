@@ -109,8 +109,10 @@ $ManifestUrl = if ($env:NATIVE_SDK_MANIFEST_URL) { $env:NATIVE_SDK_MANIFEST_URL 
 try {
     $headers = @{}
     if ($env:RELEASE_CALLBACK_TOKEN) { $headers["x-callback-token"] = $env:RELEASE_CALLBACK_TOKEN }
-    $manifest = Invoke-RestMethod -Uri $ManifestUrl -Headers $headers -TimeoutSec 20
-    $manifest | ConvertTo-Json -Depth 5 | Out-File -FilePath $NativeSdkFile -Encoding utf8
+    $response = Invoke-WebRequest -Uri $ManifestUrl -Headers $headers -TimeoutSec 20 -UseBasicParsing
+    # Save the JSON exactly as sent (no BOM, no re-serialising)
+    [System.IO.File]::WriteAllText($NativeSdkFile, $response.Content)
+    $manifest = $response.Content | ConvertFrom-Json
     Write-Host "Native SDKs in this build: $(@($manifest.dependencies).Count)" -ForegroundColor Cyan
     foreach ($s in @($manifest.skipped)) { if ($s) { Write-Host "  skipped $($s.appId): $($s.reason)" -ForegroundColor DarkYellow } }
 } catch {
