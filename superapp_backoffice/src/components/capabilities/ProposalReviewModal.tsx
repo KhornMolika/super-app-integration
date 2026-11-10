@@ -64,7 +64,11 @@ const FILE_LABELS: Record<string, string> = {
   'android/app/src/main/AndroidManifest.xml': 'Android permission',
   'ios/Runner/Info.plist': 'iOS permission message',
   'pubspec.yaml': 'Flutter package',
+  'lib/core/miniapp/bridge/capability_handlers.generated.dart': 'Bridge registration',
 };
+
+const fileLabel = (f: string) =>
+  FILE_LABELS[f] ?? (f.includes('/bridge/handlers/') ? 'Bridge handler to implement' : 'File');
 
 function StatusBadge({ proposal }: { proposal: PermissionProposal }) {
   const codeChange = proposal.metadata?.codeChange;
@@ -201,7 +205,7 @@ function CodeChangeResult({
           <ul className="pl-6 space-y-0.5 text-[11px] text-emerald-800/90 dark:text-emerald-300/90">
             {codeChange.filesModified.map((f) => (
               <li key={f}>
-                {FILE_LABELS[f] || 'File'} <span className="font-mono text-[10px] opacity-70">{f}</span>
+                {fileLabel(f)} <span className="font-mono text-[10px] opacity-70">{f}</span>
               </li>
             ))}
           </ul>

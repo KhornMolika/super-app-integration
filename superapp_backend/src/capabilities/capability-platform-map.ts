@@ -27,6 +27,12 @@ export interface PlatformCapability {
   /** Part of the Super App host itself: approving needs no work at all */
   builtIn?: boolean;
   /**
+   * Standard bridge handler shipped in the Super App
+   * (lib/core/miniapp/bridge/handlers/). Approving only registers it.
+   * Without one, the generator adds a skeleton for a developer to implement.
+   */
+  handler?: { className: string; file: string };
+  /**
    * Setup that cannot be generated safely (Xcode capabilities, entitlements,
    * Firebase files). Listed for the Super App team in the tracking issue.
    */
@@ -36,6 +42,7 @@ export interface PlatformCapability {
 export const PLATFORM_CAPABILITIES: PlatformCapability[] = [
   {
     key: 'scan_qr_code',
+    handler: { className: 'ScanQrCodeHandler', file: 'handlers/scan_qr_code_handler.dart' },
     name: 'Scan QR Code',
     aliases: ['qr', 'qr_code', 'qr_scan', 'qr_scanner', 'scan_qr', 'barcode', 'barcode_scanner', 'scanner'],
     android: ['android.permission.CAMERA'],
@@ -44,6 +51,7 @@ export const PLATFORM_CAPABILITIES: PlatformCapability[] = [
   },
   {
     key: 'take_photo',
+    handler: { className: 'TakePhotoHandler', file: 'handlers/image_handlers.dart' },
     name: 'Camera & Document Capture',
     aliases: ['camera', 'photo', 'take_picture', 'picture', 'document_capture', 'capture_document', 'selfie'],
     android: ['android.permission.CAMERA'],
@@ -52,6 +60,7 @@ export const PLATFORM_CAPABILITIES: PlatformCapability[] = [
   },
   {
     key: 'photo_library',
+    handler: { className: 'PhotoLibraryHandler', file: 'handlers/image_handlers.dart' },
     name: 'Photo Library',
     aliases: ['gallery', 'photos', 'image_library', 'pick_image', 'media_library'],
     android: ['android.permission.READ_MEDIA_IMAGES'],
@@ -60,6 +69,7 @@ export const PLATFORM_CAPABILITIES: PlatformCapability[] = [
   },
   {
     key: 'get_location',
+    handler: { className: 'GetLocationHandler', file: 'handlers/get_location_handler.dart' },
     name: 'Location',
     aliases: ['location', 'gps', 'geolocation', 'geo_location', 'geolocator', 'current_location', 'maps'],
     android: ['android.permission.ACCESS_FINE_LOCATION', 'android.permission.ACCESS_COARSE_LOCATION'],
@@ -68,6 +78,7 @@ export const PLATFORM_CAPABILITIES: PlatformCapability[] = [
   },
   {
     key: 'biometric_auth',
+    handler: { className: 'BiometricAuthHandler', file: 'handlers/biometric_auth_handler.dart' },
     name: 'Biometric Authentication',
     aliases: ['biometric', 'biometrics', 'fingerprint', 'face_id', 'faceid', 'touch_id', 'local_auth', 'face_unlock'],
     android: ['android.permission.USE_BIOMETRIC'],
@@ -83,6 +94,7 @@ export const PLATFORM_CAPABILITIES: PlatformCapability[] = [
   },
   {
     key: 'nfc',
+    handler: { className: 'NfcHandler', file: 'handlers/nfc_handler.dart' },
     name: 'NFC',
     aliases: ['nfc_reader', 'nfc_read', 'nfc_tag', 'contactless', 'smart_card', 'nfc_smart_card'],
     android: ['android.permission.NFC'],
@@ -122,6 +134,7 @@ export const PLATFORM_CAPABILITIES: PlatformCapability[] = [
   },
   {
     key: 'secure_storage',
+    handler: { className: 'SecureStorageHandler', file: 'handlers/secure_storage_handler.dart' },
     name: 'Secure Storage',
     aliases: ['keychain', 'keystore', 'secure_store', 'encrypted_storage'],
     // Keychain / Keystore need no permission, only the package
@@ -139,21 +152,49 @@ export const PLATFORM_CAPABILITIES: PlatformCapability[] = [
   },
 ];
 
+/** Where the Super App keeps its bridge handlers, relative to the repo root. */
+export const BRIDGE_DIR = 'lib/core/miniapp/bridge';
+export const HANDLER_REGISTRY_FILE = `${BRIDGE_DIR}/capability_handlers.generated.dart`;
+
+/** "nfc_reader" -> "NfcReaderHandler" */
+export function handlerClassName(key: string): string {
+  return (
+    normalizeCapabilityKey(key)
+      .split('_')
+      .filter(Boolean)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join('') + 'Handler'
+  );
+}
+
+/** The handler the generator registers: the standard one, or a generated skeleton. */
+export function handlerFor(key: string): { className: string; file: string; standard: boolean } {
+  const known = findPlatformCapability(key);
+  if (known?.handler) return { ...known.handler, standard: true };
+  const k = normalizeCapabilityKey(key);
+  return { className: handlerClassName(k), file: `handlers/${k}_handler.dart`, standard: false };
+}
+
 /**
- * Work the Super App team must do by hand after approval. Every capability
- * that is not built into the host needs a bridge method (the function mini
- * apps call) and an entry in the supported-capabilities list; generated file
- * changes never cover that.
+ * Work the Super App team must do by hand after approval. The bridge wiring
+ * (registering the handler, supported-capability lists) is generated; what
+ * remains is writing handler logic that does not exist yet, deciding the
+ * permissions of an unknown capability, and project setup that cannot be
+ * edited safely as text (Xcode capabilities, Firebase files).
  */
 export function remainingWork(
   key: string,
   opts: { builtIn?: boolean; known: boolean; manualSteps?: string[] },
 ): string[] {
   if (opts.builtIn) return [];
+  const handler = handlerFor(key);
   return [
     ...(opts.known ? [] : [`Decide which device permissions and packages "${key}" needs, if any, and add them.`]),
-    `Add the bridge method that mini apps call for "${key}".`,
-    `Add "${key}" to the supported capabilities list (_supportedCapabilities in lib/core/miniapp/widgets/miniapp_iframe_stub.dart).`,
+    ...(handler.standard
+      ? []
+      : [
+          `Implement the bridge handler in ${BRIDGE_DIR}/${handler.file} (a skeleton was generated), then change "implemented" to true so mini apps can use it.`,
+        ]),
     ...(opts.manualSteps ?? []),
   ];
 }

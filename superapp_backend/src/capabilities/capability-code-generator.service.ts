@@ -11,6 +11,10 @@ import {
   IosUsageEntry,
   findPlatformCapability,
   remainingWork,
+  handlerFor,
+  normalizeCapabilityKey,
+  BRIDGE_DIR,
+  HANDLER_REGISTRY_FILE,
 } from './capability-platform-map';
 
 /** What adding a capability means for the Super App's platform files. */
@@ -85,6 +89,7 @@ const FILE_LABELS: Record<string, string> = {
   [MANIFEST_FILE]: 'Android permission',
   [PLIST_FILE]: 'iOS permission message',
   [PUBSPEC_FILE]: 'Flutter package',
+  [HANDLER_REGISTRY_FILE]: 'Bridge registration',
 };
 
 /** The low-level reason a fetch failed (DNS, refused, timeout), not just "fetch failed". */
@@ -217,6 +222,29 @@ export class CapabilityCodeGeneratorService {
         lines: [mapping.plugin],
       });
     }
+    const handler = mapping.builtIn ? null : handlerFor(capabilityKey);
+    if (handler) {
+      files.push({
+        file: HANDLER_REGISTRY_FILE,
+        label: handler.standard
+          ? 'Bridge registration (uses the standard handler; skipped if already registered)'
+          : 'Bridge registration',
+        lines: [`import '${handler.file}';`, `${handler.className}(),`],
+      });
+      if (!handler.standard) {
+        files.push({
+          file: `${BRIDGE_DIR}/${handler.file}`,
+          label: 'Bridge handler to implement (new skeleton)',
+          lines: [
+            `class ${handler.className} extends CapabilityHandler {`,
+            `  String get key => '${normalizeCapabilityKey(capabilityKey)}';`,
+            `  bool get implemented => false; // until a developer implements handle()`,
+            `  ...`,
+            `}`,
+          ],
+        });
+      }
+    }
 
     const manualSteps = this.remainingSteps(capabilityKey, mapping);
     let note: string | undefined;
@@ -224,10 +252,10 @@ export class CapabilityCodeGeneratorService {
       note = 'This is built into the Super App, so nothing has to be added or done.';
     } else if (!mapping.known) {
       note =
-        'No device permission is known for this capability, so nothing will be added to the Super App automatically. ' +
-        'Approving creates a task for the Super App team instead.';
-    } else if (!files.length) {
-      note = 'This capability needs no device permission. Approving creates a task for the Super App team.';
+        'No device permission is known for this capability. A handler skeleton is added for the Super App team ' +
+        'to implement, and approving creates a task for it.';
+    } else if (handler?.standard && !manualSteps.length) {
+      note = 'The Super App already has a standard handler for this capability, so approving makes it fully available.';
     }
 
     return {
@@ -345,32 +373,103 @@ export class CapabilityCodeGeneratorService {
 
   /** New contents for every file that actually changes. */
   private computeChanges(
-    files: Record<string, string>,
+    // null = the file does not exist yet (created when needed)
+    files: Record<string, string | null>,
     mapping: CapabilityMapping,
     key: string,
   ): Record<string, string> {
     const changes: Record<string, string> = {};
-    if (mapping.android.length && files[MANIFEST_FILE] !== undefined) {
-      const next = this.addAndroidPermissions(files[MANIFEST_FILE], mapping.android, key);
+    const has = (f: string) => typeof files[f] === 'string';
+    if (mapping.android.length && has(MANIFEST_FILE)) {
+      const next = this.addAndroidPermissions(files[MANIFEST_FILE]!, mapping.android, key);
       if (next !== null && next !== files[MANIFEST_FILE]) changes[MANIFEST_FILE] = next;
     }
-    if (mapping.ios.length && files[PLIST_FILE] !== undefined) {
-      const next = this.addIosEntries(files[PLIST_FILE], mapping.ios, key);
+    if (mapping.ios.length && has(PLIST_FILE)) {
+      const next = this.addIosEntries(files[PLIST_FILE]!, mapping.ios, key);
       if (next !== files[PLIST_FILE]) changes[PLIST_FILE] = next;
     }
-    if (mapping.plugin && files[PUBSPEC_FILE] !== undefined) {
-      const next = this.addPubspecPlugin(files[PUBSPEC_FILE], mapping.plugin, key);
+    if (mapping.plugin && has(PUBSPEC_FILE)) {
+      const next = this.addPubspecPlugin(files[PUBSPEC_FILE]!, mapping.plugin, key);
       if (next !== files[PUBSPEC_FILE]) changes[PUBSPEC_FILE] = next;
+    }
+    if (!mapping.builtIn && has(HANDLER_REGISTRY_FILE)) {
+      const handler = handlerFor(key);
+      const next = this.registerHandler(files[HANDLER_REGISTRY_FILE]!, handler.className, handler.file);
+      if (next !== files[HANDLER_REGISTRY_FILE]) changes[HANDLER_REGISTRY_FILE] = next;
+      const skeletonPath = `${BRIDGE_DIR}/${handler.file}`;
+      if (!handler.standard && files[skeletonPath] === null) {
+        changes[skeletonPath] = this.handlerSkeleton(key, handler.className);
+      }
     }
     return changes;
   }
 
+  /** Files that must exist in the Super App for this capability. */
   private neededFiles(mapping: CapabilityMapping): string[] {
     return [
       ...(mapping.android.length ? [MANIFEST_FILE] : []),
       ...(mapping.ios.length ? [PLIST_FILE] : []),
       ...(mapping.plugin ? [PUBSPEC_FILE] : []),
+      ...(mapping.builtIn ? [] : [HANDLER_REGISTRY_FILE]),
     ];
+  }
+
+  /** Files that may not exist yet and are created when missing (the handler skeleton). */
+  private optionalFiles(mapping: CapabilityMapping, key: string): string[] {
+    if (mapping.builtIn) return [];
+    const handler = handlerFor(key);
+    return handler.standard ? [] : [`${BRIDGE_DIR}/${handler.file}`];
+  }
+
+  /**
+   * Adds the handler's import and its entry to the generated registry, each
+   * just above its END marker. Unchanged if already registered.
+   */
+  private registerHandler(content: string, className: string, file: string): string {
+    const importEnd = '// END GENERATED CAPABILITY HANDLER IMPORTS';
+    const listEnd = '// END GENERATED CAPABILITY HANDLERS';
+    if (!content.includes(importEnd) || !content.includes(listEnd)) {
+      throw new Error(`The handler markers are missing in ${HANDLER_REGISTRY_FILE}`);
+    }
+    const nl = content.includes('\r\n') ? '\r\n' : '\n';
+    const lines = content.split(/\r?\n/);
+    const insertBefore = (marker: string, line: string) => {
+      const i = lines.findIndex((l) => l.includes(marker));
+      const indent = lines[i].match(/^\s*/)?.[0] ?? '';
+      lines.splice(i, 0, `${indent}${line}`);
+    };
+    const importLine = `import '${file}';`;
+    if (!lines.some((l) => l.trim() === importLine)) insertBefore(importEnd, importLine);
+    if (!lines.some((l) => l.trim() === `${className}(),`)) insertBefore(listEnd, `${className}(),`);
+    return lines.join(nl);
+  }
+
+  /** A handler for a capability with no standard implementation: a developer fills it in. */
+  private handlerSkeleton(key: string, className: string): string {
+    const name = findPlatformCapability(key)?.name || key;
+    return [
+      `import '../capability_bridge.dart';`,
+      ``,
+      `/// \`${key}\`: ${name}.`,
+      `///`,
+      `/// Generated by the Backoffice capability generator when "${key}" was approved.`,
+      `/// TODO(super-app team): ask for the device permission, call the platform API,`,
+      `/// return JSON data (or throw a BridgeException), then set [implemented] to true.`,
+      `class ${className} extends CapabilityHandler {`,
+      `  @override`,
+      `  String get key => '${key}';`,
+      ``,
+      `  /// Not offered to mini apps until it is implemented.`,
+      `  @override`,
+      `  bool get implemented => false;`,
+      ``,
+      `  @override`,
+      `  Future<Object?> handle(Map<String, dynamic> params, BridgeContext ctx) async {`,
+      `    throw const BridgeException(BridgeErrorCode.unsupported, '"${key}" is not implemented yet.');`,
+      `  }`,
+      `}`,
+      ``,
+    ].join('\n');
   }
 
   /**
@@ -583,13 +682,18 @@ export class CapabilityCodeGeneratorService {
     const bodySnippet = async (res: Response) =>
       (await res.text().catch(() => '')).replace(/\s+/g, ' ').slice(0, 200);
 
-    // 1. Read the current files from the target branch
-    const files: Record<string, string> = {};
-    for (const file of needed) {
+    // 1. Read the current files from the target branch (optional ones may be missing)
+    const files: Record<string, string | null> = {};
+    const optional = new Set(this.optionalFiles(mapping, key));
+    for (const file of [...needed, ...optional]) {
       const res = await call(
         `${projectApiUrl}/repository/files/${encodeURIComponent(file)}/raw?ref=${encodeURIComponent(targetBranch)}`,
       );
       if (res.status === 404) {
+        if (optional.has(file)) {
+          files[file] = null;
+          continue;
+        }
         return fail(`${file} was not found on branch '${targetBranch}'.`);
       }
       if (!res.ok) {
@@ -621,7 +725,11 @@ export class CapabilityCodeGeneratorService {
       body: JSON.stringify({
         branch: branchName,
         commit_message: `feat(capability): add ${key} capability & permissions (target: ${targetVersion || 'next'})`,
-        actions: changed.map((file) => ({ action: 'update', file_path: file, content: changes[file] })),
+        actions: changed.map((file) => ({
+          action: files[file] === null ? 'create' : 'update',
+          file_path: file,
+          content: changes[file],
+        })),
       }),
     });
     if (!commitRes.ok) {
@@ -671,12 +779,15 @@ export class CapabilityCodeGeneratorService {
   ): CodeGenerationResult {
     const { key, branchName, targetBranch, targetVersion, result } = ctx;
     const abs = (f: string) => path.join(superAppDir, ...f.split('/'));
-    const files: Record<string, string> = {};
+    const files: Record<string, string | null> = {};
     for (const file of needed) {
       if (!fs.existsSync(abs(file))) {
         throw new Error(`${file} was not found in the local Super App checkout`);
       }
       files[file] = fs.readFileSync(abs(file), 'utf8');
+    }
+    for (const file of this.optionalFiles(mapping, key)) {
+      files[file] = fs.existsSync(abs(file)) ? fs.readFileSync(abs(file), 'utf8') : null;
     }
     const changes = this.computeChanges(files, mapping, key);
     const changed = Object.keys(changes);
@@ -706,12 +817,22 @@ export class CapabilityCodeGeneratorService {
         /* stay on the current branch */
       }
       runGit(['checkout', '-b', branchName]);
-      for (const file of changed) fs.writeFileSync(abs(file), changes[file], 'utf8');
+      for (const file of changed) {
+        fs.mkdirSync(path.dirname(abs(file)), { recursive: true });
+        fs.writeFileSync(abs(file), changes[file], 'utf8');
+      }
       for (const file of changed) runGit(['add', file]);
       runGit(['commit', '-m', `feat(capability): add ${key} capability & permissions (target: ${targetVersion || 'next'})`]);
     } catch (err) {
-      // Put the working tree back as it was
-      for (const file of changed) fs.writeFileSync(abs(file), files[file], 'utf8');
+      // Put the working tree back as it was (remove files this run created)
+      for (const file of changed) {
+        const original = files[file];
+        if (original === null || original === undefined) {
+          if (fs.existsSync(abs(file))) fs.unlinkSync(abs(file));
+        } else {
+          fs.writeFileSync(abs(file), original, 'utf8');
+        }
+      }
       try {
         runGit(['checkout', originalBranch]);
       } catch {

@@ -251,6 +251,31 @@ The Flutter host should read `launchable` / `unavailableReason` from the catalog
 
 ---
 
+## 5a. Host Bridge Implementation (what is generated, what is written by hand)
+
+A capability reaches a mini app through three layers. Only the last one needs code that touches the device:
+
+| Layer | Example | Who provides it |
+|---|---|---|
+| Platform declaration | `ACCESS_FINE_LOCATION`, `NSLocationWhenInUseUsageDescription` | Generated (§2) |
+| Package | `geolocator` in `pubspec.yaml` | Generated (§2) |
+| Bridge handler | `GetLocationHandler`: asks for the OS permission, calls the device, returns JSON | Written once per kind of capability; registration is generated |
+
+**Runtime (Super App, `lib/core/miniapp/bridge/`):**
+* Mini apps call one generic method, `FSASuperApp.requestCapability(key, params)` (typed helpers such as `getLocation()` wrap it), so the mini-app side never changes per capability.
+* `CapabilityBridge` routes the call to the registered `CapabilityHandler` for `key`, but only if the mini app was **approved** for that capability (the catalog's declared list for the app) and the handler is `implemented`. Otherwise it answers with the §4 rejection envelope (`CAPABILITY_NOT_APPROVED`, `CAPABILITY_UNSUPPORTED`, `PERMISSION_DENIED`, `CANCELLED`, ...).
+* `canIUse` / `_supportedCapabilities` = registered and implemented handlers ∩ the mini app's approved capabilities. Nothing is hard-coded.
+* Calls are only accepted from the mini app's own origin; `secure_storage` keys are namespaced per mini app.
+
+**Standard handlers** ship with the Super App for `get_location`, `take_photo`, `photo_library`, `scan_qr_code`, `biometric_auth`, `secure_storage` and `nfc`.
+
+**Generator (on approval):**
+* Known capability with a standard handler: adds the platform declarations, the package and the handler registration (`capability_handlers.generated.dart`, between the `GENERATED CAPABILITY HANDLER…` markers). Fully automatic, no manual work.
+* Capability without a standard handler (or unknown): also creates a skeleton `handlers/<key>_handler.dart` with `implemented => false`, registers it, and opens a GitLab issue for the Super App team to implement it (plus any Xcode/Firebase setup). Until a developer implements it and sets `implemented` to true, mini apps do not see it.
+* `webview_runtime` is the WebView host itself and needs nothing.
+
+---
+
 ## 6. Security & Isolation Invariants
 
 1. **Zero Raw Native Access**: MiniApps run in sandboxed processes or restricted WebViews. They cannot invoke arbitrary Android Java reflection or iOS Objective-C selectors.
@@ -264,3 +289,4 @@ The Flutter host should read `launchable` / `unavailableReason` from the catalog
 
 * **2026-10-22:** Initial approved specification of Capability Generator flow, Rejection Protocol, and unified SDK contracts across Web, Flutter, and Native.
 * **2026-11-09:** Added and implemented Section 5, Registration Policy for Unsupported Capabilities: optional unsupported capabilities register disabled; required ones register but are not launchable (Option B); support is computed on read and enables automatically; one shared check covers all four integration methods.
+* **2026-11-10:** Added Section 5a, Host Bridge Implementation: generic `requestCapability` routed to registered handlers with an approval check, standard handlers for seven capabilities, generated registration, and a skeleton plus GitLab task for capabilities without a standard handler.

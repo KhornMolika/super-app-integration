@@ -3,6 +3,7 @@ import {
   findPlatformCapability,
   normalizeCapabilityKey,
   remainingWork,
+  handlerFor,
   suggestCapabilityKeys,
 } from './capability-platform-map';
 
@@ -47,15 +48,29 @@ describe('capability platform map', () => {
     expect(suggestCapabilityKeys('microphone', catalog)[0]).toMatchObject({ key: 'microphone', reason: 'known' });
   });
 
-  it('remainingWork: bridge steps for every capability not built in, plus its manual setup', () => {
+  it('remainingWork: nothing for built-in or standard-handler capabilities, otherwise implement + setup', () => {
     expect(remainingWork('webview_runtime', { builtIn: true, known: true })).toEqual([]);
-    const storage = remainingWork('secure_storage', { known: true });
-    expect(storage).toHaveLength(2);
-    expect(storage[0]).toMatch(/bridge method/);
-    expect(storage[1]).toMatch(/_supportedCapabilities/);
+    expect(remainingWork('secure_storage', { known: true })).toEqual([]);
+    expect(remainingWork('get_location', { known: true })).toEqual([]);
     const push = findPlatformCapability('push_notifications')!;
-    expect(remainingWork(push.key, { known: true, manualSteps: push.manualSteps })).toHaveLength(5);
-    expect(remainingWork('teleport', { known: false })[0]).toMatch(/Decide which device permissions/);
+    const pushSteps = remainingWork(push.key, { known: true, manualSteps: push.manualSteps });
+    expect(pushSteps).toHaveLength(4);
+    expect(pushSteps[0]).toContain(
+      'Implement the bridge handler in lib/core/miniapp/bridge/handlers/push_notifications_handler.dart',
+    );
+    const unknown = remainingWork('teleport', { known: false });
+    expect(unknown[0]).toMatch(/Decide which device permissions/);
+    expect(unknown[1]).toContain('teleport_handler.dart');
+  });
+
+  it('handlerFor: the standard handler when one exists, else a generated skeleton name', () => {
+    expect(handlerFor('gps')).toEqual({ className: 'GetLocationHandler', file: 'handlers/get_location_handler.dart', standard: true });
+    expect(handlerFor('nfc reader').className).toBe('NfcHandler');
+    expect(handlerFor('push_notifications')).toEqual({
+      className: 'PushNotificationsHandler',
+      file: 'handlers/push_notifications_handler.dart',
+      standard: false,
+    });
   });
 
   it('returns nothing for empty or unrelated input', () => {
