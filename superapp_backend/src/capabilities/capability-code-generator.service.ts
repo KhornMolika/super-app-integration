@@ -10,6 +10,7 @@ import { localBuildsEnabled } from '../common/utils/local-workspace.util';
 import {
   IosUsageEntry,
   findPlatformCapability,
+  remainingWork,
 } from './capability-platform-map';
 
 /** What adding a capability means for the Super App's platform files. */
@@ -22,6 +23,10 @@ export interface CapabilityMapping {
   /** false: neither the proposal nor the platform map says what is needed */
   known: boolean;
   source: 'metadata' | 'platform_map' | 'none';
+  /** Part of the Super App host itself: nothing to do */
+  builtIn: boolean;
+  /** Setup that cannot be generated (Xcode capabilities, Firebase files) */
+  manualSteps: string[];
 }
 
 export interface PreviewFile {
@@ -37,22 +42,29 @@ export interface CodePreviewResult {
   capabilityKey: string;
   known: boolean;
   files: PreviewFile[];
+  /** Work the Super App team does by hand after approval (bridge code, Xcode setup) */
+  manualSteps: string[];
   /** Set when nothing will be added automatically */
   note?: string;
 }
 
 /**
- * created:    branch + commit + merge request opened (or committed locally)
- * not_needed: the Super App already has everything (or nothing is known to add)
- * failed:     something went wrong; `error` says what
+ * created:    branch + commit + merge request opened (plus a tracking issue when work remains)
+ * needs_work: no file changes, but the Super App team has manual work; tracked in an issue
+ * not_needed: built into the Super App, or everything is already present and nothing remains
+ * failed:     something went wrong; `error` says what (mrUrl is kept if only the issue failed)
  */
 export interface CodeGenerationResult {
-  status: 'created' | 'not_needed' | 'failed';
+  status: 'created' | 'needs_work' | 'not_needed' | 'failed';
   /** Kept for older callers: status !== 'failed' */
   success: boolean;
   branchName?: string;
   targetBranch: string;
   mrUrl?: string;
+  /** GitLab issue listing the manual work for the Super App team */
+  issueUrl?: string;
+  /** The manual steps that issue lists */
+  remainingSteps?: string[];
   filesModified: string[];
   message: string;
   error?: string;
@@ -165,7 +177,14 @@ export class CapabilityCodeGeneratorService {
       plugin: metaPlugin ?? known?.plugin,
       known: Boolean(known) || fromMetadata,
       source: fromMetadata ? 'metadata' : known ? 'platform_map' : 'none',
+      builtIn: Boolean(known?.builtIn),
+      manualSteps: known?.manualSteps ?? [],
     };
+  }
+
+  /** Manual work left for the Super App team after approval. */
+  remainingSteps(key: string, mapping: CapabilityMapping): string[] {
+    return remainingWork(key, mapping);
   }
 
   /** Backwards-compatible alias for resolveCapabilityMapping. */
@@ -199,13 +218,16 @@ export class CapabilityCodeGeneratorService {
       });
     }
 
+    const manualSteps = this.remainingSteps(capabilityKey, mapping);
     let note: string | undefined;
-    if (!mapping.known) {
+    if (mapping.builtIn) {
+      note = 'This is built into the Super App, so nothing has to be added or done.';
+    } else if (!mapping.known) {
       note =
         'No device permission is known for this capability, so nothing will be added to the Super App automatically. ' +
-        'If it needs one, the Super App team has to add it by hand.';
+        'Approving creates a task for the Super App team instead.';
     } else if (!files.length) {
-      note = 'This capability needs no device permission or extra package.';
+      note = 'This capability needs no device permission. Approving creates a task for the Super App team.';
     }
 
     return {
@@ -213,6 +235,7 @@ export class CapabilityCodeGeneratorService {
       capabilityKey,
       known: mapping.known,
       files,
+      manualSteps,
       note,
     };
   }
@@ -378,21 +401,30 @@ export class CapabilityCodeGeneratorService {
     });
 
     const needed = this.neededFiles(mapping);
-    if (!needed.length) {
-      return result('not_needed', {
-        message: mapping.known
-          ? `'${key}' needs no device permission or package; no code change was made.`
-          : `No device permission is known for '${key}'; no code change was made.`,
-      });
-    }
-
+    const steps = this.remainingSteps(key, mapping);
     const branchName = `capa/add-${key.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Date.now().toString(36)}`;
     const superAppDir = this.getSuperAppDir();
 
+    // 1. File changes (permissions, packages)
+    let outcome: CodeGenerationResult;
     try {
-      // A local checkout is only touched on a developer workstation that opts in
-      if (superAppDir && localBuildsEnabled()) {
-        return this.generateLocally(superAppDir, proposal, mapping, needed, {
+      if (!needed.length) {
+        outcome = result('not_needed', {
+          message: mapping.builtIn
+            ? `'${key}' is built into the Super App; nothing has to change.`
+            : `'${key}' needs no device permission or package.`,
+        });
+      } else if (superAppDir && localBuildsEnabled()) {
+        // A local checkout is only touched on a developer workstation that opts in
+        outcome = this.generateLocally(superAppDir, proposal, mapping, needed, {
+          key,
+          branchName,
+          targetBranch,
+          targetVersion,
+          result,
+        });
+      } else {
+        outcome = await this.generateOnGitLab(proposal, mapping, needed, {
           key,
           branchName,
           targetBranch,
@@ -400,26 +432,104 @@ export class CapabilityCodeGeneratorService {
           result,
         });
       }
-      return await this.generateOnGitLab(proposal, mapping, needed, {
-        key,
-        branchName,
-        targetBranch,
-        targetVersion,
-        result,
-      });
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err);
       this.logger.error(`Capability code change for '${key}' failed: ${error}`);
       return result('failed', {
         error,
+        remainingSteps: steps.length ? steps : undefined,
         message: `The code change for '${key}' could not be prepared: ${error}`,
       });
+    }
+
+    if (outcome.status === 'failed' || !steps.length) {
+      return { ...outcome, remainingSteps: steps.length ? steps : undefined };
+    }
+
+    // 2. Manual work remains (bridge method, Xcode setup): track it in a GitLab issue
+    const issue = await this.openTrackingIssue(proposal, key, steps, outcome.mrUrl);
+    if (issue.url) {
+      return {
+        ...outcome,
+        status: outcome.status === 'created' ? 'created' : 'needs_work',
+        success: true,
+        issueUrl: issue.url,
+        remainingSteps: steps,
+        message:
+          outcome.status === 'created'
+            ? `${outcome.message} The remaining work is tracked in an issue for the Super App team.`
+            : `No file change was needed for '${key}'. The Super App team has a task to finish it.`,
+      };
+    }
+    const error =
+      outcome.status === 'created'
+        ? `The code change is ready, but the task for the Super App team could not be created: ${issue.error}`
+        : `The task for the Super App team could not be created: ${issue.error}`;
+    this.logger.error(`Tracking issue for '${key}' failed: ${issue.error}`);
+    return { ...outcome, status: 'failed', success: false, error, remainingSteps: steps, message: error };
+  }
+
+  /**
+   * Opens the tracking issue for an approved proposal whose code change is
+   * already done (used by Retry when only the issue failed).
+   */
+  async createTrackingIssue(
+    proposal: CapabilityProposal,
+    mrUrl?: string,
+  ): Promise<{ issueUrl?: string; error?: string; steps: string[] }> {
+    const key = proposal.capabilityKey || (proposal as any).permissionKey;
+    const steps = this.remainingSteps(key, this.resolveCapabilityMapping(key, proposal.metadata));
+    if (!steps.length) return { steps };
+    const issue = await this.openTrackingIssue(proposal, key, steps, mrUrl);
+    return { issueUrl: issue.url, error: issue.error, steps };
+  }
+
+  /** GitLab issue in the Super App repo with a checklist of the manual work. */
+  private async openTrackingIssue(
+    proposal: CapabilityProposal,
+    key: string,
+    steps: string[],
+    mrUrl?: string,
+  ): Promise<{ url?: string; error?: string }> {
+    const { token, projectApiUrl } = this.gitlabProject();
+    if (!token) {
+      return { error: 'Access to the Super App code repository is not configured (MOBILE_GIT_TOKEN is not set).' };
+    }
+    const name = proposal.capabilityName || findPlatformCapability(key)?.name || key;
+    const miniApp = proposal.miniApp?.name || proposal.metadata?.miniAppName || 'Platform / Host Core Shell';
+    const description =
+      `A capability was approved in the Backoffice and needs work in the Super App.\n\n` +
+      `* **Capability**: ${name} (\`${key}\`)\n` +
+      `* **Requested by**: ${proposal.requestedBy?.name || 'MiniApp Developer'}\n` +
+      `* **Mini app**: ${miniApp}\n` +
+      `* **Release**: ${proposal.targetSuperAppVersion || 'next'}\n` +
+      (mrUrl ? `* **Generated code change**: ${mrUrl}\n` : '') +
+      (proposal.description ? `\n> ${proposal.description.replace(/\n/g, '\n> ')}\n` : '') +
+      `\n#### To do\n` +
+      steps.map((s) => `- [ ] ${s}`).join('\n') +
+      `\n\n*Created automatically by FSA SuperApp BackOffice.*`;
+    try {
+      const res = await fetch(`${projectApiUrl}/issues`, {
+        method: 'POST',
+        headers: this.gitlabHeaders(token),
+        body: JSON.stringify({ title: `Add capability: ${name} (${key})`, description, labels: 'capability' }),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!res.ok) {
+        const body = (await res.text().catch(() => '')).replace(/\s+/g, ' ').slice(0, 200);
+        return { error: `Creating the issue returned HTTP ${res.status}: ${body}` };
+      }
+      const issue = (await res.json().catch(() => ({}))) as { web_url?: string };
+      return issue.web_url ? { url: issue.web_url } : { error: 'GitLab did not return the issue link.' };
+    } catch (err) {
+      return { error: `Could not reach the code repository (${fetchErrorReason(err)})` };
     }
   }
 
   private mergeRequestText(proposal: CapabilityProposal, key: string, targetVersion: string | undefined, targetBranch: string, files: string[]) {
     const miniAppDisplay =
       proposal.miniApp?.name || proposal.metadata?.miniAppName || 'Platform / Host Core Shell';
+    const steps = this.remainingSteps(key, this.resolveCapabilityMapping(key, proposal.metadata));
     return {
       title: `feat(capability): Add ${key} capability`,
       description:
@@ -431,6 +541,9 @@ export class CapabilityCodeGeneratorService {
         `* **Target Branch**: \`${targetBranch}\`\n\n` +
         `#### Changed files:\n` +
         files.map((f) => `- \`${f}\``).join('\n') +
+        (steps.length
+          ? `\n\n#### Still to do by hand before release:\n` + steps.map((s) => `- [ ] ${s}`).join('\n')
+          : '') +
         `\n\n*Generated automatically by FSA SuperApp BackOffice.*`,
     };
   }

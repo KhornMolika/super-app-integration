@@ -80,9 +80,15 @@ export interface PermissionProposal {
 
 /** Outcome of adding an approved capability to the Super App code. */
 export interface CodeChange {
-  /** created: ready for review; not_needed: nothing to add; failed: see error */
-  status: 'created' | 'not_needed' | 'failed';
+  /**
+   * created: code change ready for review; needs_work: no file change, a task was created
+   * for the Super App team; not_needed: nothing to do; failed: see error
+   */
+  status: 'created' | 'needs_work' | 'not_needed' | 'failed';
   mrUrl?: string;
+  /** Task (GitLab issue) listing the manual work for the Super App team */
+  issueUrl?: string;
+  remainingSteps?: string[];
   branchName?: string;
   targetBranch?: string;
   filesModified?: string[];
@@ -97,6 +103,8 @@ export interface CodePreview {
   /** false: no device permission is known for this capability */
   known: boolean;
   files: Array<{ file: string; label: string; lines: string[] }>;
+  /** Work the Super App team does by hand after approval */
+  manualSteps?: string[];
   note?: string;
 }
 

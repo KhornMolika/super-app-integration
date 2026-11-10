@@ -20,6 +20,7 @@ import {
   ChevronDown,
   Loader2,
   Lightbulb,
+  ClipboardList,
 } from 'lucide-react';
 import {
   CodeChange,
@@ -76,6 +77,9 @@ function StatusBadge({ proposal }: { proposal: PermissionProposal }) {
     if (codeChange?.status === 'failed') {
       label = 'Code change failed';
       tone = 'rose';
+    } else if (codeChange?.status === 'needs_work') {
+      label = 'Waiting for the Super App team';
+      tone = 'amber';
     } else if (codeChange?.status === 'created' || proposal.metadata?.mrUrl) {
       label = 'Code change ready';
       tone = 'violet';
@@ -101,6 +105,34 @@ function StatusBadge({ proposal }: { proposal: PermissionProposal }) {
   );
 }
 
+function TaskLink({ url }: { url: string }) {
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-white/70 dark:bg-slate-900/60 border border-current/20 hover:bg-white dark:hover:bg-slate-900 transition-colors shrink-0"
+    >
+      <ExternalLink className="w-3.5 h-3.5" />
+      <span>View task</span>
+    </a>
+  );
+}
+
+function StepList({ steps }: { steps?: string[] }) {
+  if (!steps?.length) return null;
+  return (
+    <ul className="space-y-1 pl-1">
+      {steps.map((s) => (
+        <li key={s} className="flex items-start gap-2 text-[11px] leading-relaxed">
+          <span className="mt-1 w-3 h-3 rounded border border-current/40 shrink-0" aria-hidden="true" />
+          <span>{s}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** Result of the Super App code change, with Retry when it failed. */
 function CodeChangeResult({
   codeChange,
@@ -118,6 +150,24 @@ function CodeChangeResult({
       <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2.5">
         <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
         <span className="font-bold">Approved{targetVersion ? ` for release v${targetVersion}` : ''}</span>
+      </div>
+    );
+  }
+
+  if (codeChange.status === 'needs_work') {
+    return (
+      <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-800 dark:text-amber-300 space-y-2.5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-2.5">
+            <ClipboardList className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold">Approved. The Super App team has a task to finish it.</p>
+              <p className="text-[11px] mt-0.5 opacity-90">No file had to change automatically; the work below is done by hand.</p>
+            </div>
+          </div>
+          {codeChange.issueUrl && <TaskLink url={codeChange.issueUrl} />}
+        </div>
+        <StepList steps={codeChange.remainingSteps} />
       </div>
     );
   }
@@ -156,6 +206,15 @@ function CodeChangeResult({
             ))}
           </ul>
         )}
+        {!!codeChange.remainingSteps?.length && (
+          <div className="pt-2 border-t border-emerald-500/20 space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-semibold text-[11px]">Still to do by the Super App team</span>
+              {codeChange.issueUrl && <TaskLink url={codeChange.issueUrl} />}
+            </div>
+            <StepList steps={codeChange.remainingSteps} />
+          </div>
+        )}
       </div>
     );
   }
@@ -183,6 +242,17 @@ function CodeChangeResult({
           </p>
         </div>
       </div>
+      {codeChange.mrUrl && (
+        <a
+          href={codeChange.mrUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1.5 text-[11px] font-semibold underline underline-offset-2"
+        >
+          <ExternalLink className="w-3 h-3" />
+          View code change
+        </a>
+      )}
       <div className="flex justify-end">
         <Button
           type="button"
@@ -407,7 +477,7 @@ export function ProposalReviewModal({
         </div>
 
         {proposal.description && (
-          <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/30 border-l-4 border-brand-500 border-r border-t border-b border-slate-200/60 dark:border-slate-800 text-xs">
+          <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/30 border-l-4 border-l-brand-500 border-r border-t border-b border-slate-200/60 dark:border-slate-800 text-xs">
             <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
               Why it is needed
             </span>
@@ -485,6 +555,15 @@ export function ProposalReviewModal({
                     <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
                   )}
                   <span>{preview.note}</span>
+                </div>
+              )}
+              {!!preview.manualSteps?.length && (
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-200 space-y-1.5">
+                  <span className="font-semibold flex items-center gap-1.5">
+                    <ClipboardList className="w-3.5 h-3.5 text-slate-400" />
+                    Work for the Super App team (tracked in a task after approval)
+                  </span>
+                  <StepList steps={preview.manualSteps} />
                 </div>
               )}
             </>
@@ -583,10 +662,12 @@ export function ProposalReviewModal({
 
                 <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                   {preview && !preview.files.length
-                    ? 'Approving records the capability. No Super App code needs to change.'
+                    ? preview.manualSteps?.length
+                      ? 'Approving creates a task for the Super App team with the work listed above.'
+                      : 'Approving records the capability. Nothing in the Super App has to change.'
                     : `Approving prepares the code change for the Super App team to review and release${
                         versionValid ? ` in v${targetVersion.trim()}` : ''
-                      }.`}
+                      }${preview?.manualSteps?.length ? ', plus a task for the remaining work' : ''}.`}
                 </p>
 
                 <div className="flex items-center justify-end gap-2.5 pt-1">

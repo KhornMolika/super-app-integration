@@ -172,8 +172,10 @@ function CapabilitiesContent() {
 
       if (codeChange?.status === 'failed') {
         toast.error('Approved, but the code change could not be prepared. See the details and retry.');
+      } else if (codeChange?.status === 'needs_work') {
+        toast.success('Approved. A task was created for the Super App team.');
       } else if (codeChange?.status === 'not_needed') {
-        toast.success('Approved. No code change was needed.');
+        toast.success('Approved. Nothing in the Super App had to change.');
       } else {
         toast.success('Approved. The code change is ready for review.');
       }

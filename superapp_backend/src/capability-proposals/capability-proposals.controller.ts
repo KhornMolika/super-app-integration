@@ -26,8 +26,12 @@ import { suggestCapabilityKeys } from '../capabilities/capability-platform-map';
 
 /** Outcome of the Super App code change, stored in proposal.metadata.codeChange. */
 export interface StoredCodeChange {
-  status: 'created' | 'not_needed' | 'failed';
+  status: 'created' | 'needs_work' | 'not_needed' | 'failed';
   mrUrl?: string;
+  /** GitLab issue tracking the manual work for the Super App team */
+  issueUrl?: string;
+  /** Manual steps listed in that issue */
+  remainingSteps?: string[];
   branchName?: string;
   targetBranch: string;
   filesModified: string[];
@@ -151,6 +155,8 @@ export class CapabilityProposalsController {
     return {
       status: gen.status,
       mrUrl: gen.mrUrl,
+      issueUrl: gen.issueUrl,
+      remainingSteps: gen.remainingSteps,
       branchName: gen.branchName,
       targetBranch: gen.targetBranch,
       filesModified: gen.filesModified,
@@ -206,7 +212,9 @@ export class CapabilityProposalsController {
         message = `Great news! Your proposal for '${proposal.capabilityKey}' has been approved and targeted for version ${targetVersion || 'a future release'}.${
           codeChange?.status === 'created' && codeChange.mrUrl
             ? ` The Super App code change is ready for review: ${codeChange.mrUrl}`
-            : ''
+            : codeChange?.status === 'needs_work'
+              ? ' The Super App team has been given a task to add it.'
+              : ''
         }`;
         type = 'proposal_approved';
       } else if (decision === 'IN_DEVELOPMENT') {
@@ -249,11 +257,32 @@ export class CapabilityProposalsController {
       );
     }
 
-    const codeChange = await this.runCodeChange(
-      proposal,
-      proposal.targetSuperAppVersion || undefined,
-      previous.targetBranch || proposal.metadata?.targetBranch,
-    );
+    let codeChange: StoredCodeChange;
+    if (previous.mrUrl) {
+      // The code change itself succeeded; only the tracking issue failed
+      const issue = await this.capabilityCodeGenerator.createTrackingIssue(proposal, previous.mrUrl);
+      codeChange = issue.issueUrl
+        ? {
+            ...previous,
+            status: 'created',
+            issueUrl: issue.issueUrl,
+            remainingSteps: issue.steps,
+            error: undefined,
+            message: 'Code change ready for review. The remaining work is tracked in an issue for the Super App team.',
+            at: new Date().toISOString(),
+          }
+        : {
+            ...previous,
+            error: `The code change is ready, but the task for the Super App team could not be created: ${issue.error}`,
+            at: new Date().toISOString(),
+          };
+    } else {
+      codeChange = await this.runCodeChange(
+        proposal,
+        proposal.targetSuperAppVersion || undefined,
+        previous.targetBranch || proposal.metadata?.targetBranch,
+      );
+    }
     await this.capabilityProposalsService.update(id, {
       metadata: this.withCodeChange(proposal.metadata, codeChange),
     });

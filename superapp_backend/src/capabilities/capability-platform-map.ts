@@ -24,6 +24,13 @@ export interface PlatformCapability {
   ios: IosUsageEntry[];
   /** pubspec dependency line, e.g. "mobile_scanner: ^6.0.0" */
   plugin?: string;
+  /** Part of the Super App host itself: approving needs no work at all */
+  builtIn?: boolean;
+  /**
+   * Setup that cannot be generated safely (Xcode capabilities, entitlements,
+   * Firebase files). Listed for the Super App team in the tracking issue.
+   */
+  manualSteps?: string[];
 }
 
 export const PLATFORM_CAPABILITIES: PlatformCapability[] = [
@@ -81,6 +88,7 @@ export const PLATFORM_CAPABILITIES: PlatformCapability[] = [
     android: ['android.permission.NFC'],
     ios: [{ key: 'NFCReaderUsageDescription', description: 'NFC is used to read cards and tags.' }],
     plugin: 'nfc_manager: ^3.5.0',
+    manualSteps: ['Enable the "Near Field Communication Tag Reading" capability for the Runner target in Xcode.'],
   },
   {
     key: 'bluetooth',
@@ -102,14 +110,24 @@ export const PLATFORM_CAPABILITIES: PlatformCapability[] = [
     name: 'Push Notifications',
     aliases: ['notifications', 'notification', 'push', 'push_notification'],
     android: ['android.permission.POST_NOTIFICATIONS'],
+    // iOS asks for notification permission at runtime (no Info.plist text),
+    // but needs project setup that cannot be generated safely:
     ios: [],
+    plugin: 'firebase_messaging: ^15.1.0',
+    manualSteps: [
+      'Enable the "Push Notifications" capability for the Runner target in Xcode (aps-environment entitlement).',
+      'Enable "Background Modes > Remote notifications" in Xcode (UIBackgroundModes: remote-notification).',
+      'Add the Firebase config files: android/app/google-services.json and ios/Runner/GoogleService-Info.plist.',
+    ],
   },
   {
     key: 'secure_storage',
     name: 'Secure Storage',
     aliases: ['keychain', 'keystore', 'secure_store', 'encrypted_storage'],
+    // Keychain / Keystore need no permission, only the package
     android: [],
     ios: [],
+    plugin: 'flutter_secure_storage: ^9.2.2',
   },
   {
     key: 'webview_runtime',
@@ -117,8 +135,28 @@ export const PLATFORM_CAPABILITIES: PlatformCapability[] = [
     aliases: ['webview', 'web_view', 'browser'],
     android: [],
     ios: [],
+    builtIn: true,
   },
 ];
+
+/**
+ * Work the Super App team must do by hand after approval. Every capability
+ * that is not built into the host needs a bridge method (the function mini
+ * apps call) and an entry in the supported-capabilities list; generated file
+ * changes never cover that.
+ */
+export function remainingWork(
+  key: string,
+  opts: { builtIn?: boolean; known: boolean; manualSteps?: string[] },
+): string[] {
+  if (opts.builtIn) return [];
+  return [
+    ...(opts.known ? [] : [`Decide which device permissions and packages "${key}" needs, if any, and add them.`]),
+    `Add the bridge method that mini apps call for "${key}".`,
+    `Add "${key}" to the supported capabilities list (_supportedCapabilities in lib/core/miniapp/widgets/miniapp_iframe_stub.dart).`,
+    ...(opts.manualSteps ?? []),
+  ];
+}
 
 /** "QR Scanner" / "qr-scanner" / " QR_scanner " -> "qr_scanner" */
 export function normalizeCapabilityKey(input: string): string {

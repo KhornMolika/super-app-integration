@@ -18,8 +18,15 @@ interface ProposalsTabProps {
 }
 
 /** Where a proposal is in its life, from the reviewer's point of view. */
-type ProposalState = 'pending' | 'code_ready' | 'code_failed' | 'approved' | 'in_development' | 'rejected';
-type FilterKey = 'ALL' | 'pending' | 'code_ready' | 'code_failed' | 'rejected';
+type ProposalState =
+  | 'pending'
+  | 'code_ready'
+  | 'needs_work'
+  | 'code_failed'
+  | 'approved'
+  | 'in_development'
+  | 'rejected';
+type FilterKey = 'ALL' | 'pending' | 'code_ready' | 'needs_work' | 'code_failed' | 'rejected';
 
 export function proposalState(p: PermissionProposal): ProposalState {
   if (p.status === 'PENDING_REVIEW') return 'pending';
@@ -27,6 +34,7 @@ export function proposalState(p: PermissionProposal): ProposalState {
   if (p.status === 'IN_DEVELOPMENT') return 'in_development';
   const cc = p.metadata?.codeChange;
   if (cc?.status === 'failed') return 'code_failed';
+  if (cc?.status === 'needs_work') return 'needs_work';
   if (cc?.status === 'created' || (!cc && p.metadata?.mrUrl)) return 'code_ready';
   return 'approved';
 }
@@ -41,6 +49,11 @@ const STATE_CHIP: Record<ProposalState, { label: string; className: string; dot:
     label: 'Code change ready',
     className: 'bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300 border-violet-200 dark:border-violet-800',
     dot: 'bg-violet-500',
+  },
+  needs_work: {
+    label: 'Waiting for the Super App team',
+    className: 'bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300 border-orange-200 dark:border-orange-800',
+    dot: 'bg-orange-500',
   },
   code_failed: {
     label: 'Code change failed',
@@ -81,7 +94,14 @@ export function ProposalsTab({
   const safeProposals = useMemo(() => (Array.isArray(proposals) ? proposals : []), [proposals]);
 
   const counts = useMemo(() => {
-    const c: Record<FilterKey, number> = { ALL: safeProposals.length, pending: 0, code_ready: 0, code_failed: 0, rejected: 0 };
+    const c: Record<FilterKey, number> = {
+      ALL: safeProposals.length,
+      pending: 0,
+      code_ready: 0,
+      needs_work: 0,
+      code_failed: 0,
+      rejected: 0,
+    };
     for (const p of safeProposals) {
       const s = proposalState(p);
       if (s in c) c[s as FilterKey]++;
@@ -132,6 +152,7 @@ export function ProposalsTab({
     { key: 'ALL', label: 'All proposals', tone: 'text-slate-900 dark:text-slate-100' },
     { key: 'pending', label: 'Waiting for review', tone: 'text-amber-600 dark:text-amber-400' },
     { key: 'code_ready', label: 'Code change ready', tone: 'text-violet-600 dark:text-violet-400' },
+    { key: 'needs_work', label: 'Waiting for Super App team', tone: 'text-orange-600 dark:text-orange-400' },
     { key: 'code_failed', label: 'Code change failed', tone: 'text-rose-600 dark:text-rose-400' },
     { key: 'rejected', label: 'Rejected', tone: 'text-slate-500 dark:text-slate-400' },
   ];
@@ -139,7 +160,7 @@ export function ProposalsTab({
   return (
     <div className="space-y-3">
       {/* Summary counts; each one filters the list */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2" role="group" aria-label="Filter proposals">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2" role="group" aria-label="Filter proposals">
         {tiles.map((t) => (
           <button
             key={t.key}

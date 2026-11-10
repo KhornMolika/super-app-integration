@@ -2,6 +2,7 @@ import {
   PLATFORM_CAPABILITIES,
   findPlatformCapability,
   normalizeCapabilityKey,
+  remainingWork,
   suggestCapabilityKeys,
 } from './capability-platform-map';
 
@@ -44,6 +45,17 @@ describe('capability platform map', () => {
   it('says when the exact key already exists, or is known but not in the catalog yet', () => {
     expect(suggestCapabilityKeys('get_location', catalog)[0]).toMatchObject({ key: 'get_location', reason: 'exists' });
     expect(suggestCapabilityKeys('microphone', catalog)[0]).toMatchObject({ key: 'microphone', reason: 'known' });
+  });
+
+  it('remainingWork: bridge steps for every capability not built in, plus its manual setup', () => {
+    expect(remainingWork('webview_runtime', { builtIn: true, known: true })).toEqual([]);
+    const storage = remainingWork('secure_storage', { known: true });
+    expect(storage).toHaveLength(2);
+    expect(storage[0]).toMatch(/bridge method/);
+    expect(storage[1]).toMatch(/_supportedCapabilities/);
+    const push = findPlatformCapability('push_notifications')!;
+    expect(remainingWork(push.key, { known: true, manualSteps: push.manualSteps })).toHaveLength(5);
+    expect(remainingWork('teleport', { known: false })[0]).toMatch(/Decide which device permissions/);
   });
 
   it('returns nothing for empty or unrelated input', () => {

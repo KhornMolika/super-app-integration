@@ -105,6 +105,23 @@ describe('CapabilityCodeGeneratorService', () => {
       const preview = service.preview('teleport');
       expect(preview).toMatchObject({ known: false, files: [] });
       expect(preview.note).toMatch(/nothing will be added/);
+      expect(preview.manualSteps[0]).toMatch(/Decide which device permissions/);
+    });
+
+    it('push notifications: Android permission plus the Xcode and Firebase steps', () => {
+      const preview = service.preview('push_notifications');
+      expect(preview.files[0].lines).toEqual(['<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>']);
+      expect(preview.files.some((f) => f.label === 'iOS permission message')).toBe(false);
+      expect(preview.manualSteps.join(' ')).toMatch(/Push Notifications/);
+      expect(preview.manualSteps.join(' ')).toMatch(/Remote notifications/);
+      expect(preview.manualSteps.join(' ')).toMatch(/GoogleService-Info\.plist/);
+    });
+
+    it('a built-in capability has nothing to do', () => {
+      const preview = service.preview('webview_runtime');
+      expect(preview.files).toEqual([]);
+      expect(preview.manualSteps).toEqual([]);
+      expect(preview.note).toMatch(/built into the Super App/);
     });
   });
 
@@ -124,7 +141,9 @@ describe('CapabilityCodeGeneratorService', () => {
               ? 'commit'
               : url.includes('/merge_requests')
                 ? 'mr'
-                : 'other';
+                : url.includes('/issues')
+                  ? 'issue'
+                  : 'other';
         calls.push(`${init?.method || 'GET'} ${route}`);
         if (overrides[route]) return Promise.resolve(overrides[route]());
         if (route === 'raw') {
@@ -137,6 +156,13 @@ describe('CapabilityCodeGeneratorService', () => {
             status: 201,
             json: () =>
               Promise.resolve({ web_url: 'https://git.fintechcenterfsa.com/frontend/super-app/-/merge_requests/42', iid: 42 }),
+          });
+        }
+        if (route === 'issue') {
+          return Promise.resolve({
+            ok: true,
+            status: 201,
+            json: () => Promise.resolve({ web_url: 'https://git.fintechcenterfsa.com/frontend/super-app/-/issues/7' }),
           });
         }
         return Promise.resolve({ ok: true, status: 201, json: () => Promise.resolve({}), text: () => Promise.resolve('') });
@@ -166,23 +192,62 @@ describe('CapabilityCodeGeneratorService', () => {
         'ios/Runner/Info.plist',
         'pubspec.yaml',
       ]);
-      expect(calls).toEqual(['GET raw', 'GET raw', 'GET raw', 'POST branch', 'POST commit', 'POST mr']);
+      // Files first, then the merge request, then the issue for the bridge work
+      expect(calls).toEqual(['GET raw', 'GET raw', 'GET raw', 'POST branch', 'POST commit', 'POST mr', 'POST issue']);
+      expect(result.issueUrl).toBe('https://git.fintechcenterfsa.com/frontend/super-app/-/issues/7');
+      expect(result.remainingSteps?.some((s) => s.includes('bridge method'))).toBe(true);
       const commitCall = fetchMock.mock.calls.find((c: unknown[]) => String(c[0]).includes('/commits'));
       const commitBody = JSON.parse(commitCall[1].body);
       const manifestAction = commitBody.actions.find((a: any) => a.file_path.includes('AndroidManifest'));
       expect(manifestAction.content).toContain('android.permission.BLUETOOTH_SCAN');
       expect(manifestAction.content).toContain('android.permission.BLUETOOTH_CONNECT');
+      const mrCall = fetchMock.mock.calls.find((c: unknown[]) => String(c[0]).includes('/merge_requests'));
+      expect(JSON.parse(mrCall[1].body).description).toContain('Still to do by hand');
     });
 
-    it('returns not_needed without touching GitLab for an unknown capability', async () => {
+    it('an unknown capability: no file change, a task for the Super App team (needs_work)', async () => {
+      jest.spyOn(service, 'getSuperAppDir').mockReturnValue(null);
+      const { calls, fetchMock } = gitlab();
+      const result = await service.generateCapabilityMr(proposal('teleport'));
+      expect(result.status).toBe('needs_work');
+      expect(calls).toEqual(['POST issue']);
+      const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(body.description).toContain('Decide which device permissions');
+      expect(body.description).toContain('- [ ] Add the bridge method');
+    });
+
+    it('a built-in capability needs nothing at all (not_needed, no GitLab calls)', async () => {
       jest.spyOn(service, 'getSuperAppDir').mockReturnValue(null);
       const { calls } = gitlab();
-      const result = await service.generateCapabilityMr(proposal('teleport'));
+      const result = await service.generateCapabilityMr(proposal('webview_runtime'));
       expect(result.status).toBe('not_needed');
       expect(calls).toEqual([]);
     });
 
-    it('returns not_needed (no branch) when the Super App already has everything', async () => {
+    it('secure_storage with the package already present: no branch, only a task (needs_work)', async () => {
+      jest.spyOn(service, 'getSuperAppDir').mockReturnValue(null);
+      const { calls } = gitlab({
+        raw: () => ({
+          ok: true,
+          status: 200,
+          text: () => Promise.resolve('dependencies:\n  flutter_secure_storage: ^11.2.0\n'),
+        }),
+      });
+      const result = await service.generateCapabilityMr(proposal('secure_storage'));
+      expect(result.status).toBe('needs_work');
+      expect(calls).toEqual(['GET raw', 'POST issue']);
+    });
+
+    it('keeps the merge request link when only the issue could not be created', async () => {
+      jest.spyOn(service, 'getSuperAppDir').mockReturnValue(null);
+      gitlab({ issue: () => ({ ok: false, status: 403, text: () => Promise.resolve('forbidden') }) });
+      const result = await service.generateCapabilityMr(proposal('nfc'));
+      expect(result.status).toBe('failed');
+      expect(result.mrUrl).toContain('/merge_requests/42');
+      expect(result.error).toContain('code change is ready');
+    });
+
+    it('needs_work (only the task) when the Super App already has the permissions', async () => {
       jest.spyOn(service, 'getSuperAppDir').mockReturnValue(null);
       const { calls } = gitlab({
         raw: () => ({
@@ -196,8 +261,8 @@ describe('CapabilityCodeGeneratorService', () => {
         }),
       });
       const result = await service.generateCapabilityMr(proposal('microphone'));
-      expect(result.status).toBe('not_needed');
-      expect(calls.some((c) => c.startsWith('POST'))).toBe(false);
+      expect(result.status).toBe('needs_work');
+      expect(calls.filter((c) => c.startsWith('POST'))).toEqual(['POST issue']);
     });
 
     it('reports a GitLab failure clearly instead of claiming success', async () => {
