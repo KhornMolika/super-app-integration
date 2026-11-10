@@ -238,6 +238,70 @@ describe('NativeSdkCodegenService', () => {
     );
   });
 
+  describe('single-platform SDKs', () => {
+    const androidOnly = () =>
+      makeApp({
+        appId: 'sample_spa',
+        integrationConfig: {
+          androidPackageName: 'com.fintech.vendor.spa',
+          androidObjectName: 'SpaBookingSdk',
+          androidMavenGroupId: 'com.fintech.vendor',
+          androidMavenArtifactId: 'spa-booking-sdk',
+          androidMavenVersion: '1.0.0',
+          androidNexusMavenUrl: AAR,
+        },
+      } as Partial<MiniApp>);
+
+    it('wires an Android-only SDK into Android and leaves the iOS files alone', async () => {
+      await setup([androidOnly()]);
+      const { changedFiles } = await service.regenerate();
+      expect([...changedFiles.keys()].sort()).toEqual([files.gradle, files.mainActivity].sort());
+      expect(changedFiles.get(files.mainActivity)).toContain('SpaBookingSdk.present(this)');
+      expect(changedFiles.get(files.gradle)).toContain(
+        'implementation("com.fintech.vendor:spa-booking-sdk:1.0.0")',
+      );
+      // Only the Android artifact is checked on Nexus
+      expect(fetchMock.mock.calls.map(([u]) => u)).toEqual([AAR]);
+    });
+
+    it('wires an iOS-only SDK into iOS only', async () => {
+      await setup([
+        makeApp({
+          integrationConfig: {
+            iosModuleName: 'PermitCheckSDK',
+            iosTypeName: 'PermitCheck',
+            iosNexusZipUrl: IOS_ZIP,
+          },
+        }),
+      ]);
+      const { changedFiles } = await service.regenerate();
+      expect([...changedFiles.keys()].sort()).toEqual([files.appDelegate, files.podfile].sort());
+    });
+
+    it('keeps both-platform SDKs on both, next to an Android-only one', async () => {
+      await setup([makeApp(), androidOnly()]);
+      const { changedFiles } = await service.regenerate();
+      expect(changedFiles.get(files.appDelegate)).toContain('PermitCheck.present');
+      expect(changedFiles.get(files.appDelegate)).not.toContain('SpaBookingSdk');
+      expect(changedFiles.get(files.mainActivity)).toContain('PermitCheck.present(this)');
+      expect(changedFiles.get(files.mainActivity)).toContain('SpaBookingSdk.present(this)');
+    });
+
+    it('a half-filled platform is not wired; with neither complete it names what is missing', async () => {
+      await setup([
+        makeApp({
+          integrationConfig: {
+            androidPackageName: 'com.fintech.vendor.spa',
+            iosModuleName: 'SpaSDK',
+          },
+        }),
+      ]);
+      await expect(service.regenerate()).rejects.toThrow(
+        /permit_check.*no complete SDK.*Android is missing androidObjectName.*iOS is missing iosTypeName/,
+      );
+    });
+  });
+
   it('throws when a NATIVE_SDK app has no integrationConfig', async () => {
     await setup([makeApp({ integrationConfig: null })]);
     await expect(service.regenerate()).rejects.toThrow(

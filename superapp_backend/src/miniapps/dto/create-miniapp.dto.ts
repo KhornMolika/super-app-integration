@@ -189,24 +189,46 @@ const NATIVE_PACKAGE = /^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$/;
 const MAVEN_COORD = /^[A-Za-z0-9_.-]+$/;
 const MAVEN_VERSION = /^[A-Za-z0-9_.+-]+$/;
 
+// A Native SDK mini app ships Android, iOS, or both. A platform's fields are
+// validated when any of them is sent; Android is required when no iOS is sent.
+const NATIVE_ANDROID_KEYS = [
+  'androidPackageName',
+  'androidObjectName',
+  'androidArtifactFilename',
+  'androidMavenGroupId',
+  'androidMavenArtifactId',
+  'androidMavenVersion',
+] as const;
+const NATIVE_IOS_KEYS = ['iosModuleName', 'iosTypeName', 'iosArtifactFilename'] as const;
+
+function sendsAny(o: Record<string, unknown>, keys: readonly string[]): boolean {
+  return keys.some((k) => typeof o[k] === 'string' ? (o[k] as string).trim() !== '' : o[k] != null);
+}
+const validateIos = (o: Record<string, unknown>) => sendsAny(o, NATIVE_IOS_KEYS);
+const validateAndroid = (o: Record<string, unknown>) =>
+  sendsAny(o, NATIVE_ANDROID_KEYS) || !sendsAny(o, NATIVE_IOS_KEYS);
+
 export class NativeSdkConfigDto {
+  @ValidateIf(validateIos)
   @IsString()
   @IsNotEmpty()
   @Matches(NATIVE_IDENTIFIER, {
     message: 'iosModuleName must be a valid identifier',
   })
-  iosModuleName!: string; // 'SpaBookingSDK'
+  iosModuleName?: string; // 'SpaBookingSDK'
 
+  @ValidateIf(validateIos)
   @IsString()
   @IsNotEmpty()
   @Matches(NATIVE_IDENTIFIER, {
     message: 'iosTypeName must be a valid identifier',
   })
-  iosTypeName!: string; // 'SpaBookingSDKView'
+  iosTypeName?: string; // 'SpaBookingSDKView'
 
+  @ValidateIf(validateIos)
   @IsString()
   @IsNotEmpty()
-  iosArtifactFilename!: string; // 'SpaBookingSDK.xcframework.zip'
+  iosArtifactFilename?: string; // 'SpaBookingSDK.xcframework.zip'
 
   @IsString()
   @IsOptional()
@@ -240,23 +262,26 @@ export class NativeSdkConfigDto {
   @IsOptional()
   iosDetectedPermissions?: string[];
 
+  @ValidateIf(validateAndroid)
   @IsString()
   @IsNotEmpty()
   @Matches(NATIVE_PACKAGE, {
     message: 'androidPackageName must be a dotted package name',
   })
-  androidPackageName!: string; // 'com.example.spabooking'
+  androidPackageName?: string; // 'com.example.spabooking'
 
+  @ValidateIf(validateAndroid)
   @IsString()
   @IsNotEmpty()
   @Matches(NATIVE_IDENTIFIER, {
     message: 'androidObjectName must be a valid identifier',
   })
-  androidObjectName!: string; // 'SpaBookingSDK'
+  androidObjectName?: string; // 'SpaBookingSDK'
 
+  @ValidateIf(validateAndroid)
   @IsString()
   @IsNotEmpty()
-  androidArtifactFilename!: string; // 'spa-booking-sdk-1.0.0.aar'
+  androidArtifactFilename?: string; // 'spa-booking-sdk-1.0.0.aar'
 
   @IsString()
   @IsOptional()
@@ -290,26 +315,29 @@ export class NativeSdkConfigDto {
   @IsOptional()
   androidDetectedPermissions?: string[];
 
+  @ValidateIf(validateAndroid)
   @IsString()
   @IsNotEmpty()
   @Matches(MAVEN_COORD, {
     message: 'androidMavenGroupId may only contain letters, digits, _ . -',
   })
-  androidMavenGroupId!: string; // 'com.fsa.sdk'
+  androidMavenGroupId?: string; // 'com.fsa.sdk'
 
+  @ValidateIf(validateAndroid)
   @IsString()
   @IsNotEmpty()
   @Matches(MAVEN_COORD, {
     message: 'androidMavenArtifactId may only contain letters, digits, _ . -',
   })
-  androidMavenArtifactId!: string; // 'spa-booking-sdk'
+  androidMavenArtifactId?: string; // 'spa-booking-sdk'
 
+  @ValidateIf(validateAndroid)
   @IsString()
   @IsNotEmpty()
   @Matches(MAVEN_VERSION, {
     message: 'androidMavenVersion may only contain letters, digits, _ . + -',
   })
-  androidMavenVersion!: string; // '1.0.0'
+  androidMavenVersion?: string; // '1.0.0'
 }
 
 export class PermissionDto {

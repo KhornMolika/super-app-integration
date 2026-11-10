@@ -6,7 +6,7 @@ import { In, Repository } from 'typeorm';
 import { MiniApp } from '../miniapps/entities/miniapp.entity';
 import { GitLabProvider } from '../integrations/git/providers/gitlab.provider';
 import { GitlabMrService } from './gitlab-mr.service';
-import { NativeSdkVendor } from './vendor.types';
+import { NativeSdkVendor, hasAndroid, hasIos } from './vendor.types';
 import { replaceMarkedRegion } from './marker';
 import {
   NATIVE_SDK_MARKED_REGIONS,
@@ -34,18 +34,23 @@ interface RegionEdit {
   body: string;
 }
 
-/** integrationConfig fields that must be non-empty strings for every vendor. */
-const REQUIRED_CONFIG_FIELDS = [
-  'iosModuleName',
-  'iosTypeName',
+/**
+ * integrationConfig fields a platform needs. A mini app may ship one platform
+ * or both; it is wired into each platform whose fields are all set.
+ */
+const ANDROID_CONFIG_FIELDS = [
   'androidPackageName',
   'androidObjectName',
   'androidMavenGroupId',
   'androidMavenArtifactId',
   'androidMavenVersion',
-  'iosNexusZipUrl',
   'androidNexusMavenUrl',
 ] as const;
+const IOS_CONFIG_FIELDS = ['iosModuleName', 'iosTypeName', 'iosNexusZipUrl'] as const;
+
+function isFilled(value: unknown): value is string {
+  return typeof value === 'string' && value.trim() !== '';
+}
 
 /** Mini-app statuses whose native SDK must stay wired into the mobile app. */
 const LIVE_STATUSES = ['APPROVED', 'ACTIVE'];
@@ -145,27 +150,37 @@ export class NativeSdkCodegenService {
           `NATIVE_SDK app "${app.appId}" has no integrationConfig set`,
         );
       }
-      for (const field of REQUIRED_CONFIG_FIELDS) {
-        const value = config[field];
-        if (typeof value !== 'string' || value.trim() === '') {
-          throw new Error(
-            `NATIVE_SDK app "${app.appId}" has an invalid integrationConfig: "${field}" must be a non-empty string`,
-          );
-        }
+      const missingAndroid = ANDROID_CONFIG_FIELDS.filter((f) => !isFilled(config[f]));
+      const missingIos = IOS_CONFIG_FIELDS.filter((f) => !isFilled(config[f]));
+      const android = missingAndroid.length === 0;
+      const ios = missingIos.length === 0;
+      if (!android && !ios) {
+        throw new Error(
+          `NATIVE_SDK app "${app.appId}" has no complete SDK for either platform. ` +
+            `Android is missing ${missingAndroid.join(', ')}; iOS is missing ${missingIos.join(', ')}`,
+        );
       }
       return {
         appId: app.appId,
-        iosModuleName: config.iosModuleName,
-        iosTypeName: config.iosTypeName,
-        iosNexusZipUrl: config.iosNexusZipUrl,
         cocoapodsSpecsUrl,
-        androidPackageName: config.androidPackageName,
-        androidObjectName: config.androidObjectName,
-        androidMavenGroupId: config.androidMavenGroupId,
-        androidMavenArtifactId: config.androidMavenArtifactId,
-        androidMavenVersion: config.androidMavenVersion,
-        androidNexusMavenUrl: config.androidNexusMavenUrl,
         mavenRepoUrl,
+        ...(ios
+          ? {
+              iosModuleName: config.iosModuleName,
+              iosTypeName: config.iosTypeName,
+              iosNexusZipUrl: config.iosNexusZipUrl,
+            }
+          : {}),
+        ...(android
+          ? {
+              androidPackageName: config.androidPackageName,
+              androidObjectName: config.androidObjectName,
+              androidMavenGroupId: config.androidMavenGroupId,
+              androidMavenArtifactId: config.androidMavenArtifactId,
+              androidMavenVersion: config.androidMavenVersion,
+              androidNexusMavenUrl: config.androidNexusMavenUrl,
+            }
+          : {}),
       };
     });
 
@@ -201,13 +216,13 @@ export class NativeSdkCodegenService {
 
     const probes: Promise<string | null>[] = [];
     for (const vendor of vendors) {
-      const artifacts: [string, string | undefined][] = [
-        ['iOS zip', vendor.iosNexusZipUrl],
-        ['Android AAR', vendor.androidNexusMavenUrl],
-      ];
+      // Only the platforms this vendor ships
+      const artifacts: [string, string | undefined][] = [];
+      if (hasIos(vendor)) artifacts.push(['iOS zip', vendor.iosNexusZipUrl]);
+      if (hasAndroid(vendor)) artifacts.push(['Android AAR', vendor.androidNexusMavenUrl]);
       // The podspec the Podfile pins via `:podspec =>`; only when an iOS zip is
       // configured (otherwise the zip probe already reports the problem).
-      if (vendor.iosNexusZipUrl) {
+      if (hasIos(vendor) && vendor.iosNexusZipUrl) {
         let podspecUrl: string | undefined;
         try {
           podspecUrl = podspecUrlFor(vendor);
@@ -267,46 +282,49 @@ export class NativeSdkCodegenService {
   }
 
   private editsFor(vendors: NativeSdkVendor[]): RegionEdit[] {
+    // Each platform's files list only the vendors that ship that platform
+    const ios = vendors.filter(hasIos);
+    const android = vendors.filter(hasAndroid);
     return [
       {
         target: 'podfile',
         region: REGION_SOURCES,
-        body: renderPodfileSources(vendors),
+        body: renderPodfileSources(ios),
       },
       {
         target: 'podfile',
         region: REGION_PODS,
-        body: renderPodfileLines(vendors),
+        body: renderPodfileLines(ios),
       },
       {
         target: 'gradle',
         region: REGION_SOURCES,
-        body: renderGradleSources(vendors),
+        body: renderGradleSources(android),
       },
       {
         target: 'gradle',
         region: REGION_DEPS,
-        body: renderGradleLines(vendors),
+        body: renderGradleLines(android),
       },
       {
         target: 'appDelegate',
         region: REGION_IMPORTS,
-        body: renderIosImports(vendors),
+        body: renderIosImports(ios),
       },
       {
         target: 'appDelegate',
         region: REGION_HANDLERS,
-        body: renderIosHandlers(vendors),
+        body: renderIosHandlers(ios),
       },
       {
         target: 'mainActivity',
         region: REGION_IMPORTS,
-        body: renderAndroidImports(vendors),
+        body: renderAndroidImports(android),
       },
       {
         target: 'mainActivity',
         region: REGION_HANDLERS,
-        body: renderAndroidHandlers(vendors),
+        body: renderAndroidHandlers(android),
       },
     ];
   }
