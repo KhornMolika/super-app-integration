@@ -121,8 +121,9 @@ export const IOS_ENTRY_PROTOCOL = 'FSAMiniAppNativeProtocol';
 export function findSwiftEntryTypes(swiftInterface: string): string[] {
   const out = new Set<string>();
   const re = new RegExp(
-    // class/struct/enum/extension, names may be module-qualified (Spa.SpaBooking)
-    String.raw`\b(?:class|struct|enum|extension)\s+([A-Za-z_][A-Za-z0-9_.]*)[^{\n]*?:\s*[^{\n]*\b` +
+    // Only classes (and their extensions) can conform to the @objc contract;
+    // names may be module-qualified (Spa.SpaBooking)
+    String.raw`\b(?:class|extension)\s+([A-Za-z_][A-Za-z0-9_.]*)[^{\n]*?:\s*[^{\n]*\b` +
       IOS_ENTRY_PROTOCOL +
       String.raw`\b`,
     'g',

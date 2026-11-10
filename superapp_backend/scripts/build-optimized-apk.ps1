@@ -102,8 +102,8 @@ try {
     }
 } catch {}
 
-# Native SDK mini apps for this build (android/app/build.gradle.kts reads the file)
-$NativeSdkFile = Join-Path $MobileAppDir "android/native_sdks.json"
+# Native SDK mini apps for this build (android/app/build.gradle.kts and ios/Podfile read the file)
+$NativeSdkFile = Join-Path $MobileAppDir "native_sdks.json"
 $BackendPort = if ($env:PORT) { $env:PORT } else { "3000" }
 $ManifestUrl = if ($env:NATIVE_SDK_MANIFEST_URL) { $env:NATIVE_SDK_MANIFEST_URL } else { "http://localhost:$BackendPort/api/release-assembly/native-sdk-manifest" }
 try {

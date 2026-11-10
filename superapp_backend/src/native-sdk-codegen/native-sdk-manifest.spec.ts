@@ -31,6 +31,7 @@ describe('NativeSdkCodegenService.buildManifest', () => {
     expect(m).toEqual({
       repositories: ['https://app.fintechcenterfsa.com/nexus/repository/maven-sdk-hosted/'],
       dependencies: ['com.fintech.vendor:spa-booking-sdk:1.0.0'],
+      iosPods: [],
       skipped: [],
     });
     // Only apps that belong in a build; archived/rejected/draft are not asked for
@@ -54,12 +55,38 @@ describe('NativeSdkCodegenService.buildManifest', () => {
 
   it('leaves out iOS-only SDKs without complaint and lists each coordinate once', async () => {
     const { svc } = serviceWith([
-      spa({ appId: 'ios', integrationConfig: { iosModuleName: 'Spa', iosTypeName: 'Spa' } }),
+      spa({ appId: 'ios', integrationConfig: { iosModuleName: 'Spa', iosTypeName: 'Spa', iosNexusZipUrl: 'https://n/Spa/1.0.0/Spa.xcframework.zip' } }),
       spa({ appId: 'x' }),
       spa({ appId: 'y' }),
     ]);
     const m = await svc.buildManifest();
     expect(m.dependencies).toEqual(['com.fintech.vendor:spa-booking-sdk:1.0.0']);
     expect(m.skipped).toEqual([]);
+  });
+
+  it('lists published iOS pods by their podspec, and skips unpublished ones', async () => {
+    const ios = (appId: string, extra: Record<string, any>) =>
+      spa({ appId, integrationConfig: { iosModuleName: 'SpaKit', iosTypeName: 'SpaBookingSDK', ...extra } });
+    const { svc } = serviceWith([
+      ios('pub', { iosVersion: '2.1.0', iosNexusZipUrl: 'https://app.fintechcenterfsa.com/nexus/repository/raw-sdk-artifacts/SpaKit/2.1.0/SpaKit.xcframework.zip' }),
+      ios('unpub', {}),
+    ]);
+    const m = await svc.buildManifest();
+    expect(m.iosPods).toEqual([
+      {
+        name: 'SpaKit',
+        podspecUrl: 'https://app.fintechcenterfsa.com/nexus/repository/cocoapods-specs/Specs/SpaKit/2.1.0/SpaKit.podspec',
+      },
+    ]);
+    expect(m.skipped).toEqual([{ appId: 'unpub', reason: 'iOS SDK not published to Nexus yet' }]);
+  });
+
+  it('skips an iOS module name that is not a valid identifier', async () => {
+    const { svc } = serviceWith([
+      spa({ appId: 'bad', integrationConfig: { iosModuleName: 'Spa Kit', iosTypeName: 'X', iosNexusZipUrl: 'https://n/x.zip' } }),
+    ]);
+    const m = await svc.buildManifest();
+    expect(m.iosPods).toEqual([]);
+    expect(m.skipped[0].appId).toBe('bad');
   });
 });

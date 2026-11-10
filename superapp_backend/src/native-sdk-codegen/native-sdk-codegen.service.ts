@@ -61,6 +61,8 @@ export interface NativeSdkManifest {
   repositories: string[];
   /** group:artifact:version */
   dependencies: string[];
+  /** iOS: CocoaPods pods, each from its podspec on the Nexus specs repository */
+  iosPods: { name: string; podspecUrl: string }[];
   /** Apps left out, and why (shown in the build log). */
   skipped: { appId: string; reason: string }[];
 }
@@ -155,9 +157,30 @@ export class NativeSdkCodegenService {
       order: { appId: 'ASC' },
     });
     const dependencies = new Set<string>();
+    const iosPods = new Map<string, string>();
     const skipped: { appId: string; reason: string }[] = [];
+    const cocoapodsSpecsUrl = this.nexusRepoUrl('NEXUS_COCOAPODS_SPECS_REPO', 'cocoapods-specs');
     for (const app of apps) {
       const c = app.integrationConfig || {};
+      // iOS: the pod named after the module, from the podspec published at approval
+      if (isFilled(c.iosModuleName) && isFilled(c.iosTypeName)) {
+        if (!isFilled(c.iosNexusZipUrl)) {
+          skipped.push({ appId: app.appId, reason: 'iOS SDK not published to Nexus yet' });
+        } else {
+          try {
+            const podspecUrl = podspecUrlFor({
+              appId: app.appId,
+              cocoapodsSpecsUrl,
+              iosModuleName: c.iosModuleName,
+              iosVersion: c.iosVersion,
+              iosNexusZipUrl: c.iosNexusZipUrl,
+            } as NativeSdkVendor);
+            iosPods.set(c.iosModuleName, podspecUrl);
+          } catch (err) {
+            skipped.push({ appId: app.appId, reason: `iOS: ${(err as Error).message}` });
+          }
+        }
+      }
       const group = c.androidMavenGroupId;
       const artifact = c.androidMavenArtifactId;
       const version = c.androidMavenVersion;
@@ -179,6 +202,7 @@ export class NativeSdkCodegenService {
     return {
       repositories: [this.nexusRepoUrl('NEXUS_MAVEN_SDK_REPO', 'maven-sdk-hosted')],
       dependencies: [...dependencies],
+      iosPods: [...iosPods].map(([name, podspecUrl]) => ({ name, podspecUrl })),
       skipped,
     };
   }

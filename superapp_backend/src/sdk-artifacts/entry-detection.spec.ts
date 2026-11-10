@@ -77,7 +77,7 @@ describe('ArtifactScannerService.scanAar entry detection', () => {
 });
 
 describe('findSwiftEntryTypes', () => {
-  it('finds conforming classes, structs and extensions, with module names', () => {
+  it('finds conforming classes and extensions, with module names; not structs or enums', () => {
     const text = `
       import FSASuperAppMiniAppNativeSDK
       public class SpaBooking : FSASuperAppMiniAppNativeSDK.FSAMiniAppNativeProtocol {
@@ -85,6 +85,7 @@ describe('findSwiftEntryTypes', () => {
       public struct Helper : Swift.Codable {}
       extension SpaSDK.Loyalty : FSASuperAppMiniAppNativeSDK.FSAMiniAppNativeProtocol {}
       public enum Other : Swift.Error {}
+      public struct NotFound : FSASuperAppMiniAppNativeSDK.FSAMiniAppNativeProtocol {}
     `;
     expect(findSwiftEntryTypes(text).sort()).toEqual(['Loyalty', 'SpaBooking']);
   });
