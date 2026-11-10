@@ -7,11 +7,14 @@ import { toast } from '@/components/ui/Toast';
 import { authApi } from '@/api/auth.api';
 import { AuthCenteredLayout } from '@/components/auth/AuthCenteredLayout';
 import { OtpInputGroup } from '@/components/auth/OtpInputGroup';
+import { maskEmail } from '@/lib/mask-email';
 
 function VerifyOtpContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const rawEmail = searchParams?.get('email') || '';
+  // Arrived from the login page (unverified account), not from registration
+  const fromLogin = searchParams?.get('from') === 'login';
 
   const [otp, setOtp] = useState<string[]>(Array(6).fill(''));
   const [loading, setLoading] = useState(false);
@@ -19,14 +22,8 @@ function VerifyOtpContent() {
   const [canResend, setCanResend] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [hasError, setHasError] = useState(false);
-
-  // Mask email for privacy: developer@fintech.com.kh -> d•••••••r@fintech.com.kh
-  const maskEmail = (str: string) => {
-    if (!str || !str.includes('@')) return 'your email';
-    const [user, domain] = str.split('@');
-    if (user.length <= 2) return `${user[0]}*@${domain}`;
-    return `${user[0]}${'•'.repeat(Math.min(user.length - 2, 7))}${user[user.length - 1]}@${domain}`;
-  };
+  // What the account can do after verifying: sign in now, or wait for approval
+  const [nextStatus, setNextStatus] = useState<'ACTIVE' | 'PENDING_APPROVAL'>('PENDING_APPROVAL');
 
   // Resend Countdown Timer
   useEffect(() => {
@@ -52,7 +49,7 @@ function VerifyOtpContent() {
 
     if (!rawEmail) {
       toast.error('No email address provided. Please restart registration.', 'Missing Email');
-      router.push('/signup');
+      router.push(fromLogin ? '/login' : '/signup');
       return;
     }
 
@@ -67,9 +64,13 @@ function VerifyOtpContent() {
       });
 
       if (res?.success) {
+        const canSignIn = res.nextStatus === 'ACTIVE';
+        setNextStatus(canSignIn ? 'ACTIVE' : 'PENDING_APPROVAL');
         setIsVerified(true);
         toast.success(
-          'Email verified successfully! Your account is now pending Super Administrator approval.',
+          canSignIn
+            ? 'Email verified successfully! You can sign in now.'
+            : 'Email verified successfully! Your account is now pending Super Administrator approval.',
           'Identity Verified'
         );
       } else {
@@ -133,27 +134,46 @@ function VerifyOtpContent() {
           </p>
         </div>
 
-        <div className="p-4 rounded-2xl bg-accent-500/10 border border-accent-500/25 text-left space-y-2">
-          <div className="flex items-center gap-2 text-xs font-bold text-accent-300">
-            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            <span>Super Administrator Review Required</span>
-          </div>
-          <p className="text-[11px] text-slate-300/90 leading-relaxed">
-            As a regulated sovereign financial infrastructure platform, all new developer accounts require Super Administrator authorization before back-office access is granted.
-          </p>
-        </div>
+        {nextStatus === 'ACTIVE' ? (
+          <>
+            <p className="text-xs text-slate-300 leading-relaxed max-w-sm mx-auto">
+              Your account is active. You can sign in now.
+            </p>
+            <div className="pt-2">
+              <Link
+                href={`/login?email=${encodeURIComponent(rawEmail)}`}
+                className="w-full py-3.5 px-4 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-brand-600 via-brand-500 to-brand-600 hover:from-brand-500 hover:to-brand-500 shadow-lg shadow-brand-500/25 border border-brand-400/30 transition-all duration-200 flex items-center justify-center gap-2"
+              >
+                <span>Sign in</span>
+                <span className="text-accent-300 font-bold">→</span>
+              </Link>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="p-4 rounded-2xl bg-accent-500/10 border border-accent-500/25 text-left space-y-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-accent-300">
+                <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span>Super Administrator Review Required</span>
+              </div>
+              <p className="text-[11px] text-slate-300/90 leading-relaxed">
+                As a regulated sovereign financial infrastructure platform, all new developer accounts require Super Administrator authorization before back-office access is granted.
+              </p>
+            </div>
 
-        <div className="pt-2">
-          <Link
-            href="/login"
-            className="w-full py-3.5 px-4 rounded-xl text-sm font-semibold text-white bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-brand-500/40 transition-all duration-200 flex items-center justify-center gap-2"
-          >
-            <span>Return to Login</span>
-            <span className="text-brand-400">→</span>
-          </Link>
-        </div>
+            <div className="pt-2">
+              <Link
+                href="/login"
+                className="w-full py-3.5 px-4 rounded-xl text-sm font-semibold text-white bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-brand-500/40 transition-all duration-200 flex items-center justify-center gap-2"
+              >
+                <span>Return to Login</span>
+                <span className="text-brand-400">→</span>
+              </Link>
+            </div>
+          </>
+        )}
       </div>
     );
   }
@@ -176,7 +196,7 @@ function VerifyOtpContent() {
           </div>
         </div>
         <Link
-          href="/signup"
+          href={fromLogin ? '/login' : '/signup'}
           className="text-xs font-medium text-brand-400 hover:text-brand-300 transition-colors shrink-0 ml-2"
         >
           Change
@@ -248,18 +268,26 @@ function VerifyOtpContent() {
   );
 }
 
-export default function VerifyOtpPage() {
+/** Reads ?from= (needs the Suspense boundary below) to pick the back link. */
+function VerifyOtpShell() {
+  const fromLogin = useSearchParams()?.get('from') === 'login';
   return (
     <AuthCenteredLayout
       title="Verify it's you"
-      subtitle="Enter the 6-digit confirmation code dispatched to your email."
+      subtitle="Enter the 6-digit confirmation code sent to your email."
       badge="Identity Verification"
-      backHref="/signup"
-      backLabel="Back to registration"
+      backHref={fromLogin ? '/login' : '/signup'}
+      backLabel={fromLogin ? 'Back to sign in' : 'Back to registration'}
     >
-      <Suspense fallback={<div className="p-8 text-center text-xs text-slate-500">Loading verification...</div>}>
-        <VerifyOtpContent />
-      </Suspense>
+      <VerifyOtpContent />
     </AuthCenteredLayout>
+  );
+}
+
+export default function VerifyOtpPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-xs text-slate-500">Loading verification...</div>}>
+      <VerifyOtpShell />
+    </Suspense>
   );
 }

@@ -440,9 +440,14 @@ export class AuthService implements OnModuleInit {
     if (isSeedAccount) {
       user.status = 'ACTIVE';
     } else if (user.status === 'PENDING_EMAIL_VERIFICATION') {
-      throw new UnauthorizedException(
-        'Please verify your email address with the 6-digit code before signing in. Check your inbox.',
-      );
+      // Only reached with a correct password, so the account state is not
+      // revealed to guessers. `code` lets the backoffice offer verification.
+      throw new UnauthorizedException({
+        statusCode: 401,
+        code: 'EMAIL_NOT_VERIFIED',
+        message:
+          'Please verify your email address with the 6-digit code before signing in.',
+      });
     } else if (
       user.status !== 'ACTIVE' ||
       (!user.role && !(user as any).roles?.length)
@@ -1040,12 +1045,15 @@ export class AuthService implements OnModuleInit {
     if (purpose === 'EMAIL_VERIFICATION') {
       const user =
         await this.accessControlService.findByEmailWithPermissions(rawEmail);
+      // nextStatus tells the UI whether the user can sign in now (ACTIVE) or
+      // still waits for a Super Administrator (PENDING_APPROVAL).
+      let nextStatus: string | undefined = user?.status;
       if (user && user.status === 'PENDING_EMAIL_VERIFICATION') {
         const isSuperOrAdmin =
           user.role?.name === 'SUPER_ADMIN' ||
           user.role?.name === 'ADMIN' ||
           Boolean(OFFICIAL_SEEDS[rawEmail]);
-        const nextStatus = isSuperOrAdmin ? 'ACTIVE' : 'PENDING_APPROVAL';
+        nextStatus = isSuperOrAdmin ? 'ACTIVE' : 'PENDING_APPROVAL';
         await this.accessControlService.updateUserStatus(user.id, nextStatus);
         this.logger.log(
           `[AUTH] User ${rawEmail} successfully verified email. Transitioned to ${nextStatus}`,
@@ -1054,8 +1062,11 @@ export class AuthService implements OnModuleInit {
       return {
         success: true,
         verified: true,
+        nextStatus: nextStatus === 'ACTIVE' ? 'ACTIVE' : 'PENDING_APPROVAL',
         message:
-          'Email verified successfully! You may now Login to your account.',
+          nextStatus === 'ACTIVE'
+            ? 'Email verified successfully! You may now sign in to your account.'
+            : 'Email verified successfully! Your account is now pending Super Administrator approval.',
       };
     }
 

@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { toast } from '@/components/ui/Toast';
 import { AuthSplitLayout } from '@/components/auth/AuthSplitLayout';
+import { authApi } from '@/api/auth.api';
+import { maskEmail } from '@/lib/mask-email';
 
 function LoginForm() {
   const router = useRouter();
@@ -14,7 +16,11 @@ function LoginForm() {
   const hasWarnedRef = useRef(false);
 
   const { loginWithEmail } = useAuth();
-  const [email, setEmail] = useState('');
+  // Pre-filled after verifying from /verify-otp ("Sign in" button)
+  const [email, setEmail] = useState(searchParams?.get('email') || '');
+  // Set when the password was right but the email was never verified
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  const [sendingCode, setSendingCode] = useState(false);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState('');
@@ -40,6 +46,7 @@ function LoginForm() {
 
     setEmailError('');
     setPasswordError('');
+    setUnverifiedEmail(null);
 
     let hasValidationError = false;
     const trimmedEmail = email.trim();
@@ -72,7 +79,11 @@ function LoginForm() {
       const redirectUrl = searchParams?.get('redirect');
       router.push(redirectUrl && redirectUrl.startsWith('/') && !redirectUrl.startsWith('/login') ? redirectUrl : '/miniapps');
     } else {
-      if (res.pendingApproval || res.error?.toLowerCase().includes('pending approval')) {
+      if (res.emailNotVerified) {
+        // Correct password, email never verified: not a credentials error.
+        setUnverifiedEmail(trimmedEmail.toLowerCase());
+        toast.warning('Please verify your email address to continue.', 'Email Not Verified');
+      } else if (res.pendingApproval || res.error?.toLowerCase().includes('pending approval')) {
         setEmailError('Account registered but pending Super Administrator approval.');
         toast.warning(
           'Your account is registered but pending Super Administrator approval.',
@@ -84,6 +95,27 @@ function LoginForm() {
         setPasswordError('Incorrect password or credentials. Please try again.');
         toast.error(failureMessage, 'Authentication Failed');
       }
+    }
+  };
+
+  /** Sends a fresh verification code (the original one is usually expired) and opens the verify page. */
+  const handleSendVerificationCode = async () => {
+    if (!unverifiedEmail || sendingCode) return;
+    setSendingCode(true);
+    try {
+      const res = await authApi.requestOtp({ email: unverifiedEmail, purpose: 'EMAIL_VERIFICATION' });
+      if (res?.alreadyVerified) {
+        setUnverifiedEmail(null);
+        toast.success('Your email is already verified. Please sign in.', 'Already Verified');
+        return;
+      }
+      toast.success(`A 6-digit code was sent to ${maskEmail(unverifiedEmail)}.`, 'Code Sent');
+      router.push(`/verify-otp?email=${encodeURIComponent(unverifiedEmail)}&from=login`);
+    } catch (err: any) {
+      // e.g. 503 OTP_EMAIL_NOT_SENT: keep the callout so the user can retry
+      toast.error(err?.message || 'We could not send the verification code. Please try again.', 'Code Not Sent');
+    } finally {
+      setSendingCode(false);
     }
   };
 
@@ -108,6 +140,7 @@ function LoginForm() {
               setEmail(e.target.value);
               if (emailError) setEmailError('');
               if (passwordError) setPasswordError('');
+              if (unverifiedEmail) setUnverifiedEmail(null);
             }}
             placeholder="name@company.com"
             disabled={loading}
@@ -183,6 +216,37 @@ function LoginForm() {
           </p>
         )}
       </div>
+
+      {/* Unverified email: offer a fresh code instead of a credentials error */}
+      {unverifiedEmail && (
+        <div
+          role="alert"
+          className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs space-y-3 animate-in fade-in"
+        >
+          <div className="flex items-start gap-2.5">
+            <svg className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            <div className="min-w-0">
+              <p className="font-semibold text-amber-300">Verify your email to continue</p>
+              <p className="text-amber-200/90 mt-0.5 leading-relaxed">
+                Your account isn&apos;t verified yet. We&apos;ll send a 6-digit code to{' '}
+                <strong className="text-amber-100">{maskEmail(unverifiedEmail)}</strong>.
+              </p>
+            </div>
+          </div>
+          <div className="pt-1 border-t border-amber-500/20">
+            <button
+              type="button"
+              onClick={handleSendVerificationCode}
+              disabled={sendingCode}
+              className="w-full sm:w-auto px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-amber-600 hover:bg-amber-500 transition-colors text-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {sendingCode ? 'Sending code...' : 'Send verification code'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Remember Me Checkbox */}
       <div className="flex items-center justify-between pt-1">

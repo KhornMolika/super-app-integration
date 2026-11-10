@@ -110,6 +110,8 @@ export const authApi = {
       message: string;
       expiresInSeconds?: number;
       emailDispatched?: boolean;
+      /** EMAIL_VERIFICATION for an address that is already verified */
+      alreadyVerified?: boolean;
     }>('/api/auth/request-otp', {
       method: 'POST',
       body: data,
@@ -124,6 +126,8 @@ export const authApi = {
       success: boolean;
       resetToken?: string;
       verified?: boolean;
+      /** EMAIL_VERIFICATION: ACTIVE = can sign in now, PENDING_APPROVAL = waits for a Super Administrator */
+      nextStatus?: 'ACTIVE' | 'PENDING_APPROVAL';
       message: string;
     }>('/api/auth/verify-otp', {
       method: 'POST',

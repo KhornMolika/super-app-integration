@@ -18,7 +18,16 @@ export async function POST(request: Request) {
     if (!res.ok || !data?.success || !data?.access_token) {
       const message = data?.message || data?.error || 'Invalid credentials or user not found.';
       return NextResponse.json(
-        { error: message, pendingApproval: Boolean(data?.pendingApproval) },
+        {
+          error: message,
+          // e.g. EMAIL_NOT_VERIFIED: lets the login page offer OTP verification.
+          // The backend's generic fallback code carries no meaning, so drop it.
+          code:
+            typeof data?.code === 'string' && data.code !== 'INTERNAL_SERVER_ERROR'
+              ? data.code
+              : undefined,
+          pendingApproval: Boolean(data?.pendingApproval),
+        },
         { status: res.status >= 400 ? res.status : 401 },
       );
     }
