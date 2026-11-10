@@ -110,6 +110,33 @@ describe('who can do what with capability requests', () => {
   });
 });
 
+describe('progress links', () => {
+  const approved = pendingProposal({
+    status: 'APPROVED',
+    metadata: {
+      codeChange: {
+        status: 'needs_work',
+        mrUrl: 'https://git.example/frontend/super-app/-/merge_requests/7',
+        issueUrl: 'https://git.example/frontend/super-app/-/issues/3',
+      },
+    },
+  });
+  const linksIn = (p: any) => p.steps.flatMap((s: any) => s.links ?? []);
+
+  it('platform staff (Super Admin, regulatory admin) see the code change and task links', async () => {
+    const { controller } = makeController({ proposal: approved });
+    expect(linksIn(await controller.getProgress({ user: superAdmin }, 'p1'))).toHaveLength(2);
+    expect(linksIn(await controller.getProgress({ user: admin }, 'p1'))).toHaveLength(2);
+  });
+
+  it('a developer gets the same steps without internal GitLab links', async () => {
+    const { controller } = makeController({ proposal: approved });
+    const progress = await controller.getProgress({ user: developer }, 'p1');
+    expect(linksIn(progress)).toEqual([]);
+    expect(progress.steps.map((s: any) => s.key)).toContain('code_change');
+  });
+});
+
 describe('rejecting needs a reason', () => {
   async function errorsFor(body: Record<string, unknown>) {
     const dto = plainToInstance(ReviewProposalDto, body);

@@ -7,6 +7,7 @@ import { BackButton } from '@/components/ui/BackButton';
 import { Card } from '@/components/ui/card';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/lib/auth';
+import { useCapabilityView } from '@/components/capabilities/capability-view';
 import { toast } from '@/components/ui/Toast';
 import { Button, Input, Label, Textarea } from '@/components/ui/inputs';
 import {
@@ -56,8 +57,8 @@ export default function CapabilityDetailPage({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { can } = useAuth();
-  const canManage = can('permission:manage');
+  const view = useCapabilityView();
+  const canManage = view.canEditCatalog;
 
   const [activeTab, setActiveTab] = useState<string>(
     () => searchParams.get('tab') || 'specs'
@@ -318,7 +319,7 @@ export default function CapabilityDetailPage({
               {activeTab === 'specs'
                 ? 'Runtime & Bridge Specs'
                 : activeTab === 'apps'
-                ? 'Associated MiniApps'
+                ? view.text.appsUsingIt
                 : 'Governance & Edit'}
             </span>
           </div>
@@ -396,7 +397,7 @@ export default function CapabilityDetailPage({
               <span>Copy SDK Call</span>
             </Button>
 
-            {can('permission_proposal:create') && (
+            {view.canRequest && (
               <Button
                 variant="primary"
                 size="sm"
@@ -404,7 +405,7 @@ export default function CapabilityDetailPage({
                 className="text-xs font-semibold gap-1.5 rounded-xl cursor-pointer shadow-xs"
               >
                 <GitPullRequest className="w-4 h-4" />
-                <span>Propose Revision</span>
+                <span>{view.text.requestChangeButton}</span>
               </Button>
             )}
 
@@ -455,7 +456,7 @@ export default function CapabilityDetailPage({
               }`}
             >
               <Layers className="w-4 h-4" />
-              <span>Associated MiniApps</span>
+              <span>{view.text.appsUsingIt}</span>
               <span
                 className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
                   activeTab === 'apps'
@@ -660,7 +661,9 @@ export default function CapabilityDetailPage({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                  <span>Applications Utilizing {capability.name}</span>
+                  <span>
+                    {view.audience === 'requester' ? 'Your mini apps using' : 'Applications Utilizing'} {capability.name}
+                  </span>
                   <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400 border border-brand-200 dark:border-brand-500/20">
                     {associatedApps.length}
                   </span>

@@ -3,10 +3,11 @@
 import React, { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/inputs';
-import { ExternalLink, User, Users, Smartphone, Search, X, Globe, Tag, FileCode, ClipboardCheck, ListChecks } from 'lucide-react';
+import { ExternalLink, User, Users, Smartphone, Search, X, Globe, Tag, FileCode, ClipboardCheck, ListChecks, Info, PlusCircle } from 'lucide-react';
 import { PermissionProposal } from '@/api/permissions.api';
 import { Pagination } from '@/components/ui/Pagination';
 import { getCapabilityVisual } from '@/lib/capability-visuals';
+import type { CapabilityAudience } from '@/components/capabilities/capability-view';
 
 interface ProposalsTabProps {
   proposals: PermissionProposal[];
@@ -19,6 +20,10 @@ interface ProposalsTabProps {
   onViewProgress?: (proposal: PermissionProposal) => void;
   /** Signed-in user, for the "Mine" filter */
   currentUserId?: string;
+  /** Who is looking: changes the tiles, wording and links (default: decider) */
+  audience?: CapabilityAudience;
+  /** Opens the request form (shown in the empty state for requesters) */
+  onRequest?: () => void;
 }
 
 /** True when the user made the request or added their mini app to it. */
@@ -37,7 +42,32 @@ type ProposalState =
   | 'approved'
   | 'in_development'
   | 'rejected';
-type FilterKey = 'ALL' | 'pending' | 'code_ready' | 'needs_work' | 'code_failed' | 'rejected';
+type FilterKey = 'ALL' | 'pending' | 'accepted' | 'code_ready' | 'needs_work' | 'code_failed' | 'rejected';
+
+/** Every state after an approval, shown as one group outside the decider view. */
+const ACCEPTED_STATES: ProposalState[] = ['code_ready', 'needs_work', 'code_failed', 'approved', 'in_development'];
+
+function matchesFilter(p: PermissionProposal, key: FilterKey): boolean {
+  if (key === 'ALL') return true;
+  const state = proposalState(p);
+  return key === 'accepted' ? ACCEPTED_STATES.includes(state) : state === key;
+}
+
+/** Plain wording for the developer who asked; no internal steps. */
+export function requesterChip(p: PermissionProposal): { label: string; className: string; dot: string } {
+  const state = proposalState(p);
+  if (state === 'pending' || state === 'rejected') return STATE_CHIP[state];
+  const version = p.implementedInSuperAppVersion || p.targetSuperAppVersion;
+  return {
+    label: p.implementedInSuperAppVersion
+      ? `Available from v${p.implementedInSuperAppVersion}`
+      : version && (state === 'code_ready' || state === 'approved')
+        ? `Approved, ships in v${version}`
+        : 'Approved, being added to the Super App',
+    className: STATE_CHIP.approved.className,
+    dot: STATE_CHIP.approved.dot,
+  };
+}
 
 export function proposalState(p: PermissionProposal): ProposalState {
   if (p.status === 'PENDING_REVIEW') return 'pending';
@@ -98,10 +128,17 @@ export function ProposalsTab({
   onSelectProposal,
   onViewProgress,
   currentUserId,
+  audience = 'decider',
+  onRequest,
 }: ProposalsTabProps) {
+  const isDecider = audience === 'decider';
+  const isRequester = audience === 'requester';
   const [searchQuery, setSearchQuery] = useState('');
   const [mineOnly, setMineOnly] = useState(false);
-  const [filter, setFilter] = useState<FilterKey>(proposalSubFilter === 'PENDING' ? 'pending' : 'ALL');
+  // Deciders start on the waiting list; others see all their requests
+  const [filter, setFilter] = useState<FilterKey>(
+    isDecider && proposalSubFilter === 'PENDING' ? 'pending' : 'ALL',
+  );
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -111,19 +148,10 @@ export function ProposalsTab({
   }, [proposals, mineOnly, currentUserId]);
 
   const counts = useMemo(() => {
-    const c: Record<FilterKey, number> = {
-      ALL: safeProposals.length,
-      pending: 0,
-      code_ready: 0,
-      needs_work: 0,
-      code_failed: 0,
-      rejected: 0,
-    };
-    for (const p of safeProposals) {
-      const s = proposalState(p);
-      if (s in c) c[s as FilterKey]++;
-    }
-    return c;
+    const keys: FilterKey[] = ['ALL', 'pending', 'accepted', 'code_ready', 'needs_work', 'code_failed', 'rejected'];
+    return Object.fromEntries(
+      keys.map((k) => [k, safeProposals.filter((p) => matchesFilter(p, k)).length]),
+    ) as Record<FilterKey, number>;
   }, [safeProposals]);
 
   const changeFilter = (next: FilterKey) => {
@@ -137,7 +165,7 @@ export function ProposalsTab({
     const q = searchQuery.trim().toLowerCase();
     return safeProposals
       .filter((p) => {
-        if (filter !== 'ALL' && proposalState(p) !== filter) return false;
+        if (!matchesFilter(p, filter)) return false;
         if (!q) return true;
         return [
           p.permissionName,
@@ -165,19 +193,48 @@ export function ProposalsTab({
     [filtered, safePage, pageSize],
   );
 
-  const tiles: Array<{ key: FilterKey; label: string; tone: string }> = [
-    { key: 'ALL', label: 'All proposals', tone: 'text-slate-900 dark:text-slate-100' },
-    { key: 'pending', label: 'Waiting for review', tone: 'text-amber-600 dark:text-amber-400' },
-    { key: 'code_ready', label: 'Code change ready', tone: 'text-violet-600 dark:text-violet-400' },
-    { key: 'needs_work', label: 'Waiting for Super App team', tone: 'text-orange-600 dark:text-orange-400' },
-    { key: 'code_failed', label: 'Code change failed', tone: 'text-rose-600 dark:text-rose-400' },
-    { key: 'rejected', label: 'Rejected', tone: 'text-slate-500 dark:text-slate-400' },
-  ];
+  const tiles: Array<{ key: FilterKey; label: string; tone: string }> = isDecider
+    ? [
+        { key: 'ALL', label: 'All proposals', tone: 'text-slate-900 dark:text-slate-100' },
+        { key: 'pending', label: 'Waiting for review', tone: 'text-amber-600 dark:text-amber-400' },
+        { key: 'code_ready', label: 'Code change ready', tone: 'text-violet-600 dark:text-violet-400' },
+        { key: 'needs_work', label: 'Waiting for Super App team', tone: 'text-orange-600 dark:text-orange-400' },
+        { key: 'code_failed', label: 'Code change failed', tone: 'text-rose-600 dark:text-rose-400' },
+        { key: 'rejected', label: 'Rejected', tone: 'text-slate-500 dark:text-slate-400' },
+      ]
+    : [
+        { key: 'ALL', label: isRequester ? 'All my requests' : 'All requests', tone: 'text-slate-900 dark:text-slate-100' },
+        { key: 'pending', label: 'Waiting for review', tone: 'text-amber-600 dark:text-amber-400' },
+        { key: 'accepted', label: 'Approved', tone: 'text-emerald-600 dark:text-emerald-400' },
+        { key: 'rejected', label: 'Rejected', tone: 'text-slate-500 dark:text-slate-400' },
+      ];
+
+  /** Who asked, as this viewer should read it. */
+  const requesterLabel = (p: PermissionProposal): string => {
+    const others = p.metadata?.supporters?.length ?? 0;
+    if (isRequester && isMine(p, currentUserId)) {
+      return others > 0 && p.requestedBy?.id === currentUserId
+        ? `You and ${others} other${others === 1 ? '' : 's'} asked`
+        : 'You asked';
+    }
+    return p.requestedBy?.name || (isRequester ? 'Another developer' : 'Developer');
+  };
 
   return (
     <div className="space-y-3">
+      {audience === 'overseer' && (
+        <p className="flex items-start gap-2 px-3 py-2.5 rounded-xl border border-sky-200 dark:border-sky-900/60 bg-sky-50 dark:bg-sky-950/30 text-xs text-sky-800 dark:text-sky-200">
+          <Info className="w-4 h-4 shrink-0 mt-px" />
+          Only Super Admins approve or reject requests. You can follow each one&apos;s progress.
+        </p>
+      )}
+
       {/* Summary counts; each one filters the list */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2" role="group" aria-label="Filter proposals">
+      <div
+        className={`grid grid-cols-2 gap-2 ${isDecider ? 'sm:grid-cols-3 lg:grid-cols-6' : 'sm:grid-cols-4'}`}
+        role="group"
+        aria-label="Filter requests"
+      >
         {tiles.map((t) => (
           <button
             key={t.key}
@@ -207,7 +264,7 @@ export function ProposalsTab({
               setSearchQuery(e.target.value);
               setCurrentPage(1);
             }}
-            placeholder="Search by capability, mini app or requester..."
+            placeholder={isRequester ? 'Search your requests...' : 'Search by capability, mini app or requester...'}
             aria-label="Search proposals"
             className="w-full pl-9 pr-8 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-slate-800 dark:text-slate-200 transition-all placeholder:text-slate-400"
           />
@@ -225,7 +282,7 @@ export function ProposalsTab({
             </button>
           )}
         </div>
-        {currentUserId && (
+        {currentUserId && isDecider && (
           <button
             type="button"
             onClick={() => {
@@ -252,13 +309,35 @@ export function ProposalsTab({
             <ClipboardCheck className="w-6 h-6 text-slate-400 dark:text-slate-500" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">No capability proposals found</h3>
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+              {searchQuery || filter !== 'ALL' || mineOnly
+                ? 'Nothing found'
+                : isRequester
+                  ? 'You haven\'t requested any capabilities yet'
+                  : audience === 'overseer'
+                    ? 'No requests yet'
+                    : 'No capability proposals found'}
+            </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
               {searchQuery || filter !== 'ALL' || mineOnly
                 ? 'Nothing matches this search or filter.'
-                : 'When developers or partners ask for a device feature the Super App does not support yet, the request appears here for review and an automatic Super App update.'}
+                : isRequester
+                  ? 'If your mini app needs a device feature that is not in the catalog, request it here. You can follow it until it ships.'
+                  : audience === 'overseer'
+                    ? 'Requests for new device features appear here with their progress.'
+                    : 'When developers or partners ask for a device feature the Super App does not support yet, the request appears here for review and an automatic Super App update.'}
             </p>
           </div>
+          {isRequester && onRequest && !searchQuery && filter === 'ALL' && (
+            <button
+              type="button"
+              onClick={onRequest}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-brand-600 hover:bg-brand-700 text-white cursor-pointer"
+            >
+              <PlusCircle className="w-3.5 h-3.5" />
+              Request a capability
+            </button>
+          )}
           {(searchQuery || filter !== 'ALL' || mineOnly) && (
             <button
               type="button"
@@ -281,7 +360,7 @@ export function ProposalsTab({
             const isPlatform = !prop.miniApp?.name && !(prop.metadata as any)?.miniAppName;
             const miniAppName = prop.miniApp?.name || (prop.metadata as any)?.miniAppName || 'Platform / Core Shell';
             const state = proposalState(prop);
-            const chip = STATE_CHIP[state];
+            const chip = isRequester ? requesterChip(prop) : STATE_CHIP[state];
             const codeUrl = prop.metadata?.codeChange?.mrUrl || prop.metadata?.mrUrl;
             const supporterCount = prop.metadata?.supporters?.length ?? 0;
 
@@ -317,9 +396,9 @@ export function ProposalsTab({
                       </span>
                       <span className="inline-flex items-center gap-1">
                         <User className="w-3 h-3 text-slate-400" />
-                        {prop.requestedBy?.name || 'Developer'}
+                        {requesterLabel(prop)}
                       </span>
-                      {supporterCount > 0 && (
+                      {supporterCount > 0 && !(isRequester && isMine(prop, currentUserId)) && (
                         <span
                           className="inline-flex items-center gap-1"
                           title="Other mini apps that asked for the same capability"
@@ -340,7 +419,7 @@ export function ProposalsTab({
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                  {codeUrl && state === 'code_ready' && (
+                  {codeUrl && state === 'code_ready' && !isRequester && (
                     <a
                       href={codeUrl}
                       target="_blank"

@@ -4,6 +4,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { useCapabilityView } from '@/components/capabilities/capability-view';
 
 
 type NavItem = {
@@ -344,7 +345,7 @@ const getMiniAppNavGroups = (miniAppId: string): NavGroupWithTab[] => [
 ];
 
 
-const getCapabilityNavGroups = (capabilityId: string): NavGroupWithTab[] => [
+const getCapabilityNavGroups = (capabilityId: string, appsLabel = 'Associated MiniApps'): NavGroupWithTab[] => [
   {
     label: 'CAPABILITY SPECIFICATIONS',
     items: [
@@ -359,7 +360,7 @@ const getCapabilityNavGroups = (capabilityId: string): NavGroupWithTab[] => [
         ),
       },
       {
-        name: 'Associated MiniApps',
+        name: appsLabel,
         href: `/capabilities/${capabilityId}?tab=apps`,
         tabKey: 'apps',
         icon: (
@@ -391,6 +392,7 @@ function SidebarNavContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { can, user, role } = useAuth();
+  const capabilityView = useCapabilityView();
   const isSuperOrAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN' || can('organization:manage');
   const { isCollapsed, isWizardStepAllowed, completedWizardSteps } = useSidebar();
 
@@ -418,7 +420,7 @@ function SidebarNavContent() {
   } else if (isMiniAppDetailMode) {
     activeNavGroups = getMiniAppNavGroups(miniAppId);
   } else if (isCapabilityDetailMode) {
-    activeNavGroups = getCapabilityNavGroups(capabilityId);
+    activeNavGroups = getCapabilityNavGroups(capabilityId, capabilityView.text.appsUsingIt);
   }
 
 

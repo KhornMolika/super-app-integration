@@ -214,8 +214,8 @@ export class AuthService implements OnModuleInit {
       .map((r: any) => (typeof r === 'string' ? r : r?.name))
       .filter(Boolean);
 
-    // Standardize strictly to the 3-Role Architecture (SUPER_ADMIN, ADMIN, MA_DEVELOPER)
-    let roles: string[] = Array.from(
+    // Standardize to the platform roles (SUPER_ADMIN, ADMIN, MA_DEVELOPER, STAFF)
+    const roles: string[] = Array.from(
       new Set(
         rawRoles
           .map((r) => {
@@ -229,13 +229,12 @@ export class AuthService implements OnModuleInit {
             }
             return r;
           })
-          .filter((r) => ['SUPER_ADMIN', 'ADMIN', 'MA_DEVELOPER'].includes(r)),
+          .filter((r) => ['SUPER_ADMIN', 'ADMIN', 'MA_DEVELOPER', 'STAFF'].includes(r)),
       ),
     );
-
-    if (roles.length === 0) {
-      roles = ['MA_DEVELOPER'];
-    }
+    // No known role means no role: never fall back to developer rights
+    // (STAFF and users without a role must not be able to build mini apps or
+    // request capabilities).
 
     // If permissions not explicitly loaded from DB relations, supply standard defaults
     if (permissions.size === 0) {

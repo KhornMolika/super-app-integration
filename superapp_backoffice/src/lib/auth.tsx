@@ -5,7 +5,7 @@ import { authApi } from '@/api/auth.api';
 import { usersApi } from '@/api/users.api';
 import { resetSessionExpiredState } from '@/api/client';
 
-export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'MA_DEVELOPER';
+export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'MA_DEVELOPER' | 'STAFF';
 
 const ROLE_PERMISSIONS: Record<Role, string[]> = {
   SUPER_ADMIN: [
@@ -37,7 +37,37 @@ const ROLE_PERMISSIONS: Record<Role, string[]> = {
     'super_app:read',
     'organization:read'
   ],
+  // FSA staff using mobile services: no mini app or capability work
+  STAFF: ['miniapp:read', 'super_app:read', 'organization:read'],
 };
+
+/** Role names as the backend may send them, mapped to the backoffice roles. */
+const ROLE_ALIASES: Record<string, Role> = {
+  SUPER_ADMIN: 'SUPER_ADMIN',
+  SUPERADMIN: 'SUPER_ADMIN',
+  ADMIN: 'ADMIN',
+  MA_DEVELOPER: 'MA_DEVELOPER',
+  MINI_APP_DEVELOPER: 'MA_DEVELOPER',
+  DEVELOPER: 'MA_DEVELOPER',
+  STAFF: 'STAFF',
+};
+const ROLE_PRIORITY: Role[] = ['SUPER_ADMIN', 'ADMIN', 'MA_DEVELOPER', 'STAFF'];
+
+/** Role names from the backend, with known aliases normalised. */
+function normaliseRoles(raw: unknown[]): string[] {
+  return raw
+    .map((r: any) => (typeof r === 'string' ? r : r?.name))
+    .filter((n): n is string => typeof n === 'string' && !!n)
+    .map((n) => ROLE_ALIASES[n.toUpperCase().trim()] ?? n);
+}
+
+/**
+ * The role that drives the backoffice UI. A role it does not know gets the
+ * least rights (STAFF), never developer rights.
+ */
+export function primaryRoleOf(roles: string[]): Role {
+  return ROLE_PRIORITY.find((r) => roles.includes(r)) ?? 'STAFF';
+}
 
 export interface AuthUser {
   id?: string;
@@ -125,14 +155,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             : profile.role
             ? [profile.role]
             : [];
-        const userRoles: string[] = rawRoleList.map((r: any) => {
-          const roleName = typeof r === 'string' ? r : r?.name;
-          return roleName === 'MINI_APP_DEVELOPER' ? 'MA_DEVELOPER' : roleName;
-        });
-        const primaryRole: Role =
-          (userRoles.find((r) =>
-            ['SUPER_ADMIN', 'ADMIN', 'MA_DEVELOPER'].includes(r)
-          ) as Role) || 'MA_DEVELOPER';
+        const userRoles = normaliseRoles(rawRoleList);
+        const primaryRole = primaryRoleOf(userRoles);
 
         setRoleState(primaryRole);
         setCurrentUser({
@@ -214,11 +238,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       resetSessionExpiredState();
       const res = await authApi.login({ email, password });
       if (res?.user) {
-        const userRoles: string[] = (res.user.roles || []).map((r: any) => {
-          const roleName = typeof r === 'string' ? r : r?.name;
-          return roleName === 'MINI_APP_DEVELOPER' ? 'MA_DEVELOPER' : roleName;
-        });
-        const primaryRole: Role = (userRoles.find((r) => ['SUPER_ADMIN', 'ADMIN', 'MA_DEVELOPER'].includes(r)) as Role) || 'MA_DEVELOPER';
+        const userRoles = normaliseRoles(res.user.roles || []);
+        const primaryRole = primaryRoleOf(userRoles);
 
         setRoleState(primaryRole);
         setCurrentUser({

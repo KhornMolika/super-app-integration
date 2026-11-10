@@ -16,6 +16,7 @@ import { CapabilitiesTab } from '@/components/capabilities/CapabilitiesTab';
 import { ProposalsTab } from '@/components/capabilities/ProposalsTab';
 import { ProposalReviewModal } from '@/components/capabilities/ProposalReviewModal';
 import { ProposalProgressModal } from '@/components/capabilities/ProposalProgress';
+import { useCapabilityView } from '@/components/capabilities/capability-view';
 import { CreateProposalModal } from '@/components/capabilities/CreateProposalModal';
 import { Button } from '@/components/ui/inputs';
 import {
@@ -23,6 +24,8 @@ import {
   GitPullRequest,
   PlusCircle,
   RefreshCw,
+  Eye,
+  ArrowRight,
 } from 'lucide-react';
 import { renderCapabilityIcon } from '@/lib/capability-visuals';
 
@@ -35,7 +38,9 @@ function CapabilitiesContent() {
   const parseFilter = (f: string | null | undefined): 'PENDING' | 'ALL' =>
     f === 'all' ? 'ALL' : 'PENDING';
 
-  const { can, user } = useAuth();
+  const { user } = useAuth();
+  // What this person may do here, and the words used for them
+  const view = useCapabilityView();
   // Local state enables instant 0ms tab transitions
   const [activeTab, setActiveTab] = useState<'CAPABILITIES' | 'PROPOSALS'>(() =>
     parseTab(searchParams?.get('tab'))
@@ -119,7 +124,7 @@ function CapabilitiesContent() {
       setLoading(true);
       const [capData, propData] = await Promise.all([
         permissionsApi.getCapabilities().catch(() => []),
-        permissionsApi.getProposals().catch(() => []),
+        view.canSeeRequests ? permissionsApi.getProposals().catch(() => []) : Promise.resolve([]),
       ]);
       setCapabilities(unwrapData(capData));
       setProposals(unwrapData(propData));
@@ -229,27 +234,33 @@ function CapabilitiesContent() {
                 <Zap className="w-5 h-5" />
               </div>
               Capabilities
+              {view.audience === 'overseer' && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                  <Eye className="w-3 h-3" />
+                  View only
+                </span>
+              )}
             </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Platform bridge features, JS SDK methods, and integration proposals.
-            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-2xl">{view.text.subtitle}</p>
           </div>
 
           <div className="flex items-center gap-2.5">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleSyncGitLab}
-              disabled={isSyncingGitLab || loading}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold h-8 px-3"
-              title="Synchronize SuperApp capabilities strictly from GitLab main into Database Registry"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isSyncingGitLab ? 'animate-spin' : ''}`} />
-              <span>{isSyncingGitLab ? 'Syncing...' : 'Sync from GitLab'}</span>
-            </Button>
+            {view.canSync && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleSyncGitLab}
+                disabled={isSyncingGitLab || loading}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold h-8 px-3"
+                title="Synchronize SuperApp capabilities strictly from GitLab main into Database Registry"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isSyncingGitLab ? 'animate-spin' : ''}`} />
+                <span>{isSyncingGitLab ? 'Syncing...' : 'Sync from GitLab'}</span>
+              </Button>
+            )}
 
-            {can('permission_proposal:create') && (
+            {view.canRequest && (
               <Button
                 type="button"
                 variant="primary"
@@ -258,11 +269,33 @@ function CapabilitiesContent() {
                 className="inline-flex items-center gap-1.5 text-xs font-semibold h-8 px-3"
               >
                 <PlusCircle className="w-3.5 h-3.5" />
-                <span>Propose Capability</span>
+                <span>{view.text.requestButton}</span>
               </Button>
             )}
           </div>
         </div>
+
+        {/* Deciders: requests waiting for them */}
+        {view.audience === 'decider' && pendingProposalsCount > 0 && (
+          <button
+            type="button"
+            onClick={() => {
+              handleProposalFilterChange('PENDING');
+              handleTabChange('PROPOSALS');
+            }}
+            className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50 dark:bg-amber-950/30 text-left cursor-pointer hover:border-amber-300 dark:hover:border-amber-800 transition-colors"
+          >
+            <span className="text-xs sm:text-sm font-semibold text-amber-800 dark:text-amber-200">
+              {pendingProposalsCount === 1
+                ? '1 request is waiting for your decision'
+                : `${pendingProposalsCount} requests are waiting for your decision`}
+            </span>
+            <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 dark:text-amber-300 shrink-0">
+              Review
+              <ArrowRight className="w-3.5 h-3.5" />
+            </span>
+          </button>
+        )}
 
         {/* Streamlined 2-Tab Navigation */}
         <div className="flex border-b border-slate-200 dark:border-slate-800 space-x-6 text-xs sm:text-sm">
@@ -270,7 +303,7 @@ function CapabilitiesContent() {
             type="button"
             onClick={() => handleTabChange('CAPABILITIES')}
             className={`pb-3 font-semibold flex items-center gap-2 border-b-2 transition-all duration-200 ease-out active:scale-[0.98] cursor-pointer ${
-              activeTab === 'CAPABILITIES'
+              activeTab === 'CAPABILITIES' || !view.canSeeRequests
                 ? 'border-brand-600 text-brand-600 dark:border-brand-400 dark:text-brand-400 font-bold'
                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
             }`}
@@ -282,6 +315,7 @@ function CapabilitiesContent() {
             </span>
           </button>
 
+          {view.canSeeRequests && (
           <button
             type="button"
             onClick={() => handleTabChange('PROPOSALS')}
@@ -292,8 +326,8 @@ function CapabilitiesContent() {
             }`}
           >
             <GitPullRequest className="w-4 h-4" />
-            Proposals
-            {pendingProposalsCount > 0 ? (
+            {view.text.requestsTab}
+            {pendingProposalsCount > 0 && view.audience === 'decider' ? (
               <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500 text-white font-bold">
                 {pendingProposalsCount}
               </span>
@@ -303,27 +337,30 @@ function CapabilitiesContent() {
               </span>
             )}
           </button>
+          )}
         </div>
 
         {/* Tab Panels with Smooth Enter Animation */}
         <div key={activeTab} className="tab-panel-enter">
-          {activeTab === 'CAPABILITIES' && (
+          {(activeTab === 'CAPABILITIES' || !view.canSeeRequests) && (
             <CapabilitiesTab
               capabilities={capabilities}
               loading={loading}
-              onSyncGitLab={handleSyncGitLab}
+              onSyncGitLab={view.canSync ? handleSyncGitLab : undefined}
               isSyncingGitLab={isSyncingGitLab}
               getPermissionIcon={getPermissionIcon}
             />
           )}
 
-          {activeTab === 'PROPOSALS' && (
+          {activeTab === 'PROPOSALS' && view.canSeeRequests && (
             <ProposalsTab
+              audience={view.audience}
+              onRequest={view.canRequest ? () => setShowCreateModal(true) : undefined}
               proposals={proposals}
               proposalSubFilter={proposalSubFilter}
               setProposalSubFilter={handleProposalFilterChange}
               pendingCount={pendingProposalsCount}
-              canReview={can('permission_proposal:review')}
+              canReview={view.canReview}
               onSelectProposal={(prop) => setSelectedProposal(prop)}
               onViewProgress={(prop) => setProgressProposal(prop)}
               currentUserId={user?.id}
@@ -339,7 +376,7 @@ function CapabilitiesContent() {
           onReject={handleReject}
           onChanged={() => void loadData()}
           isSubmitting={isSubmitting}
-          canApprove={can('permission_proposal:approve')}
+          canApprove={view.canApprove}
         />
 
         <ProposalProgressModal proposal={progressProposal} onClose={() => setProgressProposal(null)} />

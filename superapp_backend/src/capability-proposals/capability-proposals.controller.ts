@@ -25,6 +25,7 @@ import { CapabilityProposal } from './entities/capability-proposal.entity';
 import { CapabilitiesService } from '../capabilities/capabilities.service';
 import { suggestCapabilityKeys } from '../capabilities/capability-platform-map';
 import { buildProposalProgress } from './helpers/proposal-progress.helper';
+import { isPlatformAdmin } from '../access-control/helpers/platform-admin.helper';
 
 function requesterId(req: any): string | undefined {
   return req?.user?.sub || req?.user?.id || undefined;
@@ -179,7 +180,12 @@ export class CapabilityProposalsController {
     const mrState = mrUrl
       ? await this.capabilityCodeGenerator.getMergeRequestState(mrUrl)
       : null;
-    return buildProposalProgress(proposal, mrState);
+    const progress = buildProposalProgress(proposal, mrState);
+    // Code change and task links point at the internal GitLab: platform staff only
+    if (!isPlatformAdmin(req.user)) {
+      progress.steps = progress.steps.map(({ links: _links, ...step }) => step);
+    }
+    return progress;
   }
 
   /** Runs the code generator and stores its outcome on the proposal. */
