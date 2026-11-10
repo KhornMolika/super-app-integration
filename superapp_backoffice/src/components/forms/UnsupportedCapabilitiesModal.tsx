@@ -102,7 +102,7 @@ export default function UnsupportedCapabilitiesModal({
               <span>Automated Capability Proposal</span>
             </div>
             <p className="leading-relaxed">
-              Clicking <strong>Submit Proposal &amp; Proceed</strong> will automatically submit a Capability Proposal to SuperApp platform administrators. Once approved, the automated code generator will create a branch and Merge Request to inject support into the host shell.
+              Clicking <strong>Submit Proposal &amp; Proceed</strong> will automatically submit a Capability Proposal to SuperApp platform administrators. Once approved, the Super App is updated automatically to support it, and the Super App team releases it in an upcoming version.
             </p>
           </div>
         </div>

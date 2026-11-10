@@ -9,6 +9,7 @@ import {
   permissionsApi,
   PermissionProposal,
   CapabilityItem,
+  CodeChange,
 } from '@/api/permissions.api';
 import { unwrapData } from '@/api';
 import { CapabilitiesTab } from '@/components/capabilities/CapabilitiesTab';
@@ -156,28 +157,33 @@ function CapabilitiesContent() {
     proposal: PermissionProposal,
     targetVersion: string,
     targetBranch: string,
-  ) => {
+  ): Promise<CodeChange | null | undefined> => {
     try {
       setIsSubmitting(true);
-      toast.info(`Generating branch and code injection for '${proposal.permissionKey}'...`);
+      toast.info('Preparing the Super App update...');
 
       const res = await permissionsApi.reviewProposal(proposal.id, {
         decision: 'APPROVED',
-        targetVersion: targetVersion || '1.1.0',
-        targetBranch: targetBranch || 'development',
+        targetVersion,
+        targetBranch,
         createMr: true,
       });
+      const codeChange = res.codeChange ?? null;
 
-      toast.success(
-        res.mrUrl
-          ? `Approved. Branch '${res.branchName}' created with MR targeting '${res.targetBranch || targetBranch || 'development'}'.`
-          : 'Proposal approved.',
-      );
+      if (codeChange?.status === 'failed') {
+        toast.error('Approved, but the code change could not be prepared. See the details and retry.');
+      } else if (codeChange?.status === 'not_needed') {
+        toast.success('Approved. No code change was needed.');
+      } else {
+        toast.success('Approved. The code change is ready for review.');
+      }
 
-      setSelectedProposal(null);
-      await loadData();
+      // The modal stays open to show the outcome; refresh the list behind it
+      void loadData();
+      return codeChange;
     } catch (err: any) {
       toast.error(`Approval failed: ${err.message || 'Unknown error'}`);
+      return undefined;
     } finally {
       setIsSubmitting(false);
     }
@@ -322,6 +328,7 @@ function CapabilitiesContent() {
           onClose={() => setSelectedProposal(null)}
           onApprove={handleApproveWithMr}
           onReject={handleReject}
+          onChanged={() => void loadData()}
           isSubmitting={isSubmitting}
         />
 

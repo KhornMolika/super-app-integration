@@ -10,8 +10,10 @@ import {
   ChevronDown,
   Info,
   Check,
+  Lightbulb,
+  AlertTriangle,
 } from 'lucide-react';
-import { permissionsApi } from '@/api/permissions.api';
+import { permissionsApi, KeySuggestion } from '@/api/permissions.api';
 import { miniappsApi } from '@/api';
 import { useAuth } from '@/lib/auth';
 import { toast } from '@/components/ui/Toast';
@@ -69,10 +71,43 @@ export function CreateProposalModal({
   const [isLoadingApps, setIsLoadingApps] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mounted, setMounted] = useState(false);
+  // "Did you mean" suggestions for the typed key (debounced)
+  const [suggestions, setSuggestions] = useState<KeySuggestion[]>([]);
+  const [existingMatch, setExistingMatch] = useState<KeySuggestion | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const key = permissionKey.trim();
+    if (key.length < 2) {
+      setSuggestions([]);
+      setExistingMatch(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      permissionsApi
+        .suggestKey(key)
+        .then((list) => {
+          if (cancelled) return;
+          setExistingMatch(list.find((sg) => sg.key === key && sg.reason === 'exists') || null);
+          setSuggestions(list.filter((sg) => sg.key !== key).slice(0, 3));
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setSuggestions([]);
+            setExistingMatch(null);
+          }
+        });
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [permissionKey, isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -107,7 +142,11 @@ export function CreateProposalModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!permissionKey.trim()) {
-      toast.error('Capability key is required');
+      toast.error('Capability ID is required');
+      return;
+    }
+    if (existingMatch) {
+      toast.error(`${existingMatch.name} already exists in the Super App.`);
       return;
     }
 
@@ -349,7 +388,7 @@ export function CreateProposalModal({
             {/* Capability Key */}
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
-                <span>Capability Key (ID)</span>
+                <span>Capability ID</span>
                 <span className="text-rose-500 font-bold">*</span>
               </label>
               <div className="relative">
@@ -364,10 +403,15 @@ export function CreateProposalModal({
                     const cleaned = e.target.value.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
                     setPermissionKey(cleaned);
                   }}
+                  onBlur={() => setPermissionKey((k) => k.replace(/_+/g, '_').replace(/^_+|_+$/g, ''))}
                   placeholder="e.g. nfc_reader"
+                  aria-describedby="capability-id-help"
                   className="w-full h-10 pl-7 pr-3 text-xs font-mono rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/70 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all placeholder:text-slate-400"
                 />
               </div>
+              <p id="capability-id-help" className="text-[10px] text-slate-500 dark:text-slate-400">
+                A short name in lowercase with underscores, e.g. <span className="font-mono">nfc_reader</span>.
+              </p>
             </div>
 
             {/* Capability Display Name */}
@@ -392,10 +436,49 @@ export function CreateProposalModal({
             </div>
           </div>
 
+          {/* Already exists / did you mean */}
+          {existingMatch ? (
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2.5" role="status">
+              <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+              <span>
+                <strong>{existingMatch.name}</strong> (<span className="font-mono">{existingMatch.key}</span>) already exists in the
+                Super App, so there is no need to propose it. Mini apps can use it right away.
+              </span>
+            </div>
+          ) : (
+            suggestions.length > 0 && (
+              <div className="p-3 rounded-xl bg-sky-500/10 border border-sky-500/20 text-xs text-sky-800 dark:text-sky-300 space-y-2" role="status">
+                <span className="flex items-center gap-1.5 font-semibold">
+                  <Lightbulb className="w-3.5 h-3.5 text-sky-500" />
+                  Did you mean one of these?
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {suggestions.map((sg) => (
+                    <button
+                      key={sg.key}
+                      type="button"
+                      onClick={() => {
+                        setPermissionKey(sg.key);
+                        setPermissionName(sg.name);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 border border-sky-300/60 dark:border-sky-800 hover:border-sky-500 text-slate-800 dark:text-slate-100 cursor-pointer transition-colors"
+                    >
+                      <span className="font-semibold">{sg.name}</span>
+                      <span className="font-mono text-[10px] text-slate-500">{sg.key}</span>
+                      {sg.reason === 'exists' && (
+                        <span className="text-[9px] font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">available</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
+          )}
+
           {/* Purpose & Technical Justification */}
           <div className="space-y-1">
             <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
-              <span>Purpose &amp; Technical Justification</span>
+              <span>Why is it needed?</span>
               <span className="text-rose-500 font-bold">*</span>
             </label>
             <textarea
@@ -454,7 +537,7 @@ export function CreateProposalModal({
               type="submit"
               variant="primary"
               size="sm"
-              disabled={isSubmitting || !permissionKey.trim()}
+              disabled={isSubmitting || !permissionKey.trim() || !!existingMatch}
               className="inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-xs cursor-pointer disabled:opacity-50"
             >
               <Sparkles className="w-3.5 h-3.5" />

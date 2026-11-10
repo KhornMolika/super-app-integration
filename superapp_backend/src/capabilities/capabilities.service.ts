@@ -89,6 +89,15 @@ export class CapabilitiesService implements OnApplicationBootstrap {
     return createPaginatedResponse(items, totalItems, page, limit);
   }
 
+  /** Keys and names of the active catalog, for "did you mean" suggestions. */
+  async listCatalogKeys(): Promise<Array<{ key: string; name: string }>> {
+    return this.capabilityDefinitionRepository
+      .createQueryBuilder('cap')
+      .select(['cap.key', 'cap.name'])
+      .where('cap.isActive = :active', { active: true })
+      .getMany();
+  }
+
   async findByKey(key: string): Promise<CapabilityDefinition | null> {
     if (!key) return null;
     return this.capabilityDefinitionRepository

@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException, Optional } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -6,25 +6,79 @@ import * as child_process from 'child_process';
 import * as YAML from 'yaml';
 import { CapabilityProposal } from '../capability-proposals/entities/capability-proposal.entity';
 import { GitLabProvider } from '../integrations/git/providers/gitlab.provider';
+import { localBuildsEnabled } from '../common/utils/local-workspace.util';
+import {
+  IosUsageEntry,
+  findPlatformCapability,
+} from './capability-platform-map';
+
+/** What adding a capability means for the Super App's platform files. */
+export interface CapabilityMapping {
+  /** Full Android permission names */
+  android: string[];
+  ios: IosUsageEntry[];
+  /** pubspec dependency line, e.g. "mobile_scanner: ^6.0.0" */
+  plugin?: string;
+  /** false: neither the proposal nor the platform map says what is needed */
+  known: boolean;
+  source: 'metadata' | 'platform_map' | 'none';
+}
+
+export interface PreviewFile {
+  file: string;
+  /** Plain-language label, e.g. "Android permission" */
+  label: string;
+  /** Lines that will be added */
+  lines: string[];
+}
 
 export interface CodePreviewResult {
   permissionKey: string;
-  capabilityKey?: string;
-  androidPermissionTag?: string;
-  androidManifestDiff?: string;
-  iosPlistEntry?: string;
-  iosPlistDiff?: string;
-  flutterPluginEntry?: string;
-  pubspecDiff?: string;
+  capabilityKey: string;
+  known: boolean;
+  files: PreviewFile[];
+  /** Set when nothing will be added automatically */
+  note?: string;
 }
 
+/**
+ * created:    branch + commit + merge request opened (or committed locally)
+ * not_needed: the Super App already has everything (or nothing is known to add)
+ * failed:     something went wrong; `error` says what
+ */
 export interface CodeGenerationResult {
+  status: 'created' | 'not_needed' | 'failed';
+  /** Kept for older callers: status !== 'failed' */
   success: boolean;
-  branchName: string;
+  branchName?: string;
   targetBranch: string;
-  mrUrl: string;
+  mrUrl?: string;
   filesModified: string[];
   message: string;
+  error?: string;
+}
+
+export interface TargetBranchesResult {
+  branches: string[];
+  defaultBranch: string;
+  source: 'gitlab' | 'fallback';
+}
+
+const MANIFEST_FILE = 'android/app/src/main/AndroidManifest.xml';
+const PLIST_FILE = 'ios/Runner/Info.plist';
+const PUBSPEC_FILE = 'pubspec.yaml';
+const FALLBACK_BRANCHES = ['development', 'main'];
+
+const FILE_LABELS: Record<string, string> = {
+  [MANIFEST_FILE]: 'Android permission',
+  [PLIST_FILE]: 'iOS permission message',
+  [PUBSPEC_FILE]: 'Flutter package',
+};
+
+/** The low-level reason a fetch failed (DNS, refused, timeout), not just "fetch failed". */
+function fetchErrorReason(err: unknown): string {
+  const e = err as { message?: string; cause?: { code?: string; message?: string } };
+  return e?.cause?.code || e?.cause?.message || e?.message || String(err);
 }
 
 @Injectable()
@@ -68,512 +122,519 @@ export class CapabilityCodeGeneratorService {
   }
 
   /**
-   * Resolves Flutter plugins, Android manifest tags, and iOS Info.plist entries dynamically
-   * from proposal metadata, database registry attributes, or standard conventions.
+   * What the Super App needs for a capability: explicit platform fields in the
+   * proposal metadata first, then the known platform map. Nothing is invented:
+   * an unknown capability gets empty lists and known=false.
    */
-  resolveCapabilityMapping(
-    key: string,
-    customMetadata?: any,
-  ): {
-    android: string;
-    iosKey: string;
-    iosDescription: string;
-    defaultPlugin?: string;
-  } {
-    const cleanKey = key.toLowerCase().trim();
-    const capitalized = cleanKey.charAt(0).toUpperCase() + cleanKey.slice(1);
+  resolveCapabilityMapping(key: string, customMetadata?: any): CapabilityMapping {
+    const meta = customMetadata || {};
+    const known = findPlatformCapability(key);
 
-    const android =
-      customMetadata?.androidPermission ||
-      customMetadata?.android ||
-      `android.permission.${cleanKey.toUpperCase()}`;
+    const metaAndroidRaw = meta.androidPermissions ?? meta.androidPermission ?? meta.android;
+    const metaAndroid: string[] | undefined = metaAndroidRaw
+      ? (Array.isArray(metaAndroidRaw) ? metaAndroidRaw : [metaAndroidRaw])
+          .map((p: unknown) => String(p).trim())
+          .filter(Boolean)
+      : undefined;
 
-    const iosKey =
-      customMetadata?.iosPlistKey ||
-      customMetadata?.iosKey ||
-      `NS${capitalized}UsageDescription`;
+    const metaIosKey: string | undefined = meta.iosPlistKey || meta.iosKey;
+    const metaIosDescription: string | undefined =
+      meta.iosUsageDescription || meta.iosDescription;
+    let ios = known?.ios ?? [];
+    if (metaIosKey) {
+      ios = [
+        {
+          key: metaIosKey,
+          description:
+            metaIosDescription ||
+            known?.ios.find((e) => e.key === metaIosKey)?.description ||
+            `${known?.name || key} is used by a mini app feature.`,
+        },
+      ];
+    } else if (metaIosDescription && ios.length) {
+      ios = ios.map((e) => ({ ...e, description: metaIosDescription }));
+    }
 
-    const iosDescription =
-      customMetadata?.iosUsageDescription ||
-      customMetadata?.iosDescription ||
-      customMetadata?.description ||
-      `${key} access is required to support this mini application feature.`;
+    const metaPlugin: string | undefined =
+      meta.flutterPlugin || meta.providerPackage || meta.defaultPlugin;
 
-    const defaultPlugin =
-      customMetadata?.flutterPlugin ||
-      customMetadata?.providerPackage ||
-      customMetadata?.defaultPlugin;
-
+    const fromMetadata = Boolean(metaAndroid?.length || metaIosKey || metaPlugin);
     return {
-      android,
-      iosKey,
-      iosDescription,
-      defaultPlugin,
+      android: metaAndroid ?? known?.android ?? [],
+      ios,
+      plugin: metaPlugin ?? known?.plugin,
+      known: Boolean(known) || fromMetadata,
+      source: fromMetadata ? 'metadata' : known ? 'platform_map' : 'none',
     };
   }
 
-  /**
-   * Backwards-compatible alias for resolveCapabilityMapping.
-   */
+  /** Backwards-compatible alias for resolveCapabilityMapping. */
   resolvePermissionMapping(key: string, customMetadata?: any) {
     return this.resolveCapabilityMapping(key, customMetadata);
   }
 
-  /**
-   * Previews the code diffs that will be injected into AndroidManifest, Info.plist, and pubspec.yaml.
-   */
+  /** The lines that would be added to each Super App file, in plain terms. */
   preview(capabilityKey: string, metadata?: any): CodePreviewResult {
     const mapping = this.resolveCapabilityMapping(capabilityKey, metadata);
+    const files: PreviewFile[] = [];
+    if (mapping.android.length) {
+      files.push({
+        file: MANIFEST_FILE,
+        label: FILE_LABELS[MANIFEST_FILE],
+        lines: mapping.android.map((p) => `<uses-permission android:name="${p}"/>`),
+      });
+    }
+    if (mapping.ios.length) {
+      files.push({
+        file: PLIST_FILE,
+        label: FILE_LABELS[PLIST_FILE],
+        lines: mapping.ios.flatMap((e) => [`<key>${e.key}</key>`, `<string>${e.description}</string>`]),
+      });
+    }
+    if (mapping.plugin) {
+      files.push({
+        file: PUBSPEC_FILE,
+        label: FILE_LABELS[PUBSPEC_FILE],
+        lines: [mapping.plugin],
+      });
+    }
 
-    const androidTag = `<uses-permission android:name="${mapping.android}"/>`;
-    const pluginEntry = mapping.defaultPlugin
-      ? `  ${mapping.defaultPlugin}`
-      : undefined;
+    let note: string | undefined;
+    if (!mapping.known) {
+      note =
+        'No device permission is known for this capability, so nothing will be added to the Super App automatically. ' +
+        'If it needs one, the Super App team has to add it by hand.';
+    } else if (!files.length) {
+      note = 'This capability needs no device permission or extra package.';
+    }
 
     return {
       permissionKey: capabilityKey,
       capabilityKey,
-      androidPermissionTag: mapping.android,
-      androidManifestDiff: `+    ${androidTag}`,
-      iosPlistEntry: mapping.iosKey,
-      iosPlistDiff: `+    <key>${mapping.iosKey}</key>\n+    <string>${mapping.iosDescription}</string>`,
-      flutterPluginEntry: mapping.defaultPlugin,
-      pubspecDiff: pluginEntry
-        ? `+  dependencies:\n+  ${pluginEntry}`
-        : undefined,
+      known: mapping.known,
+      files,
+      note,
     };
   }
 
+  /** GitLab project settings for the Super App repository. */
+  private gitlabProject(): { token?: string; projectApiUrl: string; webUrl: string } {
+    const token =
+      this.configService.get<string>('MOBILE_GIT_TOKEN') ||
+      this.configService.get<string>('GITLAB_ACCESS_TOKEN') ||
+      undefined;
+    const projectSlug =
+      this.configService.get<string>('CODEGEN_REPO_SLUG') || 'frontend/super-app';
+    const gitlabBaseUrl = (
+      this.configService.get<string>('GITLAB_BASE_URL') ||
+      'https://git.fintechcenterfsa.com'
+    ).replace(/\/+$/, '');
+    const projectApiUrl = this.gitlabProvider
+      ? this.gitlabProvider.getProjectApiUrl(projectSlug)
+      : `${gitlabBaseUrl}/api/v4/projects/${encodeURIComponent(projectSlug)}`;
+    return { token, projectApiUrl, webUrl: `${gitlabBaseUrl}/${projectSlug}` };
+  }
+
+  private gitlabHeaders(token: string): Record<string, string> {
+    return {
+      'Content-Type': 'application/json',
+      'PRIVATE-TOKEN': token,
+      'User-Agent': 'FSA-SuperApp-Platform',
+    };
+  }
+
+  /** Branches of the Super App repository, for the approve form. */
+  async listTargetBranches(): Promise<TargetBranchesResult> {
+    const fallback: TargetBranchesResult = {
+      branches: FALLBACK_BRANCHES,
+      defaultBranch: 'development',
+      source: 'fallback',
+    };
+    const { token, projectApiUrl } = this.gitlabProject();
+    if (!token) return fallback;
+    try {
+      const res = await fetch(`${projectApiUrl}/repository/branches?per_page=100`, {
+        headers: this.gitlabHeaders(token),
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!res.ok) {
+        this.logger.warn(`Listing Super App branches returned ${res.status}`);
+        return fallback;
+      }
+      const data = (await res.json()) as Array<{ name?: string; default?: boolean }>;
+      const branches = data.map((b) => b.name).filter((n): n is string => !!n);
+      if (!branches.length) return fallback;
+      const defaultBranch =
+        data.find((b) => b.default)?.name ||
+        (branches.includes('development') ? 'development' : branches[0]);
+      // Never offer the generator's own temporary branches
+      const visible = branches.filter((b) => !b.startsWith('capa/')).sort();
+      return { branches: visible.length ? visible : branches, defaultBranch, source: 'gitlab' };
+    } catch (err) {
+      this.logger.warn(`Listing Super App branches failed: ${fetchErrorReason(err)}`);
+      return fallback;
+    }
+  }
+
+  // --- File edits (pure, shared by the local and the GitLab path) ---------
+
+  private addAndroidPermissions(content: string, permissions: string[], key: string): string | null {
+    const missing = permissions.filter((p) => !content.includes(`android:name="${p}"`));
+    if (!missing.length) return content;
+    if (!/<manifest[^>]*>/i.test(content)) {
+      throw new Error(`Could not find the <manifest> tag in ${MANIFEST_FILE}`);
+    }
+    const tags = missing.map((p) => `    <uses-permission android:name="${p}"/>`).join('\n');
+    return content.replace(
+      /(<manifest[^>]*>)/i,
+      `$1\n    <!-- Added for capability: ${key} -->\n${tags}`,
+    );
+  }
+
+  private addIosEntries(content: string, entries: IosUsageEntry[], key: string): string {
+    const missing = entries.filter((e) => !content.includes(`<key>${e.key}</key>`));
+    if (!missing.length) return content;
+    if (!/<\/dict>\s*<\/plist>/i.test(content)) {
+      throw new Error(`Could not find the closing </dict></plist> in ${PLIST_FILE}`);
+    }
+    const block = missing
+      .map((e) => `\t<key>${e.key}</key>\n\t<string>${e.description}</string>`)
+      .join('\n');
+    return content.replace(
+      /<\/dict>\s*<\/plist>/i,
+      `\t<!-- Added for capability: ${key} -->\n${block}\n</dict>\n</plist>`,
+    );
+  }
+
+  private addPubspecPlugin(content: string, plugin: string, key: string): string {
+    const [pkgName, pkgVer] = plugin.split(':').map((s) => s.trim());
+    if (new RegExp(`^\\s+${pkgName}:`, 'm').test(content)) return content;
+    if (!/(dependencies:\s*\n)/.test(content)) {
+      throw new Error(`Could not find the dependencies section in ${PUBSPEC_FILE}`);
+    }
+    const updated = content.replace(
+      /(dependencies:\s*\n)/,
+      `$1  # Added for capability: ${key}\n  ${pkgName}: ${pkgVer || 'any'}\n`,
+    );
+    YAML.parse(updated); // must stay valid YAML
+    return updated;
+  }
+
+  /** New contents for every file that actually changes. */
+  private computeChanges(
+    files: Record<string, string>,
+    mapping: CapabilityMapping,
+    key: string,
+  ): Record<string, string> {
+    const changes: Record<string, string> = {};
+    if (mapping.android.length && files[MANIFEST_FILE] !== undefined) {
+      const next = this.addAndroidPermissions(files[MANIFEST_FILE], mapping.android, key);
+      if (next !== null && next !== files[MANIFEST_FILE]) changes[MANIFEST_FILE] = next;
+    }
+    if (mapping.ios.length && files[PLIST_FILE] !== undefined) {
+      const next = this.addIosEntries(files[PLIST_FILE], mapping.ios, key);
+      if (next !== files[PLIST_FILE]) changes[PLIST_FILE] = next;
+    }
+    if (mapping.plugin && files[PUBSPEC_FILE] !== undefined) {
+      const next = this.addPubspecPlugin(files[PUBSPEC_FILE], mapping.plugin, key);
+      if (next !== files[PUBSPEC_FILE]) changes[PUBSPEC_FILE] = next;
+    }
+    return changes;
+  }
+
+  private neededFiles(mapping: CapabilityMapping): string[] {
+    return [
+      ...(mapping.android.length ? [MANIFEST_FILE] : []),
+      ...(mapping.ios.length ? [PLIST_FILE] : []),
+      ...(mapping.plugin ? [PUBSPEC_FILE] : []),
+    ];
+  }
+
   /**
-   * Injects code safely, creates a Git feature branch, and generates a Merge Request URL.
+   * Adds the capability's platform settings to the Super App on a new branch
+   * and opens a merge request for the Super App team. Never throws: the
+   * outcome (created / not_needed / failed + error) is in the result.
    */
   async generateCapabilityMr(
     proposal: CapabilityProposal,
     targetVersion?: string,
     targetBranchOverride?: string,
   ): Promise<CodeGenerationResult> {
-    const superAppDir = this.getSuperAppDir();
     const targetBranch =
       targetBranchOverride?.trim() ||
       this.configService.get<string>('CODEGEN_TARGET_BRANCH') ||
       'development';
-
     const key = proposal.capabilityKey || (proposal as any).permissionKey;
     const mapping = this.resolveCapabilityMapping(key, proposal.metadata);
+    const result = (
+      status: CodeGenerationResult['status'],
+      extra: Partial<CodeGenerationResult> & { message: string },
+    ): CodeGenerationResult => ({
+      status,
+      success: status !== 'failed',
+      targetBranch,
+      filesModified: [],
+      ...extra,
+    });
 
-    const cleanKey = key.toLowerCase().replace(/[^a-z0-9]/g, '-');
-    const timestamp = Date.now().toString(36);
-    const branchName = `capa/add-${cleanKey}-${timestamp}`;
+    const needed = this.neededFiles(mapping);
+    if (!needed.length) {
+      return result('not_needed', {
+        message: mapping.known
+          ? `'${key}' needs no device permission or package; no code change was made.`
+          : `No device permission is known for '${key}'; no code change was made.`,
+      });
+    }
 
-    this.logger.log(
-      `Starting automated capability injection for '${key}' on branch '${branchName}'`,
-    );
-
-    const filesModified: string[] = [];
-
-    let manifestPath = '';
-    let plistPath = '';
-    let pubspecPath = '';
-    let manifestBak = '';
-    let plistBak = '';
-    let pubspecBak = '';
+    const branchName = `capa/add-${key.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Date.now().toString(36)}`;
+    const superAppDir = this.getSuperAppDir();
 
     try {
-      if (superAppDir) {
-        manifestPath = path.join(
-          superAppDir,
-          'android',
-          'app',
-          'src',
-          'main',
-          'AndroidManifest.xml',
-        );
-        plistPath = path.join(superAppDir, 'ios', 'Runner', 'Info.plist');
-        pubspecPath = path.join(superAppDir, 'pubspec.yaml');
-
-        manifestBak = `${manifestPath}.bak`;
-        plistBak = `${plistPath}.bak`;
-        pubspecBak = `${pubspecPath}.bak`;
-
-        // 1. Create backups
-        if (fs.existsSync(manifestPath))
-          fs.copyFileSync(manifestPath, manifestBak);
-        if (fs.existsSync(plistPath)) fs.copyFileSync(plistPath, plistBak);
-        if (fs.existsSync(pubspecPath))
-          fs.copyFileSync(pubspecPath, pubspecBak);
-
-        // 2. Inject Android Permission
-        if (fs.existsSync(manifestPath)) {
-          let manifestContent = fs.readFileSync(manifestPath, 'utf8');
-          const permTag = `<uses-permission android:name="${mapping.android}"/>`;
-          if (!manifestContent.includes(mapping.android)) {
-            // Insert after first <manifest ...> tag
-            manifestContent = manifestContent.replace(
-              /(<manifest[^>]*>)/i,
-              `$1\n    <!-- Auto-injected for capability: ${key} -->\n    ${permTag}`,
-            );
-            fs.writeFileSync(manifestPath, manifestContent, 'utf8');
-            filesModified.push('android/app/src/main/AndroidManifest.xml');
-          }
-        }
-
-        // 3. Inject iOS Plist Usage Description
-        if (fs.existsSync(plistPath)) {
-          let plistContent = fs.readFileSync(plistPath, 'utf8');
-          if (!plistContent.includes(`<key>${mapping.iosKey}</key>`)) {
-            const iosBlock = `\t<!-- Auto-injected for capability: ${key} -->\n\t<key>${mapping.iosKey}</key>\n\t<string>${mapping.iosDescription}</string>\n</dict>`;
-            plistContent = plistContent.replace(
-              /<\/dict>\s*<\/plist>/i,
-              `${iosBlock}\n</plist>`,
-            );
-            fs.writeFileSync(plistPath, plistContent, 'utf8');
-            filesModified.push('ios/Runner/Info.plist');
-          }
-        }
-
-        // 4. Inject Flutter Plugin if specified
-        if (mapping.defaultPlugin && fs.existsSync(pubspecPath)) {
-          const [pkgName, pkgVer] = mapping.defaultPlugin
-            .split(':')
-            .map((s) => s.trim());
-          let pubspecContent = fs.readFileSync(pubspecPath, 'utf8');
-          if (!pubspecContent.includes(`${pkgName}:`)) {
-            pubspecContent = pubspecContent.replace(
-              /(dependencies:\s*\n)/,
-              `$1  # Auto-injected for capability: ${key}\n  ${pkgName}: ${pkgVer || 'any'}\n`,
-            );
-            fs.writeFileSync(pubspecPath, pubspecContent, 'utf8');
-            filesModified.push('pubspec.yaml');
-          }
-        }
-
-        // 5. Verification: Quick parse checks
-        if (fs.existsSync(pubspecPath)) {
-          YAML.parse(fs.readFileSync(pubspecPath, 'utf8'));
-        }
-
-        // 6. Git Branching & Commit
-        const runGit = (args: string[]) => {
-          return child_process.execFileSync('git', args, {
-            cwd: superAppDir,
-            encoding: 'utf8',
-            stdio: ['ignore', 'pipe', 'pipe'],
-          });
-        };
-
-        // Detect original branch to safely return to it afterwards
-        let originalBranch = 'main';
-        try {
-          originalBranch = runGit(['rev-parse', '--abbrev-ref', 'HEAD']).trim();
-        } catch (_) {}
-
-        // Switch to target branch before creating feature branch if possible
-        try {
-          runGit(['checkout', targetBranch]);
-        } catch (_) {}
-
-        // Create and checkout new feature branch
-        runGit(['checkout', '-b', branchName]);
-
-        // Stage modified files
-        for (const relFile of filesModified) {
-          runGit(['add', relFile]);
-        }
-
-        // Commit changes
-        const commitMsg = `feat(capability): add ${key} capability & permissions (target: ${targetVersion || 'next'})`;
-        runGit(['commit', '-m', commitMsg]);
-
-        // Attempt push to remote if possible
-        try {
-          runGit(['push', '-u', 'origin', branchName]);
-        } catch (pushErr: any) {
-          this.logger.warn(
-            `Push to remote failed (may be offline/sandbox): ${pushErr.message}`,
-          );
-        }
-
-        // Clean up backups on success
-        if (fs.existsSync(manifestBak)) fs.unlinkSync(manifestBak);
-        if (fs.existsSync(plistBak)) fs.unlinkSync(plistBak);
-        if (fs.existsSync(pubspecBak)) fs.unlinkSync(pubspecBak);
-
-        // Return to original working branch
-        try {
-          runGit(['checkout', originalBranch || 'main']);
-        } catch (_) {}
-      } else {
-        this.logger.log(
-          `No local SuperApp directory mounted (running in containerized environment). Performing remote GitLab Merge Request generation for '${key}'.`,
-        );
-
-        const gitlabToken =
-          this.configService.get<string>('MOBILE_GIT_TOKEN') ||
-          this.configService.get<string>('GITLAB_ACCESS_TOKEN');
-        const projectSlug =
-          this.configService.get<string>('CODEGEN_REPO_SLUG') ||
-          'frontend/super-app';
-        const gitlabBaseUrl =
-          this.configService.get<string>('GITLAB_BASE_URL') ||
-          'https://git.fintechcenterfsa.com';
-
-        if (gitlabToken) {
-          const projectApiUrl = this.gitlabProvider
-            ? this.gitlabProvider.getProjectApiUrl(projectSlug)
-            : `${gitlabBaseUrl.replace(/\/+$/, '')}/api/v4/projects/${encodeURIComponent(projectSlug)}`;
-
-          const gitlabHeaders = {
-            'Content-Type': 'application/json',
-            'PRIVATE-TOKEN': gitlabToken,
-            'User-Agent': 'FSA-SuperApp-Platform',
-          };
-
-          try {
-            // 1. Create remote feature branch from targetBranch
-            const createBranchRes = await fetch(
-              `${projectApiUrl}/repository/branches?branch=${encodeURIComponent(branchName)}&ref=${encodeURIComponent(targetBranch)}`,
-              { method: 'POST', headers: gitlabHeaders },
-            );
-
-            if (!createBranchRes.ok && createBranchRes.status !== 400) {
-              const errTxt = await createBranchRes.text();
-              this.logger.warn(
-                `Could not create remote branch '${branchName}' (${createBranchRes.status}): ${errTxt}`,
-              );
-            } else {
-              this.logger.log(
-                `Remote branch '${branchName}' created from '${targetBranch}'`,
-              );
-            }
-
-            // 2. Fetch existing files from targetBranch, modify them in-memory, and collect commit actions
-            const actions: Array<{
-              action: 'update' | 'create';
-              file_path: string;
-              content: string;
-            }> = [];
-
-            const fetchRaw = async (rawPath: string): Promise<string | null> => {
-              try {
-                const encodedPath = encodeURIComponent(
-                  rawPath.replace(/^\//, ''),
-                );
-                const res = await fetch(
-                  `${projectApiUrl}/repository/files/${encodedPath}/raw?ref=${encodeURIComponent(targetBranch)}`,
-                  { headers: gitlabHeaders },
-                );
-                if (res.ok) return await res.text();
-              } catch (_) {}
-              return null;
-            };
-
-            // AndroidManifest.xml
-            const manifestContent = await fetchRaw(
-              'android/app/src/main/AndroidManifest.xml',
-            );
-            if (manifestContent) {
-              const permTag = `<uses-permission android:name="${mapping.android}"/>`;
-              if (!manifestContent.includes(mapping.android)) {
-                const updatedManifest = manifestContent.replace(
-                  /(<manifest[^>]*>)/i,
-                  `$1\n    <!-- Auto-injected for capability: ${key} -->\n    ${permTag}`,
-                );
-                actions.push({
-                  action: 'update',
-                  file_path: 'android/app/src/main/AndroidManifest.xml',
-                  content: updatedManifest,
-                });
-                filesModified.push('android/app/src/main/AndroidManifest.xml');
-              }
-            } else {
-              filesModified.push('android/app/src/main/AndroidManifest.xml');
-            }
-
-            // Info.plist
-            const plistContent = await fetchRaw('ios/Runner/Info.plist');
-            if (plistContent) {
-              if (!plistContent.includes(`<key>${mapping.iosKey}</key>`)) {
-                const iosBlock = `\t<!-- Auto-injected for capability: ${key} -->\n\t<key>${mapping.iosKey}</key>\n\t<string>${mapping.iosDescription}</string>\n</dict>`;
-                const updatedPlist = plistContent.replace(
-                  /<\/dict>\s*<\/plist>/i,
-                  `${iosBlock}\n</plist>`,
-                );
-                actions.push({
-                  action: 'update',
-                  file_path: 'ios/Runner/Info.plist',
-                  content: updatedPlist,
-                });
-                filesModified.push('ios/Runner/Info.plist');
-              }
-            } else {
-              filesModified.push('ios/Runner/Info.plist');
-            }
-
-            // pubspec.yaml
-            if (mapping.defaultPlugin) {
-              const pubspecContent = await fetchRaw('pubspec.yaml');
-              if (pubspecContent) {
-                const [pkgName, pkgVer] = mapping.defaultPlugin
-                  .split(':')
-                  .map((s) => s.trim());
-                if (!pubspecContent.includes(`${pkgName}:`)) {
-                  const updatedPubspec = pubspecContent.replace(
-                    /(dependencies:\s*\n)/,
-                    `$1  # Auto-injected for capability: ${key}\n  ${pkgName}: ${pkgVer || 'any'}\n`,
-                  );
-                  actions.push({
-                    action: 'update',
-                    file_path: 'pubspec.yaml',
-                    content: updatedPubspec,
-                  });
-                  filesModified.push('pubspec.yaml');
-                }
-              } else {
-                filesModified.push('pubspec.yaml');
-              }
-            }
-
-            // 3. Commit files to remote branch
-            if (actions.length > 0) {
-              const commitMsg = `feat(capability): add ${key} capability & permissions (target: ${targetVersion || 'next'})`;
-              const commitRes = await fetch(
-                `${projectApiUrl}/repository/commits`,
-                {
-                  method: 'POST',
-                  headers: gitlabHeaders,
-                  body: JSON.stringify({
-                    branch: branchName,
-                    commit_message: commitMsg,
-                    actions,
-                  }),
-                },
-              );
-
-              if (commitRes.ok) {
-                this.logger.log(
-                  `Successfully committed ${actions.length} file modification(s) to remote branch '${branchName}'`,
-                );
-              } else {
-                const errBody = await commitRes.text();
-                this.logger.warn(
-                  `GitLab commit API returned ${commitRes.status}: ${errBody}`,
-                );
-              }
-            }
-          } catch (gitOpsErr: any) {
-            this.logger.warn(
-              `Remote GitLab GitOps error for '${key}': ${gitOpsErr.message}`,
-            );
-          }
-        } else {
-          filesModified.push('android/app/src/main/AndroidManifest.xml');
-          filesModified.push('ios/Runner/Info.plist');
-          if (mapping.defaultPlugin) {
-            filesModified.push('pubspec.yaml');
-          }
-        }
+      // A local checkout is only touched on a developer workstation that opts in
+      if (superAppDir && localBuildsEnabled()) {
+        return this.generateLocally(superAppDir, proposal, mapping, needed, {
+          key,
+          branchName,
+          targetBranch,
+          targetVersion,
+          result,
+        });
       }
+      return await this.generateOnGitLab(proposal, mapping, needed, {
+        key,
+        branchName,
+        targetBranch,
+        targetVersion,
+        result,
+      });
+    } catch (err) {
+      const error = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Capability code change for '${key}' failed: ${error}`);
+      return result('failed', {
+        error,
+        message: `The code change for '${key}' could not be prepared: ${error}`,
+      });
+    }
+  }
 
-      const miniAppDisplay =
-        proposal.miniApp?.name ||
-        proposal.metadata?.miniAppName ||
-        'Platform / Host Core Shell';
-
-      const mrTitleRaw = `feat(capability): Add ${key} capability`;
-      const mrDescriptionRaw =
-        `### Automated Capability PR / Merge Request\n\n` +
+  private mergeRequestText(proposal: CapabilityProposal, key: string, targetVersion: string | undefined, targetBranch: string, files: string[]) {
+    const miniAppDisplay =
+      proposal.miniApp?.name || proposal.metadata?.miniAppName || 'Platform / Host Core Shell';
+    return {
+      title: `feat(capability): Add ${key} capability`,
+      description:
+        `### Capability added from the Backoffice\n\n` +
         `* **Capability Key**: \`${key}\`\n` +
         `* **Requested By**: ${proposal.requestedBy?.name || 'MiniApp Developer'}\n` +
         `* **MiniApp**: ${miniAppDisplay}\n` +
-        `* **Target SuperApp Version**: ${targetVersion || '1.1.0'}\n` +
+        `* **Target SuperApp Version**: ${targetVersion || 'next'}\n` +
         `* **Target Branch**: \`${targetBranch}\`\n\n` +
-        `#### Injected Changes:\n` +
-        filesModified.map((f) => `- \`${f}\``).join('\n') +
-        `\n\n*Generated automatically by FSA SuperApp BackOffice.*`;
+        `#### Changed files:\n` +
+        files.map((f) => `- \`${f}\``).join('\n') +
+        `\n\n*Generated automatically by FSA SuperApp BackOffice.*`,
+    };
+  }
 
-      const mrTitle = encodeURIComponent(mrTitleRaw);
-      const mrDescription = encodeURIComponent(mrDescriptionRaw);
+  private async generateOnGitLab(
+    proposal: CapabilityProposal,
+    mapping: CapabilityMapping,
+    needed: string[],
+    ctx: {
+      key: string;
+      branchName: string;
+      targetBranch: string;
+      targetVersion?: string;
+      result: (s: CodeGenerationResult['status'], e: Partial<CodeGenerationResult> & { message: string }) => CodeGenerationResult;
+    },
+  ): Promise<CodeGenerationResult> {
+    const { key, branchName, targetBranch, targetVersion, result } = ctx;
+    const { token, projectApiUrl } = this.gitlabProject();
+    const fail = (error: string, extra: Partial<CodeGenerationResult> = {}) =>
+      result('failed', {
+        ...extra,
+        error,
+        message: `The code change for '${key}' could not be prepared: ${error}`,
+      });
 
-      let mrUrl = `https://git.fintechcenterfsa.com/frontend/super-app/-/merge_requests/new?merge_request[source_branch]=${encodeURIComponent(branchName)}&merge_request[target_branch]=${encodeURIComponent(targetBranch)}&merge_request[title]=${mrTitle}&merge_request[description]=${mrDescription}`;
-
-      // Open Merge Request directly via GitLab REST API if configured
-      const gitlabBaseUrl =
-        this.configService.get<string>('GITLAB_BASE_URL') ||
-        'https://git.fintechcenterfsa.com';
-      const gitlabToken = this.configService.get<string>('MOBILE_GIT_TOKEN');
-      const projectSlug = 'frontend/super-app';
-
-      if (gitlabToken) {
-        try {
-          const apiEndpoint = `${gitlabBaseUrl.replace(/\/+$/, '')}/api/v4/projects/${encodeURIComponent(projectSlug)}/merge_requests`;
-          const res = await fetch(apiEndpoint, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'PRIVATE-TOKEN': gitlabToken,
-              'User-Agent': 'FSA-SuperApp-Platform',
-            },
-            body: JSON.stringify({
-              source_branch: branchName,
-              target_branch: targetBranch,
-              title: mrTitleRaw,
-              description: mrDescriptionRaw,
-              remove_source_branch: true,
-            }),
-          });
-
-          if (res.ok) {
-            const mrData = await res.json();
-            if (mrData.web_url) {
-              mrUrl = mrData.web_url;
-              this.logger.log(
-                `Created GitLab Merge Request directly: ${mrUrl} (IID: ${mrData.iid})`,
-              );
-            }
-          } else {
-            const errBody = await res.text();
-            this.logger.warn(
-              `Direct GitLab MR creation returned ${res.status}: ${errBody}. Falling back to draft creation URL.`,
-            );
-          }
-        } catch (apiErr: any) {
-          this.logger.warn(
-            `GitLab MR API call failed: ${apiErr.message}. Falling back to draft creation URL.`,
-          );
-        }
+    if (!token) {
+      return fail('Access to the Super App code repository is not configured (MOBILE_GIT_TOKEN is not set).');
+    }
+    const headers = this.gitlabHeaders(token);
+    const call = async (url: string, init?: RequestInit) => {
+      try {
+        return await fetch(url, { ...init, headers, signal: AbortSignal.timeout(15000) });
+      } catch (err) {
+        throw new Error(`Could not reach the code repository (${fetchErrorReason(err)})`);
       }
+    };
+    const bodySnippet = async (res: Response) =>
+      (await res.text().catch(() => '')).replace(/\s+/g, ' ').slice(0, 200);
 
-      return {
-        success: true,
-        branchName,
-        targetBranch,
-        mrUrl,
-        filesModified,
-        message: `Successfully generated branch '${branchName}' and created Merge Request targeting '${targetBranch}'!`,
-      };
-    } catch (err: any) {
-      this.logger.error(
-        `Capability generation failed: ${err.message}`,
-        err.stack,
+    // 1. Read the current files from the target branch
+    const files: Record<string, string> = {};
+    for (const file of needed) {
+      const res = await call(
+        `${projectApiUrl}/repository/files/${encodeURIComponent(file)}/raw?ref=${encodeURIComponent(targetBranch)}`,
       );
+      if (res.status === 404) {
+        return fail(`${file} was not found on branch '${targetBranch}'.`);
+      }
+      if (!res.ok) {
+        return fail(`Reading ${file} from '${targetBranch}' returned HTTP ${res.status}: ${await bodySnippet(res)}`);
+      }
+      files[file] = await res.text();
+    }
 
-      // Restore backups on failure
-      if (manifestBak && fs.existsSync(manifestBak)) {
-        fs.copyFileSync(manifestBak, manifestPath);
-        fs.unlinkSync(manifestBak);
-      }
-      if (plistBak && fs.existsSync(plistBak)) {
-        fs.copyFileSync(plistBak, plistPath);
-        fs.unlinkSync(plistBak);
-      }
-      if (pubspecBak && fs.existsSync(pubspecBak)) {
-        fs.copyFileSync(pubspecBak, pubspecPath);
-        fs.unlinkSync(pubspecBak);
-      }
+    // 2. Work out the edits; nothing to do means no branch and no merge request
+    const changes = this.computeChanges(files, mapping, key);
+    const changed = Object.keys(changes);
+    if (!changed.length) {
+      return result('not_needed', {
+        message: `The Super App on '${targetBranch}' already has everything '${key}' needs.`,
+      });
+    }
 
-      throw new BadRequestException(
-        `Failed to inject capability into SuperApp codebase: ${err.message}`,
+    // 3. Branch, commit, merge request
+    const branchRes = await call(
+      `${projectApiUrl}/repository/branches?branch=${encodeURIComponent(branchName)}&ref=${encodeURIComponent(targetBranch)}`,
+      { method: 'POST' },
+    );
+    if (!branchRes.ok) {
+      return fail(`Creating branch '${branchName}' returned HTTP ${branchRes.status}: ${await bodySnippet(branchRes)}`);
+    }
+
+    const commitRes = await call(`${projectApiUrl}/repository/commits`, {
+      method: 'POST',
+      body: JSON.stringify({
+        branch: branchName,
+        commit_message: `feat(capability): add ${key} capability & permissions (target: ${targetVersion || 'next'})`,
+        actions: changed.map((file) => ({ action: 'update', file_path: file, content: changes[file] })),
+      }),
+    });
+    if (!commitRes.ok) {
+      return fail(`Saving the changes returned HTTP ${commitRes.status}: ${await bodySnippet(commitRes)}`, { branchName });
+    }
+
+    const text = this.mergeRequestText(proposal, key, targetVersion, targetBranch, changed);
+    const mrRes = await call(`${projectApiUrl}/merge_requests`, {
+      method: 'POST',
+      body: JSON.stringify({
+        source_branch: branchName,
+        target_branch: targetBranch,
+        title: text.title,
+        description: text.description,
+        remove_source_branch: true,
+      }),
+    });
+    if (!mrRes.ok) {
+      return fail(
+        `The changes were saved on branch '${branchName}', but opening the review request returned HTTP ${mrRes.status}: ${await bodySnippet(mrRes)}`,
+        { branchName, filesModified: changed },
       );
     }
+    const mr = (await mrRes.json().catch(() => ({}))) as { web_url?: string; iid?: number };
+    this.logger.log(`Opened Super App merge request for '${key}': ${mr.web_url} (IID ${mr.iid})`);
+    return result('created', {
+      branchName,
+      mrUrl: mr.web_url,
+      filesModified: changed,
+      message: `Code change for '${key}' is ready for review (branch '${branchName}' into '${targetBranch}').`,
+    });
+  }
+
+  /** Developer workstation only (LOCAL_BUILDS_ENABLED=true): commit in the local checkout. */
+  private generateLocally(
+    superAppDir: string,
+    proposal: CapabilityProposal,
+    mapping: CapabilityMapping,
+    needed: string[],
+    ctx: {
+      key: string;
+      branchName: string;
+      targetBranch: string;
+      targetVersion?: string;
+      result: (s: CodeGenerationResult['status'], e: Partial<CodeGenerationResult> & { message: string }) => CodeGenerationResult;
+    },
+  ): CodeGenerationResult {
+    const { key, branchName, targetBranch, targetVersion, result } = ctx;
+    const abs = (f: string) => path.join(superAppDir, ...f.split('/'));
+    const files: Record<string, string> = {};
+    for (const file of needed) {
+      if (!fs.existsSync(abs(file))) {
+        throw new Error(`${file} was not found in the local Super App checkout`);
+      }
+      files[file] = fs.readFileSync(abs(file), 'utf8');
+    }
+    const changes = this.computeChanges(files, mapping, key);
+    const changed = Object.keys(changes);
+    if (!changed.length) {
+      return result('not_needed', {
+        message: `The local Super App already has everything '${key}' needs.`,
+      });
+    }
+
+    const runGit = (args: string[]) =>
+      child_process.execFileSync('git', args, {
+        cwd: superAppDir,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+    let originalBranch = 'main';
+    try {
+      originalBranch = runGit(['rev-parse', '--abbrev-ref', 'HEAD']).trim();
+    } catch {
+      /* keep default */
+    }
+
+    try {
+      try {
+        runGit(['checkout', targetBranch]);
+      } catch {
+        /* stay on the current branch */
+      }
+      runGit(['checkout', '-b', branchName]);
+      for (const file of changed) fs.writeFileSync(abs(file), changes[file], 'utf8');
+      for (const file of changed) runGit(['add', file]);
+      runGit(['commit', '-m', `feat(capability): add ${key} capability & permissions (target: ${targetVersion || 'next'})`]);
+    } catch (err) {
+      // Put the working tree back as it was
+      for (const file of changed) fs.writeFileSync(abs(file), files[file], 'utf8');
+      try {
+        runGit(['checkout', originalBranch]);
+      } catch {
+        /* best effort */
+      }
+      throw err;
+    }
+
+    let pushed = true;
+    try {
+      runGit(['push', '-u', 'origin', branchName]);
+    } catch (pushErr) {
+      pushed = false;
+      this.logger.warn(`Push to remote failed: ${(pushErr as Error).message}`);
+    }
+    try {
+      runGit(['checkout', originalBranch]);
+    } catch {
+      /* best effort */
+    }
+
+    const { webUrl } = this.gitlabProject();
+    const text = this.mergeRequestText(proposal, key, targetVersion, targetBranch, changed);
+    const mrUrl = pushed
+      ? `${webUrl}/-/merge_requests/new?merge_request[source_branch]=${encodeURIComponent(branchName)}` +
+        `&merge_request[target_branch]=${encodeURIComponent(targetBranch)}` +
+        `&merge_request[title]=${encodeURIComponent(text.title)}` +
+        `&merge_request[description]=${encodeURIComponent(text.description)}`
+      : undefined;
+    return result('created', {
+      branchName,
+      mrUrl,
+      filesModified: changed,
+      message: pushed
+        ? `Code change for '${key}' committed on branch '${branchName}'; open the review request from the link.`
+        : `Code change for '${key}' committed locally on branch '${branchName}' (push failed).`,
+    });
   }
 }

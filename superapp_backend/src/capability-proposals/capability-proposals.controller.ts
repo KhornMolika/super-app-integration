@@ -20,6 +20,22 @@ import { CapabilityCodeGeneratorService } from '../capabilities/capability-code-
 import { ReviewProposalDto } from './dto/review-proposal.dto';
 import { CreateCapabilityProposalDto } from './dto/create-capability-proposal.dto';
 import { QueryCapabilityProposalsDto } from './dto/query-capability-proposals.dto';
+import { CapabilityProposal } from './entities/capability-proposal.entity';
+import { CapabilitiesService } from '../capabilities/capabilities.service';
+import { suggestCapabilityKeys } from '../capabilities/capability-platform-map';
+
+/** Outcome of the Super App code change, stored in proposal.metadata.codeChange. */
+export interface StoredCodeChange {
+  status: 'created' | 'not_needed' | 'failed';
+  mrUrl?: string;
+  branchName?: string;
+  targetBranch: string;
+  filesModified: string[];
+  message: string;
+  error?: string;
+  /** ISO time of the attempt */
+  at: string;
+}
 
 @UseGuards(JwtAuthGuard, RbacGuard)
 @Controller([
@@ -35,6 +51,7 @@ export class CapabilityProposalsController {
     private readonly capabilityProposalsService: CapabilityProposalsService,
     private readonly notificationsService: NotificationsService,
     private readonly capabilityCodeGenerator: CapabilityCodeGeneratorService,
+    private readonly capabilitiesService: CapabilitiesService,
   ) {}
 
   @Get()
@@ -93,6 +110,21 @@ export class CapabilityProposalsController {
     return proposal;
   }
 
+  /** "Did you mean" suggestions for a capability key someone is typing. */
+  @Get('suggest-key')
+  @RequirePermissions('permission_proposal:read')
+  async suggestKey(@Query('q') q?: string) {
+    const catalog = await this.capabilitiesService.listCatalogKeys();
+    return { suggestions: suggestCapabilityKeys(q || '', catalog) };
+  }
+
+  /** Branches of the Super App repository for the approve form. */
+  @Get('target-branches')
+  @RequirePermissions('permission_proposal:review')
+  async targetBranches() {
+    return this.capabilityCodeGenerator.listTargetBranches();
+  }
+
   @Get(':id/preview')
   @RequirePermissions('permission_proposal:read')
   async previewProposalCode(@Param('id') id: string) {
@@ -103,6 +135,40 @@ export class CapabilityProposalsController {
       proposal.capabilityKey,
       proposal.metadata,
     );
+  }
+
+  /** Runs the code generator and stores its outcome on the proposal. */
+  private async runCodeChange(
+    proposal: CapabilityProposal,
+    targetVersion?: string,
+    targetBranch?: string,
+  ): Promise<StoredCodeChange> {
+    const gen = await this.capabilityCodeGenerator.generateCapabilityMr(
+      proposal,
+      targetVersion,
+      targetBranch,
+    );
+    return {
+      status: gen.status,
+      mrUrl: gen.mrUrl,
+      branchName: gen.branchName,
+      targetBranch: gen.targetBranch,
+      filesModified: gen.filesModified,
+      message: gen.message,
+      error: gen.error,
+      at: new Date().toISOString(),
+    };
+  }
+
+  private withCodeChange(metadata: Record<string, any> | null | undefined, codeChange: StoredCodeChange) {
+    return {
+      ...(metadata || {}),
+      codeChange,
+      // Flat fields kept for older list views
+      targetBranch: codeChange.targetBranch,
+      ...(codeChange.mrUrl ? { mrUrl: codeChange.mrUrl } : {}),
+      ...(codeChange.branchName ? { branchName: codeChange.branchName } : {}),
+    };
   }
 
   @Post(':id/review')
@@ -116,49 +182,20 @@ export class CapabilityProposalsController {
 
     const { decision, reason, targetVersion, targetBranch, createMr } = body;
 
-    let mrResult: {
-      mrUrl?: string;
-      branchName?: string;
-      targetBranch?: string;
-      message?: string;
-    } | null = null;
-
+    // Approval is recorded even when the code step fails; the outcome is
+    // returned and stored, so the reviewer sees it and can retry.
+    let codeChange: StoredCodeChange | null = null;
     if (decision === 'APPROVED' && createMr !== false) {
-      try {
-        const gen = await this.capabilityCodeGenerator.generateCapabilityMr(
-          proposal,
-          targetVersion,
-          targetBranch,
-        );
-        mrResult = {
-          mrUrl: gen.mrUrl,
-          branchName: gen.branchName,
-          targetBranch: gen.targetBranch,
-          message: gen.message,
-        };
-      } catch (err: any) {
-        this.logger.error(`Automated MR generation failed: ${err.message}`);
-        // If git branch fails, we still record approval but inform the admin
-        mrResult = {
-          message: `Proposal approved, but automated MR creation failed: ${err.message}`,
-        };
-      }
+      codeChange = await this.runCodeChange(proposal, targetVersion, targetBranch);
     }
-
-    const updatedMetadata = {
-      ...(proposal.metadata || {}),
-      ...(mrResult?.mrUrl ? { mrUrl: mrResult.mrUrl } : {}),
-      ...(mrResult?.branchName ? { branchName: mrResult.branchName } : {}),
-      ...(mrResult?.targetBranch
-        ? { targetBranch: mrResult.targetBranch }
-        : {}),
-    };
 
     await this.capabilityProposalsService.update(id, {
       status: decision,
       adminDecisionReason: reason,
       targetSuperAppVersion: targetVersion,
-      metadata: updatedMetadata,
+      metadata: codeChange
+        ? this.withCodeChange(proposal.metadata, codeChange)
+        : proposal.metadata,
     });
 
     if (proposal.requestedBy) {
@@ -166,8 +203,10 @@ export class CapabilityProposalsController {
       let type = 'proposal_reviewed';
 
       if (decision === 'APPROVED') {
-        message = `Great news! Your proposal for '${proposal.capabilityKey}' has been approved and targeted for version ${targetVersion || 'a future release'}. ${
-          mrResult?.mrUrl ? `Merge Request created: ${mrResult.mrUrl}` : ''
+        message = `Great news! Your proposal for '${proposal.capabilityKey}' has been approved and targeted for version ${targetVersion || 'a future release'}.${
+          codeChange?.status === 'created' && codeChange.mrUrl
+            ? ` The Super App code change is ready for review: ${codeChange.mrUrl}`
+            : ''
         }`;
         type = 'proposal_approved';
       } else if (decision === 'IN_DEVELOPMENT') {
@@ -188,10 +227,37 @@ export class CapabilityProposalsController {
 
     return {
       success: true,
-      mrUrl: mrResult?.mrUrl,
-      branchName: mrResult?.branchName,
-      message: mrResult?.message || 'Proposal reviewed successfully.',
+      codeChange,
+      // Flat fields kept for older clients
+      mrUrl: codeChange?.mrUrl,
+      branchName: codeChange?.branchName,
+      targetBranch: codeChange?.targetBranch,
+      message: codeChange?.message || 'Proposal reviewed successfully.',
     };
+  }
+
+  /** Re-runs a failed code change for an approved proposal (same release and branch). */
+  @Post(':id/retry-code-change')
+  @RequirePermissions('permission_proposal:review')
+  async retryCodeChange(@Param('id') id: string) {
+    const proposal = await this.capabilityProposalsService.findOne(id);
+    if (!proposal) throw new NotFoundException('Proposal not found');
+    const previous = proposal.metadata?.codeChange as StoredCodeChange | undefined;
+    if (proposal.status !== 'APPROVED' || previous?.status !== 'failed') {
+      throw new BadRequestException(
+        'Only an approved proposal whose code change failed can be retried.',
+      );
+    }
+
+    const codeChange = await this.runCodeChange(
+      proposal,
+      proposal.targetSuperAppVersion || undefined,
+      previous.targetBranch || proposal.metadata?.targetBranch,
+    );
+    await this.capabilityProposalsService.update(id, {
+      metadata: this.withCodeChange(proposal.metadata, codeChange),
+    });
+    return { success: true, codeChange, message: codeChange.message };
   }
 }
 

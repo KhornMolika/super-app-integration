@@ -3,22 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/inputs';
-import {
-  GitPullRequest,
-  ExternalLink,
-  GitBranch,
-  User,
-  Smartphone,
-  Search,
-  X,
-  Clock,
-  CheckCircle,
-  XCircle,
-  Copy,
-  Check,
-  Globe,
-  Tag,
-} from 'lucide-react';
+import { ExternalLink, User, Smartphone, Search, X, Globe, Tag, FileCode, ClipboardCheck } from 'lucide-react';
 import { PermissionProposal } from '@/api/permissions.api';
 import { Pagination } from '@/components/ui/Pagination';
 import { getCapabilityVisual } from '@/lib/capability-visuals';
@@ -32,430 +17,287 @@ interface ProposalsTabProps {
   onSelectProposal: (proposal: PermissionProposal) => void;
 }
 
-type StatusFilterType = 'ALL' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED';
+/** Where a proposal is in its life, from the reviewer's point of view. */
+type ProposalState = 'pending' | 'code_ready' | 'code_failed' | 'approved' | 'in_development' | 'rejected';
+type FilterKey = 'ALL' | 'pending' | 'code_ready' | 'code_failed' | 'rejected';
+
+export function proposalState(p: PermissionProposal): ProposalState {
+  if (p.status === 'PENDING_REVIEW') return 'pending';
+  if (p.status === 'REJECTED') return 'rejected';
+  if (p.status === 'IN_DEVELOPMENT') return 'in_development';
+  const cc = p.metadata?.codeChange;
+  if (cc?.status === 'failed') return 'code_failed';
+  if (cc?.status === 'created' || (!cc && p.metadata?.mrUrl)) return 'code_ready';
+  return 'approved';
+}
+
+const STATE_CHIP: Record<ProposalState, { label: string; className: string; dot: string }> = {
+  pending: {
+    label: 'Waiting for review',
+    className: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+    dot: 'bg-amber-500 animate-pulse',
+  },
+  code_ready: {
+    label: 'Code change ready',
+    className: 'bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300 border-violet-200 dark:border-violet-800',
+    dot: 'bg-violet-500',
+  },
+  code_failed: {
+    label: 'Code change failed',
+    className: 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border-rose-200 dark:border-rose-800',
+    dot: 'bg-rose-500',
+  },
+  approved: {
+    label: 'Approved, no code change needed',
+    className: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+    dot: 'bg-emerald-500',
+  },
+  in_development: {
+    label: 'In development',
+    className: 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border-sky-200 dark:border-sky-800',
+    dot: 'bg-sky-500',
+  },
+  rejected: {
+    label: 'Rejected',
+    className: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700',
+    dot: 'bg-slate-400',
+  },
+};
+
+const time = (p: PermissionProposal) => (p.createdAt ? new Date(p.createdAt).getTime() : 0);
 
 export function ProposalsTab({
   proposals = [],
   proposalSubFilter,
   setProposalSubFilter,
-  pendingCount,
   canReview,
   onSelectProposal,
 }: ProposalsTabProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilterType>(
-    proposalSubFilter === 'PENDING' ? 'PENDING_REVIEW' : 'ALL',
-  );
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [filter, setFilter] = useState<FilterKey>(proposalSubFilter === 'PENDING' ? 'pending' : 'ALL');
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(6);
+  const [pageSize, setPageSize] = useState(10);
 
-  const safeProposals = Array.isArray(proposals) ? proposals : [];
+  const safeProposals = useMemo(() => (Array.isArray(proposals) ? proposals : []), [proposals]);
 
-  // Compute status counts
   const counts = useMemo(() => {
-    let pending = 0;
-    let approved = 0;
-    let rejected = 0;
-    safeProposals.forEach((p) => {
-      if (p.status === 'PENDING_REVIEW') pending++;
-      else if (p.status === 'APPROVED') approved++;
-      else if (p.status === 'REJECTED') rejected++;
-    });
-    return {
-      all: safeProposals.length,
-      pending,
-      approved,
-      rejected,
-    };
+    const c: Record<FilterKey, number> = { ALL: safeProposals.length, pending: 0, code_ready: 0, code_failed: 0, rejected: 0 };
+    for (const p of safeProposals) {
+      const s = proposalState(p);
+      if (s in c) c[s as FilterKey]++;
+    }
+    return c;
   }, [safeProposals]);
 
-  // Handle filter changes
-  const handleStatusFilterChange = (filter: StatusFilterType) => {
-    setStatusFilter(filter);
+  const changeFilter = (next: FilterKey) => {
+    setFilter(next);
     setCurrentPage(1);
-    if (filter === 'PENDING_REVIEW') {
-      setProposalSubFilter('PENDING');
-    } else {
-      setProposalSubFilter('ALL');
-    }
+    setProposalSubFilter(next === 'pending' ? 'PENDING' : 'ALL');
   };
 
-  // Filtered proposals based on search and status
+  // Filter, then sort: waiting proposals first (oldest first: longest wait on top), then newest first
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return safeProposals.filter((p) => {
-      // Status filter
-      if (statusFilter !== 'ALL' && p.status !== statusFilter) {
-        return false;
-      }
+    return safeProposals
+      .filter((p) => {
+        if (filter !== 'ALL' && proposalState(p) !== filter) return false;
+        if (!q) return true;
+        return [
+          p.permissionName,
+          p.permissionKey,
+          p.description,
+          p.requestedBy?.name,
+          p.requestedBy?.email,
+          p.miniApp?.name,
+          (p.metadata as any)?.miniAppName,
+        ].some((v) => typeof v === 'string' && v.toLowerCase().includes(q));
+      })
+      .sort((a, b) => {
+        const ap = a.status === 'PENDING_REVIEW' ? 0 : 1;
+        const bp = b.status === 'PENDING_REVIEW' ? 0 : 1;
+        if (ap !== bp) return ap - bp;
+        return ap === 0 ? time(a) - time(b) : time(b) - time(a);
+      });
+  }, [safeProposals, filter, searchQuery]);
 
-      // Search filter
-      if (q) {
-        const matchesName = p.permissionName?.toLowerCase().includes(q);
-        const matchesKey = p.permissionKey?.toLowerCase().includes(q);
-        const matchesDesc = p.description?.toLowerCase().includes(q);
-        const matchesRequester = p.requestedBy?.name?.toLowerCase().includes(q) ||
-          p.requestedBy?.email?.toLowerCase().includes(q);
-        const matchesMiniApp = p.miniApp?.name?.toLowerCase().includes(q) ||
-          (p.metadata as any)?.miniAppName?.toLowerCase().includes(q);
-
-        return (
-          matchesName ||
-          matchesKey ||
-          matchesDesc ||
-          matchesRequester ||
-          matchesMiniApp
-        );
-      }
-
-      return true;
-    });
-  }, [safeProposals, statusFilter, searchQuery]);
-
-  // Pagination calculation
   const totalItems = filtered.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const safePage = Math.min(currentPage, totalPages);
+  const paginatedItems = useMemo(
+    () => filtered.slice((safePage - 1) * pageSize, safePage * pageSize),
+    [filtered, safePage, pageSize],
+  );
 
-  const paginatedItems = useMemo(() => {
-    const start = (safePage - 1) * pageSize;
-    return filtered.slice(start, start + pageSize);
-  }, [filtered, safePage, pageSize]);
-
-  const handleCopy = (e: React.MouseEvent, text: string, id: string) => {
-    e.stopPropagation();
-    e.preventDefault();
-    navigator.clipboard.writeText(text);
-    setCopiedKey(id);
-    setTimeout(() => setCopiedKey(null), 1500);
-  };
+  const tiles: Array<{ key: FilterKey; label: string; tone: string }> = [
+    { key: 'ALL', label: 'All proposals', tone: 'text-slate-900 dark:text-slate-100' },
+    { key: 'pending', label: 'Waiting for review', tone: 'text-amber-600 dark:text-amber-400' },
+    { key: 'code_ready', label: 'Code change ready', tone: 'text-violet-600 dark:text-violet-400' },
+    { key: 'code_failed', label: 'Code change failed', tone: 'text-rose-600 dark:text-rose-400' },
+    { key: 'rejected', label: 'Rejected', tone: 'text-slate-500 dark:text-slate-400' },
+  ];
 
   return (
-    <div className="space-y-4">
-      {/* Search & Filter Toolbar */}
-      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
-        {/* Search Input */}
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
-            }}
-            placeholder="Search proposals by name, key, mini-app, or requester..."
-            className="w-full pl-9 pr-8 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-slate-800 dark:text-slate-200 transition-all placeholder:text-slate-400"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => {
-                setSearchQuery('');
-                setCurrentPage(1);
-              }}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
-
-        {/* Filter Pills */}
-        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 overflow-x-auto no-scrollbar shrink-0">
+    <div className="space-y-3">
+      {/* Summary counts; each one filters the list */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2" role="group" aria-label="Filter proposals">
+        {tiles.map((t) => (
           <button
+            key={t.key}
             type="button"
-            onClick={() => handleStatusFilterChange('PENDING_REVIEW')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
-              statusFilter === 'PENDING_REVIEW'
-                ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 font-bold shadow-xs border border-amber-500/30'
-                : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
+            onClick={() => changeFilter(t.key)}
+            aria-pressed={filter === t.key}
+            className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+              filter === t.key
+                ? 'bg-white dark:bg-slate-900 border-brand-500/50 ring-2 ring-brand-500/15 shadow-xs'
+                : 'bg-white/60 dark:bg-slate-900/50 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
             }`}
           >
-            <Clock className="w-3.5 h-3.5 text-amber-500" />
-            <span>Pending Review</span>
-            <span
-              className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                statusFilter === 'PENDING_REVIEW'
-                  ? 'bg-amber-500 text-white'
-                  : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-              }`}
-            >
-              {counts.pending}
-            </span>
+            <span className={`block text-xl font-bold tabular-nums ${t.tone}`}>{counts[t.key]}</span>
+            <span className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">{t.label}</span>
           </button>
-
-          <button
-            type="button"
-            onClick={() => handleStatusFilterChange('APPROVED')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
-              statusFilter === 'APPROVED'
-                ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold shadow-xs border border-emerald-500/30'
-                : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
-            }`}
-          >
-            <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
-            <span>Approved</span>
-            <span
-              className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                statusFilter === 'APPROVED'
-                  ? 'bg-emerald-500 text-white'
-                  : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-              }`}
-            >
-              {counts.approved}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleStatusFilterChange('REJECTED')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
-              statusFilter === 'REJECTED'
-                ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300 font-bold shadow-xs border border-rose-500/30'
-                : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
-            }`}
-          >
-            <XCircle className="w-3.5 h-3.5 text-rose-500" />
-            <span>Rejected</span>
-            <span
-              className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                statusFilter === 'REJECTED'
-                  ? 'bg-rose-500 text-white'
-                  : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-              }`}
-            >
-              {counts.rejected}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleStatusFilterChange('ALL')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
-              statusFilter === 'ALL'
-                ? 'bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 font-bold shadow-xs border border-brand-500/20'
-                : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
-            }`}
-          >
-            <span>All</span>
-            <span
-              className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                statusFilter === 'ALL'
-                  ? 'bg-brand-500 text-white'
-                  : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-              }`}
-            >
-              {counts.all}
-            </span>
-          </button>
-        </div>
+        ))}
       </div>
 
-      {/* Proposals List */}
+      {/* Search */}
+      <div className="relative">
+        <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setCurrentPage(1);
+          }}
+          placeholder="Search by capability, mini app or requester..."
+          aria-label="Search proposals"
+          className="w-full pl-9 pr-8 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-slate-800 dark:text-slate-200 transition-all placeholder:text-slate-400"
+        />
+        {searchQuery && (
+          <button
+            type="button"
+            onClick={() => {
+              setSearchQuery('');
+              setCurrentPage(1);
+            }}
+            aria-label="Clear search"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+
       {paginatedItems.length === 0 ? (
-        <Card className="p-12 text-center text-slate-400 dark:text-slate-500 space-y-3 bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 rounded-2xl">
-          <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 mx-auto">
-            <GitPullRequest className="w-6 h-6 text-slate-400 dark:text-slate-500" />
+        <Card className="p-10 text-center text-slate-400 dark:text-slate-500 space-y-3 bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 rounded-2xl">
+          <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto">
+            <ClipboardCheck className="w-6 h-6 text-slate-400 dark:text-slate-500" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-              No capability proposals found
-            </h3>
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">No capability proposals found</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
-              {searchQuery
-                ? `No proposals match "${searchQuery}". Try clearing the search query or changing filters.`
-                : 'When developers or partners propose unlisted device features, they will appear here for review and automated MR generation.'}
+              {searchQuery || filter !== 'ALL'
+                ? 'Nothing matches this search or filter.'
+                : 'When developers or partners ask for a device feature the Super App does not support yet, the request appears here for review and an automatic Super App update.'}
             </p>
           </div>
-          {searchQuery && (
+          {(searchQuery || filter !== 'ALL') && (
             <button
               type="button"
               onClick={() => {
                 setSearchQuery('');
-                setStatusFilter('ALL');
+                changeFilter('ALL');
               }}
               className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline cursor-pointer"
             >
-              Clear Search &amp; Filters
+              Show all proposals
             </button>
           )}
         </Card>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {paginatedItems.map((prop) => {
             const visual = getCapabilityVisual(prop.permissionKey, prop.permissionName, prop.description);
             const Icon = visual.Icon;
             const isPlatform = !prop.miniApp?.name && !(prop.metadata as any)?.miniAppName;
             const miniAppName = prop.miniApp?.name || (prop.metadata as any)?.miniAppName || 'Platform / Core Shell';
+            const state = proposalState(prop);
+            const chip = STATE_CHIP[state];
+            const codeUrl = prop.metadata?.codeChange?.mrUrl || prop.metadata?.mrUrl;
 
             return (
               <Card
                 key={prop.id || prop.permissionKey}
-                className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-brand-500/40 dark:hover:border-brand-500/40 transition-all bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-xs group"
+                className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-brand-500/40 dark:hover:border-brand-500/40 transition-all bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl shadow-xs"
               >
-                {/* Left: Icon, Details & Justification */}
-                <div className="flex items-start gap-3.5 min-w-0 flex-1">
-                  <div
-                    className={`w-11 h-11 rounded-xl ${visual.bgColor} ${visual.borderColor} border flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 mt-0.5`}
-                  >
-                    <Icon className={`w-5 h-5 ${visual.iconColor}`} />
+                <div className="flex items-start gap-3 min-w-0 flex-1">
+                  <div className={`w-9 h-9 rounded-lg ${visual.bgColor} ${visual.borderColor} border flex items-center justify-center shrink-0`}>
+                    <Icon className={`w-4 h-4 ${visual.iconColor}`} />
                   </div>
-
-                  <div className="space-y-2 min-w-0 flex-1">
-                    {/* Title, Key & Status Chips */}
+                  <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">
                         {prop.permissionName || prop.permissionKey}
                       </span>
-
-                      {/* Copyable Key Badge */}
-                      <button
-                        type="button"
-                        onClick={(e) => handleCopy(e, prop.permissionKey, `key-${prop.id}`)}
-                        className="inline-flex items-center gap-1 font-mono text-[10px] px-1.5 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
-                        title="Click to copy capability key"
-                      >
-                        <span>#{prop.permissionKey}</span>
-                        {copiedKey === `key-${prop.id}` ? (
-                          <Check className="w-3 h-3 text-emerald-500" />
-                        ) : (
-                          <Copy className="w-3 h-3 opacity-60" />
-                        )}
-                      </button>
-
-                      {/* Category Pill */}
-                      <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${visual.pillBgColor} ${visual.badgeTextColor} border ${visual.borderColor}`}
-                      >
-                        {visual.category}
+                      <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                        {prop.permissionKey}
                       </span>
-
-                      {/* Status Badge */}
-                      <span
-                        className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
-                          prop.status === 'APPROVED'
-                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                            : prop.status === 'REJECTED'
-                            ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border-rose-200 dark:border-rose-800'
-                            : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-amber-200 dark:border-amber-800'
-                        }`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            prop.status === 'APPROVED'
-                              ? 'bg-emerald-500'
-                              : prop.status === 'REJECTED'
-                              ? 'bg-rose-500'
-                              : 'bg-amber-500 animate-pulse'
-                          }`}
-                        />
-                        <span>
-                          {prop.status === 'PENDING_REVIEW'
-                            ? 'Pending Review'
-                            : prop.status === 'APPROVED'
-                            ? 'Approved'
-                            : prop.status === 'REJECTED'
-                            ? 'Rejected'
-                            : prop.status}
-                        </span>
+                      <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border ${chip.className}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${chip.dot}`} />
+                        {chip.label}
                       </span>
                     </div>
-
-                    {/* Justification Text */}
                     {prop.description && (
-                      <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 leading-relaxed">
-                        {prop.description}
-                      </p>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-1">{prop.description}</p>
                     )}
-
-                    {/* Meta Row: Scope, Requester, Version, Target Branch */}
-                    <div className="flex items-center gap-2.5 text-[11px] text-slate-500 dark:text-slate-400 flex-wrap pt-0.5">
-                      {/* MiniApp or Platform Scope */}
-                      <span className="inline-flex items-center gap-1.5 font-medium text-slate-700 dark:text-slate-300">
-                        {isPlatform ? (
-                          <Globe className="w-3.5 h-3.5 text-brand-500 shrink-0" />
-                        ) : (
-                          <Smartphone className="w-3.5 h-3.5 text-brand-500 shrink-0" />
-                        )}
-                        <span>{miniAppName}</span>
+                    <div className="flex items-center gap-x-3 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400 flex-wrap">
+                      <span className="inline-flex items-center gap-1 font-medium text-slate-700 dark:text-slate-300">
+                        {isPlatform ? <Globe className="w-3 h-3 text-brand-500" /> : <Smartphone className="w-3 h-3 text-brand-500" />}
+                        {miniAppName}
                       </span>
-
-                      <span>•</span>
-
-                      {/* Requester */}
                       <span className="inline-flex items-center gap-1">
-                        <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span>{prop.requestedBy?.name || 'Developer'}</span>
+                        <User className="w-3 h-3 text-slate-400" />
+                        {prop.requestedBy?.name || 'Developer'}
                       </span>
-
-                      {/* Target Version */}
                       {prop.targetSuperAppVersion && (
-                        <>
-                          <span>•</span>
-                          <span className="inline-flex items-center gap-1 font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                            <Tag className="w-3 h-3 text-slate-400" />
-                            <span>v{prop.targetSuperAppVersion}</span>
-                          </span>
-                        </>
+                        <span className="inline-flex items-center gap-1 font-mono text-[10px]">
+                          <Tag className="w-3 h-3 text-slate-400" />v{prop.targetSuperAppVersion}
+                        </span>
                       )}
-
-                      {/* Target Branch */}
-                      {prop.metadata?.targetBranch && (
-                        <>
-                          <span>•</span>
-                          <span className="inline-flex items-center gap-1 font-mono text-[10px] text-slate-500 dark:text-slate-400">
-                            <GitBranch className="w-3 h-3 text-slate-400" />
-                            <span>{prop.metadata.targetBranch}</span>
-                          </span>
-                        </>
-                      )}
-
-                      {/* Rejection reason preview */}
-                      {prop.status === 'REJECTED' && prop.adminDecisionReason && (
-                        <>
-                          <span>•</span>
-                          <span className="text-[11px] text-rose-500 dark:text-rose-400 italic truncate max-w-xs">
-                            Reason: {prop.adminDecisionReason}
-                          </span>
-                        </>
+                      {state === 'rejected' && prop.adminDecisionReason && (
+                        <span className="text-rose-500 dark:text-rose-400 truncate max-w-xs">Reason: {prop.adminDecisionReason}</span>
                       )}
                     </div>
                   </div>
                 </div>
 
-                {/* Right: Actions */}
-                <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
-                  {/* GitLab MR link */}
-                  {prop.metadata?.mrUrl && (
+                <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                  {codeUrl && state === 'code_ready' && (
                     <a
-                      href={prop.metadata.mrUrl}
+                      href={codeUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-violet-50 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300 border border-violet-200 dark:border-violet-800 hover:bg-violet-100 dark:hover:bg-violet-900/60 transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-violet-50 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300 border border-violet-200 dark:border-violet-800 hover:bg-violet-100 dark:hover:bg-violet-900/60 transition-colors"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
-                      <span>GitLab MR</span>
+                      <span>View code change</span>
                     </a>
                   )}
-
                   {canReview && (
                     <Button
-                      variant={prop.status === 'PENDING_REVIEW' ? 'primary' : 'secondary'}
+                      variant={state === 'pending' || state === 'code_failed' ? 'primary' : 'secondary'}
                       size="sm"
                       onClick={() => onSelectProposal(prop)}
                       className={`text-xs font-semibold px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-xs ${
-                        prop.status === 'PENDING_REVIEW'
-                          ? 'bg-brand-600 hover:bg-brand-700 text-white'
-                          : ''
+                        state === 'pending' ? 'bg-brand-600 hover:bg-brand-700 text-white' : ''
                       }`}
                     >
-                      {prop.status === 'PENDING_REVIEW' ? (
+                      {state === 'pending' ? (
                         <>
-                          <GitPullRequest className="w-3.5 h-3.5" />
-                          <span>Review &amp; Decide</span>
+                          <FileCode className="w-3.5 h-3.5" />
+                          <span>Review</span>
                         </>
+                      ) : state === 'code_failed' ? (
+                        <span>View &amp; retry</span>
                       ) : (
                         <span>View</span>
                       )}
@@ -466,9 +308,8 @@ export function ProposalsTab({
             );
           })}
 
-          {/* Pagination Controls */}
           {totalItems > 0 && (
-            <div className="pt-4 border-t border-slate-200/60 dark:border-slate-800/80">
+            <div className="pt-3 border-t border-slate-200/60 dark:border-slate-800/80">
               <Pagination
                 currentPage={safePage}
                 totalPages={totalPages}
@@ -480,7 +321,7 @@ export function ProposalsTab({
                   setCurrentPage(1);
                 }}
                 showPageSizeSelector={true}
-                pageSizeOptions={[4, 6, 10, 20]}
+                pageSizeOptions={[10, 20, 50]}
                 showTotal={true}
               />
             </div>
