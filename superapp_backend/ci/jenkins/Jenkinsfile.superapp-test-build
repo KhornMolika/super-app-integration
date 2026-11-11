@@ -20,9 +20,59 @@ def p(String name) {
         API_BASE_URL: '',
         FLUTTER_IMAGE: 'ghcr.io/cirruslabs/flutter:3.44.0',
         TOOLCHAIN_CHECK_ONLY: false,
+        PRIVATE_GIT_DEPS: 'https://github.com/KhornMolika/sc-private-miniapp.git=github-sc-private-miniapp',
     ]
     def v = params[name]
     return (v == null || v == '') ? defaults[name] : v
+}
+
+/** Private Git dependencies of the Super App: "<https url>=<Jenkins SSH credential id>", comma separated. */
+def privateGitDeps() {
+    def deps = []
+    for (entry in (p('PRIVATE_GIT_DEPS') ?: '').split(',')) {
+        def e = entry.trim()
+        if (!e) continue
+        def parts = e.split('=', 2)
+        if (parts.length != 2 || !(parts[0] ==~ /https:\/\/github\.com\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+\.git/) || !(parts[1] ==~ /[A-Za-z0-9._-]+/)) {
+            error("Invalid PRIVATE_GIT_DEPS entry: ${e}")
+        }
+        deps << [url: parts[0], cred: parts[1]]
+    }
+    return deps
+}
+
+/**
+ * Runs body with each private Git dependency fetched over SSH with its own
+ * read-only deploy key: writes $WORKSPACE/.ci-secrets/{ssh_config,gitconfig}
+ * (a Git insteadOf per repository, so other GitHub URLs stay anonymous) and
+ * removes it afterwards.
+ */
+def withPrivateGitDeps(Closure body) {
+    def deps = privateGitDeps()
+    if (!deps) { body(); return }
+    def bindings = []
+    def list = []
+    for (int i = 0; i < deps.size(); i++) {
+        bindings << sshUserPrivateKey(credentialsId: deps[i].cred, keyFileVariable: "GIT_DEP_KEY_${i}")
+        list << "${i}|${deps[i].url}"
+    }
+    withCredentials(bindings) {
+        withEnv(["GIT_DEP_LIST=${list.join('\n')}"]) {
+            sh '''
+                set -e
+                S="$WORKSPACE/.ci-secrets"; rm -rf "$S"; mkdir -p "$S"; chmod 700 "$S"
+                : > "$S/ssh_config"; : > "$S/gitconfig"
+                printf '%s\\n' "$GIT_DEP_LIST" | while IFS='|' read -r i url; do
+                    [ -n "$url" ] || continue
+                    cp "$(printenv "GIT_DEP_KEY_$i")" "$S/key_$i"; chmod 600 "$S/key_$i"
+                    printf 'Host gh-dep-%s\\n  HostName github.com\\n  User git\\n  IdentityFile %s\\n  IdentitiesOnly yes\\n  StrictHostKeyChecking accept-new\\n  UserKnownHostsFile %s/known_hosts\\n' "$i" "$S/key_$i" "$S" >> "$S/ssh_config"
+                    printf '[url "gh-dep-%s:%s"]\\n\\tinsteadOf = %s\\n' "$i" "${url#https://github.com/}" "$url" >> "$S/gitconfig"
+                done
+                echo "Private Git dependencies: $(grep -c insteadOf "$S/gitconfig")"
+            '''
+        }
+    }
+    try { body() } finally { sh 'rm -rf "$WORKSPACE/.ci-secrets"' }
 }
 
 def callbackBase() { return (params.CALLBACK_URL ?: '').trim() }
@@ -101,6 +151,7 @@ pipeline {
         string(name: 'GIT_CREDENTIALS_ID', defaultValue: 'git-action', description: 'Jenkins credential for MOBILE_REPO_URL')
         string(name: 'NATIVE_SDK_MANIFEST_URL', defaultValue: '', description: 'Native SDK list URL. Empty: derived from CALLBACK_URL.')
         string(name: 'FLUTTER_IMAGE', defaultValue: 'ghcr.io/cirruslabs/flutter:3.44.0', description: 'Docker image with Flutter and the Android SDK')
+        string(name: 'PRIVATE_GIT_DEPS', defaultValue: 'https://github.com/KhornMolika/sc-private-miniapp.git=github-sc-private-miniapp', description: 'Private Git dependencies: <https url>=<Jenkins SSH deploy-key credential id>, comma separated')
         booleanParam(name: 'TOOLCHAIN_CHECK_ONLY', defaultValue: false, description: 'Only check the build machine (Docker, Flutter, source mount, pub get); build and upload nothing')
         string(name: 'CODEGEN_MR_IID', defaultValue: '', description: 'Unused; accepted so older backends can still trigger the job')
     }
@@ -169,9 +220,14 @@ pipeline {
                     runStage('compile', '3. Compile APK',
                             "Compiling the Super App ${params.BUILD_TYPE} APK (android-arm, arm64, x64)...",
                             "APK compiled.") {
+                        withPrivateGitDeps {
                         withEnv(["FLUTTER_IMAGE=${p('FLUTTER_IMAGE')}", "API_BASE_URL=${p('API_BASE_URL') ?: ''}", "TOOLCHAIN_CHECK_ONLY=${p('TOOLCHAIN_CHECK_ONLY') ? 'true' : 'false'}"]) {
                             sh '''
                                 set -e
+                                S="$WORKSPACE/.ci-secrets"
+                                if [ -f "$S/gitconfig" ]; then
+                                    export GIT_SSH_COMMAND="ssh -F $S/ssh_config" GIT_DEPS_CONFIG="$S/gitconfig"
+                                fi
                                 # Kept in the workspace between builds so Gradle and pub do not download everything each time
                                 CACHE_DIR="$WORKSPACE/.ci-cache"
                                 mkdir -p "$CACHE_DIR/pub" "$CACHE_DIR/gradle"
@@ -186,11 +242,13 @@ pipeline {
                                     -e PUB_CACHE="$CACHE_DIR/pub" -e GRADLE_USER_HOME="$CACHE_DIR/gradle" \
                                     -e GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx3g" \
                                     -e NEXUS_USER -e NEXUS_PASSWORD -e API_BASE_URL -e BUILD_TYPE -e TOOLCHAIN_CHECK_ONLY \
+                                    -e GIT_SSH_COMMAND -e GIT_DEPS_CONFIG \
                                     -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" \
                                     "$FLUTTER_IMAGE" bash -ec '
                                         # Files written as root inside go back to the Jenkins user
                                         trap "chown -R $HOST_UID:$HOST_GID . $PUB_CACHE $GRADLE_USER_HOME 2>/dev/null || true" EXIT
                                         git config --global --add safe.directory "*"
+                                        if [ -n "${GIT_DEPS_CONFIG:-}" ]; then git config --global include.path "$GIT_DEPS_CONFIG"; fi
                                         flutter --version
                                         test -f pubspec.yaml && echo "Source visible in the build container"
                                         if [ "$TOOLCHAIN_CHECK_ONLY" = "true" ]; then
@@ -208,6 +266,7 @@ pipeline {
                                 test -s "$APK" || { echo "No APK at $APK"; exit 1; }
                                 ls -l "$APK"
                             '''
+                        }
                         }
                     }
                 }
