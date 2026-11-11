@@ -1161,7 +1161,7 @@ export class MiniappLifecycleHelper {
             })
             .catch(() => {});
         }
-        this.jenkinsService.triggerSuperAppSandboxBuild().catch(() => {});
+        // The test build also publishes the web Super App (same source and version)
       } catch (err: any) {
         this.logger.error(
           `Error triggering Jenkins test build for revision: ${err.message}`,
@@ -1285,12 +1285,8 @@ export class MiniappLifecycleHelper {
           });
       }
 
-      // Also trigger SuperApp Web Sandbox build concurrently
-      this.jenkinsService.triggerSuperAppSandboxBuild().catch((e: any) => {
-        this.logger.warn(
-          `Failed to trigger superapp-sandbox-build: ${e.message}`,
-        );
-      });
+      // The test build also builds and publishes the web Super App (same source
+      // and version), so the previews match the APK: no separate sandbox build
     } catch (err: any) {
       this.logger.error(`Error triggering Jenkins test build: ${err.message}`);
       await this.markBuildFailed(

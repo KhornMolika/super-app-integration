@@ -91,6 +91,9 @@ export class SuperAppWebController {
     const ext = (file.split('.').pop() || '').toLowerCase();
     res.set('Content-Type', TYPES[ext] || 'application/octet-stream');
     res.set('X-SuperApp-Web-Build', String(build.info.build));
+    if (build.info.version && /^[A-Za-z0-9._-]{1,40}$/.test(build.info.version)) {
+      res.set('X-SuperApp-Version', build.info.version);
+    }
     res.set('X-Content-Type-Options', 'nosniff');
     if (file === 'index.html') {
       const requested = String(req.headers[BASE_HEADER] || '');

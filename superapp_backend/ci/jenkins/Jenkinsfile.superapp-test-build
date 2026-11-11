@@ -20,6 +20,7 @@ def p(String name) {
         API_BASE_URL: '',
         FLUTTER_IMAGE: 'ghcr.io/cirruslabs/flutter:3.44.0',
         TOOLCHAIN_CHECK_ONLY: false,
+        BUILD_WEB: true,
         PRIVATE_GIT_DEPS: '',
         BUILD_CREDENTIALS_URL: '',
         MINIAPPS_URL: '',
@@ -274,6 +275,7 @@ pipeline {
         string(name: 'BUILD_CREDENTIALS_URL', defaultValue: '', description: 'Backend build-git-credentials URL (each mini app private repository key). Empty: derived from CALLBACK_URL.')
         string(name: 'MINIAPPS_URL', defaultValue: '', description: 'Backend build-miniapps URL (the Flutter mini apps in this build). Empty: derived from CALLBACK_URL.')
         booleanParam(name: 'TOOLCHAIN_CHECK_ONLY', defaultValue: false, description: 'Only check the build machine (Docker, Flutter, source mount, pub get); build and upload nothing')
+        booleanParam(name: 'BUILD_WEB', defaultValue: true, description: 'Also build the web Super App from the same source and publish it with this version (the Backoffice preview and /preview/ show it)')
         string(name: 'CODEGEN_MR_IID', defaultValue: '', description: 'Unused; accepted so older backends can still trigger the job')
     }
 
@@ -343,7 +345,7 @@ pipeline {
                             "Compiling the Super App ${params.BUILD_TYPE} APK (android-arm, arm64, x64)...",
                             "APK compiled.") {
                         withPrivateGitDeps {
-                        withEnv(["FLUTTER_IMAGE=${p('FLUTTER_IMAGE')}", "PUB_GATEWAY_URL=${p('PUB_GATEWAY_URL')}", "API_BASE_URL=${p('API_BASE_URL') ?: ''}", "TOOLCHAIN_CHECK_ONLY=${p('TOOLCHAIN_CHECK_ONLY') ? 'true' : 'false'}"]) {
+                        withEnv(["FLUTTER_IMAGE=${p('FLUTTER_IMAGE')}", "PUB_GATEWAY_URL=${p('PUB_GATEWAY_URL')}", "API_BASE_URL=${p('API_BASE_URL') ?: ''}", "TOOLCHAIN_CHECK_ONLY=${p('TOOLCHAIN_CHECK_ONLY') ? 'true' : 'false'}", "BUILD_WEB=${p('BUILD_WEB') ? 'true' : 'false'}"]) {
                             sh '''
                                 set -e
                                 S="$WORKSPACE/.ci-secrets"
@@ -364,7 +366,7 @@ pipeline {
                                     --memory 6g --cpus 2 \
                                     -e PUB_CACHE="$CACHE_DIR/pub" -e GRADLE_USER_HOME="$CACHE_DIR/gradle" \
                                     -e GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx3g" \
-                                    -e NEXUS_USER -e NEXUS_PASSWORD -e API_BASE_URL -e BUILD_TYPE -e TOOLCHAIN_CHECK_ONLY \
+                                    -e NEXUS_USER -e NEXUS_PASSWORD -e API_BASE_URL -e BUILD_TYPE -e TOOLCHAIN_CHECK_ONLY -e BUILD_WEB \
                                     -e GIT_SSH_COMMAND -e GIT_DEPS_CONFIG -e FSA_PUB_TOKEN -e PUB_GATEWAY_URL \
                                     -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" \
                                     "$FLUTTER_IMAGE" bash -ec '
@@ -385,11 +387,21 @@ pipeline {
                                         if [ -n "$API_BASE_URL" ]; then DEFINES="--dart-define=API_BASE_URL=$API_BASE_URL"; fi
                                         case "$API_BASE_URL" in http://*) DEFINES="$DEFINES --dart-define=ALLOW_CLEARTEXT=true";; esac
                                         flutter build apk --$BUILD_TYPE --target-platform android-arm,android-arm64,android-x64 $DEFINES
+                                        # Same source and mini apps as the APK: the Backoffice preview and /preview/
+                                        # show this build (the backend sets the base path for each)
+                                        if [ "$BUILD_WEB" = "true" ]; then
+                                            flutter build web --release --base-href /superapp-sandbox/ $DEFINES
+                                        fi
                                     '
                                 if [ "$TOOLCHAIN_CHECK_ONLY" = "true" ]; then echo "Toolchain check done"; exit 0; fi
                                 APK="$MOBILE_DIR/build/app/outputs/flutter-apk/app-$BUILD_TYPE.apk"
                                 test -s "$APK" || { echo "No APK at $APK"; exit 1; }
                                 ls -l "$APK"
+                                if [ "$BUILD_WEB" = "true" ]; then
+                                    test -f "$MOBILE_DIR/build/web/index.html" || { echo "No web build at $MOBILE_DIR/build/web"; exit 1; }
+                                    tar -czf superapp-web.tar.gz -C "$MOBILE_DIR/build/web" .
+                                    ls -l superapp-web.tar.gz
+                                fi
                             '''
                         }
                         }
@@ -405,7 +417,8 @@ pipeline {
                     runStage('publish', '4. Publish to Nexus (apk-test-builds)',
                             'Uploading the APK to Sonatype Nexus...',
                             "Published ${apkName()} to apk-test-builds/${params.APP_NAME}/${params.RELEASE_VERSION}/.") {
-                        withEnv(["APK_URL=${apkUrl()}"]) {
+                        withEnv(["APK_URL=${apkUrl()}", "BUILD_WEB=${p('BUILD_WEB') ? 'true' : 'false'}",
+                                 "WEB_BASE=${params.NEXUS_URL}/repository/superapp-artifacts/superapp-web"]) {
                             sh '''
                                 set -e
                                 APK="$MOBILE_DIR/build/app/outputs/flutter-apk/app-$BUILD_TYPE.apk"
@@ -418,6 +431,17 @@ pipeline {
                                 upload "$APK" "$APK_URL"
                                 echo "Uploaded $APK_URL"
                                 if [ -f "$MOBILE_DIR/native_sdks.json" ]; then upload "$MOBILE_DIR/native_sdks.json" "$LIST_URL"; echo "Uploaded $LIST_URL"; fi
+                                # Web build of this same version, published only after the APK, so the
+                                # previews never show a build whose APK failed. latest.json last.
+                                if [ "$BUILD_WEB" = "true" ] && [ -f superapp-web.tar.gz ]; then
+                                    DIR="$RELEASE_VERSION-b$BUILD_NUMBER"
+                                    COMMIT=$(git -C "$MOBILE_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)
+                                    upload superapp-web.tar.gz "$WEB_BASE/$DIR/superapp-web.tar.gz"
+                                    printf '{"build":%s,"version":"%s","archive":"superapp-web/%s/superapp-web.tar.gz","commit":"%s","builtAt":"%s"}\\n' \
+                                        "$BUILD_NUMBER" "$RELEASE_VERSION" "$DIR" "$COMMIT" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > latest.json
+                                    upload latest.json "$WEB_BASE/latest.json"
+                                    echo "Web build $RELEASE_VERSION published: the Backoffice preview and /preview/ switch to it within a minute"
+                                fi
                             '''
                         }
                     }

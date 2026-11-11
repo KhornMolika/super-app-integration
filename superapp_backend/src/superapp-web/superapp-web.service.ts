@@ -4,6 +4,8 @@ import { readTarGz } from './tar.util';
 
 export interface SuperAppWebInfo {
   build: number;
+  /** Super App version (test builds publish the web app with their APK version) */
+  version?: string;
   archive: string;
   commit?: string;
   builtAt?: string;
@@ -16,7 +18,7 @@ export interface SuperAppWebBuild {
 
 const REPO = 'superapp-artifacts';
 const LATEST = 'superapp-web/latest.json';
-const ARCHIVE_PATH = /^superapp-web\/\d{1,9}\/superapp-web\.tar\.gz$/;
+const ARCHIVE_PATH = /^superapp-web\/[A-Za-z0-9._-]{1,80}\/superapp-web\.tar\.gz$/;
 const MAX_ARCHIVE_BYTES = 150 * 1024 * 1024;
 
 /**
@@ -59,7 +61,7 @@ export class SuperAppWebService {
     if (res.status === 404) return;
     if (!res.ok) throw new Error(`Nexus ${LATEST}: HTTP ${res.status}`);
     const info = (await res.json()) as SuperAppWebInfo;
-    if (!info || typeof info.archive !== 'string' || !ARCHIVE_PATH.test(info.archive)) {
+    if (!info || typeof info.archive !== 'string' || !ARCHIVE_PATH.test(info.archive) || info.archive.includes('..')) {
       throw new Error(`Nexus ${LATEST} names no valid archive`);
     }
     if (this.current?.info.archive === info.archive) return;
@@ -75,7 +77,7 @@ export class SuperAppWebService {
     const files = readTarGz(buf);
     if (!files.has('index.html')) throw new Error(`${info.archive} has no index.html`);
     this.current = { info, files };
-    this.logger.log(`Serving web Super App build ${info.build} (${info.commit || '?'}), ${files.size} files`);
+    this.logger.log(`Serving web Super App ${info.version || 'build'} ${info.build} (${info.commit || '?'}), ${files.size} files`);
   }
 
   private url(path: string): string {

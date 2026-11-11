@@ -38,7 +38,7 @@ push-all.ps1
 start.sh
 
 # Standalone Mobile Super App clone
-super-app/
+/super-app/
 /scratch/
 *.patch
 *.apk

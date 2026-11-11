@@ -115,8 +115,11 @@ docker push registry.fintechcenterfsa.com/super-app/manager-client:latest
 
 This image holds no app files. nginx passes `/preview/*` to the backend
 (`super-app-backend-svc:3000/superapp-web/`), which serves the newest web build
-that Jenkins `superapp-sandbox-build` published to Nexus
-(`superapp-artifacts/superapp-web/latest.json`). The Backoffice device preview
+published to Nexus (`superapp-artifacts/superapp-web/latest.json`). Every
+successful `superapp-test-build` publishes one, built from the same source, mini
+apps and version as its APK (response header `X-SuperApp-Version`), so the phone,
+the Backoffice preview and `/preview/` always show the same Super App version.
+`superapp-sandbox-build` is now only for a manual web-only rebuild. The Backoffice device preview
 (`/superapp-sandbox/`) shows the same build. Both update about a minute after
 each Jenkins build, with no image rebuild. Rebuild this image only when
 `super-app/Dockerfile` or `super-app/docker/nginx.conf.template` changes.

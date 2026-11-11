@@ -156,6 +156,13 @@ export class SuperAppService implements OnApplicationBootstrap {
     }
 
     const currentVer = latest.superAppVersion || 'v1.0.0';
+
+    // A version whose test build failed was never published: hand it out
+    // again, so failed builds do not use up version numbers.
+    if (await this.isFailedTestVersion(currentVer)) {
+      return currentVer;
+    }
+
     const nextVersion = this.computeNextVersion(currentVer);
 
     // Persist new version to advance sequence
@@ -169,12 +176,31 @@ export class SuperAppService implements OnApplicationBootstrap {
   }
 
   /**
+   * True when every mini app built with this version has its build failed
+   * (none is building, testing or live with it).
+   */
+  async isFailedTestVersion(version: string): Promise<boolean> {
+    const apps = await this.miniAppRepository.find({
+      where: { activeTestVersion: version },
+    });
+    return (
+      apps.length > 0 &&
+      apps.every(
+        (a) =>
+          String(a.lifecycleStatus) === 'BUILD_FAILED' ||
+          String(a.buildStatus) === 'FAILED',
+      )
+    );
+  }
+
+  /**
    * Preview the next suggested version tag without immediately saving
    */
   async getNextSuggestedVersion(): Promise<string> {
     const latest = await this.findLatestCapability();
     if (!latest) return 'v1.0.0';
     const currentVer = latest.superAppVersion || 'v1.0.0';
+    if (await this.isFailedTestVersion(currentVer)) return currentVer;
     return this.computeNextVersion(currentVer);
   }
 

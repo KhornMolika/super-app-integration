@@ -314,12 +314,7 @@ export class ReleaseAssemblyVerificationService {
         );
       }
 
-      // Trigger Jenkins SuperApp Web Sandbox build pipeline
-      this.jenkinsService.triggerSuperAppSandboxBuild().catch((e: any) => {
-        this.logger.warn(
-          `Failed to trigger superapp-sandbox-build: ${e.message}`,
-        );
-      });
+      // The test build also publishes the web Super App with this version
     }
 
     const nexusBase = (
