@@ -273,6 +273,39 @@ if ($Target -eq 'all' -or $Target -eq 'client') {
     # the private Git packages in pubspec.yaml (no credentials inside Docker).
     # Build it fresh here, with this machine's Git access, so the image never
     # ships a stale or missing build.
+    # Mini app packages come from the /pub gateway (pubspec.yaml hosted url).
+    # Check it first, so a gateway problem is reported as itself and not as
+    # pub's "badly formatted response".
+    $pubspecText = Get-Content (Join-Path $clientDir 'pubspec.yaml') -Raw
+    $hosted = [regex]::Matches($pubspecText, '(?m)^\s+name:\s*([a-z0-9_]+)\s*\r?\n\s+url:\s*(https?://\S+?)/?\s*$')
+    if ($hosted.Count -gt 0) {
+        if ($env:RELEASE_CALLBACK_TOKEN) { $env:FSA_PUB_TOKEN = $env:RELEASE_CALLBACK_TOKEN }
+        $tokenAdded = @{}
+        foreach ($m in $hosted) {
+            $pkg = $m.Groups[1].Value
+            $gateway = $m.Groups[2].Value.TrimEnd('/')
+            if ($env:FSA_PUB_TOKEN -and -not $tokenAdded[$gateway]) {
+                flutter pub token add $gateway --env-var FSA_PUB_TOKEN | Out-Null
+                $tokenAdded[$gateway] = $true
+            }
+            $auth = if ($env:FSA_PUB_TOKEN) { @('-H', "Authorization: Bearer $($env:FSA_PUB_TOKEN)") } else { @() }
+            $code = & curl.exe -s -o NUL -w '%{http_code}' --max-time 30 @auth `
+                -H 'Accept: application/vnd.pub.v2+json' "$gateway/api/packages/$pkg"
+            $problem = switch -Regex ($code) {
+                '^200$' { $null }
+                '^30\d$' { "$gateway answers with a redirect (HTTP $code), the Backoffice login page. The Backoffice with the /pub route is not deployed yet: deploy the manager image first (-Target manager), then run -Target client." }
+                '^(401|403)$' { "$gateway refused the login (HTTP $code). Set RELEASE_CALLBACK_TOKEN to the production Jenkins callback token before running this script (developer tokens only see the SDK packages)." }
+                '^404$' { "$pkg is not in the production Nexus pub-hosted repository (HTTP 404). Publish it there after its security scan." }
+                default { "$gateway did not answer for $pkg (HTTP $code). Check that the backend is running." }
+            }
+            if ($problem) {
+                Write-Failure "Mini app package $pkg cannot be fetched: $problem"
+                exit 1
+            }
+            Write-Host "  $pkg is available from $gateway" -ForegroundColor DarkGray
+        }
+    }
+
     Write-Host "Building Flutter web (base href /preview/)..." -ForegroundColor Yellow
     Push-Location $clientDir
     try {
@@ -286,7 +319,7 @@ if ($Target -eq 'all' -or $Target -eq 'client') {
         Pop-Location
     }
     if ($LASTEXITCODE -ne 0) {
-        Write-Failure "Flutter web build failed (check Git access to the private mini app packages)."
+        Write-Failure "Flutter web build failed (see the pub or build error above: /pub packages or private Git access)."
         exit 1
     }
 
