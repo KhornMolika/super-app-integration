@@ -66,20 +66,3 @@ spec:
             name: super-app-backend-svc
             port:
               number: 3000
-      # Partner package registries (developer token). The trailing slash matters:
-      # Traefik matches Prefix as plain text, and "/api/sdk" would also catch the
-      # Back Office's own /api/sdk-artifacts calls.
-      - path: /pub/
-        pathType: Prefix
-        backend:
-          service:
-            name: super-app-backend-svc
-            port:
-              number: 3000
-      - path: /api/sdk/
-        pathType: Prefix
-        backend:
-          service:
-            name: super-app-backend-svc
-            port:
-              number: 3000

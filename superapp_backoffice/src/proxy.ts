@@ -17,9 +17,12 @@ const PUBLIC_ROUTES = [
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
-  // 1. Skip API proxy endpoints, Next.js internal static assets, and files
+  // 1. Skip API proxy endpoints, the partner pub registry (developer token, no
+  //    login cookie), Next.js internal static assets, and files
   if (
     pathname.startsWith('/api') ||
+    pathname === '/pub' ||
+    pathname.startsWith('/pub/') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/static') ||
     pathname.includes('.')
