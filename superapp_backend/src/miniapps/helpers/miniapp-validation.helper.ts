@@ -740,6 +740,10 @@ export class MiniappValidationHelper {
 
     let polls = 0;
     const maxPolls = 120; // 120 * 3s = 6 minutes
+    // After Jenkins finishes, its last callback can take a moment to land
+    const resultGracePolls = 10; // 30s
+    let finishedPolls = 0;
+    let lastConsole = '';
     const interval = setInterval(async () => {
       polls++;
       try {
@@ -749,13 +753,29 @@ export class MiniappValidationHelper {
           if (app && app.validationStatus === 'RUNNING' && polls >= maxPolls) {
             await this.markValidationFailed(
               miniAppId,
-              'Validation pipeline timed out after 6 minutes waiting for Jenkins CI.',
+              finishedPolls > 0
+                ? this.lostResultMessage(lastConsole)
+                : 'Validation pipeline timed out after 6 minutes waiting for Jenkins CI.',
             );
           }
           return;
         }
 
         const jStatus = await this.jenkinsService.getJobBuildStatus(targetJob);
+        // The job's last build may be another app's scan (or ours is still queued)
+        if (jStatus.available && jStatus.miniAppId && jStatus.miniAppId !== miniAppId) return;
+        if (jStatus.available && !jStatus.building && jStatus.result !== 'FAILURE' && jStatus.result !== 'ABORTED') {
+          // Finished without failing, yet the app is still RUNNING: the results
+          // did not reach us. Wait briefly, then say why instead of spinning forever.
+          finishedPolls++;
+          lastConsole = jStatus.consoleText || '';
+          if (finishedPolls >= resultGracePolls) {
+            clearInterval(interval);
+            this.logger.warn(`Jenkins scan for ${integrationMethod} app ${miniAppId} finished but its results never arrived.`);
+            await this.markValidationFailed(miniAppId, this.lostResultMessage(lastConsole));
+          }
+          return;
+        }
         if (jStatus.available && !jStatus.building) {
           clearInterval(interval);
           if (jStatus.result === 'FAILURE' || jStatus.result === 'ABORTED') {
@@ -785,6 +805,21 @@ export class MiniappValidationHelper {
         this.logger.debug(`Jenkins validation watchdog poll error: ${err.message}`);
       }
     }, 3000);
+  }
+
+  /** Why a finished Jenkins scan left no result, from its console. */
+  private lostResultMessage(consoleText: string): string {
+    if (/status:?\s*401\b/i.test(consoleText)) {
+      return (
+        'The scan finished on Jenkins, but the backend refused its results (HTTP 401: callback token). ' +
+        'Check that RELEASE_CALLBACK_TOKEN is set on the backend and that the Jenkins job declares the ' +
+        'CALLBACK_TOKEN parameter (run "pnpm sync:jenkins --prod"), then scan again.'
+      );
+    }
+    return (
+      'The scan finished on Jenkins, but its results never reached the backend. ' +
+      'Check that Jenkins can reach CALLBACK_BASE_URL, then scan again.'
+    );
   }
 
   /**

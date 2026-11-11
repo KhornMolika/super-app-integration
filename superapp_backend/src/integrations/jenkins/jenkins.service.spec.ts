@@ -26,7 +26,8 @@ describe('JenkinsService.triggerSuperAppBuild CODEGEN_MR_IID', () => {
     const call = fetchSpy.mock.calls.find((c) =>
       String(c[0]).includes('buildWithParameters'),
     );
-    return new URL(String(call![0]));
+    // Parameters travel in the POST body
+    return new URL(`${call![0]}?${call![1]?.body ?? ""}`);
   };
 
   it('sends CODEGEN_MR_IID when it is digits', async () => {
@@ -70,7 +71,8 @@ describe('JenkinsService.triggerSuperAppBuild CODEGEN_MR_IID', () => {
       const call = [...fetchSpy.mock.calls]
         .reverse()
         .find((c) => String(c[0]).includes('buildWithParameters'));
-      return new URL(String(call![0]));
+      // Parameters travel in the POST body
+    return new URL(`${call![0]}?${call![1]?.body ?? ""}`);
     };
 
     it('sends MOBILE_API_BASE_URL (trailing slash trimmed)', async () => {
@@ -133,6 +135,29 @@ describe('JenkinsService.triggerMiniAppValidation modular pipelines', () => {
   });
   afterEach(() => jest.restoreAllMocks());
 
+  it('keeps secrets out of the URL and the logs: parameters go in the POST body', async () => {
+    const svc = new JenkinsService({
+      get: (k: string, d?: string) =>
+        ({ JENKINS_URL: 'http://jenkins.test', RELEASE_CALLBACK_TOKEN: 'cb-secret' } as Record<string, string>)[k] ?? d,
+    } as any);
+    jest.spyOn(svc as any, 'getCrumb').mockResolvedValue(null);
+    const log = jest.spyOn((svc as any).logger, 'log').mockImplementation();
+    await svc.triggerMiniAppValidation({
+      miniAppId: 'app-1',
+      integrationMethod: 'FLUTTER_PACKAGE',
+      gitAccessToken: 'git-secret',
+    });
+    const [url, init] = fetchSpy.mock.calls[0];
+    expect(String(url)).toBe('http://jenkins.test/job/miniapp-validation-flutter-package/buildWithParameters');
+    const body = new URLSearchParams(String(init.body));
+    // The token comes from ConfigService, the same source the callback guard checks
+    expect(body.get('CALLBACK_TOKEN')).toBe('cb-secret');
+    expect(body.get('GIT_ACCESS_TOKEN')).toBe('git-secret');
+    const logged = log.mock.calls.map((c) => String(c[0])).join(' ');
+    expect(logged).not.toContain('cb-secret');
+    expect(logged).not.toContain('git-secret');
+  });
+
   it('routes WEBVIEW integration method to miniapp-validation-webview job', async () => {
     const svc = make();
     jest.spyOn(svc as any, 'getCrumb').mockResolvedValue(null);
@@ -141,7 +166,8 @@ describe('JenkinsService.triggerMiniAppValidation modular pipelines', () => {
       targetUrl: 'https://example.com',
     });
     expect(res.success).toBe(true);
-    const callUrl = String(fetchSpy.mock.calls[0][0]);
+    const [url, init] = fetchSpy.mock.calls[0];
+    const callUrl = `${url}?${init?.body ?? ""}`;
     expect(callUrl).toContain(
       '/job/miniapp-validation-webview/buildWithParameters',
     );
@@ -157,7 +183,8 @@ describe('JenkinsService.triggerMiniAppValidation modular pipelines', () => {
       packageName: 'test_pkg',
     });
     expect(res.success).toBe(true);
-    const callUrl = String(fetchSpy.mock.calls[0][0]);
+    const [url, init] = fetchSpy.mock.calls[0];
+    const callUrl = `${url}?${init?.body ?? ""}`;
     expect(callUrl).toContain(
       '/job/miniapp-validation-flutter-package/buildWithParameters',
     );
@@ -172,7 +199,8 @@ describe('JenkinsService.triggerMiniAppValidation modular pipelines', () => {
       packageName: 'PaymentSdk',
     });
     expect(res.success).toBe(true);
-    const callUrl = String(fetchSpy.mock.calls[0][0]);
+    const [url, init] = fetchSpy.mock.calls[0];
+    const callUrl = `${url}?${init?.body ?? ""}`;
     expect(callUrl).toContain(
       '/job/miniapp-validation-native-sdk/buildWithParameters',
     );
@@ -187,7 +215,8 @@ describe('JenkinsService.triggerMiniAppValidation modular pipelines', () => {
       urlScheme: 'myapp://',
     });
     expect(res.success).toBe(true);
-    const callUrl = String(fetchSpy.mock.calls[0][0]);
+    const [url, init] = fetchSpy.mock.calls[0];
+    const callUrl = `${url}?${init?.body ?? ""}`;
     expect(callUrl).toContain(
       '/job/miniapp-validation-deep-link/buildWithParameters',
     );

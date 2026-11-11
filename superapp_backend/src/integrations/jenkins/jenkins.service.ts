@@ -71,6 +71,20 @@ export class JenkinsService {
     return `${base}/api/${cleanEndpoint}`;
   }
 
+  /**
+   * The shared secret Jenkins sends back as x-callback-token. Read like
+   * CallbackTokenGuard reads it, so both always agree.
+   */
+  private callbackToken(): string {
+    const token = (this.configService.get<string>('RELEASE_CALLBACK_TOKEN') || '').trim();
+    if (!token) {
+      this.logger.warn(
+        'RELEASE_CALLBACK_TOKEN is not set: Jenkins results will be refused in production (the scan or build stays RUNNING).',
+      );
+    }
+    return token;
+  }
+
   private getAuthHeader(): string | null {
     const user =
       this.configService.get<string>('JENKINS_USER') ||
@@ -185,7 +199,7 @@ export class JenkinsService {
       GIT_DEPLOY_KEY: options.deployKey || '',
       CALLBACK_URL: callbackUrl,
       // Validation results are trusted to mark a scan PASSED: authenticate them
-      CALLBACK_TOKEN: process.env.RELEASE_CALLBACK_TOKEN || '',
+      CALLBACK_TOKEN: this.callbackToken(),
       ALLOW_LOCAL: allowLocalStr,
     });
 
@@ -204,7 +218,7 @@ export class JenkinsService {
     const executeTrigger = async (
       job: string,
     ): Promise<{ success: boolean; message: string; notFound?: boolean }> => {
-      const triggerUrl = `${this.jenkinsUrl}/job/${job}/buildWithParameters?${params.toString()}`;
+      const triggerUrl = `${this.jenkinsUrl}/job/${job}/buildWithParameters`;
       this.logger.log(
         `Triggering Jenkins job "${job}" (${options.integrationMethod}): ${triggerUrl}`,
       );
@@ -229,6 +243,7 @@ export class JenkinsService {
       const response = await fetch(triggerUrl, {
         method: 'POST',
         headers,
+        body: params.toString(),
       });
 
       if (response.status === 201 || response.status === 200) {
@@ -421,7 +436,7 @@ export class JenkinsService {
     const appName = options.appName || 'superapp';
     const nexusUrl = options.nexusUrl || this.jenkinsNexusUrl;
 
-    const callbackToken = process.env.RELEASE_CALLBACK_TOKEN || '';
+    const callbackToken = this.callbackToken();
     const nexusUser = process.env.NEXUS_ADMIN_USER || 'admin';
     const nexusPassword =
       this.configService.get<string>('NEXUS_ADMIN_PASSWORD') ||
@@ -463,7 +478,7 @@ export class JenkinsService {
       params.set('CODEGEN_MR_IID', options.codegenMrIid);
     }
 
-    const triggerUrl = `${this.jenkinsUrl}/job/${jobName}/buildWithParameters?${params.toString()}`;
+    const triggerUrl = `${this.jenkinsUrl}/job/${jobName}/buildWithParameters`;
     this.logger.log(
       `Triggering Jenkins SuperApp build pipeline: ${triggerUrl}`,
     );
@@ -489,6 +504,7 @@ export class JenkinsService {
       const response = await fetch(triggerUrl, {
         method: 'POST',
         headers,
+        body: params.toString(),
       });
 
       if (response.status === 201 || response.status === 200) {
@@ -538,7 +554,7 @@ export class JenkinsService {
     const repoUrl = options?.repoUrl || this.superAppRepoUrl;
     const nexusUrl = options?.nexusUrl || this.jenkinsNexusUrl;
 
-    const callbackToken = process.env.RELEASE_CALLBACK_TOKEN || '';
+    const callbackToken = this.callbackToken();
     const params = new URLSearchParams({
       REPO_URL: repoUrl,
       BRANCH: branch,
@@ -550,7 +566,7 @@ export class JenkinsService {
       CALLBACK_TOKEN: callbackToken,
     });
 
-    const triggerUrl = `${this.jenkinsUrl}/job/${jobName}/buildWithParameters?${params.toString()}`;
+    const triggerUrl = `${this.jenkinsUrl}/job/${jobName}/buildWithParameters`;
     this.logger.log(
       `Triggering Jenkins SuperApp Web Sandbox pipeline: ${triggerUrl}`,
     );
@@ -576,6 +592,7 @@ export class JenkinsService {
       const response = await fetch(triggerUrl, {
         method: 'POST',
         headers,
+        body: params.toString(),
       });
 
       if (response.status === 201 || response.status === 200) {
@@ -661,6 +678,8 @@ export class JenkinsService {
     result?: string | null;
     duration?: number;
     consoleText?: string;
+    /** Which mini app this build scanned (its MINIAPP_ID parameter), when it has one. */
+    miniAppId?: string;
   }> {
     const statusUrl = `${this.jenkinsUrl}/job/${encodeURIComponent(jobName)}/lastBuild/api/json`;
     const consoleUrl = `${this.jenkinsUrl}/job/${encodeURIComponent(jobName)}/lastBuild/consoleText`;
@@ -690,6 +709,10 @@ export class JenkinsService {
         result: data.result ?? null,
         duration: data.duration ?? 0,
         consoleText,
+        // Only MINIAPP_ID is read: the other parameters include secrets
+        miniAppId: (data.actions || [])
+          .flatMap((a: any) => (Array.isArray(a?.parameters) ? a.parameters : []))
+          .find((p: any) => p?.name === 'MINIAPP_ID')?.value,
       };
     } catch (_) {
       return { available: false };
