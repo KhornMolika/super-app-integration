@@ -33,7 +33,11 @@ param(
     [string]$HarborRegistry = 'registry.fintechcenterfsa.com',
     [string]$HarborProject = 'super-app',
     [switch]$SkipTests,
-    [switch]$SkipPush
+    [switch]$SkipPush,
+    # Backend whose mini app list the client build uses
+    [string]$BackendUrl = 'https://app.fintechcenterfsa.com',
+    # Build the client with the mini apps committed in super-app
+    [switch]$SkipMiniAppSync
 )
 
 Set-StrictMode -Version Latest
@@ -273,21 +277,55 @@ if ($Target -eq 'all' -or $Target -eq 'client') {
     # the private Git packages in pubspec.yaml (no credentials inside Docker).
     # Build it fresh here, with this machine's Git access, so the image never
     # ships a stale or missing build.
+    # Build token: this terminal's RELEASE_CALLBACK_TOKEN, else the one in
+    # superapp_backend/.env.production (git-ignored). Never printed.
+    $buildToken = $env:RELEASE_CALLBACK_TOKEN
+    $prodEnv = Join-Path $backendDir '.env.production'
+    if (-not $buildToken -and (Test-Path $prodEnv)) {
+        $line = Get-Content $prodEnv | Where-Object { $_ -match '^\s*RELEASE_CALLBACK_TOKEN\s*=' } | Select-Object -Last 1
+        if ($line) { $buildToken = ($line -replace '^\s*RELEASE_CALLBACK_TOKEN\s*=\s*', '').Trim().Trim('"').Trim("'") }
+    }
+    if ($buildToken) { $env:FSA_PUB_TOKEN = $buildToken }
+
+    # Mini apps: rewrite super-app's pubspec.yaml and registry from the
+    # production list (as Jenkins does), so a deleted app is never built.
+    if (-not $SkipMiniAppSync) {
+        if (-not $buildToken) {
+            Write-Failure "No RELEASE_CALLBACK_TOKEN (terminal or superapp_backend/.env.production) to read the production mini app list. Use -SkipMiniAppSync to build with the committed mini apps."
+            exit 1
+        }
+        $listUrl = "$($BackendUrl.TrimEnd('/'))/api/release-assembly/build-miniapps"
+        $listFile = Join-Path ([IO.Path]::GetTempPath()) "build-miniapps-$PID.json"
+        $headerFile = Join-Path ([IO.Path]::GetTempPath()) "build-miniapps-$PID.hdr"
+        try {
+            # The token goes in a header file, not on the command line
+            [IO.File]::WriteAllText($headerFile, "x-callback-token: $buildToken")
+            $code = & curl.exe -s -o $listFile -w '%{http_code}' --max-time 30 -H "@$headerFile" $listUrl
+            if ($code -eq '404') {
+                Write-Host "  WARNING: the backend has no build-miniapps yet: building with the mini apps committed in super-app" -ForegroundColor Yellow
+            } elseif ($code -ne '200') {
+                Write-Failure "Could not read the mini app list from $listUrl (HTTP $code)."
+                exit 1
+            } else {
+                Write-Host "Syncing mini apps from $listUrl..." -ForegroundColor Yellow
+                dart (Join-Path $clientDir 'tool\sync_miniapps.dart') $listFile $clientDir
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Failure "Mini app sync failed (see above)."
+                    exit 1
+                }
+                Write-Host "  super-app files now match production; commit them if git shows changes." -ForegroundColor DarkGray
+            }
+        } finally {
+            Remove-Item $listFile, $headerFile -Force -ErrorAction SilentlyContinue
+        }
+    }
+
     # Mini app packages come from the /pub gateway (pubspec.yaml hosted url).
     # Check it first, so a gateway problem is reported as itself and not as
     # pub's "badly formatted response".
     $pubspecText = Get-Content (Join-Path $clientDir 'pubspec.yaml') -Raw
-    $hosted = [regex]::Matches($pubspecText, '(?m)^\s+name:\s*([a-z0-9_]+)\s*\r?\n\s+url:\s*(https?://\S+?)/?\s*$')
+    $hosted = [regex]::Matches($pubspecText, '(?m)^\s+name:\s*([a-z0-9_]+)\s*\r?\n\s+url:\s*[''"]?(https?://[^''"\s]+?)/?[''"]?\s*$')
     if ($hosted.Count -gt 0) {
-        # Build token: this terminal's RELEASE_CALLBACK_TOKEN, else the one in
-        # superapp_backend/.env.production (git-ignored). Never printed.
-        $buildToken = $env:RELEASE_CALLBACK_TOKEN
-        $prodEnv = Join-Path $backendDir '.env.production'
-        if (-not $buildToken -and (Test-Path $prodEnv)) {
-            $line = Get-Content $prodEnv | Where-Object { $_ -match '^\s*RELEASE_CALLBACK_TOKEN\s*=' } | Select-Object -Last 1
-            if ($line) { $buildToken = ($line -replace '^\s*RELEASE_CALLBACK_TOKEN\s*=\s*', '').Trim().Trim('"').Trim("'") }
-        }
-        if ($buildToken) { $env:FSA_PUB_TOKEN = $buildToken }
         $tokenAdded = @{}
         foreach ($m in $hosted) {
             $pkg = $m.Groups[1].Value

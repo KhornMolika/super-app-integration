@@ -3,6 +3,7 @@ import { CallbackTokenGuard } from '../integrations/release-assembly/callback-to
 import { BypassTransform } from '../common/decorators/bypass-transform.decorator';
 import { NativeSdkCodegenService } from './native-sdk-codegen.service';
 import { BuildGitCredentialsService } from './build-git-credentials.service';
+import { BuildMiniAppsService } from './build-miniapps.service';
 
 /**
  * Read by the Super App build (Jenkins) before `flutter build`. Machine-to-machine,
@@ -13,6 +14,7 @@ export class NativeSdkManifestController {
   constructor(
     private readonly codegen: NativeSdkCodegenService,
     private readonly gitCredentials: BuildGitCredentialsService,
+    private readonly miniApps: BuildMiniAppsService,
   ) {}
 
   /** Which Native SDK libraries to add (archived with the build: no secrets). */
@@ -21,6 +23,19 @@ export class NativeSdkManifestController {
   @BypassTransform()
   manifest() {
     return this.codegen.buildManifest();
+  }
+
+  /**
+   * The Flutter mini apps in the build: pubspec.yaml dependencies and the
+   * generated registry, which the build writes into the Super App before
+   * pub get (no secrets).
+   */
+  @Get('build-miniapps')
+  @UseGuards(CallbackTokenGuard)
+  @BypassTransform()
+  @Header('Cache-Control', 'no-store')
+  buildMiniApps() {
+    return this.miniApps.plan();
   }
 
   /**

@@ -387,7 +387,7 @@ dev_dependencies:
       );
     });
 
-    it('references the Home widget through its own package even when the entry uses a hard-coded branch', () => {
+    it('matches the sample entry branches by exact package name only', () => {
       writeDeps(['flutter', 'fsa_public_hr']);
       service.generateDynamicRegistry([
         {
@@ -404,12 +404,9 @@ dev_dependencies:
       expect(content).toContain(
         "import 'package:fsa_public_hr/fsa_public_hr.dart' as fsa_public_hr;",
       );
-      // hard-coded branch keeps its entry expression unchanged
-      expect(content).toContain(
-        '=> sc_public_miniapp.PublicMiniAppEntry(onExit: () => safePop(context), passengerName:',
-      );
-      expect(content).not.toContain('PublicMiniAppEntry.new');
-      // ...but the widget line always goes through the helper
+      // "public" in the name no longer pulls in sc_public_miniapp (not a dependency)
+      expect(content).not.toContain('sc_public_miniapp');
+      expect(content).toContain('=> buildPackageWidget(fsa_public_hr.MiniAppEntry.new,');
       expect(content).toContain(
         "(context, onOpen) => buildPackageWidget(fsa_public_hr.HrHomeWidget.new, {#onOpen: onOpen}, superAppTokenProvider(context, 'fsa_public_hr_app'))",
       );

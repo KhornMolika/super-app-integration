@@ -8,6 +8,7 @@ import { NativeSdkCodegenService } from './native-sdk-codegen.service';
 import { GitlabMrService } from './gitlab-mr.service';
 import { NativeSdkManifestController } from './native-sdk-manifest.controller';
 import { BuildGitCredentialsService } from './build-git-credentials.service';
+import { BuildMiniAppsService } from './build-miniapps.service';
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { BuildGitCredentialsService } from './build-git-credentials.service';
     IntegrationsModule,
   ],
   controllers: [NativeSdkManifestController],
-  providers: [NativeSdkCodegenService, GitlabMrService, BuildGitCredentialsService],
+  providers: [NativeSdkCodegenService, GitlabMrService, BuildGitCredentialsService, BuildMiniAppsService],
   exports: [NativeSdkCodegenService, GitlabMrService],
 })
 export class NativeSdkCodegenModule {}

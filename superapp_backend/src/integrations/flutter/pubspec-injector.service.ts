@@ -20,6 +20,8 @@ import * as child_process from 'child_process';
 import * as YAML from 'yaml';
 import { decryptCredential } from '../../common/utils/credential-cipher.util';
 import { gitSourceUrlOf, isGitSource } from './git-source.util';
+import { renderMiniAppRegistry } from './miniapp-registry.render';
+import { canonicalPackageNameOf, pubspecHostedUrlFor } from './miniapp-dependency.util';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 import {
   InjectDependencyDto,
@@ -211,17 +213,7 @@ export class PubspecInjectorService {
    * it is never written there, and neither is an app's stored Nexus URL.
    */
   pubspecHostedUrl(requested?: string): string {
-    const gateway = (
-      this.configService.get<string>('SUPER_APP_PUB_URL') ||
-      'https://app.fintechcenterfsa.com/pub'
-    )
-      .trim()
-      .replace(/\/+$/, '');
-    const r = (requested || '').trim();
-    const usable =
-      /^https:\/\//.test(r) &&
-      !/(localhost|127\.0\.0\.1|host\.docker\.internal|\.svc\.cluster\.local|\/repository\/)/i.test(r);
-    return usable ? r.replace(/\/+$/, '') : gateway;
+    return pubspecHostedUrlFor(this.configService.get<string>('SUPER_APP_PUB_URL'), requested);
   }
 
   /**
@@ -372,29 +364,7 @@ export class PubspecInjectorService {
    * Infers the canonical Dart package name from MiniApp entity configuration.
    */
   inferCanonicalPackageName(miniApp: MiniApp): string {
-    const cfg = miniApp.integrationConfig || {};
-    if (
-      cfg.packageName &&
-      typeof cfg.packageName === 'string' &&
-      cfg.packageName.trim() !== ''
-    ) {
-      return cfg.packageName.trim().replace(/-/g, '_').toLowerCase();
-    }
-
-    const gitUrl =
-      cfg.gitUrl ||
-      cfg.repoUrl ||
-      (cfg.repoOwner && cfg.repoName ? cfg.repoName : '');
-    if (gitUrl) {
-      const match = gitUrl.match(/[\/:]([^\/:]+?)(\.git)?$/);
-      if (match && match[1]) {
-        return match[1].replace(/-/g, '_').toLowerCase();
-      }
-    }
-
-    return (miniApp.name || miniApp.appId || 'miniapp')
-      .toLowerCase()
-      .replace(/[^a-z0-9_]/g, '_');
+    return canonicalPackageNameOf(miniApp);
   }
 
   /**
@@ -648,125 +618,24 @@ export class PubspecInjectorService {
     }
   }
 
-  /** A valid, lower-case Dart import prefix for a package name. */
-  private dartImportPrefix(pkg: string): string {
-    const safe = pkg.replace(/[^a-z0-9_]/g, '_');
-    return /^[a-z_]/.test(safe) ? safe : `p_${safe}`;
-  }
-
   /**
-   * Automatically generates the dynamic Dart registry file linking all approved mini-apps to builders.
+   * Writes the dynamic Dart registry linking the mini apps to their entry
+   * widgets (only apps whose package is a pubspec dependency can be imported).
    */
   generateDynamicRegistry(apps: MiniApp[]): void {
     try {
-      // Only apps whose package is an actual pubspec dependency can be imported
       const currentDeps = new Set(
         Object.keys(this.readPubspecDocument().dependenciesNode?.toJSON() ?? {}),
       );
-      apps = apps.filter((app) => currentDeps.has(this.inferCanonicalPackageName(app)));
+      const entries = apps
+        .map((app) => ({ packageName: this.inferCanonicalPackageName(app), app }))
+        .filter((e) => currentDeps.has(e.packageName));
 
-      const mobileDir = this.getMobileAppDir();
       const generatedPath = path.join(
-        mobileDir,
+        this.getMobileAppDir(),
         'lib/core/miniapp/mini_app_registry.generated.dart',
       );
-
-      const imports = new Set<string>([
-        "import 'package:flutter/material.dart';",
-        "import 'package:go_router/go_router.dart';",
-        "import 'mini_app_registry.dart';",
-      ]);
-
-      const registrations: string[] = [];
-
-      for (const app of apps) {
-        const canonicalName = this.inferCanonicalPackageName(app);
-        const nameSlug = (app.name || '').toLowerCase().replace(/\s+/g, '_');
-        const appId = app.appId || '';
-
-        // Every package is imported under its own prefix so two packages that
-        // both export `MiniAppEntry` never make the generated file ambiguous.
-        const importPackage = (pkg: string): string => {
-          const prefix = this.dartImportPrefix(pkg);
-          imports.add(`import 'package:${pkg}/${pkg}.dart' as ${prefix};`);
-          return prefix;
-        };
-
-        let widgetExpr = '';
-        let prefix: string;
-        if (
-          canonicalName === 'sc_public_miniapp' ||
-          canonicalName.includes('transit') ||
-          canonicalName.includes('public')
-        ) {
-          prefix = importPackage('sc_public_miniapp');
-          widgetExpr =
-            `${prefix}.PublicMiniAppEntry(onExit: () => safePop(context), passengerName: 'Super App Commuter', passTier: '30-Day Unlimited All-Access')`;
-        } else if (
-          canonicalName === 'sc_private_miniapp' ||
-          canonicalName.includes('private') ||
-          canonicalName.includes('loyalty') ||
-          canonicalName.includes('reward')
-        ) {
-          prefix = importPackage('sc_private_miniapp');
-          widgetExpr =
-            `${prefix}.MiniAppEntry(onExit: () => safePop(context), userName: 'Super App VIP Member', userTier: 'Gold Elite')`;
-        } else if (
-          canonicalName === 'ma_flutter_kyc' ||
-          canonicalName.includes('kyc')
-        ) {
-          prefix = importPackage('ma_flutter_kyc');
-          widgetExpr =
-            `${prefix}.KycVerifierAppEntry(jwtToken: 'tok_live_superapp_session', userId: 'usr_fsa_verified', onExit: () => safePop(context))`;
-        } else {
-          // Dynamic invocation for any newly registered package entry point
-          const entryPoint = (
-            app.integrationConfig?.entryPoint || 'MiniAppEntry'
-          ).trim();
-          prefix = importPackage(canonicalName);
-          // the helper hands the super app's token to constructors that accept it
-          widgetExpr = `buildPackageWidget(${prefix}.${entryPoint}.new, {#onExit: () => safePop(context)}, superAppTokenProvider(context, '${appId}'))`;
-        }
-
-        if (widgetExpr) {
-          const aliasList = `[
-    '${canonicalName}',
-    '${appId}',
-    '${nameSlug}',
-    '${app.name || ''}',
-    'miniapp_${nameSlug}_${(app.id || '').substring(0, 6)}',
-    '${app.id || ''}',
-  ].where((s) => s.isNotEmpty).toList()`;
-          let registration = `  MiniAppRegistry.registerAliases(${aliasList}, (context, arguments) => ${widgetExpr});`;
-
-          const widgetClass = app.homeWidget?.widgetClass;
-          if (widgetClass && app.homeWidget?.verifiedClass === widgetClass) {
-            // the widget was verified in the app's own package, which the
-            // hard-coded entry branches above may not import
-            const widgetPrefix = importPackage(canonicalName);
-            registration += `\n\n  MiniAppRegistry.registerWidgetAliases(${aliasList}, (context, onOpen) => buildPackageWidget(${widgetPrefix}.${widgetClass}.new, {#onOpen: onOpen}, superAppTokenProvider(context, '${appId}')));`;
-          }
-          registrations.push(registration);
-        }
-      }
-
-      const content = `// AUTO-GENERATED BY PubspecInjectorService - DO NOT EDIT MANUALLY
-${Array.from(imports).join('\n')}
-
-void registerDynamicGeneratedMiniApps() {
-  void safePop(BuildContext context) {
-    if (GoRouter.maybeOf(context) != null && GoRouter.of(context).canPop()) {
-      GoRouter.of(context).pop();
-    } else if (Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
-    }
-  }
-
-${registrations.join('\n\n')}
-}
-`;
-
-      fs.writeFileSync(generatedPath, content, 'utf-8');
+      fs.writeFileSync(generatedPath, renderMiniAppRegistry(entries), 'utf-8');
       this.logger.log(`Generated dynamic MiniApp registry at ${generatedPath}`);
     } catch (err: any) {
       this.logger.warn(

@@ -22,6 +22,7 @@ def p(String name) {
         TOOLCHAIN_CHECK_ONLY: false,
         PRIVATE_GIT_DEPS: '',
         BUILD_CREDENTIALS_URL: '',
+        MINIAPPS_URL: '',
         PUB_GATEWAY_URL: 'https://app.fintechcenterfsa.com/pub',
     ]
     def v = params[name]
@@ -49,6 +50,56 @@ def gitCredentialsUrl() {
     if (explicit) return explicit
     def base = (params.CALLBACK_URL ?: '').trim()
     return base ? base.replaceAll('/build-callback/?$', '/build-git-credentials') : ''
+}
+
+/** Backend list of the Flutter mini apps in this build (pubspec entries and registry, no secrets). */
+def miniAppsUrl() {
+    def explicit = (p('MINIAPPS_URL') ?: '').trim()
+    if (explicit) return explicit
+    def base = (params.CALLBACK_URL ?: '').trim()
+    return base ? base.replaceAll('/build-callback/?$', '/build-miniapps') : ''
+}
+
+/**
+ * Rewrites the Super App's mini app packages (pubspec.yaml and the generated
+ * registry) from the backend list, so an app added or deleted in this
+ * environment is never out of date in the super-app repository. Runs
+ * tool/sync_miniapps.dart in the Flutter image, before pub get.
+ */
+def syncMiniApps() {
+    def url = miniAppsUrl()
+    if (!url) {
+        echo 'WARNING: no backend URL (CALLBACK_URL / MINIAPPS_URL): building with the mini apps committed in super-app'
+        return
+    }
+    withEnv(["MINIAPPS_LIST_URL=${url}", "FLUTTER_IMAGE=${p('FLUTTER_IMAGE')}"]) {
+        sh '''
+            set -e
+            LIST="$WORKSPACE/build-miniapps.json"
+            rm -f "$LIST"
+            code=$(curl -sS --max-time 30 -o "$LIST" -w '%{http_code}' \
+                -H "x-callback-token: ${CALLBACK_TOKEN:-}" "$MINIAPPS_LIST_URL") || code=error
+            if [ "$code" = "404" ]; then
+                echo "WARNING: this backend has no build-miniapps yet: building with the mini apps committed in super-app"
+                rm -f "$LIST"; exit 0
+            elif [ "$code" != "200" ]; then
+                echo "Could not read the mini app list from $MINIAPPS_LIST_URL (HTTP $code)"; exit 1
+            fi
+            if [ ! -f "$MOBILE_DIR/tool/sync_miniapps.dart" ]; then
+                echo "WARNING: this super-app branch has no tool/sync_miniapps.dart: building with its committed mini apps"
+                exit 0
+            fi
+            SELF=$(cat /etc/hostname)
+            if docker inspect "$SELF" >/dev/null 2>&1; then MOUNT="--volumes-from $SELF"
+            else MOUNT="-v $WORKSPACE:$WORKSPACE"; fi
+            docker run --rm $MOUNT -w "$WORKSPACE" -e MOBILE_DIR -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" \
+                "$FLUTTER_IMAGE" bash -ec '
+                    trap "chown -R $HOST_UID:$HOST_GID $MOBILE_DIR 2>/dev/null || true" EXIT
+                    dart "$MOBILE_DIR/tool/sync_miniapps.dart" build-miniapps.json "$MOBILE_DIR"
+                '
+        '''
+    }
+    if (fileExists('build-miniapps.json')) archiveArtifacts artifacts: 'build-miniapps.json', fingerprint: true
 }
 
 /** Turns git-credentials.json into an SSH config, key files and Git insteadOf rules (no backslashes: kept in a Groovy string). */
@@ -221,6 +272,7 @@ pipeline {
         string(name: 'PUB_GATEWAY_URL', defaultValue: 'https://app.fintechcenterfsa.com/pub', description: 'Pub registry the Super App pubspec.yaml uses for mini app packages; the build reads it with CALLBACK_TOKEN')
         string(name: 'PRIVATE_GIT_DEPS', defaultValue: '', description: 'Extra private Git dependencies not registered as mini apps: <https url>=<Jenkins SSH deploy-key credential id>, comma separated')
         string(name: 'BUILD_CREDENTIALS_URL', defaultValue: '', description: 'Backend build-git-credentials URL (each mini app private repository key). Empty: derived from CALLBACK_URL.')
+        string(name: 'MINIAPPS_URL', defaultValue: '', description: 'Backend build-miniapps URL (the Flutter mini apps in this build). Empty: derived from CALLBACK_URL.')
         booleanParam(name: 'TOOLCHAIN_CHECK_ONLY', defaultValue: false, description: 'Only check the build machine (Docker, Flutter, source mount, pub get); build and upload nothing')
         string(name: 'CODEGEN_MR_IID', defaultValue: '', description: 'Unused; accepted so older backends can still trigger the job')
     }
@@ -245,6 +297,7 @@ pipeline {
                                 extensions: [[$class: 'CloneOption', depth: 1, shallow: true, noTags: true],
                                              [$class: 'CleanBeforeCheckout']]])
                         }
+                        syncMiniApps()
                         // Packages only a developer PC can serve make the build fail later with a vague error
                         def local = sh(returnStdout: true, script: "grep -nE 'url: *https?://(localhost|127\\.0\\.0\\.1|10\\.0\\.2\\.2|host\\.docker\\.internal)' ${env.MOBILE_DIR}/pubspec.yaml || true").trim()
                         if (local && p('TOOLCHAIN_CHECK_ONLY')) {
