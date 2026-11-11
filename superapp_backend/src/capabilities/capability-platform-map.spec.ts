@@ -54,10 +54,12 @@ describe('capability platform map', () => {
     expect(remainingWork('get_location', { known: true })).toEqual([]);
     const push = findPlatformCapability('push_notifications')!;
     const pushSteps = remainingWork(push.key, { known: true, manualSteps: push.manualSteps });
-    expect(pushSteps).toHaveLength(4);
+    expect(pushSteps).toHaveLength(5);
     expect(pushSteps[0]).toContain(
       'Implement the bridge handler in lib/core/miniapp/bridge/handlers/push_notifications_handler.dart',
     );
+    // A new handler also goes into the Mini App Contract, so the SDKs get typed calls
+    expect(pushSteps[1]).toContain('packages/contract/capabilities.json');
     const unknown = remainingWork('teleport', { known: false });
     expect(unknown[0]).toMatch(/Decide which device permissions/);
     expect(unknown[1]).toContain('teleport_handler.dart');

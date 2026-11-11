@@ -194,6 +194,7 @@ export function remainingWork(
       ? []
       : [
           `Implement the bridge handler in ${BRIDGE_DIR}/${handler.file} (a skeleton was generated), then change "implemented" to true so mini apps can use it.`,
+          `Describe "${normalizeCapabilityKey(key)}" (params, result, example) in packages/contract/capabilities.json and run "node packages/contract/generate.mjs", so the Web and Flutter SDKs get typed calls for it (the Super App tests fail until the contract and the handlers match).`,
         ]),
     ...(opts.manualSteps ?? []),
   ];
