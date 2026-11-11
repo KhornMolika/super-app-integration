@@ -1,3 +1,4 @@
+import { testApkBuildMode } from '../../common/utils/build-mode.util';
 import {
   Injectable,
   Logger,
@@ -1120,7 +1121,7 @@ export class MiniappLifecycleHelper {
       await this.miniappRepository.save(app);
 
       const testBuildType =
-        process.env.SUPERAPP_TEST_APK_BUILD_MODE || 'release';
+        testApkBuildMode();
 
       if (app.ownerId) {
         await this.notificationsService.createNotification(
@@ -1232,7 +1233,7 @@ export class MiniappLifecycleHelper {
     await this.miniappRepository.save(app);
 
     // Dispatch explicit BUILDING status notification
-    const testBuildType = process.env.SUPERAPP_TEST_APK_BUILD_MODE || 'release';
+    const testBuildType = testApkBuildMode();
     if (app.ownerId) {
       await this.notificationsService.createNotification(
         app.ownerId,

@@ -1,3 +1,4 @@
+import { testApkBuildMode } from '../../common/utils/build-mode.util';
 import {
   LOCAL_BUILDS_DISABLED_MESSAGE,
   localBuildsEnabled,
@@ -102,7 +103,7 @@ export class ApkBuildManagerService {
     }
     const releaseVersion = options.releaseVersion || 'v0.0.1';
     const defaultBuildType =
-      process.env.SUPERAPP_TEST_APK_BUILD_MODE || 'release';
+      testApkBuildMode();
     const buildType = options.buildType || defaultBuildType;
     const appName = options.appName || 'superapp';
     const apiBaseUrl = resolveMobileApiBaseUrl(options.apiBaseUrl);

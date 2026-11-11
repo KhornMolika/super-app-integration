@@ -1,3 +1,4 @@
+import { testApkBuildMode } from '../../common/utils/build-mode.util';
 import {
   Controller,
   Post,
@@ -77,7 +78,7 @@ export class ReleaseAssemblyVerificationController {
   ) {
     return this.apkBuildManager.triggerBuild({
       releaseVersion: body.releaseVersion || 'v0.0.5',
-      buildType: body.buildType || 'debug',
+      buildType: body.buildType || testApkBuildMode(),
       appName: body.appName || 'superapp',
       apiBaseUrl: body.apiBaseUrl,
     });

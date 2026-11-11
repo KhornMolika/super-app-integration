@@ -1,3 +1,4 @@
+import { testApkBuildMode } from '../../common/utils/build-mode.util';
 import { isPgUuid } from '../../common/utils/uuid.util';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -284,7 +285,7 @@ export class ReleaseAssemblyVerificationService {
               {
                 releaseVersion: dto.releaseVersion,
                 version: dto.releaseVersion,
-                buildType: 'debug',
+                buildType: testApkBuildMode(),
               },
             );
           }
@@ -295,7 +296,7 @@ export class ReleaseAssemblyVerificationService {
       const jenkinsBuildRes = await this.jenkinsService.triggerSuperAppBuild({
         appName: 'superapp',
         releaseVersion: dto.releaseVersion,
-        buildType: 'debug',
+        buildType: testApkBuildMode(),
         codegenMrIid: latestCodegenMrIid(releaseConfigs),
       });
 

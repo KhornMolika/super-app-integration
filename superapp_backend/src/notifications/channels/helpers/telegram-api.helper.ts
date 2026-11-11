@@ -1,5 +1,3 @@
-import * as fs from 'fs';
-import * as path from 'path';
 import { resolveAppUrl } from '../../../common/utils/network.utils';
 import {
   TelegramInlineButton,
@@ -13,6 +11,9 @@ import {
   TelegramGetChatMemberResponse,
   TelegramLogger,
 } from './telegram.types';
+
+/** Telegram Bot API upload limit for documents. */
+const TELEGRAM_UPLOAD_LIMIT_BYTES = 50 * 1024 * 1024;
 
 export class TelegramApiHelper {
   /**
@@ -394,170 +395,58 @@ export class TelegramApiHelper {
     logger?: TelegramLogger,
   ): Promise<boolean> {
     try {
-      const normVer = version
-        ? version.startsWith('v')
-          ? version
-          : `v${version}`
-        : 'v0.2.5';
-      const standardizedFilename = `superapp-test-${normVer}.apk`;
-
-      const url = `https://api.telegram.org/bot${botToken}/sendDocument`;
-      const formData = new FormData();
-      formData.append('chat_id', chatId);
-      formData.append(
-        'caption',
-        `📲 <b>Direct APK Download:</b> <code>${standardizedFilename}</code>\nTap the file above to install directly on Android.`,
-      );
-      formData.append('parse_mode', 'HTML');
-
-      // 1. PRIORITIZE DOWNLOADING DIRECTLY FROM THE BACKOFFICE ENDPOINT OR SONATYPE NEXUS (Single Source of Truth)
-      const nexusBase = (
-        process.env.NEXUS_BASE_URL ||
-        process.env.NEXUS_URL ||
-        'http://localhost:8081'
-      ).replace(/\/+$/, '');
-      const nexusUser =
-        process.env.NEXUS_ADMIN_USER ||
-        process.env.NEXUS_USER ||
-        process.env.NEXUS_USERNAME ||
-        'admin';
-      const nexusPass =
-        process.env.NEXUS_ADMIN_PASSWORD || process.env.NEXUS_PASSWORD || '';
-      const nexusAuthHeader = nexusPass
-        ? `Basic ${Buffer.from(`${nexusUser}:${nexusPass}`).toString('base64')}`
-        : '';
-
-      const backofficeBase = (
-        process.env.BACKOFFICE_BASE_URL ||
-        process.env.WEBAPP_URL ||
-        'http://localhost:3002'
-      ).replace(/\/+$/, '');
-
-      // Sanitize incoming APK URL if it uses Docker internal hostnames
-      const sanitizedIncomingUrl = apkUrlOrPath?.startsWith('http')
-        ? apkUrlOrPath.replace(
-            /https?:\/\/host\.docker\.internal:8081/,
-            nexusBase,
-          )
-        : null;
-
-      // Ordered list of authoritative download endpoints
-      const downloadEndpoints: {
-        url: string;
-        headers?: Record<string, string>;
-      }[] = [
-        // 1. Direct Backend download endpoint on port 3000 (ApkDownloadController)
-        {
-          url: `http://localhost:3000/api/download-apk?type=test&version=${encodeURIComponent(normVer)}&appName=superapp`,
-        },
-        // 2. Backoffice streaming proxy endpoint (which handles Nexus auth, caching, and failover)
-        {
-          url: `${backofficeBase}/api/download-apk?type=test&version=${encodeURIComponent(normVer)}&appName=superapp`,
-        },
-        // 2. Incoming APK URL (if provided by Jenkins or callback)
-        ...(sanitizedIncomingUrl
-          ? [
-              {
-                url: sanitizedIncomingUrl,
-                headers:
-                  nexusAuthHeader &&
-                  (sanitizedIncomingUrl.includes(':8081') ||
-                    sanitizedIncomingUrl.includes('nexus'))
-                    ? { Authorization: nexusAuthHeader }
-                    : undefined,
-              },
-            ]
-          : []),
-        // 3. Direct Sonatype Nexus test builds repository (release APK preferred, debug APK fallback)
-        {
-          url: `${nexusBase}/repository/apk-test-builds/superapp/${normVer}/app-release.apk`,
-          headers: nexusAuthHeader
-            ? { Authorization: nexusAuthHeader }
-            : undefined,
-        },
-        {
-          url: `${nexusBase}/repository/apk-test-builds/superapp/${normVer}/app-debug.apk`,
-          headers: nexusAuthHeader
-            ? { Authorization: nexusAuthHeader }
-            : undefined,
-        },
-        {
-          url: `${nexusBase}/repository/apk-test-builds/superapp/latest/app-release.apk`,
-          headers: nexusAuthHeader
-            ? { Authorization: nexusAuthHeader }
-            : undefined,
-        },
-        {
-          url: `${nexusBase}/repository/apk-test-builds/superapp/latest/app-debug.apk`,
-          headers: nexusAuthHeader
-            ? { Authorization: nexusAuthHeader }
-            : undefined,
-        },
-      ];
-
-      let attached = false;
-      for (const endpoint of downloadEndpoints) {
-        try {
-          const res = await fetch(endpoint.url, {
-            headers: endpoint.headers,
-            cache: 'no-store',
-          });
-
-          if (res.ok) {
-            const arrayBuf = await res.arrayBuffer();
-            if (arrayBuf.byteLength > 1000) {
-              const blob = new Blob([Buffer.from(arrayBuf)], {
-                type: 'application/vnd.android.package-archive',
-              });
-              formData.append('document', blob, standardizedFilename);
-              attached = true;
-              logger?.log?.(
-                `Successfully fetched APK (${(arrayBuf.byteLength / 1024 / 1024).toFixed(2)} MB) from ${endpoint.url} as ${standardizedFilename}`,
-              );
-              break;
-            }
-          }
-        } catch (fetchErr: unknown) {
-          const msg =
-            fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
-          logger?.debug?.(`Failed to fetch APK from ${endpoint.url}: ${msg}`);
-        }
+      // Only this exact build: never another version's APK under this name
+      const normVer = (version || '').startsWith('v') ? version : `v${version || ''}`;
+      if (!/^v\d+\.\d+\.\d+[A-Za-z0-9.+-]*$/.test(normVer)) {
+        logger?.warn?.(`Not sending an APK to Telegram: no valid version (${version})`);
+        return false;
       }
+      const filename = `superapp-test-${normVer}.apk`;
+      const nexusBase = (process.env.NEXUS_BASE_URL || process.env.NEXUS_URL || 'http://localhost:8081').replace(/\/+$/, '');
+      const nexusUser = process.env.NEXUS_ADMIN_USER || process.env.NEXUS_USER || 'admin';
+      const nexusPass = process.env.NEXUS_ADMIN_PASSWORD || process.env.NEXUS_PASSWORD || '';
+      const headers: Record<string, string> = nexusPass
+        ? { Authorization: `Basic ${Buffer.from(`${nexusUser}:${nexusPass}`).toString('base64')}` }
+        : {};
+      // Where superapp-test-build uploads it (apk-test-builds/<app>/<version>/<file>)
+      const source = `${nexusBase}/repository/apk-test-builds/superapp/${encodeURIComponent(normVer)}/${filename}`;
 
-      // Offline dev fallback: check if local superapp-test.apk exists if all remote endpoints are unreachable
-      if (!attached) {
-        const localFallbackPath = path.resolve(
-          process.cwd(),
-          '../superapp_backoffice/public/superapp-test.apk',
-        );
-        if (fs.existsSync(localFallbackPath)) {
-          const fileBuffer = fs.readFileSync(localFallbackPath);
-          const blob = new Blob([fileBuffer], {
-            type: 'application/vnd.android.package-archive',
-          });
-          formData.append('document', blob, standardizedFilename);
-          attached = true;
-        }
+      const res = await fetch(source, { headers, cache: 'no-store', signal: AbortSignal.timeout(120_000) });
+      if (!res.ok) {
+        logger?.warn?.(`Not sending ${filename} to Telegram: Nexus answered HTTP ${res.status} for ${source}`);
+        return false;
       }
-
-      if (!attached && apkUrlOrPath && apkUrlOrPath.startsWith('http')) {
-        formData.append('document', apkUrlOrPath);
-        attached = true;
+      const declared = Number(res.headers.get('content-length') || 0);
+      if (declared > TELEGRAM_UPLOAD_LIMIT_BYTES) {
+        await TelegramApiHelper.sendTooLargeNotice(botToken, chatId, filename, declared, apkUrlOrPath, logger);
+        return false;
       }
-
-      if (!attached) {
-        logger?.warn?.(
-          `Could not attach APK document: all Nexus & Backoffice endpoints unreachable for ${standardizedFilename}`,
-        );
+      const apk = Buffer.from(await res.arrayBuffer());
+      if (apk.length < 1000) {
+        logger?.warn?.(`Not sending ${filename} to Telegram: the file in Nexus is empty (${apk.length} bytes)`);
+        return false;
+      }
+      if (apk.length > TELEGRAM_UPLOAD_LIMIT_BYTES) {
+        await TelegramApiHelper.sendTooLargeNotice(botToken, chatId, filename, apk.length, apkUrlOrPath, logger);
         return false;
       }
 
-      const res = await fetch(url, {
-        method: 'POST',
-        body: formData,
-      });
-
-      return res.ok;
+      const form = new FormData();
+      form.append('chat_id', chatId);
+      form.append(
+        'caption',
+        `📲 <b>${TelegramApiHelper.escapeHtml(appName || 'Super App')}</b> test build <code>${normVer}</code> (${(apk.length / 1048576).toFixed(1)} MB)\nTap the file to install it on Android.`,
+      );
+      form.append('parse_mode', 'HTML');
+      form.append('document', new Blob([apk], { type: 'application/vnd.android.package-archive' }), filename);
+      const sent = await fetch(`https://api.telegram.org/bot${botToken}/sendDocument`, { method: 'POST', body: form });
+      if (!sent.ok) {
+        const detail = await sent.text().catch(() => '');
+        logger?.warn?.(`Telegram refused ${filename} for ${chatId}: HTTP ${sent.status} ${detail.slice(0, 200)}`);
+        return false;
+      }
+      logger?.log?.(`Sent ${filename} (${(apk.length / 1048576).toFixed(1)} MB) to Telegram chat ${chatId}`);
+      return true;
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       logger?.warn?.(
@@ -565,5 +454,34 @@ export class TelegramApiHelper {
       );
       return false;
     }
+  }
+
+  /** Telegram bots cannot upload files over 50 MB: send the download link instead. */
+  private static async sendTooLargeNotice(
+    botToken: string,
+    chatId: string,
+    filename: string,
+    bytes: number,
+    downloadUrl: string,
+    logger?: TelegramLogger,
+  ): Promise<void> {
+    const mb = (bytes / 1048576).toFixed(1);
+    logger?.warn?.(`${filename} is ${mb} MB, over Telegram's 50 MB limit: sending the link only`);
+    const link = /^https:\/\//.test(downloadUrl || '')
+      ? `\n<a href="${TelegramApiHelper.escapeHtml(downloadUrl)}">Download ${filename}</a>`
+      : '';
+    await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        parse_mode: 'HTML',
+        text: `<code>${filename}</code> is ${mb} MB, too large for Telegram (50 MB).${link}`,
+      }),
+    }).catch(() => undefined);
+  }
+
+  private static escapeHtml(s: string): string {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 }
