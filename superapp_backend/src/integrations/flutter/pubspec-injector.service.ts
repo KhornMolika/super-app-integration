@@ -19,6 +19,7 @@ import * as crypto from 'crypto';
 import * as child_process from 'child_process';
 import * as YAML from 'yaml';
 import { decryptCredential } from '../../common/utils/credential-cipher.util';
+import { gitSourceUrlOf, isGitSource } from './git-source.util';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 import {
   InjectDependencyDto,
@@ -412,12 +413,7 @@ export class PubspecInjectorService {
     }
     const cfg = miniApp.integrationConfig || {};
     const packageName = this.inferCanonicalPackageName(miniApp);
-    const repoUrl =
-      cfg.gitUrl ||
-      cfg.repoUrl ||
-      (cfg.repoOwner && cfg.repoName
-        ? `https://github.com/${cfg.repoOwner}/${cfg.repoName}.git`
-        : undefined);
+    const repoUrl = gitSourceUrlOf(cfg);
     const gitRef =
       cfg.gitBranch ||
       cfg.gitTag ||
@@ -428,7 +424,7 @@ export class PubspecInjectorService {
     const packageVersion = cfg.packageVersion || cfg.version || '1.0.0';
 
     // 1. Explicit Git Repository Dependency (Highest Priority when Git source is configured)
-    if (repoUrl && (cfg.sourceType === 'GIT' || (!cfg.sourceType && repoUrl))) {
+    if (repoUrl && isGitSource(cfg)) {
       return this.injectDependency({
         packageName,
         gitUrl: repoUrl,

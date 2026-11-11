@@ -20,7 +20,8 @@ def p(String name) {
         API_BASE_URL: '',
         FLUTTER_IMAGE: 'ghcr.io/cirruslabs/flutter:3.44.0',
         TOOLCHAIN_CHECK_ONLY: false,
-        PRIVATE_GIT_DEPS: 'https://github.com/KhornMolika/sc-private-miniapp.git=github-sc-private-miniapp',
+        PRIVATE_GIT_DEPS: '',
+        BUILD_CREDENTIALS_URL: '',
         PUB_GATEWAY_URL: 'https://app.fintechcenterfsa.com/pub',
     ]
     def v = params[name]
@@ -42,38 +43,103 @@ def privateGitDeps() {
     return deps
 }
 
+/** Backend list of each in-build mini app's private repository and its key. */
+def gitCredentialsUrl() {
+    def explicit = (p('BUILD_CREDENTIALS_URL') ?: '').trim()
+    if (explicit) return explicit
+    def base = (params.CALLBACK_URL ?: '').trim()
+    return base ? base.replaceAll('/build-callback/?$', '/build-git-credentials') : ''
+}
+
+/** Turns git-credentials.json into an SSH config, key files and Git insteadOf rules (no backslashes: kept in a Groovy string). */
+def gitConfigJs() {
+    return '''
+const fs = require('fs');
+const S = process.argv[2];
+const NL = String.fromCharCode(10), TAB = String.fromCharCode(9);
+const data = JSON.parse(fs.readFileSync(S + '/git-credentials.json', 'utf8'));
+let ssh = '', git = '', n = 0;
+for (const c of data.credentials || []) {
+  const i = n++;
+  if (c.type === 'ssh') {
+    fs.writeFileSync(S + '/app_key_' + i, c.privateKey, { mode: 0o600 });
+    ssh += ['Host app-dep-' + i, '  HostName ' + c.host, '  User git', '  IdentityFile ' + S + '/app_key_' + i,
+            '  IdentitiesOnly yes', '  StrictHostKeyChecking accept-new', '  UserKnownHostsFile ' + S + '/known_hosts', ''].join(NL);
+    git += '[url "app-dep-' + i + ':' + c.path + '"]' + NL + TAB + 'insteadOf = ' + c.repoUrl + NL;
+  } else if (c.type === 'token') {
+    git += '[url "https://oauth2:' + encodeURIComponent(c.token) + '@' + c.host + '/' + c.path + '"]' + NL + TAB + 'insteadOf = ' + c.repoUrl + NL;
+  }
+  console.log('Private repository for ' + c.appId + ': ' + c.repoUrl + ' (' + c.type + ')');
+}
+fs.appendFileSync(S + '/ssh_config', ssh, { mode: 0o600 });
+fs.appendFileSync(S + '/gitconfig', git, { mode: 0o600 });
+for (const s of data.skipped || []) console.log('WARNING: ' + s.appId + ': ' + s.reason);
+console.log('Private mini app repositories: ' + n);
+'''
+}
+
 /**
- * Runs body with each private Git dependency fetched over SSH with its own
- * read-only deploy key: writes $WORKSPACE/.ci-secrets/{ssh_config,gitconfig}
- * (a Git insteadOf per repository, so other GitHub URLs stay anonymous) and
- * removes it afterwards.
+ * Runs body with the private Git repositories of the mini apps in this build
+ * reachable: each with the deploy key or token its developer registered
+ * (backend build-git-credentials), plus any extra PRIVATE_GIT_DEPS entries
+ * from Jenkins credentials. Writes $WORKSPACE/.ci-secrets (SSH config, keys,
+ * a Git insteadOf per repository, so other URLs stay anonymous) and always
+ * removes it afterwards; nothing there is archived or uploaded.
  */
 def withPrivateGitDeps(Closure body) {
     def deps = privateGitDeps()
-    if (!deps) { body(); return }
     def bindings = []
     def list = []
     for (int i = 0; i < deps.size(); i++) {
         bindings << sshUserPrivateKey(credentialsId: deps[i].cred, keyFileVariable: "GIT_DEP_KEY_${i}")
         list << "${i}|${deps[i].url}"
     }
-    withCredentials(bindings) {
-        withEnv(["GIT_DEP_LIST=${list.join('\n')}"]) {
-            sh '''
-                set -e
-                S="$WORKSPACE/.ci-secrets"; rm -rf "$S"; mkdir -p "$S"; chmod 700 "$S"
-                : > "$S/ssh_config"; : > "$S/gitconfig"
-                printf '%s\\n' "$GIT_DEP_LIST" | while IFS='|' read -r i url; do
-                    [ -n "$url" ] || continue
-                    cp "$(printenv "GIT_DEP_KEY_$i")" "$S/key_$i"; chmod 600 "$S/key_$i"
-                    printf 'Host gh-dep-%s\\n  HostName github.com\\n  User git\\n  IdentityFile %s\\n  IdentitiesOnly yes\\n  StrictHostKeyChecking accept-new\\n  UserKnownHostsFile %s/known_hosts\\n' "$i" "$S/key_$i" "$S" >> "$S/ssh_config"
-                    printf '[url "gh-dep-%s:%s"]\\n\\tinsteadOf = %s\\n' "$i" "${url#https://github.com/}" "$url" >> "$S/gitconfig"
-                done
-                echo "Private Git dependencies: $(grep -c insteadOf "$S/gitconfig")"
-            '''
+    sh 'S="$WORKSPACE/.ci-secrets"; rm -rf "$S"; mkdir -p "$S"; chmod 700 "$S"; : > "$S/ssh_config"; : > "$S/gitconfig"'
+    try {
+        def credsUrl = gitCredentialsUrl()
+        if (credsUrl) {
+            writeFile file: '.ci-secrets/write-git-config.js', text: gitConfigJs()
+            withEnv(["GIT_CREDS_URL=${credsUrl}"]) {
+                sh '''
+                    set -e
+                    S="$WORKSPACE/.ci-secrets"
+                    code=$(curl -sS --max-time 30 -o "$S/git-credentials.json" -w '%{http_code}' \
+                        -H "x-callback-token: ${CALLBACK_TOKEN:-}" "$GIT_CREDS_URL") || code=error
+                    chmod 600 "$S/git-credentials.json" 2>/dev/null || true
+                    if [ "$code" = "200" ]; then
+                        node "$S/write-git-config.js" "$S"
+                    elif [ "$code" = "404" ]; then
+                        echo "WARNING: this backend has no build-git-credentials yet; private mini app repositories are not set up"
+                    else
+                        echo "Could not read private repository keys from $GIT_CREDS_URL (HTTP $code)"; exit 1
+                    fi
+                    rm -f "$S/git-credentials.json"
+                '''
+            }
+        } else {
+            echo 'WARNING: no backend URL for private repository keys (CALLBACK_URL / BUILD_CREDENTIALS_URL); only PRIVATE_GIT_DEPS is used'
         }
+        if (deps) {
+            withCredentials(bindings) {
+                withEnv(["GIT_DEP_LIST=${list.join('\n')}"]) {
+                    sh '''
+                        set -e
+                        S="$WORKSPACE/.ci-secrets"
+                        printf '%s\\n' "$GIT_DEP_LIST" | while IFS='|' read -r i url; do
+                            [ -n "$url" ] || continue
+                            cp "$(printenv "GIT_DEP_KEY_$i")" "$S/jk_key_$i"; chmod 600 "$S/jk_key_$i"
+                            printf 'Host jk-dep-%s\\n  HostName github.com\\n  User git\\n  IdentityFile %s\\n  IdentitiesOnly yes\\n  StrictHostKeyChecking accept-new\\n  UserKnownHostsFile %s/known_hosts\\n' "$i" "$S/jk_key_$i" "$S" >> "$S/ssh_config"
+                            printf '[url "jk-dep-%s:%s"]\\n\\tinsteadOf = %s\\n' "$i" "${url#https://github.com/}" "$url" >> "$S/gitconfig"
+                        done
+                        echo "Extra private repositories (PRIVATE_GIT_DEPS): $(grep -c 'jk-dep-' "$S/gitconfig" || true)"
+                    '''
+                }
+            }
+        }
+        body()
+    } finally {
+        sh 'rm -rf "$WORKSPACE/.ci-secrets"'
     }
-    try { body() } finally { sh 'rm -rf "$WORKSPACE/.ci-secrets"' }
 }
 
 def callbackBase() { return (params.CALLBACK_URL ?: '').trim() }
@@ -153,7 +219,8 @@ pipeline {
         string(name: 'NATIVE_SDK_MANIFEST_URL', defaultValue: '', description: 'Native SDK list URL. Empty: derived from CALLBACK_URL.')
         string(name: 'FLUTTER_IMAGE', defaultValue: 'ghcr.io/cirruslabs/flutter:3.44.0', description: 'Docker image with Flutter and the Android SDK')
         string(name: 'PUB_GATEWAY_URL', defaultValue: 'https://app.fintechcenterfsa.com/pub', description: 'Pub registry the Super App pubspec.yaml uses for mini app packages; the build reads it with CALLBACK_TOKEN')
-        string(name: 'PRIVATE_GIT_DEPS', defaultValue: 'https://github.com/KhornMolika/sc-private-miniapp.git=github-sc-private-miniapp', description: 'Private Git dependencies: <https url>=<Jenkins SSH deploy-key credential id>, comma separated')
+        string(name: 'PRIVATE_GIT_DEPS', defaultValue: '', description: 'Extra private Git dependencies not registered as mini apps: <https url>=<Jenkins SSH deploy-key credential id>, comma separated')
+        string(name: 'BUILD_CREDENTIALS_URL', defaultValue: '', description: 'Backend build-git-credentials URL (each mini app private repository key). Empty: derived from CALLBACK_URL.')
         booleanParam(name: 'TOOLCHAIN_CHECK_ONLY', defaultValue: false, description: 'Only check the build machine (Docker, Flutter, source mount, pub get); build and upload nothing')
         string(name: 'CODEGEN_MR_IID', defaultValue: '', description: 'Unused; accepted so older backends can still trigger the job')
     }
