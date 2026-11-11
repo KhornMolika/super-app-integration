@@ -487,6 +487,12 @@ export class ReleaseAssemblyVerificationService {
       `Received build callback from Jenkins for release ${body.releaseVersion}: ${body.status}`,
     );
 
+    // The Backoffice web sandbox is not a mini app build: never move apps for it
+    if (body.appName === 'superapp-sandbox') {
+      this.logger.log(`Ignoring build callback for the web sandbox (${body.status})`);
+      return { success: true, ignored: true };
+    }
+
     const isSuccess = body.status === 'COMPLETED' || body.status === 'SUCCESS';
 
     if (isSuccess) {

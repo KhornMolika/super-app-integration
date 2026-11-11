@@ -1,156 +1,148 @@
+// Super App Flutter Web sandbox (the Backoffice preview at /superapp-sandbox/):
+// compiles inside Jenkins with the Flutter Docker image, then copies build/web to
+// SANDBOX_OUTPUT_DIR and, optionally, uploads an archive to Nexus.
+//
+// It sends no build callback: /release-assembly/build-callback moves every BUILDING
+// mini app to TESTING, which a sandbox rebuild must never do.
+def p(String name) {
+    // Parameters added after the job was created are null on the first run with this file
+    def defaults = [
+        REPO_URL: 'https://git.fintechcenterfsa.com/frontend/super-app.git',
+        BRANCH: 'development',
+        GIT_CREDENTIALS_ID: 'git-action',
+        BASE_HREF: '/superapp-sandbox/',
+        BUILD_MODE: 'release',
+        FLUTTER_IMAGE: 'ghcr.io/cirruslabs/flutter:3.44.0',
+        DEPLOY_SANDBOX: true,
+        PUBLISH_TO_NEXUS: false,
+        NEXUS_URL: 'https://app.fintechcenterfsa.com/nexus',
+        NEXUS_USER: 'admin',
+    ]
+    def v = params[name]
+    return (v == null || v == '') ? defaults[name] : v
+}
+
+def validateParams() {
+    if (!(p('BRANCH') ==~ /[A-Za-z0-9._\/-]{1,100}/)) { error("Invalid BRANCH") }
+    if (!(p('REPO_URL') ==~ /https:\/\/[A-Za-z0-9._:\/-]+\.git/)) { error("Invalid REPO_URL") }
+    if (!(p('BASE_HREF') ==~ /\/([A-Za-z0-9._-]+\/)*/)) { error("Invalid BASE_HREF (must start and end with /)") }
+    if (!(p('BUILD_MODE') in ['release', 'debug', 'profile'])) { error("Invalid BUILD_MODE") }
+    if (!(p('NEXUS_URL') ==~ /https?:\/\/[A-Za-z0-9._:\/-]+/)) { error("Invalid NEXUS_URL") }
+    if (!(p('FLUTTER_IMAGE') ==~ /[A-Za-z0-9._\/-]+(:[A-Za-z0-9._-]+)?/)) { error("Invalid FLUTTER_IMAGE") }
+}
+
 pipeline {
     agent any
 
+    options {
+        disableConcurrentBuilds()
+        timeout(time: 45, unit: 'MINUTES')
+    }
+
     parameters {
-        string(name: 'REPO_URL', defaultValue: 'https://git.fintechcenterfsa.com/frontend/super-app.git', description: 'Git Repository Clone URL')
-        string(name: 'BRANCH', defaultValue: 'main', description: 'Git Branch / Tag to build')
-        string(name: 'BASE_HREF', defaultValue: '/superapp-sandbox/', description: 'Base href for Flutter Web hosting')
-        choice(name: 'BUILD_MODE', choices: ['release', 'debug'], description: 'Flutter Web compilation mode')
-        string(name: 'CALLBACK_URL', defaultValue: 'http://host.docker.internal:3000/api/release-assembly/build-callback', description: 'Backend Webhook Callback URL')
-        string(name: 'NEXUS_URL', defaultValue: 'http://host.docker.internal:8081', description: 'Sonatype Nexus URL')
-        booleanParam(name: 'PUBLISH_TO_NEXUS', defaultValue: false, description: 'Publish compiled sandbox archive to Sonatype Nexus')
-        string(name: 'CALLBACK_TOKEN', defaultValue: '', description: 'Secret callback auth token')
+        string(name: 'REPO_URL', defaultValue: 'https://git.fintechcenterfsa.com/frontend/super-app.git', description: 'Super App source repository')
+        string(name: 'BRANCH', defaultValue: 'development', description: 'Branch to build')
+        string(name: 'GIT_CREDENTIALS_ID', defaultValue: 'git-action', description: 'Jenkins credential for REPO_URL')
+        string(name: 'BASE_HREF', defaultValue: '/superapp-sandbox/', description: 'Base href where the Backoffice serves the sandbox')
+        choice(name: 'BUILD_MODE', choices: ['release', 'debug', 'profile'], description: 'Flutter Web build mode')
+        booleanParam(name: 'DEPLOY_SANDBOX', defaultValue: true, description: 'Copy build/web to SANDBOX_OUTPUT_DIR (the live sandbox)')
+        booleanParam(name: 'PUBLISH_TO_NEXUS', defaultValue: false, description: 'Also upload superapp-sandbox.tar.gz to Nexus superapp-artifacts')
+        string(name: 'NEXUS_URL', defaultValue: 'https://app.fintechcenterfsa.com/nexus', description: 'Sonatype Nexus URL')
+        string(name: 'NEXUS_USER', defaultValue: 'admin', description: 'Nexus user (for PUBLISH_TO_NEXUS)')
+        password(name: 'NEXUS_PASSWORD', defaultValue: '', description: 'Nexus password (for PUBLISH_TO_NEXUS)')
+        string(name: 'FLUTTER_IMAGE', defaultValue: 'ghcr.io/cirruslabs/flutter:3.44.0', description: 'Docker image with Flutter')
+        string(name: 'CALLBACK_URL', defaultValue: '', description: 'Unused (see the note at the top); accepted so the backend can still trigger the job')
+        string(name: 'CALLBACK_TOKEN', defaultValue: '', description: 'Unused; accepted so the backend can still trigger the job')
     }
 
     environment {
-        SANDBOX_OUTPUT_DIR = "/var/reports/superapp-sandbox"
-        ARCHIVE_FILE = "/var/reports/superapp-sandbox.tar.gz"
-        PUB_HOSTED_URL = "${params.NEXUS_URL}/repository/pub-group"
+        MOBILE_DIR = 'mobile'
+        SANDBOX_OUTPUT_DIR = '/var/reports/superapp-sandbox'
     }
 
     stages {
-        stage('1. Pre-Flight & Workspace Preparation') {
+        stage('1. Pre-Flight & Checkout') {
             steps {
-                echo "=========================================================="
-                echo " [*] Super App Flutter Web Sandbox CI Pipeline"
-                echo " Repository      : ${params.REPO_URL}"
-                echo " Branch          : ${params.BRANCH}"
-                echo " Base Href       : ${params.BASE_HREF}"
-                echo " Build Mode      : ${params.BUILD_MODE}"
-                echo " Output Dir      : ${env.SANDBOX_OUTPUT_DIR}"
-                echo " PUB_HOSTED_URL  : ${env.PUB_HOSTED_URL}"
-                echo "=========================================================="
-
-                sh "mkdir -p ${env.SANDBOX_OUTPUT_DIR} && chmod -R 777 /var/reports"
-                sh """
-                if [ -d "super-app" ] || [ -f "pubspec.yaml" ]; then
-                    echo "Workspace already initialized. Pulling latest changes..."
-                    git fetch origin ${params.BRANCH} --depth 1 || true
-                    git checkout ${params.BRANCH} || true
-                    git pull origin ${params.BRANCH} || true
-                else
-                    echo "Cloning repository from ${params.REPO_URL} (branch ${params.BRANCH})..."
-                    git clone --depth 1 -b ${params.BRANCH} ${params.REPO_URL} . || true
-                fi
-                """
-            }
-        }
-
-        stage('2. Build Flutter Web Sandbox') {
-            steps {
-                echo "[INFO] Resolving Flutter dependencies & Compiling Flutter Web (--base-href ${params.BASE_HREF})..."
-                sh """
-                APP_DIR="."
-                if [ -d "super-app" ]; then
-                    APP_DIR="super-app"
-                fi
-
-                docker run --rm \
-                    -v "\$(pwd)/\${APP_DIR}:/app" \
-                    -v /var/reports:/var/reports \
-                    -e PUB_HOSTED_URL="${params.NEXUS_URL}/repository/pub-group" \
-                    -w /app \
-                    ghcr.io/cirruslabs/flutter:stable \
-                    sh -c "export PUB_HOSTED_URL=${params.NEXUS_URL}/repository/pub-group && flutter pub get && flutter build web --base-href ${params.BASE_HREF} --${params.BUILD_MODE} && mkdir -p ${env.SANDBOX_OUTPUT_DIR} && cp -R build/web/* ${env.SANDBOX_OUTPUT_DIR}/ && tar -czf ${env.ARCHIVE_FILE} -C build/web ." || {
-                        echo "[WARN] Docker compilation failed or docker CLI unavailable in container. Performing fallback build step..."
+                script {
+                    validateParams()
+                    echo "Sandbox from ${p('REPO_URL')} @ ${p('BRANCH')}, base href ${p('BASE_HREF')}, ${p('BUILD_MODE')}, image ${p('FLUTTER_IMAGE')}"
+                    dir(env.MOBILE_DIR) {
+                        checkout([$class: 'GitSCM',
+                            branches: [[name: "*/${p('BRANCH')}"]],
+                            userRemoteConfigs: [[url: p('REPO_URL'), credentialsId: p('GIT_CREDENTIALS_ID')]],
+                            extensions: [[$class: 'CloneOption', depth: 1, shallow: true, noTags: true],
+                                         [$class: 'CleanBeforeCheckout']]])
                     }
-                """
+                    def local = sh(returnStdout: true, script: "grep -nE 'url: *https?://(localhost|127\\.0\\.0\\.1|10\\.0\\.2\\.2|host\\.docker\\.internal)' ${env.MOBILE_DIR}/pubspec.yaml || true").trim()
+                    if (local) {
+                        error("pubspec.yaml uses a package registry on a developer PC, which this build cannot reach:\n${local}\nPublish those packages to the production Nexus and point pubspec.yaml at it.")
+                    }
+                }
             }
         }
 
-        stage('3. Publish Artifacts (Optional)') {
-            when {
-                expression { return params.PUBLISH_TO_NEXUS == true }
-            }
+        stage('2. Build Flutter Web') {
             steps {
-                echo "[INFO] Uploading superapp-sandbox.tar.gz to Sonatype Nexus..."
-                sh """
-                NEXUS_USER="\${NEXUS_USER:-admin}"
-                NEXUS_PASSWORD="\${NEXUS_PASSWORD:-}"
-                AUTH_OPT=""
-                if [ -n "\$NEXUS_PASSWORD" ]; then
-                    AUTH_OPT="-u \${NEXUS_USER}:\${NEXUS_PASSWORD}"
-                fi
-                if [ -f "${env.ARCHIVE_FILE}" ]; then
-                    curl -s -f \$AUTH_OPT --upload-file "${env.ARCHIVE_FILE}" "${params.NEXUS_URL}/repository/superapp-artifacts/sandbox/latest/superapp-sandbox.tar.gz"
-                    echo "[OK] Nexus upload completed."
-                fi
-                """
-            }
-        }
-    }
+                script {
+                    withEnv(["FLUTTER_IMAGE=${p('FLUTTER_IMAGE')}", "BASE_HREF=${p('BASE_HREF')}", "BUILD_MODE=${p('BUILD_MODE')}"]) {
+                        sh '''
+                            set -e
+                            CACHE_DIR="$WORKSPACE/.ci-cache"
+                            mkdir -p "$CACHE_DIR/pub"
+                            # Jenkins runs in a container that talks to the host's Docker: share its
+                            # volumes so the build container sees this workspace at the same path.
+                            SELF=$(cat /etc/hostname)
+                            if docker inspect "$SELF" >/dev/null 2>&1; then MOUNT="--volumes-from $SELF"
+                            else MOUNT="-v $WORKSPACE:$WORKSPACE"; fi
 
-    post {
-        success {
-            echo "[SUCCESS] Flutter Web Sandbox built and synced successfully!"
-            script {
-                sh """
-                node -e '
-                    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-                    (async () => {
-                        const callbackUrl = "${params.CALLBACK_URL}";
-                        const token = "${params.CALLBACK_TOKEN ?: ''}";
-                        const headers = { "Content-Type": "application/json" };
-                        if (token) headers["x-callback-token"] = token;
-                        try {
-                            const res = await fetch(callbackUrl, {
-                                method: "POST",
-                                headers: headers,
-                                body: JSON.stringify({
-                                    callbackToken: token,
-                                    appName: "superapp-sandbox",
-                                    status: "COMPLETED",
-                                    details: "Flutter Web Sandbox compiled successfully with base-href ${params.BASE_HREF}."
-                                })
-                            });
-                            console.log("[SANDBOX SUCCESS CALLBACK] Status:", res.status);
-                        } catch (err) {
-                            console.error("[SANDBOX SUCCESS CALLBACK ERROR]:", err.message);
-                        }
-                    })();
-                ' || true
-                """
+                            docker run --rm $MOUNT -w "$WORKSPACE/$MOBILE_DIR" --memory 4g --cpus 2 \
+                                -e PUB_CACHE="$CACHE_DIR/pub" -e BASE_HREF -e BUILD_MODE \
+                                -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" \
+                                "$FLUTTER_IMAGE" bash -ec '
+                                    trap "chown -R $HOST_UID:$HOST_GID . $PUB_CACHE 2>/dev/null || true" EXIT
+                                    git config --global --add safe.directory "*"
+                                    flutter --version
+                                    flutter pub get
+                                    flutter build web --base-href "$BASE_HREF" --$BUILD_MODE
+                                '
+                            test -f "$MOBILE_DIR/build/web/index.html" || { echo "No build/web/index.html"; exit 1; }
+                            tar -czf superapp-sandbox.tar.gz -C "$MOBILE_DIR/build/web" .
+                            ls -l superapp-sandbox.tar.gz
+                        '''
+                    }
+                    archiveArtifacts artifacts: 'superapp-sandbox.tar.gz', fingerprint: true
+                }
             }
         }
-        failure {
-            echo "[ERROR] Flutter Web Sandbox build failed."
-            script {
-                sh """
-                node -e '
-                    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-                    (async () => {
-                        const callbackUrl = "${params.CALLBACK_URL}";
-                        const token = "${params.CALLBACK_TOKEN ?: ''}";
-                        const headers = { "Content-Type": "application/json" };
-                        if (token) headers["x-callback-token"] = token;
-                        try {
-                            const res = await fetch(callbackUrl, {
-                                method: "POST",
-                                headers: headers,
-                                body: JSON.stringify({
-                                    callbackToken: token,
-                                    appName: "superapp-sandbox",
-                                    status: "FAILED",
-                                    details: "Flutter Web Sandbox build execution failed in Jenkins."
-                                })
-                            });
-                            console.log("[SANDBOX FAILURE CALLBACK] Status:", res.status);
-                        } catch (err) {
-                            console.error("[SANDBOX FAILURE CALLBACK ERROR]:", err.message);
-                        }
-                    })();
-                ' || true
-                """
+
+        stage('3. Deploy sandbox') {
+            when { expression { p('DEPLOY_SANDBOX') } }
+            steps {
+                sh '''
+                    set -e
+                    mkdir -p "$SANDBOX_OUTPUT_DIR"
+                    # Replace the old files, so removed assets do not linger
+                    find "$SANDBOX_OUTPUT_DIR" -mindepth 1 -delete
+                    cp -R "$MOBILE_DIR/build/web/." "$SANDBOX_OUTPUT_DIR/"
+                    echo "Sandbox deployed to $SANDBOX_OUTPUT_DIR"
+                '''
+            }
+        }
+
+        stage('4. Publish to Nexus') {
+            when { expression { p('PUBLISH_TO_NEXUS') } }
+            steps {
+                script {
+                    withEnv(["UPLOAD_URL=${p('NEXUS_URL')}/repository/superapp-artifacts/sandbox/latest/superapp-sandbox.tar.gz",
+                             "NEXUS_USER=${p('NEXUS_USER')}"]) {
+                        sh '''
+                            set -e
+                            printf 'user = "%s:%s"\\n' "$NEXUS_USER" "${NEXUS_PASSWORD:-}" \
+                                | curl -sSf -K - --upload-file superapp-sandbox.tar.gz "$UPLOAD_URL" > /dev/null
+                            echo "Uploaded $UPLOAD_URL"
+                        '''
+                    }
+                }
             }
         }
     }
