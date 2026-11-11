@@ -38,7 +38,7 @@ if [ "$VERSION_ARG" = "latest" ]; then
     # First attempt to query Nexus REST API for latest versioned asset
     RESOLVED_URL=""
     if command -v curl >/dev/null 2>&1; then
-        LATEST_PATH=$(curl -sSL -u "${NEXUS_USER:-admin}:${NEXUS_PASSWORD:-admin123}" "${NEXUS_BASE}/service/rest/v1/assets?repository=${REPO_NAME}" 2>/dev/null | grep -o "\"downloadUrl\" : \"[^\"]*\"" | head -n 1 | cut -d'"' -f4 || true)
+        LATEST_PATH=$(curl -sSL ${NEXUS_PASSWORD:+-u "${NEXUS_USER:-admin}:${NEXUS_PASSWORD}"} "${NEXUS_BASE}/service/rest/v1/assets?repository=${REPO_NAME}" 2>/dev/null | grep -o "\"downloadUrl\" : \"[^\"]*\"" | head -n 1 | cut -d'"' -f4 || true)
         if [ -n "$LATEST_PATH" ]; then
             RESOLVED_URL="$LATEST_PATH"
         fi

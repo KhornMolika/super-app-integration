@@ -44,10 +44,14 @@ if ($Version -eq "latest" -or -not $Version) {
     # Dynamically query Nexus REST API for latest asset in repository
     try {
         $user = if ($env:NEXUS_ADMIN_USER) { $env:NEXUS_ADMIN_USER } else { "admin" }
-        $pass = if ($env:NEXUS_ADMIN_PASSWORD) { $env:NEXUS_ADMIN_PASSWORD } else { "admin123" }
-        $b64 = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("${user}:${pass}"))
+        $pass = $env:NEXUS_ADMIN_PASSWORD
+        $headers = @{}
+        if ($pass) {
+            $b64 = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("${user}:${pass}"))
+            $headers.Authorization = "Basic $b64"
+        }
         
-        $apiRes = Invoke-RestMethod -Uri "$NexusUrl/service/rest/v1/assets?repository=$RepoName" -Headers @{ Authorization = "Basic $b64" } -TimeoutSec 5 -ErrorAction SilentlyContinue
+        $apiRes = Invoke-RestMethod -Uri "$NexusUrl/service/rest/v1/assets?repository=$RepoName" -Headers $headers -TimeoutSec 5 -ErrorAction SilentlyContinue
         if ($apiRes.items -and $apiRes.items.Count -gt 0) {
             $sorted = $apiRes.items | Sort-Object { [DateTime]($_.lastModified) } -Descending
             $resolvedUrl = $sorted[0].downloadUrl

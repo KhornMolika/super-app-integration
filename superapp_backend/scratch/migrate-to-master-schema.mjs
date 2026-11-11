@@ -6,7 +6,7 @@ async function runMigration() {
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT || '5432', 10),
     user: process.env.DB_USERNAME || 'admin',
-    password: process.env.DB_PASSWORD || 'admin123',
+    password: process.env.DB_PASSWORD, // from superapp_backend/.env, never hardcoded
     database: process.env.DB_DATABASE || 'dps_db',
   });
 

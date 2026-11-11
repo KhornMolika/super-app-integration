@@ -10,15 +10,16 @@
     - raw (hosted): For iOS Podspecs, iOS XCFramework binaries, APK builds, and Core bundles
 
 .EXAMPLE
-    .\scripts\setup-nexus-sdk-repositories.ps1 -AdminPassword "admin123"
-    .\scripts\setup-nexus-sdk-repositories.ps1 -AdminPassword "admin123" -UseFriendlyNames
+    $env:NEXUS_ADMIN_PASSWORD = "<nexus admin password>"
+    .\scripts\setup-nexus-sdk-repositories.ps1
+    .\scripts\setup-nexus-sdk-repositories.ps1 -UseFriendlyNames
 #>
 
 [CmdletBinding()]
 param (
     [string]$NexusBaseUrl = $(if ($env:NEXUS_BASE_URL) { $env:NEXUS_BASE_URL } else { "https://app.fintechcenterfsa.com/nexus" }),
     [string]$AdminUser = $(if ($env:NEXUS_ADMIN_USER) { $env:NEXUS_ADMIN_USER } else { "admin" }),
-    [string]$AdminPassword = $(if ($env:NEXUS_ADMIN_PASSWORD) { $env:NEXUS_ADMIN_PASSWORD } else { "admin123" }),
+    [string]$AdminPassword = $(if ($env:NEXUS_ADMIN_PASSWORD) { $env:NEXUS_ADMIN_PASSWORD } else { "" }),
     [switch]$UseFriendlyNames,
     [switch]$Both
 )
@@ -46,6 +47,7 @@ foreach ($ef in $candidateEnvFiles) {
 if (-not $PSBoundParameters.ContainsKey('NexusBaseUrl') -and $env:NEXUS_BASE_URL) { $NexusBaseUrl = $env:NEXUS_BASE_URL }
 if (-not $PSBoundParameters.ContainsKey('AdminUser') -and $env:NEXUS_ADMIN_USER) { $AdminUser = $env:NEXUS_ADMIN_USER }
 if (-not $PSBoundParameters.ContainsKey('AdminPassword') -and $env:NEXUS_ADMIN_PASSWORD) { $AdminPassword = $env:NEXUS_ADMIN_PASSWORD }
+if (-not $AdminPassword) { Write-Error "Nexus admin password missing: set NEXUS_ADMIN_PASSWORD (.env) or pass -AdminPassword"; exit 1 }
 
 $NexusBaseUrl = $NexusBaseUrl.TrimEnd('/')
 $apiUrl = "$NexusBaseUrl/service/rest/v1"

@@ -6,7 +6,7 @@ async function verify() {
     host: 'localhost',
     port: 5432,
     user: 'admin',
-    password: 'admin123',
+    password: process.env.DB_PASSWORD, // from superapp_backend/.env, never hardcoded
     database: 'dps_db',
   });
 

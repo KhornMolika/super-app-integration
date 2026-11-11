@@ -4,7 +4,7 @@
 .DESCRIPTION
     Fixes the CI/CD Gradle Wrapper network connection reset error by hosting the distribution internally.
 .EXAMPLE
-    .\scripts\mirror-gradle-to-nexus.ps1 -NexusUser admin -NexusPassword admin123
+    $env:NEXUS_ADMIN_PASSWORD = "<nexus admin password>"; .\scripts\mirror-gradle-to-nexus.ps1
 #>
 
 param (
@@ -13,7 +13,7 @@ param (
     [string]$NexusUrl = "https://app.fintechcenterfsa.com/nexus",
     [string]$RepositoryName = "superapp-artifacts",
     [string]$NexusUser = "admin",
-    [string]$NexusPassword
+    [string]$NexusPassword = $env:NEXUS_ADMIN_PASSWORD
 )
 
 $ErrorActionPreference = "Stop"

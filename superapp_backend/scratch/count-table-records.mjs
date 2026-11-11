@@ -4,7 +4,7 @@ const client = new pg.Client({
   host: '127.0.0.1',
   port: 5432,
   user: 'admin',
-  password: 'admin123',
+  password: process.env.DB_PASSWORD, // from superapp_backend/.env, never hardcoded
   database: 'dps_db',
 });
 

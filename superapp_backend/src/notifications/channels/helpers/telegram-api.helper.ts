@@ -401,41 +401,44 @@ export class TelegramApiHelper {
         logger?.warn?.(`Not sending an APK to Telegram: no valid version (${version})`);
         return false;
       }
-      const filename = `superapp-test-${normVer}.apk`;
-      const nexusBase = (process.env.NEXUS_BASE_URL || process.env.NEXUS_URL || 'http://localhost:8081').replace(/\/+$/, '');
-      const nexusUser = process.env.NEXUS_ADMIN_USER || process.env.NEXUS_USER || 'admin';
-      const nexusPass = process.env.NEXUS_ADMIN_PASSWORD || process.env.NEXUS_PASSWORD || '';
-      const headers: Record<string, string> = nexusPass
-        ? { Authorization: `Basic ${Buffer.from(`${nexusUser}:${nexusPass}`).toString('base64')}` }
-        : {};
-      // Where superapp-test-build uploads it (apk-test-builds/<app>/<version>/<file>)
-      const source = `${nexusBase}/repository/apk-test-builds/superapp/${encodeURIComponent(normVer)}/${filename}`;
+      const universalName = `superapp-test-${normVer}.apk`;
+      // Same build for 64-bit ARM only (superapp-test-build --split-per-abi): about 30 MB instead
+      // of ~75 MB, so it fits Telegram. Older builds have only the universal APK.
+      const arm64Name = `superapp-test-${normVer}-arm64-v8a.apk`;
 
-      const res = await fetch(source, { headers, cache: 'no-store', signal: AbortSignal.timeout(120_000) });
-      if (!res.ok) {
-        logger?.warn?.(`Not sending ${filename} to Telegram: Nexus answered HTTP ${res.status} for ${source}`);
-        return false;
+      let apk: Buffer<ArrayBuffer> | null = null;
+      let filename = universalName;
+      let tooLargeBytes = 0;
+      for (const name of [arm64Name, universalName]) {
+        const got = await TelegramApiHelper.fetchTestApk(normVer, name, logger);
+        if (got.tooLargeBytes) {
+          if (name === universalName) tooLargeBytes = got.tooLargeBytes;
+          continue;
+        }
+        if (got.apk) {
+          apk = got.apk;
+          filename = name;
+          break;
+        }
       }
-      const declared = Number(res.headers.get('content-length') || 0);
-      if (declared > TELEGRAM_UPLOAD_LIMIT_BYTES) {
-        await TelegramApiHelper.sendTooLargeNotice(botToken, chatId, filename, declared, apkUrlOrPath, logger);
-        return false;
-      }
-      const apk = Buffer.from(await res.arrayBuffer());
-      if (apk.length < 1000) {
-        logger?.warn?.(`Not sending ${filename} to Telegram: the file in Nexus is empty (${apk.length} bytes)`);
-        return false;
-      }
-      if (apk.length > TELEGRAM_UPLOAD_LIMIT_BYTES) {
-        await TelegramApiHelper.sendTooLargeNotice(botToken, chatId, filename, apk.length, apkUrlOrPath, logger);
+      if (!apk) {
+        if (tooLargeBytes) {
+          await TelegramApiHelper.sendTooLargeNotice(botToken, chatId, universalName, tooLargeBytes, apkUrlOrPath, logger);
+        }
         return false;
       }
 
+      const isArm64 = filename === arm64Name;
+      const otherPhones = isArm64
+        ? /^https:\/\//.test(apkUrlOrPath || '')
+          ? `\nFor 64-bit Android phones. Older 32-bit phones: <a href="${TelegramApiHelper.escapeHtml(apkUrlOrPath)}">universal APK</a>.`
+          : '\nFor 64-bit Android phones.'
+        : '';
       const form = new FormData();
       form.append('chat_id', chatId);
       form.append(
         'caption',
-        `📲 <b>${TelegramApiHelper.escapeHtml(appName || 'Super App')}</b> test build <code>${normVer}</code> (${(apk.length / 1048576).toFixed(1)} MB)\nTap the file to install it on Android.`,
+        `📲 <b>${TelegramApiHelper.escapeHtml(appName || 'Super App')}</b> test build <code>${normVer}</code> (${(apk.length / 1048576).toFixed(1)} MB)\nTap the file to install it on Android.${otherPhones}`,
       );
       form.append('parse_mode', 'HTML');
       form.append('document', new Blob([apk], { type: 'application/vnd.android.package-archive' }), filename);
@@ -454,6 +457,43 @@ export class TelegramApiHelper {
       );
       return false;
     }
+  }
+
+  /**
+   * Reads one APK of this exact version from Nexus, where superapp-test-build uploads it
+   * (apk-test-builds/superapp/<version>/<file>). Returns the file, or its size when it is over
+   * Telegram's limit, or neither when it is missing or empty.
+   */
+  private static async fetchTestApk(
+    version: string,
+    filename: string,
+    logger?: TelegramLogger,
+  ): Promise<{ apk?: Buffer<ArrayBuffer>; tooLargeBytes?: number }> {
+    const nexusBase = (process.env.NEXUS_BASE_URL || process.env.NEXUS_URL || 'http://localhost:8081').replace(/\/+$/, '');
+    const nexusUser = process.env.NEXUS_ADMIN_USER || process.env.NEXUS_USER || 'admin';
+    const nexusPass = process.env.NEXUS_ADMIN_PASSWORD || process.env.NEXUS_PASSWORD || '';
+    const headers: Record<string, string> = nexusPass
+      ? { Authorization: `Basic ${Buffer.from(`${nexusUser}:${nexusPass}`).toString('base64')}` }
+      : {};
+    const source = `${nexusBase}/repository/apk-test-builds/superapp/${encodeURIComponent(version)}/${filename}`;
+
+    const res = await fetch(source, { headers, cache: 'no-store', signal: AbortSignal.timeout(120_000) });
+    if (!res.ok) {
+      logger?.warn?.(`No ${filename} for Telegram: Nexus answered HTTP ${res.status} for ${source}`);
+      return {};
+    }
+    const declared = Number(res.headers.get('content-length') || 0);
+    if (declared > TELEGRAM_UPLOAD_LIMIT_BYTES) {
+      await res.body?.cancel().catch(() => undefined);
+      return { tooLargeBytes: declared };
+    }
+    const apk = Buffer.from(await res.arrayBuffer());
+    if (apk.length < 1000) {
+      logger?.warn?.(`Not sending ${filename} to Telegram: the file in Nexus is empty (${apk.length} bytes)`);
+      return {};
+    }
+    if (apk.length > TELEGRAM_UPLOAD_LIMIT_BYTES) return { tooLargeBytes: apk.length };
+    return { apk };
   }
 
   /** Telegram bots cannot upload files over 50 MB: send the download link instead. */

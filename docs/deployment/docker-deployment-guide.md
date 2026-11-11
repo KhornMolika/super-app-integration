@@ -55,7 +55,7 @@ Create `.env.docker` with your server's credentials:
 ```dotenv
 # --- PostgreSQL Database ---
 POSTGRES_USER=admin
-POSTGRES_PASSWORD=admin123
+POSTGRES_PASSWORD=<strong-db-password>
 POSTGRES_DB=dps_db
 POSTGRES_PORT=5432
 
@@ -64,7 +64,7 @@ NEXUS_PORT=8081
 
 # --- MinIO (S3 Object Storage) ---
 MINIO_ROOT_USER=admin
-MINIO_ROOT_PASSWORD=admin123
+MINIO_ROOT_PASSWORD=<strong-minio-password>
 MINIO_PORT=9000
 MINIO_CONSOLE_PORT=9001
 MINIO_IMAGE=quay.io/minio/aistor/minio:RELEASE.2026-09-07T08-39-31Z
@@ -109,11 +109,11 @@ docker compose logs -f
    docker exec -it superapp-nexus cat /nexus-data/admin.password
    ```
 2. Log in at `http://<SERVER_IP>:8081` using username `admin` and the retrieved password.
-3. Complete the setup wizard, set your new password (e.g., `admin123`), and enable anonymous access if desired.
+3. Complete the setup wizard, set a new strong password, and enable anonymous access if desired.
 
 ### 2. MinIO S3 Object Storage (`http://<SERVER_IP>:9001`)
 1. Navigate to `http://<SERVER_IP>:9001`.
-2. Log in with `admin` / `admin123`.
+2. Log in with `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` from `.env.docker`.
 3. Under **Buckets**, verify that the following buckets were auto-created:
    - `mini-app-logos` (Access Policy: `Public / Read-Only`)
    - `submissions` (Access Policy: `Private`)
@@ -140,20 +140,20 @@ When running the backend application on the server, configure its `.env` with th
 DB_HOST=localhost       # (or 'postgres' if backend is also dockerized)
 DB_PORT=5432
 DB_USERNAME=admin
-DB_PASSWORD=admin123
+DB_PASSWORD=<strong-db-password>
 DB_DATABASE=dps_db
 
 # Nexus Registry
 NEXUS_BASE_URL=http://localhost:8081
 NEXUS_ADMIN_USER=admin
-NEXUS_ADMIN_PASSWORD=admin123
+NEXUS_ADMIN_PASSWORD=<nexus-admin-password>
 
 # MinIO / Object Storage
 MINIO_ENDPOINT=localhost
 MINIO_PORT=9000
 MINIO_USE_SSL=false
 MINIO_ACCESS_KEY=admin
-MINIO_SECRET_KEY=admin123
+MINIO_SECRET_KEY=<strong-minio-password>
 MINIO_BUCKET_NAME=mini-app-assets
 MINIO_PACKAGE_SUBMISSIONS_BUCKET=package-submissions
 MINIO_SDK_SUBMISSIONS_BUCKET=sdk-submissions

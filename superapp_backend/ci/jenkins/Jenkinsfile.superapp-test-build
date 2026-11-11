@@ -75,7 +75,7 @@ def syncMiniApps() {
     }
     withEnv(["MINIAPPS_LIST_URL=${url}", "FLUTTER_IMAGE=${p('FLUTTER_IMAGE')}"]) {
         sh '''
-            set -e
+            set -e +x  # no trace: keeps the callback token and passwords out of the console log
             LIST="$WORKSPACE/build-miniapps.json"
             rm -f "$LIST"
             code=$(curl -sS --max-time 30 -o "$LIST" -w '%{http_code}' \
@@ -153,7 +153,7 @@ def withPrivateGitDeps(Closure body) {
             writeFile file: '.ci-secrets/write-git-config.js', text: gitConfigJs()
             withEnv(["GIT_CREDS_URL=${credsUrl}"]) {
                 sh '''
-                    set -e
+                    set -e +x  # no trace: keeps the callback token and passwords out of the console log
                     S="$WORKSPACE/.ci-secrets"
                     code=$(curl -sS --max-time 30 -o "$S/git-credentials.json" -w '%{http_code}' \
                         -H "x-callback-token: ${CALLBACK_TOKEN:-}" "$GIT_CREDS_URL") || code=error
@@ -175,7 +175,7 @@ def withPrivateGitDeps(Closure body) {
             withCredentials(bindings) {
                 withEnv(["GIT_DEP_LIST=${list.join('\n')}"]) {
                     sh '''
-                        set -e
+                        set -e +x  # no trace: keeps the callback token and passwords out of the console log
                         S="$WORKSPACE/.ci-secrets"
                         printf '%s\\n' "$GIT_DEP_LIST" | while IFS='|' read -r i url; do
                             [ -n "$url" ] || continue
@@ -213,6 +213,7 @@ def postJson(String url, Map body) {
     writeFile file: '.callback-body.json', text: JsonOutput.toJson(body)
     withEnv(["POST_URL=${url}"]) {
         sh '''
+            set +x  # no trace: keeps the callback token out of the console log
             code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 -X POST "$POST_URL" \
                 -H 'Content-Type: application/json' -H "x-callback-token: ${CALLBACK_TOKEN:-}" \
                 --data @.callback-body.json) || code=error
@@ -327,7 +328,7 @@ pipeline {
                         // Never drop SDKs silently: fail when the list cannot be read
                         withEnv(["MANIFEST_URL=${manifestUrl}"]) {
                             sh '''
-                                set -e
+                                set -e +x  # no trace: keeps the callback token and passwords out of the console log
                                 curl -sSf --max-time 30 -H "x-callback-token: ${CALLBACK_TOKEN:-}" "$MANIFEST_URL" -o "$MOBILE_DIR/native_sdks.json"
                                 echo "Native SDK list:"; cat "$MOBILE_DIR/native_sdks.json"; echo
                             '''
@@ -342,12 +343,12 @@ pipeline {
             steps {
                 script {
                     runStage('compile', '3. Compile APK',
-                            "Compiling the Super App ${params.BUILD_TYPE} APK (android-arm, arm64, x64)...",
+                            "Compiling the Super App ${params.BUILD_TYPE} APK (universal android-arm, arm64, x64, plus an arm64-only copy)...",
                             "APK compiled.") {
                         withPrivateGitDeps {
                         withEnv(["FLUTTER_IMAGE=${p('FLUTTER_IMAGE')}", "PUB_GATEWAY_URL=${p('PUB_GATEWAY_URL')}", "API_BASE_URL=${p('API_BASE_URL') ?: ''}", "TOOLCHAIN_CHECK_ONLY=${p('TOOLCHAIN_CHECK_ONLY') ? 'true' : 'false'}", "BUILD_WEB=${p('BUILD_WEB') ? 'true' : 'false'}"]) {
                             sh '''
-                                set -e
+                                set -e +x  # no trace: keeps the callback token and passwords out of the console log
                                 S="$WORKSPACE/.ci-secrets"
                                 if [ -f "$S/gitconfig" ]; then
                                     export GIT_SSH_COMMAND="ssh -F $S/ssh_config" GIT_DEPS_CONFIG="$S/gitconfig"
@@ -366,7 +367,7 @@ pipeline {
                                     --memory 6g --cpus 2 \
                                     -e PUB_CACHE="$CACHE_DIR/pub" -e GRADLE_USER_HOME="$CACHE_DIR/gradle" \
                                     -e GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx3g -Djava.net.preferIPv4Stack=true" \
-                                    -e NEXUS_USER -e NEXUS_PASSWORD -e API_BASE_URL -e BUILD_TYPE -e TOOLCHAIN_CHECK_ONLY -e BUILD_WEB \
+                                    -e NEXUS_URL -e NEXUS_USER -e NEXUS_PASSWORD -e API_BASE_URL -e BUILD_TYPE -e TOOLCHAIN_CHECK_ONLY -e BUILD_WEB \
                                     -e GIT_SSH_COMMAND -e GIT_DEPS_CONFIG -e FSA_PUB_TOKEN -e PUB_GATEWAY_URL \
                                     -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" \
                                     "$FLUTTER_IMAGE" bash -ec '
@@ -376,12 +377,9 @@ pipeline {
                                         if [ -n "${GIT_DEPS_CONFIG:-}" ]; then git config --global include.path "$GIT_DEPS_CONFIG"; fi
                                         # Mini app packages come from the /pub gateway; the build token reads them (never written to disk)
                                         if [ -n "${FSA_PUB_TOKEN:-}" ]; then dart pub token add "$PUB_GATEWAY_URL" --env-var FSA_PUB_TOKEN; fi
-                                        # Provide Nexus credentials to Gradle wrapper if Nexus raw repo requires authentication
-                                        if [ -n "${NEXUS_USER:-}" ] && [ -n "${NEXUS_PASSWORD:-}" ]; then
-                                            mkdir -p "$GRADLE_USER_HOME"
-                                            printf "systemProp.gradle.wrapperUser=%s\nsystemProp.gradle.wrapperPassword=%s\n" "$NEXUS_USER" "$NEXUS_PASSWORD" > "$GRADLE_USER_HOME/gradle.properties"
-                                            chmod 600 "$GRADLE_USER_HOME/gradle.properties"
-                                        fi
+                                        # An earlier version wrote the Nexus password here for the Gradle wrapper, which would
+                                        # send it to services.gradle.org; the distribution is now pre-fetched below instead.
+                                        rm -f "$GRADLE_USER_HOME/gradle.properties"
                                         flutter --version
                                         test -f pubspec.yaml && echo "Source visible in the build container"
                                         if [ "$TOOLCHAIN_CHECK_ONLY" = "true" ]; then
@@ -392,25 +390,44 @@ pipeline {
                                         DEFINES=""
                                         if [ -n "$API_BASE_URL" ]; then DEFINES="--dart-define=API_BASE_URL=$API_BASE_URL"; fi
                                         case "$API_BASE_URL" in http://*) DEFINES="$DEFINES --dart-define=ALLOW_CLEARTEXT=true";; esac
-                                        # Ensure Gradle 9.1.0 is in cache: copy from pre-baked image cache if present, or fetch via curl
+                                        # Gradle 9.1.0 into the wrapper cache before the build. services.gradle.org resets
+                                        # connections from the production server, so the Nexus mirror is tried first
+                                        # (upload it once with scripts/mirror-gradle-to-nexus.ps1).
+                                        GRADLE_ZIP=gradle-9.1.0-all.zip
                                         DIST_DIR="$GRADLE_USER_HOME/wrapper/dists/gradle-9.1.0-all/7wzd0jkjit61aq2p43wpjgij9"
                                         IMAGE_BAKED="/opt/gradle-wrapper/wrapper/dists/gradle-9.1.0-all/7wzd0jkjit61aq2p43wpjgij9"
-                                        if [ ! -f "$DIST_DIR/gradle-9.1.0-all.zip.ok" ]; then
+                                        if [ ! -f "$DIST_DIR/$GRADLE_ZIP.ok" ]; then
                                             mkdir -p "$DIST_DIR"
-                                            if [ -f "$IMAGE_BAKED/gradle-9.1.0-all.zip.ok" ]; then
+                                            rm -f "$DIST_DIR/$GRADLE_ZIP"
+                                            if [ -f "$IMAGE_BAKED/$GRADLE_ZIP.ok" ]; then
                                                 echo "Seeding Gradle 9.1.0 from pre-baked builder image cache..."
                                                 cp -rn "$IMAGE_BAKED"/* "$DIST_DIR/"
                                             else
-                                                echo "Pre-fetching Gradle 9.1.0 distribution into cache via curl..."
-                                                curl -fSL --retry 3 --max-time 300 \
-                                                    "https://services.gradle.org/distributions/gradle-9.1.0-all.zip" \
-                                                    -o "$DIST_DIR/gradle-9.1.0-all.zip"
-                                                unzip -q -o "$DIST_DIR/gradle-9.1.0-all.zip" -d "$DIST_DIR"
-                                                touch "$DIST_DIR/gradle-9.1.0-all.zip.ok"
+                                                MIRROR="${NEXUS_URL%/}/repository/superapp-artifacts/gradle/$GRADLE_ZIP"
+                                                # Credentials through a stdin config so the password never appears in ps
+                                                if printf "user = \\"%s:%s\\"\\n" "${NEXUS_USER:-}" "${NEXUS_PASSWORD:-}" \
+                                                        | curl -fsSL -K - --retry 3 --max-time 600 "$MIRROR" -o "$DIST_DIR/$GRADLE_ZIP"; then
+                                                    echo "Gradle 9.1.0 downloaded from the Nexus mirror"
+                                                else
+                                                    echo "WARNING: Gradle 9.1.0 is not in Nexus ($MIRROR); trying services.gradle.org"
+                                                    rm -f "$DIST_DIR/$GRADLE_ZIP"
+                                                    curl -fSL --retry 5 --retry-all-errors --retry-delay 10 --max-time 600 \
+                                                        "https://services.gradle.org/distributions/$GRADLE_ZIP" -o "$DIST_DIR/$GRADLE_ZIP" || {
+                                                        echo "Could not download Gradle 9.1.0. Mirror it to Nexus with scripts/mirror-gradle-to-nexus.ps1"; exit 1; }
+                                                fi
+                                                unzip -q -o "$DIST_DIR/$GRADLE_ZIP" -d "$DIST_DIR"
+                                                touch "$DIST_DIR/$GRADLE_ZIP.ok"
                                             fi
                                             echo "Gradle 9.1.0 distribution ready in cache."
                                         fi
                                         flutter build apk --$BUILD_TYPE --target-platform android-arm,android-arm64,android-x64 $DEFINES
+                                        # Same source as arm64 only (~30 MB instead of ~75 MB): the copy sent to Telegram,
+                                        # whose bot upload limit is 50 MB. The universal APK above stays the download.
+                                        # Optional: without it Telegram gets the download link instead.
+                                        ARM64_APK="build/app/outputs/flutter-apk/app-arm64-v8a-$BUILD_TYPE.apk"
+                                        rm -f "$ARM64_APK"
+                                        flutter build apk --$BUILD_TYPE --split-per-abi --target-platform android-arm64 $DEFINES \
+                                            || echo "WARNING: arm64 APK build failed; Telegram gets the download link instead"
                                         # Same source and mini apps as the APK: the Backoffice preview and /preview/
                                         # show this build (the backend sets the base path for each)
                                         if [ "$BUILD_WEB" = "true" ]; then
@@ -421,6 +438,7 @@ pipeline {
                                 APK="$MOBILE_DIR/build/app/outputs/flutter-apk/app-$BUILD_TYPE.apk"
                                 test -s "$APK" || { echo "No APK at $APK"; exit 1; }
                                 ls -l "$APK"
+                                ls -l "$MOBILE_DIR/build/app/outputs/flutter-apk/app-arm64-v8a-$BUILD_TYPE.apk" 2>/dev/null || echo "No arm64 APK (optional)"
                                 if [ "$BUILD_WEB" = "true" ]; then
                                     test -f "$MOBILE_DIR/build/web/index.html" || { echo "No web build at $MOBILE_DIR/build/web"; exit 1; }
                                     tar -czf superapp-web.tar.gz -C "$MOBILE_DIR/build/web" .
@@ -444,7 +462,7 @@ pipeline {
                         withEnv(["APK_URL=${apkUrl()}", "BUILD_WEB=${p('BUILD_WEB') ? 'true' : 'false'}",
                                  "WEB_BASE=${params.NEXUS_URL}/repository/superapp-artifacts/superapp-web"]) {
                             sh '''
-                                set -e
+                                set -e +x  # no trace: keeps the callback token and passwords out of the console log
                                 APK="$MOBILE_DIR/build/app/outputs/flutter-apk/app-$BUILD_TYPE.apk"
                                 LIST_URL="${APK_URL%/*}/native_sdks.json"
                                 # Credentials through a stdin config so the password never appears in `ps`
@@ -454,6 +472,12 @@ pipeline {
                                 }
                                 upload "$APK" "$APK_URL"
                                 echo "Uploaded $APK_URL"
+                                # arm64 copy next to it (superapp-test-<version>-arm64-v8a.apk): the one Telegram gets
+                                ARM64_APK="$MOBILE_DIR/build/app/outputs/flutter-apk/app-arm64-v8a-$BUILD_TYPE.apk"
+                                if [ -s "$ARM64_APK" ]; then
+                                    upload "$ARM64_APK" "${APK_URL%.apk}-arm64-v8a.apk"
+                                    echo "Uploaded ${APK_URL%.apk}-arm64-v8a.apk"
+                                fi
                                 if [ -f "$MOBILE_DIR/native_sdks.json" ]; then upload "$MOBILE_DIR/native_sdks.json" "$LIST_URL"; echo "Uploaded $LIST_URL"; fi
                                 # Web build of this same version, published only after the APK, so the
                                 # previews never show a build whose APK failed. latest.json last.

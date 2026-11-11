@@ -7,7 +7,7 @@ const client = new Client({
   host: process.env.DB_HOST || '127.0.0.1',
   port: Number(process.env.DB_PORT || 5432),
   user: process.env.DB_USERNAME || 'admin',
-  password: process.env.DB_PASSWORD || 'admin123',
+  password: process.env.DB_PASSWORD, // from superapp_backend/.env, never hardcoded
   database: process.env.DB_DATABASE || 'dps_db',
 });
 
