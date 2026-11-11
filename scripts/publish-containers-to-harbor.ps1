@@ -279,7 +279,15 @@ if ($Target -eq 'all' -or $Target -eq 'client') {
     $pubspecText = Get-Content (Join-Path $clientDir 'pubspec.yaml') -Raw
     $hosted = [regex]::Matches($pubspecText, '(?m)^\s+name:\s*([a-z0-9_]+)\s*\r?\n\s+url:\s*(https?://\S+?)/?\s*$')
     if ($hosted.Count -gt 0) {
-        if ($env:RELEASE_CALLBACK_TOKEN) { $env:FSA_PUB_TOKEN = $env:RELEASE_CALLBACK_TOKEN }
+        # Build token: this terminal's RELEASE_CALLBACK_TOKEN, else the one in
+        # superapp_backend/.env.production (git-ignored). Never printed.
+        $buildToken = $env:RELEASE_CALLBACK_TOKEN
+        $prodEnv = Join-Path $backendDir '.env.production'
+        if (-not $buildToken -and (Test-Path $prodEnv)) {
+            $line = Get-Content $prodEnv | Where-Object { $_ -match '^\s*RELEASE_CALLBACK_TOKEN\s*=' } | Select-Object -Last 1
+            if ($line) { $buildToken = ($line -replace '^\s*RELEASE_CALLBACK_TOKEN\s*=\s*', '').Trim().Trim('"').Trim("'") }
+        }
+        if ($buildToken) { $env:FSA_PUB_TOKEN = $buildToken }
         $tokenAdded = @{}
         foreach ($m in $hosted) {
             $pkg = $m.Groups[1].Value
@@ -294,7 +302,7 @@ if ($Target -eq 'all' -or $Target -eq 'client') {
             $problem = switch -Regex ($code) {
                 '^200$' { $null }
                 '^30\d$' { "$gateway answers with a redirect (HTTP $code), the Backoffice login page. The Backoffice with the /pub route is not deployed yet: deploy the manager image first (-Target manager), then run -Target client." }
-                '^(401|403)$' { "$gateway refused the login (HTTP $code). Set RELEASE_CALLBACK_TOKEN to the production Jenkins callback token before running this script (developer tokens only see the SDK packages)." }
+                '^(401|403)$' { "$gateway refused the login (HTTP $code). RELEASE_CALLBACK_TOKEN (terminal or superapp_backend/.env.production) must match the one the production backend runs with (developer tokens only see the SDK packages)." }
                 '^404$' { "$pkg is not in the production Nexus pub-hosted repository (HTTP 404). Publish it there after its security scan." }
                 default { "$gateway did not answer for $pkg (HTTP $code). Check that the backend is running." }
             }
