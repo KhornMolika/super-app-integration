@@ -10,7 +10,11 @@ const BACKEND_URL = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_U
 /** Response headers that must not be copied: fetch already decoded the body. */
 const DROP_RESPONSE_HEADERS = new Set(['content-encoding', 'content-length', 'transfer-encoding', 'connection']);
 
-export async function passThroughToRegistry(request: Request, backendPath: string): Promise<Response> {
+export async function passThroughToRegistry(
+  request: Request,
+  backendPath: string,
+  extraHeaders: Record<string, string> = {},
+): Promise<Response> {
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     return Response.json({ error: 'Read-only registry' }, { status: 405, headers: { Allow: 'GET, HEAD' } });
   }
@@ -26,6 +30,7 @@ export async function passThroughToRegistry(request: Request, backendPath: strin
   const accept = request.headers.get('accept');
   if (accept) headers.set('accept', accept);
   headers.set('x-forwarded-host', request.headers.get('x-forwarded-host') || request.headers.get('host') || incoming.host);
+  for (const [k, v] of Object.entries(extraHeaders)) headers.set(k, v);
   headers.set('x-forwarded-proto', request.headers.get('x-forwarded-proto') || incoming.protocol.replace(':', ''));
 
   let res: Response;

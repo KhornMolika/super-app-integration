@@ -18,7 +18,7 @@ All commands run pre-flight quality checks (Jest unit tests, TypeScript typechec
 | **All Components** | `all` | *All 3 images sequentially* | `.\scripts\publish-containers-to-harbor.ps1 -Target all` | `pnpm publish:containers` |
 | **Backend API & Migrator** | `backend` *(or `api`)* | `super-app/backend:latest`<br>`super-app/backend:migrator` | `.\scripts\publish-containers-to-harbor.ps1 -Target backend` | `pnpm publish:backend` |
 | **Backoffice Manager** | `frontend` *(or `manager`, `backoffice`)* | `super-app/manager-client:latest` | `.\scripts\publish-containers-to-harbor.ps1 -Target frontend` | `pnpm publish:frontend` |
-| **Flutter Web Client** | `mobile` *(or `client`)* | `super-app/client:latest` | `.\scripts\publish-containers-to-harbor.ps1 -Target mobile` | `pnpm publish:mobile` |
+| **/preview/ client (nginx)** | `mobile` *(or `client`)* | `super-app/client:latest` | `.\scripts\publish-containers-to-harbor.ps1 -Target mobile` | `pnpm publish:mobile` |
 
 ---
 
@@ -41,7 +41,7 @@ Docker builds run **sequentially by default** rather than concurrently. This pre
 # 3. Build and push ONLY Backoffice Frontend (Next.js):
 .\scripts\publish-containers-to-harbor.ps1 -Target frontend
 
-# 4. Build and push ONLY Mobile Client (Flutter Web):
+# 4. Build and push ONLY the /preview/ client (nginx; the web app itself comes from Jenkins through the backend):
 .\scripts\publish-containers-to-harbor.ps1 -Target mobile
 
 # Dry Run / Test build locally without pushing to Harbor:
@@ -111,17 +111,31 @@ docker build --platform linux/amd64 \
 docker push registry.fintechcenterfsa.com/super-app/manager-client:latest
 ```
 
-### C. Flutter Web Client (`super-app-client`)
+### C. Web Super App at /preview/ (`super-app-client`)
+
+This image holds no app files. nginx passes `/preview/*` to the backend
+(`super-app-backend-svc:3000/superapp-web/`), which serves the newest web build
+that Jenkins `superapp-sandbox-build` published to Nexus
+(`superapp-artifacts/superapp-web/latest.json`). The Backoffice device preview
+(`/superapp-sandbox/`) shows the same build. Both update about a minute after
+each Jenkins build, with no image rebuild. Rebuild this image only when
+`super-app/Dockerfile` or `super-app/docker/nginx.conf.template` changes.
+
 ```bash
 cd super-app
 
 docker build --platform linux/amd64 \
-  --build-arg BASE_HREF=/preview/ \
-  --build-arg API_BASE_URL=https://app.fintechcenterfsa.com/api \
   -t registry.fintechcenterfsa.com/super-app/client:latest \
   .
 docker push registry.fintechcenterfsa.com/super-app/client:latest
 ```
+
+If the backend Service has another name, set `SUPERAPP_WEB_UPSTREAM`
+(default `http://super-app-backend-svc:3000`) on the `super-app-client` deployment.
+
+To publish a new web build by hand: run the Jenkins job `superapp-sandbox-build`
+(`PUBLISH_TO_NEXUS` is on by default). Check what is served with
+`curl https://app.fintechcenterfsa.com/preview/ -I` (header `X-SuperApp-Web-Build`).
 
 ---
 

@@ -18,11 +18,13 @@ export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
   // 1. Skip API proxy endpoints, the partner pub registry (developer token, no
-  //    login cookie), Next.js internal static assets, and files
+  //    login cookie), the web Super App preview (public, like /preview/), Next.js internal static assets, and files
   if (
     pathname.startsWith('/api') ||
     pathname === '/pub' ||
     pathname.startsWith('/pub/') ||
+    pathname === '/superapp-sandbox' ||
+    pathname.startsWith('/superapp-sandbox/') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/static') ||
     pathname.includes('.')

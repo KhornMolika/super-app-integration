@@ -33,11 +33,7 @@ param(
     [string]$HarborRegistry = 'registry.fintechcenterfsa.com',
     [string]$HarborProject = 'super-app',
     [switch]$SkipTests,
-    [switch]$SkipPush,
-    # Backend whose mini app list the client build uses
-    [string]$BackendUrl = 'https://app.fintechcenterfsa.com',
-    # Build the client with the mini apps committed in super-app
-    [switch]$SkipMiniAppSync
+    [switch]$SkipPush
 )
 
 Set-StrictMode -Version Latest
@@ -265,114 +261,19 @@ if ($Target -eq 'all' -or $Target -eq 'manager') {
 }
 
 # -------------------------------------------------------------
-# 4. Build Component: Client (Flutter Web)
+# 4. Build Component: Client (/preview/ proxy)
 # -------------------------------------------------------------
+# /preview/ shows the newest web Super App build Jenkins (superapp-sandbox-build)
+# published to Nexus, served by the backend: this image is only nginx passing
+# requests on, so it never goes stale and needs no Flutter build here.
 if ($Target -eq 'all' -or $Target -eq 'client') {
-    Write-Step "Component: SuperApp Client (Flutter Web)"
+    Write-Step "Component: SuperApp Client (/preview/ proxy to the backend)"
 
     $imgClient = "$HarborRegistry/$HarborProject/client:$Tag"
     $imgClientLatest = "$HarborRegistry/$HarborProject/client:latest"
 
-    # The image copies build/web from this machine: the Docker build cannot fetch
-    # the private Git packages in pubspec.yaml (no credentials inside Docker).
-    # Build it fresh here, with this machine's Git access, so the image never
-    # ships a stale or missing build.
-    # Build token: this terminal's RELEASE_CALLBACK_TOKEN, else the one in
-    # superapp_backend/.env.production (git-ignored). Never printed.
-    $buildToken = $env:RELEASE_CALLBACK_TOKEN
-    $prodEnv = Join-Path $backendDir '.env.production'
-    if (-not $buildToken -and (Test-Path $prodEnv)) {
-        $line = Get-Content $prodEnv | Where-Object { $_ -match '^\s*RELEASE_CALLBACK_TOKEN\s*=' } | Select-Object -Last 1
-        if ($line) { $buildToken = ($line -replace '^\s*RELEASE_CALLBACK_TOKEN\s*=\s*', '').Trim().Trim('"').Trim("'") }
-    }
-    if ($buildToken) { $env:FSA_PUB_TOKEN = $buildToken }
-
-    # Mini apps: rewrite super-app's pubspec.yaml and registry from the
-    # production list (as Jenkins does), so a deleted app is never built.
-    if (-not $SkipMiniAppSync) {
-        if (-not $buildToken) {
-            Write-Failure "No RELEASE_CALLBACK_TOKEN (terminal or superapp_backend/.env.production) to read the production mini app list. Use -SkipMiniAppSync to build with the committed mini apps."
-            exit 1
-        }
-        $listUrl = "$($BackendUrl.TrimEnd('/'))/api/release-assembly/build-miniapps"
-        $listFile = Join-Path ([IO.Path]::GetTempPath()) "build-miniapps-$PID.json"
-        $headerFile = Join-Path ([IO.Path]::GetTempPath()) "build-miniapps-$PID.hdr"
-        try {
-            # The token goes in a header file, not on the command line
-            [IO.File]::WriteAllText($headerFile, "x-callback-token: $buildToken")
-            $code = & curl.exe -s -o $listFile -w '%{http_code}' --max-time 30 -H "@$headerFile" $listUrl
-            if ($code -eq '404') {
-                Write-Host "  WARNING: the backend has no build-miniapps yet: building with the mini apps committed in super-app" -ForegroundColor Yellow
-            } elseif ($code -ne '200') {
-                Write-Failure "Could not read the mini app list from $listUrl (HTTP $code)."
-                exit 1
-            } else {
-                Write-Host "Syncing mini apps from $listUrl..." -ForegroundColor Yellow
-                dart (Join-Path $clientDir 'tool\sync_miniapps.dart') $listFile $clientDir
-                if ($LASTEXITCODE -ne 0) {
-                    Write-Failure "Mini app sync failed (see above)."
-                    exit 1
-                }
-                Write-Host "  super-app files now match production; commit them if git shows changes." -ForegroundColor DarkGray
-            }
-        } finally {
-            Remove-Item $listFile, $headerFile -Force -ErrorAction SilentlyContinue
-        }
-    }
-
-    # Mini app packages come from the /pub gateway (pubspec.yaml hosted url).
-    # Check it first, so a gateway problem is reported as itself and not as
-    # pub's "badly formatted response".
-    $pubspecText = Get-Content (Join-Path $clientDir 'pubspec.yaml') -Raw
-    $hosted = [regex]::Matches($pubspecText, '(?m)^\s+name:\s*([a-z0-9_]+)\s*\r?\n\s+url:\s*[''"]?(https?://[^''"\s]+?)/?[''"]?\s*$')
-    if ($hosted.Count -gt 0) {
-        $tokenAdded = @{}
-        foreach ($m in $hosted) {
-            $pkg = $m.Groups[1].Value
-            $gateway = $m.Groups[2].Value.TrimEnd('/')
-            if ($env:FSA_PUB_TOKEN -and -not $tokenAdded[$gateway]) {
-                flutter pub token add $gateway --env-var FSA_PUB_TOKEN | Out-Null
-                $tokenAdded[$gateway] = $true
-            }
-            $auth = if ($env:FSA_PUB_TOKEN) { @('-H', "Authorization: Bearer $($env:FSA_PUB_TOKEN)") } else { @() }
-            $code = & curl.exe -s -o NUL -w '%{http_code}' --max-time 30 @auth `
-                -H 'Accept: application/vnd.pub.v2+json' "$gateway/api/packages/$pkg"
-            $problem = switch -Regex ($code) {
-                '^200$' { $null }
-                '^30\d$' { "$gateway answers with a redirect (HTTP $code), the Backoffice login page. The Backoffice with the /pub route is not deployed yet: deploy the manager image first (-Target manager), then run -Target client." }
-                '^(401|403)$' { "$gateway refused the login (HTTP $code). RELEASE_CALLBACK_TOKEN (terminal or superapp_backend/.env.production) must match the one the production backend runs with (developer tokens only see the SDK packages)." }
-                '^404$' { "$pkg is not in the production Nexus pub-hosted repository (HTTP 404). Publish it there after its security scan." }
-                default { "$gateway did not answer for $pkg (HTTP $code). Check that the backend is running." }
-            }
-            if ($problem) {
-                Write-Failure "Mini app package $pkg cannot be fetched: $problem"
-                exit 1
-            }
-            Write-Host "  $pkg is available from $gateway" -ForegroundColor DarkGray
-        }
-    }
-
-    Write-Host "Building Flutter web (base href /preview/)..." -ForegroundColor Yellow
-    Push-Location $clientDir
-    try {
-        flutter pub get
-        if ($LASTEXITCODE -eq 0) {
-            flutter build web --release `
-                --base-href=/preview/ `
-                --dart-define=API_BASE_URL=https://app.fintechcenterfsa.com/api
-        }
-    } finally {
-        Pop-Location
-    }
-    if ($LASTEXITCODE -ne 0) {
-        Write-Failure "Flutter web build failed (see the pub or build error above: /pub packages or private Git access)."
-        exit 1
-    }
-
     Write-Host "Building Docker Image: $imgClient" -ForegroundColor Yellow
     docker build --platform linux/amd64 `
-        --build-arg BASE_HREF=/preview/ `
-        --build-arg API_BASE_URL=https://app.fintechcenterfsa.com/api `
         -t $imgClient -t $imgClientLatest $clientDir
 
     if ($LASTEXITCODE -ne 0) {

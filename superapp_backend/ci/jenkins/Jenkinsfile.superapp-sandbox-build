@@ -14,7 +14,8 @@ def p(String name) {
         BUILD_MODE: 'release',
         FLUTTER_IMAGE: 'ghcr.io/cirruslabs/flutter:3.44.0',
         DEPLOY_SANDBOX: true,
-        PUBLISH_TO_NEXUS: false,
+        PUBLISH_TO_NEXUS: true,
+        API_BASE_URL: 'https://app.fintechcenterfsa.com/api',
         NEXUS_URL: 'https://app.fintechcenterfsa.com/nexus',
         NEXUS_USER: 'admin',
         PRIVATE_GIT_DEPS: '',
@@ -195,6 +196,7 @@ def validateParams() {
     if (!(p('REPO_URL') ==~ /https:\/\/[A-Za-z0-9._:\/-]+\.git/)) { error("Invalid REPO_URL") }
     if (!(p('BASE_HREF') ==~ /\/([A-Za-z0-9._-]+\/)*/)) { error("Invalid BASE_HREF (must start and end with /)") }
     if (!(p('BUILD_MODE') in ['release', 'debug', 'profile'])) { error("Invalid BUILD_MODE") }
+    if (!(p('API_BASE_URL') ==~ /https?:\/\/[A-Za-z0-9._:\/-]+/)) { error("Invalid API_BASE_URL") }
     if (!(p('NEXUS_URL') ==~ /https?:\/\/[A-Za-z0-9._:\/-]+/)) { error("Invalid NEXUS_URL") }
     if (!(p('FLUTTER_IMAGE') ==~ /[A-Za-z0-9._\/-]+(:[A-Za-z0-9._-]+)?/)) { error("Invalid FLUTTER_IMAGE") }
 }
@@ -214,7 +216,8 @@ pipeline {
         string(name: 'BASE_HREF', defaultValue: '/superapp-sandbox/', description: 'Base href where the Backoffice serves the sandbox')
         choice(name: 'BUILD_MODE', choices: ['release', 'debug', 'profile'], description: 'Flutter Web build mode')
         booleanParam(name: 'DEPLOY_SANDBOX', defaultValue: true, description: 'Copy build/web to SANDBOX_OUTPUT_DIR (the live sandbox)')
-        booleanParam(name: 'PUBLISH_TO_NEXUS', defaultValue: false, description: 'Also upload superapp-sandbox.tar.gz to Nexus superapp-artifacts')
+        booleanParam(name: 'PUBLISH_TO_NEXUS', defaultValue: true, description: 'Upload the web build to Nexus superapp-artifacts/superapp-web (the Backoffice preview and /preview/ serve the newest one)')
+        string(name: 'API_BASE_URL', defaultValue: 'https://app.fintechcenterfsa.com/api', description: 'Backend URL the web Super App talks to')
         string(name: 'NEXUS_URL', defaultValue: 'https://app.fintechcenterfsa.com/nexus', description: 'Sonatype Nexus URL')
         string(name: 'NEXUS_USER', defaultValue: 'admin', description: 'Nexus user (for PUBLISH_TO_NEXUS)')
         password(name: 'NEXUS_PASSWORD', defaultValue: '', description: 'Nexus password (for PUBLISH_TO_NEXUS)')
@@ -258,7 +261,7 @@ pipeline {
             steps {
                 script {
                     withPrivateGitDeps {
-                    withEnv(["FLUTTER_IMAGE=${p('FLUTTER_IMAGE')}", "PUB_GATEWAY_URL=${p('PUB_GATEWAY_URL')}", "BASE_HREF=${p('BASE_HREF')}", "BUILD_MODE=${p('BUILD_MODE')}"]) {
+                    withEnv(["FLUTTER_IMAGE=${p('FLUTTER_IMAGE')}", "PUB_GATEWAY_URL=${p('PUB_GATEWAY_URL')}", "BASE_HREF=${p('BASE_HREF')}", "BUILD_MODE=${p('BUILD_MODE')}", "API_BASE_URL=${p('API_BASE_URL')}"]) {
                         sh '''
                             set -e
                             S="$WORKSPACE/.ci-secrets"
@@ -275,7 +278,7 @@ pipeline {
                             else MOUNT="-v $WORKSPACE:$WORKSPACE"; fi
 
                             docker run --rm $MOUNT -w "$WORKSPACE/$MOBILE_DIR" --memory 4g --cpus 2 \
-                                -e PUB_CACHE="$CACHE_DIR/pub" -e BASE_HREF -e BUILD_MODE \
+                                -e PUB_CACHE="$CACHE_DIR/pub" -e BASE_HREF -e BUILD_MODE -e API_BASE_URL \
                                 -e GIT_SSH_COMMAND -e GIT_DEPS_CONFIG -e FSA_PUB_TOKEN -e PUB_GATEWAY_URL \
                                 -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" \
                                 "$FLUTTER_IMAGE" bash -ec '
@@ -286,7 +289,7 @@ pipeline {
                                     if [ -n "${FSA_PUB_TOKEN:-}" ]; then dart pub token add "$PUB_GATEWAY_URL" --env-var FSA_PUB_TOKEN; fi
                                     flutter --version
                                     flutter pub get
-                                    flutter build web --base-href "$BASE_HREF" --$BUILD_MODE
+                                    flutter build web --base-href "$BASE_HREF" --$BUILD_MODE --dart-define=API_BASE_URL="$API_BASE_URL"
                                 '
                             test -f "$MOBILE_DIR/build/web/index.html" || { echo "No build/web/index.html"; exit 1; }
                             tar -czf superapp-sandbox.tar.gz -C "$MOBILE_DIR/build/web" .
@@ -317,13 +320,21 @@ pipeline {
             when { expression { p('PUBLISH_TO_NEXUS') } }
             steps {
                 script {
-                    withEnv(["UPLOAD_URL=${p('NEXUS_URL')}/repository/superapp-artifacts/sandbox/latest/superapp-sandbox.tar.gz",
+                    // The backend serves the newest build (latest.json) at the Backoffice
+                    // preview (/superapp-sandbox/) and the web Super App (/preview/)
+                    withEnv(["REPO_BASE=${p('NEXUS_URL')}/repository/superapp-artifacts/superapp-web",
                              "NEXUS_USER=${p('NEXUS_USER')}"]) {
                         sh '''
                             set -e
-                            printf 'user = "%s:%s"\\n' "$NEXUS_USER" "${NEXUS_PASSWORD:-}" \
-                                | curl -sSf -K - --upload-file superapp-sandbox.tar.gz "$UPLOAD_URL" > /dev/null
-                            echo "Uploaded $UPLOAD_URL"
+                            ARCHIVE="superapp-web/$BUILD_NUMBER/superapp-web.tar.gz"
+                            COMMIT=$(git -C "$MOBILE_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)
+                            printf '{"build":%s,"archive":"%s","commit":"%s","builtAt":"%s"}\\n' \
+                                "$BUILD_NUMBER" "$ARCHIVE" "$COMMIT" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > latest.json
+                            auth() { printf 'user = "%s:%s"\\n' "$NEXUS_USER" "${NEXUS_PASSWORD:-}"; }
+                            auth | curl -sSf -K - --upload-file superapp-sandbox.tar.gz "$REPO_BASE/$BUILD_NUMBER/superapp-web.tar.gz" > /dev/null
+                            # latest.json last, so it never points at a missing archive
+                            auth | curl -sSf -K - -H "Content-Type: application/json" --upload-file latest.json "$REPO_BASE/latest.json" > /dev/null
+                            echo "Published web build $BUILD_NUMBER ($COMMIT) to $REPO_BASE"
                         '''
                     }
                 }

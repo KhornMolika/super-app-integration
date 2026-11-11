@@ -550,7 +550,8 @@ export class JenkinsService {
     const branch = options?.branch || this.superAppBranch;
     const baseHref = options?.baseHref || this.sandboxBaseHref;
     const buildMode = options?.buildMode || this.sandboxBuildMode;
-    const publishToNexus = options?.publishToNexus ? 'true' : 'false';
+    // Published by default: the Backoffice preview and /preview/ serve the newest build from Nexus
+    const publishToNexus = options?.publishToNexus === false ? 'false' : 'true';
     const repoUrl = options?.repoUrl || this.superAppRepoUrl;
     const nexusUrl = options?.nexusUrl || this.jenkinsNexusUrl;
 
@@ -564,7 +565,17 @@ export class JenkinsService {
       NEXUS_URL: nexusUrl,
       PUBLISH_TO_NEXUS: publishToNexus,
       CALLBACK_TOKEN: callbackToken,
+      NEXUS_USER: process.env.NEXUS_ADMIN_USER || 'admin',
+      NEXUS_PASSWORD:
+        this.configService.get<string>('NEXUS_ADMIN_PASSWORD') ||
+        process.env.NEXUS_ADMIN_PASSWORD ||
+        process.env.NEXUS_PASSWORD ||
+        '',
     });
+    // Backend URL the web Super App talks to (https only)
+    if (/^https:\/\/[A-Za-z0-9._:-]+(?:\/[A-Za-z0-9._~%/-]*)?$/.test(this.mobileApiBaseUrl)) {
+      params.set('API_BASE_URL', this.mobileApiBaseUrl.replace(/\/+$/, ''));
+    }
 
     const triggerUrl = `${this.jenkinsUrl}/job/${jobName}/buildWithParameters`;
     this.logger.log(

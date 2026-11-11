@@ -48,3 +48,5 @@ next-env.d.ts
 /fix
 
 .developer_tokens.json
+# Local web Super App builds (production serves the newest Jenkins build through the backend)
+/public/superapp-sandbox/

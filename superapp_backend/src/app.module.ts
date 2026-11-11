@@ -16,6 +16,7 @@ import { StorageModule } from './storage/storage.module';
 import { SettingsModule } from './settings/settings.module';
 import { MobileModule } from './mobile/mobile.module';
 import { SdkArtifactsModule } from './sdk-artifacts/sdk-artifacts.module';
+import { SuperAppWebModule } from './superapp-web/superapp-web.module';
 import { NativeSdkCodegenModule } from './native-sdk-codegen/native-sdk-codegen.module';
 import { HealthModule } from './health/health.module';
 
@@ -64,6 +65,7 @@ import { AppService } from './app.service';
     SettingsModule,
     MobileModule,
     SdkArtifactsModule,
+    SuperAppWebModule,
     NativeSdkCodegenModule,
     HealthModule,
   ],
