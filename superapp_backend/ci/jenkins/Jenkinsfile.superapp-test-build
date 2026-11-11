@@ -18,7 +18,7 @@ def p(String name) {
         GIT_CREDENTIALS_ID: 'git-action',
         NATIVE_SDK_MANIFEST_URL: '',
         API_BASE_URL: '',
-        FLUTTER_IMAGE: 'ghcr.io/cirruslabs/flutter:3.44.4',
+        FLUTTER_IMAGE: 'ghcr.io/cirruslabs/flutter:3.44.0',
         TOOLCHAIN_CHECK_ONLY: false,
         BUILD_WEB: true,
         PRIVATE_GIT_DEPS: '',
@@ -269,7 +269,7 @@ pipeline {
         string(name: 'MOBILE_BRANCH', defaultValue: 'development', description: 'Super App branch to build')
         string(name: 'GIT_CREDENTIALS_ID', defaultValue: 'git-action', description: 'Jenkins credential for MOBILE_REPO_URL')
         string(name: 'NATIVE_SDK_MANIFEST_URL', defaultValue: '', description: 'Native SDK list URL. Empty: derived from CALLBACK_URL.')
-        string(name: 'FLUTTER_IMAGE', defaultValue: 'ghcr.io/cirruslabs/flutter:3.44.4', description: 'Docker image with Flutter and the Android SDK')
+        string(name: 'FLUTTER_IMAGE', defaultValue: 'ghcr.io/cirruslabs/flutter:3.44.0', description: 'Docker image with Flutter and the Android SDK')
         string(name: 'PUB_GATEWAY_URL', defaultValue: 'https://app.fintechcenterfsa.com/pub', description: 'Pub registry the Super App pubspec.yaml uses for mini app packages; the build reads it with CALLBACK_TOKEN')
         string(name: 'PRIVATE_GIT_DEPS', defaultValue: '', description: 'Extra private Git dependencies not registered as mini apps: <https url>=<Jenkins SSH deploy-key credential id>, comma separated')
         string(name: 'BUILD_CREDENTIALS_URL', defaultValue: '', description: 'Backend build-git-credentials URL (each mini app private repository key). Empty: derived from CALLBACK_URL.')
