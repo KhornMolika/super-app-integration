@@ -121,7 +121,28 @@ dev_dependencies:
     const updatedContent = fs.readFileSync(tempPubspecPath, 'utf-8');
     expect(updatedContent).toContain('dps_core_package:');
     expect(updatedContent).toContain('hosted:');
-    expect(updatedContent).toContain('http://localhost:8081/repository/pub-group');
+    // The public /pub gateway, never the backend's own Nexus address (localhost / cluster-internal)
+    expect(updatedContent).toContain('url: https://app.fintechcenterfsa.com/pub');
+    expect(updatedContent).not.toContain('localhost');
+  });
+
+  it('pubspec registry URL: SUPER_APP_PUB_URL, and never a Nexus or internal address', () => {
+    expect(service.pubspecHostedUrl()).toBe('https://app.fintechcenterfsa.com/pub');
+    for (const internal of [
+      'http://localhost:8081/repository/pub-group',
+      'http://nexus.super-app.svc.cluster.local:8081/repository/pub-group',
+      'https://app.fintechcenterfsa.com/nexus/repository/pub-hosted',
+    ]) {
+      expect(service.pubspecHostedUrl(internal)).toBe('https://app.fintechcenterfsa.com/pub');
+    }
+    // A real external registry the app asked for is kept
+    expect(service.pubspecHostedUrl('https://pub.partner.example/')).toBe('https://pub.partner.example');
+    const prev = configService.get.getMockImplementation();
+    configService.get.mockImplementation((k: string) =>
+      k === 'SUPER_APP_PUB_URL' ? 'https://staging.example/pub/' : prev(k),
+    );
+    expect(service.pubspecHostedUrl()).toBe('https://staging.example/pub');
+    configService.get.mockImplementation(prev);
   });
 
   describe('with LOCAL_BUILDS_ENABLED off (the default on servers)', () => {

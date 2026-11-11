@@ -11,7 +11,8 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
-import { AuthService } from '../auth/auth.service';
+import { AuthService, BACK_OFFICE_TYP } from '../auth/auth.service';
+import * as crypto from 'crypto';
 import { Readable } from 'stream';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -29,11 +30,13 @@ import * as path from 'path';
  *   GET /pub/api/packages/:packageName
  *   GET /pub/packages/:packageName/versions/:version.tar.gz
  *
- * Enforces Least Privilege:
- * 1. Authenticates developer via Bearer token (from `dart pub token add`).
- * 2. Strictly restricts queries to `fsa_superapp_flutter*` packages.
- *    Any query for non-FSA packages is immediately blocked with 403 Forbidden.
- * 3. Proxies authorized requests to internal Nexus (pub-hosted) and rewrites archive URLs.
+ * Who may read what (Bearer token from `dart pub token add`):
+ * - any valid developer token: only the FSA SDK packages (`fsa_superapp_flutter*`)
+ * - a Back Office token with super_app:manage, or the Jenkins callback token
+ *   (RELEASE_CALLBACK_TOKEN): every package in pub-hosted, i.e. the mini app
+ *   packages published after their security scan. The Super App's pubspec.yaml
+ *   points here, so its builds (Jenkins or a team PC) resolve them.
+ * Proxies to internal Nexus (pub-hosted) and rewrites archive URLs.
  */
 @Controller(['pub', 'api/pub'])
 export class PubRegistryProxyController {
@@ -59,9 +62,8 @@ export class PubRegistryProxyController {
     @Req() req: Request,
     @Res() res: Response,
   ) {
-    const cleanName = (packageName || '').trim().toLowerCase();
-    this.assertPackageAllowed(cleanName);
-    this.authenticateRequest(req);
+    const cleanName = this.cleanPackageName(packageName);
+    this.assertPackageAllowed(cleanName, this.authenticateRequest(req));
     return this.handleMetadata(cleanName, req, res);
   }
 
@@ -76,22 +78,33 @@ export class PubRegistryProxyController {
     @Req() req: Request,
     @Res() res: Response,
   ) {
-    const cleanName = (packageName || '').trim().toLowerCase();
-    this.assertPackageAllowed(cleanName);
-    this.authenticateRequest(req);
+    const cleanName = this.cleanPackageName(packageName);
+    this.assertPackageAllowed(cleanName, this.authenticateRequest(req));
+    if (!/^[A-Za-z0-9._+-]+.tar.gz$/.test(versionArchive || '') || versionArchive.includes('..')) {
+      throw new NotFoundException('Archive not found.');
+    }
     return this.handleArchive(cleanName, versionArchive, res);
   }
 
+  /** Dart package names only: no paths into other repositories. */
+  private cleanPackageName(packageName: string): string {
+    const name = (packageName || '').trim().toLowerCase();
+    if (!/^[a-z][a-z0-9_]{0,63}$/.test(name)) {
+      throw new NotFoundException('Package not found.');
+    }
+    return name;
+  }
+
+  private isSdkPackage(packageName: string): boolean {
+    return this.allowedPackages.has(packageName) || packageName.startsWith('fsa_superapp_flutter');
+  }
+
   /**
-   * Least Privilege Enforcement:
-   * Strictly permits ONLY official FSA Flutter SDK packages.
-   * Rejects any attempt to query internal banking packages or probe other repositories.
+   * Least privilege: developer tokens read only the FSA SDK packages; Super App
+   * builds ('all') read every package in pub-hosted.
    */
-  private assertPackageAllowed(packageName: string) {
-    if (
-      !this.allowedPackages.has(packageName) &&
-      !packageName.startsWith('fsa_superapp_flutter')
-    ) {
+  private assertPackageAllowed(packageName: string, access: 'sdk' | 'all') {
+    if (access !== 'all' && !this.isSdkPackage(packageName)) {
       this.logger.warn(
         `[LeastPrivilege Violation] Blocked unauthorized Pub request for: "${packageName}"`,
       );
@@ -104,9 +117,11 @@ export class PubRegistryProxyController {
   }
 
   /**
-   * Authenticates developer via Bearer token.
+   * Authenticates the Bearer token and says what it may read: 'all' for the
+   * Jenkins callback token or a Back Office token with super_app:manage,
+   * otherwise 'sdk'.
    */
-  private authenticateRequest(req: Request) {
+  private authenticateRequest(req: Request): 'sdk' | 'all' {
     const authHeader = req.headers.authorization;
     let token: string | undefined;
 
@@ -122,10 +137,15 @@ export class PubRegistryProxyController {
     }
 
     if (token) {
+      if (this.isBuildToken(token)) return 'all';
       try {
         const payload = this.authService.verifyToken(token);
         req['user'] = payload;
-        return;
+        const canBuild =
+          payload?.typ === BACK_OFFICE_TYP &&
+          Array.isArray(payload?.permissions) &&
+          payload.permissions.includes('super_app:manage');
+        return canBuild ? 'all' : 'sdk';
       } catch (err: unknown) {
         if (process.env.NODE_ENV === 'production') {
           throw new UnauthorizedException(
@@ -144,6 +164,15 @@ export class PubRegistryProxyController {
     this.logger.debug(
       'Proceeding in dev mode without verified token for Flutter package.',
     );
+    return 'sdk';
+  }
+
+  /** The Jenkins callback token (RELEASE_CALLBACK_TOKEN), compared in constant time. */
+  private isBuildToken(token: string): boolean {
+    const expected = (this.configService.get<string>('RELEASE_CALLBACK_TOKEN') || '').trim();
+    if (!expected || expected.startsWith('CHANGE_ME')) return false;
+    const hash = (v: string) => crypto.createHash('sha256').update(v).digest();
+    return crypto.timingSafeEqual(hash(token.trim()), hash(expected));
   }
 
   /**
@@ -193,8 +222,12 @@ export class PubRegistryProxyController {
       this.logger.debug(`Nexus pub query failed at ${upstreamUrl}: ${msg}`);
     }
 
-    // Local workspace fallback (supports dev/POC without running Nexus)
-    const localMetadata = this.generateLocalFallbackMetadata(packageName, req);
+    // Local workspace fallback (dev/POC without Nexus): only for the SDK, never
+    // invented metadata for a mini app package, and never in production
+    const localMetadata =
+      process.env.NODE_ENV !== 'production' && this.isSdkPackage(packageName)
+        ? this.generateLocalFallbackMetadata(packageName, req)
+        : null;
     if (localMetadata) {
       res.setHeader('Content-Type', 'application/vnd.pub.v2+json');
       return res.json(localMetadata);

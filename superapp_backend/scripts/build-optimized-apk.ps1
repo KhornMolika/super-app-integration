@@ -120,6 +120,16 @@ try {
     Write-Host "Could not read the Native SDK list ($ManifestUrl): $($_.Exception.Message). Building without Native SDK mini apps." -ForegroundColor DarkYellow
 }
 
+# Mini app packages come from the /pub gateway (pubspec.yaml); the build token reads them.
+# pub stores only the variable name, never the token.
+$PubGateway = if ($env:SUPER_APP_PUB_URL) { $env:SUPER_APP_PUB_URL.TrimEnd('/') } else { "https://app.fintechcenterfsa.com/pub" }
+if ($env:RELEASE_CALLBACK_TOKEN) {
+    $env:FSA_PUB_TOKEN = $env:RELEASE_CALLBACK_TOKEN
+    & $FlutterBin pub token add $PubGateway --env-var FSA_PUB_TOKEN | Out-Null
+} else {
+    Write-Host "RELEASE_CALLBACK_TOKEN is not set: mini app packages from $PubGateway cannot be read." -ForegroundColor DarkYellow
+}
+
 Write-Host "Resolving Flutter dependencies with $FlutterBin..." -ForegroundColor Yellow
 & $FlutterBin pub get
 

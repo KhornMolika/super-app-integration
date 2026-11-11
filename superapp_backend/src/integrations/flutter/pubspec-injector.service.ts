@@ -203,6 +203,27 @@ export class PubspecInjectorService {
   }
 
   /**
+   * The registry URL written into the Super App's pubspec.yaml for hosted mini
+   * app packages: the public /pub gateway (SUPER_APP_PUB_URL), which any build
+   * machine can reach with a build token. NEXUS_BASE_URL is the backend's own
+   * view of Nexus (localhost on a PC, a cluster-internal name in production), so
+   * it is never written there, and neither is an app's stored Nexus URL.
+   */
+  pubspecHostedUrl(requested?: string): string {
+    const gateway = (
+      this.configService.get<string>('SUPER_APP_PUB_URL') ||
+      'https://app.fintechcenterfsa.com/pub'
+    )
+      .trim()
+      .replace(/\/+$/, '');
+    const r = (requested || '').trim();
+    const usable =
+      /^https:\/\//.test(r) &&
+      !/(localhost|127\.0\.0\.1|host\.docker\.internal|\.svc\.cluster\.local|\/repository\/)/i.test(r);
+    return usable ? r.replace(/\/+$/, '') : gateway;
+  }
+
+  /**
    * Injects or updates a dependency in super-app/pubspec.yaml.
    */
   async injectDependency(dto: InjectDependencyDto): Promise<{
@@ -257,9 +278,7 @@ export class PubspecInjectorService {
       if (localPath) gitConfig.path = localPath;
       dependencyValue = { git: gitConfig };
     } else if (isHosted) {
-      const nexusPubGroup =
-        hostedUrl ||
-        `${(this.configService.get<string>('NEXUS_BASE_URL') || 'http://localhost:8081').replace(/\/+$/, '')}/repository/pub-group`;
+      const nexusPubGroup = this.pubspecHostedUrl(hostedUrl);
       dependencyValue = {
         hosted: {
           name: packageName,
@@ -273,9 +292,7 @@ export class PubspecInjectorService {
       dependencyValue = normalizeVersionConstraint(version);
     } else {
       // Default: Resolve dynamically from private Nexus pub-group registry
-      const nexusPubGroup =
-        hostedUrl ||
-        `${(this.configService.get<string>('NEXUS_BASE_URL') || 'http://localhost:8081').replace(/\/+$/, '')}/repository/pub-group`;
+      const nexusPubGroup = this.pubspecHostedUrl(hostedUrl);
       dependencyValue = {
         hosted: {
           name: packageName,

@@ -21,6 +21,7 @@ def p(String name) {
         FLUTTER_IMAGE: 'ghcr.io/cirruslabs/flutter:3.44.0',
         TOOLCHAIN_CHECK_ONLY: false,
         PRIVATE_GIT_DEPS: 'https://github.com/KhornMolika/sc-private-miniapp.git=github-sc-private-miniapp',
+        PUB_GATEWAY_URL: 'https://app.fintechcenterfsa.com/pub',
     ]
     def v = params[name]
     return (v == null || v == '') ? defaults[name] : v
@@ -151,6 +152,7 @@ pipeline {
         string(name: 'GIT_CREDENTIALS_ID', defaultValue: 'git-action', description: 'Jenkins credential for MOBILE_REPO_URL')
         string(name: 'NATIVE_SDK_MANIFEST_URL', defaultValue: '', description: 'Native SDK list URL. Empty: derived from CALLBACK_URL.')
         string(name: 'FLUTTER_IMAGE', defaultValue: 'ghcr.io/cirruslabs/flutter:3.44.0', description: 'Docker image with Flutter and the Android SDK')
+        string(name: 'PUB_GATEWAY_URL', defaultValue: 'https://app.fintechcenterfsa.com/pub', description: 'Pub registry the Super App pubspec.yaml uses for mini app packages; the build reads it with CALLBACK_TOKEN')
         string(name: 'PRIVATE_GIT_DEPS', defaultValue: 'https://github.com/KhornMolika/sc-private-miniapp.git=github-sc-private-miniapp', description: 'Private Git dependencies: <https url>=<Jenkins SSH deploy-key credential id>, comma separated')
         booleanParam(name: 'TOOLCHAIN_CHECK_ONLY', defaultValue: false, description: 'Only check the build machine (Docker, Flutter, source mount, pub get); build and upload nothing')
         string(name: 'CODEGEN_MR_IID', defaultValue: '', description: 'Unused; accepted so older backends can still trigger the job')
@@ -221,13 +223,14 @@ pipeline {
                             "Compiling the Super App ${params.BUILD_TYPE} APK (android-arm, arm64, x64)...",
                             "APK compiled.") {
                         withPrivateGitDeps {
-                        withEnv(["FLUTTER_IMAGE=${p('FLUTTER_IMAGE')}", "API_BASE_URL=${p('API_BASE_URL') ?: ''}", "TOOLCHAIN_CHECK_ONLY=${p('TOOLCHAIN_CHECK_ONLY') ? 'true' : 'false'}"]) {
+                        withEnv(["FLUTTER_IMAGE=${p('FLUTTER_IMAGE')}", "PUB_GATEWAY_URL=${p('PUB_GATEWAY_URL')}", "API_BASE_URL=${p('API_BASE_URL') ?: ''}", "TOOLCHAIN_CHECK_ONLY=${p('TOOLCHAIN_CHECK_ONLY') ? 'true' : 'false'}"]) {
                             sh '''
                                 set -e
                                 S="$WORKSPACE/.ci-secrets"
                                 if [ -f "$S/gitconfig" ]; then
                                     export GIT_SSH_COMMAND="ssh -F $S/ssh_config" GIT_DEPS_CONFIG="$S/gitconfig"
                                 fi
+                                export FSA_PUB_TOKEN="${CALLBACK_TOKEN:-}"
                                 # Kept in the workspace between builds so Gradle and pub do not download everything each time
                                 CACHE_DIR="$WORKSPACE/.ci-cache"
                                 mkdir -p "$CACHE_DIR/pub" "$CACHE_DIR/gradle"
@@ -242,13 +245,15 @@ pipeline {
                                     -e PUB_CACHE="$CACHE_DIR/pub" -e GRADLE_USER_HOME="$CACHE_DIR/gradle" \
                                     -e GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx3g" \
                                     -e NEXUS_USER -e NEXUS_PASSWORD -e API_BASE_URL -e BUILD_TYPE -e TOOLCHAIN_CHECK_ONLY \
-                                    -e GIT_SSH_COMMAND -e GIT_DEPS_CONFIG \
+                                    -e GIT_SSH_COMMAND -e GIT_DEPS_CONFIG -e FSA_PUB_TOKEN -e PUB_GATEWAY_URL \
                                     -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" \
                                     "$FLUTTER_IMAGE" bash -ec '
                                         # Files written as root inside go back to the Jenkins user
                                         trap "chown -R $HOST_UID:$HOST_GID . $PUB_CACHE $GRADLE_USER_HOME 2>/dev/null || true" EXIT
                                         git config --global --add safe.directory "*"
                                         if [ -n "${GIT_DEPS_CONFIG:-}" ]; then git config --global include.path "$GIT_DEPS_CONFIG"; fi
+                                        # Mini app packages come from the /pub gateway; the build token reads them (never written to disk)
+                                        if [ -n "${FSA_PUB_TOKEN:-}" ]; then dart pub token add "$PUB_GATEWAY_URL" --env-var FSA_PUB_TOKEN; fi
                                         flutter --version
                                         test -f pubspec.yaml && echo "Source visible in the build container"
                                         if [ "$TOOLCHAIN_CHECK_ONLY" = "true" ]; then
