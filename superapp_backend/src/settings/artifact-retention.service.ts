@@ -229,8 +229,9 @@ export class ArtifactRetentionService implements OnModuleInit {
       configured,
       'https://app.fintechcenterfsa.com/nexus',
       'http://10.200.8.6:8081',
+      'http://super-app-nexus-svc.super-app.svc.cluster.local:8081/nexus',
+      'http://super-app-nexus-svc.super-app.svc.cluster.local:8081',
       'http://nexus:8081',
-      'http://nexus.super-app.svc.cluster.local:8081',
       'http://localhost:8081',
     ].filter(Boolean) as string[];
 

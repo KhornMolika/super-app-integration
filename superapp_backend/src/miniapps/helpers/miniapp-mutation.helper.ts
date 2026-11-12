@@ -1071,11 +1071,21 @@ export class MiniappMutationHelper {
       }
     }
 
-    const res = await this.storageService.uploadPackageArchive(
-      file,
-      miniAppId,
-      version,
-    );
+    // Logged both ways: a submit that later reports "not found in Nexus" can then be
+    // told apart from "no archive was ever sent" in the backend log
+    const label = `${file?.originalname || 'archive'} (${file?.size ?? '?'} bytes) for ${miniAppId || 'draft'} ${version || ''}`.trim();
+    let res: Awaited<ReturnType<StorageService['uploadPackageArchive']>>;
+    try {
+      res = await this.storageService.uploadPackageArchive(
+        file,
+        miniAppId,
+        version,
+      );
+    } catch (err: any) {
+      this.logger.warn(`Package archive upload to MinIO failed: ${label}: ${err?.message || err}`);
+      throw err;
+    }
+    this.logger.log(`Package archive uploaded to MinIO: ${label} -> ${res?.packageStoragePath || res?.minioKey || '?'}`);
     const detected =
       this.permissionDetectorHelper.detectFromPubspecDependencies(
         res.pubspec?.dependencies || {},

@@ -34,8 +34,10 @@ export class NexusIntegrationService {
     const configured = this.configService.get<string>('NEXUS_BASE_URL');
     const list = [
       configured,
+      // The Kubernetes Service is super-app-nexus-svc (there is no "nexus" Service)
+      'http://super-app-nexus-svc.super-app.svc.cluster.local:8081/nexus',
+      'http://super-app-nexus-svc.super-app.svc.cluster.local:8081',
       'http://nexus:8081',
-      'http://nexus.super-app.svc.cluster.local:8081',
       'http://10.200.8.6:8081',
       'http://localhost:8081',
     ].filter(Boolean) as string[];
