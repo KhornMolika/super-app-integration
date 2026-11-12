@@ -271,7 +271,8 @@ export default function MiniAppLifecycleBanners({
           </div>
         </div>
       )}
-      {/* 1. Review & Action Banner for IN_REVIEW (New App vs Update Proposal) */}
+      {/* 1. Review & Action Banner for IN_REVIEW (New App vs Update Proposal).
+          After a failed security scan: no Approve, only Request Changes / Reject. */}
       {status === 'IN_REVIEW' && (
         <div className={`mb-6 p-5 rounded-2xl border shadow-sm animate-in fade-in flex flex-col md:flex-row md:items-center justify-between gap-4 ${
           isUpdateProposal
@@ -324,9 +325,11 @@ export default function MiniAppLifecycleBanners({
               <p className={`text-sm mt-1 leading-relaxed ${
                 isUpdateProposal ? 'text-amber-800 dark:text-amber-200' : 'text-blue-800 dark:text-blue-200'
               }`}>
-                {isUpdateProposal
-                  ? `Live version v${currentReleaseVersion || '1.0.0'} is currently active and unaffected. Review the configuration, permissions, and security report for candidate version ${draftVersion || 'update'} before approving.`
-                  : 'Automated security validation has PASSED. Review the initial configuration, permissions, and security report to approve for Sandbox Testing.'}
+                {actions.scanFailed
+                  ? 'The automated security scan FAILED, so this cannot be approved. Review the findings in the security report, then Request Changes so the developer can fix them, or Reject.'
+                  : isUpdateProposal
+                    ? `Live version v${currentReleaseVersion || '1.0.0'} is currently active and unaffected. Review the configuration, permissions, and security report for candidate version ${draftVersion || 'update'} before approving.`
+                    : 'Automated security validation has PASSED. Review the initial configuration, permissions, and security report to approve for Sandbox Testing.'}
               </p>
             </div>
           </div>

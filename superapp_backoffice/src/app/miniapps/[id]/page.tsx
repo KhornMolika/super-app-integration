@@ -340,6 +340,7 @@ function ManageMiniAppContent() {
           onClose={() => setIsReviewDiffOpen(false)}
           miniAppId={id as string}
           miniAppName={formData.name}
+          scanFailed={actions.scanFailed}
           onSuccess={() => {
             setIsReviewDiffOpen(false);
             fetchApp();

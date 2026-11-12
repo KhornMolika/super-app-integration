@@ -13,6 +13,8 @@ export interface RevisionReviewModalProps {
   baseVersion?: string;
   targetVersion?: string;
   onSuccess?: () => void;
+  /** The revision's security scan failed: no approval, Request Changes still works. */
+  scanFailed?: boolean;
 }
 
 export function RevisionReviewModal({
@@ -23,10 +25,12 @@ export function RevisionReviewModal({
   baseVersion,
   targetVersion,
   onSuccess,
+  scanFailed = false,
 }: RevisionReviewModalProps) {
   // Only reviewers decide; the developer sees the comparison only
   const { can } = useAuth();
-  const canApprove = can('miniapp:approve');
+  // Same rule as the backend: nothing is approved after a failed security scan
+  const canApprove = can('miniapp:approve') && !scanFailed;
   const canReject = can('miniapp:reject');
   const [diffData, setDiffData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -473,8 +477,14 @@ export function RevisionReviewModal({
             <span>Cancel</span>
           </button>
 
-          {!canApprove && !canReject && (
-            <p className="text-sm text-slate-500 dark:text-slate-400">A reviewer will approve or return this revision.</p>
+          {scanFailed ? (
+            <p className="text-sm text-rose-600 dark:text-rose-400">
+              The security scan failed: this revision cannot be approved until the findings are fixed.
+            </p>
+          ) : (
+            !canApprove && !canReject && (
+              <p className="text-sm text-slate-500 dark:text-slate-400">A reviewer will approve or return this revision.</p>
+            )
           )}
           <div className="flex flex-wrap items-center gap-3">
             {canReject && (

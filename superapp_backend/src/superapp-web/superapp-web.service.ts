@@ -45,8 +45,12 @@ export class SuperAppWebService {
       try {
         await this.inflight;
       } catch (err: any) {
-        // Keep serving the build we have
-        this.logger.warn(`Could not check for a newer web build: ${err.message}`);
+        // Keep serving the build we have. Node's fetch says only "fetch failed": name the
+        // cause (ENOTFOUND = DNS, ECONNREFUSED, ETIMEDOUT...) and where it was going.
+        const cause = err?.cause?.code || err?.cause?.message;
+        this.logger.warn(
+          `Could not check for a newer web build at ${this.url(LATEST)}: ${err.message}${cause ? ` (${cause})` : ''}`,
+        );
       }
     }
     return this.current;

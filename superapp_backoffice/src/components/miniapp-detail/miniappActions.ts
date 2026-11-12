@@ -25,6 +25,8 @@ export interface MiniAppActionSubject {
   buildStatus?: string;
   pendingRevision?: unknown;
   archiveRequest?: unknown;
+  /** Security scan result (the pending revision's, when there is one). */
+  validationStatus?: string;
 }
 
 export interface MiniAppActionUser {
@@ -38,6 +40,8 @@ export interface MiniAppAllowedActions {
   isLive: boolean;
   isOwner: boolean;
   archiveRequested: boolean;
+  /** The security scan failed: it cannot be approved (Request Changes / Reject still can). */
+  scanFailed: boolean;
   // Banner: next step
   submit: boolean;
   approve: boolean;
@@ -105,20 +109,24 @@ export function getAllowedActions(
   const archiveRequested = Boolean(app.archiveRequest);
   const hasRevision = Boolean(app.pendingRevision);
   const ownerOrAdmin = isOwner || isSuper || isAdmin;
+  // Same rule as the backend (assertSecurityScanNotFailed): no approval after a failed
+  // scan. Request Changes and Reject stay, so the reviewer can send it back or turn it down.
+  const scanFailed = (app.validationStatus || '').toUpperCase() === 'FAILED';
 
   return {
     phase,
     isLive,
     isOwner,
     archiveRequested,
+    scanFailed,
     submit: phase === 'draft' && canUpdate && ownerOrAdmin,
-    approve: phase === 'review' && canApprove,
+    approve: phase === 'review' && canApprove && !scanFailed,
     requestChanges: phase === 'review' && canReject,
     reject: phase === 'review' && canReject,
     startTesting: phase === 'approved' && canApprove,
     retryBuild: phase === 'build-failed' && canApprove,
     activate: phase === 'testing' && canApprove,
-    publishRevision: isLive && hasRevision && canApprove,
+    publishRevision: isLive && hasRevision && canApprove && !scanFailed,
     discardRevision: isLive && hasRevision && canUpdate && (ownerOrAdmin || canApprove),
     resume: phase === 'suspended' && canSuspend,
     decideArchive: isSuper && archiveRequested && phase !== 'archived',

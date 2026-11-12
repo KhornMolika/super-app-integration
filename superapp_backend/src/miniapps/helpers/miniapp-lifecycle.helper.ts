@@ -1126,6 +1126,8 @@ export class MiniappLifecycleHelper {
         `App must be in APPROVED, BUILDING, IN_REVIEW, TESTING, ACTIVE, or BUILD_FAILED status before moving to TESTING (current: ${app.lifecycleStatus || currentStatus})`,
       );
     }
+    // "Approve for Test Build" is an approval too: not after a failed scan
+    assertSecurityScanNotFailed(app);
 
     if (
       (currentStatus === 'ACTIVE' ||
