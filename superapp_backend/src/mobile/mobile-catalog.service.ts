@@ -11,6 +11,7 @@ import {
   CapabilityGateService,
   evaluateAgainstCatalog,
 } from '../capabilities/capability-gate.service';
+import { isAssetProxyLink } from '../storage/asset-url-signer';
 
 export interface CatalogItem {
   id: string;
@@ -128,6 +129,12 @@ export function toCatalogItem(
   if (logo) {
     if (logo.startsWith('data:')) {
       // Inline base64 image data: preserve as is
+    } else if (isAssetProxyLink(logo)) {
+      // Already a backend asset link (/api/storage/asset?key=...&bucket=...): keep its
+      // key. It contains "superapp-storage", so the raw-URL branch below would take the
+      // key from its path ("api/storage/asset") and the image would not be found.
+      // The response interceptor re-signs it.
+      if (logo.startsWith('/')) logo = `${baseUrl}${logo}`;
     } else if (
       logo.includes(':9000') ||
       logo.includes('superapp-storage') || logo.includes('mini-app-assets') ||

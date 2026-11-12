@@ -24,6 +24,28 @@ function makeApp(over: any = {}): MiniApp {
   } as unknown as MiniApp;
 }
 
+describe('toCatalogItem logo links', () => {
+  const host = 'app.fintechcenterfsa.com';
+  const keyOf = (logo: string) => new URL(logo, 'https://x').searchParams.get('key');
+
+  it('keeps the key of a stored asset-proxy link (never "api/storage/asset")', () => {
+    const stored = '/api/storage/asset?key=logos%2Fabc.png&bucket=superapp-storage&exp=1&sig=old';
+    const logo = toCatalogItem(makeApp({ logo: stored }), host).logo!;
+    expect(keyOf(logo)).toBe('logos/abc.png');
+    expect(logo).toMatch(/^https:\/\/app\.fintechcenterfsa\.com\/api\/storage\/asset\?/);
+  });
+
+  it('keeps the key of an absolute asset-proxy link', () => {
+    const stored = 'https://app.fintechcenterfsa.com/api/storage/asset?bucket=superapp-storage&key=logos%2Fabc.png';
+    expect(keyOf(toCatalogItem(makeApp({ logo: stored }), host).logo!)).toBe('logos/abc.png');
+  });
+
+  it('still turns a raw MinIO object URL into a proxy link for that object', () => {
+    const raw = 'http://10.200.8.6:9000/superapp-storage/logos/abc.png';
+    expect(keyOf(toCatalogItem(makeApp({ logo: raw }), host).logo!)).toBe('superapp-storage/logos/abc.png');
+  });
+});
+
 describe('toCatalogItem', () => {
   it('projects safe catalog item with integrationConfig', () => {
     const json = JSON.stringify(toCatalogItem(makeApp()));

@@ -84,6 +84,22 @@ export function isAssetProxyLink(value: string): boolean {
 }
 
 /**
+ * The object an asset-proxy link points at (its `key` and `bucket` query
+ * parameters), or null when the value is not such a link. Never take the key
+ * from the path of a proxy link: that is "api/storage/asset", not an object.
+ */
+export function assetProxyTarget(value: string): { key: string; bucket: string | null } | null {
+  if (!value || !isAssetProxyLink(value)) return null;
+  try {
+    const url = new URL(value, 'http://placeholder.local');
+    const key = url.searchParams.get('key');
+    return key ? { key, bucket: url.searchParams.get('bucket') } : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Sets a fresh `exp` and `sig` on an asset-proxy link. A link that already has
  * them is re-signed too: a client may save a signed link back into the DB, and
  * it must not expire there. Links without a `key` come back unchanged.

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Client as MinioClient } from 'minio';
 import { randomUUID } from 'crypto';
 import type { Multer } from 'multer';
+import { assetProxyTarget, isAssetProxyLink } from '../asset-url-signer';
 
 @Injectable()
 export class PresignedUrlHelper {
@@ -73,6 +74,8 @@ export class PresignedUrlHelper {
     if (
       logoUrlOrPath.startsWith('/api/storage/') ||
       logoUrlOrPath.startsWith('/storage/') ||
+      // also absolute proxy links (https://host/api/storage/asset?key=...)
+      isAssetProxyLink(logoUrlOrPath) ||
       (logoUrlOrPath.startsWith('https://') &&
         (logoUrlOrPath.includes('X-Amz-Signature') ||
           logoUrlOrPath.includes('X-Amz-Credential')))
@@ -118,7 +121,8 @@ export class PresignedUrlHelper {
   ): Promise<void> {
     if (!logoUrlOrPath || logoUrlOrPath.startsWith('data:')) return;
     let bucket = assetsBucket;
-    let key = logoUrlOrPath.split('?')[0];
+    // A proxy link names its object in ?key=; its path is the proxy route itself
+    let key = assetProxyTarget(logoUrlOrPath)?.key ?? logoUrlOrPath.split('?')[0];
     key = key.replace(/^https?:\/\/[^\/]+\//, '');
 
     if (key.startsWith('mini-app-logos/')) {
