@@ -77,7 +77,8 @@ export async function prepareDraftPayload(
   }
   if (payload.integrationMethod !== IntegrationMethod.FLUTTER_PACKAGE) {
     delete payload.integrationConfigFlutter;
-  } else if (pendingArchiveFile) {
+  } else if (pendingArchiveFile && payload.integrationConfigFlutter?.sourceType !== SourceType.GIT) {
+    // (a Git source never uploads an archive picked before switching to Git)
     try {
       const uploadFormData = new FormData();
       uploadFormData.append('file', pendingArchiveFile);
@@ -141,7 +142,8 @@ export async function prepareSubmitPayload(
 
   if (payload.integrationMethod !== IntegrationMethod.FLUTTER_PACKAGE) {
     delete payload.integrationConfigFlutter;
-  } else if (pendingArchiveFile) {
+  } else if (pendingArchiveFile && payload.integrationConfigFlutter?.sourceType !== SourceType.GIT) {
+    // (a Git source never uploads an archive picked before switching to Git)
     try {
       const uploadFormData = new FormData();
       uploadFormData.append('file', pendingArchiveFile);

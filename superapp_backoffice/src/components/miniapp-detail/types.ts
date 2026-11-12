@@ -45,6 +45,7 @@ export type LifecycleActionType =
   | 'reject'
   | 'request-changes'
   | 'start-testing'
+  | 'pass-testing'
   | 'activate'
   | 'suspend'
   | 'publish-revision'

@@ -16,6 +16,7 @@ import * as crypto from 'crypto';
 import { Readable } from 'stream';
 import * as fs from 'fs';
 import * as path from 'path';
+import { nexusApiBaseUrl } from '../integrations/nexus/nexus-url';
 
 /**
  * Scoped Dart Pub Registry Gateway Controller (/pub/*)
@@ -282,12 +283,9 @@ export class PubRegistryProxyController {
     );
   }
 
+  /** In-cluster Nexus when NEXUS_INTERNAL_URL is set (see nexus-url.ts). */
   private getNexusBaseUrl(): string {
-    return (
-      this.configService.get<string>('NEXUS_BASE_URL') ||
-      process.env.NEXUS_BASE_URL ||
-      'http://localhost:8081'
-    ).replace(/\/+$/, '');
+    return nexusApiBaseUrl((k) => this.configService.get<string>(k));
   }
 
   private getNexusAuthHeader(): Record<string, string> {

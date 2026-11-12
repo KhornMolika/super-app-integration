@@ -3,7 +3,7 @@
  * Shared by the local pubspec injector and the production build list
  * (build-miniapps), so both write the same entry.
  */
-import { gitSourceUrlOf, isGitSource, splitGitUrl } from './git-source.util';
+import { gitRefOf, gitSourceUrlOf, isGitSource, splitGitUrl } from './git-source.util';
 import { DART_PACKAGE_NAME } from './miniapp-registry.render';
 
 interface PackageSource {
@@ -86,7 +86,8 @@ export function miniAppDependencyOf(
     const url = gitSourceUrlOf(cfg)!;
     // Also refuses credentials written into the URL (user:token@host)
     if (!splitGitUrl(url)) return { packageName, skip: 'repository URL is not a supported Git URL' };
-    const ref = String(cfg.gitBranch || cfg.gitTag || cfg.commitSha || cfg.branch || cfg.ref || 'main').trim();
+    // The locked commit: the build ships exactly what was scanned and tested
+    const ref = gitRefOf(cfg);
     if (!SAFE_REF.test(ref) || ref.split('/').includes('..')) return { packageName, skip: 'Git branch or tag has unsupported characters' };
     const subPath = String(cfg.gitPath || cfg.packagePath || '').trim().replace(/^\.\/|\/+$/g, '');
     if (subPath && (!SAFE_PATH.test(subPath) || subPath.split('/').includes('..'))) {
@@ -102,7 +103,11 @@ export function miniAppDependencyOf(
   // Published package (ARTIFACT), from the /pub gateway
   const url = pubspecHostedUrlFor(pubGateway, cfg.nexusUrl || cfg.hostedUrl);
   if (!SAFE_HOSTED_URL.test(url)) return { packageName, skip: 'package registry URL is not valid' };
-  const version = normalizeVersionConstraint(cfg.versionConstraint || cfg.packageVersion || cfg.version);
+  // The version the backend published to Nexus (from the archive's pubspec.yaml),
+  // pinned exactly: the build gets the scanned package, whatever the form says.
+  // Before a publish, the form's constraint.
+  const published = String(cfg.nexusPublishedVersion || '').trim();
+  const version = published || normalizeVersionConstraint(cfg.versionConstraint || cfg.packageVersion || cfg.version);
   if (!SAFE_VERSION.test(version)) return { packageName, skip: `version "${version}" is not a valid constraint` };
   return { packageName, dependency: { hosted: { name: packageName, url }, version } };
 }

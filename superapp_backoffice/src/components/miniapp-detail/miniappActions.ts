@@ -1,7 +1,7 @@
 /**
  * Which mini app actions the current user can take, in one place.
  *
- * The status banner shows the next step (submit, review, build, activate,
+ * The status banner shows the next step (submit, review, build, pass testing, activate,
  * resume, archive decision, restore). The header "..." menu holds the rest
  * (edit, sandbox, suspend, archive, delete). Each flag here matches the rule
  * the backend applies, so a button is only shown when it can work.
@@ -14,6 +14,8 @@ export type MiniAppPhase =
   | 'building'
   | 'build-failed'
   | 'testing'
+  /** The test build was verified (TEST_PASSED): next is Activate. */
+  | 'test-passed'
   | 'live'
   | 'suspended'
   | 'archived';
@@ -49,6 +51,9 @@ export interface MiniAppAllowedActions {
   reject: boolean;
   startTesting: boolean;
   retryBuild: boolean;
+  /** TESTING -> TEST_PASSED (the test build works). */
+  passTesting: boolean;
+  /** TEST_PASSED -> production release build -> ACTIVE. */
   activate: boolean;
   publishRevision: boolean;
   discardRevision: boolean;
@@ -81,13 +86,17 @@ export function getMiniAppPhase(app: MiniAppActionSubject): MiniAppPhase {
   if (availability === 'SUSPENDED') return 'suspended';
   if (NEEDS_SUBMIT.includes(status)) return 'draft';
   if (IN_REVIEW.includes(status)) return 'review';
-  if (status === 'BUILD_FAILED' || (app.buildStatus === 'FAILED' && status !== 'TESTING' && status !== 'ACTIVE')) {
+  if (
+    status === 'BUILD_FAILED' ||
+    (app.buildStatus === 'FAILED' && status !== 'TESTING' && status !== 'TEST_PASSED' && status !== 'ACTIVE')
+  ) {
     return 'build-failed';
   }
   if (status === 'BUILDING') return 'building';
   // ACTIVE, or older rows activated as APPROVED + PRODUCTION
   if (status === 'ACTIVE' || availability === 'PRODUCTION') return 'live';
   if (status === 'TESTING') return 'testing';
+  if (status === 'TEST_PASSED') return 'test-passed';
   return 'approved';
 }
 
@@ -125,7 +134,8 @@ export function getAllowedActions(
     reject: phase === 'review' && canReject,
     startTesting: phase === 'approved' && canApprove,
     retryBuild: phase === 'build-failed' && canApprove,
-    activate: phase === 'testing' && canApprove,
+    passTesting: phase === 'testing' && canApprove,
+    activate: phase === 'test-passed' && canApprove,
     publishRevision: isLive && hasRevision && canApprove && !scanFailed,
     discardRevision: isLive && hasRevision && canUpdate && (ownerOrAdmin || canApprove),
     resume: phase === 'suspended' && canSuspend,
@@ -135,13 +145,13 @@ export function getAllowedActions(
     sandbox: phase !== 'archived' && phase !== 'draft',
     suspend:
       canSuspend &&
-      (phase === 'live' || phase === 'testing' || (phase === 'approved' && status === 'APPROVED') ||
+      (phase === 'live' || phase === 'testing' || phase === 'test-passed' || (phase === 'approved' && status === 'APPROVED') ||
         (phase === 'review' && availability === 'PRODUCTION')),
     archive: isSuper && phase !== 'archived' && !DELETABLE.includes(status),
     requestArchive: !isSuper && canSuspend && phase === 'suspended' && !archiveRequested,
     delete: DELETABLE.includes(status) && canUpdate && ownerOrAdmin,
     deletePermanently: phase === 'archived' && isSuper,
     rollback: (isSuper || isAdmin) && phase !== 'archived',
-    downloadTestApk: phase === 'testing' || phase === 'live',
+    downloadTestApk: phase === 'testing' || phase === 'test-passed' || phase === 'live',
   };
 }

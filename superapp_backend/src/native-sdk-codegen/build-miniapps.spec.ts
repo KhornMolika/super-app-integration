@@ -32,6 +32,17 @@ describe('miniAppDependencyOf', () => {
     expect(pubspecHostedUrlFor(undefined, 'http://nexus.super-app.svc.cluster.local:8081/repository/pub-hosted')).toBe(GW);
   });
 
+  it('pins the version published to Nexus over the form constraint', () => {
+    const r = miniAppDependencyOf(
+      app('hr', { sourceType: 'ARTIFACT', packageName: 'fsa_hr_miniapp', versionConstraint: '^1.0.0', nexusPublishedVersion: '2.1.0' }),
+      GW,
+    );
+    expect((r as any).dependency.version).toBe('2.1.0');
+
+    const notYet = miniAppDependencyOf(app('hr', { sourceType: 'ARTIFACT', packageName: 'fsa_hr_miniapp', versionConstraint: '^1.0.0' }), GW);
+    expect((notYet as any).dependency.version).toBe('^1.0.0');
+  });
+
   it('skips what a build server cannot use', () => {
     const skip = (cfg: Record<string, any>) => (miniAppDependencyOf(app('x', cfg), GW) as any).skip;
     expect(skip({ sourceType: 'LOCAL', packageName: 'p', path: '../p' })).toMatch(/developer PC/);
@@ -94,7 +105,7 @@ describe('BuildMiniAppsService.plan', () => {
     expect(r.registryDart).not.toContain('local_pkg');
     const where = (repo.find.mock.calls[0] as any)[0].where;
     expect(where.integrationMethod).toBe('FLUTTER_PACKAGE');
-    expect(where.lifecycleStatus._value).toEqual(['APPROVED', 'BUILDING', 'BUILD_FAILED', 'TESTING', 'ACTIVE']);
+    expect(where.lifecycleStatus._value).toEqual(['APPROVED', 'BUILDING', 'BUILD_FAILED', 'TESTING', 'TEST_PASSED', 'ACTIVE']);
   });
 
   it('with no mini apps, the registry registers nothing', async () => {

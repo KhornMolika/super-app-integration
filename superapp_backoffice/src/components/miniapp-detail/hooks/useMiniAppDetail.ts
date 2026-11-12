@@ -484,6 +484,9 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
   ) => {
     if (extraData?.archiveFile) {
       setPendingArchiveFile(extraData.archiveFile);
+    } else if (updates.sourceType === SourceType.GIT) {
+      // Switched to Git: an archive picked earlier must not be uploaded and scanned
+      setPendingArchiveFile(null);
     }
     setFormData((prev: any) => {
       const nextValidationErrors = prev.validationErrors ? { ...prev.validationErrors } : undefined;
@@ -712,7 +715,7 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
       }
       payload.integrationConfigWebView = webConfig;
     } else if (formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE) {
-      if (pendingArchiveFile) {
+      if (pendingArchiveFile && formData.integrationConfigFlutter?.sourceType !== SourceType.GIT) {
         try {
           const uploadFormData = new FormData();
           uploadFormData.append('file', pendingArchiveFile);

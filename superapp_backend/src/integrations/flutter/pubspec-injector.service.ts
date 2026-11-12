@@ -606,7 +606,7 @@ export class PubspecInjectorService {
     try {
       const approvedMiniApps = await this.miniappRepository.find({
         where: {
-          status: In(['APPROVED', 'TESTING', 'ACTIVE', 'IN_REVIEW'] as any),
+          status: In(['APPROVED', 'TESTING', 'TEST_PASSED', 'ACTIVE', 'IN_REVIEW'] as any),
         },
       });
       const flutterMiniApps = approvedMiniApps.filter(

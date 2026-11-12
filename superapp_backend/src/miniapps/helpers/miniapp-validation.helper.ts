@@ -1,3 +1,4 @@
+import { scanSourceOf } from '../../integrations/flutter/git-source.util';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -597,16 +598,9 @@ export class MiniappValidationHelper {
           ? cfg.allowedDomains.split(',')
           : [];
 
-      const integrationType = cfg.packageStoragePath
-        ? 'ARTIFACT'
-        : 'SOURCE_CODE';
-      const repoUrl =
-        cfg.repoUrl ||
-        (cfg.repoOwner && cfg.repoName
-          ? `https://github.com/${cfg.repoOwner}/${cfg.repoName}`
-          : '');
-      const commitSha = cfg.commitSha || cfg.branch || 'main';
-      const gitProvider = (cfg.provider || 'GITHUB').toUpperCase();
+      // Archive in MinIO or Git repository at the locked commit (same as the build)
+      const { integrationType, sourceStoragePath, repoUrl, commitSha, gitProvider } =
+        scanSourceOf(cfg);
       const packageName = cfg.packageName || cfg.name || app.name;
       const packageVersion = cfg.packageVersion || cfg.version || '1.0.0';
 
@@ -626,7 +620,7 @@ export class MiniappValidationHelper {
           packageName,
           version: packageVersion,
           integrationType,
-          sourceStoragePath: cfg.packageStoragePath || '',
+          sourceStoragePath,
           repoUrl,
           commitSha,
           gitProvider,

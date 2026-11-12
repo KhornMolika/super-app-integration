@@ -4,6 +4,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { nexusApiBaseUrl } from './nexus-url';
 
 export interface NexusPackageValidation {
   isValid: boolean;
@@ -13,6 +14,12 @@ export interface NexusPackageValidation {
   versions?: string[];
   description?: string;
   error?: string;
+}
+
+/** An error body for a log or message: tags stripped, at most 300 characters. */
+function shortBody(text: string): string {
+  const plain = String(text || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  return plain.length > 300 ? `${plain.slice(0, 300)}...` : plain;
 }
 
 @Injectable()
@@ -33,6 +40,7 @@ export class NexusIntegrationService {
   private getCandidateBaseUrls(): string[] {
     const configured = this.configService.get<string>('NEXUS_BASE_URL');
     const list = [
+      this.configService.get<string>('NEXUS_INTERNAL_URL'),
       configured,
       // The Kubernetes Service is super-app-nexus-svc (there is no "nexus" Service)
       'http://super-app-nexus-svc.super-app.svc.cluster.local:8081/nexus',
@@ -199,11 +207,9 @@ export class NexusIntegrationService {
     } catch (_) {}
   }
 
+  /** Where the backend calls Nexus (NEXUS_INTERNAL_URL in the cluster): see nexus-url.ts. */
   private getBaseUrl(): string {
-    return (
-      this.configService.get<string>('NEXUS_BASE_URL') ||
-      'http://localhost:8081'
-    ).replace(/\/+$/, '');
+    return nexusApiBaseUrl((k) => this.configService.get<string>(k));
   }
 
   private getAuthHeader(): Record<string, string> {
@@ -319,25 +325,23 @@ export class NexusIntegrationService {
         `Nexus Maven upload to ${repo} failed with HTTP ${res.status}: ${res.statusText}`,
       );
     }
-    return `${this.getBaseUrl()}/repository/${repo}/${groupId.replace(/\./g, '/')}/${artifactId}/${version}/${artifactId}-${version}.aar`;
+    // Stored on the app and handed to builds: the public address, not the in-cluster one
+    return `${this.getPublicBaseUrl()}/repository/${repo}/${groupId.replace(/\./g, '/')}/${artifactId}/${version}/${artifactId}-${version}.aar`;
   }
 
   private getPubGroupUrl(): string {
+    // NEXUS_INTERNAL_URL wins: NEXUS_PUB_GROUP_URL is often the public address,
+    // which sends the backend's own calls out through the ingress
     const configured = this.configService.get<string>('NEXUS_PUB_GROUP_URL');
-    if (configured) return configured.replace(/\/+$/, '');
-    const baseUrl =
-      this.configService.get<string>('NEXUS_BASE_URL') ||
-      'http://localhost:8081';
-    return `${baseUrl.replace(/\/+$/, '')}/repository/pub-group`;
+    if (configured && !this.configService.get<string>('NEXUS_INTERNAL_URL')) return configured.replace(/\/+$/, '');
+    return `${this.getBaseUrl()}/repository/pub-group`;
   }
 
   private getPubHostedUrl(): string {
+    // NEXUS_INTERNAL_URL wins over NEXUS_PUB_HOSTED_URL (see getPubGroupUrl)
     const configured = this.configService.get<string>('NEXUS_PUB_HOSTED_URL');
-    if (configured) return configured.replace(/\/+$/, '');
-    const baseUrl =
-      this.configService.get<string>('NEXUS_BASE_URL') ||
-      'http://localhost:8081';
-    return `${baseUrl.replace(/\/+$/, '')}/repository/pub-hosted`;
+    if (configured && !this.configService.get<string>('NEXUS_INTERNAL_URL')) return configured.replace(/\/+$/, '');
+    return `${this.getBaseUrl()}/repository/pub-hosted`;
   }
 
   async getPackageInfo(packageName: string): Promise<NexusPackageValidation> {
@@ -433,6 +437,22 @@ export class NexusIntegrationService {
     } catch (err: any) {
       return { found: false, reachable: false, versions: [], error: `Could not reach Nexus at ${url}: ${err?.message || err}` };
     }
+  }
+
+  /**
+   * [link] from Nexus (absolute, maybe on another host, or relative) moved onto
+   * [hostedUrl]: its /api/packages/... path and query on our pub-hosted address.
+   */
+  private onOurPubHost(link: string | undefined, hostedUrl: string, fallbackPath: string): string {
+    const marker = '/api/packages/';
+    try {
+      const parsed = new URL(link || '', `${hostedUrl}/`);
+      const at = parsed.pathname.indexOf(marker);
+      if (at >= 0) return `${hostedUrl}${parsed.pathname.slice(at)}${parsed.search}`;
+    } catch {
+      // not a URL: use the standard path
+    }
+    return `${hostedUrl}${fallbackPath}`;
   }
 
   /**
@@ -590,8 +610,11 @@ export class NexusIntegrationService {
     }
 
     const initData = await initRes.json();
-    const uploadUrl =
-      initData.url || `${hostedUrl}/api/packages/versions/newUpload`;
+    // Nexus builds the next links from its configured Base URL (here the public
+    // http://app.fintechcenterfsa.com/nexus). From inside the cluster that goes out
+    // through the ingress, where the POST is redirected to https and turns into a
+    // GET: Nexus then answers 404. Keep the path; send it to the address we use.
+    const uploadUrl = this.onOurPubHost(initData.url, hostedUrl, '/api/packages/versions/newUpload');
 
     const formData = new FormData();
     const blob = new Blob([tarGzBuffer], { type: 'application/gzip' });
@@ -607,18 +630,28 @@ export class NexusIntegrationService {
       method: 'POST',
       body: formData,
       headers: authHeader,
+      redirect: 'manual', // the "finish" link below gets the same host rewrite
     });
 
-    if (
-      !uploadRes.ok &&
-      uploadRes.status !== 200 &&
-      uploadRes.status !== 204 &&
-      uploadRes.status !== 302
-    ) {
-      const errText = await uploadRes.text();
+    if (uploadRes.status >= 400) {
       throw new Error(
-        `Nexus Pub package upload failed with HTTP ${uploadRes.status}: ${errText}`,
+        `Nexus Pub package upload to ${uploadUrl} failed with HTTP ${uploadRes.status}: ${shortBody(await uploadRes.text())}`,
       );
+    }
+
+    // Pub protocol: the upload answers with a redirect to a "finish" URL, and the
+    // version is published when the client GETs it.
+    const finishLocation = uploadRes.headers.get('location');
+    if (finishLocation) {
+      const finishUrl = this.onOurPubHost(finishLocation, hostedUrl, '/api/packages/versions/newUploadFinish');
+      const finishRes = await fetch(finishUrl, {
+        headers: { Accept: 'application/vnd.pub.v2+json', ...authHeader },
+      });
+      if (!finishRes.ok) {
+        throw new Error(
+          `Nexus Pub upload finish at ${finishUrl} failed with HTTP ${finishRes.status}: ${shortBody(await finishRes.text())}`,
+        );
+      }
     }
 
     this.logger.log(
@@ -638,7 +671,10 @@ export class NexusIntegrationService {
   }): string {
     const pkg = options.packageName.trim() || 'package_name';
     const ver = options.versionConstraint?.trim() || '^1.0.0';
-    const groupUrl = this.getPubGroupUrl();
+    // Shown to developers: the public address
+    const groupUrl =
+      this.configService.get<string>('NEXUS_PUB_GROUP_URL')?.replace(/\/+$/, '') ||
+      `${this.getPublicBaseUrl()}/repository/pub-group`;
 
     return `dependencies:\n  ${pkg}: ${ver}\n\n# Hosted on Sonatype Nexus Private Registry\n# Resolves via environment: PUB_HOSTED_URL=${groupUrl}`;
   }

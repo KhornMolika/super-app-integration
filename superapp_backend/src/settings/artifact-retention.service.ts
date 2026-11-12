@@ -226,6 +226,7 @@ export class ArtifactRetentionService implements OnModuleInit {
 
     const configured = this.configService.get<string>('NEXUS_BASE_URL');
     const candidates = [
+      this.configService.get<string>('NEXUS_INTERNAL_URL'),
       configured,
       'https://app.fintechcenterfsa.com/nexus',
       'http://10.200.8.6:8081',

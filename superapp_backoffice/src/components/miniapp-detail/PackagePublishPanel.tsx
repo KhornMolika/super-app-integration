@@ -77,8 +77,9 @@ export interface PackagePublishPanelProps {
 /**
  * Where a Flutter package is on its way to the Super App build:
  *   archive in MinIO quarantine -> security scan -> published to Nexus pub-hosted.
- * Approval and test builds stop when the last step is not done, so this shows
- * why, and lets a reviewer publish (or retry) without approving.
+ * Approval needs the archive in MinIO; the test build and the production release
+ * need the package in Nexus and stop when it is not there, so this shows why,
+ * and lets a reviewer publish (or retry) before starting a build.
  */
 export function PackagePublishPanel({ miniAppId, formData, canPublish, onRefresh }: PackagePublishPanelProps) {
   const [busy, setBusy] = useState(false);
@@ -153,7 +154,7 @@ export function PackagePublishPanel({ miniAppId, formData, canPublish, onRefresh
       : publishError
       ? [publishError, conf.nexusPublishCheckedAt ? `Tried ${formatWhen(conf.nexusPublishCheckedAt)}` : ''].filter(Boolean)
       : scanState === 'done'
-      ? ['Not published yet. Approval publishes it first, or publish it now.']
+      ? ['Not published yet. The test build publishes it first, or publish it now.']
       : ['After the security scan passes.'],
   };
 

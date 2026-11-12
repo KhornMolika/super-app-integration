@@ -713,7 +713,7 @@ export class MiniappsService implements OnApplicationBootstrap {
       );
     }
     if (
-      !['APPROVED', 'TESTING', 'ACTIVE'].includes(
+      !['APPROVED', 'TESTING', 'TEST_PASSED', 'ACTIVE'].includes(
         (app.lifecycleStatus || (app as any).status)?.toUpperCase(),
       )
     ) {
@@ -820,6 +820,14 @@ export class MiniappsService implements OnApplicationBootstrap {
       actorId,
       (mId, aId, aType, t, d, aAction, oVal, nVal) =>
         this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal),
+    );
+  }
+
+  async passTesting(id: string, actorId: string) {
+    const app = await this.findOne(id);
+    if (!app) throw new BadRequestException('App not found');
+    return this.lifecycleHelper.passTesting(app, actorId, (mId, aId, aType, t, d, aAction, oVal, nVal) =>
+      this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal),
     );
   }
 

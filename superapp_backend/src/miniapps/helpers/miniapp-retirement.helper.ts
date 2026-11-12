@@ -32,7 +32,7 @@ export type LogActivityFn = (
 ) => Promise<void>;
 
 /** Statuses an app can be suspended from: in testing or live. */
-const SUSPENDABLE_LIFECYCLE = ['TESTING', 'APPROVED', 'ACTIVE'];
+const SUSPENDABLE_LIFECYCLE = ['TESTING', 'TEST_PASSED', 'APPROVED', 'ACTIVE'];
 /** Never built or turned down: delete these instead of archiving. */
 const DELETE_INSTEAD = ['DRAFT', 'REJECTED'];
 

@@ -1,3 +1,4 @@
+import { gitRefOf, gitSourceUrlOf, isGitSource, scanSourceOf } from '../../integrations/flutter/git-source.util';
 import { testApkBuildMode } from '../../common/utils/build-mode.util';
 import {
   Injectable,
@@ -95,6 +96,8 @@ import { CapabilitiesService } from '../../capabilities/capabilities.service';
 import {
   PackagePublishError,
   ScannedArtifactPublisherService,
+  isFlutterArtifactConfig,
+  readArchivePubspec,
 } from '../../integrations/validation/scanned-artifact-publisher.service';
 
 /**
@@ -145,10 +148,49 @@ export class MiniappLifecycleHelper {
   ) {}
 
   /**
-   * Stops approval or a test build when a Flutter package cannot be confirmed in
-   * Nexus pub-hosted: publishes it from MinIO first when it is not there yet.
-   * Without this the app was approved and the test build failed minutes later
-   * with "could not find package".
+   * Approval (of an app or a new version) needs the scanned package archive in
+   * MinIO: stored, readable, and naming the registered package. Nexus is checked
+   * only when a build needs it (see assertPackageInNexus). Returns the archive it
+   * read (null when there is no uploaded package to check), so the caller can reuse it.
+   */
+  private async assertPackageInMinio(app: MiniApp, action: string, useRevision: boolean): Promise<Buffer | null> {
+    const rev = useRevision ? app.pendingRevision : null;
+    const inRevision = Boolean(rev?.integrationConfig);
+    const method = String((inRevision && rev?.integrationMethod) || app.integrationMethod || '').toUpperCase();
+    if (method !== 'FLUTTER_PACKAGE') return null;
+    const config: Record<string, any> = (inRevision ? rev.integrationConfig : app.integrationConfig) || {};
+    if (!isFlutterArtifactConfig(config)) return null; // Git source: built from Git
+
+    const storagePath: string | undefined = config.packageStoragePath || config.minioKey || undefined;
+    const fail = (why: string) =>
+      new BadRequestException(`Cannot ${action}: ${why} Request changes so the developer attaches the archive again.`);
+    if (!storagePath) throw fail('no package archive is stored in MinIO for this mini app.');
+    if (!this.storageService) throw fail('MinIO storage is not configured on the backend.');
+    let archive: Buffer | null = null;
+    try {
+      archive = await this.storageService.getObjectBuffer(this.storageService.packageSubmissionsBucket, storagePath);
+    } catch (err: any) {
+      throw fail(`the package archive could not be read from MinIO (${storagePath}): ${err?.message || err}.`);
+    }
+    if (!archive || archive.length === 0) throw fail(`the package archive is missing or empty in MinIO (${storagePath}).`);
+
+    const pubspec = readArchivePubspec(archive);
+    const norm = (n: string) => n.trim().replace(/-/g, '_').toLowerCase();
+    const declared = String(config.packageName || '').trim();
+    if (pubspec?.name && declared && norm(pubspec.name) !== norm(declared)) {
+      throw new BadRequestException(
+        `Cannot ${action}: the archive's pubspec.yaml names the package "${pubspec.name}", but the mini app is ` +
+          `registered as "${declared}". The Super App build looks it up by the registered name: request changes.`,
+      );
+    }
+    return archive;
+  }
+
+  /**
+   * Stops a build (test build, production release) when a Flutter package cannot
+   * be confirmed in Nexus pub-hosted: publishes it from MinIO first when it is not
+   * there yet. Without this the build failed minutes later with "could not find
+   * package".
    */
   private async assertPackageInNexus(app: MiniApp, action: string, useRevision: boolean): Promise<void> {
     if (!this.artifactPublisher) return;
@@ -211,19 +253,15 @@ export class MiniappLifecycleHelper {
       packageName = this.pubspecService.inferCanonicalPackageName(app);
       let files: Record<string, string> | null = null;
 
-      if (archiveBuf && archiveBuf.length > 0) {
+      const cfg = app.integrationConfig || {};
+      // A Git source is checked in Git, even when an old upload left an archive path
+      if (archiveBuf && archiveBuf.length > 0 && !isGitSource(cfg)) {
         files = dartFilesFromZip(archiveBuf);
       } else {
-        const cfg = app.integrationConfig || {};
-        const repoUrl =
-          cfg.gitUrl ||
-          cfg.repoUrl ||
-          (cfg.repoOwner && cfg.repoName
-            ? `https://github.com/${cfg.repoOwner}/${cfg.repoName}.git`
-            : undefined);
-        if (repoUrl && (cfg.sourceType === 'GIT' || !cfg.sourceType)) {
-          const gitRef =
-            cfg.gitBranch || cfg.gitTag || cfg.commitSha || cfg.branch || cfg.ref || 'main';
+        const repoUrl = gitSourceUrlOf(cfg);
+        if (repoUrl && isGitSource(cfg)) {
+          // The commit the build uses (miniAppDependencyOf)
+          const gitRef = gitRefOf(cfg);
           const token = extractDecryptedGitToken(cfg) || undefined;
           files = await gitDartFiles(
             (path) => this.gitService.getFileContent(repoUrl, path, gitRef, token),
@@ -368,14 +406,9 @@ export class MiniappLifecycleHelper {
         ? cfg.allowedDomains.split(',')
         : [];
 
-    const integrationType = cfg.packageStoragePath ? 'ARTIFACT' : 'SOURCE_CODE';
-    const repoUrl =
-      cfg.repoUrl ||
-      (cfg.repoOwner && cfg.repoName
-        ? `https://github.com/${cfg.repoOwner}/${cfg.repoName}`
-        : '');
-    const commitSha = cfg.commitSha || cfg.branch || 'main';
-    const gitProvider = (cfg.provider || 'GITHUB').toUpperCase();
+    // Archive in MinIO or Git repository at the locked commit (same as the build)
+    const { integrationType, sourceStoragePath, repoUrl, commitSha, gitProvider } =
+      scanSourceOf(cfg);
     const packageName = cfg.packageName || cfg.name || app.name;
     const packageVersion = cfg.packageVersion || cfg.version || '1.0.0';
 
@@ -395,7 +428,7 @@ export class MiniappLifecycleHelper {
         packageName,
         version: packageVersion,
         integrationType,
-        sourceStoragePath: cfg.packageStoragePath || '',
+        sourceStoragePath,
         repoUrl,
         commitSha,
         gitProvider,
@@ -516,14 +549,9 @@ export class MiniappLifecycleHelper {
         ? cfg.allowedDomains.split(',')
         : [];
 
-    const integrationType = cfg.packageStoragePath ? 'ARTIFACT' : 'SOURCE_CODE';
-    const repoUrl =
-      cfg.repoUrl ||
-      (cfg.repoOwner && cfg.repoName
-        ? `https://github.com/${cfg.repoOwner}/${cfg.repoName}`
-        : '');
-    const commitSha = cfg.commitSha || cfg.branch || 'main';
-    const gitProvider = (cfg.provider || 'GITHUB').toUpperCase();
+    // Archive in MinIO or Git repository at the locked commit (same as the build)
+    const { integrationType, sourceStoragePath, repoUrl, commitSha, gitProvider } =
+      scanSourceOf(cfg);
     const packageName = cfg.packageName || cfg.name || app.name;
     const packageVersion = cfg.packageVersion || cfg.version || '1.0.0';
 
@@ -543,7 +571,7 @@ export class MiniappLifecycleHelper {
         packageName,
         version: packageVersion,
         integrationType,
-        sourceStoragePath: cfg.packageStoragePath || '',
+        sourceStoragePath,
         repoUrl,
         commitSha,
         gitProvider,
@@ -823,8 +851,9 @@ export class MiniappLifecycleHelper {
       app.pendingRevision = null;
     }
 
-    // Before saving APPROVED: a package that is not in Nexus would fail every build
-    await this.assertPackageInNexus(app, 'approve', false);
+    // Before saving APPROVED: the scanned archive must be in MinIO. Nexus is
+    // checked when a build needs the package (test build, production release).
+    const approvedArchive = await this.assertPackageInMinio(app, 'approve', false);
 
     app.lifecycleStatus = MiniAppLifecycleStatus.APPROVED;
     (app as any).status = 'APPROVED';
@@ -833,10 +862,11 @@ export class MiniappLifecycleHelper {
     // Auto-inject Flutter package dependency into SuperApp pubspec.yaml if applicable
     if ((app.integrationMethod || '').toUpperCase() === 'FLUTTER_PACKAGE') {
       try {
-        // The package itself was confirmed in Nexus above (assertPackageInNexus).
+        // The archive was confirmed in MinIO above (assertPackageInMinio).
         // Verify the Home widget class from the archive kept in MinIO: it is what was
         // scanned and approved, and a re-scan reads it from there.
-        const archiveBuf = await this.readStagedArchive(app.integrationConfig?.packageStoragePath);
+        // (already read by the MinIO check; Git source reads nothing here)
+        const archiveBuf = approvedArchive ?? (await this.readStagedArchive(app.integrationConfig?.packageStoragePath));
         await this.verifyHomeWidgetClass(app, archiveBuf, { force: sourceChanged });
 
         await this.pubspecService.injectMiniApp(app);
@@ -918,7 +948,7 @@ export class MiniappLifecycleHelper {
       return this.discardRevision(app, actorId, logActivityFn, reason);
     }
 
-    const validStatuses = ['IN_REVIEW', 'SUBMITTED', 'APPROVED', 'TESTING'];
+    const validStatuses = ['IN_REVIEW', 'SUBMITTED', 'APPROVED', 'TESTING', 'TEST_PASSED'];
     if (!validStatuses.includes(currentStatus)) {
       throw new BadRequestException(
         `App cannot be rejected from current status: ${app.lifecycleStatus || currentStatus}`,
@@ -1100,17 +1130,21 @@ export class MiniappLifecycleHelper {
       'TESTING',
       'ACTIVE',
       'BUILD_FAILED',
+      'TEST_PASSED',
     ];
     if (
       !validStatuses.includes(currentStatus) &&
       app.availabilityStatus !== MiniAppAvailabilityStatus.TESTING
     ) {
       throw new BadRequestException(
-        `App must be in APPROVED, BUILDING, IN_REVIEW, TESTING, ACTIVE, or BUILD_FAILED status before moving to TESTING (current: ${app.lifecycleStatus || currentStatus})`,
+        `App must be in APPROVED, BUILDING, IN_REVIEW, TESTING, TEST_PASSED, ACTIVE, or BUILD_FAILED status before moving to TESTING (current: ${app.lifecycleStatus || currentStatus})`,
       );
     }
     // "Approve for Test Build" is an approval too: not after a failed scan
     assertSecurityScanNotFailed(app);
+    // The scanned archive must still be in MinIO; the build itself reads the
+    // package from Nexus, so it is published from that archive when missing.
+    await this.assertPackageInMinio(app, 'start the test build', true);
     await this.assertPackageInNexus(app, 'start the test build', true);
 
     if (
@@ -1319,6 +1353,61 @@ export class MiniappLifecycleHelper {
     return app;
   }
 
+  /**
+   * TESTING -> TEST_PASSED: a reviewer confirms the test build works. The app
+   * stays available to testers (availabilityStatus is unchanged) and can now be
+   * activated, which starts the production release build.
+   */
+  async passTesting(
+    app: MiniApp,
+    actorId: string,
+    logActivityFn: (
+      miniAppId: string,
+      actorId: string,
+      actionType: string,
+      title: string,
+      description: string,
+      auditAction: string,
+      oldVal?: any,
+      newVal?: any,
+    ) => Promise<void>,
+  ) {
+    const currentStatus = String(app.lifecycleStatus || (app as any).status || '').toUpperCase();
+    if (currentStatus !== 'TESTING') {
+      throw new BadRequestException(
+        `Only a mini app in TESTING can pass testing (current status: ${app.lifecycleStatus || currentStatus})`,
+      );
+    }
+    if (String((app as any).buildStatus || '').toUpperCase() === 'FAILED') {
+      throw new BadRequestException('The test build failed: run it again before marking testing as passed.');
+    }
+    const oldStatus = app.lifecycleStatus;
+    app.lifecycleStatus = MiniAppLifecycleStatus.TEST_PASSED;
+    (app as any).status = MiniAppLifecycleStatus.TEST_PASSED;
+    const saved = await this.miniappRepository.save(app);
+
+    if (app.ownerId) {
+      await this.notificationsService.createNotification(
+        app.ownerId,
+        'MiniApp Passed Testing',
+        `MiniApp "${app.name}" passed testing and is ready for production activation.`,
+        'MINIAPP_TEST_PASSED',
+        app.id,
+      );
+    }
+    await logActivityFn(
+      app.id,
+      actorId,
+      'TEST_PASSED',
+      'Testing Passed',
+      `Test build verified; ready to activate.`,
+      'PASS_TESTING',
+      { status: oldStatus },
+      { status: MiniAppLifecycleStatus.TEST_PASSED },
+    );
+    return saved;
+  }
+
   async activate(
     app: MiniApp,
     actorId: string,
@@ -1339,14 +1428,17 @@ export class MiniappLifecycleHelper {
       (app as any).status ||
       ''
     ).toUpperCase();
-    const isTestingOrApproved =
-      ['TESTING', 'APPROVED'].includes(currentStatus) ||
-      app.availabilityStatus === MiniAppAvailabilityStatus.TESTING;
-    if (!isTestingOrApproved) {
+    // Only after a reviewer marked the test build as passed. (availabilityStatus is
+    // not a signal: it is TESTING on every new app.)
+    if (currentStatus !== MiniAppLifecycleStatus.TEST_PASSED) {
       throw new BadRequestException(
-        'App must be in TESTING or APPROVED status to activate',
+        currentStatus === 'TESTING'
+          ? 'Mark the test build as passed (Pass Testing) before activating the mini app.'
+          : `App must have passed testing to activate (current status: ${app.lifecycleStatus || currentStatus})`,
       );
     }
+    // Activating starts the production release build, which reads the package from Nexus
+    await this.assertPackageInNexus(app, 'activate', false);
 
     const releaseVersion =
       await this.superAppService.getAndRegisterNextVersion();
@@ -1428,7 +1520,7 @@ export class MiniappLifecycleHelper {
       throw new BadRequestException('No pending revision found to publish');
     }
     assertSecurityScanNotFailed(app);
-    await this.assertPackageInNexus(app, 'publish this version', true);
+    await this.assertPackageInMinio(app, 'publish this version', true);
 
     const rev = app.pendingRevision;
     const oldVal = { ...app };

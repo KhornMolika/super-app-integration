@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { readTarGz } from './tar.util';
+import { nexusApiBaseUrl } from '../integrations/nexus/nexus-url';
 
 export interface SuperAppWebInfo {
   build: number;
@@ -85,7 +86,8 @@ export class SuperAppWebService {
   }
 
   private url(path: string): string {
-    const base = (this.config.get<string>('NEXUS_BASE_URL') || process.env.NEXUS_BASE_URL || 'http://localhost:8081').replace(/\/+$/, '');
+    // In-cluster Nexus when NEXUS_INTERNAL_URL is set: the public hostname resets these
+    const base = nexusApiBaseUrl((k) => this.config.get<string>(k));
     return `${base}/repository/${REPO}/${path}`;
   }
 

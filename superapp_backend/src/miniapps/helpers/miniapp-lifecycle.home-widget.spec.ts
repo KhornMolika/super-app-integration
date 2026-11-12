@@ -470,7 +470,8 @@ describe('MiniappLifecycleHelper and homeWidget', () => {
       const result = await helper.publishRevision(app, 'super-admin', log);
 
       expect(result.homeWidget?.verifiedClass).toBe('HrHomeWidget');
-      expect(storageService.getObjectBuffer).not.toHaveBeenCalled();
+      // read once: the MinIO check of the new version's archive (no widget re-check)
+      expect(storageService.getObjectBuffer).toHaveBeenCalledTimes(1);
       expect(gitService.getFileContent).not.toHaveBeenCalled();
     });
 
@@ -651,7 +652,6 @@ describe('MiniappLifecycleHelper and homeWidget', () => {
         ['gitPath', 'packages/hr'],
         ['packageStoragePath', 'pkgs/hr-v2.zip'],
         ['versionConstraint', '^2.0.0'],
-        ['sourceType', 'ARTIFACT'],
       ])('publishRevision: a changed %s forces re-verification', async (key, value) => {
         const ctx = pkgSetup({ archive: new Error('gone') });
         const app = gitApp({
@@ -664,6 +664,18 @@ describe('MiniappLifecycleHelper and homeWidget', () => {
         // sources unreadable in this test, so a forced re-check can only end unverified
         expect(result.homeWidget).toEqual({ widgetClass: 'HrHomeWidget' });
         expect(ctx.registryWidgets).toEqual([{ widgetClass: 'HrHomeWidget' }]);
+      });
+
+      it('publishRevision: switching to an uploaded package whose archive cannot be read is refused', async () => {
+        const ctx = pkgSetup({ archive: new Error('gone') });
+        const app = gitApp({
+          integrationConfig: { sourceType: 'GIT', gitUrl: GIT_URL, packageName: PKG },
+          pendingRevision: gitRevision({ sourceType: 'ARTIFACT', packageStoragePath: 'pkgs/hr-v2.zip' }),
+        });
+
+        await expect(ctx.helper.publishRevision(app, 'admin', ctx.log)).rejects.toThrow(
+          /Cannot publish this version: the package archive could not be read from MinIO/,
+        );
       });
 
       it('publishRevision: an unchanged source keeps the live verification without a re-check', async () => {
@@ -766,7 +778,14 @@ describe('MiniappLifecycleHelper and homeWidget', () => {
   });
 });
 
-describe('MiniappLifecycleHelper: the package must be in Nexus', () => {
+describe('MiniappLifecycleHelper: package checks (MinIO to approve, Nexus to build)', () => {
+  const AdmZipLib = require('adm-zip');
+  const hrZip = (name = 'fsa_hr_miniapp') => {
+    const z = new AdmZipLib();
+    z.addFile('pubspec.yaml', Buffer.from(`name: ${name}\nversion: 1.2.0\n`));
+    return z.toBuffer();
+  };
+
   const flutterApp = (over: any = {}): MiniApp =>
     ({
       id: 'app-hr',
@@ -789,47 +808,109 @@ describe('MiniappLifecycleHelper: the package must be in Nexus', () => {
     validateDependencies: jest.fn().mockResolvedValue({}),
     triggerSandboxRebuild: jest.fn().mockResolvedValue(undefined),
   };
+  const storageWith = (archive: Buffer | null) => ({
+    packageSubmissionsBucket: 'bucket',
+    getObjectBuffer: jest.fn().mockResolvedValue(archive),
+  });
 
-  it('approve stops, without saving APPROVED, when the package cannot be confirmed in Nexus', async () => {
+  it('approve checks the archive in MinIO and does not touch Nexus', async () => {
+    const artifactPublisher = { ensureFlutterPackagePublished: jest.fn() };
+    const storageService = storageWith(hrZip());
+    const { helper, log } = setup({ artifactPublisher, pubspecService, storageService });
+
+    const result = await helper.approve(flutterApp(), 'super-admin', log);
+
+    expect(result.status).toBe('APPROVED');
+    expect(storageService.getObjectBuffer).toHaveBeenCalledWith('bucket', 'p.zip');
+    expect(artifactPublisher.ensureFlutterPackagePublished).not.toHaveBeenCalled();
+  });
+
+  it('approve stops, without saving APPROVED, when the archive is not in MinIO', async () => {
+    const { helper, repo, log } = setup({ pubspecService, storageService: storageWith(null) });
+
+    await expect(helper.approve(flutterApp(), 'super-admin', log)).rejects.toThrow(
+      /Cannot approve: the package archive is missing or empty in MinIO \(p\.zip\)/,
+    );
+    expect(repo.save).not.toHaveBeenCalled();
+  });
+
+  it('approve stops when the app has no stored archive at all', async () => {
+    const { helper, repo, log } = setup({ pubspecService, storageService: storageWith(hrZip()) });
+    const app = flutterApp({ integrationConfig: { sourceType: 'ARTIFACT', packageName: 'fsa_hr_miniapp' } });
+
+    await expect(helper.approve(app, 'super-admin', log)).rejects.toThrow(/no package archive is stored in MinIO/);
+    expect(repo.save).not.toHaveBeenCalled();
+  });
+
+  it('approve stops when the archive names a different package than the registered one', async () => {
+    const { helper, log } = setup({ pubspecService, storageService: storageWith(hrZip('other_pkg')) });
+
+    await expect(helper.approve(flutterApp(), 'super-admin', log)).rejects.toThrow(
+      /names the package "other_pkg", but the mini app is registered as "fsa_hr_miniapp"/,
+    );
+  });
+
+  it('approve leaves Git-source packages to the build (no MinIO archive needed)', async () => {
+    const storageService = storageWith(null);
+    const { helper, log } = setup({ pubspecService, storageService });
+    const app = flutterApp({
+      integrationConfig: { sourceType: 'GIT', gitUrl: 'https://git/x.git', packageName: 'fsa_hr_miniapp' },
+    });
+
+    const result = await helper.approve(app, 'super-admin', log);
+
+    expect(result.status).toBe('APPROVED');
+  });
+
+  it('activate (production release build) stops when the package cannot be confirmed in Nexus', async () => {
     const { PackagePublishError } = require('../../integrations/validation/scanned-artifact-publisher.service');
     const artifactPublisher = {
       ensureFlutterPackagePublished: jest.fn().mockRejectedValue(new PackagePublishError('Nexus refused fsa_hr_miniapp 1.2.0: HTTP 400')),
     };
     const { helper, repo, log } = setup({ artifactPublisher, pubspecService });
 
-    await expect(helper.approve(flutterApp(), 'super-admin', log)).rejects.toThrow(
-      /Cannot approve: the package is not in Nexus\. Nexus refused fsa_hr_miniapp 1\.2\.0/,
-    );
+    await expect(
+      helper.activate(flutterApp({ status: 'TEST_PASSED', lifecycleStatus: 'TEST_PASSED' }), 'super-admin', log),
+    ).rejects.toThrow(/Cannot activate: the package is not in Nexus\. Nexus refused fsa_hr_miniapp 1\.2\.0/);
     expect(repo.save).not.toHaveBeenCalled();
   });
 
-  it('approve confirms the package in Nexus before saving APPROVED', async () => {
-    const order: string[] = [];
-    const artifactPublisher = {
-      ensureFlutterPackagePublished: jest.fn(async () => {
-        order.push('nexus');
-        return { packageName: 'fsa_hr_miniapp', version: '1.2.0', publishedNow: true };
-      }),
-    };
+  it('activate is refused until testing is marked as passed', async () => {
+    const artifactPublisher = { ensureFlutterPackagePublished: jest.fn() };
     const { helper, repo, log } = setup({ artifactPublisher, pubspecService });
-    repo.save.mockImplementation((e: MiniApp) => {
-      order.push('save');
-      return Promise.resolve(e);
-    });
 
-    const result = await helper.approve(flutterApp(), 'super-admin', log);
-
-    expect(result.status).toBe('APPROVED');
-    expect(order[0]).toBe('nexus');
-    expect(order.indexOf('nexus')).toBeLessThan(order.indexOf('save'));
+    await expect(
+      helper.activate(flutterApp({ status: 'TESTING', lifecycleStatus: 'TESTING' }), 'super-admin', log),
+    ).rejects.toThrow(/Mark the test build as passed \(Pass Testing\) before activating/);
+    // availabilityStatus is TESTING on every new app: it must not count
+    await expect(
+      helper.activate(flutterApp({ availabilityStatus: 'TESTING' }), 'super-admin', log),
+    ).rejects.toThrow(/must have passed testing/);
+    expect(artifactPublisher.ensureFlutterPackagePublished).not.toHaveBeenCalled();
+    expect(repo.save).not.toHaveBeenCalled();
   });
 
-  it('does not ask Nexus about other integration methods', async () => {
-    const artifactPublisher = { ensureFlutterPackagePublished: jest.fn() };
-    const { helper, log } = setup({ artifactPublisher, pubspecService });
+  it('pass testing: TESTING -> TEST_PASSED, testers keep the app, owner notified', async () => {
+    const { helper, repo, notifications, log } = setup({ pubspecService });
+    const app = flutterApp({ status: 'TESTING', lifecycleStatus: 'TESTING', availabilityStatus: 'TESTING', ownerId: 'dev-1' });
 
-    await helper.approve(flutterApp({ integrationMethod: 'DEEP_LINK', integrationConfig: { urlScheme: 'x://' } }), 'super-admin', log);
+    const result: any = await helper.passTesting(app, 'super-admin', log);
 
-    expect(artifactPublisher.ensureFlutterPackagePublished).not.toHaveBeenCalled();
+    expect(result.lifecycleStatus).toBe('TEST_PASSED');
+    expect(result.availabilityStatus).toBe('TESTING');
+    expect(repo.save).toHaveBeenCalledTimes(1);
+    expect(notifications.createNotification).toHaveBeenCalledWith(
+      'dev-1', 'MiniApp Passed Testing', expect.any(String), 'MINIAPP_TEST_PASSED', 'app-hr',
+    );
+    expect(log).toHaveBeenCalledWith('app-hr', 'super-admin', 'TEST_PASSED', 'Testing Passed', expect.any(String), 'PASS_TESTING', expect.anything(), expect.anything());
+  });
+
+  it('pass testing is refused outside TESTING or after a failed build', async () => {
+    const { helper, repo, log } = setup({ pubspecService });
+    await expect(helper.passTesting(flutterApp(), 'super-admin', log)).rejects.toThrow(/Only a mini app in TESTING/);
+    await expect(
+      helper.passTesting(flutterApp({ lifecycleStatus: 'TESTING', buildStatus: 'FAILED' }), 'super-admin', log),
+    ).rejects.toThrow(/The test build failed/);
+    expect(repo.save).not.toHaveBeenCalled();
   });
 });

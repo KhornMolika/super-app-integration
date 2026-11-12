@@ -153,6 +153,8 @@ describe('Phase 3: Lifecycle & Governance State Machine Testing', () => {
         ownerId: 'partner-usr-2',
         ownerEmail: 'transit@gov.kh',
         integrationMethod: 'FLUTTER_PACKAGE',
+        // Git source: an uploaded package would also need its archive in MinIO
+        integrationConfig: { sourceType: 'GIT', gitUrl: 'https://git.example/transit.git', packageName: 'metro_pass' },
       } as any;
 
       const result = await helper.approve(app, 'sa-admin-1', mockLogActivityFn);
@@ -227,6 +229,8 @@ describe('Phase 3: Lifecycle & Governance State Machine Testing', () => {
         lifecycleStatus: MiniAppLifecycleStatus.APPROVED,
         ownerId: 'partner-usr-5',
         integrationMethod: 'FLUTTER_PACKAGE',
+        // Git source: an uploaded package would also need its archive in MinIO
+        integrationConfig: { sourceType: 'GIT', gitUrl: 'https://git.example/transit.git', packageName: 'public_transit' },
       } as any;
 
       const result = await helper.startTesting(app, 'sa-admin-1', mockLogActivityFn);

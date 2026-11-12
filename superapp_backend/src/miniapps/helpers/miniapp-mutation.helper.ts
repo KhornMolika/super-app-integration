@@ -631,7 +631,8 @@ export class MiniappMutationHelper {
       (existing as any).status === 'ACTIVE' ||
       existing.availabilityStatus === MiniAppAvailabilityStatus.SUSPENDED ||
       existing.lifecycleStatus === 'TESTING' ||
-      (existing as any).status === 'TESTING';
+      (existing as any).status === 'TESTING' ||
+      existing.lifecycleStatus === 'TEST_PASSED';
 
     // Unchanged input keeps its backend-set verification: the client never
     // sends `verifiedClass`, so the stored row (or open revision) wins.

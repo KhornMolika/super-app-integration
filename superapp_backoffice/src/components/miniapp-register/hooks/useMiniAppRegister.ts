@@ -519,6 +519,9 @@ export function useMiniAppRegister() {
   ) => {
     if (extraData?.archiveFile) {
       setPendingArchiveFile(extraData.archiveFile);
+    } else if (updates.sourceType === SourceType.GIT) {
+      // Switched to Git: an archive picked earlier must not be uploaded and scanned
+      setPendingArchiveFile(null);
     }
     setFormData((prev) => {
       const nextFlutter: FlutterPackageConfigDto = {

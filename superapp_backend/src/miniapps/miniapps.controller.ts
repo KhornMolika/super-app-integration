@@ -403,6 +403,13 @@ export class MiniappsController {
     return this.miniappService.startTesting(id, req.user.sub);
   }
 
+  /** TESTING -> TEST_PASSED: the test build works; the app can then be activated. */
+  @Post(':id/pass-testing')
+  @RequirePermissions('miniapp:approve')
+  passTesting(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    return this.miniappService.passTesting(id, req.user.sub);
+  }
+
   @Post(':id/activate')
   @RequirePermissions('miniapp:approve')
   activate(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {

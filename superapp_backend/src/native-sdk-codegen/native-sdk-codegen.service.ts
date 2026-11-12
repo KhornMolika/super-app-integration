@@ -55,7 +55,7 @@ function isFilled(value: unknown): value is string {
 }
 
 /** Statuses whose Android SDK goes into a Super App build (see buildManifest). */
-export const MANIFEST_STATUSES = ['APPROVED', 'BUILDING', 'BUILD_FAILED', 'TESTING', 'ACTIVE'];
+export const MANIFEST_STATUSES = ['APPROVED', 'BUILDING', 'BUILD_FAILED', 'TESTING', 'TEST_PASSED', 'ACTIVE'];
 
 export interface NativeSdkManifest {
   repositories: string[];

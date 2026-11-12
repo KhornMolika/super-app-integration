@@ -601,7 +601,43 @@ export default function MiniAppLifecycleBanners({
               </h4>
               <p className="text-sm text-accent-800 dark:text-accent-200 mt-1 leading-relaxed">
                 The test build is ready. Test the MiniApp with <strong>Launch Sandbox Preview</strong> (in the ... menu) or
-                the test APK on an Android phone. When it works, a reviewer activates it.
+                the test APK on an Android phone. When everything works, a reviewer marks testing as passed; found a
+                defect? Request changes.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {actions.passTesting && (
+              <Button
+                type="button"
+                onClick={() => onLifecycleAction('pass-testing')}
+                disabled={isSubmitting}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-4 py-2 font-semibold shadow-sm flex items-center gap-1.5"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>Pass Testing</span>
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 5. Testing passed: ready for the production release */}
+      {actions.phase === 'test-passed' && (
+        <div className="mb-6 p-4 rounded-2xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/80 dark:bg-emerald-950/40 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm animate-in fade-in">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-200 dark:border-emerald-800">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="text-base font-bold text-emerald-900 dark:text-emerald-200">Testing Passed</h4>
+              <p className="text-sm text-emerald-800 dark:text-emerald-200 mt-1 leading-relaxed">
+                The test build was verified. Activating starts the production release build and puts the MiniApp in
+                the SuperApp catalog.
               </p>
             </div>
           </div>

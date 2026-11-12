@@ -237,8 +237,10 @@ export function useMiniAppLifecycle({
         ? 'publish the staged revision live to production'
         : isDiscardRev
         ? 'discard the pending revision'
+        : action === 'pass-testing'
+        ? 'mark the test build as passed for'
         : action === 'activate'
-        ? 'activate'
+        ? 'activate (this starts the production release build)'
         : action === 'submit'
         ? 'submit for review'
         : action === 'restore'
@@ -258,7 +260,7 @@ export function useMiniAppLifecycle({
           : isDiscardRev
           ? 'Are you sure you want to discard this pending draft revision? Any unmerged changes will be lost.'
           : isTestBuild
-          ? 'Are you sure you want to trigger the Jenkins test build? This will compile the SuperApp container in debug mode and upload the test APK to Nexus for manual testing.'
+          ? 'Are you sure you want to trigger the Jenkins test build? It checks the scanned package in MinIO, publishes it to Nexus if needed, compiles a release-mode test APK, uploads it to Nexus and sends it to Telegram for manual testing.'
           : `Are you sure you want to ${actionLabel} this MiniApp?`,
         confirmText: isPublishRev
           ? 'Publish Live'
@@ -333,6 +335,8 @@ export function useMiniAppLifecycle({
           ? extra?.requestArchive
             ? 'MiniApp suspended. A Super Admin was asked to archive it.'
             : 'MiniApp suspended and hidden from users.'
+          : action === 'pass-testing'
+          ? 'Testing marked as passed. The MiniApp can now be activated.'
           : action === 'resume'
           ? 'MiniApp resumed and available again.'
           : action === 'request-archive'
