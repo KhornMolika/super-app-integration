@@ -1150,7 +1150,7 @@ export class MiniappLifecycleHelper {
             `Failed to trigger Jenkins pipeline: ${jenkinsResult.message}`,
           );
         } else {
-          this.monitorJenkinsTestBuild(app.id, releaseVersion);
+          this.monitorJenkinsTestBuild(app.id, releaseVersion, jenkinsResult.queueId);
         }
 
         if (this.apkBuildManager) {
@@ -1270,7 +1270,7 @@ export class MiniappLifecycleHelper {
         );
       } else {
         // Start background watchdog poller in case Jenkins pipeline crashes, aborts, or encounters syntax error
-        this.monitorJenkinsTestBuild(app.id, releaseVersion);
+        this.monitorJenkinsTestBuild(app.id, releaseVersion, jenkinsResult.queueId);
       }
 
       // Also trigger host APK compilation manager
@@ -1786,9 +1786,12 @@ export class MiniappLifecycleHelper {
    * If Jenkins crashes, fails during Groovy compilation, or is aborted,
    * this poller detects it and immediately transitions the app to BUILD_FAILED.
    */
-  private monitorJenkinsTestBuild(miniAppId: string, releaseVersion: string) {
+  private monitorJenkinsTestBuild(miniAppId: string, releaseVersion: string, queueId?: number) {
+    // Only the run this trigger queued: lastBuild can still be an older (e.g. aborted) run
+    const tracker = this.jenkinsService.trackTestBuild({ queueId, releaseVersion, triggeredAt: Date.now() });
     let polls = 0;
-    const maxPolls = 180; // 180 * 3s = 9 minutes
+    // The Jenkinsfile aborts itself after 60 minutes; allow for time in the queue
+    const maxPolls = 420; // 420 * 10s = 70 minutes
     const interval = setInterval(async () => {
       polls++;
       try {
@@ -1801,15 +1804,14 @@ export class MiniappLifecycleHelper {
             await this.markBuildFailed(
               miniAppId,
               releaseVersion,
-              'SuperApp build pipeline timed out after 9 minutes.',
+              'SuperApp build pipeline timed out after 70 minutes.',
             );
           }
           return;
         }
 
-        const jStatus =
-          await this.jenkinsService.getTestBuildStatusFromJenkins();
-        if (jStatus.available && !jStatus.building) {
+        const jStatus = await tracker.poll();
+        if (jStatus.available && jStatus.state === 'finished') {
           clearInterval(interval);
           if (jStatus.result === 'FAILURE' || jStatus.result === 'ABORTED') {
             const errorLine =
@@ -1829,7 +1831,7 @@ export class MiniappLifecycleHelper {
               `Jenkins pipeline build ended with ${jStatus.result || 'FAILURE'}.`;
 
             this.logger.warn(
-              `Jenkins test build failure detected by watchdog for app ${miniAppId}: ${errorLine}`,
+              `Jenkins test build #${jStatus.buildNumber ?? '?'} failure detected by watchdog for app ${miniAppId}: ${errorLine}`,
             );
             await this.markBuildFailed(miniAppId, releaseVersion, errorLine);
           }
@@ -1837,7 +1839,7 @@ export class MiniappLifecycleHelper {
       } catch (err: any) {
         this.logger.debug(`Jenkins watchdog poll error: ${err.message}`);
       }
-    }, 3000);
+    }, 10_000);
   }
 
   /**

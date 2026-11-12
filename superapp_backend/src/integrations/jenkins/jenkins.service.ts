@@ -429,7 +429,7 @@ export class JenkinsService {
     codegenMrIid?: string;
     /** Overrides MOBILE_API_BASE_URL: backend URL the built app talks to. */
     apiBaseUrl?: string;
-  }): Promise<{ success: boolean; message: string }> {
+  }): Promise<{ success: boolean; message: string; queueId?: number }> {
     const jobName = 'superapp-test-build';
     const callbackUrl = this.getCallbackUrl('/release-assembly/build-callback');
     const buildType = options.buildType || 'release';
@@ -508,12 +508,17 @@ export class JenkinsService {
       });
 
       if (response.status === 201 || response.status === 200) {
+        // Jenkins answers with the queue item of exactly this build (Location: .../queue/item/<id>/)
+        const queueMatch = /\/queue\/item\/(\d+)\/?$/.exec(response.headers?.get?.('location') || '');
+        const queueId = queueMatch ? Number(queueMatch[1]) : undefined;
         this.logger.log(
-          `Jenkins job "${jobName}" triggered successfully for release ${options.releaseVersion}`,
+          `Jenkins job "${jobName}" triggered successfully for release ${options.releaseVersion}` +
+            (queueId ? ` (queue item ${queueId})` : ''),
         );
         return {
           success: true,
           message: 'SuperApp build pipeline triggered successfully',
+          queueId,
         };
       }
 
@@ -742,4 +747,100 @@ export class JenkinsService {
   }> {
     return this.getJobBuildStatus('superapp-test-build');
   }
+
+  /**
+   * Follows exactly one superapp-test-build run: the one a trigger queued (queueId), or else
+   * the newest run with this RELEASE_VERSION that started after the trigger. Never judges
+   * another run, e.g. an older aborted one that is still lastBuild while ours is queued.
+   *
+   * poll() answers pending (still queued / not found yet), building, or finished with the
+   * result; the console log is read only once the run has finished.
+   */
+  trackTestBuild(options: { queueId?: number; releaseVersion: string; triggeredAt?: number }): {
+    poll: () => Promise<TrackedBuildStatus>;
+  } {
+    const job = 'superapp-test-build';
+    const since = (options.triggeredAt ?? Date.now()) - 2 * 60_000; // allows for clock skew with Jenkins
+    let buildNumber: number | undefined;
+    let queueGone = !options.queueId;
+
+    const getJson = async (path: string): Promise<{ status: number; data?: any }> => {
+      const headers: Record<string, string> = {};
+      const authHeader = this.getAuthHeader();
+      if (authHeader) headers['Authorization'] = authHeader;
+      const res = await fetch(`${this.jenkinsUrl}${path}`, { headers, signal: AbortSignal.timeout(20_000) });
+      return res.ok ? { status: res.status, data: await res.json() } : { status: res.status };
+    };
+
+    const findBuildNumber = async (): Promise<TrackedBuildStatus | undefined> => {
+      if (!queueGone) {
+        const q = await getJson(`/queue/item/${options.queueId}/api/json`);
+        if (q.status === 404) {
+          queueGone = true; // Jenkins forgets queue items a few minutes after they start
+        } else if (!q.data) {
+          return { available: false, state: 'pending' };
+        } else if (q.data.cancelled) {
+          return { available: true, state: 'finished', result: 'ABORTED', consoleText: 'Jenkins build was cancelled while queued.' };
+        } else if (typeof q.data.executable?.number === 'number') {
+          buildNumber = q.data.executable.number;
+          return undefined;
+        } else {
+          return { available: true, state: 'pending' };
+        }
+      }
+      // Fallback: the newest run of this version that started after the trigger. Reads only
+      // RELEASE_VERSION from the parameters; the others include secrets.
+      const list = await getJson(
+        `/job/${job}/api/json?tree=builds[number,timestamp,actions[parameters[name,value]]]{0,10}`,
+      );
+      if (!list.data) return { available: false, state: 'pending' };
+      const match = (list.data.builds || []).find(
+        (b: any) =>
+          (b.timestamp ?? 0) >= since &&
+          (b.actions || [])
+            .flatMap((a: any) => (Array.isArray(a?.parameters) ? a.parameters : []))
+            .some((p: any) => p?.name === 'RELEASE_VERSION' && p?.value === options.releaseVersion),
+      );
+      if (!match) return { available: true, state: 'pending' };
+      buildNumber = match.number;
+      return undefined;
+    };
+
+    const poll = async (): Promise<TrackedBuildStatus> => {
+      try {
+        if (buildNumber === undefined) {
+          const early = await findBuildNumber();
+          if (early) return early;
+        }
+        const b = await getJson(`/job/${job}/${buildNumber}/api/json?tree=building,result`);
+        if (!b.data) return { available: false, state: 'building', buildNumber };
+        if (b.data.building || !b.data.result) return { available: true, state: 'building', buildNumber };
+        let consoleText = '';
+        if (b.data.result !== 'SUCCESS') {
+          const headers: Record<string, string> = {};
+          const authHeader = this.getAuthHeader();
+          if (authHeader) headers['Authorization'] = authHeader;
+          const c = await fetch(`${this.jenkinsUrl}/job/${job}/${buildNumber}/consoleText`, {
+            headers,
+            signal: AbortSignal.timeout(20_000),
+          }).catch(() => undefined);
+          if (c?.ok) consoleText = await c.text();
+        }
+        return { available: true, state: 'finished', result: b.data.result, consoleText, buildNumber };
+      } catch (_) {
+        return { available: false, state: buildNumber === undefined ? 'pending' : 'building', buildNumber };
+      }
+    };
+    return { poll };
+  }
+}
+
+export interface TrackedBuildStatus {
+  /** false: Jenkins could not be read this time (keep polling). */
+  available: boolean;
+  /** pending: queued or not started yet; building: running; finished: result is set. */
+  state: 'pending' | 'building' | 'finished';
+  result?: string | null;
+  consoleText?: string;
+  buildNumber?: number;
 }

@@ -312,6 +312,7 @@ export class ReleaseAssemblyVerificationService {
         this.monitorJenkinsReleaseBuild(
           dto.miniApps.map((a) => a.id),
           dto.releaseVersion,
+          jenkinsBuildRes.queueId,
         );
       }
 
@@ -901,9 +902,12 @@ export class ReleaseAssemblyVerificationService {
   /**
    * Watchdog poller for Jenkins superapp-test-build in release assembly.
    */
-  private monitorJenkinsReleaseBuild(miniAppIds: string[], releaseVersion: string) {
+  private monitorJenkinsReleaseBuild(miniAppIds: string[], releaseVersion: string, queueId?: number) {
+    // Only the run this trigger queued: lastBuild can still be an older (e.g. aborted) run
+    const tracker = this.jenkinsService.trackTestBuild({ queueId, releaseVersion, triggeredAt: Date.now() });
     let polls = 0;
-    const maxPolls = 180; // 180 * 3s = 9 minutes
+    // The Jenkinsfile aborts itself after 60 minutes; allow for time in the queue
+    const maxPolls = 420; // 420 * 10s = 70 minutes
     const interval = setInterval(async () => {
       polls++;
       try {
@@ -917,14 +921,14 @@ export class ReleaseAssemblyVerificationService {
             await this.markReleaseBuildFailed(
               miniAppIds,
               releaseVersion,
-              'SuperApp build pipeline timed out after 9 minutes.',
+              'SuperApp build pipeline timed out after 70 minutes.',
             );
           }
           return;
         }
 
-        const jStatus = await this.jenkinsService.getTestBuildStatusFromJenkins();
-        if (jStatus.available && !jStatus.building) {
+        const jStatus = await tracker.poll();
+        if (jStatus.available && jStatus.state === 'finished') {
           clearInterval(interval);
           if (jStatus.result === 'FAILURE' || jStatus.result === 'ABORTED') {
             const errorLine =
@@ -944,7 +948,7 @@ export class ReleaseAssemblyVerificationService {
               `Jenkins pipeline build ended with ${jStatus.result || 'FAILURE'}.`;
 
             this.logger.warn(
-              `Jenkins release build failure detected by watchdog for apps [${miniAppIds.join(', ')}]: ${errorLine}`,
+              `Jenkins release build #${jStatus.buildNumber ?? '?'} failure detected by watchdog for apps [${miniAppIds.join(', ')}]: ${errorLine}`,
             );
             await this.markReleaseBuildFailed(miniAppIds, releaseVersion, errorLine);
           }
@@ -952,7 +956,7 @@ export class ReleaseAssemblyVerificationService {
       } catch (err: any) {
         this.logger.debug(`Jenkins release build watchdog poll error: ${err.message}`);
       }
-    }, 3000);
+    }, 10_000);
   }
 
   /**
