@@ -325,7 +325,8 @@ describe('MiniappLifecycleHelper and homeWidget', () => {
       const verifiedSave = order.indexOf('save', order.indexOf('save') + 1);
       expect(verifiedSave).toBeGreaterThan(-1);
       expect(verifiedSave).toBeLessThan(order.indexOf('publish'));
-      expect(order.indexOf('publish')).toBeLessThan(order.indexOf('delete'));
+      // The archive stays in MinIO after publishing: a re-scan reads it from there
+      expect(order).not.toContain('delete');
     });
 
     it('approve: archive without the class stays unverified and approve still resolves', async () => {
