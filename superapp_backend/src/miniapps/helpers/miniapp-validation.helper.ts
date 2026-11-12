@@ -19,6 +19,19 @@ import {
   getDefaultChecksForMethod,
 } from '../../integrations/validation/local-security-scanner.service';
 
+/** An app in one of these has been approved at least once: a failed check never sends it back to DRAFT. */
+const POST_APPROVAL_STATUSES = new Set([
+  'APPROVED',
+  'APPROVED_FOR_TESTING',
+  'BUILDING',
+  'BUILDING_STAGE_1',
+  'TESTING',
+  'TEST_PASSED',
+  'BUILDING_STAGE_2',
+  'ACTIVE',
+  'SUSPENDED',
+]);
+
 @Injectable()
 export class MiniappValidationHelper {
   private readonly logger = new Logger(MiniappValidationHelper.name);
@@ -240,38 +253,31 @@ export class MiniappValidationHelper {
       }
     } else if (app.integrationMethod === 'FLUTTER_PACKAGE') {
       const flutterConfig = app.integrationConfig || {};
+      // Same rule as the Backoffice form (isFlutterArtifact): Git only with a Git URL
       const isArtifact =
         flutterConfig.sourceType === 'ARTIFACT' ||
-        (!flutterConfig.sourceType && flutterConfig.packageName);
+        (!flutterConfig.sourceType && !String(flutterConfig.gitUrl || '').trim());
 
       if (isArtifact) {
         const packageName = flutterConfig.packageName?.trim();
+        // Only a stored archive counts: inspecting a file in the form fills its
+        // checksum without storing it, and the scan reads the archive from MinIO
         const hasPackageArchive = Boolean(
           flutterConfig.packageStoragePath ||
-          flutterConfig.archiveChecksum ||
-          flutterConfig.packageUrl ||
-          flutterConfig.minioKey,
+          flutterConfig.minioKey ||
+          flutterConfig.packageUrl,
         );
 
+        if (!hasPackageArchive) {
+          // Required: the archive is what gets security-scanned and published to Nexus
+          errors['integrationConfigFlutter.archiveFile'] =
+            'Attach the package archive (.zip or .tar.gz). It is required for a Flutter package: it is security-scanned and published to Nexus for you.';
+        }
         if (!packageName) {
           errors['integrationConfigFlutter.packageName'] =
             'Package name is required for Artifact integration.';
         } else if (!hasPackageArchive) {
-          checks.push(
-            this.nexusService
-              .getPackageInfo(packageName)
-              .then((result) => {
-                if (!result.exists) {
-                  errors['integrationConfigFlutter.packageName'] =
-                    `No package archive was uploaded for "${packageName}", and it is not in Nexus yet. ` +
-                    `Upload the package (.zip or .tar.gz) and submit again: it is security-scanned and published to Nexus for you.`;
-                }
-              })
-              .catch((err) => {
-                errors['integrationConfigFlutter.packageName'] =
-                  `Could not verify package "${packageName}" on Nexus: ${err.message}`;
-              }),
-          );
+          // reported above
         } else {
           this.logger.log(
             `Package archive detected for "${packageName}" (Storage: ${flutterConfig.packageStoragePath || 'quarantine'}). CI validation pipeline will verify and publish to Nexus on review approval.`,
@@ -454,12 +460,12 @@ export class MiniappValidationHelper {
     // Clear old issues
     await this.issueRepository.delete({ miniAppId: id });
 
+    // Past approval only. availabilityStatus is not a signal: it defaults to TESTING on
+    // every new row, which made a brand-new app look live, so a failed check left it
+    // IN_REVIEW (no scan, nothing to fix) instead of returning it to DRAFT.
     const isLive =
-      app.lifecycleStatus === 'ACTIVE' ||
-      app.availabilityStatus === 'TESTING' ||
+      POST_APPROVAL_STATUSES.has(String(app.lifecycleStatus || '').toUpperCase()) ||
       app.availabilityStatus === 'PRODUCTION' ||
-      (app as any).status === 'ACTIVE' ||
-      (app as any).status === 'TESTING' ||
       Boolean(app.pendingRevision);
 
     if (Object.keys(errors).length > 0) {

@@ -6,6 +6,7 @@ import { io } from 'socket.io-client';
 import { miniappsApi, superAppApi, unwrapItem } from '@/api';
 import { toast } from '@/components/ui/Toast';
 import { validateUrlFormat } from '@/components/ui/ValidatedUrlInput';
+import { missingArtifactFiles } from '@/lib/miniapp-form.validator';
 import { formatCompliantPurpose } from '@/components/forms/CapabilitiesForm';
 import { IntegrationMethod, NativeSdkConfigDto, SourceType } from '@/types/miniapp.types';
 import { SubmissionModalState } from '@/components/ui/SubmissionModal';
@@ -867,6 +868,16 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
           'Domain ownership has not been verified. Please host the verification association file and verify domain ownership before submitting.',
       }));
       return;
+    }
+
+    // A Flutter package artifact / Native SDK cannot be submitted without its uploaded file
+    if (!isDraftOnly) {
+      const missingFiles = missingArtifactFiles(formData, { archive: pendingArchiveFile });
+      if (Object.keys(missingFiles).length > 0) {
+        setLocalErrors((prev) => ({ ...prev, ...missingFiles }));
+        toast.error(Object.values(missingFiles)[0], 'File Required');
+        return;
+      }
     }
 
     if (!isDraftOnly && formData.status === 'ACTIVE') {

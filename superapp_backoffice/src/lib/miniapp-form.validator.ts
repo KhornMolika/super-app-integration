@@ -162,24 +162,20 @@ export async function validateMiniAppStep(
       }
     }
 
+    // The uploaded file a Flutter package artifact / Native SDK needs (same rule on the detail page)
+    const missingFiles = missingArtifactFiles(formData, {
+      archive: (formData as any)?.pendingArchiveFile,
+      ios: (formData as any)?.pendingIosFile,
+      android: (formData as any)?.pendingAndroidFile,
+    });
+    if (Object.keys(missingFiles).length > 0) {
+      Object.assign(errors, missingFiles);
+      isValid = false;
+    }
+
     if (formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE) {
       const conf = formData.integrationConfigFlutter;
-      if (conf?.sourceType === SourceType.ARTIFACT) {
-        const hasArchive = Boolean(
-          conf?.packageStoragePath ||
-          conf?.archiveChecksum ||
-          conf?.packageUrl ||
-          conf?.minioKey ||
-          (conf as any)?.archiveFilename ||
-          (conf as any)?.isArchiveSubmission ||
-          (formData as any)?.pendingArchiveFile,
-        );
-
-        if (!hasArchive) {
-          errors['integrationConfigFlutter.archiveFile'] =
-            'Please upload a package archive (.zip or .tar.gz) before proceeding.';
-          isValid = false;
-        }
+      if (isFlutterArtifact(conf)) {
 
         if (!conf?.packageName || !conf.packageName.trim()) {
           errors['integrationConfigFlutter.packageName'] =
@@ -335,11 +331,7 @@ export async function validateMiniAppStep(
           isValid = false;
         }
 
-        const hasIosFile = Boolean(
-          conf?.iosArtifactFilename ||
-          conf?.iosStoragePath ||
-          (formData as any)?.pendingIosFile,
-        );
+        const hasIosFile = hasIosSdkFile(conf, (formData as any)?.pendingIosFile);
         if (!hasIosFile) {
           errors['integrationConfigNativeSdk.iosArtifactFilename'] = 'Please upload an iOS framework (.xcframework.zip)';
           isValid = false;
@@ -384,11 +376,7 @@ export async function validateMiniAppStep(
           isValid = false;
         }
 
-        const hasAndroidFile = Boolean(
-          conf?.androidArtifactFilename ||
-          conf?.androidStoragePath ||
-          (formData as any)?.pendingAndroidFile,
-        );
+        const hasAndroidFile = hasAndroidSdkFile(conf, (formData as any)?.pendingAndroidFile);
         if (!hasAndroidFile) {
           errors['integrationConfigNativeSdk.androidArtifactFilename'] = 'Please upload an Android AAR (.aar)';
           isValid = false;
@@ -457,10 +445,69 @@ const filledText = (v: unknown) => typeof v === 'string' && v.trim() !== '';
 
 /** True when an iOS SDK file was chosen or is already stored. */
 export function nativeSdkShipsIos(conf: any, pendingFile?: File | null): boolean {
-  return Boolean(pendingFile || filledText(conf?.iosArtifactFilename) || filledText(conf?.iosStoragePath));
+  return Boolean(
+    pendingFile ||
+      filledText(conf?.iosArtifactFilename) ||
+      filledText(conf?.iosStoragePath) ||
+      filledText(conf?.iosMinioKey) ||
+      filledText(conf?.iosNexusZipUrl),
+  );
 }
 
 /** True when an Android SDK file was chosen or is already stored. */
 export function nativeSdkShipsAndroid(conf: any, pendingFile?: File | null): boolean {
-  return Boolean(pendingFile || filledText(conf?.androidArtifactFilename) || filledText(conf?.androidStoragePath));
+  return Boolean(
+    pendingFile ||
+      filledText(conf?.androidArtifactFilename) ||
+      filledText(conf?.androidStoragePath) ||
+      filledText(conf?.androidMinioKey) ||
+      filledText(conf?.androidNexusMavenUrl),
+  );
+}
+
+/** The iOS SDK file is in storage, or chosen and sent on submit (a file name alone is not). */
+function hasIosSdkFile(conf: any, pendingFile?: File | null): boolean {
+  return Boolean(pendingFile || filledText(conf?.iosMinioKey) || filledText(conf?.iosNexusZipUrl) || filledText(conf?.iosStoragePath));
+}
+
+/** The Android SDK file is in storage, or chosen and sent on submit (a file name alone is not). */
+function hasAndroidSdkFile(conf: any, pendingFile?: File | null): boolean {
+  return Boolean(
+    pendingFile || filledText(conf?.androidMinioKey) || filledText(conf?.androidNexusMavenUrl) || filledText(conf?.androidStoragePath),
+  );
+}
+
+/** A Flutter package taken from an uploaded archive, not from Git (the backend's rule too). */
+export function isFlutterArtifact(conf: any): boolean {
+  return conf?.sourceType === SourceType.ARTIFACT || (!conf?.sourceType && !filledText(conf?.gitUrl));
+}
+
+/**
+ * The uploaded file a Flutter package artifact or a Native SDK must have before it
+ * is submitted. Counts only a file already stored in MinIO / Nexus, or one chosen now
+ * that is sent on submit: inspecting a file fills its name and checksum without
+ * storing it, so those do not count. Empty when nothing is missing.
+ */
+export function missingArtifactFiles(
+  formData: Partial<CreateMiniAppDto>,
+  pending: { archive?: File | null; ios?: File | null; android?: File | null } = {},
+): Record<string, string> {
+  const errors: Record<string, string> = {};
+  if (formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE) {
+    const conf: any = formData.integrationConfigFlutter || {};
+    const stored =
+      filledText(conf.packageStoragePath) || filledText(conf.minioKey) || filledText(conf.packageUrl);
+    if (isFlutterArtifact(conf) && !stored && !pending.archive) {
+      errors['integrationConfigFlutter.archiveFile'] =
+        'Attach the package archive (.zip or .tar.gz). It is required for a Flutter package: it is security-scanned and published to Nexus for you.';
+    }
+  }
+  if (formData.integrationMethod === IntegrationMethod.NATIVE_SDK) {
+    const conf: any = formData.integrationConfigNativeSdk || {};
+    if (!hasIosSdkFile(conf, pending.ios) && !hasAndroidSdkFile(conf, pending.android)) {
+      errors['integrationConfigNativeSdk.androidArtifactFilename'] =
+        'Attach the SDK file: an Android .aar, an iOS .xcframework.zip, or both.';
+    }
+  }
+  return errors;
 }
