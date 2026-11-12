@@ -1,3 +1,4 @@
+import { simulatedScanAllowed } from '../simulated-scan.policy';
 import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -90,6 +91,34 @@ export class FlutterPackageSecurityScanner {
     app.validationStages = stages;
     app.validationStatus = 'RUNNING';
     await this.miniappRepository.save(app);
+
+    // Production: never a simulated pass for a package that was not really scanned
+    if (!simulatedScanAllowed()) {
+      const why = `The security scanner (Jenkins) did not run${options?.fallbackReason ? `: ${options.fallbackReason}` : ''}.`;
+      for (const stage of Object.values(stages) as any[]) {
+        stage.status = 'FAILED';
+        stage.details = 'Not run: the security scanner is unavailable.';
+      }
+      app.validationStages = stages;
+      await this.scanFinalizer.finalizeScan(
+        app,
+        'FLUTTER_PACKAGE',
+        0,
+        { scanner: { passed: false, details: why } },
+        [
+          {
+            id: 'SCANNER_UNAVAILABLE',
+            severity: 'HIGH',
+            category: 'SCANNER_ERROR',
+            title: 'The package was not scanned',
+            description: `${why} A package that was not scanned is never approved automatically.`,
+            recommendation: 'A platform problem, not the mini app: re-scan once Jenkins is reachable.',
+          },
+        ],
+        options?.fallbackReason,
+      );
+      return;
+    }
 
     await this.pipelinePacerService.paceValidationStart(app.name || app.appId);
 

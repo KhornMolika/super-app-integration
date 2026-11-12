@@ -111,4 +111,30 @@ describe('FlutterPackageSecurityScanner', () => {
       undefined,
     );
   });
+
+  it('in production a Jenkins outage fails the scan instead of a simulated pass', async () => {
+    const saved = { ...process.env };
+    process.env.ENVIRONMENT = 'PROD';
+    delete process.env.LOCAL_SCANNER_FALLBACK;
+    try {
+      mockMiniappRepo.findOne.mockResolvedValue({
+        id: 'hr',
+        appId: 'fsa_hr',
+        name: 'HR',
+        integrationMethod: 'FLUTTER_PACKAGE',
+        integrationConfig: { packageName: 'fsa_hr' },
+      });
+
+      await scanner.scan('hr', { fallbackReason: 'Jenkins connection failed: ECONNREFUSED' });
+
+      const [, , score, checks, findings] = mockScanFinalizer.finalizeScan.mock.calls[0];
+      expect(score).toBe(0);
+      expect(checks.scanner.passed).toBe(false);
+      expect(findings[0]).toMatchObject({ id: 'SCANNER_UNAVAILABLE', severity: 'HIGH' });
+      expect(findings[0].description).toMatch(/ECONNREFUSED/);
+      expect(mockPubVulnerabilityScanner.scanPubDependencies).not.toHaveBeenCalled();
+    } finally {
+      process.env = saved;
+    }
+  });
 });

@@ -124,6 +124,7 @@ export class MiniappMutationHelper {
         [s.sdkSubmissionsBucket, `quarantine/sdks/${id}/`],
         [s.sdkSubmissionsBucket, `pending/${id}/`],
         [s.assetsBucket, `miniapps/${id}/`],
+        [s.packageSubmissionsBucket, `reports/security/${id}/`],
       );
     }
     const seen = new Set<string>();

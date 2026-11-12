@@ -1,3 +1,4 @@
+import { scanConfigOf, scanScopeOf } from '../../integrations/validation/scan-source-ticket';
 import { scanSourceOf } from '../../integrations/flutter/git-source.util';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -569,7 +570,9 @@ export class MiniappValidationHelper {
 
       const envVal = (process.env.ENVIRONMENT || '').toUpperCase();
       const allowLocal = envVal === 'DEV';
-      const cfg = app.integrationConfig || {};
+      // The new version's own package or repository when one is under review
+      const scanScope = scanScopeOf(app);
+      const cfg = scanConfigOf(app, scanScope);
 
       const declaredPerms = Array.isArray(
         (app as any).capabilities || (app as any).permissions,
@@ -627,6 +630,7 @@ export class MiniappValidationHelper {
           allowedCapabilities: allowedCaps,
           requiredCapabilities: requiredCaps,
           checks: app.securityChecks || getDefaultChecksForMethod(method),
+          scanScope,
           isPrivateRepo: cfg.isPrivateRepo === true,
           gitAuthMethod:
             cfg.authMethod || (cfg.isPrivateRepo ? 'deploy_key' : 'none'),
@@ -740,7 +744,8 @@ export class MiniappValidationHelper {
     const targetJob = methodJobMap[integrationMethod] || 'miniapp-validation';
 
     let polls = 0;
-    const maxPolls = 120; // 120 * 3s = 6 minutes
+    // Real scanners (image pulls, the Trivy vulnerability database) need more than a few minutes
+    const maxPolls = 300; // 300 * 3s = 15 minutes
     // After Jenkins finishes, its last callback can take a moment to land
     const resultGracePolls = 10; // 30s
     let finishedPolls = 0;
@@ -756,7 +761,7 @@ export class MiniappValidationHelper {
               miniAppId,
               finishedPolls > 0
                 ? this.lostResultMessage(lastConsole)
-                : 'Validation pipeline timed out after 6 minutes waiting for Jenkins CI.',
+                : 'Validation pipeline timed out after 15 minutes waiting for Jenkins CI.',
             );
           }
           return;

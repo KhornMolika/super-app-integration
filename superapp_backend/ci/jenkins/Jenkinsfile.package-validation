@@ -1,318 +1,457 @@
+// Security scan of a Flutter package mini app (job miniapp-validation-flutter-package).
+//
+// Fetches the source through the backend (the uploaded archive from MinIO, or the
+// Git repository at the locked commit), runs real scanners in Docker containers
+// and posts each tool's raw JSON to the backend, which turns it into the report
+// (src/integrations/validation/scan-report.normalizer.ts):
+//
+//   ingest            unpack, find pubspec.yaml, check the package name    (python)
+//   secret_scan       hardcoded secrets                                     (Gitleaks)
+//   sast              unsafe Dart code patterns                             (Semgrep)
+//   dependency_scan   known CVEs in pubspec.lock                            (Trivy)
+//   license_compliance forbidden or restricted licenses                     (Trivy)
+//   sbom              CycloneDX bill of materials                           (Trivy)
+//   capability_gate   requested vs offered capabilities                     (backend)
+//
+// A check that cannot run fails the scan (it never counts as passed). Nothing
+// here needs MinIO access or Git credentials as parameters: SCAN_SOURCE_URL and
+// SCAN_TICKET (one mini app, expires) come from the backend with each run.
+//
+// After changing parameters, run the job once (or scripts/sync-jenkins-jobs.mjs):
+// Jenkins ignores parameters a job does not declare yet.
+
+/** Shell prelude: scan folders, Docker mount of the workspace, helpers. */
+String prelude() {
+    return '''
+set +x  # no trace: keeps the callback token out of the console log
+S="$WORKSPACE/scan"; R="$S/reports"; CACHE="$WORKSPACE/.scan-cache"
+export S R CACHE
+SELF=$(cat /etc/hostname)
+if docker inspect "$SELF" >/dev/null 2>&1; then MOUNT="--volumes-from $SELF"
+else MOUNT="-v $WORKSPACE:$WORKSPACE"; fi
+ME="$(id -u):$(id -g)"
+# Package root from the ingest report; empty when the source could not be read
+pkg_root() { node -e 'try { const i = require(process.env.R + "/ingest.json"); if (i.passed && i.root) process.stdout.write(i.root); } catch (e) {}'; }
+'''
+}
+
+/** Unpacks the archive (or takes the clone), finds the package and checks its name. */
+String ingestPy() {
+    return '''
+import hashlib, json, os, sys, zipfile
+
+mode, archive, dest, report, expected, sub = sys.argv[1:7]
+out = {"passed": False}
+
+def done(**kw):
+    out.update(kw)
+    with open(report, "w") as f:
+        json.dump(out, f)
+    sys.exit(0)
+
+try:
+    if mode == "zip":
+        with open(archive, "rb") as f:
+            out["sha256"] = hashlib.sha256(f.read()).hexdigest()
+        with zipfile.ZipFile(archive) as z:
+            if sum(i.file_size for i in z.infolist()) > 500 * 1024 * 1024:
+                done(details="The archive unpacks to more than 500 MB.")
+            # zipfile drops absolute paths and ".." parts: nothing lands outside dest
+            z.extractall(dest)
+        base = dest
+    else:
+        base = os.path.join(dest, sub) if sub else dest
+        if not os.path.isdir(base):
+            done(details="The package folder " + (sub or "/") + " does not exist in the repository.")
+
+    roots = []
+    for d, dirs, files in os.walk(base):
+        dirs[:] = [x for x in dirs if x not in (".git", ".dart_tool", "build", "node_modules", ".pub-cache")]
+        if "pubspec.yaml" in files:
+            roots.append(d)
+    if not roots:
+        done(details="No pubspec.yaml found: this is not a Flutter package.")
+    root = min(roots, key=lambda p: p.count(os.sep))
+
+    name = version = ""
+    with open(os.path.join(root, "pubspec.yaml"), encoding="utf-8", errors="replace") as f:
+        for line in f:
+            if not line[:1].isalpha():
+                continue  # nested keys and comments
+            key, _, value = line.partition(":")
+            value = value.split("#")[0].strip().strip("'").strip('"')
+            if key.strip() == "name" and not name:
+                name = value
+            if key.strip() == "version" and not version:
+                version = value
+
+    files = sum(len(f) for _, _, f in os.walk(root))
+    norm = lambda n: n.strip().replace("-", "_").lower()
+    if expected and name and norm(name) != norm(expected):
+        done(details='pubspec.yaml names the package "' + name + '", but the mini app is registered as "' + expected + '".',
+             packageName=name, version=version, root=root)
+    done(passed=True, packageName=name, version=version, files=files, root=root)
+except zipfile.BadZipFile:
+    done(details="The archive is not a valid .zip file.")
+except SystemExit:
+    raise
+except Exception as e:
+    done(details="Could not read the package: " + str(e)[:200])
+'''
+}
+
+/** Semgrep rules for Dart (regex: works whatever Semgrep's Dart parser supports). */
+String semgrepRules() {
+    return '''
+rules:
+  - id: dart-mirrors
+    languages: [regex]
+    severity: ERROR
+    message: "dart:mirrors allows reflective code execution; it is not allowed in a mini app."
+    pattern-regex: "import +.dart:mirrors"
+    paths: { include: ["*.dart"], exclude: ["test/", "*_test.dart"] }
+    metadata: { title: "Reflection with dart:mirrors" }
+  - id: process-execution
+    languages: [regex]
+    severity: ERROR
+    message: "Starts an operating system process. A mini app must not run programs on the device."
+    pattern-regex: "Process[.](run|runSync|start)[ ]*[(]"
+    paths: { include: ["*.dart"], exclude: ["test/", "*_test.dart", "tool/"] }
+    metadata: { title: "Operating system process execution" }
+  - id: tls-verification-disabled
+    languages: [regex]
+    severity: ERROR
+    message: "Overrides TLS certificate checks: anyone on the network can read and change the traffic."
+    pattern-regex: "badCertificateCallback[ ]*="
+    paths: { include: ["*.dart"], exclude: ["test/", "*_test.dart"] }
+    metadata: { title: "TLS certificate verification disabled" }
+  - id: native-library-loading
+    languages: [regex]
+    severity: WARNING
+    message: "Loads native code through dart:ffi. Native code needs a separate review."
+    pattern-regex: "DynamicLibrary[.](open|process|executable)[ ]*[(]"
+    paths: { include: ["*.dart"], exclude: ["test/", "*_test.dart"] }
+    metadata: { title: "Native library loading (FFI)" }
+  - id: cleartext-http-url
+    languages: [regex]
+    severity: WARNING
+    message: "Plain http:// traffic is not encrypted. Use https://."
+    pattern-regex: "http://(?!localhost|127[.]0[.]0[.]1|10[.]0[.]2[.]2|www[.]w3[.]org|schemas[.])[A-Za-z0-9]"
+    paths: { include: ["*.dart"], exclude: ["test/", "*_test.dart"] }
+    metadata: { title: "Cleartext HTTP URL" }
+  - id: webview-file-access
+    languages: [regex]
+    severity: WARNING
+    message: "Lets web content read local files. Keep WebView file access off."
+    pattern-regex: "(setAllowFileAccess|allowFileAccessFromFileURLs|allowUniversalAccessFromFileURLs)"
+    paths: { include: ["*.dart"], exclude: ["test/", "*_test.dart"] }
+    metadata: { title: "WebView local file access" }
+'''
+}
+
+/** The selected checks (CHECKS); all of them when none were sent. */
+boolean wants(String id) {
+    def checks = (params.CHECKS ?: '').split(',').collect { it.trim() }.findAll { it }
+    return checks.isEmpty() || checks.contains(id) ||
+        (id == 'license_compliance' && checks.contains('license_audit')) ||
+        (id == 'dependency_scan' && checks.contains('sca'))
+}
+
+/** Shows a stage as running in the Back Office; the final report sets the result. */
+void notifyStage(String id, String name, String details) {
+    withEnv(["N_ID=${id}", "N_NAME=${name}", "N_DETAILS=${details}"]) {
+        sh '''
+            set +x
+            node -e '
+                const e = process.env;
+                fetch(e.STAGE_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "x-callback-token": e.CALLBACK_TOKEN || "" },
+                    body: JSON.stringify({ miniAppId: e.MINIAPP_ID, stageId: e.N_ID, stageName: e.N_NAME, status: "RUNNING", details: e.N_DETAILS }),
+                }).then((r) => console.log("Stage " + e.N_ID + ": HTTP " + r.status), (err) => console.log("Stage update failed: " + err.message));
+            ' || true
+        '''
+    }
+}
+
 pipeline {
     agent any
 
-    parameters {
-        string(name: 'MINIAPP_ID', defaultValue: '', description: 'Mini App UUID')
-        string(name: 'INTEGRATION_METHOD', defaultValue: 'FLUTTER_PACKAGE', description: 'Integration Method')
-        string(name: 'PACKAGE_NAME', defaultValue: '', description: 'Flutter Package Name')
-        string(name: 'VERSION', defaultValue: '1.0.0', description: 'Package Version')
-        choice(name: 'INTEGRATION_TYPE', choices: ['ARTIFACT', 'SOURCE_CODE'], description: 'Ingestion method')
-        string(name: 'SOURCE_STORAGE_PATH', defaultValue: '', description: 'MinIO storage key for uploaded .zip/.tar.gz artifact')
-        string(name: 'REPO_URL', defaultValue: '', description: 'Git repository clone URL')
-        string(name: 'COMMIT_SHA', defaultValue: 'main', description: 'Git branch or Commit SHA')
-        choice(name: 'GIT_PROVIDER', choices: ['GITHUB', 'GITLAB', 'CUSTOM'], description: 'Git provider')
-        booleanParam(name: 'IS_PRIVATE_REPO', defaultValue: false, description: 'Is private repository')
-        choice(name: 'GIT_AUTH_METHOD', choices: ['none', 'deploy_key', 'token'], description: 'Auth method')
-        string(name: 'GIT_ACCESS_TOKEN', defaultValue: '', description: 'Git access token')
-        string(name: 'GIT_DEPLOY_KEY', defaultValue: '', description: 'SSH Deploy Key')
-        string(name: 'ALLOWED_CAPABILITIES', defaultValue: 'camera,geolocator,location,local_auth,biometrics', description: 'Allowed capabilities')
-        string(name: 'REQUIRED_CAPABILITIES', defaultValue: '', description: 'Declared capabilities')
-        string(name: 'CHECKS', defaultValue: '', description: 'Selected security checks')
-        string(name: 'CALLBACK_URL', defaultValue: 'http://host.docker.internal:3000/api/integrations/validation/callback', description: 'Webhook Callback URL')
-        string(name: 'CALLBACK_TOKEN', defaultValue: '', description: 'NestJS Backend Webhook Callback Auth Token')
-        string(name: 'MINIO_ENDPOINT', defaultValue: 'http://host.docker.internal:9000', description: 'MinIO Endpoint')
-        string(name: 'MINIO_BUCKET', defaultValue: 'package-submissions', description: 'MinIO Bucket')
+    options {
+        timeout(time: 30, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '100'))
     }
 
-    environment {
-        WORKSPACE_DIR = "/var/workspace/pkg-${params.MINIAPP_ID}"
-        REPORT_DIR = "/var/reports"
-        INGEST_REPORT = "/var/reports/ingest-${params.MINIAPP_ID}.json"
-        SECRETS_REPORT = "/var/reports/secrets-${params.MINIAPP_ID}.json"
-        SAST_REPORT = "/var/reports/sast-${params.MINIAPP_ID}.json"
-        SCA_REPORT = "/var/reports/sca-${params.MINIAPP_ID}.json"
-        CAPABILITY_REPORT = "/var/reports/capability-${params.MINIAPP_ID}.json"
-        SBOM_REPORT = "/var/reports/sbom-${params.MINIAPP_ID}.json"
-        LICENSE_REPORT = "/var/reports/license-${params.MINIAPP_ID}.json"
+    parameters {
+        string(name: 'MINIAPP_ID', defaultValue: '', description: 'Mini App UUID')
+        string(name: 'INTEGRATION_METHOD', defaultValue: 'FLUTTER_PACKAGE', description: 'Integration method')
+        string(name: 'PACKAGE_NAME', defaultValue: '', description: 'Registered Dart package name (must match pubspec.yaml)')
+        string(name: 'VERSION', defaultValue: '1.0.0', description: 'Package version (informational)')
+        choice(name: 'INTEGRATION_TYPE', choices: ['ARTIFACT', 'SOURCE_CODE'], description: 'Uploaded archive or Git repository')
+        string(name: 'SOURCE_STORAGE_PATH', defaultValue: '', description: 'MinIO key of the archive (informational: the archive comes through SCAN_SOURCE_URL)')
+        string(name: 'REPO_URL', defaultValue: '', description: 'Git repository (informational: the clone address comes through SCAN_SOURCE_URL)')
+        string(name: 'COMMIT_SHA', defaultValue: 'main', description: 'Locked commit, or branch / tag (informational)')
+        string(name: 'GIT_PROVIDER', defaultValue: 'GITHUB', description: 'Git provider (informational)')
+        booleanParam(name: 'IS_PRIVATE_REPO', defaultValue: false, description: 'Private repository (informational)')
+        string(name: 'ALLOWED_CAPABILITIES', defaultValue: 'camera,geolocator,location,local_auth,biometrics', description: 'Capabilities the Super App offers')
+        string(name: 'REQUIRED_CAPABILITIES', defaultValue: '', description: 'Capabilities the mini app requests')
+        string(name: 'CHECKS', defaultValue: '', description: 'Selected checks, comma separated (empty: all)')
+        string(name: 'SCAN_SOURCE_URL', defaultValue: '', description: 'Backend URL of this mini app\'s source: <url>/archive or <url>/git')
+        string(name: 'SCAN_TICKET', defaultValue: '', description: 'Short-lived ticket for SCAN_SOURCE_URL (from the backend)')
+        string(name: 'CALLBACK_URL', defaultValue: 'http://host.docker.internal:3000/api/integrations/validation/callback', description: 'Backend validation callback URL')
+        string(name: 'CALLBACK_TOKEN', defaultValue: '', description: 'Backend callback token (RELEASE_CALLBACK_TOKEN)')
+        string(name: 'PUB_GATEWAY_URL', defaultValue: 'https://app.fintechcenterfsa.com/pub', description: 'Pub registry for resolving dependencies (backend /pub gateway)')
+        string(name: 'PYTHON_IMAGE', defaultValue: 'python:3.12-alpine', description: 'Unpacks the archive')
+        string(name: 'GIT_IMAGE', defaultValue: 'alpine/git:2.45.2', description: 'Clones Git sources')
+        string(name: 'GITLEAKS_IMAGE', defaultValue: 'zricethezav/gitleaks:v8.21.2', description: 'Secret scanner')
+        string(name: 'SEMGREP_IMAGE', defaultValue: 'semgrep/semgrep:1.85.0', description: 'Static analysis')
+        string(name: 'TRIVY_IMAGE', defaultValue: 'aquasec/trivy:0.56.2', description: 'Dependency CVEs, licenses, SBOM')
+        string(name: 'FLUTTER_IMAGE', defaultValue: 'ghcr.io/cirruslabs/flutter:3.44.0', description: 'Resolves pubspec.lock when the package has none')
     }
 
     stages {
+        stage('Prepare') {
+            steps {
+                script {
+                    env.STAGE_URL = (params.CALLBACK_URL ?: '').replaceAll('/callback$', '/stage')
+                    env.SCAN_REPORT_URL = (params.CALLBACK_URL ?: '').replaceAll('/callback$', '/scan-report')
+                    sh(prelude() + '''
+                        if [ -d "$S" ]; then rm -rf "$S" 2>/dev/null || docker run --rm $MOUNT --entrypoint rm "$GIT_IMAGE" -rf "$S"; fi
+                        mkdir -p "$S/src" "$R" "$S/home" "$CACHE/trivy"
+                        echo "Scanning mini app $MINIAPP_ID ($INTEGRATION_TYPE), package $PACKAGE_NAME"
+                    ''')
+                    writeFile file: 'scan/ingest.py', text: ingestPy()
+                    writeFile file: 'scan/semgrep-rules.yml', text: semgrepRules()
+                }
+            }
+        }
+
         stage('Ingestion & Integrity Verification') {
             steps {
-                echo "=========================================================="
-                echo " [STAGE 1] Ingestion & Integrity Verification (Flutter Package)"
-                sh 'mkdir -p ${REPORT_DIR} ${WORKSPACE_DIR} && chmod -R 777 ${REPORT_DIR} ${WORKSPACE_DIR}'
-
                 script {
-                    notifyStage("ingest", "Ingestion & Integrity Verification", "RUNNING", "Unpacking package source & verifying checksum...")
+                    notifyStage('ingest', 'Ingestion & Integrity Verification',
+                        params.INTEGRATION_TYPE == 'SOURCE_CODE' ? 'Cloning the repository at the locked commit...' : 'Downloading the package archive from MinIO...')
+                    sh(prelude() + '''
+                        fail() { echo "$1" > "$R/ingest-error.txt"; echo "INGEST: $1"; exit 0; }
+                        [ -n "$SCAN_SOURCE_URL" ] && [ -n "$SCAN_TICKET" ] || \
+                            fail "The backend sent no SCAN_SOURCE_URL / SCAN_TICKET: update the backend, and run this job once so Jenkins registers the new parameters."
 
-                    sh """
-                    node -e '
-                        const fs = require("fs");
-                        const path = require("path");
+                        if [ "$INTEGRATION_TYPE" = "SOURCE_CODE" ]; then
+                            MODE=dir
+                            code=$(curl -sS --max-time 60 -o "$S/git.json" -w '%{http_code}' \
+                                -H "x-callback-token: ${CALLBACK_TOKEN:-}" "$SCAN_SOURCE_URL/git?ticket=$SCAN_TICKET") || code=error
+                            chmod 600 "$S/git.json" 2>/dev/null || true
+                            [ "$code" = "200" ] || fail "Could not get the repository address from the backend (HTTP $code): $(head -c 300 "$S/git.json" 2>/dev/null)"
+                            node -e '
+                                const fs = require("fs"); const S = process.env.S;
+                                const a = JSON.parse(fs.readFileSync(S + "/git.json", "utf8"));
+                                let url = a.repoUrl;
+                                // a deploy key works over SSH only
+                                if (a.auth === "ssh" && url.startsWith("https://")) {
+                                    const u = new URL(url); let p = u.pathname;
+                                    while (p.startsWith("/")) p = p.slice(1);
+                                    url = "git@" + u.hostname + ":" + p;
+                                }
+                                fs.writeFileSync(S + "/git.url", url);
+                                fs.writeFileSync(S + "/git.ref", a.ref || "main");
+                                fs.writeFileSync(S + "/git.path", a.path || "");
+                                fs.writeFileSync(S + "/git.auth", a.auth || "none");
+                                if (a.privateKey) fs.writeFileSync(S + "/.git_key", a.privateKey, { mode: 0o600 });
+                                if (a.token) fs.writeFileSync(S + "/.git_header", "Authorization: Basic " + Buffer.from("oauth2:" + a.token).toString("base64"), { mode: 0o600 });
+                            '
+                            rm -f "$S/git.json"
+                            echo "Cloning $(cat "$S/git.url") at $(cat "$S/git.ref") ($(cat "$S/git.auth") access)"
+                            docker run --rm $MOUNT -e S -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" --entrypoint sh "$GIT_IMAGE" -ec '
+                                cd "$S"; export HOME="$S/home"
+                                AUTH=$(cat git.auth); REF=$(cat git.ref)
+                                trap "rm -f $S/.git_key $S/.git_header; chown -R $HOST_UID:$HOST_GID $S/src $S/home $S/git.sha 2>/dev/null || true" EXIT
+                                if [ "$AUTH" = ssh ]; then
+                                    export GIT_SSH_COMMAND="ssh -i $S/.git_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=$S/home/known_hosts"
+                                fi
+                                g() { if [ "$AUTH" = token ]; then git -c "http.extraHeader=$(cat "$S/.git_header")" "$@"; else git "$@"; fi; }
+                                rm -rf src; git init -q src; cd src
+                                git remote add origin "$(cat ../git.url)"
+                                if g fetch -q --depth 1 origin "$REF"; then
+                                    git checkout -q FETCH_HEAD
+                                else
+                                    g fetch -q origin "+refs/heads/*:refs/remotes/origin/*" "+refs/tags/*:refs/tags/*"
+                                    git checkout -q "$REF" 2>/dev/null || git checkout -q "origin/$REF"
+                                fi
+                                git rev-parse HEAD > ../git.sha
+                                rm -rf .git
+                            ' || fail "Could not clone the repository at $(cat "$S/git.ref"). Check the URL, the branch or tag, and that the deploy key or token has read access."
+                            rm -f "$S/.git_key" "$S/.git_header"
+                            echo "Checked out commit $(cat "$S/git.sha")"
+                        else
+                            MODE=zip
+                            code=$(curl -sS --max-time 300 -o "$S/package.zip" -w '%{http_code}' \
+                                -H "x-callback-token: ${CALLBACK_TOKEN:-}" "$SCAN_SOURCE_URL/archive?ticket=$SCAN_TICKET") || code=error
+                            [ "$code" = "200" ] || fail "Could not download the package archive from the backend (HTTP $code): $(head -c 300 "$S/package.zip" 2>/dev/null)"
+                            echo "Archive: $(wc -c < "$S/package.zip") bytes"
+                        fi
 
-                        // Verify workspace files or mock valid package structure
-                        fs.writeFileSync("${env.INGEST_REPORT}", JSON.stringify({
-                            passed: true,
-                            packageName: "${params.PACKAGE_NAME}",
-                            version: "${params.VERSION}",
-                            timestamp: new Date().toISOString()
-                        }));
-                    ' || true
-                    """
-
-                    notifyStage("ingest", "Ingestion & Integrity Verification", "COMPLETED", "Package source unpacked and integrity verified.")
+                        docker run --rm $MOUNT --user "$ME" "$PYTHON_IMAGE" python3 "$S/ingest.py" \
+                            "$MODE" "$S/package.zip" "$S/src" "$R/ingest.json" "$PACKAGE_NAME" "$(cat "$S/git.path" 2>/dev/null || true)" \
+                            || fail "Could not unpack the package (the $PYTHON_IMAGE container did not run)."
+                        rm -f "$S/package.zip"
+                        node -e 'const i = require(process.env.R + "/ingest.json"); console.log(i.passed ? "Package " + i.packageName + " " + i.version + " (" + i.files + " files)" : "INGEST: " + i.details)'
+                    ''')
                 }
             }
         }
 
         stage('Secret & Credential Leak Detection') {
+            when { expression { wants('secret_scan') } }
             steps {
-                echo "=========================================================="
-                echo " [STAGE 2] Secret & Credential Leak Detection"
                 script {
-                    notifyStage("secret_scan", "Secret & Credential Leak Detection", "RUNNING", "Scanning Dart source for private keys, AWS tokens, and hardcoded secrets...")
-
-                    sh """
-                    node -e '
-                        const fs = require("fs");
-                        fs.writeFileSync("${env.SECRETS_REPORT}", JSON.stringify({
-                            passed: true,
-                            findings: [],
-                            timestamp: new Date().toISOString()
-                        }));
-                    ' || true
-                    """
-
-                    notifyStage("secret_scan", "Secret & Credential Leak Detection", "COMPLETED", "No credential leaks detected.")
+                    notifyStage('secret_scan', 'Secret & API Key Leak Detection', 'Gitleaks is scanning the package for hardcoded secrets...')
+                    sh(prelude() + '''
+                        PKG=$(pkg_root); [ -n "$PKG" ] || exit 0
+                        docker run --rm $MOUNT --user "$ME" "$GITLEAKS_IMAGE" detect --no-git --source "$PKG" \
+                            --report-format json --report-path "$R/gitleaks.json" --redact --exit-code 0 --no-banner --log-level warn \
+                            || echo "Gitleaks ($GITLEAKS_IMAGE) did not run (exit $?)." > "$R/error-secret_scan.txt"
+                        [ -s "$R/gitleaks.json" ] || [ -f "$R/error-secret_scan.txt" ] || echo "Gitleaks wrote no report." > "$R/error-secret_scan.txt"
+                    ''')
                 }
             }
         }
 
         stage('Static Application Security Testing (SAST)') {
+            when { expression { wants('sast') } }
             steps {
-                echo "=========================================================="
-                echo " [STAGE 3] Static Application Security Testing (SAST)"
                 script {
-                    notifyStage("sast", "Static Application Security Testing", "RUNNING", "Analyzing Dart AST, dangerous imports, and insecure API calls...")
-
-                    sh """
-                    node -e '
-                        const fs = require("fs");
-                        fs.writeFileSync("${env.SAST_REPORT}", JSON.stringify({
-                            passed: true,
-                            findings: [],
-                            timestamp: new Date().toISOString()
-                        }));
-                    ' || true
-                    """
-
-                    notifyStage("sast", "Static Application Security Testing", "COMPLETED", "SAST analysis passed cleanly.")
+                    notifyStage('sast', 'Static Application Security Testing (SAST)', 'Semgrep is checking the Dart code for unsafe patterns...')
+                    sh(prelude() + '''
+                        PKG=$(pkg_root); [ -n "$PKG" ] || exit 0
+                        docker run --rm $MOUNT --user "$ME" -e HOME="$S/home" -e SEMGREP_SEND_METRICS=off "$SEMGREP_IMAGE" \
+                            semgrep scan --config "$S/semgrep-rules.yml" --json --output "$R/semgrep.json" \
+                            --metrics=off --disable-version-check --quiet "$PKG" \
+                            || echo "Semgrep ($SEMGREP_IMAGE) did not run (exit $?)." > "$R/error-sast.txt"
+                        [ -s "$R/semgrep.json" ] || [ -f "$R/error-sast.txt" ] || echo "Semgrep wrote no report." > "$R/error-sast.txt"
+                    ''')
                 }
             }
         }
 
-        stage('Software Composition Analysis (SCA / CVE)') {
+        stage('Dependencies & Licenses (Trivy)') {
+            when { expression { wants('dependency_scan') || wants('license_compliance') } }
             steps {
-                echo "=========================================================="
-                echo " [STAGE 4] Software Composition Analysis (SCA / CVE)"
                 script {
-                    notifyStage("dependency_scan", "Software Composition Analysis (SCA / CVE)", "RUNNING", "Auditing dependencies against National Vulnerability Database...")
-
-                    sh """
-                    node -e '
-                        const fs = require("fs");
-                        fs.writeFileSync("${env.SCA_REPORT}", JSON.stringify({
-                            passed: true,
-                            findings: [],
-                            timestamp: new Date().toISOString()
-                        }));
-                    ' || true
-                    """
-
-                    notifyStage("dependency_scan", "Software Composition Analysis (SCA / CVE)", "COMPLETED", "SCA audit completed. Zero high/critical CVEs.")
-                }
-            }
-        }
-
-        stage('Super App Capability Gatekeeper') {
-            steps {
-                echo "=========================================================="
-                echo " [STAGE 5] Super App Capability Gatekeeper"
-                script {
-                    notifyStage("capability_gate", "Super App Capability Gatekeeper", "RUNNING", "Verifying hardware permissions against container allowlist...")
-
-                    sh """
-                    node -e '
-                        const fs = require("fs");
-                        const allowed = ("${params.ALLOWED_CAPABILITIES}").toLowerCase().split(",").map(s => s.trim());
-                        const required = ("${params.REQUIRED_CAPABILITIES}").toLowerCase().split(",").map(s => s.trim()).filter(Boolean);
-
-                        const unauthorized = required.filter(c => !allowed.includes(c));
-                        const passed = unauthorized.length === 0;
-
-                        const findings = unauthorized.map(c => ({
-                            id: "UNAUTHORIZED_CAPABILITY",
-                            severity: "HIGH",
-                            category: "CAPABILITY_VIOLATION",
-                            title: "Undeclared Hardware Capability Requested: " + c,
-                            description: "Package attempts to access " + c + " without Super App host authorization.",
-                            recommendation: "Request capability authorization in Mini App permission profile."
-                        }));
-
-                        fs.writeFileSync("${env.CAPABILITY_REPORT}", JSON.stringify({ passed, findings, timestamp: new Date().toISOString() }));
-                    ' || true
-                    """
-
-                    notifyStage("capability_gate", "Super App Capability Gatekeeper", "COMPLETED", "Capability gatekeeper evaluation complete.")
+                    if (wants('dependency_scan')) notifyStage('dependency_scan', 'Dependency Vulnerability Scan (SCA / CVE)', 'Resolving dependencies and checking them for known CVEs with Trivy...')
+                    if (wants('license_compliance')) notifyStage('license_compliance', 'Open Source License Compliance', 'Trivy is checking dependency licenses...')
+                    sh(prelude() + '''
+                        PKG=$(pkg_root); [ -n "$PKG" ] || exit 0
+                        if [ ! -f "$PKG/pubspec.lock" ]; then
+                            echo "No pubspec.lock: resolving dependencies with flutter pub get"
+                            export FSA_PUB_TOKEN="${CALLBACK_TOKEN:-}"
+                            docker run --rm $MOUNT -w "$PKG" -e PUB_CACHE="$S/pub-cache" -e FSA_PUB_TOKEN -e PUB_GATEWAY_URL \
+                                -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" "$FLUTTER_IMAGE" bash -c '
+                                    trap "chown -R $HOST_UID:$HOST_GID . $PUB_CACHE 2>/dev/null || true" EXIT
+                                    dart pub token add "$PUB_GATEWAY_URL" --env-var FSA_PUB_TOKEN >/dev/null 2>&1 || true
+                                    flutter pub get
+                                ' > "$S/pub-get.log" 2>&1 || tail -n 15 "$S/pub-get.log" > "$S/deps-unresolved.txt"
+                            [ -f "$S/deps-unresolved.txt" ] && { echo "flutter pub get failed:"; cat "$S/deps-unresolved.txt"; }
+                        fi
+                        docker run --rm $MOUNT --user "$ME" -e HOME="$S/home" -e TRIVY_CACHE_DIR="$CACHE/trivy" "$TRIVY_IMAGE" \
+                            fs --scanners vuln,license --license-full --format json --output "$R/trivy.json" \
+                            --exit-code 0 --quiet --skip-dirs "**/.dart_tool" "$PKG" \
+                            || { echo "Trivy ($TRIVY_IMAGE) did not run (exit $?)." | tee "$R/error-dependency_scan.txt" > "$R/error-license_compliance.txt"; }
+                        [ -s "$R/trivy.json" ] || [ -f "$R/error-dependency_scan.txt" ] || \
+                            { echo "Trivy wrote no report." | tee "$R/error-dependency_scan.txt" > "$R/error-license_compliance.txt"; }
+                    ''')
                 }
             }
         }
 
         stage('Software Bill of Materials (SBOM)') {
+            when { expression { wants('sbom') } }
             steps {
-                echo "=========================================================="
-                echo " [STAGE 6] Software Bill of Materials (SBOM)"
                 script {
-                    notifyStage("sbom", "Software Bill of Materials", "RUNNING", "Generating SPDX / CycloneDX SBOM inventory...")
-
-                    sh """
-                    node -e '
-                        const fs = require("fs");
-                        fs.writeFileSync("${env.SBOM_REPORT}", JSON.stringify({
-                            passed: true,
-                            format: "CycloneDX-JSON",
-                            timestamp: new Date().toISOString()
-                        }));
-                    ' || true
-                    """
-
-                    notifyStage("sbom", "Software Bill of Materials", "COMPLETED", "SBOM generated.")
-                }
-            }
-        }
-
-        stage('Open Source License Compliance') {
-            steps {
-                echo "=========================================================="
-                echo " [STAGE 7] Open Source License Compliance"
-                script {
-                    notifyStage("license_audit", "Open Source License Compliance", "RUNNING", "Auditing package licenses for copyleft contamination...")
-
-                    sh """
-                    node -e '
-                        const fs = require("fs");
-                        fs.writeFileSync("${env.LICENSE_REPORT}", JSON.stringify({
-                            passed: true,
-                            license: "MIT",
-                            findings: [],
-                            timestamp: new Date().toISOString()
-                        }));
-                    ' || true
-                    """
-
-                    notifyStage("license_audit", "Open Source License Compliance", "COMPLETED", "License compliance audit passed.")
-                }
-            }
-        }
-
-        stage('Final Report Aggregation & Backend Callback') {
-            steps {
-                echo "=========================================================="
-                echo " [STAGE 8] Final Report Aggregation & Backend Callback"
-                script {
-                    sh """
-                    node -e '
-                        const fs = require("fs");
-
-                        const miniAppId = "${params.MINIAPP_ID}";
-                        const callbackUrl = "${params.CALLBACK_URL}";
-
-                        const ingestFile = "${env.INGEST_REPORT}";
-                        const secretsFile = "${env.SECRETS_REPORT}";
-                        const sastFile = "${env.SAST_REPORT}";
-                        const scaFile = "${env.SCA_REPORT}";
-                        const capFile = "${env.CAPABILITY_REPORT}";
-                        const sbomFile = "${env.SBOM_REPORT}";
-                        const licenseFile = "${env.LICENSE_REPORT}";
-
-                        const findings = [];
-                        let score = 100;
-                        const checks = {
-                            ingest: { passed: true, details: "Package ingestion & integrity verified." },
-                            secret_scan: { passed: true, details: "Zero credential leaks detected." },
-                            sast: { passed: true, details: "Static analysis passed cleanly." },
-                            sca: { passed: true, details: "Zero high/critical CVEs." },
-                            capability_gate: { passed: true, details: "Hardware permissions match host allowlist." },
-                            sbom: { passed: true, details: "SBOM inventory generated." },
-                            license_audit: { passed: true, details: "Permissive OSS licenses verified." }
-                        };
-
-                        [ingestFile, secretsFile, sastFile, scaFile, capFile, sbomFile, licenseFile].forEach(f => {
-                            if (fs.existsSync(f)) {
-                                try {
-                                    const data = JSON.parse(fs.readFileSync(f, "utf8"));
-                                    if (data.findings && data.findings.length > 0) findings.push(...data.findings);
-                                    if (data.passed === false) score -= 25;
-                                } catch (_) {}
-                            }
-                        });
-
-                        const status = score >= 70 && !findings.some(f => f.severity === "CRITICAL") ? "PASSED" : "FAILED";
-                        const payload = {
-                            miniAppId,
-                            integrationMethod: "FLUTTER_PACKAGE",
-                            status,
-                            score: Math.max(0, score),
-                            findings,
-                            checks,
-                            timestamp: new Date().toISOString()
-                        };
-
-                        (async () => {
-                            try {
-                                process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-                                const res = await fetch(callbackUrl, {
-                                    method: "POST",
-                                    headers: Object.assign({ "Content-Type": "application/json" }, "${params.CALLBACK_TOKEN ?: ''}" ? { "x-callback-token": "${params.CALLBACK_TOKEN ?: ''}" } : {}),
-                                    body: JSON.stringify(payload)
-                                });
-                                console.log("Final callback HTTP status:", res.status);
-                            } catch (e) {
-                                console.error("Callback error:", e.message);
-                            }
-                        })();
-                    ' || true
-                    """
+                    notifyStage('sbom', 'Software Bill of Materials (SBOM)', 'Generating the CycloneDX SBOM with Trivy...')
+                    sh(prelude() + '''
+                        PKG=$(pkg_root); [ -n "$PKG" ] || exit 0
+                        docker run --rm $MOUNT --user "$ME" -e HOME="$S/home" -e TRIVY_CACHE_DIR="$CACHE/trivy" "$TRIVY_IMAGE" \
+                            fs --format cyclonedx --output "$R/sbom.json" --quiet --skip-dirs "**/.dart_tool" "$PKG" \
+                            || echo "Trivy SBOM ($TRIVY_IMAGE) did not run (exit $?)." > "$R/error-sbom.txt"
+                    ''')
                 }
             }
         }
     }
-}
 
-def notifyStage(String stageId, String stageName, String status, String details) {
-    sh """
-    node -e '
-        (async () => {
-            try {
-                process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-                const callbackUrl = "${params.CALLBACK_URL}".replace("/callback", "/stage");
-                const res = await fetch(callbackUrl, {
-                    method: "POST",
-                    headers: Object.assign({ "Content-Type": "application/json" }, "${params.CALLBACK_TOKEN ?: ''}" ? { "x-callback-token": "${params.CALLBACK_TOKEN ?: ''}" } : {}),
-                    body: JSON.stringify({
-                        miniAppId: "${params.MINIAPP_ID}",
-                        stageId: "${stageId}",
-                        stageName: "${stageName}",
-                        status: "${status}",
-                        details: "${details}"
-                    })
-                });
-                console.log("Stage update [" + "${stageId}" + "] status: " + res.status);
-            } catch (err) {
-                console.warn("Stage update failed for " + "${stageId}" + ":", err.message);
+    post {
+        always {
+            script {
+                // Always report, also after an error above: otherwise the scan stays RUNNING
+                sh(prelude() + '''
+                    mkdir -p "$R"
+                    node -e '
+                        const fs = require("fs"); const e = process.env; const S = e.S; const R = e.R;
+                        const read = (f) => { try { return JSON.parse(fs.readFileSync(R + "/" + f, "utf8")); } catch (err) { return undefined; } };
+                        const text = (p) => { try { return fs.readFileSync(p, "utf8").trim(); } catch (err) { return ""; } };
+                        const list = (v) => (v || "").split(",").map((s) => s.trim()).filter(Boolean);
+
+                        const errors = {};
+                        for (const f of fs.existsSync(R) ? fs.readdirSync(R) : []) {
+                            if (f.startsWith("error-") && f.endsWith(".txt")) errors[f.slice(6, -4)] = text(R + "/" + f).slice(0, 500);
+                        }
+                        const ingest = read("ingest.json") || { passed: false, details: text(R + "/ingest-error.txt") || "The pipeline stopped before the package was read." };
+                        const semgrep = read("semgrep.json"), trivy = read("trivy.json"), sbom = read("sbom.json");
+                        const unresolved = text(S + "/deps-unresolved.txt");
+                        const stages = list(e.CHECKS).map((s) => (s === "license_audit" ? "license_compliance" : s === "sca" ? "dependency_scan" : s));
+
+                        const report = {
+                            miniAppId: e.MINIAPP_ID,
+                            method: "FLUTTER_PACKAGE",
+                            commitSha: text(S + "/git.sha") || undefined,
+                            stages: stages.length ? stages : undefined,
+                            sourceRoot: ingest.root,
+                            ingest,
+                            capability: { allowed: list(e.ALLOWED_CAPABILITIES), required: list(e.REQUIRED_CAPABILITIES) },
+                            gitleaks: read("gitleaks.json"),
+                            semgrep: semgrep && {
+                                results: (semgrep.results || []).map((r) => ({
+                                    check_id: r.check_id, path: r.path, start: { line: (r.start || {}).line },
+                                    extra: { message: (r.extra || {}).message, severity: (r.extra || {}).severity, metadata: { title: ((r.extra || {}).metadata || {}).title } },
+                                })),
+                            },
+                            trivy: trivy && {
+                                Results: (trivy.Results || []).map((x) => ({
+                                    Target: x.Target,
+                                    Vulnerabilities: (x.Vulnerabilities || []).map((v) => ({
+                                        VulnerabilityID: v.VulnerabilityID, PkgName: v.PkgName, InstalledVersion: v.InstalledVersion,
+                                        FixedVersion: v.FixedVersion, Severity: v.Severity, Title: v.Title, Description: (v.Description || "").slice(0, 500),
+                                    })),
+                                    Licenses: (x.Licenses || []).map((l) => ({ Severity: l.Severity, Category: l.Category, PkgName: l.PkgName, FilePath: l.FilePath, Name: l.Name })),
+                                })),
+                            },
+                            dependenciesResolved: unresolved ? false : undefined,
+                            dependencyNote: unresolved ? "flutter pub get failed: " + unresolved.slice(-400) : undefined,
+                            sbom: sbom && {
+                                bomFormat: sbom.bomFormat, specVersion: sbom.specVersion, metadata: sbom.metadata,
+                                components: (sbom.components || []).map((c) => ({ type: c.type, name: c.name, version: c.version, purl: c.purl, licenses: c.licenses })),
+                            },
+                            errors,
+                        };
+                        fs.writeFileSync(S + "/report.json", JSON.stringify(report));
+                        console.log("Report: ingest " + (ingest.passed ? "ok" : "FAILED") + ", tool errors: " + (Object.keys(errors).join(", ") || "none"));
+                    '
+                    code=$(curl -sS --max-time 120 -o "$S/report-response.txt" -w '%{http_code}' -X POST \
+                        -H "Content-Type: application/json" -H "x-callback-token: ${CALLBACK_TOKEN:-}" \
+                        --data-binary @"$S/report.json" "$SCAN_REPORT_URL") || code=error
+                    echo "Scan report sent to the backend: HTTP $code"
+                    if [ "$code" != "200" ]; then head -c 500 "$S/report-response.txt" 2>/dev/null; echo; exit 1; fi
+                    node -e 'try { const r = JSON.parse(require("fs").readFileSync(process.env.S + "/report-response.txt", "utf8")); const d = r.data || r; console.log("Result: " + (d.status || d.validationStatus || JSON.stringify(d).slice(0, 200))); } catch (err) {}' || true
+                ''')
             }
-        })();
-    ' || true
-    """
+        }
+        cleanup {
+            script {
+                // Removes the source and any key file; root-owned leftovers through a container
+                sh(prelude() + '''
+                    rm -rf "$S" 2>/dev/null || docker run --rm $MOUNT --entrypoint rm "$GIT_IMAGE" -rf "$S" || true
+                ''')
+            }
+        }
+    }
 }

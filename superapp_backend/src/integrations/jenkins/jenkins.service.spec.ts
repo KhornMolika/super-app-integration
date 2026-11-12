@@ -152,7 +152,13 @@ describe('JenkinsService.triggerMiniAppValidation modular pipelines', () => {
     const body = new URLSearchParams(String(init.body));
     // The token comes from ConfigService, the same source the callback guard checks
     expect(body.get('CALLBACK_TOKEN')).toBe('cb-secret');
-    expect(body.get('GIT_ACCESS_TOKEN')).toBe('git-secret');
+    // Git credentials are never Jenkins parameters (shown on every build page): the
+    // pipeline fetches them from SCAN_SOURCE_URL with the short-lived ticket
+    expect(body.get('GIT_ACCESS_TOKEN')).toBe('');
+    expect(body.get('GIT_DEPLOY_KEY')).toBe('');
+    expect(body.get('SCAN_SOURCE_URL')).toMatch(/\/api\/integrations\/validation\/scan-source\/app-1$/);
+    expect(body.get('SCAN_TICKET')).toMatch(/^live\.\d+\./);
+    expect(String(init.body)).not.toContain('git-secret');
     const logged = log.mock.calls.map((c) => String(c[0])).join(' ');
     expect(logged).not.toContain('cb-secret');
     expect(logged).not.toContain('git-secret');

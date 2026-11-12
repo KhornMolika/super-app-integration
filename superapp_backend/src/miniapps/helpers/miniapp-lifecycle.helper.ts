@@ -1,3 +1,4 @@
+import { scanConfigOf, scanScopeOf } from '../../integrations/validation/scan-source-ticket';
 import { gitRefOf, gitSourceUrlOf, isGitSource, scanSourceOf } from '../../integrations/flutter/git-source.util';
 import { testApkBuildMode } from '../../common/utils/build-mode.util';
 import {
@@ -361,7 +362,9 @@ export class MiniappLifecycleHelper {
     app.validationStatus = 'RUNNING';
     await this.miniappRepository.save(app);
 
-    const cfg = app.integrationConfig || {};
+    // The new version's own package or repository when one is under review
+    const scanScope = scanScopeOf(app);
+    const cfg = scanConfigOf(app, scanScope);
     const envVal = (process.env.ENVIRONMENT || '').toUpperCase();
     const allowLocal = envVal === 'DEV';
 
@@ -435,6 +438,7 @@ export class MiniappLifecycleHelper {
         allowedCapabilities: allowedCaps,
         requiredCapabilities: requiredCaps,
         checks: app.securityChecks || getDefaultChecksForMethod(method),
+        scanScope,
         isPrivateRepo: cfg.isPrivateRepo === true,
         gitAuthMethod:
           cfg.authMethod || (cfg.isPrivateRepo ? 'deploy_key' : 'none'),
@@ -518,7 +522,9 @@ export class MiniappLifecycleHelper {
     app.validationStatus = 'RUNNING';
     await this.miniappRepository.save(app);
 
-    const cfg = app.integrationConfig || {};
+    // The new version's own package or repository when one is under review
+    const scanScope = scanScopeOf(app);
+    const cfg = scanConfigOf(app, scanScope);
     const envVal = (process.env.ENVIRONMENT || '').toUpperCase();
     const allowLocal = envVal === 'DEV';
 
@@ -578,6 +584,7 @@ export class MiniappLifecycleHelper {
         allowedCapabilities: allowedCaps,
         requiredCapabilities: requiredCaps,
         checks: activeChecks,
+        scanScope,
         isPrivateRepo: cfg.isPrivateRepo === true,
         gitAuthMethod:
           cfg.authMethod || (cfg.isPrivateRepo ? 'deploy_key' : 'none'),

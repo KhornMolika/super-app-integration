@@ -11,6 +11,9 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { CallbackTokenGuard } from '../release-assembly/callback-token.guard';
+import { normalizeScanReport } from './scan-report.normalizer';
+import { CapabilityGateService } from '../../capabilities/capability-gate.service';
+import type { RawScanReport } from './scan-report.normalizer';
 import { StorageService } from '../../storage/storage.service';
 import { ScannedArtifactPublisherService } from './scanned-artifact-publisher.service';
 import {
@@ -42,6 +45,8 @@ export interface ValidationFindingDto {
 export interface ValidationCallbackDto {
   miniAppId: string;
   method: string;
+  /** Older pipelines send the method under this name */
+  integrationMethod?: string;
   status: 'PASSED' | 'FAILED';
   score?: number;
   commitSha?: string;
@@ -72,6 +77,8 @@ export class ValidationCallbackController {
     private readonly storageService?: StorageService,
     @Optional()
     private readonly scannedArtifactPublisher?: ScannedArtifactPublisherService,
+    @Optional()
+    private readonly capabilityGate?: CapabilityGateService,
   ) {}
 
   @Post('stage')
@@ -149,6 +156,64 @@ export class ValidationCallbackController {
     return { ok: true };
   }
 
+  /**
+   * The Flutter package scan pipeline posts each tool's raw output here; the
+   * findings and the verdict are worked out by normalizeScanReport.
+   */
+  @Post('scan-report')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(CallbackTokenGuard)
+  async handleScanReport(@Body() raw: RawScanReport) {
+    if (!raw || !isPgUuid(raw.miniAppId)) {
+      throw new BadRequestException('miniAppId must be a valid MiniApp UUID');
+    }
+    const input: RawScanReport = { ...raw, capabilityGate: undefined };
+    // The capability check is the shared catalog gate (versions, required vs optional)
+    if (this.capabilityGate) {
+      const app = await this.miniappRepository.findOne({ where: { id: raw.miniAppId } });
+      if (app) {
+        const checks: Record<string, any> = {};
+        const findings: any[] = [];
+        await this.capabilityGate.runStage(app, { capability_gate: {} }, checks, findings, async () => {});
+        if (checks.capability_gate) input.capabilityGate = { check: checks.capability_gate, findings };
+      }
+    }
+    const dto = normalizeScanReport(input);
+    dto.reportPath = await this.archiveScanReport(raw, dto);
+    return this.handleValidationCallback(dto);
+  }
+
+  /**
+   * Keeps the full scan (raw tool output + the verdict) in MinIO:
+   * reports/security/{miniAppId}/{version}/{time}-scan.json, plus the SBOM.
+   * Returns its key, or undefined when MinIO is unavailable (the result still counts).
+   */
+  private async archiveScanReport(raw: RawScanReport, result: ValidationCallbackDto): Promise<string | undefined> {
+    if (!this.storageService) return undefined;
+    const rawVersion = String(raw.ingest?.version || '').trim();
+    const version = /^[0-9A-Za-z.+_-]{1,64}$/.test(rawVersion) ? rawVersion : 'unknown';
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const folder = `reports/security/${raw.miniAppId}/${version}`;
+    const key = `${folder}/${stamp}-scan.json`;
+    try {
+      const bucket = this.storageService.packageSubmissionsBucket;
+      const { sbom, ...rest } = raw;
+      await this.storageService.putPrivateObject(
+        bucket,
+        key,
+        Buffer.from(JSON.stringify({ storedAt: new Date().toISOString(), result: { ...result, sbom: undefined }, raw: rest }, null, 2)),
+        'application/json',
+      );
+      if (sbom) {
+        await this.storageService.putPrivateObject(bucket, `${folder}/${stamp}-sbom.cdx.json`, Buffer.from(JSON.stringify(sbom)), 'application/vnd.cyclonedx+json');
+      }
+      return key;
+    } catch (err: any) {
+      this.logger.warn(`Could not store the scan report of ${raw.miniAppId} in MinIO (${key}): ${err?.message || err}`);
+      return undefined;
+    }
+  }
+
   @Post('callback')
   @HttpCode(HttpStatus.OK)
   // Only Jenkins may report results: an open callback let anyone mark a scan PASSED
@@ -162,6 +227,7 @@ export class ValidationCallbackController {
     if (dto.status !== 'PASSED' && dto.status !== 'FAILED') {
       throw new BadRequestException("status must be 'PASSED' or 'FAILED'");
     }
+    if (!dto.method && dto.integrationMethod) dto.method = dto.integrationMethod;
     this.logger.log(
       `Received validation callback for MiniApp ${dto.miniAppId}: status = ${dto.status}, score = ${dto.score}`,
     );
@@ -183,10 +249,20 @@ export class ValidationCallbackController {
       type: 'SECURITY_CHECK',
     });
 
-    if (dto.commitSha) {
-      if (!app.integrationConfig) app.integrationConfig = {};
-      app.integrationConfig.commitSha = dto.commitSha;
-      app.integrationConfig.lockedCommitSha = dto.commitSha;
+    // The commit the scan checked out: the build uses the same one (gitRefOf).
+    // Only a full SHA, on the config that was scanned (the new version's, if any).
+    if (dto.commitSha && /^[0-9a-f]{40}$/i.test(dto.commitSha)) {
+      const rev = app.pendingRevision as any;
+      if (rev?.integrationConfig) {
+        app.pendingRevision = {
+          ...rev,
+          integrationConfig: { ...rev.integrationConfig, commitSha: dto.commitSha, lockedCommitSha: dto.commitSha },
+        };
+      } else {
+        if (!app.integrationConfig) app.integrationConfig = {};
+        app.integrationConfig.commitSha = dto.commitSha;
+        app.integrationConfig.lockedCommitSha = dto.commitSha;
+      }
     }
 
     app.validationReport = {
@@ -205,12 +281,14 @@ export class ValidationCallbackController {
     const currentStages = app.validationStages || {};
     for (const [stageId, stageObj] of Object.entries(currentStages)) {
       const s = stageObj as any;
-      if (s && (s.status === 'PENDING' || s.status === 'RUNNING')) {
-        const checkResult = dto.checks?.[stageId];
-        if (checkResult) {
-          s.status = checkResult.passed !== false ? 'COMPLETED' : 'FAILED';
-          if (checkResult.details) s.details = checkResult.details;
-        } else if (dto.status === 'PASSED') {
+      const checkResult = dto.checks?.[stageId];
+      if (s && checkResult) {
+        // The final report decides, also for a stage the pipeline already marked done
+        s.status = checkResult.passed !== false ? 'COMPLETED' : 'FAILED';
+        if (checkResult.details) s.details = checkResult.details;
+        s.updatedAt = new Date().toISOString();
+      } else if (s && (s.status === 'PENDING' || s.status === 'RUNNING')) {
+        if (dto.status === 'PASSED') {
           s.status = 'COMPLETED';
           if (
             !s.details ||

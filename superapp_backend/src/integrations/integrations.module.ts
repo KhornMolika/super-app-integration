@@ -21,6 +21,7 @@ import { CapabilitiesModule } from '../capabilities/capabilities.module';
 import { StorageModule } from '../storage/storage.module';
 import { DomainVerificationService } from './webview/domain-verification.service';
 import { ValidationCallbackController } from './validation/validation-callback.controller';
+import { ScanSourceController } from './validation/scan-source.controller';
 import { JenkinsService } from './jenkins/jenkins.service';
 import { LocalSecurityScannerService } from './validation/local-security-scanner.service';
 import { ScanFinalizerService } from './validation/scan-finalizer.service';
@@ -51,6 +52,7 @@ import { PubspecInjectorController } from './flutter/pubspec-injector.controller
     NexusIntegrationController,
     ReleaseAssemblyVerificationController,
     ValidationCallbackController,
+    ScanSourceController,
     PubspecInjectorController,
   ],
   providers: [

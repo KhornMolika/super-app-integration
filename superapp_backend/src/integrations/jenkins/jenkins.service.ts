@@ -1,3 +1,4 @@
+import { ScanScope, signScanTicket } from '../validation/scan-source-ticket';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
@@ -164,6 +165,8 @@ export class JenkinsService {
     gitAccessToken?: string;
     deployKey?: string;
     jobName?: string;
+    /** Which config is scanned: the live one or the new version under review. */
+    scanScope?: ScanScope;
   }): Promise<{ success: boolean; message: string }> {
     const callbackUrl = this.getCallbackUrl(
       '/integrations/validation/callback',
@@ -195,8 +198,14 @@ export class JenkinsService {
       GIT_AUTH_METHOD:
         options.gitAuthMethod ||
         (options.isPrivateRepo ? 'deploy_key' : 'none'),
-      GIT_ACCESS_TOKEN: options.gitAccessToken || '',
-      GIT_DEPLOY_KEY: options.deployKey || '',
+      // Never as parameters: Jenkins shows them on every build page. The pipeline
+      // fetches the Git access from SCAN_SOURCE_URL with the ticket below.
+      GIT_ACCESS_TOKEN: '',
+      GIT_DEPLOY_KEY: '',
+      // The archive (MinIO) or Git access of this mini app, through the backend:
+      // Jenkins needs no MinIO address or credentials
+      SCAN_SOURCE_URL: this.getCallbackUrl(`/integrations/validation/scan-source/${options.miniAppId}`),
+      SCAN_TICKET: signScanTicket(options.miniAppId, options.scanScope || 'live'),
       CALLBACK_URL: callbackUrl,
       // Validation results are trusted to mark a scan PASSED: authenticate them
       CALLBACK_TOKEN: this.callbackToken(),
