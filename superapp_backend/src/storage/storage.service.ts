@@ -447,6 +447,39 @@ export class StorageService implements OnModuleInit {
   /**
    * Deletes an object from a MinIO bucket.
    */
+  /**
+   * Deletes every object under `prefix` (a folder ending in "/") and returns the
+   * removed keys. Refuses a prefix shorter than two path segments, so a bad id
+   * can never empty a whole bucket area such as "quarantine/".
+   */
+  async deleteByPrefix(bucket: string, prefix: string): Promise<{ removed: string[]; failed: string[] }> {
+    const removed: string[] = [];
+    const failed: string[] = [];
+    const segments = prefix.split('/').filter(Boolean);
+    if (!prefix.endsWith('/') || segments.length < 2 || segments.some((p) => p === '.' || p === '..')) {
+      throw new Error(`Refusing to delete by an unsafe prefix: "${prefix}"`);
+    }
+    if (typeof this.minioClient?.listObjectsV2 !== 'function') return { removed, failed };
+    const keys: string[] = [];
+    await new Promise<void>((resolve, reject) => {
+      const stream = this.minioClient.listObjectsV2(bucket, prefix, true);
+      stream.on('data', (obj: any) => {
+        if (obj?.name) keys.push(obj.name);
+      });
+      stream.on('end', () => resolve());
+      stream.on('error', (err: any) => reject(err));
+    });
+    for (const key of keys) {
+      try {
+        await this.minioClient.removeObject(bucket, key);
+        removed.push(key);
+      } catch (err: any) {
+        failed.push(`${key}: ${err?.message || err}`);
+      }
+    }
+    return { removed, failed };
+  }
+
   async deleteObject(bucket: string, key: string): Promise<void> {
     return this.quarantineHelper.deleteObject(this.minioClient, bucket, key);
   }

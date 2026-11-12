@@ -45,7 +45,9 @@ export function nexusTargetsFor(app: MiniApp): {
     // Only uploaded archives are published to pub-hosted; Git sources are not
     const source = String(cfg.sourceType || 'ARTIFACT').toUpperCase();
     const fromGit = source.includes('GIT') || source.includes('SOURCE') || Boolean(cfg.repoUrl || cfg.gitUrl);
-    return !fromGit && cfg.packageName ? { pubPackage: String(cfg.packageName) } : {};
+    // nexusPublishedPackage: the name Nexus filed it under (from the archive's pubspec.yaml)
+    const name = cfg.nexusPublishedPackage || cfg.packageName;
+    return !fromGit && name ? { pubPackage: String(name) } : {};
   }
   if (method === 'NATIVE_SDK') {
     return {
@@ -91,12 +93,82 @@ export class MiniappMutationHelper {
   ) {}
 
   /**
-   * Removes this app's files from Nexus, keeping any package or SDK
-   * coordinate that another mini app still uses.
+   * Removes the app's MinIO objects: the exact keys saved on the app or its pending
+   * revision, and everything in its folders (by App ID and by UUID).
+   */
+  private async cleanUpMinio(app: MiniApp): Promise<{ removed: string[]; failed: string[] }> {
+    const removed: string[] = [];
+    const failed: string[] = [];
+    const s = this.storageService;
+    if (!s) return { removed, failed };
+
+    const configs = [app.integrationConfig, (app.pendingRevision as any)?.integrationConfig].filter(Boolean) as any[];
+    const exact: Array<[string, string]> = [];
+    for (const cfg of configs) {
+      if (cfg.packageStoragePath) exact.push([s.packageSubmissionsBucket, cfg.packageStoragePath]);
+      if (cfg.minioKey && cfg.minioKey !== cfg.packageStoragePath) exact.push([s.packageSubmissionsBucket, cfg.minioKey]);
+      if (cfg.iosMinioKey) exact.push([s.sdkSubmissionsBucket, cfg.iosMinioKey]);
+      if (cfg.androidMinioKey) exact.push([s.sdkSubmissionsBucket, cfg.androidMinioKey]);
+    }
+    for (const [bucket, key] of exact) {
+      await s.deleteObject(bucket, key); // logs, never throws; a missing key is fine
+    }
+
+    // Folder ids must be a plain path segment: never let a bad value widen the prefix
+    const ids = [...new Set([app.appId, app.id].filter((v) => typeof v === 'string' && /^[A-Za-z0-9_-]+$/.test(v)))];
+    const folders: Array<[string, string]> = [];
+    for (const id of ids) {
+      folders.push(
+        [s.packageSubmissionsBucket, `quarantine/packages/${id}/`],
+        [s.packageSubmissionsBucket, `pending/${id}/`],
+        [s.sdkSubmissionsBucket, `quarantine/sdks/${id}/`],
+        [s.sdkSubmissionsBucket, `pending/${id}/`],
+        [s.assetsBucket, `miniapps/${id}/`],
+      );
+    }
+    const seen = new Set<string>();
+    for (const [bucket, prefix] of folders) {
+      const k = `${bucket}/${prefix}`;
+      if (seen.has(k)) continue; // the buckets are often the same one
+      seen.add(k);
+      try {
+        const res = await s.deleteByPrefix(bucket, prefix);
+        removed.push(...res.removed.map((key) => `${bucket}/${key}`));
+        failed.push(...res.failed.map((f) => `${bucket}/${f}`));
+      } catch (err: any) {
+        failed.push(`${bucket}/${prefix}: ${err?.message || err}`);
+      }
+    }
+
+    // A logo stored elsewhere (older uploads, another folder layout)
+    if (app.logo) {
+      try {
+        await s.deleteLogo(app.logo);
+      } catch (err: any) {
+        failed.push(`logo: ${err?.message || err}`);
+      }
+    }
+    return { removed, failed };
+  }
+
+  /**
+   * Removes this app's files from Nexus (also those of a pending revision), keeping
+   * any package or SDK coordinate that another mini app still uses.
    */
   private async cleanUpNexus(app: MiniApp) {
     const result = { removed: [] as string[], failed: [] as string[], kept: [] as string[] };
     const targets = nexusTargetsFor(app);
+    const rev: any = app.pendingRevision;
+    if (rev?.integrationConfig) {
+      const revTargets = nexusTargetsFor({
+        ...app,
+        integrationMethod: rev.integrationMethod ?? app.integrationMethod,
+        integrationConfig: rev.integrationConfig,
+      } as MiniApp);
+      targets.pubPackage ??= revTargets.pubPackage;
+      targets.maven ??= revTargets.maven;
+      targets.ios ??= revTargets.ios;
+    }
     if (!this.nexusService || (!targets.pubPackage && !targets.maven && !targets.ios)) {
       return result;
     }
@@ -1162,37 +1234,27 @@ export class MiniappMutationHelper {
       );
     }
 
-    // 3. Delete staged Flutter package archive from MinIO quarantine if present
-    if (existing.integrationConfig?.packageStoragePath) {
-      await this.storageService.deleteObject(
-        this.storageService.packageSubmissionsBucket,
-        existing.integrationConfig.packageStoragePath,
-      );
-    }
-
-    // 4. Delete staged Native SDK archives from MinIO quarantine if present
-    if (existing.integrationConfig?.iosMinioKey) {
-      await this.storageService.deleteObject(
-        this.storageService.sdkSubmissionsBucket,
-        existing.integrationConfig.iosMinioKey,
-      );
-    }
-    if (existing.integrationConfig?.androidMinioKey) {
-      await this.storageService.deleteObject(
-        this.storageService.sdkSubmissionsBucket,
-        existing.integrationConfig.androidMinioKey,
-      );
-    }
-
-    // 5. Delete logo from MinIO assets if present
-    if (existing.logo) {
-      await this.storageService.deleteLogo(existing.logo);
-    }
+    // 3-5. MinIO: the package archive, SDK files and logo, of the live app AND of a
+    // pending revision. Deleted by folder too: an app registered before the upload fix
+    // never had its archive path saved, every re-upload may leave an older copy, and
+    // uploads are filed under the App ID (register page) or the UUID (detail page).
+    const minio = await this.cleanUpMinio(existing);
 
     // 6. Remove what it published to Nexus (never the shared Super App APKs)
     const nexus = await this.cleanUpNexus(existing);
 
+    this.logger.log(
+      `Deleted mini app ${existing.appId}: MinIO removed ${minio.removed.length} object(s)` +
+        (minio.failed.length ? `, failed ${minio.failed.length}` : '') +
+        `; Nexus removed ${nexus.removed.length}, kept ${nexus.kept.length}, failed ${nexus.failed.length}` +
+        (nexus.failed.length || minio.failed.length ? ` (${[...minio.failed, ...nexus.failed].join('; ')})` : ''),
+    );
+
     if (logActivityFn) {
+      const minioNote = [
+        `MinIO removed ${minio.removed.length} object(s)`,
+        minio.failed.length ? `MinIO failed: ${minio.failed.join(', ')}` : '',
+      ].filter(Boolean).join('. ');
       const nexusNote = [
         nexus.removed.length ? `Nexus removed: ${nexus.removed.join(', ')}` : '',
         nexus.kept.length ? `Nexus kept: ${nexus.kept.join(', ')}` : '',
@@ -1203,13 +1265,13 @@ export class MiniappMutationHelper {
         actorId || user?.sub || 'system',
         'DELETE',
         `App ${existing.name || existing.appId} Deleted`,
-        `App removed and MinIO objects purged${nexusNote ? `. ${nexusNote}` : ''}`,
+        `App removed. ${minioNote}${nexusNote ? `. ${nexusNote}` : ''}`,
         'DELETE_MINI_APP',
         existing,
         null,
       );
     }
     await this.miniappRepository.delete(existing.id);
-    return { success: true, appId: existing.appId, nexus };
+    return { success: true, appId: existing.appId, minio, nexus };
   }
 }

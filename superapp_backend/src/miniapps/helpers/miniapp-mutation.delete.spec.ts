@@ -113,3 +113,83 @@ describe('nexusTargetsFor', () => {
     });
   });
 });
+
+describe('MiniappMutationHelper.remove: MinIO cleanup', () => {
+  function withFolders(app: any) {
+    const ctx = setup(app);
+    const storage: any = ctx.storage;
+    storage.assetsBucket = 'assets';
+    storage.deleteByPrefix = jest.fn(async (bucket: string, prefix: string) => ({
+      removed: prefix.startsWith('quarantine/packages/fsa_hr_miniapp/') ? [`${prefix}1.0.0/fsa_hr_miniapp.zip`] : [],
+      failed: [],
+    }));
+    return { ...ctx, storage };
+  }
+
+  const hrDraft = (over: Record<string, any> = {}) =>
+    archived({
+      id: '01a1cf02-70a0-7daa-8ae5-430218d4300f',
+      appId: 'fsa_hr_miniapp',
+      lifecycleStatus: 'DRAFT',
+      integrationMethod: 'FLUTTER_PACKAGE',
+      // registered before the upload fix: no archive path was saved
+      integrationConfig: { sourceType: 'ARTIFACT', packageName: 'fsa_hr_miniapp' },
+      ...over,
+    });
+
+  it('empties the app folders by App ID and by UUID, also when no path was saved', async () => {
+    const { helper, storage } = withFolders(hrDraft());
+    const res: any = await helper.remove(hrDraft().id, 'dev-1', owner);
+
+    const prefixes = storage.deleteByPrefix.mock.calls.map((c: any[]) => `${c[0]}:${c[1]}`);
+    for (const id of ['fsa_hr_miniapp', '01a1cf02-70a0-7daa-8ae5-430218d4300f']) {
+      expect(prefixes).toEqual(
+        expect.arrayContaining([
+          `pkg:quarantine/packages/${id}/`,
+          `pkg:pending/${id}/`,
+          `sdk:quarantine/sdks/${id}/`,
+          `sdk:pending/${id}/`,
+          `assets:miniapps/${id}/`,
+        ]),
+      );
+    }
+    expect(res.minio.removed).toEqual(['pkg/quarantine/packages/fsa_hr_miniapp/1.0.0/fsa_hr_miniapp.zip']);
+  });
+
+  it('deletes the files of a pending revision too', async () => {
+    const app = hrDraft({
+      pendingRevision: {
+        integrationConfig: { packageStoragePath: 'elsewhere/rev.zip', androidMinioKey: 'elsewhere/a.aar' },
+      },
+    });
+    const { helper, storage } = withFolders(app);
+    await helper.remove(app.id, 'dev-1', owner);
+    expect(storage.deleteObject).toHaveBeenCalledWith('pkg', 'elsewhere/rev.zip');
+    expect(storage.deleteObject).toHaveBeenCalledWith('sdk', 'elsewhere/a.aar');
+  });
+
+  it('never builds a folder from an id that is not a plain path segment', async () => {
+    const app = hrDraft({ appId: '../everything', id: 'id-1' });
+    const { helper, storage } = withFolders(app);
+    await helper.remove('id-1', 'dev-1', owner);
+    const prefixes = storage.deleteByPrefix.mock.calls.map((c: any[]) => c[1]);
+    expect(prefixes.some((p: string) => p.includes('..'))).toBe(false);
+    expect(prefixes).toContain('quarantine/packages/id-1/');
+  });
+
+  it('reports a folder it could not empty, and still deletes the app', async () => {
+    const { helper, repo, storage } = withFolders(hrDraft());
+    storage.deleteByPrefix.mockRejectedValueOnce(new Error('MinIO unreachable'));
+    const res: any = await helper.remove(hrDraft().id, 'dev-1', owner);
+    expect(res.minio.failed[0]).toMatch(/MinIO unreachable/);
+    expect(repo.delete).toHaveBeenCalled();
+  });
+
+  it('removes the Nexus package under the name Nexus filed it (pubspec.yaml)', () => {
+    const t = nexusTargetsFor({
+      integrationMethod: 'FLUTTER_PACKAGE',
+      integrationConfig: { sourceType: 'ARTIFACT', packageName: 'HR-App', nexusPublishedPackage: 'fsa_hr_miniapp' },
+    } as any);
+    expect(t.pubPackage).toBe('fsa_hr_miniapp');
+  });
+});
