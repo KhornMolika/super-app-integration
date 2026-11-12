@@ -83,6 +83,13 @@ function LoginForm() {
         // Correct password, email never verified: not a credentials error.
         setUnverifiedEmail(trimmedEmail.toLowerCase());
         toast.warning('Please verify your email address to continue.', 'Email Not Verified');
+      } else if (res.noBackofficeAccess) {
+        // Not a credentials error: STAFF and mobile-only accounts use the Super App
+        setEmailError('This account has no Backoffice access.');
+        toast.warning(
+          res.error || 'This account cannot use the Backoffice. Sign in with the FSA Super App on your phone instead.',
+          'Use the Mobile App'
+        );
       } else if (res.pendingApproval || res.error?.toLowerCase().includes('pending approval')) {
         setEmailError('Account registered but pending Super Administrator approval.');
         toast.warning(

@@ -80,7 +80,7 @@ describe('Mobile HTTP (in-process)', () => {
         name: 'Admin',
         isActive: true,
         status: 'ACTIVE',
-        roles: [{ name: 'R', permissions: [] }],
+        roles: [{ name: 'ADMIN', permissions: [] }],
       }),
       getPasswordHash: async () => adminPasswordHash,
     } as any);

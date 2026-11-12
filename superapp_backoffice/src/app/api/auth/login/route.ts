@@ -27,6 +27,8 @@ export async function POST(request: Request) {
               ? data.code
               : undefined,
           pendingApproval: Boolean(data?.pendingApproval),
+          // STAFF / mobile-only account: correct password, but no Backoffice role
+          noBackofficeAccess: Boolean(data?.noBackofficeAccess),
         },
         { status: res.status >= 400 ? res.status : 401 },
       );

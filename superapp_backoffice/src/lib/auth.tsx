@@ -102,7 +102,7 @@ interface AuthContextType {
   loginWithEmail: (
     email: string,
     password?: string,
-  ) => Promise<{ success: boolean; error?: string; pendingApproval?: boolean; emailNotVerified?: boolean }>;
+  ) => Promise<{ success: boolean; error?: string; pendingApproval?: boolean; emailNotVerified?: boolean; noBackofficeAccess?: boolean }>;
   can: (permission: string) => boolean;
   hasRole: (role: Role) => boolean;
   logout: () => Promise<void>;
@@ -264,6 +264,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         pendingApproval: isPending,
         // Correct password but email never verified: the login page offers a new OTP
         emailNotVerified: err?.data?.code === 'EMAIL_NOT_VERIFIED',
+        // Correct password, but the role (e.g. STAFF) is for the mobile app only
+        noBackofficeAccess: Boolean(err?.data?.noBackofficeAccess),
         error: err.message || (isPending ? 'Your account is pending Super Administrator approval.' : 'Login failed'),
       };
     }
