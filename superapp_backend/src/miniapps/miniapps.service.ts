@@ -47,6 +47,10 @@ import {
   PaginationQueryDto,
 } from '../common/dto/pagination-query.dto';
 import { maskMiniAppCredentials } from './helpers/flutter-credential.helper';
+import {
+  PackagePublishError,
+  ScannedArtifactPublisherService,
+} from '../integrations/validation/scanned-artifact-publisher.service';
 
 @Injectable()
 export class MiniappsService implements OnApplicationBootstrap {
@@ -90,7 +94,42 @@ export class MiniappsService implements OnApplicationBootstrap {
 
     @Optional()
     private retirementHelper?: MiniappRetirementHelper,
+    @Optional()
+    private artifactPublisher?: ScannedArtifactPublisherService,
   ) {}
+
+  /**
+   * "Publish to Nexus" in the Backoffice: makes sure the Flutter package (of the
+   * pending revision when there is one) is in Nexus pub-hosted, publishing it
+   * from MinIO when needed. Only after a passed scan: the archive in MinIO is
+   * quarantined until then.
+   */
+  async publishPackageToNexus(id: string) {
+    const app = await this.findOne(id);
+    if (!app) throw new NotFoundException('Mini app not found');
+    const rev: any = app.pendingRevision;
+    const inRevision = Boolean(rev?.integrationConfig);
+    const method = String((inRevision && rev.integrationMethod) || app.integrationMethod || '').toUpperCase();
+    if (method !== 'FLUTTER_PACKAGE') {
+      throw new BadRequestException('Only Flutter package mini apps are published to Nexus pub-hosted.');
+    }
+    const scan = String((inRevision && rev.validationStatus) || app.validationStatus || '').toUpperCase();
+    if (scan !== 'PASSED') {
+      throw new BadRequestException(
+        `The package is published only after its security scan passes (scan: ${scan || 'not run'}).`,
+      );
+    }
+    if (!this.artifactPublisher) throw new BadRequestException('Publishing to Nexus is not available on this server.');
+    const config = inRevision ? rev.integrationConfig : app.integrationConfig || {};
+    try {
+      const res = await this.artifactPublisher.ensureFlutterPackagePublished(app, { config, inRevision });
+      if (!res) throw new BadRequestException('This package is built from Git source: nothing to publish to Nexus.');
+      return { ...res, nexusPublishedAt: config.nexusPublishedAt, nexusPublishCheckedAt: config.nexusPublishCheckedAt };
+    } catch (err: any) {
+      if (err instanceof PackagePublishError) throw new BadRequestException(err.message);
+      throw err;
+    }
+  }
 
   async onApplicationBootstrap() {
     await this.backfillOrganizations();

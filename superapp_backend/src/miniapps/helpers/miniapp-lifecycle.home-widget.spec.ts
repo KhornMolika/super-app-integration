@@ -17,6 +17,9 @@ function setup(deps: Record<string, any> = {}) {
     (deps.pubspecService ?? {}) as any,
     deps.storageService,
     deps.nexusService,
+    undefined,
+    undefined,
+    deps.artifactPublisher,
   );
   return { helper, repo, notifications, log: jest.fn().mockResolvedValue(undefined) };
 }
@@ -307,8 +310,8 @@ describe('MiniappLifecycleHelper and homeWidget', () => {
         'lib/src/hr.dart': HR_SRC,
       });
 
-    it('approve: marks the widget verified from the archive, before publishing it', async () => {
-      const { helper, log, order, saves, nexusService } = pkgSetup({ archive: goodZip() });
+    it('approve: marks the widget verified from the archive', async () => {
+      const { helper, log, order, saves } = pkgSetup({ archive: goodZip() });
 
       const result = await helper.approve(pkgApp(), 'super-admin', log);
 
@@ -320,12 +323,8 @@ describe('MiniappLifecycleHelper and homeWidget', () => {
         widgetClass: 'HrHomeWidget',
         verifiedClass: 'HrHomeWidget',
       });
-      expect(nexusService.publishPubArchive).toHaveBeenCalledTimes(1);
-      // the verified widget is saved before the archive is published/deleted
-      const verifiedSave = order.indexOf('save', order.indexOf('save') + 1);
-      expect(verifiedSave).toBeGreaterThan(-1);
-      expect(verifiedSave).toBeLessThan(order.indexOf('publish'));
-      // The archive stays in MinIO after publishing: a re-scan reads it from there
+      // Publishing is ScannedArtifactPublisherService's job (see "package in Nexus" below).
+      // The archive stays in MinIO: a re-scan reads it from there.
       expect(order).not.toContain('delete');
     });
 
@@ -334,13 +333,12 @@ describe('MiniappLifecycleHelper and homeWidget', () => {
         'pubspec.yaml': `name: ${PKG}`,
         [`lib/${PKG}.dart`]: 'class Other {}',
       });
-      const { helper, log, nexusService } = pkgSetup({ archive });
+      const { helper, log } = pkgSetup({ archive });
 
       const result = await helper.approve(pkgApp(), 'super-admin', log);
 
       expect(result.status).toBe('APPROVED');
       expect(result.homeWidget).toEqual({ widgetClass: 'HrHomeWidget' });
-      expect(nexusService.publishPubArchive).toHaveBeenCalledTimes(1);
     });
 
     it('approve: a verification crash never throws out of approve', async () => {
@@ -765,5 +763,73 @@ describe('MiniappLifecycleHelper and homeWidget', () => {
         warn.mockRestore();
       });
     });
+  });
+});
+
+describe('MiniappLifecycleHelper: the package must be in Nexus', () => {
+  const flutterApp = (over: any = {}): MiniApp =>
+    ({
+      id: 'app-hr',
+      appId: 'fsa_hr_miniapp',
+      name: 'HR',
+      status: 'IN_REVIEW',
+      lifecycleStatus: 'IN_REVIEW',
+      validationStatus: 'PASSED',
+      integrationMethod: 'FLUTTER_PACKAGE',
+      integrationConfig: { sourceType: 'ARTIFACT', packageName: 'fsa_hr_miniapp', packageStoragePath: 'p.zip' },
+      permissions: [],
+      homeWidget: null,
+      versionHistory: [],
+      ...over,
+    }) as unknown as MiniApp;
+
+  const pubspecService = {
+    injectMiniApp: jest.fn().mockResolvedValue({}),
+    regenerateRegistry: jest.fn().mockResolvedValue(undefined),
+    validateDependencies: jest.fn().mockResolvedValue({}),
+    triggerSandboxRebuild: jest.fn().mockResolvedValue(undefined),
+  };
+
+  it('approve stops, without saving APPROVED, when the package cannot be confirmed in Nexus', async () => {
+    const { PackagePublishError } = require('../../integrations/validation/scanned-artifact-publisher.service');
+    const artifactPublisher = {
+      ensureFlutterPackagePublished: jest.fn().mockRejectedValue(new PackagePublishError('Nexus refused fsa_hr_miniapp 1.2.0: HTTP 400')),
+    };
+    const { helper, repo, log } = setup({ artifactPublisher, pubspecService });
+
+    await expect(helper.approve(flutterApp(), 'super-admin', log)).rejects.toThrow(
+      /Cannot approve: the package is not in Nexus\. Nexus refused fsa_hr_miniapp 1\.2\.0/,
+    );
+    expect(repo.save).not.toHaveBeenCalled();
+  });
+
+  it('approve confirms the package in Nexus before saving APPROVED', async () => {
+    const order: string[] = [];
+    const artifactPublisher = {
+      ensureFlutterPackagePublished: jest.fn(async () => {
+        order.push('nexus');
+        return { packageName: 'fsa_hr_miniapp', version: '1.2.0', publishedNow: true };
+      }),
+    };
+    const { helper, repo, log } = setup({ artifactPublisher, pubspecService });
+    repo.save.mockImplementation((e: MiniApp) => {
+      order.push('save');
+      return Promise.resolve(e);
+    });
+
+    const result = await helper.approve(flutterApp(), 'super-admin', log);
+
+    expect(result.status).toBe('APPROVED');
+    expect(order[0]).toBe('nexus');
+    expect(order.indexOf('nexus')).toBeLessThan(order.indexOf('save'));
+  });
+
+  it('does not ask Nexus about other integration methods', async () => {
+    const artifactPublisher = { ensureFlutterPackagePublished: jest.fn() };
+    const { helper, log } = setup({ artifactPublisher, pubspecService });
+
+    await helper.approve(flutterApp({ integrationMethod: 'DEEP_LINK', integrationConfig: { urlScheme: 'x://' } }), 'super-admin', log);
+
+    expect(artifactPublisher.ensureFlutterPackagePublished).not.toHaveBeenCalled();
   });
 });

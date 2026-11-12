@@ -92,7 +92,10 @@ function packageSourceChanged(
 type WidgetProblem = 'missing' | 'unreadable';
 
 import { CapabilitiesService } from '../../capabilities/capabilities.service';
-import { declaredPackageVersion } from '../../integrations/validation/scanned-artifact-publisher.service';
+import {
+  PackagePublishError,
+  ScannedArtifactPublisherService,
+} from '../../integrations/validation/scanned-artifact-publisher.service';
 
 /**
  * Approving (or publishing a revision) after a failed security scan is refused:
@@ -137,7 +140,37 @@ export class MiniappLifecycleHelper {
     private apkBuildManager?: ApkBuildManagerService,
     @Optional()
     private capabilitiesService?: CapabilitiesService,
+    @Optional()
+    private artifactPublisher?: ScannedArtifactPublisherService,
   ) {}
+
+  /**
+   * Stops approval or a test build when a Flutter package cannot be confirmed in
+   * Nexus pub-hosted: publishes it from MinIO first when it is not there yet.
+   * Without this the app was approved and the test build failed minutes later
+   * with "could not find package".
+   */
+  private async assertPackageInNexus(app: MiniApp, action: string, useRevision: boolean): Promise<void> {
+    if (!this.artifactPublisher) return;
+    const rev = useRevision ? app.pendingRevision : null;
+    const inRevision = Boolean(rev?.integrationConfig);
+    const method = String((inRevision && rev?.integrationMethod) || app.integrationMethod || '').toUpperCase();
+    if (method !== 'FLUTTER_PACKAGE') return;
+    const config: Record<string, any> = inRevision ? rev.integrationConfig : (app.integrationConfig ||= {});
+    try {
+      const res = await this.artifactPublisher.ensureFlutterPackagePublished(app, { config, inRevision });
+      if (res) {
+        this.logger.log(
+          `${res.packageName} ${res.version} is in Nexus pub-hosted (${res.publishedNow ? 'published now' : 'already there'}) before ${action} of ${app.appId}`,
+        );
+      }
+    } catch (err: any) {
+      if (err instanceof PackagePublishError) {
+        throw new BadRequestException(`Cannot ${action}: the package is not in Nexus. ${err.message}`);
+      }
+      throw err;
+    }
+  }
 
   /** Staged package archive from MinIO, or null when absent/unreadable. */
   private async readStagedArchive(storagePath?: string): Promise<Buffer | null> {
@@ -790,6 +823,9 @@ export class MiniappLifecycleHelper {
       app.pendingRevision = null;
     }
 
+    // Before saving APPROVED: a package that is not in Nexus would fail every build
+    await this.assertPackageInNexus(app, 'approve', false);
+
     app.lifecycleStatus = MiniAppLifecycleStatus.APPROVED;
     (app as any).status = 'APPROVED';
     await this.miniappRepository.save(app);
@@ -797,52 +833,11 @@ export class MiniappLifecycleHelper {
     // Auto-inject Flutter package dependency into SuperApp pubspec.yaml if applicable
     if ((app.integrationMethod || '').toUpperCase() === 'FLUTTER_PACKAGE') {
       try {
-        const pkgName =
-          app.integrationConfig?.packageName ||
-          (app.name || '').toLowerCase().replace(/[^a-z0-9_]/g, '_');
-        // Same rule as the publish when the scan passed, so both name one Nexus version
-        const pkgVer = declaredPackageVersion(app.integrationConfig, app);
-        const storagePath = app.integrationConfig?.packageStoragePath;
-
-        // Auto-publish candidate package archive to Nexus pub-hosted repository
-        let widgetChecked = false;
-        if (storagePath && this.storageService && this.nexusService) {
-          try {
-            const archiveBuf = await this.storageService.getObjectBuffer(
-              this.storageService.packageSubmissionsBucket,
-              storagePath,
-            );
-            if (archiveBuf && archiveBuf.length > 0) {
-              // Verify the Home widget class while the archive is still in MinIO
-              widgetChecked = true;
-              await this.verifyHomeWidgetClass(app, archiveBuf, { force: sourceChanged });
-              // Usually already published when its security scan passed
-              // (ScannedArtifactPublisherService); otherwise, publish now
-              if (app.integrationConfig?.nexusPublishedVersion === pkgVer) {
-                this.logger.log(
-                  `Package "${pkgName}" (${pkgVer}) was published to Nexus when its scan passed; not publishing again.`,
-                );
-              } else {
-                await this.nexusService.publishPubArchive(
-                  archiveBuf,
-                  pkgName,
-                  pkgVer,
-                );
-                this.logger.log(
-                  `Auto-published package "${pkgName}" (${pkgVer}) to Nexus pub-hosted upon approval.`,
-                );
-              }
-
-              // The archive stays in MinIO: it is exactly what was scanned and approved,
-              // and a re-scan reads it from there (packageStoragePath).
-            }
-          } catch (pubErr: any) {
-            this.logger.warn(
-              `Could not auto-publish archive to Nexus for ${app.name}: ${pubErr.message}`,
-            );
-          }
-        }
-        if (!widgetChecked) await this.verifyHomeWidgetClass(app, null, { force: sourceChanged });
+        // The package itself was confirmed in Nexus above (assertPackageInNexus).
+        // Verify the Home widget class from the archive kept in MinIO: it is what was
+        // scanned and approved, and a re-scan reads it from there.
+        const archiveBuf = await this.readStagedArchive(app.integrationConfig?.packageStoragePath);
+        await this.verifyHomeWidgetClass(app, archiveBuf, { force: sourceChanged });
 
         await this.pubspecService.injectMiniApp(app);
         await this.pubspecService.regenerateRegistry();
@@ -1116,6 +1111,7 @@ export class MiniappLifecycleHelper {
     }
     // "Approve for Test Build" is an approval too: not after a failed scan
     assertSecurityScanNotFailed(app);
+    await this.assertPackageInNexus(app, 'start the test build', true);
 
     if (
       (currentStatus === 'ACTIVE' ||
@@ -1432,6 +1428,7 @@ export class MiniappLifecycleHelper {
       throw new BadRequestException('No pending revision found to publish');
     }
     assertSecurityScanNotFailed(app);
+    await this.assertPackageInNexus(app, 'publish this version', true);
 
     const rev = app.pendingRevision;
     const oldVal = { ...app };

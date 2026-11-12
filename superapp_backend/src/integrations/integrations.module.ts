@@ -83,6 +83,7 @@ import { PubspecInjectorController } from './flutter/pubspec-injector.controller
     DomainVerificationService,
     JenkinsService,
     ScanFinalizerService,
+    ScannedArtifactPublisherService,
     WebViewSecurityScanner,
     FlutterPackageSecurityScanner,
     NativeSdkSecurityScanner,

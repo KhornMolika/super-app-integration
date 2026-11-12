@@ -155,6 +155,18 @@ export const miniappsApi = {
       body: securityChecks && securityChecks.length > 0 ? { securityChecks } : {},
     }),
 
+  /** Publishes (or confirms) the scanned Flutter package in Nexus pub-hosted. */
+  publishPackage: (id: string) =>
+    apiClient<any>(`/api/mini-apps/${id}/publish-package`, { method: 'POST' }).then((res) =>
+      unwrapItem<{
+        packageName: string;
+        version: string;
+        publishedNow: boolean;
+        nexusPublishedAt?: string;
+        nexusPublishCheckedAt?: string;
+      }>(res),
+    ),
+
   cancelValidation: (id: string) =>
     apiClient<any>(`/api/mini-apps/${id}/cancel-validation`, { method: 'POST' }),
 

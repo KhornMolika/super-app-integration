@@ -352,6 +352,13 @@ export class MiniappsController {
     return this.miniappService.rescan(id, req.user?.sub, body?.securityChecks);
   }
 
+  /** Publishes (or confirms) the scanned Flutter package in Nexus pub-hosted. */
+  @Post(':id/publish-package')
+  @RequirePermissions('miniapp:approve')
+  publishPackage(@Param('id', ParseUUIDPipe) id: string) {
+    return this.miniappService.publishPackageToNexus(id);
+  }
+
   @Post(':id/cancel-validation')
   @RequirePermissions('miniapp:update')
   cancelValidation(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {

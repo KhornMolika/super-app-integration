@@ -354,16 +354,14 @@ export class NexusIntegrationService {
     const groupUrl = `${this.getPubGroupUrl()}/api/packages/${encodeURIComponent(trimmed)}`;
 
     try {
-      let res = await fetch(groupUrl, {
-        headers: { Accept: 'application/vnd.pub.v2+json, application/json' },
-      });
+      // Nexus refuses anonymous reads (401): without credentials every lookup failed
+      const headers = { Accept: 'application/vnd.pub.v2+json, application/json', ...this.getAuthHeader() };
+      let res = await fetch(groupUrl, { headers });
 
       if (!res.ok && res.status === 404) {
         // Fallback to pub-hosted directly
         const hostedUrl = `${this.getPubHostedUrl()}/api/packages/${encodeURIComponent(trimmed)}`;
-        res = await fetch(hostedUrl, {
-          headers: { Accept: 'application/vnd.pub.v2+json, application/json' },
-        });
+        res = await fetch(hostedUrl, { headers });
       }
 
       if (!res.ok) {
@@ -407,6 +405,33 @@ export class NexusIntegrationService {
         exists: false,
         error: `Could not reach Nexus registry at ${this.getPubGroupUrl()}: ${err.message}`,
       };
+    }
+  }
+
+  /**
+   * Whether pub-hosted lists this exact version. `reachable: false` means Nexus
+   * could not be asked (network, credentials), which is not the same as "absent".
+   */
+  async hasPackageVersion(
+    packageName: string,
+    version: string,
+  ): Promise<{ found: boolean; reachable: boolean; versions: string[]; error?: string }> {
+    const url = `${this.getPubHostedUrl()}/api/packages/${encodeURIComponent(packageName.trim())}`;
+    try {
+      const res = await fetch(url, {
+        headers: { Accept: 'application/vnd.pub.v2+json, application/json', ...this.getAuthHeader() },
+      });
+      if (res.status === 404) return { found: false, reachable: true, versions: [] };
+      if (!res.ok) {
+        return { found: false, reachable: false, versions: [], error: `Nexus returned HTTP ${res.status} for ${url}` };
+      }
+      const data: any = await res.json();
+      const versions: string[] = Array.isArray(data?.versions)
+        ? data.versions.map((v: any) => String(typeof v === 'string' ? v : v?.version || '')).filter(Boolean)
+        : [];
+      return { found: versions.includes(version.trim()), reachable: true, versions };
+    } catch (err: any) {
+      return { found: false, reachable: false, versions: [], error: `Could not reach Nexus at ${url}: ${err?.message || err}` };
     }
   }
 

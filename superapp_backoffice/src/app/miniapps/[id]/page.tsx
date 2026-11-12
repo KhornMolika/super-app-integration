@@ -23,6 +23,7 @@ import {
   useMiniAppLifecycle,
 } from '@/components/miniapp-detail';
 import { getAllowedActions } from '@/components/miniapp-detail/miniappActions';
+import { PackagePublishPanel } from '@/components/miniapp-detail/PackagePublishPanel';
 
 const TAB_TITLES: Record<MiniAppTabType, string> = {
   overview: 'General Information',
@@ -248,6 +249,14 @@ function ManageMiniAppContent() {
               appName: formData.name,
             })
           }
+        />
+
+        {/* Flutter package: MinIO -> security scan -> Nexus (approval needs the last step) */}
+        <PackagePublishPanel
+          miniAppId={id}
+          formData={formData}
+          canPublish={can('miniapp:approve')}
+          onRefresh={() => fetchApp(false, true)}
         />
 
         {/* Section Contents Router with Smooth Enter Animation */}
