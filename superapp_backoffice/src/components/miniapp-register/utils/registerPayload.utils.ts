@@ -88,9 +88,9 @@ export async function prepareDraftPayload(
 
       const uploadRes = await miniappsApi.uploadArtifact(uploadFormData);
       if (
+        // A stored path, not just success: without it the submit has no archive
         uploadRes &&
-        (uploadRes.success ||
-          uploadRes.packageStoragePath ||
+        (uploadRes.packageStoragePath ||
           uploadRes.minioKey ||
           uploadRes.packageUrl)
       ) {
@@ -152,9 +152,9 @@ export async function prepareSubmitPayload(
 
       const uploadRes = await miniappsApi.uploadArtifact(uploadFormData);
       if (
+        // A stored path, not just success: without it the submit has no archive
         uploadRes &&
-        (uploadRes.success ||
-          uploadRes.packageStoragePath ||
+        (uploadRes.packageStoragePath ||
           uploadRes.minioKey ||
           uploadRes.packageUrl)
       ) {

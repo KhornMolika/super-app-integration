@@ -721,7 +721,7 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
           uploadFormData.append('version', ver);
 
           const uploadRes = await miniappsApi.uploadArtifact(uploadFormData);
-          if (uploadRes && (uploadRes.success || uploadRes.packageStoragePath || uploadRes.minioKey || uploadRes.packageUrl)) {
+          if (uploadRes && (uploadRes.packageStoragePath || uploadRes.minioKey || uploadRes.packageUrl)) {
             formData.integrationConfigFlutter = {
               sourceType: formData.integrationConfigFlutter?.sourceType || SourceType.ARTIFACT,
               ...formData.integrationConfigFlutter,

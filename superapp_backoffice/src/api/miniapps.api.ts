@@ -158,6 +158,8 @@ export const miniappsApi = {
   cancelValidation: (id: string) =>
     apiClient<any>(`/api/mini-apps/${id}/cancel-validation`, { method: 'POST' }),
 
+  // Both return the backend's { success, data } envelope: unwrapped here, or every
+  // field (pubspec, packageStoragePath, ...) reads as undefined while success is true.
   inspectArtifact: (formData: FormData) =>
     apiClient<{
       success: boolean;
@@ -179,7 +181,7 @@ export const miniappsApi = {
     }>('/api/mini-apps/inspect-artifact', {
       method: 'POST',
       body: formData,
-    }),
+    }).then(unwrapItem),
 
   uploadArtifact: (formData: FormData) =>
     apiClient<{
@@ -201,7 +203,7 @@ export const miniappsApi = {
     }>('/api/mini-apps/upload-artifact', {
       method: 'POST',
       body: formData,
-    }),
+    }).then(unwrapItem),
 
   getAllIssues: () =>
     apiClient<any[]>('/api/mini-apps/issues/all'),
