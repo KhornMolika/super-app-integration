@@ -24,6 +24,7 @@ import { ValidationCallbackController } from './validation/validation-callback.c
 import { JenkinsService } from './jenkins/jenkins.service';
 import { LocalSecurityScannerService } from './validation/local-security-scanner.service';
 import { ScanFinalizerService } from './validation/scan-finalizer.service';
+import { ScannedArtifactPublisherService } from './validation/scanned-artifact-publisher.service';
 import { WebViewSecurityScanner } from './validation/scanners/webview-security.scanner';
 import { FlutterPackageSecurityScanner } from './validation/scanners/flutter-package-security.scanner';
 import { NativeSdkSecurityScanner } from './validation/scanners/native-sdk-security.scanner';
@@ -61,6 +62,7 @@ import { PubspecInjectorController } from './flutter/pubspec-injector.controller
     DomainVerificationService,
     JenkinsService,
     ScanFinalizerService,
+    ScannedArtifactPublisherService,
     WebViewSecurityScanner,
     FlutterPackageSecurityScanner,
     NativeSdkSecurityScanner,

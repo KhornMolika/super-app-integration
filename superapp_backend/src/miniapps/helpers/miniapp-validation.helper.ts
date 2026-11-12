@@ -263,7 +263,8 @@ export class MiniappValidationHelper {
               .then((result) => {
                 if (!result.exists) {
                   errors['integrationConfigFlutter.packageName'] =
-                    `Package "${packageName}" was not found in Nexus repository (pub-group). Please publish the package before submitting for review.`;
+                    `No package archive was uploaded for "${packageName}", and it is not in Nexus yet. ` +
+                    `Upload the package (.zip or .tar.gz) and submit again: it is security-scanned and published to Nexus for you.`;
                 }
               })
               .catch((err) => {

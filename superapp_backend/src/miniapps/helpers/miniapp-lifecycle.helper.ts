@@ -92,6 +92,23 @@ function packageSourceChanged(
 type WidgetProblem = 'missing' | 'unreadable';
 
 import { CapabilitiesService } from '../../capabilities/capabilities.service';
+import { declaredPackageVersion } from '../../integrations/validation/scanned-artifact-publisher.service';
+
+/**
+ * Approving (or publishing a revision) after a failed security scan is refused:
+ * the Backoffice hides the review buttons then, and a direct API call must not
+ * get around that. A revision is judged by its own scan.
+ */
+export function assertSecurityScanNotFailed(app: { validationStatus?: string | null; pendingRevision?: any }): void {
+  const status = String(
+    (app.pendingRevision ? app.pendingRevision.validationStatus : app.validationStatus) || '',
+  ).toUpperCase();
+  if (status === 'FAILED') {
+    throw new BadRequestException(
+      'The security scan failed. The developer must resolve the findings and submit again before it can be approved.',
+    );
+  }
+}
 
 @Injectable()
 export class MiniappLifecycleHelper {
@@ -707,6 +724,7 @@ export class MiniappLifecycleHelper {
     ) {
       return this.publishRevision(app, actorId, logActivityFn);
     }
+    assertSecurityScanNotFailed(app);
 
     const validStatuses = ['IN_REVIEW', 'SUBMITTED', 'DRAFT'];
     if (!validStatuses.includes(currentStatus)) {
@@ -782,12 +800,8 @@ export class MiniappLifecycleHelper {
         const pkgName =
           app.integrationConfig?.packageName ||
           (app.name || '').toLowerCase().replace(/[^a-z0-9_]/g, '_');
-        const rawVer =
-          app.integrationConfig?.versionConstraint ||
-          app.currentReleaseVersion ||
-          (app as any).version ||
-          '1.0.0';
-        const pkgVer = String(rawVer).replace(/^[\^~>=<]+/, '') || '1.0.0';
+        // Same rule as the publish when the scan passed, so both name one Nexus version
+        const pkgVer = declaredPackageVersion(app.integrationConfig, app);
         const storagePath = app.integrationConfig?.packageStoragePath;
 
         // Auto-publish candidate package archive to Nexus pub-hosted repository
@@ -802,14 +816,22 @@ export class MiniappLifecycleHelper {
               // Verify the Home widget class while the archive is still in MinIO
               widgetChecked = true;
               await this.verifyHomeWidgetClass(app, archiveBuf, { force: sourceChanged });
-              await this.nexusService.publishPubArchive(
-                archiveBuf,
-                pkgName,
-                pkgVer,
-              );
-              this.logger.log(
-                `Auto-published package "${pkgName}" (${pkgVer}) to Nexus pub-hosted upon approval.`,
-              );
+              // Usually already published when its security scan passed
+              // (ScannedArtifactPublisherService); otherwise, publish now
+              if (app.integrationConfig?.nexusPublishedVersion === pkgVer) {
+                this.logger.log(
+                  `Package "${pkgName}" (${pkgVer}) was published to Nexus when its scan passed; not publishing again.`,
+                );
+              } else {
+                await this.nexusService.publishPubArchive(
+                  archiveBuf,
+                  pkgName,
+                  pkgVer,
+                );
+                this.logger.log(
+                  `Auto-published package "${pkgName}" (${pkgVer}) to Nexus pub-hosted upon approval.`,
+                );
+              }
 
               // Clean up staged package archive from MinIO quarantine now that it is published to Nexus
               try {
@@ -1419,6 +1441,7 @@ export class MiniappLifecycleHelper {
     if (!app.pendingRevision) {
       throw new BadRequestException('No pending revision found to publish');
     }
+    assertSecurityScanNotFailed(app);
 
     const rev = app.pendingRevision;
     const oldVal = { ...app };

@@ -768,10 +768,23 @@ export function useMiniAppRegister() {
     }
 
     setModalState((prev) => ({ isOpen: true, status: 'loading', createdId: prev.createdId }));
-    const payload = await prepareSubmitPayload(formData, pendingArchiveFile, {
-      ios: pendingIosFile,
-      android: pendingAndroidFile,
-    });
+    let payload: Awaited<ReturnType<typeof prepareSubmitPayload>>;
+    try {
+      payload = await prepareSubmitPayload(formData, pendingArchiveFile, {
+        ios: pendingIosFile,
+        android: pendingAndroidFile,
+      });
+    } catch (err) {
+      // The archive did not reach MinIO: stop here instead of submitting without it
+      setModalState((prev) => ({
+        isOpen: true,
+        status: 'error',
+        message: err instanceof Error ? err.message : 'The package archive could not be uploaded.',
+        createdId: prev.createdId,
+      }));
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       const resData = modalState.createdId

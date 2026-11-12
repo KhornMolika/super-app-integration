@@ -17,6 +17,7 @@ import { AuditService } from '../../audit/audit.service';
 import { ValidationFindingDto } from './validation-callback.controller';
 import { resolveBackofficeBaseUrl } from '../../common/utils/network.utils';
 import { getDefaultChecksForMethod } from './validation-stage.catalog';
+import { ScannedArtifactPublisherService } from './scanned-artifact-publisher.service';
 
 @Injectable()
 export class ScanFinalizerService {
@@ -39,6 +40,8 @@ export class ScanFinalizerService {
     private readonly pipelinePacerService: PipelinePacerService,
     @Optional()
     private readonly storageService?: StorageService,
+    @Optional()
+    private readonly scannedArtifactPublisher?: ScannedArtifactPublisherService,
   ) {}
 
   async finalizeScan(
@@ -146,6 +149,10 @@ export class ScanFinalizerService {
           issuesCount: 0,
         },
       });
+
+      // Scan passed: the uploaded package / SDK goes from MinIO quarantine to Nexus
+      // (after the save above, so that save cannot drop what it records)
+      void this.scannedArtifactPublisher?.publishAfterPassedScan(app.id);
     } else {
       app.validationStatus = 'FAILED';
 

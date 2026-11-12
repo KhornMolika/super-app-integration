@@ -729,8 +729,18 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
               archiveChecksum: uploadRes.sha256 || formData.integrationConfigFlutter?.archiveChecksum,
             };
           }
+          else throw new Error('the server did not return where the archive was stored');
         } catch (err) {
           console.error('Failed to upload archive to MinIO on edit save:', err);
+          const reason = err instanceof Error && err.message ? `: ${err.message}` : '';
+          if (!isDraftOnly) {
+            // Never submit without the archive: the review would then report the package
+            // as "not found in Nexus", although the developer attached it
+            toast.error(`The package archive could not be uploaded${reason}. Please try again.`, 'Upload Failed');
+            setIsSubmitting(false);
+            return;
+          }
+          toast.warning(`Draft saved without the new package archive${reason}. Upload it again before submitting.`, 'Archive Not Uploaded');
         }
       }
       payload.integrationConfigFlutter = formData.integrationConfigFlutter;

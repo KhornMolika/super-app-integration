@@ -111,6 +111,14 @@ export async function prepareDraftPayload(
   return payload;
 }
 
+/** The package archive could not be stored in MinIO, so the mini app was not submitted. */
+export class ArchiveUploadError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ArchiveUploadError';
+  }
+}
+
 export async function prepareSubmitPayload(
   formData: Partial<CreateMiniAppDto>,
   pendingArchiveFile: File | null,
@@ -158,9 +166,15 @@ export async function prepareSubmitPayload(
           packageUrl: uploadRes.packageUrl,
           archiveChecksum: uploadRes.sha256 || payload.integrationConfigFlutter?.archiveChecksum,
         };
+      } else {
+        throw new Error('the server did not return where the archive was stored');
       }
     } catch (err) {
+      // Never submit without the archive: the review would then look for the package in
+      // Nexus and fail with "not found", although the developer did attach it.
       console.error('Failed to upload archive to MinIO on submit:', err);
+      const reason = err instanceof Error && err.message ? `: ${err.message}` : '';
+      throw new ArchiveUploadError(`The package archive could not be uploaded${reason}. Please try submitting again.`);
     }
   }
 

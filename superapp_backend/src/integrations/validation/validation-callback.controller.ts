@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { CallbackTokenGuard } from '../release-assembly/callback-token.guard';
 import { StorageService } from '../../storage/storage.service';
+import { ScannedArtifactPublisherService } from './scanned-artifact-publisher.service';
 import {
   detectMalwareFindings,
   executeMalwarePurge,
@@ -69,6 +70,8 @@ export class ValidationCallbackController {
     private readonly mailService: MailService,
     @Optional()
     private readonly storageService?: StorageService,
+    @Optional()
+    private readonly scannedArtifactPublisher?: ScannedArtifactPublisherService,
   ) {}
 
   @Post('stage')
@@ -287,6 +290,11 @@ export class ValidationCallbackController {
           score: dto.score,
         },
       });
+
+      // Scan passed: the uploaded package / SDK goes from MinIO quarantine to Nexus.
+      // Last, after every save of `app` here (a later save would drop what it records),
+      // and not awaited, so Jenkins gets its answer without waiting for Nexus.
+      void this.scannedArtifactPublisher?.publishAfterPassedScan(app.id);
 
       return {
         success: true,
