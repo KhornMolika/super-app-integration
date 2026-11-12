@@ -37,6 +37,7 @@ function build(user: Record<string, unknown>) {
   const accessControl = {
     findByEmailWithPermissions: jest.fn().mockResolvedValue(user),
     updateUserStatus: jest.fn().mockResolvedValue(undefined),
+    recordEmailVerified: jest.fn().mockResolvedValue(undefined),
     updatePasswordDirectly: jest.fn().mockResolvedValue(undefined),
   };
   const mail = {
@@ -91,6 +92,8 @@ describe('Password reset for an unverified email', () => {
     const { svc, accessControl } = build({ id: 'u3', status: 'ACTIVE', role: { name: 'MA_DEVELOPER' } });
     await svc.verifyOtp({ email: EMAIL, code: '123456', purpose: 'PASSWORD_RESET' } as any);
     expect(accessControl.updateUserStatus).not.toHaveBeenCalled();
+    // a recovery code still proves the address, so the mobile sign-in accepts it
+    expect(accessControl.recordEmailVerified).toHaveBeenCalledWith('u3');
     const r = await svc.resetPassword({ resetToken: 'reset-token', newPassword: 'New-Strong-Pass-1!' } as any);
     expect(r).toMatchObject({ success: true, nextStatus: 'ACTIVE' });
   });

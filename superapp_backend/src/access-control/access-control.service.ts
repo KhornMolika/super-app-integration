@@ -9,7 +9,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, IsNull } from 'typeorm';
 import { Identity } from '../identities/entities/identity.entity';
 import { StaffProfile } from '../staff/entities/staff-profile.entity';
 import { Role } from './entities/role.entity';
@@ -115,6 +115,11 @@ export class AccessControlService {
       }
       if (identity.status !== 'ACTIVE') {
         identity.status = 'ACTIVE';
+        identityChanged = true;
+      }
+      // Official seed address: the mobile sign-in refuses an unverified email
+      if (!identity.emailVerifiedAt) {
+        identity.emailVerifiedAt = new Date();
         identityChanged = true;
       }
       if (identityChanged) {
@@ -229,6 +234,7 @@ export class AccessControlService {
       name: seedInfo.name,
       status: 'ACTIVE',
       passwordHash,
+      emailVerifiedAt: new Date(), // official seed address, configured by the platform owners
     });
     identity = await this.identityRepository.save(identity);
 
@@ -568,6 +574,10 @@ export class AccessControlService {
       telegramUsername: dto.telegramUsername || undefined,
       status: identityStatus,
       passwordHash,
+      // Provisioned by an administrator for this address: the user does not verify it
+      // again, and the mobile sign-in (which requires a verified email) accepts it.
+      // Self-registration (PENDING_EMAIL_VERIFICATION) still has to prove it with the code.
+      emailVerifiedAt: identityStatus === 'PENDING_EMAIL_VERIFICATION' ? null : new Date(),
     });
     const savedIdentity = await this.identityRepository.save(identity);
 
@@ -976,6 +986,18 @@ export class AccessControlService {
     identity.status = status;
     const saved = await this.identityRepository.save(identity);
     return this.findUserById(saved.id);
+  }
+
+  /**
+   * Records that this identity proved it owns its email (verification or recovery code).
+   * The mobile sign-in requires it (MOBILE_REQUIRE_EMAIL_VERIFICATION); the status alone
+   * is not enough. Keeps the first verification time.
+   */
+  async recordEmailVerified(id: string): Promise<void> {
+    await this.identityRepository.update(
+      { id, emailVerifiedAt: IsNull() },
+      { emailVerifiedAt: new Date() },
+    );
   }
 
   // --- Role Management ---

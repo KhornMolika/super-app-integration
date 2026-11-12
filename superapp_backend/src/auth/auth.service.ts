@@ -3,6 +3,7 @@ import {
   Logger,
   OnModuleInit,
   UnauthorizedException,
+  ForbiddenException,
   BadRequestException,
   NotFoundException,
   ServiceUnavailableException,
@@ -210,31 +211,7 @@ export class AuthService implements OnModuleInit {
       role.permissions?.forEach((p: any) => permissions.add(p.name));
     });
 
-    const rawRoles: string[] = userRoleList
-      .map((r: any) => (typeof r === 'string' ? r : r?.name))
-      .filter(Boolean);
-
-    // Standardize to the platform roles (SUPER_ADMIN, ADMIN, MA_DEVELOPER, STAFF)
-    const roles: string[] = Array.from(
-      new Set(
-        rawRoles
-          .map((r) => {
-            if (
-              r === 'MINI_APP_DEVELOPER' ||
-              r === 'DEVELOPER' ||
-              r === 'QA_TESTER' ||
-              r === 'AUDITOR'
-            ) {
-              return 'MA_DEVELOPER';
-            }
-            return r;
-          })
-          .filter((r) => ['SUPER_ADMIN', 'ADMIN', 'MA_DEVELOPER', 'STAFF'].includes(r)),
-      ),
-    );
-    // No known role means no role: never fall back to developer rights
-    // (STAFF and users without a role must not be able to build mini apps or
-    // request capabilities).
+    const roles = platformRoles(user);
 
     // If permissions not explicitly loaded from DB relations, supply standard defaults
     if (permissions.size === 0) {
@@ -438,6 +415,19 @@ export class AuthService implements OnModuleInit {
       return { success: false as const, message: 'Invalid email or password' };
     }
 
+    // Only after a correct password, so guessers learn nothing. STAFF and mobile-only
+    // accounts use the Super App; the Backoffice is for SUPER_ADMIN, ADMIN, MA_DEVELOPER.
+    if (!isSeedAccount && !hasBackofficeAccess(platformRoles(user))) {
+      this.logger.warn(
+        `[AUTH] Backoffice refused for ${rawEmail}: roles ${JSON.stringify(platformRoles(user))} have no Backoffice access`,
+      );
+      return {
+        success: false as const,
+        noBackofficeAccess: true,
+        message: NO_BACKOFFICE_ACCESS_MESSAGE,
+      };
+    }
+
     if (isSeedAccount) {
       user.status = 'ACTIVE';
     } else if (user.status === 'PENDING_EMAIL_VERIFICATION') {
@@ -597,6 +587,10 @@ export class AuthService implements OnModuleInit {
         'User account is deactivated or not found',
       );
     }
+    // A role change (e.g. to STAFF) ends Backoffice access at the next refresh
+    if (!OFFICIAL_SEEDS[String(payload.email || '').toLowerCase()] && !hasBackofficeAccess(platformRoles(user))) {
+      throw new UnauthorizedException(NO_BACKOFFICE_ACCESS_MESSAGE);
+    }
 
     const tokens = this.generateAuthTokens(user);
     return {
@@ -650,16 +644,16 @@ export class AuthService implements OnModuleInit {
       expirationDays > 0 ? expirationDays * 24 * 60 * 60 : 365 * 24 * 60 * 60;
     const expiresAt = new Date(Date.now() + expiresInSeconds * 1000);
 
-    const roleList = (user as any).roles || (user.role ? [user.role] : []);
-    const roles = roleList
-      .map((r: any) => (typeof r === 'string' ? r : r?.name))
-      .filter(Boolean);
+    // Same roles as the Backoffice session; never a developer fallback for an account
+    // without a Backoffice role (STAFF, consumers)
+    const roles = platformRoles(user);
+    if (!hasBackofficeAccess(roles)) throw new ForbiddenException(NO_BACKOFFICE_ACCESS_MESSAGE);
 
     const tokenPayload = {
       sub: user.id,
       email: user.email,
       name: user.name,
-      roles: roles.length > 0 ? roles : ['MINI_APP_DEVELOPER'],
+      roles,
       scopes,
       typ: BACK_OFFICE_TYP, // Permits authentication via general AuthGuards, NPM proxy, and Pub proxy
     };
@@ -1144,6 +1138,8 @@ export class AuthService implements OnModuleInit {
     user: { id: string; status?: string; role?: { name?: string } | null },
     rawEmail: string,
   ): Promise<string | undefined> {
+    // The code proved the address, whatever the status: the mobile sign-in checks this field
+    await this.accessControlService.recordEmailVerified(user.id);
     if (user.status !== 'PENDING_EMAIL_VERIFICATION') return user.status;
     const isSuperOrAdmin =
       user.role?.name === 'SUPER_ADMIN' ||
@@ -1157,6 +1153,40 @@ export class AuthService implements OnModuleInit {
     return nextStatus;
   }
 }
+
+/**
+ * The platform roles of a user (SUPER_ADMIN, ADMIN, MA_DEVELOPER, STAFF), with legacy
+ * developer role names mapped to MA_DEVELOPER. No known role means no role: never fall
+ * back to developer rights (STAFF and users without a role must not be able to build
+ * mini apps or request capabilities).
+ */
+export function platformRoles(user: any): string[] {
+  const list: any[] = user?.roles || (user?.role ? [user.role] : []);
+  return Array.from(
+    new Set(
+      list
+        .map((r: any) => (typeof r === 'string' ? r : r?.name))
+        .filter(Boolean)
+        .map((r: string) =>
+          ['MINI_APP_DEVELOPER', 'DEVELOPER', 'QA_TESTER', 'AUDITOR'].includes(r) ? 'MA_DEVELOPER' : r,
+        )
+        .filter((r: string) => ['SUPER_ADMIN', 'ADMIN', 'MA_DEVELOPER', 'STAFF'].includes(r)),
+    ),
+  );
+}
+
+/**
+ * Roles that may use the Backoffice. Every account (STAFF, consumers too) can sign in to
+ * the mobile Super App; only these can sign in here.
+ */
+export const BACKOFFICE_ROLES = ['SUPER_ADMIN', 'ADMIN', 'MA_DEVELOPER'] as const;
+
+export function hasBackofficeAccess(roles: readonly string[] | undefined | null): boolean {
+  return (roles || []).some((r) => (BACKOFFICE_ROLES as readonly string[]).includes(r));
+}
+
+export const NO_BACKOFFICE_ACCESS_MESSAGE =
+  'This account cannot use the Backoffice. Sign in with the FSA Super App on your phone instead.';
 
 /**
  * Public shape of a developer / personal access token. An explicit allowlist:

@@ -530,6 +530,9 @@ export class SeederService implements OnApplicationBootstrap {
           name: acc.name,
           status: 'ACTIVE',
           passwordHash: defaultPasswordHash,
+          // Official addresses are configured here by the platform owners, not self-registered:
+          // without this the mobile sign-in refuses them (MOBILE_REQUIRE_EMAIL_VERIFICATION)
+          emailVerifiedAt: new Date(),
         });
         identity = await this.identityRepository.save(identity);
 
@@ -561,6 +564,11 @@ export class SeederService implements OnApplicationBootstrap {
         }
         if (identity.status !== 'ACTIVE') {
           identity.status = 'ACTIVE';
+          changed = true;
+        }
+        // Accounts seeded before this was set: the mobile sign-in refuses an unverified email
+        if (!identity.emailVerifiedAt) {
+          identity.emailVerifiedAt = new Date();
           changed = true;
         }
         if (identity.name !== acc.name) {

@@ -63,6 +63,7 @@ describe('AuthService.verifyOtp EMAIL_VERIFICATION nextStatus', () => {
     const accessControl = {
       findByEmailWithPermissions: jest.fn().mockResolvedValue(user),
       updateUserStatus: jest.fn().mockResolvedValue(undefined),
+      recordEmailVerified: jest.fn().mockResolvedValue(undefined),
     };
     const svc = new AuthService(
       new JwtService({}),
@@ -85,6 +86,8 @@ describe('AuthService.verifyOtp EMAIL_VERIFICATION nextStatus', () => {
       purpose: 'EMAIL_VERIFICATION',
     } as any);
     expect(accessControl.updateUserStatus).toHaveBeenCalledWith('u1', 'PENDING_APPROVAL');
+    // the mobile sign-in checks emailVerifiedAt, not the status
+    expect(accessControl.recordEmailVerified).toHaveBeenCalledWith('u1');
     expect(r).toMatchObject({ success: true, nextStatus: 'PENDING_APPROVAL' });
   });
 

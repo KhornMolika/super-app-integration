@@ -38,7 +38,7 @@ describe('AuthService / JwtAuthGuard', () => {
   };
   const backOffice = (opts: any = {}) =>
     jwt.sign(
-      { sub: 1, typ: 'back_office' },
+      { sub: 1, typ: 'back_office', roles: ['ADMIN'] },
       {
         privateKey: (svc as any).privateKey,
         algorithm: 'RS256',
@@ -199,7 +199,7 @@ describe('AuthService / JwtAuthGuard', () => {
         name: 'A',
         isActive: true,
         status: 'ACTIVE',
-        roles: [{ name: 'r', permissions: [{ name: 'p' }] }],
+        roles: [{ name: 'ADMIN', permissions: [{ name: 'p' }] }],
       }),
       // the profile never carries the hash; login fetches it separately
       getPasswordHash: async () => passwordHash,

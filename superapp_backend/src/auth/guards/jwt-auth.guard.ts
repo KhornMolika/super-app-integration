@@ -11,6 +11,8 @@ import {
   BACK_OFFICE_TYP,
   END_USER_AUDIENCE,
   END_USER_TYP,
+  hasBackofficeAccess,
+  platformRoles,
 } from '../auth.service';
 
 /** Back-office guard: allowlist (typ=back_office) plus end-user denylist, verified by signature. */
@@ -42,6 +44,11 @@ export class JwtAuthGuard implements CanActivate {
     const aud = Array.isArray(payload?.aud) ? payload.aud : [payload?.aud];
     if (payload?.typ === END_USER_TYP || aud.includes(END_USER_AUDIENCE)) {
       this.logger.warn(`Refused ${where}: mobile user token used on a back-office route (user ${payload?.sub})`);
+      throw new UnauthorizedException();
+    }
+    // Also tokens issued before the Backoffice was limited to these roles (e.g. STAFF)
+    if (!hasBackofficeAccess(platformRoles({ roles: payload?.roles }))) {
+      this.logger.warn(`Refused ${where}: roles ${JSON.stringify(payload?.roles ?? [])} have no Backoffice access (user ${payload?.sub})`);
       throw new UnauthorizedException();
     }
     request['user'] = payload;
