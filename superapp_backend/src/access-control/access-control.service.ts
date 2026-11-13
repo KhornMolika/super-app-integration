@@ -1,5 +1,9 @@
 import { randomBytes } from 'crypto';
-import { isPlatformAdmin } from './helpers/platform-admin.helper';
+import {
+  canActInOrg,
+  isPlatformAdmin,
+  requesterOrgId,
+} from './helpers/platform-admin.helper';
 import {
   Injectable,
   NotFoundException,
@@ -390,19 +394,15 @@ export class AccessControlService {
       .createQueryBuilder('ident')
       .leftJoin('ident.staffProfile', 'staffProfile');
 
-    const userPerms = new Set<string>(
-      Array.isArray(requester?.permissions) ? requester.permissions : [],
-    );
-    const isSuperOrAdmin = isPlatformAdmin(requester);
-
-    if (
-      !userPerms.has('user:read') &&
-      !isSuperOrAdmin &&
-      requester?.organizationId
-    ) {
-      qb.andWhere('staffProfile.organizationId = :orgId', {
-        orgId: requester.organizationId,
-      });
+    // SUPER_ADMIN counts every user; anyone else (organization admins
+    // included) only their own organization, and nothing without one
+    if (requester !== undefined && !isPlatformAdmin(requester)) {
+      const orgId = requesterOrgId(requester);
+      if (orgId) {
+        qb.andWhere('staffProfile.organizationId = :orgId', { orgId });
+      } else {
+        qb.andWhere('1 = 0');
+      }
     }
 
     const rawCounts = await qb
@@ -441,6 +441,35 @@ export class AccessControlService {
     }
 
     return { total, active, pending, unverified, inactive };
+  }
+
+  /**
+   * Throws 404 unless the requester may see or manage user `id`: SUPER_ADMIN
+   * any user, anyone else only users of their own organization. 404 rather than
+   * 403 so other organizations' user ids are not confirmed to exist.
+   * No requester = internal call (seeder, registration): allowed.
+   */
+  async assertUserInScope(id: string, requester?: any): Promise<void> {
+    if (!requester || isPlatformAdmin(requester)) return;
+    const profile = await this.staffProfileRepository.findOne({
+      where: { identityId: id },
+    });
+    if (!canActInOrg(requester, profile?.organizationId)) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+  }
+
+  /**
+   * An organization admin may only place users in their own organization;
+   * only SUPER_ADMIN may move a user to another organization.
+   */
+  private assertOrgAssignable(targetOrgId: string | null, requester?: any) {
+    if (!requester || isPlatformAdmin(requester)) return;
+    if (!targetOrgId || targetOrgId !== requesterOrgId(requester)) {
+      throw new ForbiddenException(
+        'You can only assign users to your own organization.',
+      );
+    }
   }
 
   async findUserById(id: string): Promise<FormattedUserResponse> {
@@ -559,6 +588,7 @@ export class AccessControlService {
         `Organization with ID '${targetOrgId}' not found.`,
       );
     }
+    this.assertOrgAssignable(targetOrgId, requester);
 
     const identityStatus =
       dto.status ||
@@ -622,6 +652,7 @@ export class AccessControlService {
         requester.sub === id ||
         (requester.email &&
           requester.email.toLowerCase() === identity.email.toLowerCase()));
+    if (!isSelf) await this.assertUserInScope(id, requester);
 
     let staffProfile = identity.staffProfile;
     const targetRoles =
@@ -726,6 +757,10 @@ export class AccessControlService {
         dto.organizationId && dto.organizationId.trim()
           ? dto.organizationId.trim()
           : null;
+      // Moving a user (yourself included) to another organization: SUPER_ADMIN only
+      if (targetOrgId !== (staffProfile.organizationId ?? null)) {
+        this.assertOrgAssignable(targetOrgId, requester);
+      }
       staffProfile.organizationId = targetOrgId as any;
       if (targetOrgId) {
         const orgRepo =
@@ -945,6 +980,7 @@ export class AccessControlService {
         'Self-deletion guard: You cannot delete your own account.',
       );
     }
+    await this.assertUserInScope(id, requester);
 
     await this.identityRepository.remove(identity);
     return {

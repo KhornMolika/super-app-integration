@@ -8,6 +8,7 @@ import {
   Query,
   NotFoundException,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import { AuditService } from './audit.service';
 import { AuditLog } from './entities/audit-log.entity';
@@ -21,13 +22,13 @@ export class AuditController {
   constructor(private readonly auditService: AuditService) {}
 
   @Get()
-  async findAll(@Query() query: QueryAuditLogDto) {
-    return this.auditService.findAll(query);
+  async findAll(@Query() query: QueryAuditLogDto, @Req() req: any) {
+    return this.auditService.findAll(query, req?.user);
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string): Promise<AuditLog> {
-    const log = await this.auditService.findOne(id);
+  async findOne(@Param('id') id: string, @Req() req: any): Promise<AuditLog> {
+    const log = await this.auditService.findOne(id, req?.user);
     if (!log) {
       throw new NotFoundException(`Audit log ${id} not found`);
     }

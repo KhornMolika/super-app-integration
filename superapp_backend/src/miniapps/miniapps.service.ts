@@ -11,7 +11,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MiniApp } from './entities/miniapp.entity';
 import { MiniAppIssue } from './entities/miniapp-issue.entity';
-import { MiniAppCollaborator } from './entities/miniapp-collaborator.entity';
+import {
+  CollaboratorRole,
+  MiniAppCollaborator,
+} from './entities/miniapp-collaborator.entity';
 import { MiniAppVersion } from './entities/miniapp-version.entity';
 import { MiniAppBuild } from './entities/miniapp-build.entity';
 import { MiniAppLegal } from './entities/miniapp-legal.entity';
@@ -47,6 +50,14 @@ import {
   PaginationQueryDto,
 } from '../common/dto/pagination-query.dto';
 import { maskMiniAppCredentials } from './helpers/flutter-credential.helper';
+import {
+  AccessSubject,
+  isSuperAdmin,
+  scopeMiniAppQuery,
+  subjectId,
+} from './access/miniapp-access.policy';
+import { StaffProfile } from '../staff/entities/staff-profile.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 import {
   PackagePublishError,
   ScannedArtifactPublisherService,
@@ -96,6 +107,8 @@ export class MiniappsService implements OnApplicationBootstrap {
     private retirementHelper?: MiniappRetirementHelper,
     @Optional()
     private artifactPublisher?: ScannedArtifactPublisherService,
+    @Optional()
+    private notificationsService?: NotificationsService,
   ) {}
 
   /**
@@ -201,7 +214,12 @@ export class MiniappsService implements OnApplicationBootstrap {
     );
   }
 
-  async update(id: string, data: Partial<MiniApp>, actorId?: string) {
+  async update(
+    id: string,
+    data: Partial<MiniApp>,
+    actorId?: string,
+    options: { lockOwnership?: boolean } = {},
+  ) {
     const existing = await this.findOne(id);
     if (!existing) throw new BadRequestException('App not found');
     return this.miniappMutationHelper.update(
@@ -210,6 +228,7 @@ export class MiniappsService implements OnApplicationBootstrap {
       actorId,
       (mId, aId, aType, t, d, aAction, oVal, nVal) =>
         this.logActivity(mId, aId, aType, t, d, aAction, oVal, nVal),
+      options,
     );
   }
 
@@ -223,14 +242,25 @@ export class MiniappsService implements OnApplicationBootstrap {
     );
   }
 
+  /**
+   * Issues follow their app's visibility. Issues whose app is gone (only
+   * metadata left) are shown to SUPER_ADMIN only, hence the inner join for others.
+   */
+  private issueQuery(user?: AccessSubject) {
+    const qb = this.issueRepository.createQueryBuilder('issue');
+    return isSuperAdmin(user)
+      ? qb.leftJoinAndSelect('issue.miniApp', 'miniApp')
+      : qb.innerJoinAndSelect('issue.miniApp', 'miniApp');
+  }
+
   async findAllIssues(
     query?: QueryIssuesDto,
+    user?: AccessSubject,
   ): Promise<PaginatedResult<any> | any[]> {
     if (!query) {
-      const issues = await this.issueRepository.find({
-        relations: { miniApp: true },
-        order: { createdAt: 'DESC' },
-      });
+      const listQb = this.issueQuery(user).orderBy('issue.createdAt', 'DESC');
+      if (!scopeMiniAppQuery(listQb, 'miniApp', user)) return [];
+      const issues = await listQb.getMany();
 
       return issues.map((issue) => {
         let miniAppName = issue.miniApp?.name || 'Unknown MiniApp';
@@ -261,9 +291,10 @@ export class MiniappsService implements OnApplicationBootstrap {
       sortOrder = SortOrder.DESC,
     } = query;
 
-    const qb = this.issueRepository
-      .createQueryBuilder('issue')
-      .leftJoinAndSelect('issue.miniApp', 'miniApp');
+    const qb = this.issueQuery(user);
+    if (!scopeMiniAppQuery(qb, 'miniApp', user)) {
+      return createPaginatedResponse([], 0, page, limit);
+    }
 
     if (severity && severity !== 'ALL') {
       qb.andWhere('issue.severity = :severity', { severity });
@@ -342,11 +373,29 @@ export class MiniappsService implements OnApplicationBootstrap {
   async addCollaborator(miniAppId: string, userId: string, role: any) {
     // Both are FK targets: return 404 rather than a foreign-key violation (500)
     const manager = this.collaboratorRepository.manager;
-    if (!(await manager.exists(MiniApp, { where: { id: miniAppId } }))) {
+    const app = await manager.findOne(MiniApp, { where: { id: miniAppId } });
+    if (!app) {
       throw new NotFoundException(`MiniApp ${miniAppId} not found`);
     }
     if (!(await manager.exists(Identity, { where: { id: userId } }))) {
       throw new NotFoundException(`User ${userId} not found`);
+    }
+    if (app.ownerId === userId) {
+      throw new BadRequestException(
+        'The owner already has full access and cannot be added as a collaborator.',
+      );
+    }
+    // Collaboration stays inside the app's organization
+    const profile = await manager.findOne(StaffProfile, {
+      where: { identityId: userId },
+    });
+    if (
+      !profile?.organizationId ||
+      profile.organizationId !== app.organizationId
+    ) {
+      throw new BadRequestException(
+        "A collaborator must belong to the MiniApp's organization.",
+      );
     }
     const existing = await this.collaboratorRepository.findOne({
       where: { miniAppId, userId },
@@ -365,6 +414,115 @@ export class MiniappsService implements OnApplicationBootstrap {
 
   async removeCollaborator(miniAppId: string, userId: string) {
     await this.collaboratorRepository.delete({ miniAppId, userId });
+  }
+
+  /**
+   * Hands an app to another member of its organization. Who may call it (the
+   * owner, an admin of the app's organization, a Super Admin) is checked by the
+   * controller. The new owner must be an active MA_DEVELOPER or ADMIN of the
+   * app's organization; the organization itself never changes here.
+   *
+   * The previous owner stays on as a MAINTAINER collaborator unless
+   * `keepPreviousOwner` is false; a collaborator row the new owner held is
+   * dropped (owning covers it).
+   */
+  async transferOwnership(
+    id: string,
+    newOwnerId: string,
+    actor: { id?: string; name?: string },
+    keepPreviousOwner = true,
+  ): Promise<MiniApp> {
+    const manager = this.collaboratorRepository.manager;
+    const app = await manager.findOne(MiniApp, { where: { id } });
+    if (!app) throw new NotFoundException('MiniApp not found');
+    if (app.ownerId === newOwnerId) {
+      throw new BadRequestException('That user already owns this MiniApp.');
+    }
+
+    const target = await manager.findOne(Identity, {
+      where: { id: newOwnerId },
+      relations: { staffProfile: { role: true } },
+    });
+    const profile = target?.staffProfile;
+    if (!target || !profile || profile.organizationId !== app.organizationId) {
+      throw new BadRequestException(
+        "The new owner must be a member of the MiniApp's organization.",
+      );
+    }
+    const role = profile.role?.name;
+    if (role !== 'MA_DEVELOPER' && role !== 'ADMIN') {
+      throw new BadRequestException(
+        'The new owner must be a mini app developer or an organization admin.',
+      );
+    }
+    if (target.status !== 'ACTIVE') {
+      throw new BadRequestException('The new owner account is not active.');
+    }
+
+    const previousOwnerId = app.ownerId || null;
+    await manager.transaction(async (tx) => {
+      await tx.update(MiniApp, { id }, { ownerId: newOwnerId });
+      await tx.delete(MiniAppCollaborator, {
+        miniAppId: id,
+        userId: newOwnerId,
+      });
+      if (keepPreviousOwner && previousOwnerId) {
+        // Only while they are still in the app's organization (the policy would
+        // ignore the row otherwise)
+        const prevProfile = await tx.findOne(StaffProfile, {
+          where: { identityId: previousOwnerId },
+        });
+        if (prevProfile?.organizationId === app.organizationId) {
+          const existing = await tx.findOne(MiniAppCollaborator, {
+            where: { miniAppId: id, userId: previousOwnerId },
+          });
+          await tx.save(MiniAppCollaborator, {
+            ...(existing ?? {}),
+            miniAppId: id,
+            userId: previousOwnerId,
+            role: CollaboratorRole.MAINTAINER,
+          });
+        }
+      }
+    });
+
+    const label = app.name || app.appId;
+    await this.logActivity(
+      id,
+      actor.id || 'system',
+      'OWNERSHIP_TRANSFERRED',
+      'Ownership transferred',
+      `${actor.name || 'An admin'} transferred "${label}" to ${target.name || target.email}`,
+      'MINIAPP_OWNERSHIP_TRANSFERRED',
+      { ownerId: previousOwnerId },
+      { ownerId: newOwnerId, previousOwnerKept: keepPreviousOwner },
+    );
+    try {
+      await this.notificationsService?.createNotification(
+        newOwnerId,
+        'You now own a MiniApp',
+        `"${label}" was transferred to you by ${actor.name || 'an admin'}.`,
+        'MINIAPP_OWNERSHIP_TRANSFERRED',
+        id,
+      );
+      if (previousOwnerId && previousOwnerId !== actor.id) {
+        await this.notificationsService?.createNotification(
+          previousOwnerId,
+          'MiniApp ownership transferred',
+          `"${label}" now belongs to ${target.name || target.email}` +
+            (keepPreviousOwner ? '; you stay on as a maintainer.' : '.'),
+          'MINIAPP_OWNERSHIP_TRANSFERRED',
+          id,
+        );
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Ownership transfer notification failed: ${(err as Error).message}`,
+      );
+    }
+
+    const updated = await this.findOne(id);
+    return updated ?? app;
   }
 
   async checkExists(appId?: string, name?: string, excludeId?: string) {
@@ -409,12 +567,6 @@ export class MiniappsService implements OnApplicationBootstrap {
     roles?: string[],
     user?: any,
   ): Promise<PaginatedResult<MiniApp> | MiniApp[]> {
-    const isElevated =
-      roles?.includes('SUPER_ADMIN') ||
-      roles?.includes('ADMIN') ||
-      roles?.includes('SECURITY_ADMIN') ||
-      roles?.includes('COMPLIANCE_OFFICER');
-
     const isMineRequested =
       typeof queryOrOwnerId === 'object' &&
       (queryOrOwnerId?.mine === true || queryOrOwnerId?.mine === 'true');
@@ -449,26 +601,25 @@ export class MiniappsService implements OnApplicationBootstrap {
       .leftJoinAndSelect('app.issues', 'issues')
       .leftJoinAndSelect('app.owner', 'owner');
 
-    // Agency / Ownership Scoping
-    if (!isElevated || isMineRequested) {
-      const ownerId = user?.sub || user?.id;
-      const ownerEmail = user?.email;
-      const userOrgId = user?.organizationId;
+    // Access scoping (miniapps/access/miniapp-access.policy.ts): SUPER_ADMIN all,
+    // ADMIN their organization, everyone else owned + collaborated apps.
+    if (
+      !user ||
+      !scopeMiniAppQuery(qb, 'app', { ...user, roles: roles ?? user.roles })
+    ) {
+      return createPaginatedResponse([], 0, page, limit);
+    }
 
-      if (ownerId || ownerEmail || userOrgId) {
-        qb.andWhere(
-          '(app.ownerId = :ownerId OR (owner.email IS NOT NULL AND LOWER(owner.email) = LOWER(:ownerEmail))' +
-            (userOrgId ? ' OR app.organizationId = :userOrgId' : '') +
-            ')',
-          {
-            ownerId: ownerId || '',
-            ownerEmail: ownerEmail || '',
-            userOrgId: userOrgId || '',
-          },
-        );
-      } else {
-        return createPaginatedResponse([], 0, page, limit);
-      }
+    // "My apps": owned or collaborated, whatever the caller's role
+    if (isMineRequested) {
+      const me = subjectId(user);
+      if (!me) return createPaginatedResponse([], 0, page, limit);
+      qb.andWhere(
+        '(app.ownerId = :mineUserId OR EXISTS (' +
+          'SELECT 1 FROM "mini_app_collaborators" mine_c ' +
+          'WHERE mine_c."miniAppId" = app.id AND mine_c."identityId" = :mineUserId))',
+        { mineUserId: me },
+      );
     }
 
     // Search: name, description, appId, tagline
@@ -968,7 +1119,7 @@ export class MiniappsService implements OnApplicationBootstrap {
   ) {
     const app = await this.findOne(id);
     if (!app) throw new NotFoundException('MiniApp not found');
-    const result = this.artifactDistributionHelper.getVersionHistory(app, user);
+    const result = this.artifactDistributionHelper.getVersionHistory(app);
 
     const allVersions: any[] = result.versions || [];
     const page = Math.max(1, query.page || 1);
@@ -1005,7 +1156,7 @@ export class MiniappsService implements OnApplicationBootstrap {
     miniAppId: string,
     artifactType: 'test' | 'release',
     versionQuery?: string,
-    user?: any,
+    callerHasAccess?: boolean,
     inviteToken?: string,
     res?: any,
   ) {
@@ -1015,7 +1166,7 @@ export class MiniappsService implements OnApplicationBootstrap {
       app,
       artifactType,
       versionQuery,
-      user,
+      callerHasAccess,
       inviteToken,
       res,
     );

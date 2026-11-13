@@ -31,6 +31,13 @@ describe('AddCollaboratorDto', () => {
     expect(errors(AddCollaboratorDto, { userId })).toEqual([]);
     expect(errors(AddCollaboratorDto, { userId, role: 'OWNER' }).join()).toMatch(/role must be one of/);
   });
+
+  it('maps the legacy ADMIN role to MAINTAINER', () => {
+    const userId = 'b0000000-0000-4000-8000-000000000001';
+    const dto = plainToInstance(AddCollaboratorDto, { userId, role: 'ADMIN' });
+    expect(dto.role).toBe('MAINTAINER');
+    expect(errors(AddCollaboratorDto, { userId, role: 'MAINTAINER' })).toEqual([]);
+  });
 });
 
 describe('Nexus DTOs', () => {

@@ -77,7 +77,6 @@ export function effectivePermissions(user: any): Set<string> | null {
       'issue:resolve',
       'permission_proposal:read',
       'super_app:read',
-      'super_app:manage',
       'user:read',
       'user:manage',
       'role:read',
@@ -85,7 +84,6 @@ export function effectivePermissions(user: any): Set<string> | null {
       'organization:read',
       'organization:manage',
       'audit_log:read',
-      'settings:manage',
     ].forEach((p) => userPerms.add(p));
   }
 

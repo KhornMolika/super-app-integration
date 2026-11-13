@@ -150,17 +150,17 @@ export function CollaboratorsSection({
                 <div className="flex items-center gap-2.5 shrink-0">
                   <span
                     className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-1 ${
-                      collab.role === 'ADMIN'
+                      (collab.role === 'MAINTAINER' || collab.role === 'ADMIN')
                         ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
                         : collab.role === 'VIEWER'
                         ? 'bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800'
                         : 'bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300 border border-sky-200 dark:border-sky-800'
                     }`}
                   >
-                    {collab.role === 'ADMIN' && <ShieldIcon className="w-2.5 h-2.5" />}
+                    {(collab.role === 'MAINTAINER' || collab.role === 'ADMIN') && <ShieldIcon className="w-2.5 h-2.5" />}
                     {collab.role === 'DEVELOPER' && <CodeIcon className="w-2.5 h-2.5" />}
                     {collab.role === 'VIEWER' && <EyeIcon className="w-2.5 h-2.5" />}
-                    <span>{collab.role || 'DEVELOPER'}</span>
+                    <span>{collab.role === 'ADMIN' ? 'MAINTAINER' : collab.role || 'DEVELOPER'}</span>
                   </span>
 
                   <button

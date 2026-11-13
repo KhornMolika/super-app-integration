@@ -31,6 +31,7 @@
         "setup:nexus:sdk": "bash ./scripts/setup-nexus-sdk-repositories.sh",
         "setup:callback-token": "bash ./scripts/setup-jenkins-callback-token.sh",
         "sync:jenkins": "node scripts/sync-jenkins-jobs.mjs",
+        "list:cross-org-collaborators": "node scripts/list-cross-org-collaborators.mjs",
         "build:apk": "powershell -ExecutionPolicy Bypass -File ./scripts/build-optimized-apk.ps1",
         "build:apk:hotspot": "powershell -ExecutionPolicy Bypass -File ./scripts/build-optimized-apk.ps1 -Target local",
         "build:apk:usb": "powershell -ExecutionPolicy Bypass -File ./scripts/build-optimized-apk.ps1 -Target usb",

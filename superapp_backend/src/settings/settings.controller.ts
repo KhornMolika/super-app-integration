@@ -59,9 +59,10 @@ export class SettingsController {
   @UseGuards(JwtAuthGuard)
   async getArtifactRetention(@Req() req: any) {
     const userRoles: string[] = req.user?.roles || [];
-    if (!userRoles.includes('SUPER_ADMIN') && !userRoles.includes('ADMIN')) {
+    // Platform storage across every organization: platform admin only
+    if (!userRoles.includes('SUPER_ADMIN')) {
       throw new ForbiddenException(
-        'Only Super Admin and Admin can access artifact retention settings',
+        'Only Super Admin can access artifact retention settings',
       );
     }
     const [policy, stats] = await Promise.all([

@@ -554,7 +554,21 @@ export class MiniappMutationHelper {
       oldVal?: any,
       newVal?: any,
     ) => Promise<void>,
+    options: { lockOwnership?: boolean } = {},
   ): Promise<MiniApp> {
+    // lockOwnership: the caller may not move the app to another organization or
+    // owner (everyone but SUPER_ADMIN). The organization is otherwise resolved
+    // from organization / category below.
+    if (options.lockOwnership) {
+      for (const key of [
+        'organizationId',
+        'organization',
+        'organizationCode',
+        'ownerId',
+      ]) {
+        delete data[key];
+      }
+    }
     const effectiveMethod = data.integrationMethod ?? existing.integrationMethod;
     const effectiveConfig =
       data.integrationConfig ??
@@ -569,7 +583,9 @@ export class MiniappMutationHelper {
     this.assertWidgetSurvivesMethodSwitch(existing, data);
 
     delete data.status;
-    const orgInput = data.organization || data.category || undefined;
+    const orgInput = options.lockOwnership
+      ? undefined
+      : data.organization || data.category || undefined;
     if (data.category !== undefined) {
       data.category = await this.serviceCategory(data.category);
     }
@@ -1203,12 +1219,14 @@ export class MiniappMutationHelper {
       const roles = Array.isArray(user?.roles)
         ? user.roles
         : (user?.role ? [user.role] : []);
-      const isSuperAdmin = roles.includes('SUPER_ADMIN') || roles.includes('ADMIN');
+      // ADMIN here is an organization admin of this app's organization: the
+      // controller already required OWN access (MiniAppAccessService)
+      const isAdmin = roles.includes('SUPER_ADMIN') || roles.includes('ADMIN');
       const isOwner =
         (actorId && (existing.ownerId === actorId || (existing.owner as any)?.id === actorId)) ||
         (user?.sub && (existing.ownerId === user.sub || (existing.owner as any)?.id === user.sub));
 
-      if (!isSuperAdmin && !isOwner) {
+      if (!isAdmin && !isOwner) {
         throw new ForbiddenException(
           'You do not have permission to delete this MiniApp. Only SuperAdmin or the user who registered this MiniApp can delete it.',
         );

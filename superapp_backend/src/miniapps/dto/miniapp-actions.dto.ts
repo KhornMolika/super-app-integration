@@ -1,11 +1,13 @@
 import {
   IsArray,
+  IsBoolean,
   IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
   Matches,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { PG_UUID_PATTERN } from '../../common/utils/uuid.util';
 import { CollaboratorRole } from '../entities/miniapp-collaborator.entity';
 
@@ -71,8 +73,26 @@ export class AddCollaboratorDto {
   userId!: string;
 
   @IsOptional()
+  // Clients built before the rename still send ADMIN for the per-app maintainer
+  @Transform(({ value }) =>
+    typeof value === 'string' && value.toUpperCase() === 'ADMIN'
+      ? CollaboratorRole.MAINTAINER
+      : value,
+  )
   @IsEnum(CollaboratorRole, {
     message: `role must be one of: ${Object.values(CollaboratorRole).join(', ')}`,
   })
   role?: CollaboratorRole;
+}
+
+export class TransferOwnershipDto {
+  @Matches(PG_UUID_PATTERN, {
+    message: 'newOwnerId must be a valid identity UUID',
+  })
+  newOwnerId!: string;
+
+  /** The previous owner stays on as a MAINTAINER collaborator (default true). */
+  @IsOptional()
+  @IsBoolean()
+  keepPreviousOwner?: boolean;
 }

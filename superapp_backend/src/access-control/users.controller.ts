@@ -87,20 +87,16 @@ export class UsersController {
   @RequirePermissions('organization:read')
   async findAll(@Query() query: QueryUsersDto, @Req() req: any) {
     const requester = req?.user;
-    const userPerms = new Set<string>(
-      Array.isArray(requester?.permissions) ? requester.permissions : [],
-    );
-    const isSuperOrAdmin = isPlatformAdmin(requester);
-
-    // If requester does not have user:read, enforce their own organizationId
-    if (!userPerms.has('user:read') && !isSuperOrAdmin) {
-      const orgId = requester?.organizationId || query.organizationId;
+    // SUPER_ADMIN lists every organization; anyone else (organization admins
+    // included) only their own, whatever organizationId the query asks for
+    if (!isPlatformAdmin(requester)) {
+      const orgId = requester?.organizationId;
       if (!orgId) {
         throw new ForbiddenException(
           'You must belong to an organization to list members',
         );
       }
-      query.organizationId = requester?.organizationId || orgId;
+      query.organizationId = orgId;
     }
 
     return this.accessControlService.findAllUsers(query);
@@ -118,11 +114,10 @@ export class UsersController {
     const isSelf = requester && (requester.id === id || requester.sub === id);
     if (!isSelf) {
       const userPerms = new Set<string>(requester?.permissions || []);
-      const isSuperOrAdmin = isPlatformAdmin(requester);
-
-      if (!userPerms.has('user:read') && !isSuperOrAdmin) {
+      if (!userPerms.has('user:read') && !isPlatformAdmin(requester)) {
         throw new ForbiddenException('Insufficient permissions');
       }
+      await this.accessControlService.assertUserInScope(id, requester);
     }
     return this.accessControlService.findUserById(id);
   }
@@ -140,6 +135,11 @@ export class UsersController {
     @Req() req: any,
   ) {
     const requester = req?.user;
+    const isSelfById =
+      requester && (requester.id === id || requester.sub === id);
+    if (!isSelfById) {
+      await this.accessControlService.assertUserInScope(id, requester);
+    }
     const targetUser = await this.accessControlService.findUserById(id);
     const isSelf =
       requester &&
@@ -150,9 +150,7 @@ export class UsersController {
 
     if (!isSelf) {
       const userPerms = new Set<string>(requester?.permissions || []);
-      const isSuperOrAdmin = isPlatformAdmin(requester);
-
-      if (!userPerms.has('user:manage') && !isSuperOrAdmin) {
+      if (!userPerms.has('user:manage') && !isPlatformAdmin(requester)) {
         throw new ForbiddenException('Insufficient permissions');
       }
     }
@@ -217,12 +215,11 @@ export class UsersController {
     if (isSelf) return;
 
     const userPerms = new Set<string>(requester?.permissions || []);
-    const isSuperOrAdmin = isPlatformAdmin(requester);
-
-    if (!userPerms.has('user:manage') && !isSuperOrAdmin) {
+    if (!userPerms.has('user:manage') && !isPlatformAdmin(requester)) {
       throw new ForbiddenException(
         'Insufficient permissions to manage user media',
       );
     }
+    await this.accessControlService.assertUserInScope(targetId, requester);
   }
 }

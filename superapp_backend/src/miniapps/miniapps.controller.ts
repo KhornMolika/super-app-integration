@@ -41,8 +41,16 @@ import {
   DetectPermissionsDto,
   RescanDto,
   AddCollaboratorDto,
+  TransferOwnershipDto,
 } from './dto/miniapp-actions.dto';
 import { CollaboratorRole } from './entities/miniapp-collaborator.entity';
+import { MiniAppAccessService } from './access/miniapp-access.service';
+import {
+  MiniAppAccess,
+  capabilityTypes,
+  isSuperAdmin,
+  subjectId,
+} from './access/miniapp-access.policy';
 import { CapabilityGateService } from '../capabilities/capability-gate.service';
 import { QueryMiniAppsDto } from './dto/query-miniapps.dto';
 import { QueryIssuesDto } from './dto/query-issues.dto';
@@ -68,13 +76,35 @@ export class MiniappsController {
   constructor(
     private readonly miniappService: MiniappsService,
     private readonly urlProbeHelper: UrlProbeHelper,
+    private readonly access: MiniAppAccessService,
     @Optional() private readonly capabilityGate?: CapabilityGateService,
   ) {}
 
+  /** Loads the app and throws 404/403 unless the caller holds `level` on it. */
+  private require(id: string, req: any, level: MiniAppAccess) {
+    return this.access.assert(id, req?.user, level);
+  }
+
+  /** True when the caller holds VIEW; false lets an invite token decide. */
+  private async canView(id: string, req: any): Promise<boolean> {
+    try {
+      await this.require(id, req, MiniAppAccess.VIEW);
+      return true;
+    } catch (err) {
+      if (
+        err instanceof NotFoundException ||
+        err instanceof ForbiddenException
+      ) {
+        return false;
+      }
+      throw err;
+    }
+  }
+
   @Get('issues/all')
   @RequirePermissions('miniapp:read')
-  getAllIssues(@Query() query: QueryIssuesDto) {
-    return this.miniappService.findAllIssues(query);
+  getAllIssues(@Query() query: QueryIssuesDto, @Req() req: any) {
+    return this.miniappService.findAllIssues(query, req?.user);
   }
 
   private extractIntegrationConfig(dto: any): any {
@@ -277,9 +307,14 @@ export class MiniappsController {
   )
   async uploadArtifact(
     @UploadedFile() file: Express.Multer.File,
+    @Req() req: any,
     @Body('miniAppId') miniAppId?: string,
     @Body('version') version?: string,
   ) {
+    // An upload for an existing app needs EDIT on it; draft uploads belong to no app yet
+    if (miniAppId && miniAppId !== 'draft') {
+      await this.require(miniAppId, req, MiniAppAccess.EDIT);
+    }
     if (!file) {
       throw new BadRequestException(
         'Package archive file (.zip / .tar.gz) is required.',
@@ -299,10 +334,12 @@ export class MiniappsController {
 
   @Post(':id/verify-domain')
   @RequirePermissions('miniapp:update')
-  verifyDomain(
+  async verifyDomain(
     @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: any,
     @Body() body?: { productionUrl?: string },
   ) {
+    await this.require(id, req, MiniAppAccess.EDIT);
     return this.miniappService.verifyDomain(id, body?.productionUrl);
   }
 
@@ -312,123 +349,119 @@ export class MiniappsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Req() req: any,
   ) {
-    const app = await this.miniappService.findOne(id);
-    if (!app) throw new NotFoundException('MiniApp not found');
-
-    const user = req?.user;
-    const isElevated =
-      user?.roles?.includes('SUPER_ADMIN') || user?.roles?.includes('ADMIN');
-
-    // Step 2: Cross-Agency Strict Isolation
-    if (
-      !isElevated &&
-      user?.organizationId &&
-      app.organizationId &&
-      user.organizationId !== app.organizationId
-    ) {
-      throw new ForbiddenException(
-        "Access Denied: You cannot access another organization's MiniApp",
-      );
-    }
-
-    // Step 3: Sensitive Governance Gate (Option C: Only Lead Developer or SuperAdmin/Admin can submit for review)
-    const isLeadMaintainer = app.ownerId === (user?.sub || user?.id);
-    if (!isElevated && !isLeadMaintainer) {
-      throw new ForbiddenException(
-        'Only the Lead Developer (ownerId) or a SuperAdmin can submit releases or change availability',
-      );
-    }
-
+    // Owner, MAINTAINER collaborator, organization admin or Super Admin
+    await this.require(id, req, MiniAppAccess.MAINTAIN);
     return this.miniappService.submitForReview(id, req.user.sub);
   }
 
   @Post(':id/rescan')
   @RequirePermissions('miniapp:update')
-  rescan(
+  async rescan(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: RescanDto,
     @Req() req: any,
   ) {
+    await this.require(id, req, MiniAppAccess.EDIT);
     return this.miniappService.rescan(id, req.user?.sub, body?.securityChecks);
   }
 
   /** Publishes (or confirms) the scanned Flutter package in Nexus pub-hosted. */
   @Post(':id/publish-package')
   @RequirePermissions('miniapp:approve')
-  publishPackage(@Param('id', ParseUUIDPipe) id: string) {
+  async publishPackage(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: any,
+  ) {
+    await this.require(id, req, MiniAppAccess.ADMIN);
     return this.miniappService.publishPackageToNexus(id);
   }
 
   @Post(':id/cancel-validation')
   @RequirePermissions('miniapp:update')
-  cancelValidation(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+  async cancelValidation(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: any,
+  ) {
+    await this.require(id, req, MiniAppAccess.EDIT);
     return this.miniappService.cancelValidation(id, req.user?.sub);
   }
 
   @Post(':id/approve')
   @RequirePermissions('miniapp:approve')
-  approve(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+  async approve(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    await this.require(id, req, MiniAppAccess.ADMIN);
     return this.miniappService.approve(id, req.user.sub);
   }
 
   @Post(':id/codegen')
   @RequirePermissions('miniapp:approve')
-  rerunCodegen(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+  async rerunCodegen(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    await this.require(id, req, MiniAppAccess.ADMIN);
     return this.miniappService.rerunNativeSdkCodegen(id, req.user.sub);
   }
 
   @Post(':id/reject')
   @RequirePermissions('miniapp:reject')
-  reject(
+  async reject(
     @Param('id', ParseUUIDPipe) id: string,
     @Body('reason') reason: string,
     @Req() req: any,
   ) {
+    await this.require(id, req, MiniAppAccess.ADMIN);
     return this.miniappService.reject(id, reason, req.user.sub);
   }
 
   @Post(':id/request-changes')
   @RequirePermissions('miniapp:reject')
-  requestChanges(
+  async requestChanges(
     @Param('id', ParseUUIDPipe) id: string,
     @Body('reason') reason: string,
     @Req() req: any,
   ) {
+    await this.require(id, req, MiniAppAccess.ADMIN);
     return this.miniappService.requestChanges(id, reason, req.user.sub);
   }
 
   @Post(':id/start-testing')
   @RequirePermissions('miniapp:approve')
-  startTesting(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+  async startTesting(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    await this.require(id, req, MiniAppAccess.ADMIN);
     return this.miniappService.startTesting(id, req.user.sub);
   }
 
   /** TESTING -> TEST_PASSED: the test build works; the app can then be activated. */
   @Post(':id/pass-testing')
   @RequirePermissions('miniapp:approve')
-  passTesting(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+  async passTesting(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    await this.require(id, req, MiniAppAccess.ADMIN);
     return this.miniappService.passTesting(id, req.user.sub);
   }
 
   @Post(':id/activate')
   @RequirePermissions('miniapp:approve')
-  activate(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+  async activate(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    await this.require(id, req, MiniAppAccess.ADMIN);
     return this.miniappService.activate(id, req.user.sub);
   }
 
   @Post(':id/publish-revision')
   @RequirePermissions('miniapp:approve')
-  publishRevision(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+  async publishRevision(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: any,
+  ) {
+    await this.require(id, req, MiniAppAccess.ADMIN);
     return this.miniappService.publishRevision(id, req.user.sub);
   }
 
   @Post(':id/discard-revision')
   @RequirePermissions('miniapp:update')
-  discardRevision(
+  async discardRevision(
     @Param('id', ParseUUIDPipe) id: string,
     @Body('reason') reason: string,
     @Req() req: any,
   ) {
+    await this.require(id, req, MiniAppAccess.MAINTAIN);
     return this.miniappService.discardRevision(id, req.user.sub, reason);
   }
 
@@ -436,65 +469,76 @@ export class MiniappsController {
   // and restore: SUPER_ADMIN only (checked in MiniappRetirementHelper).
   @Post(':id/suspend')
   @RequirePermissions('miniapp:suspend')
-  suspend(
+  async suspend(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { reason?: string; requestArchive?: boolean },
     @Req() req: any,
   ) {
+    await this.require(id, req, MiniAppAccess.ADMIN);
     return this.miniappService.suspend(id, retirementActor(req), body ?? {});
   }
 
   @Post(':id/resume')
   @RequirePermissions('miniapp:suspend')
-  resume(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+  async resume(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    await this.require(id, req, MiniAppAccess.ADMIN);
     return this.miniappService.resume(id, retirementActor(req));
   }
 
   @Post(':id/request-archive')
   @RequirePermissions('miniapp:suspend')
-  requestArchive(
+  async requestArchive(
     @Param('id', ParseUUIDPipe) id: string,
     @Body('reason') reason: string,
     @Req() req: any,
   ) {
+    await this.require(id, req, MiniAppAccess.ADMIN);
     return this.miniappService.requestArchive(id, retirementActor(req), reason);
   }
 
   @Post(':id/archive')
   @RequirePermissions('miniapp:suspend')
-  archive(
+  async archive(
     @Param('id', ParseUUIDPipe) id: string,
     @Body('reason') reason: string,
     @Req() req: any,
   ) {
+    await this.require(id, req, MiniAppAccess.ADMIN);
     return this.miniappService.archive(id, retirementActor(req), reason);
   }
 
   @Post(':id/decline-archive')
   @RequirePermissions('miniapp:suspend')
-  declineArchive(
+  async declineArchive(
     @Param('id', ParseUUIDPipe) id: string,
     @Body('reason') reason: string,
     @Req() req: any,
   ) {
+    await this.require(id, req, MiniAppAccess.ADMIN);
     return this.miniappService.declineArchive(id, retirementActor(req), reason);
   }
 
   @Post(':id/restore')
   @RequirePermissions('miniapp:suspend')
-  restore(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+  async restore(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    await this.require(id, req, MiniAppAccess.ADMIN);
     return this.miniappService.restore(id, retirementActor(req));
   }
 
   @Get(':id/activities')
   @RequirePermissions('miniapp:read')
-  async getActivities(@Param('id', ParseUUIDPipe) id: string) {
+  async getActivities(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    await this.require(id, req, MiniAppAccess.VIEW);
     return this.miniappService.getActivities(id);
   }
 
   @Get(':id/collaborators')
   @RequirePermissions('miniapp:read')
-  async getCollaborators(@Param('id', ParseUUIDPipe) id: string) {
+  async getCollaborators(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: any,
+  ) {
+    await this.require(id, req, MiniAppAccess.VIEW);
     return this.miniappService.getCollaborators(id);
   }
 
@@ -503,7 +547,10 @@ export class MiniappsController {
   async addCollaborator(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: AddCollaboratorDto,
+    @Req() req: any,
   ) {
+    // The same-organization rule and the owner check live in the service
+    await this.require(id, req, MiniAppAccess.MAINTAIN);
     return this.miniappService.addCollaborator(
       id,
       body.userId,
@@ -516,36 +563,56 @@ export class MiniappsController {
   async removeCollaborator(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('userId', ParseUUIDPipe) userId: string,
+    @Req() req: any,
   ) {
+    // Anyone may leave an app they collaborate on; removing others needs MAINTAIN
+    const leaving = userId === subjectId(req?.user);
+    await this.require(
+      id,
+      req,
+      leaving ? MiniAppAccess.VIEW : MiniAppAccess.MAINTAIN,
+    );
     await this.miniappService.removeCollaborator(id, userId);
     return { success: true };
+  }
+
+  /**
+   * Hands the app to another active developer or admin of its organization.
+   * Owner, organization admin or Super Admin (OWN access). The organization
+   * never changes here.
+   */
+  @Post(':id/transfer-ownership')
+  @RequirePermissions('miniapp:update')
+  async transferOwnership(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: TransferOwnershipDto,
+    @Req() req: any,
+  ) {
+    await this.require(id, req, MiniAppAccess.OWN);
+    const updated = await this.miniappService.transferOwnership(
+      id,
+      body.newOwnerId,
+      {
+        id: subjectId(req?.user) || undefined,
+        name: req?.user?.name || req?.user?.email,
+      },
+      body.keepPreviousOwner !== false,
+    );
+    return maskMiniAppCredentials(updated);
   }
 
   @Get(':id')
   @RequirePermissions('miniapp:read')
   async findOne(@Param('id', ParseUUIDPipe) id: string, @Req() req?: any) {
+    const { level } = await this.require(id, req, MiniAppAccess.VIEW);
     const app = await this.miniappService.findOne(id);
     if (!app) throw new NotFoundException('MiniApp not found');
 
-    const user = req?.user;
-    const isElevated =
-      user?.roles?.includes('SUPER_ADMIN') ||
-      user?.roles?.includes('ADMIN') ||
-      user?.roles?.includes('SECURITY_ADMIN') ||
-      user?.roles?.includes('COMPLIANCE_OFFICER');
-
-    if (
-      !isElevated &&
-      user?.organizationId &&
-      app.organizationId &&
-      user.organizationId !== app.organizationId
-    ) {
-      throw new ForbiddenException(
-        "Access Denied: You cannot access another organization's MiniApp",
-      );
-    }
-
-    const masked = maskMiniAppCredentials(app);
+    // myAccess lets the Backoffice hide actions the caller cannot take
+    const masked = {
+      ...maskMiniAppCredentials(app),
+      myAccess: MiniAppAccess[level],
+    };
     // ADR-004 Section 5: which capabilities are disabled and whether it can launch
     return this.capabilityGate
       ? {
@@ -562,25 +629,24 @@ export class MiniappsController {
     @Body() updateData: UpdateMiniAppDto,
     @Req() req: any,
   ) {
-    const app = await this.miniappService.findOne(id);
-    if (!app) throw new NotFoundException('MiniApp not found');
-
     const user = req?.user;
-    const isElevated =
-      user?.roles?.includes('SUPER_ADMIN') ||
-      user?.roles?.includes('ADMIN') ||
-      user?.roles?.includes('SECURITY_ADMIN') ||
-      user?.roles?.includes('COMPLIANCE_OFFICER');
+    const { app, level } = await this.require(id, req, MiniAppAccess.EDIT);
 
-    if (
-      !isElevated &&
-      user?.organizationId &&
-      app.organizationId &&
-      user.organizationId !== app.organizationId
-    ) {
-      throw new ForbiddenException(
-        "Access Denied: You cannot access another organization's MiniApp",
+    // Changing the requested permissions needs MAINTAIN. DEVELOPER collaborators
+    // may re-send the current list, as the edit form does on every save.
+    const requested = updateData.permissions ?? updateData.capabilities;
+    if (requested !== undefined) {
+      const next = capabilityTypes(requested).join(',');
+      const revision = (app as any).pendingRevision;
+      const unchanged = [
+        app.capabilities,
+        revision?.capabilities,
+        revision?.permissions,
+      ].some(
+        (list) =>
+          list !== undefined && capabilityTypes(list).join(',') === next,
       );
+      if (!unchanged) this.access.check(level, MiniAppAccess.MAINTAIN);
     }
 
     const dataToSave = this.extractIntegrationConfig(updateData);
@@ -588,6 +654,8 @@ export class MiniappsController {
       id,
       dataToSave,
       user?.sub || user?.id,
+      // Only a Super Admin may move an app to another organization or owner
+      { lockOwnership: !isSuperAdmin(user) },
     );
     return maskMiniAppCredentials(updated);
   }
@@ -595,11 +663,12 @@ export class MiniappsController {
   // Owners may delete their own DRAFT/REJECTED apps; the helper checks owner or admin.
   @Delete(':id')
   @RequirePermissions('miniapp:update')
-  remove(
+  async remove(
     @Param('id', ParseUUIDPipe) id: string,
     @Query('confirm') confirm: string | undefined,
     @Req() req: any,
   ) {
+    await this.require(id, req, MiniAppAccess.OWN);
     return this.miniappService.remove(id, req.user?.sub, req.user, confirm);
   }
 
@@ -610,16 +679,19 @@ export class MiniappsController {
     @Req() req: any,
     @Query() query: PaginationQueryDto,
   ) {
+    await this.require(id, req, MiniAppAccess.VIEW);
     return this.miniappService.getVersionHistory(id, req.user, query);
   }
 
   @Get(':id/diff')
   @RequirePermissions('miniapp:read')
-  getDiff(
+  async getDiff(
     @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: any,
     @Query('baseVersion') baseVersion?: string,
     @Query('targetVersion') targetVersion?: string,
   ) {
+    await this.require(id, req, MiniAppAccess.VIEW);
     return this.miniappService.getDiff(id, baseVersion, targetVersion);
   }
 
@@ -631,6 +703,7 @@ export class MiniappsController {
     @Body('reason') reason: string,
     @Req() req: any,
   ) {
+    await this.require(id, req, MiniAppAccess.MAINTAIN);
     return this.miniappService.rollback(
       id,
       targetVersion,
@@ -646,6 +719,8 @@ export class MiniappsController {
     @Body('expiresIn') expiresIn: string,
     @Req() req: any,
   ) {
+    // An invite link hands download access to people outside the app's team
+    await this.require(id, req, MiniAppAccess.MAINTAIN);
     return this.miniappService.generateInviteToken(
       id,
       req.user,
@@ -665,7 +740,7 @@ export class MiniappsController {
       id,
       'test',
       version,
-      req.user,
+      await this.canView(id, req),
       inviteToken,
       res,
     );
@@ -683,7 +758,7 @@ export class MiniappsController {
       id,
       'release',
       version,
-      req.user,
+      await this.canView(id, req),
       inviteToken,
       res,
     );
@@ -702,7 +777,7 @@ export class MiniappsController {
       id,
       type === 'release' ? 'release' : 'test',
       version,
-      req.user,
+      await this.canView(id, req),
       inviteToken,
       res,
     );

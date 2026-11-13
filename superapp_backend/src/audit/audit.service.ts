@@ -1,6 +1,10 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, IsNull, Brackets } from 'typeorm';
+import { Repository, In, IsNull, Brackets, SelectQueryBuilder } from 'typeorm';
+import {
+  isPlatformAdmin,
+  requesterOrgId,
+} from '../access-control/helpers/platform-admin.helper';
 import {
   SENSITIVE_RESPONSE_KEYS,
   stripSensitiveFields,
@@ -257,9 +261,40 @@ export class AuditService implements OnApplicationBootstrap {
     return this.auditLogRepository.save(entry);
   }
 
+  /**
+   * Organization admins (anyone but SUPER_ADMIN) see the entries made by a
+   * member of their organization or about one of its mini apps. Platform
+   * entries (settings, storage, security) are SUPER_ADMIN only. Without a
+   * requester (internal call) nothing is filtered.
+   */
+  private scopeToRequester(
+    qb: SelectQueryBuilder<AuditLog>,
+    requester?: any,
+  ): void {
+    if (requester === undefined || isPlatformAdmin(requester)) return;
+    const orgId = requesterOrgId(requester);
+    if (!orgId) {
+      qb.andWhere('1 = 0');
+      return;
+    }
+    qb.andWhere(
+      '(EXISTS (SELECT 1 FROM "staff_profiles" scope_sp ' +
+        'WHERE scope_sp."identityId"::text = log."actorId" AND scope_sp."organizationId" = :scopeOrgId) ' +
+        'OR (log."resourceType" = :scopeAppType AND EXISTS (SELECT 1 FROM "mini_apps" scope_app ' +
+        'WHERE scope_app."id"::text = log."resourceId" AND scope_app."organizationId" = :scopeOrgId)))',
+      { scopeOrgId: orgId, scopeAppType: 'MiniApp' },
+    );
+  }
+
   async findAll(
     query?: QueryAuditLogDto,
+    requester?: any,
   ): Promise<PaginatedResult<AuditLog> | AuditLog[]> {
+    if (!query) {
+      if (requester !== undefined && !isPlatformAdmin(requester)) {
+        query = new QueryAuditLogDto();
+      }
+    }
     if (!query) {
       const all = await this.auditLogRepository.find({
         order: { createdAt: 'DESC' },
@@ -282,6 +317,7 @@ export class AuditService implements OnApplicationBootstrap {
     } = query;
 
     const qb = this.auditLogRepository.createQueryBuilder('log');
+    this.scopeToRequester(qb, requester);
 
     if (action && action !== 'ALL') {
       qb.andWhere('log.action = :action', { action });
@@ -374,8 +410,13 @@ export class AuditService implements OnApplicationBootstrap {
     }
   }
 
-  async findOne(id: string): Promise<AuditLog | null> {
-    return this.auditLogRepository.findOne({ where: { id } });
+  /** One entry; null when the requester may not see it (the controller answers 404). */
+  async findOne(id: string, requester?: any): Promise<AuditLog | null> {
+    const qb = this.auditLogRepository
+      .createQueryBuilder('log')
+      .where('log.id = :id', { id });
+    this.scopeToRequester(qb, requester);
+    return qb.getOne();
   }
 
   async findByResource(

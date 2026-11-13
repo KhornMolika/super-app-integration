@@ -10,10 +10,15 @@ import {
 import { MiniApp } from './miniapp.entity';
 import { Identity } from '../../identities/entities/identity.entity';
 
+/**
+ * A collaborator's rights on one Mini App (see miniapps/access/miniapp-access.policy.ts).
+ * MAINTAINER was called ADMIN before migration 1794800000000; renamed so it is
+ * not confused with the organization ADMIN platform role.
+ */
 export enum CollaboratorRole {
-  DEVELOPER = 'DEVELOPER',
-  ADMIN = 'ADMIN',
   VIEWER = 'VIEWER',
+  DEVELOPER = 'DEVELOPER',
+  MAINTAINER = 'MAINTAINER',
 }
 
 @Entity('mini_app_collaborators')

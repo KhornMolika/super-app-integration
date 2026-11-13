@@ -145,12 +145,10 @@ export class NotificationsService {
         const allUsers = await this.userRepository.find({
           relations: { staffProfile: { role: true } },
         });
-        const adminUsers = allUsers.filter((u) => {
-          const rList = (u as any).roles || (u.staffProfile?.role ? [u.staffProfile.role] : []);
-          return rList.some(
-            (r: any) => r.name === 'SUPER_ADMIN' || r.name === 'ADMIN',
-          );
-        });
+        // Super Admins always; organization admins only for their own org's apps
+        const adminUsers = allUsers.filter((u) =>
+          adminReaches(u, ['SUPER_ADMIN', 'ADMIN'], appEntity?.organizationId),
+        );
 
         for (const admin of adminUsers) {
           if (
@@ -201,10 +199,15 @@ export class NotificationsService {
       const allUsers = await this.userRepository.find({
         relations: { staffProfile: { role: true } },
       });
-      const admins = allUsers.filter((u) => {
-        const rList = (u as any).roles || (u.staffProfile?.role ? [u.staffProfile.role] : []);
-        return rList.some((r: any) => roleNames.includes(r?.name));
-      });
+      // Organization admins hear only about their own organization's apps
+      const appOrgId = miniAppId
+        ? (
+            await this.miniAppRepository.findOne({
+              where: isPgUuid(miniAppId) ? { id: miniAppId } : { appId: miniAppId },
+            })
+          )?.organizationId
+        : undefined;
+      const admins = allUsers.filter((u) => adminReaches(u, roleNames, appOrgId));
 
       // An explicit role filter reaches only those roles; nobody else is
       // told instead.
@@ -325,4 +328,26 @@ export class NotificationsService {
   emitBuildCompleted(data: any) {
     this.notificationGateway.emitBuildCompleted(data);
   }
+}
+
+/**
+ * Whether an admin notification for an app of `appOrgId` reaches user `u`:
+ * SUPER_ADMIN always; ADMIN (organization admin) only when the app belongs to
+ * their organization, never for alerts without an app.
+ */
+function adminReaches(
+  u: Identity,
+  roleNames: string[],
+  appOrgId: string | null | undefined,
+): boolean {
+  const rList: any[] =
+    (u as any).roles || (u.staffProfile?.role ? [u.staffProfile.role] : []);
+  const names = rList.map((r: any) => r?.name).filter(Boolean);
+  if (names.includes('SUPER_ADMIN') && roleNames.includes('SUPER_ADMIN')) {
+    return true;
+  }
+  if (names.includes('ADMIN') && roleNames.includes('ADMIN')) {
+    return Boolean(appOrgId && u.staffProfile?.organizationId === appOrgId);
+  }
+  return names.some((n) => n !== 'ADMIN' && roleNames.includes(n));
 }

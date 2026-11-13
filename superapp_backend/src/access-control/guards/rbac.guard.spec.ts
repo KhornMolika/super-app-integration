@@ -1,7 +1,11 @@
 import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { RbacGuard } from './rbac.guard';
-import { isPlatformAdmin } from '../helpers/platform-admin.helper';
+import {
+  canActInOrg,
+  isOrgAdmin,
+  isPlatformAdmin,
+} from '../helpers/platform-admin.helper';
 
 function contextFor(user: unknown): ExecutionContext {
   return {
@@ -52,6 +56,17 @@ describe('RbacGuard', () => {
     ).toBe(true);
   });
 
+  it.each(['super_app:manage', 'settings:manage'])(
+    'keeps platform-only %s from an ADMIN (organization admin)',
+    (permission) => {
+      expect(() =>
+        guardRequiring(permission).canActivate(
+          contextFor({ email: 'a@org.kh', roles: ['ADMIN'], permissions: [] }),
+        ),
+      ).toThrow(ForbiddenException);
+    },
+  );
+
   it('gives an ADMIN role the admin permission set', () => {
     const guard = guardRequiring('audit_log:read');
     expect(
@@ -87,7 +102,28 @@ describe('isPlatformAdmin', () => {
     expect(isPlatformAdmin({ email: 'superadmin@x.com', roles: ['MA_DEVELOPER'] })).toBe(false);
     expect(isPlatformAdmin({ email: 'admin@x.com', roles: [] })).toBe(false);
     expect(isPlatformAdmin({ email: 'a@x.com', roles: ['SUPER_ADMIN'] })).toBe(true);
-    expect(isPlatformAdmin({ email: 'a@x.com', roles: [{ name: 'ADMIN' }] })).toBe(true);
     expect(isPlatformAdmin(undefined)).toBe(false);
+  });
+
+  it('is SUPER_ADMIN only: ADMIN is an organization admin', () => {
+    expect(isPlatformAdmin({ roles: [{ name: 'ADMIN' }] })).toBe(false);
+    expect(isOrgAdmin({ roles: [{ name: 'ADMIN' }] })).toBe(true);
+    expect(isOrgAdmin({ roles: ['SUPER_ADMIN'] })).toBe(false);
+  });
+});
+
+describe('canActInOrg', () => {
+  it('lets SUPER_ADMIN act anywhere and everyone else only in their own org', () => {
+    expect(canActInOrg({ roles: ['SUPER_ADMIN'] }, 'org-b')).toBe(true);
+    const adminA = { roles: ['ADMIN'], organizationId: 'org-a' };
+    expect(canActInOrg(adminA, 'org-a')).toBe(true);
+    expect(canActInOrg(adminA, 'org-b')).toBe(false);
+  });
+
+  it('denies when either side has no organization', () => {
+    expect(canActInOrg({ roles: ['ADMIN'] }, 'org-a')).toBe(false);
+    expect(canActInOrg({ roles: ['ADMIN'], organizationId: 'org-a' }, null)).toBe(
+      false,
+    );
   });
 });

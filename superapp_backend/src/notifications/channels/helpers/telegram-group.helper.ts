@@ -58,17 +58,12 @@ export class TelegramGroupHelper {
       });
     }
 
-    // 2. Scan all mini apps owned by this user (or all mini apps if SUPER_ADMIN / ADMIN)
-    const staffRole = dbUser?.staffProfile?.role;
-    const isAdmin = staffRole?.name === 'SUPER_ADMIN' || staffRole?.name === 'ADMIN';
-
+    // 2. Scan the mini apps this user administers: all (SUPER_ADMIN), their
+    // organization's (ADMIN) or the ones they own
     let miniApps: MiniApp[] = [];
     if (miniAppRepository) {
-      miniApps = isAdmin
-        ? await miniAppRepository.find()
-        : userId
-          ? await miniAppRepository.find({ where: { ownerId: userId } })
-          : [];
+      const where = adminAppScope(dbUser, userId);
+      miniApps = where === null ? [] : await miniAppRepository.find({ where });
     }
 
     for (const app of miniApps) {
@@ -199,8 +194,8 @@ export class TelegramGroupHelper {
       }
     }
 
-    // 5. Default platform operations channel (if set in env)
-    if (defaultChatId && isAdmin) {
+    // 5. Default platform operations channel (if set in env): platform admin only
+    if (defaultChatId && dbUser?.staffProfile?.role?.name === 'SUPER_ADMIN') {
       const defaultId = defaultChatId.trim();
       const existing = groupsMap.get(defaultId);
       if (existing) {
@@ -473,11 +468,8 @@ export class TelegramGroupHelper {
         where: { id: userId },
         relations: { staffProfile: { role: true } },
       });
-      const staffRole = user?.staffProfile?.role;
-      const isAdmin = staffRole?.name === 'SUPER_ADMIN' || staffRole?.name === 'ADMIN';
-      userApps = isAdmin
-        ? await miniAppRepository.find()
-        : await miniAppRepository.find({ where: { ownerId: userId } });
+      const where = adminAppScope(user, userId);
+      userApps = where === null ? [] : await miniAppRepository.find({ where });
 
       // Update user profile telegramChatId if matching
       if (user && user.telegramChatId?.trim() === trimmedOld) {
@@ -572,9 +564,14 @@ export class TelegramGroupHelper {
         where: { id: userId },
         relations: { staffProfile: { role: true } },
       });
-      const staffRole = user?.staffProfile?.role;
-      const isAdmin = staffRole?.name === 'SUPER_ADMIN' || staffRole?.name === 'ADMIN';
-      if (!isAdmin && app.ownerId !== userId) {
+      const role = user?.staffProfile?.role?.name;
+      const mayModify =
+        role === 'SUPER_ADMIN' ||
+        (role === 'ADMIN' &&
+          Boolean(user?.staffProfile?.organizationId) &&
+          user?.staffProfile?.organizationId === app.organizationId) ||
+        app.ownerId === userId;
+      if (!mayModify) {
         return {
           success: false,
           message: 'You do not have permission to modify this MiniApp.',
@@ -649,4 +646,20 @@ export class TelegramGroupHelper {
         : `Cleaned up ${deadGroups.length} inactive group(s) across ${totalCleaned} MiniApp(s).`,
     };
   }
+}
+
+/**
+ * The mini apps whose Telegram alerts a user administers: every app for
+ * SUPER_ADMIN ({}), their organization's for ADMIN, otherwise the ones they own.
+ * null when there is nothing to match on.
+ */
+function adminAppScope(
+  user: any,
+  userId: string | undefined,
+): Record<string, string> | null {
+  const role = user?.staffProfile?.role?.name;
+  if (role === 'SUPER_ADMIN') return {};
+  const orgId = user?.staffProfile?.organizationId;
+  if (role === 'ADMIN') return orgId ? { organizationId: orgId } : null;
+  return userId ? { ownerId: userId } : null;
 }

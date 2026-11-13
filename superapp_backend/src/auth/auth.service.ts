@@ -259,7 +259,6 @@ export class AuthService implements OnModuleInit {
           'issue:resolve',
           'permission_proposal:read',
           'super_app:read',
-          'super_app:manage',
           'user:read',
           'user:manage',
           'role:read',
@@ -267,7 +266,6 @@ export class AuthService implements OnModuleInit {
           'organization:read',
           'organization:manage',
           'audit_log:read',
-          'settings:manage',
         ].forEach((p) => permissions.add(p));
       }
       if (roles.includes('MA_DEVELOPER')) {

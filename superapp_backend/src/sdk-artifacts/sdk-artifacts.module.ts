@@ -1,3 +1,4 @@
+import { MiniAppAccessModule } from '../miniapps/access/miniapp-access.module';
 import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MulterModule } from '@nestjs/platform-express';
@@ -22,6 +23,7 @@ import { PubRegistryProxyController } from './pub-registry-proxy.controller';
       useFactory: sdkUploadMulterOptions,
     }),
     TypeOrmModule.forFeature([MiniApp]),
+    MiniAppAccessModule,
     AuthModule,
     IntegrationsModule,
     forwardRef(() => StorageModule),

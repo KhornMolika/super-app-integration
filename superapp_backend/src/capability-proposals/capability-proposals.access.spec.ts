@@ -123,10 +123,14 @@ describe('progress links', () => {
   });
   const linksIn = (p: any) => p.steps.flatMap((s: any) => s.links ?? []);
 
-  it('platform staff (Super Admin, regulatory admin) see the code change and task links', async () => {
+  it('the platform admin (Super Admin) sees the code change and task links', async () => {
     const { controller } = makeController({ proposal: approved });
     expect(linksIn(await controller.getProgress({ user: superAdmin }, 'p1'))).toHaveLength(2);
-    expect(linksIn(await controller.getProgress({ user: admin }, 'p1'))).toHaveLength(2);
+  });
+
+  it('an organization admin gets the steps without internal GitLab links', async () => {
+    const { controller } = makeController({ proposal: approved });
+    expect(linksIn(await controller.getProgress({ user: admin }, 'p1'))).toEqual([]);
   });
 
   it('a developer gets the same steps without internal GitLab links', async () => {
@@ -219,15 +223,23 @@ describe('CapabilityProposalsService', () => {
     expect(scope.params).toMatchObject({ scopeUserId: 'u-dev', scopeOrgId: 'org-1' });
   });
 
-  it('platform staff see everything, unless they ask for their own', async () => {
+  it('the Super Admin sees everything, unless they ask for their own', async () => {
     const all = capturingRepo();
-    await serviceWith(all.repo).findAll({} as any, admin);
+    await serviceWith(all.repo).findAll({} as any, superAdmin);
     expect(all.wheres.some((w) => w.sql.includes('requestedBy.id'))).toBe(false);
 
     const mine = capturingRepo();
     await serviceWith(mine.repo).findAll({ mine: 'true' } as any, superAdmin);
     const scope = mine.wheres.find((w) => w.sql.includes('requestedBy.id'))!;
     expect(scope.sql).not.toContain('organizationId');
+  });
+
+  it('an organization admin sees their own organization only', async () => {
+    const { repo, wheres } = capturingRepo();
+    await serviceWith(repo).findAll({} as any, { ...admin, organizationId: 'org-a' });
+    const scope = wheres.find((w) => w.sql.includes('miniApp.organizationId'))!;
+    expect(scope).toBeDefined();
+    expect(scope.params.scopeOrgId).toBe('org-a');
   });
 
   it('findOne for someone outside the scope adds the scope (so the answer is 404)', async () => {
@@ -239,10 +251,15 @@ describe('CapabilityProposalsService', () => {
 
 describe('NotificationsService.notifyAdmins roles', () => {
   function serviceWithUsers(users: any[]) {
+    const apps: Record<string, any> = {
+      'app-a': { id: 'app-a', organizationId: 'org-a' },
+    };
     const service = new NotificationsService(
       {} as any,
       { find: jest.fn().mockResolvedValue(users) } as any,
-      {} as any,
+      {
+        findOne: jest.fn(async ({ where }: any) => apps[where.id ?? where.appId] ?? null),
+      } as any,
       {} as any,
       {} as any,
       {} as any,
@@ -252,8 +269,9 @@ describe('NotificationsService.notifyAdmins roles', () => {
   }
   const users = [
     { id: 'a', roles: [{ name: 'SUPER_ADMIN' }] },
-    { id: 'b', roles: [{ name: 'ADMIN' }] },
+    { id: 'b', roles: [{ name: 'ADMIN' }], staffProfile: { organizationId: 'org-a' } },
     { id: 'c', roles: [{ name: 'MA_DEVELOPER' }] },
+    { id: 'd', roles: [{ name: 'ADMIN' }], staffProfile: { organizationId: 'org-b' } },
   ];
 
   it('reaches only the roles asked for', async () => {
@@ -268,9 +286,15 @@ describe('NotificationsService.notifyAdmins roles', () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
-  it('keeps the old default (super admins and admins)', async () => {
+  it('by default reaches super admins and the admins of the app organization', async () => {
+    const { service, spy } = serviceWithUsers(users);
+    await service.notifyAdmins('t', 'm', 'x', 'app-a');
+    expect(spy.mock.calls.map((c) => c[0])).toEqual(['a', 'b']);
+  });
+
+  it('an alert without an app reaches super admins only (no organization to scope to)', async () => {
     const { service, spy } = serviceWithUsers(users);
     await service.notifyAdmins('t', 'm', 'x');
-    expect(spy.mock.calls.map((c) => c[0])).toEqual(['a', 'b']);
+    expect(spy.mock.calls.map((c) => c[0])).toEqual(['a']);
   });
 });

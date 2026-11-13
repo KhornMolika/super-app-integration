@@ -30,6 +30,7 @@ import { ArtifactDistributionHelper } from './helpers/artifact-distribution.help
 import { DomainAssociationHelper } from './helpers/domain-association.helper';
 import { MiniappMutationHelper } from './helpers/miniapp-mutation.helper';
 import { UrlProbeHelper } from './helpers/url-probe.helper';
+import { MiniAppAccessModule } from './access/miniapp-access.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { UrlProbeHelper } from './helpers/url-probe.helper';
     NativeSdkCodegenModule,
     SdkArtifactsModule,
     OrganizationsModule,
+    MiniAppAccessModule,
   ],
   controllers: [MiniappsController, ApkDownloadController],
   providers: [

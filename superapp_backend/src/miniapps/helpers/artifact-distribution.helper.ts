@@ -15,24 +15,9 @@ import { MiniApp } from '../entities/miniapp.entity';
 export class ArtifactDistributionHelper {
   private readonly logger = new Logger(ArtifactDistributionHelper.name);
 
-  getVersionHistory(app: MiniApp, user?: any) {
+  /** Callers check VIEW access first (MiniAppAccessService). */
+  getVersionHistory(app: MiniApp) {
     if (!app) throw new NotFoundException('MiniApp not found');
-
-    const roles: string[] = user?.roles || [];
-    const isSuperAdmin =
-      roles.includes('SUPER_ADMIN') || roles.includes('ADMIN');
-    const isOwner =
-      user?.sub === app.ownerId ||
-      (user?.email &&
-        (user.email === app.supportEmail ||
-          user.email === app.owner?.email ||
-          user.email === (app as any).ownerEmail));
-
-    if (user && !isSuperAdmin && !isOwner) {
-      throw new ForbiddenException(
-        'Access Denied: You do not have permission to view version history for this MiniApp.',
-      );
-    }
 
     const effectiveGitRef =
       app.integrationConfig?.gitTag ||
@@ -252,40 +237,15 @@ export class ArtifactDistributionHelper {
     app: MiniApp,
     artifactType: 'test' | 'release',
     versionQuery?: string,
-    user?: any,
+    callerHasAccess?: boolean,
     inviteToken?: string,
     res?: Response,
   ) {
     if (!app) throw new NotFoundException('MiniApp not found');
 
-    let authorized = false;
-
-    if (user) {
-      const roles: string[] = Array.isArray(user?.roles)
-        ? user.roles.map((r: any) => (typeof r === 'string' ? r : r.name))
-        : user?.role
-          ? [user.role]
-          : [];
-      const perms: string[] = Array.isArray(user?.permissions)
-        ? user.permissions
-        : [];
-      const isSuperAdmin =
-        roles.includes('SUPER_ADMIN') ||
-        roles.includes('ADMIN') ||
-        roles.includes('SA_ADMIN') ||
-        roles.includes('MINIAPP_MANAGER') ||
-        perms.includes('miniapp:read') ||
-        perms.includes('super_app:read');
-      const isOwner =
-        user.sub === app.ownerId ||
-        (user.email &&
-          (user.email === app.supportEmail ||
-            user.email === app.owner?.email ||
-            user.email === (app as any).ownerEmail));
-      if (isSuperAdmin || isOwner || user.sub) {
-        authorized = true;
-      }
-    }
+    // callerHasAccess: the caller holds VIEW on this app (MiniAppAccessService).
+    // Otherwise only an invite token for this app lets the download through.
+    let authorized = callerHasAccess === true;
 
     if (!authorized && inviteToken) {
       if (this.verifyInviteToken(app.id, inviteToken)) {
