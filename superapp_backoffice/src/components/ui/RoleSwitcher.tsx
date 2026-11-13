@@ -21,7 +21,7 @@ export function RoleSwitcher() {
     },
     {
       id: 'ADMIN',
-      label: 'Admin',
+      label: 'Org Admin',
       badge: 'bg-brand-50 text-brand-800 border-brand-200 dark:bg-brand-950/50 dark:text-brand-300 dark:border-brand-800',
       icon: (
         <svg className="w-3.5 h-3.5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">

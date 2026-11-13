@@ -438,6 +438,11 @@ export class JenkinsService {
     codegenMrIid?: string;
     /** Overrides MOBILE_API_BASE_URL: backend URL the built app talks to. */
     apiBaseUrl?: string;
+    /**
+     * Which mini apps the build bundles (build-inclusion.ts), separate from the
+     * Flutter build mode: test = live, under test and building; release = live only.
+     */
+    miniAppSet?: 'test' | 'release';
   }): Promise<{ success: boolean; message: string; queueId?: number }> {
     const jobName = 'superapp-test-build';
     const callbackUrl = this.getCallbackUrl('/release-assembly/build-callback');
@@ -462,6 +467,7 @@ export class JenkinsService {
       CALLBACK_TOKEN: callbackToken,
       NEXUS_USER: nexusUser,
       NEXUS_PASSWORD: nexusPassword,
+      MINIAPP_SET: options.miniAppSet === 'release' ? 'release' : 'test',
     });
     // Backend URL baked into the app. Release builds must be https (the app refuses cleartext).
     const apiBaseUrl = (options.apiBaseUrl ?? this.mobileApiBaseUrl).trim();

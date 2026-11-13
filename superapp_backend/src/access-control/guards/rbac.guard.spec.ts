@@ -127,3 +127,18 @@ describe('canActInOrg', () => {
     );
   });
 });
+
+describe('review decisions are SUPER_ADMIN only', () => {
+  const { effectivePermissions } = jest.requireActual('./rbac.guard');
+
+  it('an organization admin gets no approve or reject from the role fallback', () => {
+    const perms: Set<string> = effectivePermissions({ roles: ['ADMIN'] });
+    expect(perms.has('miniapp:approve')).toBe(false);
+    expect(perms.has('miniapp:reject')).toBe(false);
+    expect(perms.has('miniapp:suspend')).toBe(true);
+  });
+
+  it('a super admin is unrestricted', () => {
+    expect(effectivePermissions({ roles: ['SUPER_ADMIN'] })).toBeNull();
+  });
+});

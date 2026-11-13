@@ -75,7 +75,6 @@ export const INITIAL_MINIAPP_FORM_DATA: MiniAppDetailFormData = {
   name: '',
   slug: '',
   appId: '',
-  category: 'Insurance',
   shortDescription: '',
   fullDescription: '',
   logo: '',

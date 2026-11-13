@@ -82,7 +82,8 @@ interface ListState {
   org: string;
   sort: string;
   dir: SortDirection;
-  scope: Scope;
+  /** null: the role's default (all for admins). Not fixed at first render, when the role may still be loading. */
+  scope: Scope | null;
 }
 
 function readState(params: URLSearchParams, defaultScope: Scope): ListState {
@@ -98,7 +99,7 @@ function readState(params: URLSearchParams, defaultScope: Scope): ListState {
     org: params.get('org') || 'ALL',
     sort: (SORTABLE as readonly string[]).includes(sort) ? sort : DEFAULT_SORT.key,
     dir: dir === 'asc' || dir === 'desc' ? dir : DEFAULT_SORT.dir,
-    scope: params.get('scope') === 'mine' || params.get('scope') === 'all' ? (params.get('scope') as Scope) : defaultScope,
+    scope: params.get('scope') === 'mine' || params.get('scope') === 'all' ? (params.get('scope') as Scope) : null,
   };
 }
 
@@ -115,7 +116,7 @@ function writeState(s: ListState, defaultScope: Scope): string {
     p.set('sort', s.sort);
     p.set('dir', s.dir);
   }
-  if (s.scope !== defaultScope) p.set('scope', s.scope);
+  if (s.scope && s.scope !== defaultScope) p.set('scope', s.scope);
   return p.toString();
 }
 
@@ -190,6 +191,8 @@ function MiniAppsContent() {
   const defaultScope: Scope = isAdmin ? 'all' : 'mine';
 
   const [state, setState] = useState<ListState>(() => readState(searchParams, defaultScope));
+  // Only admins choose; everyone else always sees their own and shared apps
+  const scope: Scope = isAdmin ? (state.scope ?? 'all') : 'mine';
   const [searchInput, setSearchInput] = useState(state.search);
   const [apps, setApps] = useState<MiniApp[]>([]);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
@@ -253,7 +256,7 @@ function MiniAppsContent() {
       const params: Record<string, any> = {
         page: state.page,
         limit: state.limit,
-        mine: state.scope === 'mine' || !isAdmin,
+        mine: scope === 'mine',
         sortBy: state.sort,
         sortOrder: state.dir === 'asc' ? 'ASC' : 'DESC',
       };
@@ -273,7 +276,7 @@ function MiniAppsContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [state, isAdmin]);
+  }, [state, scope]);
 
   useEffect(() => {
     fetchApps();
@@ -311,10 +314,10 @@ function MiniAppsContent() {
         sortable: true,
         cell: (app) => (
           <span
-            title={getOrganizationFullName(app.organization || app.category)}
+            title={getOrganizationFullName(app.organization)}
             className="text-xs font-semibold text-slate-700 dark:text-slate-300"
           >
-            {app.organizationCode || getOrganizationCode(app.organization || app.category)}
+            {app.organizationCode || getOrganizationCode(app.organization)}
           </span>
         ),
       },
@@ -527,10 +530,10 @@ function MiniAppsContent() {
                   key={s}
                   type="button"
                   role="tab"
-                  aria-selected={state.scope === s}
+                  aria-selected={scope === s}
                   onClick={() => update({ scope: s })}
                   className={`px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer ${
-                    state.scope === s
+                    scope === s
                       ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-2xs'
                       : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
                   }`}

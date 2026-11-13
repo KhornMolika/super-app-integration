@@ -1,3 +1,5 @@
+import { SuperAppModule } from '../super-app/super-app.module';
+import { SuperAppBuildsController } from './super-app-builds/super-app-builds.controller';
 import { MiniAppRunsModule } from '../miniapps/miniapp-runs.module';
 import { AuthModule } from '../auth/auth.module';
 import { Module, forwardRef } from '@nestjs/common';
@@ -49,6 +51,7 @@ import { PubspecInjectorController } from './flutter/pubspec-injector.controller
     CapabilitiesModule,
     forwardRef(() => StorageModule),
     MiniAppRunsModule,
+    SuperAppModule,
   ],
   controllers: [
     GitIntegrationController,
@@ -57,6 +60,7 @@ import { PubspecInjectorController } from './flutter/pubspec-injector.controller
     ValidationCallbackController,
     ScanSourceController,
     PubspecInjectorController,
+    SuperAppBuildsController,
   ],
   providers: [
     GitIntegrationService,

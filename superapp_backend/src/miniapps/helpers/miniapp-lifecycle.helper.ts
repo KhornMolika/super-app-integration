@@ -1,4 +1,6 @@
 import { MiniAppRunsService } from '../miniapp-runs.service';
+import { MiniAppVersionsService } from '../versions/miniapp-versions.service';
+import { revisionVersionOf } from '../versions/version-capabilities';
 import { scanConfigOf, scanScopeOf } from '../../integrations/validation/scan-source-ticket';
 import { gitRefOf, gitSourceUrlOf, isGitSource, scanSourceOf } from '../../integrations/flutter/git-source.util';
 import { testApkBuildMode } from '../../common/utils/build-mode.util';
@@ -149,6 +151,8 @@ export class MiniappLifecycleHelper {
     private artifactPublisher?: ScannedArtifactPublisherService,
     @Optional()
     private runs?: MiniAppRunsService,
+    @Optional()
+    private versions?: MiniAppVersionsService,
   ) {}
 
   /**
@@ -873,6 +877,7 @@ export class MiniappLifecycleHelper {
     app.lifecycleStatus = MiniAppLifecycleStatus.APPROVED;
     (app as any).status = 'APPROVED';
     await this.miniappRepository.save(app);
+    await this.versions?.approveWorking(app, actorId);
 
     // Auto-inject Flutter package dependency into SuperApp pubspec.yaml if applicable
     if ((app.integrationMethod || '').toUpperCase() === 'FLUTTER_PACKAGE') {
@@ -1196,6 +1201,7 @@ export class MiniappLifecycleHelper {
           releaseVersion,
           appName: 'superapp',
           buildType: testBuildType,
+          miniAppSet: 'test',
         });
         if (!jenkinsResult.success) {
           this.logger.warn(
@@ -1316,6 +1322,7 @@ export class MiniappLifecycleHelper {
         releaseVersion,
         appName: 'superapp',
         buildType: testBuildType,
+        miniAppSet: 'test',
       });
       if (!jenkinsResult.success) {
         this.logger.warn(
@@ -1472,6 +1479,7 @@ export class MiniappLifecycleHelper {
         releaseVersion,
         appName: 'superapp',
         buildType: 'release',
+        miniAppSet: 'release',
       });
     } catch (err: any) {
       this.logger.error(
@@ -1607,12 +1615,10 @@ export class MiniappLifecycleHelper {
       app.validationErrors = rev.validationErrors;
     await this.runs?.promoteRevisionScan(app.id);
 
-    const nextVersion =
-      rev.version ||
-      rev.packageVersion ||
-      (app.currentReleaseVersion
-        ? `1.${parseInt(app.currentReleaseVersion.split('.')[1] || '0', 10) + 1}.0`
-        : '1.1.0');
+    const nextVersion = revisionVersionOf(app);
+    // The revision's DRAFT version row goes live (its capabilities approved by
+    // this reviewer); the live row becomes PREVIOUS. Needs pendingRevision set.
+    await this.versions?.publishDraft(app, nextVersion, actorId, rev.changelog);
     app.currentReleaseVersion = nextVersion;
 
     const history = Array.isArray((app as any).versionHistory)
@@ -1799,7 +1805,14 @@ export class MiniappLifecycleHelper {
     const history = Array.isArray((app as any).versionHistory)
       ? [...(app as any).versionHistory]
       : [];
-    const targetRecord = history.find((h: any) => h.version === targetVersion);
+    // Released versions live in mini_app_versions (versionHistory is not a column).
+    const released = await this.versions?.findReleased(app.id, targetVersion);
+    const targetRecord: any = released
+      ? {
+          ...released.row,
+          permissions: released.capabilities,
+        }
+      : history.find((h: any) => h.version === targetVersion);
     if (!targetRecord) {
       throw new BadRequestException(
         `Version "${targetVersion}" was not found in release history for ${app.name}`,
@@ -1847,6 +1860,7 @@ export class MiniappLifecycleHelper {
       app.homeWidget = withVerification(app.homeWidget, false) ?? null;
     }
 
+    if (released) await this.versions?.rollbackTo(app.id, released.row.id);
     await this.miniappRepository.save(app);
 
     if (isFlutterPackage) {

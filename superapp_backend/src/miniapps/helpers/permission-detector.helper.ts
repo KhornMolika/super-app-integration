@@ -18,11 +18,10 @@ export class PermissionDetectorHelper {
   /**
    * Automatically discovers required native permissions from MiniApp endpoint,
    * GitLab repository (branch main or specified branch), association file (.well-known),
-   * script ASTs, and category intelligence.
+   * and script ASTs.
    */
   async detect(body: {
     productionUrl?: string;
-    category?: string;
     name?: string;
     appId?: string;
     gitUrl?: string;
@@ -342,79 +341,6 @@ export class PermissionDetectorHelper {
       } catch {
         // Endpoint scan optional
       }
-    }
-
-    // 3. Category Intelligence Fallback / Augmentation
-    const cat = (body.category || '').toLowerCase();
-    if (cat.includes('bank') || cat.includes('finan')) {
-      addPerm(
-        'Biometrics',
-        'To authenticate user identity securely and authorize transactions',
-        'Banking Profile',
-        'HIGH',
-      );
-      addPerm(
-        'Camera',
-        'To scan QR codes for quick transfers and payments',
-        'Banking Profile',
-        'HIGH',
-      );
-    } else if (cat.includes('insur')) {
-      addPerm(
-        'Camera',
-        'To photograph accident evidence and upload policy claim documents',
-        'Insurance Profile',
-        'HIGH',
-      );
-    } else if (
-      cat.includes('travel') ||
-      cat.includes('transport') ||
-      cat.includes('ride')
-    ) {
-      addPerm(
-        'Location',
-        'To locate pickup points and provide live GPS trip tracking',
-        'Travel Profile',
-        'HIGH',
-      );
-    } else if (
-      cat.includes('food') ||
-      cat.includes('shop') ||
-      cat.includes('e-commerce') ||
-      cat.includes('retail')
-    ) {
-      addPerm(
-        'Location',
-        'To determine delivery address and locate nearby partner stores',
-        'Shopping Profile',
-        'MEDIUM',
-      );
-    } else if (cat.includes('health') || cat.includes('med')) {
-      addPerm(
-        'Camera',
-        'To take pictures of prescriptions and conduct video consultations',
-        'Healthcare Profile',
-        'HIGH',
-      );
-      addPerm(
-        'Biometrics',
-        'To secure electronic medical records and patient data',
-        'Healthcare Profile',
-        'HIGH',
-      );
-    } else if (cat.includes('gov') || cat.includes('public')) {
-      addPerm(
-        'Biometrics',
-        'To verify citizen identity against national digital ID',
-        'Government Profile',
-        'HIGH',
-      );
-      addPerm(
-        'Camera',
-        'To capture identity card photos for verification',
-        'Government Profile',
-        'HIGH',
-      );
     }
 
     return {

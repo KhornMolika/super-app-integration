@@ -216,21 +216,6 @@ export class MiniappMutationHelper {
     return resolveOrganizationDetails(input, this.organizationRepository);
   }
 
-  private async serviceCategory(category: string | null | undefined): Promise<string | null> {
-    const clean = category?.trim();
-    if (!clean) return null;
-    if (this.organizationRepository?.findOne) {
-      const org = await this.organizationRepository.findOne({
-        where: [{ name: clean }, { code: clean }],
-      });
-      if (org) return null;
-    }
-    const parenMatch = clean.match(/\(([A-Za-z0-9_-]+)\)$/);
-    if (parenMatch) return null;
-    if (clean.toLowerCase().includes('regulator')) return null;
-    return clean;
-  }
-
   private assertWidgetSurvivesMethodSwitch(
     existing: MiniApp,
     data: Partial<MiniApp>,
@@ -281,10 +266,7 @@ export class MiniappMutationHelper {
     if (homeWidget !== undefined) data.homeWidget = homeWidget;
 
     delete data.status;
-    const orgInput = data.organization || data.category || undefined;
-    if (data.category !== undefined) {
-      data.category = await this.serviceCategory(data.category);
-    }
+    delete data.category;
     data.lifecycleStatus = data.lifecycleStatus || MiniAppLifecycleStatus.DRAFT;
     data.currentReleaseVersion = undefined;
     data.pendingRevision = null;
@@ -317,10 +299,9 @@ export class MiniappMutationHelper {
     }
 
     // Resolve & normalize organization name and short code (e.g. FTC, IRC, etc.)
-    const orgInfo = await this.resolveOrganization(data.organization || data.category);
+    const orgInfo = await this.resolveOrganization(data.organization);
     data.organization = orgInfo.name;
     data.organizationCode = orgInfo.code;
-    data.category = await this.serviceCategory(data.category);
     if (orgInfo.id && !data.organizationId) {
       data.organizationId = orgInfo.id;
     }
@@ -473,7 +454,6 @@ export class MiniappMutationHelper {
             integrationMethod: savedApp.integrationMethod,
             organization: orgName,
             registrantName,
-            category: orgName,
             teamName: registrantName,
             teamTelegramChatId:
               savedApp.alertTelegramChatId ||
@@ -491,7 +471,6 @@ export class MiniappMutationHelper {
             integrationMethod: savedApp.integrationMethod,
             organization: orgName,
             registrantName,
-            category: orgName,
             teamName: registrantName,
             teamTelegramChatId:
               savedApp.alertTelegramChatId ||
@@ -558,7 +537,7 @@ export class MiniappMutationHelper {
   ): Promise<MiniApp> {
     // lockOwnership: the caller may not move the app to another organization or
     // owner (everyone but SUPER_ADMIN). The organization is otherwise resolved
-    // from organization / category below.
+    // from organization below.
     if (options.lockOwnership) {
       for (const key of [
         'organizationId',
@@ -585,10 +564,8 @@ export class MiniappMutationHelper {
     delete data.status;
     const orgInput = options.lockOwnership
       ? undefined
-      : data.organization || data.category || undefined;
-    if (data.category !== undefined) {
-      data.category = await this.serviceCategory(data.category);
-    }
+      : data.organization || undefined;
+    delete data.category;
 
     if (data.shortDescription !== undefined) {
       data.tagline = data.shortDescription;
@@ -983,9 +960,6 @@ export class MiniappMutationHelper {
       (merged as any).organization = orgInfo.name;
       (merged as any).organizationCode = orgInfo.code;
       if (orgInfo?.id) merged.organizationId = orgInfo.id;
-    }
-    if (data.category !== undefined) {
-      (merged as any).category = data.category;
     }
 
     // Reset domain verification status if productionUrl changes

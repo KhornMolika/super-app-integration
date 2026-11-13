@@ -5,9 +5,14 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/inputs';
 import { superAppApi, miniappsApi, MiniApp } from '@/api';
 import { SuperAppReleaseCompareModal } from '@/components/releases/SuperAppReleaseCompareModal';
+import { SuperAppRebuildPanel } from '@/components/releases/SuperAppRebuildPanel';
+import { useAuth } from '@/lib/auth';
 import { ShieldIcon, DevicePhoneIcon, CheckIcon, SparklesIcon, ArrowRightIcon, DotBadge } from '@/components/ui/Icons';
 
 export default function ReleasesPage() {
+  // Rebuilding the Super App is super_app:manage: Super Admin only
+  const { hasRole } = useAuth();
+  const isPlatformAdmin = hasRole('SUPER_ADMIN');
   const [apps, setApps] = useState<MiniApp[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [releaseVersion, setReleaseVersion] = useState('v0.0.3');
@@ -140,6 +145,8 @@ export default function ReleasesPage() {
           </Button>
         </div>
       </div>
+
+      {isPlatformAdmin && <SuperAppRebuildPanel />}
 
       {/* SuperApp Release Classification Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">

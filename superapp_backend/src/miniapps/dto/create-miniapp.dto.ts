@@ -407,10 +407,6 @@ export class CreateMiniAppDto {
 
   @IsString()
   @IsOptional()
-  category?: string;
-
-  @IsString()
-  @IsOptional()
   organizationId?: string;
 
   @IsString()

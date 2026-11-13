@@ -124,8 +124,9 @@ export function getAllowedActions(
   const canOwn = hasAccess(access, 'OWN');
   const isAppAdmin = hasAccess(access, 'ADMIN');
   const canUpdate = user.can('miniapp:update') && canEditApp;
-  const canApprove = user.can('miniapp:approve') && isAppAdmin;
-  const canReject = user.can('miniapp:reject') && isAppAdmin;
+  // Review decisions (approve, reject, testing, activation, publish) are Super Admin only
+  const canApprove = isSuper && user.can('miniapp:approve') && isAppAdmin;
+  const canReject = isSuper && user.can('miniapp:reject') && isAppAdmin;
   const canSuspend = user.can('miniapp:suspend') && isAppAdmin;
   const isLive = phase === 'live';
   const archiveRequested = Boolean(app.archiveRequest);

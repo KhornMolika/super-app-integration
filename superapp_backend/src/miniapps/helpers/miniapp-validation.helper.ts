@@ -722,7 +722,7 @@ export class MiniappValidationHelper {
       metadata: {
         miniAppName: app.name,
         miniAppId: app.appId || app.id,
-        category: app.tagline || (app as any).category,
+        category: app.tagline,
         requestedSource: 'MINIAPP_REGISTRATION',
       },
     });

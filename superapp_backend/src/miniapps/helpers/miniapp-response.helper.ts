@@ -68,7 +68,8 @@ export function formatMiniAppResponse<T = any>(app: T): T {
     organization: orgName,
     organizationCode: orgCode,
     teamName: orgName || ownerName || a.teamName,
-    category: orgName || a.category,
+    // Read-only alias the mobile catalog still shows; not stored or accepted.
+    category: orgName,
     permissions: a.capabilities || a.permissions || [],
     version: a.currentReleaseVersion || a.draftVersion || a.version || '1.0.0',
     versionHistory: versions,

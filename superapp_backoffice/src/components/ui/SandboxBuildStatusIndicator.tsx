@@ -19,7 +19,8 @@ import { copyText } from '@/lib/clipboard';
 
 export default function SandboxBuildStatusIndicator() {
   const { hasRole } = useAuth();
-  const isSuperAdmin = hasRole('SUPER_ADMIN') || hasRole('ADMIN');
+  // Rebuilding the web Super App is super_app:manage: Super Admin only
+  const isSuperAdmin = hasRole('SUPER_ADMIN');
 
   const [mounted, setMounted] = useState(false);
   const [status, setStatus] = useState<SandboxBuildStatus | null>(null);

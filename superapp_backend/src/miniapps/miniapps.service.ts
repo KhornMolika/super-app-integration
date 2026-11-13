@@ -162,7 +162,7 @@ export class MiniappsService implements OnApplicationBootstrap {
       for (const app of apps) {
         let changed = false;
         if (!app.organizationId) {
-          const rawOrg = (app as any).organization || (app as any).category;
+          const rawOrg = (app as any).organization;
           if (rawOrg) {
             const resolved = this.organizationsService
               ? await this.organizationsService.resolveOrganization(rawOrg)
@@ -1121,7 +1121,6 @@ export class MiniappsService implements OnApplicationBootstrap {
 
   async detectPermissions(body: {
     productionUrl?: string;
-    category?: string;
     name?: string;
     appId?: string;
     gitUrl?: string;

@@ -51,6 +51,33 @@ export interface VersionHistoryTabProps {
   onOpenReviewDiff?: () => void;
 }
 
+interface VersionCapability {
+  key: string;
+  required: boolean;
+  purpose: string | null;
+  status: 'REQUESTED' | 'APPROVED';
+}
+
+/** The capabilities a version asks for; amber only for ones still waiting for review. */
+function VersionCapabilities({ caps }: { caps?: VersionCapability[] }) {
+  if (!caps) return <span className="text-xs text-slate-400">—</span>;
+  if (caps.length === 0) return <span className="text-xs text-slate-500 dark:text-slate-400">None</span>;
+  const waiting = caps.filter((c) => c.status !== 'APPROVED').length;
+  return (
+    <div className="max-w-[220px] space-y-0.5">
+      <p
+        className="text-xs text-slate-700 dark:text-slate-300 truncate"
+        title={caps.map((c) => `${c.key}${c.required ? ' (required)' : ''}${c.purpose ? `: ${c.purpose}` : ''}`).join(', ')}
+      >
+        {caps.map((c) => c.key).join(', ')}
+      </p>
+      <p className={`text-[11px] ${waiting ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400'}`}>
+        {waiting ? `${waiting} waiting for review` : 'Approved'}
+      </p>
+    </div>
+  );
+}
+
 export default function VersionHistoryTab({
   miniAppId,
   miniAppName,
@@ -64,6 +91,7 @@ export default function VersionHistoryTab({
   const { role } = useAuth();
   const canRollback = (role === 'SUPER_ADMIN' || role === 'ADMIN') && currentStatus !== 'ARCHIVED';
   const [data, setData] = useState<VersionHistoryData | null>(null);
+  const [capsByVersion, setCapsByVersion] = useState<Record<string, VersionCapability[]>>({});
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<'ALL' | 'PRODUCTION' | 'TEST'>('ALL');
   const [selectedChangelog, setSelectedChangelog] = useState<VersionRecord | null>(null);
@@ -122,8 +150,16 @@ export default function VersionHistoryTab({
     if (!miniAppId) return;
     setLoading(true);
     try {
-      const result = await miniappsApi.getVersions(miniAppId);
+      const [result, versionCaps] = await Promise.all([
+        miniappsApi.getVersions(miniAppId),
+        miniappsApi.getVersionCapabilities(miniAppId).catch(() => []),
+      ]);
       setData(result as any);
+      const byVersion: Record<string, VersionCapability[]> = {};
+      for (const v of versionCaps as any[]) {
+        if (!byVersion[v.version]) byVersion[v.version] = v.capabilities || [];
+      }
+      setCapsByVersion(byVersion);
     } catch (err) {
       console.error('Failed to load version history:', err);
     } finally {
@@ -463,6 +499,7 @@ export default function VersionHistoryTab({
                 <th className="py-3 px-4">Version</th>
                 <th className="py-3 px-4">Package &amp; Ref</th>
                 <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4">Permissions</th>
                 <th className="py-3 px-4">Published Date</th>
                 <th className="py-3 px-4">Developer</th>
                 <th className="py-3 px-4">Checksum</th>
@@ -472,7 +509,7 @@ export default function VersionHistoryTab({
             <tbody className="divide-y divide-slate-200/70 dark:divide-slate-800">
               {filteredVersions.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-400 dark:text-slate-500">
+                  <td colSpan={8} className="py-8 text-center text-slate-400 dark:text-slate-500">
                     No version records found matching this filter.
                   </td>
                 </tr>
@@ -486,15 +523,9 @@ export default function VersionHistoryTab({
                       <div className="flex flex-col">
                         <span className="font-mono font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                           <span>{rec.version}</span>
-                          {rec.sourceType === 'GIT' ? (
-                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300 border border-brand-200/60 dark:border-brand-800">
-                              📦 Git
-                            </span>
-                          ) : (
-                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                              📁 Pkg
-                            </span>
-                          )}
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                            {rec.sourceType === 'GIT' ? 'Git' : 'Package'}
+                          </span>
                         </span>
                       </div>
                     </td>
@@ -530,6 +561,9 @@ export default function VersionHistoryTab({
                           <span>PREVIOUS</span>
                         </span>
                       )}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <VersionCapabilities caps={capsByVersion[rec.version]} />
                     </td>
                     <td className="py-3.5 px-4 text-xs text-slate-500 dark:text-slate-400">
                       {new Date(rec.releasedAt).toLocaleDateString('en-US', {

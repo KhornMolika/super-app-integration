@@ -122,15 +122,15 @@ export default function MiniAppDetailHeader({
                 ? 'Deep Link'
                 : 'WebView'}
             </span>
-            {(formData.organization || formData.category) && (
+            {(formData.organization) && (
               <>
                 <span className="text-slate-300 dark:text-slate-700">•</span>
                 <span 
                   className="inline-flex items-center gap-1 font-semibold text-sky-600 dark:text-sky-400"
-                  title={getOrganizationFullName(formData.organization || formData.category)}
+                  title={getOrganizationFullName(formData.organization)}
                 >
                   <BuildingIcon className="w-3.5 h-3.5" />
-                  <span>{getOrganizationCode(formData.organization || formData.category)}</span>
+                  <span>{getOrganizationCode(formData.organization)}</span>
                 </span>
               </>
             )}

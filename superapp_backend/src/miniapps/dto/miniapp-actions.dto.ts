@@ -45,10 +45,6 @@ export class DetectPermissionsDto {
 
   @IsString()
   @IsOptional()
-  category?: string;
-
-  @IsString()
-  @IsOptional()
   name?: string;
 
   @IsString()

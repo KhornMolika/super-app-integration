@@ -73,6 +73,12 @@ export class MiniAppAccessService {
     return { app, level };
   }
 
+  /** True when an app with this row UUID or public appId exists. */
+  async exists(id: string): Promise<boolean> {
+    const where = UUID_PATTERN.test(id) ? { id } : { appId: id };
+    return (await this.miniappRepository.count({ where })) > 0;
+  }
+
   /** Throws unless `level` satisfies `required`. */
   check(level: MiniAppAccess, required: MiniAppAccess): void {
     if (level >= required) return;

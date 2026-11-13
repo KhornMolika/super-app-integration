@@ -52,7 +52,12 @@ def privateGitDeps() {
  */
 def withBuildType(String url) {
     if (!url) return url
-    def type = params.BUILD_TYPE == 'debug' ? 'debug' : 'release'
+    // MINIAPP_SET, not BUILD_TYPE: test APKs are often compiled in release mode
+    // and must still bundle the apps under test. A job that does not know the
+    // parameter yet (first run after this change) keeps the old rule, so a
+    // production build never takes untested apps.
+    def set = params.MINIAPP_SET ?: (params.BUILD_TYPE == 'debug' ? 'test' : 'release')
+    def type = set == 'release' ? 'release' : 'debug'
     return url + (url.contains('?') ? '&' : '?') + 'buildType=' + type
 }
 
@@ -290,6 +295,7 @@ pipeline {
         string(name: 'APP_NAME', defaultValue: 'superapp', description: 'Sub-folder in the Nexus repository')
         string(name: 'RELEASE_VERSION', defaultValue: 'v0.0.1', description: 'Super App release tag')
         choice(name: 'BUILD_TYPE', choices: ['release', 'debug'], description: 'Flutter build mode')
+        choice(name: 'MINIAPP_SET', choices: ['test', 'release'], description: 'Mini apps to bundle: test = live, under test and building; release = live only')
         string(name: 'CALLBACK_URL', defaultValue: '', description: 'Backend .../release-assembly/build-callback URL. Empty: report nothing (dry run).')
         string(name: 'CALLBACK_TOKEN', defaultValue: '', description: 'Sent as x-callback-token (passed by the backend)')
         string(name: 'NEXUS_URL', defaultValue: 'https://app.fintechcenterfsa.com/nexus', description: 'Sonatype Nexus URL')

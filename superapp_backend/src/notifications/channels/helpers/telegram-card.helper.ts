@@ -28,7 +28,6 @@ export class TelegramCardHelper {
         const organization =
           (metadata?.organization as string) ||
           (metadata?.organizationName as string) ||
-          (metadata?.category as string) ||
           'Independent';
         const registrant =
           (metadata?.registrantName as string) ||

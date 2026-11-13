@@ -507,29 +507,20 @@ describe('MiniappMutationHelper and homeWidget', () => {
       );
     });
 
-    it('drops a category that only repeats the organization, keeps a service type', async () => {
+    it('ignores category: it is not stored and never picks the organization', async () => {
       const { helper, repo } = setup([{ name: 'Microfinance Regulator (MFR)', code: 'MFR' }]);
       await helper.create(
-        { appId: 'a', name: 'A', organization: 'Microfinance Regulator (MFR)', category: 'Microfinance Regulator (MFR)' },
+        { appId: 'a', name: 'A', organization: 'Microfinance Regulator (MFR)', category: 'licensing' },
         'admin-1',
       );
-      expect(repo.create).toHaveBeenLastCalledWith(
-        expect.objectContaining({ organizationCode: 'MFR', category: null }),
-      );
-      await helper.create(
-        { appId: 'b', name: 'B', organization: 'Trust Regulator (TR)', category: 'licensing' },
-        'admin-1',
-      );
-      expect(repo.create).toHaveBeenLastCalledWith(
-        expect.objectContaining({ organizationCode: 'TR', category: 'licensing' }),
-      );
-    });
+      const created = (repo.create.mock.calls as any[]).at(-1)[0];
+      expect(created).toMatchObject({ organizationCode: 'MFR' });
+      expect(created).not.toHaveProperty('category');
 
-    it('on update, an organization named only in category still sets it, and category is cleared', async () => {
-      const { helper } = setup();
-      const existing = hr({ status: 'DRAFT', category: 'Trust Regulator (TR)' } as any);
+      const existing = hr({ status: 'DRAFT', organizationCode: 'TR' } as any);
       const saved = await helper.update(existing, edit({ category: 'Insurance Regulator of Cambodia (IRC)' } as any), 'admin-1');
-      expect(saved).toMatchObject({ organizationCode: 'IRC', category: null });
+      expect((saved as any).organizationCode).not.toBe('IRC');
+      expect(saved).not.toHaveProperty('category');
     });
 
     it('falls back to the built-in FSA list', async () => {

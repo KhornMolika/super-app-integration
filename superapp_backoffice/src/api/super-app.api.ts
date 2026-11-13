@@ -14,6 +14,25 @@ export interface EcosystemStatus {
 }
 
 export const superAppApi = {
+  /** Super Admin: a new test build (APK + web preview) with the apps a test build includes now. */
+  rebuildTestBuild: () =>
+    apiClient<{ success: boolean; message: string; version: string }>(
+      '/api/super-app-builds/test',
+      { method: 'POST' },
+    ),
+
+  /** Super Admin: rebuild only the web preview (Backoffice preview and /preview/). */
+  rebuildWebPreview: () =>
+    apiClient<{ success: boolean; message: string }>('/api/super-app-builds/web', {
+      method: 'POST',
+    }),
+
+  /** The web Super App build the backend is serving now. */
+  getWebBuildInfo: () =>
+    apiClient<{ available: boolean; build?: number; version?: string; commit?: string; builtAt?: string }>(
+      '/api/superapp-web/-/info',
+    ),
+
   getEcosystemStatus: () =>
     apiClient<any>('/api/super-app/ecosystem-status').then((res) =>
       res?.data && res?.superAppVersion === undefined ? res.data : res,

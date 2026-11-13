@@ -400,11 +400,10 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
     const fieldName = e.target.name;
     const fieldValue = e.target.value;
 
-    if (fieldName === 'organization' || fieldName === 'category') {
+    if (fieldName === 'organization') {
       setFormData((prev) => ({
         ...prev,
         organization: fieldValue,
-        category: fieldValue,
       }));
       return;
     }
@@ -690,7 +689,6 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
     const payload: any = {
       name: formData.name,
       appId: formData.appId,
-      category: formData.category,
       shortDescription: formData.shortDescription,
       fullDescription: formData.fullDescription,
       logo: formData.logo,

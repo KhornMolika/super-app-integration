@@ -27,7 +27,7 @@ export default function MiniAppDetailTabs({
 
     switch (tab) {
       case 'overview':
-        return errorKeys.some((k) => ['name', 'appId', 'category', 'logo', 'shortDescription', 'fullDescription'].includes(k));
+        return errorKeys.some((k) => ['name', 'appId', 'logo', 'shortDescription', 'fullDescription'].includes(k));
       case 'legal':
         return errorKeys.some((k) => ['termsUrl', 'privacyPolicyUrl', 'termsDescription', 'privacyPolicyDescription'].includes(k));
       case 'team':

@@ -111,7 +111,8 @@ export class SeederService implements OnApplicationBootstrap {
       {
         name: 'ADMIN',
         description:
-          'Organization Administrator: reviews, approves and supervises the mini apps, users and audit trail of their own organization',
+          'Organization Administrator: supervises the mini apps, users and audit trail of their own organization. Review decisions (approve, reject, testing, activation) belong to SUPER_ADMIN',
+        // No miniapp:approve / miniapp:reject: review decisions are SUPER_ADMIN only.
         // Every grant below is scoped to the admin's organization (see
         // access-control/helpers/platform-admin.helper.ts). Platform settings and
         // Super App build infrastructure (settings:manage, super_app:manage) are
@@ -121,8 +122,6 @@ export class SeederService implements OnApplicationBootstrap {
           'miniapp:read',
           'miniapp:update',
           'miniapp:delete',
-          'miniapp:approve',
-          'miniapp:reject',
           'miniapp:suspend',
           'miniapp:submit',
           'miniapp_permission:approve',

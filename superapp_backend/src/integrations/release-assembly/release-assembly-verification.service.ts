@@ -311,6 +311,7 @@ export class ReleaseAssemblyVerificationService {
                 releaseVersion: dto.releaseVersion,
                 version: dto.releaseVersion,
                 buildType: testApkBuildMode(),
+        miniAppSet: 'test',
               },
             );
           }

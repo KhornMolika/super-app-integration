@@ -20,6 +20,7 @@ import {
   Optional,
 } from '@nestjs/common';
 import { MiniAppRunsService } from './miniapp-runs.service';
+import { MiniAppVersionsService } from './versions/miniapp-versions.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { MiniappsService } from './miniapps.service';
 import { CreateMiniAppDto } from './dto/create-miniapp.dto';
@@ -80,6 +81,7 @@ export class MiniappsController {
     private readonly access: MiniAppAccessService,
     @Optional() private readonly capabilityGate?: CapabilityGateService,
     @Optional() private readonly runs?: MiniAppRunsService,
+    @Optional() private readonly versionRows?: MiniAppVersionsService,
   ) {}
 
   /** Loads the app and throws 404/403 unless the caller holds `level` on it. */
@@ -313,8 +315,14 @@ export class MiniappsController {
     @Body('miniAppId') miniAppId?: string,
     @Body('version') version?: string,
   ) {
-    // An upload for an existing app needs EDIT on it; draft uploads belong to no app yet
-    if (miniAppId && miniAppId !== 'draft') {
+    // An upload for an existing app needs EDIT on it. Registration uploads the
+    // archive before the app exists (miniAppId is then the new appId): no app
+    // to check yet, the same as a draft upload.
+    if (
+      miniAppId &&
+      miniAppId !== 'draft' &&
+      (await this.access.exists(miniAppId))
+    ) {
       await this.require(miniAppId, req, MiniAppAccess.EDIT);
     }
     if (!file) {
@@ -683,6 +691,14 @@ export class MiniappsController {
   ) {
     await this.require(id, req, MiniAppAccess.VIEW);
     return this.miniappService.getVersionHistory(id, req.user, query);
+  }
+
+  /** Each version (newest first) with the capabilities it asks for and their review. */
+  @Get(':id/version-capabilities')
+  @RequirePermissions('miniapp:read')
+  async getVersionCapabilities(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+    await this.require(id, req, MiniAppAccess.VIEW);
+    return this.versionRows ? this.versionRows.listWithCapabilities(id) : [];
   }
 
   /** Security scan history, newest first (one row per scan run). */

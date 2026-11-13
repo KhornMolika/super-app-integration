@@ -283,8 +283,9 @@ export class MiniApp {
   })
   collaborators!: MiniAppCollaborator[];
 
+  // No cascade: MiniAppVersionsService writes version rows. Saving an app
+  // with a stale versions array must never overwrite them.
   @OneToMany(() => MiniAppVersion, (version) => version.miniApp, {
-    cascade: true,
     eager: true,
   })
   versions!: MiniAppVersion[];

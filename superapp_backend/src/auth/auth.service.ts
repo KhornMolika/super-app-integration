@@ -257,8 +257,6 @@ export class AuthService implements OnModuleInit {
           'miniapp:read',
           'miniapp:update',
           'miniapp:delete',
-          'miniapp:approve',
-          'miniapp:reject',
           'miniapp:suspend',
           'miniapp:submit',
           'miniapp_permission:approve',

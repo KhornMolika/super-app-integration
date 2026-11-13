@@ -69,8 +69,6 @@ export function effectivePermissions(user: any): Set<string> | null {
       'miniapp:read',
       'miniapp:update',
       'miniapp:delete',
-      'miniapp:approve',
-      'miniapp:reject',
       'miniapp:suspend',
       'miniapp:submit',
       'miniapp_permission:approve',

@@ -76,6 +76,7 @@ const USERS = {
 function build() {
   const miniappRepo = {
     findOne: jest.fn(async ({ where }: any) => apps[where.id] ?? null),
+    count: jest.fn(async ({ where }: any) => (apps[where.id] ? 1 : 0)),
   };
   const collabRepo = {
     findOne: jest.fn(
@@ -328,5 +329,37 @@ describe('Mini App access details', () => {
     const { controller, service } = build();
     await controller.getAllIssues({} as any, devReq);
     expect(service.findAllIssues).toHaveBeenCalledWith({}, USERS.devA);
+  });
+});
+
+describe('package archive upload', () => {
+  const file = { originalname: 'p.zip' } as any;
+
+  it('lets a developer upload while registering an app that does not exist yet', async () => {
+    const { controller } = build();
+    expect(
+      await outcome(
+        controller.uploadArtifact(
+          file,
+          { user: USERS.devA },
+          'fsa_hr_miniapp',
+          '1.0.0',
+        ),
+      ),
+    ).toBe('ok');
+  });
+
+  it('still needs EDIT to upload into an existing app', async () => {
+    const { controller } = build();
+    const req = { user: USERS.devA };
+    expect(
+      await outcome(controller.uploadArtifact(file, req, APP_SHARED_DEV)),
+    ).toBe('ok');
+    expect(
+      await outcome(controller.uploadArtifact(file, req, APP_SHARED_VIEW)),
+    ).toBe(403);
+    expect(
+      await outcome(controller.uploadArtifact(file, req, APP_OTHER_ORG)),
+    ).toBe(404);
   });
 });

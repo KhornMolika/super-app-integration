@@ -24,7 +24,6 @@ export interface VersionDiffResult {
       name?: { base: string; target: string; changed: boolean };
       shortDescription?: { base: string; target: string; changed: boolean };
       fullDescription?: { base: string; target: string; changed: boolean };
-      category?: { base: string; target: string; changed: boolean };
       logo?: { base: string; target: string; changed: boolean };
       supportEmail?: { base: string; target: string; changed: boolean };
       teamName?: { base: string; target: string; changed: boolean };
@@ -230,7 +229,6 @@ export class VersionDiffHelper {
       'name',
       'shortDescription',
       'fullDescription',
-      'category',
       'logo',
       'supportEmail',
       'teamName',

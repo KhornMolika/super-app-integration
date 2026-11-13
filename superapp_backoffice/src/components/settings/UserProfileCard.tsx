@@ -99,9 +99,9 @@ export function UserProfileCard({
 
   const accessScopeLabel =
     role === 'SUPER_ADMIN'
-      ? 'SuperApp Global Administration & Root Governance'
+      ? 'Runs the platform across every organization'
       : role === 'ADMIN'
-      ? 'SuperApp Platform Administration & Audit'
+      ? 'Manages the users and mini apps of their organization'
       : 'MiniApp Development, Sandbox Testing & Submissions';
 
   const isConnected = Boolean(telegramStatus?.user?.isConnected);
