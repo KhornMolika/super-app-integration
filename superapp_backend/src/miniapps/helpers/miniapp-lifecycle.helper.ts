@@ -1,3 +1,4 @@
+import { MiniAppRunsService } from '../miniapp-runs.service';
 import { scanConfigOf, scanScopeOf } from '../../integrations/validation/scan-source-ticket';
 import { gitRefOf, gitSourceUrlOf, isGitSource, scanSourceOf } from '../../integrations/flutter/git-source.util';
 import { testApkBuildMode } from '../../common/utils/build-mode.util';
@@ -146,6 +147,8 @@ export class MiniappLifecycleHelper {
     private capabilitiesService?: CapabilitiesService,
     @Optional()
     private artifactPublisher?: ScannedArtifactPublisherService,
+    @Optional()
+    private runs?: MiniAppRunsService,
   ) {}
 
   /**
@@ -361,6 +364,7 @@ export class MiniappLifecycleHelper {
     app.lifecycleStatus = MiniAppLifecycleStatus.SUBMITTED;
     app.validationStatus = 'RUNNING';
     await this.miniappRepository.save(app);
+    await this.runs?.syncScan(app, actorId);
 
     // The new version's own package or repository when one is under review
     const scanScope = scanScopeOf(app);
@@ -521,6 +525,7 @@ export class MiniappLifecycleHelper {
     app.validationStages = initialStages;
     app.validationStatus = 'RUNNING';
     await this.miniappRepository.save(app);
+    await this.runs?.syncScan(app, actorId);
 
     // The new version's own package or repository when one is under review
     const scanScope = scanScopeOf(app);
@@ -711,6 +716,8 @@ export class MiniappLifecycleHelper {
     ) => Promise<void>,
   ) {
     const id = app.id;
+    // Continue the scan that is running (the pending revision's, if any)
+    await this.runs?.loadScanInProgress(app);
     app.validationStatus = 'FAILED';
     if (
       app.lifecycleStatus === 'SUBMITTED' ||
@@ -746,6 +753,7 @@ export class MiniappLifecycleHelper {
     };
 
     await this.miniappRepository.save(app);
+    await this.runs?.syncScan(app, actorId);
 
     this.notificationsService.emitStageUpdate({
       miniAppId: id,
@@ -1280,6 +1288,7 @@ export class MiniappLifecycleHelper {
     };
 
     await this.miniappRepository.save(app);
+    await this.runs?.syncBuildFromApp(app, { buildType: 'debug' }, actorId);
 
     // Dispatch explicit BUILDING status notification
     const testBuildType = testApkBuildMode();
@@ -1590,11 +1599,13 @@ export class MiniappLifecycleHelper {
       app.domainVerifiedAt = rev.domainVerifiedAt;
     if (rev.verificationToken !== undefined)
       app.verificationToken = rev.verificationToken;
+    // The revision's scan becomes the app's own scan (in mini_app_scans below)
     if (rev.validationStages) app.validationStages = rev.validationStages;
     if (rev.validationReport) app.validationReport = rev.validationReport;
     if (rev.validationStatus) app.validationStatus = rev.validationStatus;
     if (rev.validationErrors !== undefined)
       app.validationErrors = rev.validationErrors;
+    await this.runs?.promoteRevisionScan(app.id);
 
     const nextVersion =
       rev.version ||
@@ -1907,6 +1918,7 @@ export class MiniappLifecycleHelper {
         const app = await this.miniappRepository.findOne({
           where: { id: miniAppId },
         });
+        await this.runs?.attach(app);
         if (!app || app.buildStatus !== 'BUILDING' || polls >= maxPolls) {
           clearInterval(interval);
           if (app && app.buildStatus === 'BUILDING' && polls >= maxPolls) {
@@ -1962,6 +1974,7 @@ export class MiniappLifecycleHelper {
     const app = await this.miniappRepository.findOne({
       where: { id: miniAppId },
     });
+    await this.runs?.attach(app);
     if (!app || app.buildStatus !== 'BUILDING') return;
 
     const stages: Record<string, any> = { ...(app.buildStages || {}) };
@@ -2008,6 +2021,7 @@ export class MiniappLifecycleHelper {
     app.buildError = errorMessage;
     app.buildStages = stages;
     await this.miniappRepository.save(app);
+    await this.runs?.syncBuildFromApp(app);
 
     this.notificationsService.emitBuildCompleted({
       miniAppId: app.id,

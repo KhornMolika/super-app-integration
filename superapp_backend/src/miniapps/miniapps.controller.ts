@@ -19,6 +19,7 @@ import {
   UploadedFile,
   Optional,
 } from '@nestjs/common';
+import { MiniAppRunsService } from './miniapp-runs.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { MiniappsService } from './miniapps.service';
 import { CreateMiniAppDto } from './dto/create-miniapp.dto';
@@ -78,6 +79,7 @@ export class MiniappsController {
     private readonly urlProbeHelper: UrlProbeHelper,
     private readonly access: MiniAppAccessService,
     @Optional() private readonly capabilityGate?: CapabilityGateService,
+    @Optional() private readonly runs?: MiniAppRunsService,
   ) {}
 
   /** Loads the app and throws 404/403 unless the caller holds `level` on it. */
@@ -681,6 +683,30 @@ export class MiniappsController {
   ) {
     await this.require(id, req, MiniAppAccess.VIEW);
     return this.miniappService.getVersionHistory(id, req.user, query);
+  }
+
+  /** Security scan history, newest first (one row per scan run). */
+  @Get(':id/scans')
+  @RequirePermissions('miniapp:read')
+  async getScans(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: any,
+    @Query() query: PaginationQueryDto,
+  ) {
+    await this.require(id, req, MiniAppAccess.VIEW);
+    return this.runs!.listScans(id, query);
+  }
+
+  /** Test and release build history, newest first (one row per build run). */
+  @Get(':id/builds')
+  @RequirePermissions('miniapp:read')
+  async getBuilds(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: any,
+    @Query() query: PaginationQueryDto,
+  ) {
+    await this.require(id, req, MiniAppAccess.VIEW);
+    return this.runs!.listBuilds(id, query);
   }
 
   @Get(':id/diff')

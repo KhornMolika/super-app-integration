@@ -11,6 +11,12 @@ import {
 import { MiniApp } from './miniapp.entity';
 import { MiniAppVersion } from './miniapp-version.entity';
 
+/**
+ * One test or release build run for a mini app. Scan results live in
+ * mini_app_scans. Written by the `mini_app_build_sync` trigger (migration
+ * CreateMiniAppScans) whenever the legacy build columns on mini_apps change,
+ * until the writers move here.
+ */
 @Entity('mini_app_builds')
 export class MiniAppBuild {
   @PrimaryGeneratedColumn('uuid')
@@ -37,20 +43,12 @@ export class MiniAppBuild {
   @Column({ nullable: true })
   version?: string;
 
+  /** debug (test build) or release; null when not known (legacy rows). */
+  @Column({ type: 'varchar', nullable: true })
+  buildType?: 'debug' | 'release' | null;
+
   @Column({ default: 'IDLE' })
-  buildStatus!: string; // IDLE, BUILDING, COMPLETED, FAILED
-
-  @Column({ default: 'PENDING' })
-  validationStatus!: string; // PENDING, RUNNING, PASSED, FAILED
-
-  @Column({ type: 'jsonb', nullable: true, default: () => "'{}'" })
-  validationStages?: any;
-
-  @Column({ type: 'jsonb', nullable: true })
-  validationReport?: any;
-
-  @Column({ type: 'jsonb', nullable: true })
-  validationErrors?: any;
+  buildStatus!: string; // IDLE, QUEUED, BUILDING, COMPLETED, FAILED
 
   @Column({ type: 'jsonb', nullable: true, default: () => "'{}'" })
   buildStages?: any;

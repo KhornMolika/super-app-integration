@@ -11,18 +11,39 @@ function looseMock(overrides: Record<string, any> = {}): any {
   });
 }
 
-async function validate(integrationConfig: Record<string, any>, appOverrides: Record<string, any> = {}) {
+async function validate(
+  integrationConfig: Record<string, any>,
+  appOverrides: Record<string, any> = {},
+) {
   const update = jest.fn().mockResolvedValue({ affected: 1 });
   const repo = looseMock({
     update,
     save: jest.fn(async (x: any) => x),
     findOne: jest.fn().mockResolvedValue(null),
   });
-  const issues = looseMock({ create: jest.fn((x: any) => x), save: jest.fn(async (x: any) => x) });
-  const nexus = looseMock({ getPackageInfo: jest.fn().mockResolvedValue({ exists: true }) });
+  const issues = looseMock({
+    create: jest.fn((x: any) => x),
+    save: jest.fn(async (x: any) => x),
+  });
+  const nexus = looseMock({
+    getPackageInfo: jest.fn().mockResolvedValue({ exists: true }),
+  });
+  // The scan run is recorded in mini_app_scans (MiniAppRunsService)
+  const runs = { syncScan: jest.fn(async (a: any) => ({ ...a })) };
   const helper = new (MiniappValidationHelper as any)(
-    repo, issues, looseMock(), looseMock(), looseMock(), looseMock(), looseMock(),
-    looseMock(), nexus, looseMock(), looseMock(), looseMock(),
+    repo,
+    issues,
+    looseMock(),
+    looseMock(),
+    looseMock(),
+    looseMock(),
+    looseMock(),
+    looseMock(),
+    nexus,
+    looseMock(),
+    looseMock(),
+    looseMock(),
+    runs,
   ) as MiniappValidationHelper;
   const app: any = {
     id: '11111111-1111-4111-8111-111111111111',
@@ -35,19 +56,42 @@ async function validate(integrationConfig: Record<string, any>, appOverrides: Re
     ...appOverrides,
   };
   await helper.validateMiniAppAsync(app).catch(() => undefined);
-  const saved = update.mock.calls.map((c) => c[1]).find((p) => p?.validationErrors);
-  return { errors: (saved?.validationErrors || {}) as Record<string, string>, nexus, saved };
+  const runs_ = (await Promise.all(
+    runs.syncScan.mock.results.map((r) => r.value),
+  )) as any[];
+  const failedRun = runs_.find((a) => a?.validationStatus === 'FAILED');
+  const payload = update.mock.calls.map((c) => c[1]).find(Boolean) || {};
+  const saved = failedRun
+    ? {
+        validationStatus: failedRun.validationStatus,
+        lifecycleStatus: payload.lifecycleStatus,
+      }
+    : undefined;
+  return {
+    errors: (failedRun?.validationErrors || {}) as Record<string, string>,
+    nexus,
+    saved,
+  };
 }
 
 describe('Flutter package artifact: the uploaded archive is required', () => {
   it('fails without an archive, even when the package is already in Nexus', async () => {
-    const { errors, nexus } = await validate({ sourceType: 'ARTIFACT', packageName: 'fsa_hr_miniapp' });
-    expect(errors['integrationConfigFlutter.archiveFile']).toMatch(/Attach the package archive/);
+    const { errors, nexus } = await validate({
+      sourceType: 'ARTIFACT',
+      packageName: 'fsa_hr_miniapp',
+    });
+    expect(errors['integrationConfigFlutter.archiveFile']).toMatch(
+      /Attach the package archive/,
+    );
     expect(nexus.getPackageInfo).not.toHaveBeenCalled();
   });
 
   it('a checksum from inspecting a file is not an uploaded archive', async () => {
-    const { errors } = await validate({ sourceType: 'ARTIFACT', packageName: 'fsa_hr_miniapp', archiveChecksum: 'abc' });
+    const { errors } = await validate({
+      sourceType: 'ARTIFACT',
+      packageName: 'fsa_hr_miniapp',
+      archiveChecksum: 'abc',
+    });
     expect(errors['integrationConfigFlutter.archiveFile']).toBeDefined();
   });
 
@@ -71,7 +115,11 @@ describe('a failed check on a new app', () => {
   it('sends a new app back to DRAFT', async () => {
     const { saved } = await validate(
       { sourceType: 'ARTIFACT', packageName: 'fsa_hr_miniapp' },
-      { lifecycleStatus: 'IN_REVIEW', availabilityStatus: 'TESTING', pendingRevision: null },
+      {
+        lifecycleStatus: 'IN_REVIEW',
+        availabilityStatus: 'TESTING',
+        pendingRevision: null,
+      },
     );
     expect(saved?.validationStatus).toBe('FAILED');
     expect(saved?.lifecycleStatus).toBe('DRAFT');
@@ -80,7 +128,11 @@ describe('a failed check on a new app', () => {
   it('leaves an app that is already live where it is', async () => {
     const { saved } = await validate(
       { sourceType: 'ARTIFACT', packageName: 'fsa_hr_miniapp' },
-      { lifecycleStatus: 'ACTIVE', availabilityStatus: 'PRODUCTION', pendingRevision: null },
+      {
+        lifecycleStatus: 'ACTIVE',
+        availabilityStatus: 'PRODUCTION',
+        pendingRevision: null,
+      },
     );
     expect(saved?.validationStatus).toBe('FAILED');
     expect(saved?.lifecycleStatus).toBeUndefined();

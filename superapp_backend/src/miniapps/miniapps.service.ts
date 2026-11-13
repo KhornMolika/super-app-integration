@@ -25,6 +25,7 @@ import { PermissionDetectorHelper } from './helpers/permission-detector.helper';
 import { MiniappValidationHelper } from './helpers/miniapp-validation.helper';
 import { nativeEntryClassProblems } from './helpers/native-sdk-config.helper';
 import { MiniappLifecycleHelper } from './helpers/miniapp-lifecycle.helper';
+import { MiniAppRunsService } from './miniapp-runs.service';
 import {
   FOUR_EYES_SUBMIT_ACTIONS,
   fourEyesViolation,
@@ -114,6 +115,8 @@ export class MiniappsService implements OnApplicationBootstrap {
     private artifactPublisher?: ScannedArtifactPublisherService,
     @Optional()
     private notificationsService?: NotificationsService,
+    @Optional()
+    private runs?: MiniAppRunsService,
   ) {}
 
   /**
@@ -562,17 +565,19 @@ export class MiniappsService implements OnApplicationBootstrap {
     return { appIdExists, nameExists };
   }
 
+  /** The app with its latest scan and build runs (validationStatus, buildStatus, ...). */
   async findOne(id: string) {
-    return this.miniappRepository.findOne({
+    const app = await this.miniappRepository.findOne({
       where: { id },
       relations: {
         issues: true,
         collaborators: true,
         versions: true,
-        builds: true,
         legal: true,
       },
     });
+    await this.runs?.attach(app);
+    return app;
   }
 
   async findAll(
@@ -592,6 +597,7 @@ export class MiniappsService implements OnApplicationBootstrap {
         order: { updatedAt: 'DESC' },
         relations: { issues: true },
       });
+      await this.runs?.attach(apps);
       return apps.map((a) => maskMiniAppCredentials(a));
     }
 
@@ -710,6 +716,7 @@ export class MiniappsService implements OnApplicationBootstrap {
     qb.skip((page - 1) * limit).take(limit);
 
     const [apps, totalItems] = await qb.getManyAndCount();
+    await this.runs?.attach(apps);
     const masked = apps.map((a) => maskMiniAppCredentials(a));
 
     return createPaginatedResponse(masked, totalItems, page, limit);

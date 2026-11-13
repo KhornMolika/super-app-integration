@@ -941,6 +941,10 @@ To transition safely without corrupting existing data or causing downtime, the m
   - [x] Kept because live entities still use them: `auth_otps`, `superapp_capabilities`, `end_user_email_verification_tokens`.
 
 - [ ] **Phase 3c: Remaining Differences From This Specification** (not yet implemented)
+  - [ ] **Run history (`mini_app_scans`, `mini_app_builds`)**, in steps:
+    - [x] 1a Expand (migration `CreateMiniAppScans`): `mini_app_scans` holds one row per scan run (scope `APP` or `REVISION`, status, stages, report, errors, checks), so a failed revision scan no longer looks like the live version's result. `mini_app_builds` lost its unused `validation*` columns and gained `buildType`. Existing state is backfilled. Triggers `trg_mini_app_scan_sync` and `trg_mini_app_build_sync` copy every change of the legacy `mini_apps` columns (and of the scan fields in `pendingRevision`) into a run row; a trigger error only logs a WARNING. History endpoints: `GET /mini-apps/:id/scans`, `GET /mini-apps/:id/builds`.
+    - [ ] 1b Writers record runs directly (with `actorId`), and reads (build inclusion, detail page, four-eyes submitter) use the run tables.
+    - [ ] 1c Contract: drop `validationStatus`, `validationStages`, `validationReport`, `validationErrors`, `securityChecks`, `buildStatus`, `buildStages`, `buildError` from `mini_apps` and the two triggers.
   - [ ] `mini_apps` slimming (Section 8): about 20 legacy technical columns (`integrationConfig`, `validation*`, `build*`, `verificationToken`, `isDomainVerified`, `status`, `version`, `versionHistory`, `permissions`, `capabilities`, `organization`, `organizationCode`, `teamName`, `teamTelegramChatId`, `sharingScope`, and others) still live on `mini_apps` instead of `mini_app_versions.integrationConfig`. Touches about 500 code references; planned as a separate refactor.
   - [ ] `mini_app_versions` still has top-level `packageName`, `gitRef`, `artifactUrl`, `checksum`, `apkSize`, `type`, and stores capabilities in `permissions` (doc: `capabilities`).
   - [ ] `organizations` still has `domain`, `contactEmail`, `contactPhone`, `metadata`.

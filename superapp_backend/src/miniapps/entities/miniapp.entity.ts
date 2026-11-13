@@ -14,6 +14,7 @@ import { MiniAppCollaborator } from './miniapp-collaborator.entity';
 import { MiniAppIssue } from './miniapp-issue.entity';
 import { MiniAppVersion } from './miniapp-version.entity';
 import { MiniAppBuild } from './miniapp-build.entity';
+import { MiniAppScan } from './miniapp-scan.entity';
 import { MiniAppLegal } from './miniapp-legal.entity';
 import { Notification } from '../../notifications/entities/notification.entity';
 import { Organization } from '../../organizations/entities/organization.entity';
@@ -263,27 +264,19 @@ export class MiniApp {
   @Column({ nullable: true })
   draftVersion?: string;
 
-  // Pipeline state for build and validation execution
-  @Column({ type: 'varchar', nullable: true, default: 'PENDING' })
+  /*
+   * Latest scan and build runs, not columns: they live in mini_app_scans and
+   * mini_app_builds. MiniAppRunsService.attach() fills them on loaded apps
+   * (API responses keep these fields); writers record runs through
+   * MiniAppRunsService (syncScan, recordBuild, ...).
+   */
   validationStatus?: string;
-
-  @Column({ type: 'jsonb', nullable: true, default: () => "'{}'" })
   validationStages?: any;
-
-  @Column({ type: 'jsonb', nullable: true })
   validationReport?: any;
-
-  @Column({ type: 'jsonb', nullable: true })
   validationErrors?: any;
-
-  @Column({ type: 'varchar', nullable: true, default: 'IDLE' })
   buildStatus?: string;
-
-  @Column({ type: 'jsonb', nullable: true, default: () => "'{}'" })
   buildStages?: any;
-
-  @Column({ type: 'text', nullable: true })
-  buildError?: string;
+  buildError?: string | null;
 
   @OneToMany(() => MiniAppCollaborator, (collab) => collab.miniApp, {
     cascade: true,
@@ -300,6 +293,9 @@ export class MiniApp {
     cascade: true,
   })
   builds!: MiniAppBuild[];
+
+  @OneToMany(() => MiniAppScan, (scan) => scan.miniApp)
+  scans!: MiniAppScan[];
 
   @OneToMany(() => MiniAppIssue, (issue) => issue.miniApp, {
     cascade: true,

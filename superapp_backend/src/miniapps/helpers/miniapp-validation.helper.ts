@@ -1,6 +1,7 @@
+import { MiniAppRunsService } from '../miniapp-runs.service';
 import { scanConfigOf, scanScopeOf } from '../../integrations/validation/scan-source-ticket';
 import { scanSourceOf } from '../../integrations/flutter/git-source.util';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { isEmail } from 'class-validator';
@@ -55,6 +56,8 @@ export class MiniappValidationHelper {
     private domainVerificationService: DomainVerificationService,
     private jenkinsService: JenkinsService,
     private localSecurityScannerService: LocalSecurityScannerService,
+    @Optional()
+    private runs?: MiniAppRunsService,
   ) {}
 
   async validateMiniAppAsync(
@@ -472,10 +475,7 @@ export class MiniappValidationHelper {
 
     if (Object.keys(errors).length > 0) {
       try {
-        const updatePayload: any = {
-          validationErrors: errors as any,
-          validationStatus: 'FAILED',
-        };
+        const updatePayload: any = {};
         if (!isLive) {
           updatePayload.lifecycleStatus = 'DRAFT';
         } else if (app.pendingRevision) {
@@ -485,15 +485,20 @@ export class MiniappValidationHelper {
             validationErrors: errors,
           };
         }
-        await this.miniappRepository.update(id, updatePayload);
+        if (Object.keys(updatePayload).length > 0) {
+          await this.miniappRepository.update(id, updatePayload);
+        }
       } catch (updErr: any) {
         this.logger.warn(
           `Could not update validationErrors directly: ${updErr.message}`,
         );
-        app.validationStatus = 'FAILED';
         if (!isLive) app.lifecycleStatus = 'DRAFT' as any;
         await this.miniappRepository.save(app);
       }
+      // The failed run: the pending revision's when there is one
+      app.validationStatus = 'FAILED';
+      app.validationErrors = errors as any;
+      await this.runs?.syncScan(app);
 
       // Create persistent issues
       const issues = Object.entries(errors).map(([key, value]) => {
@@ -552,11 +557,7 @@ export class MiniappValidationHelper {
         app.securityChecks,
       );
 
-      const updatePayload: any = {
-        validationStatus: 'RUNNING',
-        validationStages: initialStages as any,
-        validationErrors: null as any,
-      };
+      const updatePayload: any = {};
       if (!isLive) {
         updatePayload.lifecycleStatus = 'SUBMITTED';
       } else if (app.pendingRevision) {
@@ -566,7 +567,14 @@ export class MiniappValidationHelper {
           validationStages: initialStages,
         };
       }
-      await this.miniappRepository.update(id, updatePayload);
+      if (Object.keys(updatePayload).length > 0) {
+        await this.miniappRepository.update(id, updatePayload);
+      }
+      app.validationStatus = 'RUNNING';
+      app.validationStages = initialStages as any;
+      app.validationErrors = null;
+      app.validationReport = null;
+      await this.runs?.syncScan(app);
 
       const envVal = (process.env.ENVIRONMENT || '').toUpperCase();
       const allowLocal = envVal === 'DEV';
@@ -754,6 +762,7 @@ export class MiniappValidationHelper {
       polls++;
       try {
         const app = await this.miniappRepository.findOne({ where: { id: miniAppId } });
+        if (app) await this.runs?.loadScanInProgress(app);
         if (!app || app.validationStatus !== 'RUNNING' || polls >= maxPolls) {
           clearInterval(interval);
           if (app && app.validationStatus === 'RUNNING' && polls >= maxPolls) {
@@ -833,6 +842,7 @@ export class MiniappValidationHelper {
    */
   private async markValidationFailed(miniAppId: string, errorMessage: string) {
     const app = await this.miniappRepository.findOne({ where: { id: miniAppId } });
+    if (app) await this.runs?.loadScanInProgress(app);
     if (!app || app.validationStatus !== 'RUNNING') return;
 
     const stages: Record<string, any> = { ...(app.validationStages || {}) };
@@ -877,6 +887,7 @@ export class MiniappValidationHelper {
     };
 
     await this.miniappRepository.save(app);
+    await this.runs?.syncScan(app);
 
     this.notificationsService.emitStageUpdate({
       miniAppId: app.id,

@@ -7,6 +7,8 @@ import { MiniApp } from './entities/miniapp.entity';
 import { MiniAppIssue } from './entities/miniapp-issue.entity';
 import { MiniAppCollaborator } from './entities/miniapp-collaborator.entity';
 import { MiniAppVersion } from './entities/miniapp-version.entity';
+import { MiniAppScan } from './entities/miniapp-scan.entity';
+import { MiniAppRunsModule } from './miniapp-runs.module';
 import { MiniAppBuild } from './entities/miniapp-build.entity';
 import { MiniAppLegal } from './entities/miniapp-legal.entity';
 
@@ -40,8 +42,10 @@ import { MiniAppAccessModule } from './access/miniapp-access.module';
       MiniAppCollaborator,
       MiniAppVersion,
       MiniAppBuild,
+      MiniAppScan,
       MiniAppLegal,
     ]),
+    MiniAppRunsModule,
     AuthModule,
     NotificationsModule,
     CapabilitiesModule,
