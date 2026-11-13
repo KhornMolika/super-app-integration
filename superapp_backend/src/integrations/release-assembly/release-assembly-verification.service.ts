@@ -260,16 +260,16 @@ export class ReleaseAssemblyVerificationService {
       const initialBuildStages = {
         preflight: {
           id: 'preflight',
-          name: '1. Pre-Flight & Manifest Verification',
+          name: '1. Pre-Flight & Source Checkout',
           status: 'RUNNING',
           details: `Verifying dependency checksums and manifest digest for ${dto.releaseVersion}.`,
           updatedAt: new Date().toISOString(),
         },
         compile: {
           id: 'compile',
-          name: '2. Fastlane APK Packaging',
+          name: '2. Compile APK',
           status: 'PENDING',
-          details: 'Assembling Flutter SuperApp container and compiling debug APK binary with Fastlane.',
+          details: 'Assembling Flutter SuperApp container and compiling APK binary.',
         },
         publish: {
           id: 'publish',
@@ -566,16 +566,16 @@ export class ReleaseAssemblyVerificationService {
         const allCompletedStages: Record<string, any> = {
           preflight: {
             id: 'preflight',
-            name: '1. Pre-Flight & Manifest Verification',
+            name: '1. Pre-Flight & Source Checkout',
             status: 'COMPLETED',
             details: 'Manifest and dependencies verified.',
             updatedAt: new Date().toISOString(),
           },
           compile: {
             id: 'compile',
-            name: '2. Fastlane APK Packaging',
+            name: '2. Compile APK',
             status: 'COMPLETED',
-            details: 'Fastlane packaging completed successfully.',
+            details: 'APK compilation completed successfully.',
             updatedAt: new Date().toISOString(),
           },
           publish: {
@@ -994,14 +994,14 @@ export class ReleaseAssemblyVerificationService {
       const stages: Record<string, any> = {
         preflight: {
           id: 'preflight',
-          name: '1. Pre-Flight & Manifest Verification',
+          name: '1. Pre-Flight & Source Checkout',
           status: 'FAILED',
           details: errorMessage,
           updatedAt: new Date().toISOString(),
         },
         compile: {
           id: 'compile',
-          name: '2. Fastlane APK Packaging',
+          name: '2. Compile APK',
           status: 'PENDING',
           details: 'Stage aborted due to pre-flight failure.',
         },

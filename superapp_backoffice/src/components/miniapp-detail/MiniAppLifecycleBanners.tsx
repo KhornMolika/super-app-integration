@@ -57,7 +57,7 @@ export default function MiniAppLifecycleBanners({
 }: MiniAppLifecycleBannersProps) {
   const stageDefs = [
     { id: 'preflight', name: '1. Pre-Flight & Manifest', icon: <ClipboardCheckIcon className="w-4 h-4 text-accent-500" />, defaultDetails: 'Verifying dependency checksums and manifest integrity.' },
-    { id: 'compile', name: '2. Fastlane APK Packaging', icon: <SettingsIcon className="w-4 h-4 text-amber-500" />, defaultDetails: 'Assembling Flutter SuperApp container and compiling debug APK.' },
+    { id: 'compile', name: '2. Compile APK', icon: <SettingsIcon className="w-4 h-4 text-amber-500" />, defaultDetails: 'Assembling Flutter SuperApp container and compiling APK.' },
     { id: 'publish', name: '3. Publish to Nexus', icon: <PackageIcon className="w-4 h-4 text-emerald-500" />, defaultDetails: 'Uploading compiled APK artifact to Sonatype Nexus (apk-test-builds).' },
   ];
 

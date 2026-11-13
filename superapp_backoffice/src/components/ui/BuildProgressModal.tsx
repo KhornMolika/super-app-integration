@@ -33,14 +33,14 @@ export interface BuildProgressModalProps {
 const DEFAULT_STAGES: { id: string; name: string; defaultDetails: string; icon: string }[] = [
   {
     id: 'preflight',
-    name: '1. Pre-Flight & Manifest Verification',
+    name: '1. Pre-Flight & Source Checkout',
     defaultDetails: 'Verifying dependency checksums, manifest digest, and package exports.',
     icon: 'preflight',
   },
   {
     id: 'compile',
-    name: '2. Fastlane APK Packaging',
-    defaultDetails: 'Assembling Flutter SuperApp container and compiling debug APK binary with Fastlane.',
+    name: '2. Compile APK',
+    defaultDetails: 'Assembling Flutter SuperApp container and compiling APK binary.',
     icon: 'compile',
   },
   {

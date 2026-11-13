@@ -1248,7 +1248,7 @@ export class MiniappLifecycleHelper {
     app.buildStages = {
       preflight: {
         id: 'preflight',
-        name: '1. Pre-Flight & Manifest Verification',
+        name: '1. Pre-Flight & Source Checkout',
         status: 'RUNNING',
         details:
           'Verifying package checksums, dependencies, and manifest integrity...',
@@ -1256,9 +1256,9 @@ export class MiniappLifecycleHelper {
       },
       compile: {
         id: 'compile',
-        name: '2. Fastlane APK Packaging',
+        name: '2. Compile APK',
         status: 'PENDING',
-        details: 'Awaiting container assembly and Fastlane APK compilation...',
+        details: 'Awaiting container assembly and APK compilation...',
         updatedAt: new Date().toISOString(),
       },
       publish: {
@@ -1980,7 +1980,7 @@ export class MiniappLifecycleHelper {
     if (!hadRunning) {
       stages.preflight = {
         id: 'preflight',
-        name: '1. Pre-Flight & Manifest Verification',
+        name: '1. Pre-Flight & Source Checkout',
         status: 'FAILED',
         details: errorMessage,
         updatedAt: new Date().toISOString(),
@@ -1988,7 +1988,7 @@ export class MiniappLifecycleHelper {
       if (!stages.compile) {
         stages.compile = {
           id: 'compile',
-          name: '2. Fastlane APK Packaging',
+          name: '2. Compile APK',
           status: 'PENDING',
           details: 'Stage aborted due to pre-flight failure.',
         };

@@ -340,9 +340,9 @@ export class ApkBuildManagerService {
                   releaseVersion,
                   stage: {
                     id: 'compile',
-                    name: '2. Fastlane APK Packaging',
+                    name: '2. Compile APK',
                     status: 'COMPLETED',
-                    details: `Size-optimized Fastlane build completed successfully for ${appName}.`,
+                    details: `Size-optimized build completed successfully for ${appName}.`,
                     updatedAt: new Date().toISOString(),
                   },
                   stages: app.buildStages || {},

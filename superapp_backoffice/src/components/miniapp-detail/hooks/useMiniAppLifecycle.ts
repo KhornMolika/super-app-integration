@@ -281,16 +281,16 @@ export function useMiniAppLifecycle({
         const cleanStages = {
           preflight: {
             id: 'preflight',
-            name: '1. Pre-Flight & Manifest Verification',
+            name: '1. Pre-Flight & Source Checkout',
             status: 'RUNNING',
             details: 'Verifying package checksums, dependencies, and manifest integrity...',
             updatedAt: new Date().toISOString(),
           },
           compile: {
             id: 'compile',
-            name: '2. Fastlane APK Packaging',
+            name: '2. Compile APK',
             status: 'PENDING',
-            details: 'Awaiting container assembly and Fastlane APK compilation...',
+            details: 'Awaiting container assembly and APK compilation...',
             updatedAt: new Date().toISOString(),
           },
           publish: {

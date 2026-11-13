@@ -103,6 +103,25 @@ def syncMiniApps() {
     if (fileExists('build-miniapps.json')) archiveArtifacts artifacts: 'build-miniapps.json', fingerprint: true
 }
 
+/** Fetches which Native SDK libraries this build includes (written to native_sdks.json for Gradle/Podfile). */
+def syncNativeSdks() {
+    def manifestUrl = p('NATIVE_SDK_MANIFEST_URL')?.trim() ?:
+            (callbackBase() ? callbackBase().replaceAll('/build-callback/?$', '/native-sdk-manifest') : '')
+    if (!manifestUrl) {
+        echo 'WARNING: no Native SDK list URL; building without Native SDK mini apps'
+        sh "rm -f ${env.MOBILE_DIR}/native_sdks.json"
+        return
+    }
+    withEnv(["MANIFEST_URL=${manifestUrl}"]) {
+        sh '''
+            set -e +x  # no trace: keeps the callback token and passwords out of the console log
+            curl -sSf --max-time 30 -H "x-callback-token: ${CALLBACK_TOKEN:-}" "$MANIFEST_URL" -o "$MOBILE_DIR/native_sdks.json"
+            echo "Native SDK list:"; cat "$MOBILE_DIR/native_sdks.json"; echo
+        '''
+    }
+    archiveArtifacts artifacts: "${env.MOBILE_DIR}/native_sdks.json", fingerprint: true
+}
+
 /** Turns git-credentials.json into an SSH config, key files and Git insteadOf rules (no backslashes: kept in a Groovy string). */
 def gitConfigJs() {
     return '''
@@ -301,6 +320,7 @@ pipeline {
                                              [$class: 'CleanBeforeCheckout']]])
                         }
                         syncMiniApps()
+                        syncNativeSdks()
                         // Packages only a developer PC can serve make the build fail later with a vague error
                         def local = sh(returnStdout: true, script: "grep -nE 'url: *https?://(localhost|127\\.0\\.0\\.1|10\\.0\\.2\\.2|host\\.docker\\.internal)' ${env.MOBILE_DIR}/pubspec.yaml || true").trim()
                         if (local && p('TOOLCHAIN_CHECK_ONLY')) {
@@ -313,36 +333,10 @@ pipeline {
             }
         }
 
-        stage('2. Native SDK mini apps') {
+        stage('2. Compile APK') {
             steps {
                 script {
-                    runStage('native_sdks', '2. Native SDK Mini Apps',
-                            'Reading which Native SDK libraries this build includes...', 'Native SDK list ready.') {
-                        def manifestUrl = p('NATIVE_SDK_MANIFEST_URL')?.trim() ?:
-                                (callbackBase() ? callbackBase().replaceAll('/build-callback/?$', '/native-sdk-manifest') : '')
-                        if (!manifestUrl) {
-                            echo 'WARNING: no Native SDK list URL; building without Native SDK mini apps'
-                            sh "rm -f ${env.MOBILE_DIR}/native_sdks.json"
-                            return
-                        }
-                        // Never drop SDKs silently: fail when the list cannot be read
-                        withEnv(["MANIFEST_URL=${manifestUrl}"]) {
-                            sh '''
-                                set -e +x  # no trace: keeps the callback token and passwords out of the console log
-                                curl -sSf --max-time 30 -H "x-callback-token: ${CALLBACK_TOKEN:-}" "$MANIFEST_URL" -o "$MOBILE_DIR/native_sdks.json"
-                                echo "Native SDK list:"; cat "$MOBILE_DIR/native_sdks.json"; echo
-                            '''
-                        }
-                        archiveArtifacts artifacts: "${env.MOBILE_DIR}/native_sdks.json", fingerprint: true
-                    }
-                }
-            }
-        }
-
-        stage('3. Compile APK') {
-            steps {
-                script {
-                    runStage('compile', '3. Compile APK',
+                    runStage('compile', '2. Compile APK',
                             "Compiling the Super App ${params.BUILD_TYPE} APK (universal android-arm, arm64, x64, plus an arm64-only copy)...",
                             "APK compiled.") {
                         withPrivateGitDeps {
@@ -452,11 +446,11 @@ pipeline {
             }
         }
 
-        stage('4. Publish to Nexus') {
+        stage('3. Publish to Nexus') {
             when { expression { !p('TOOLCHAIN_CHECK_ONLY') } }
             steps {
                 script {
-                    runStage('publish', '4. Publish to Nexus (apk-test-builds)',
+                    runStage('publish', '3. Publish to Nexus & Finalize',
                             'Uploading the APK to Sonatype Nexus...',
                             "Published ${apkName()} to apk-test-builds/${params.APP_NAME}/${params.RELEASE_VERSION}/.") {
                         withEnv(["APK_URL=${apkUrl()}", "BUILD_WEB=${p('BUILD_WEB') ? 'true' : 'false'}",
