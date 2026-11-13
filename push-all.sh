@@ -32,6 +32,11 @@ cd "$GIT_ROOT"
 
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD | tr -d '\r\n ')
 
+# Rewritten by the backend while it runs locally: left out of commits
+NEVER_COMMIT=(
+  "superapp_backend/data/super_app_release.json"
+)
+
 # ==============================================================================
 # 1. Check for Uncommitted Changes & Prompt to Commit (git add . && git commit)
 # ==============================================================================
@@ -48,9 +53,28 @@ if [ -n "$STATUS_CHANGES" ]; then
   if [ -n "$COMMIT_MSG" ]; then
     echo -e "\n${CYAN}➜ Running: git add .${RESET}"
     git add .
-    echo -e "${CYAN}➜ Running: git commit -m \"$COMMIT_MSG\"${RESET}"
-    git commit -m "$COMMIT_MSG"
-    echo -e "${GREEN}✔ Changes staged and committed successfully!${RESET}\n"
+    # Files the backend rewrites while it runs locally: never part of a commit
+    for f in "${NEVER_COMMIT[@]}"; do
+      if ! git diff --cached --quiet -- "$f" 2>/dev/null; then
+        git reset -q -- "$f"
+        echo -e "${YELLOW}ℹ Left out (generated at runtime): $f${RESET}"
+      fi
+    done
+    if git diff --cached --quiet; then
+      echo -e "${YELLOW}ℹ Nothing left to commit. Proceeding with existing commits...${RESET}\n"
+    else
+      echo -e "\n${BOLD}Files in this commit:${RESET}"
+      git diff --cached --stat
+      read -r -p "Commit these files? [Y/n]: " COMMIT_OK
+      if [[ "$(echo "$COMMIT_OK" | tr -d '\r')" =~ ^[nN] ]]; then
+        git reset -q
+        echo -e "${YELLOW}Commit cancelled (files unstaged).${RESET}"
+        exit 0
+      fi
+      echo -e "${CYAN}➜ Running: git commit -m \"$COMMIT_MSG\"${RESET}"
+      git commit -m "$COMMIT_MSG"
+      echo -e "${GREEN}✔ Changes staged and committed successfully!${RESET}\n"
+    fi
   else
     echo -e "${YELLOW}ℹ Skipping commit. Proceeding with existing commits...${RESET}\n"
   fi
@@ -171,9 +195,9 @@ echo -e "${BOLD}${YELLOW} Push Summary:${RESET}"
 echo -e "  - Source Branch:   ${CYAN}${SOURCE_BRANCH}${RESET}"
 echo -e "  - Target Branch:   ${CYAN}${TARGET_BRANCH}${RESET}"
 case "$REMOTE_CHOICE" in
-  1) echo -e "  - Destinations:    ${GREEN}origin (Monorepo), superapp-manager (Backoffice), superapp-backend (Backend), superapp-mobile (Mobile)${RESET}" ;;
-  2) echo -e "  - Destinations:    ${GREEN}superapp-manager (Backoffice), superapp-backend (Backend), superapp-mobile (Mobile)${RESET}" ;;
-  3) echo -e "  - Destinations:    ${GREEN}superapp-mobile (Mobile)${RESET}" ;;
+  1) echo -e "  - Destinations:    ${GREEN}origin (Monorepo), superapp-manager (Backoffice), superapp-backend (Backend), superapp-mobile (Mobile: super-app's own branch)${RESET}" ;;
+  2) echo -e "  - Destinations:    ${GREEN}superapp-manager (Backoffice), superapp-backend (Backend), superapp-mobile (Mobile: super-app's own branch)${RESET}" ;;
+  3) echo -e "  - Destinations:    ${GREEN}superapp-mobile (Mobile: super-app's own branch)${RESET}" ;;
   4) echo -e "  - Destinations:    ${GREEN}superapp-manager (Backoffice)${RESET}" ;;
   5) echo -e "  - Destinations:    ${GREEN}superapp-backend (Backend)${RESET}" ;;
   6) echo -e "  - Destinations:    ${GREEN}origin (Monorepo)${RESET}" ;;
@@ -214,6 +238,12 @@ push_superapp_manager() {
     return 1
   fi
   echo -e "  ${CYAN}➜ Split commit: $SPLIT_COMMIT${RESET}"
+  if [ "$(git ls-remote superapp-manager "refs/heads/$TARGET_BRANCH" | cut -f1)" = "$SPLIT_COMMIT" ]; then
+    echo -e "${GREEN}✔ Backoffice already up to date on superapp-manager/$TARGET_BRANCH.${RESET}\n"
+    return 0
+  fi
+  # --force: the split is rebuilt from the monorepo each time. Never commit to
+  # superapp-manager directly: it would be overwritten here.
   if git push superapp-manager "$SPLIT_COMMIT":"refs/heads/$TARGET_BRANCH" --force; then
     echo -e "${GREEN}✔ Backoffice successfully pushed to superapp-manager/$TARGET_BRANCH!${RESET}\n"
   else
@@ -231,6 +261,12 @@ push_superapp_backend() {
     return 1
   fi
   echo -e "  ${CYAN}➜ Split commit: $SPLIT_COMMIT${RESET}"
+  if [ "$(git ls-remote superapp-backend "refs/heads/$TARGET_BRANCH" | cut -f1)" = "$SPLIT_COMMIT" ]; then
+    echo -e "${GREEN}✔ Backend already up to date on superapp-backend/$TARGET_BRANCH.${RESET}\n"
+    return 0
+  fi
+  # --force: the split is rebuilt from the monorepo each time. Never commit to
+  # superapp-backend directly: it would be overwritten here.
   if git push superapp-backend "$SPLIT_COMMIT":"refs/heads/$TARGET_BRANCH" --force; then
     echo -e "${GREEN}✔ Backend successfully pushed to superapp-backend/$TARGET_BRANCH!${RESET}\n"
   else
@@ -239,20 +275,62 @@ push_superapp_backend() {
 }
 
 # Helper to push to superapp-mobile (Mobile super-app)
+# super-app/ is its own Git repository inside the monorepo (not a subtree), so
+# its own current branch is pushed. Jenkins builds the mobile app from `development`.
 push_superapp_mobile() {
-  echo -e "${BOLD}${BLUE}📱 [4/4] Splitting & Pushing super-app to superapp-mobile ($TARGET_BRANCH)...${RESET}"
-  echo -e "  ${CYAN}➜ Computing subtree split for super-app...${RESET}"
-  SPLIT_COMMIT=$(git subtree split --prefix=super-app "$SOURCE_BRANCH" 2>/dev/null | tr -d '\r\n ')
-  if [ -z "$SPLIT_COMMIT" ]; then
-    echo -e "${YELLOW}ℹ No separate subtree changes found in super-app.${RESET}\n"
+  echo -e "${BOLD}${BLUE}📱 [4/4] Pushing super-app (its own repository) to superapp-mobile...${RESET}"
+  local M="$GIT_ROOT/super-app"
+  if [ ! -e "$M/.git" ]; then
+    echo -e "${YELLOW}ℹ super-app is not a Git repository here: skipped.${RESET}\n"
     return 0
   fi
-  echo -e "  ${CYAN}➜ Split commit: $SPLIT_COMMIT${RESET}"
-  if git push superapp-mobile "$SPLIT_COMMIT":"refs/heads/$TARGET_BRANCH" --force; then
-    echo -e "${GREEN}✔ Mobile SuperApp successfully pushed to superapp-mobile/$TARGET_BRANCH!${RESET}\n"
-  else
-    echo -e "${RED}❌ Failed to push to superapp-mobile/$TARGET_BRANCH.${RESET}\n"
+  if ! git -C "$M" remote get-url superapp-mobile >/dev/null 2>&1; then
+    echo -e "${RED}❌ super-app has no remote 'superapp-mobile': skipped.${RESET}\n"
+    return 0
   fi
+  local MB
+  MB=$(git -C "$M" rev-parse --abbrev-ref HEAD | tr -d '\r\n ')
+  if [ -n "$(git -C "$M" status --porcelain)" ]; then
+    echo -e "${YELLOW}⚠ super-app has uncommitted changes (not pushed):${RESET}"
+    git -C "$M" status --short
+    echo -e "${YELLOW}  Commit them inside super-app first if they should go out.${RESET}"
+  fi
+
+  echo -e "  ${CYAN}➜ git push superapp-mobile $MB${RESET}"
+  if git -C "$M" push superapp-mobile "$MB:refs/heads/$MB"; then
+    echo -e "${GREEN}✔ super-app $MB pushed to superapp-mobile/$MB.${RESET}"
+  else
+    echo -e "${RED}❌ Push of super-app $MB failed (behind the remote? pull it first).${RESET}\n"
+    return 0
+  fi
+
+  if [ "$MB" != "development" ]; then
+    read -r -p "Also merge super-app $MB into development (the branch Jenkins builds)? [y/N]: " MERGE_DEV
+    if [[ "$(echo "$MERGE_DEV" | tr -d '\r')" =~ ^[yY] ]]; then
+      if [ -n "$(git -C "$M" status --porcelain)" ]; then
+        echo -e "${RED}❌ Not merging: super-app has uncommitted changes.${RESET}\n"
+        return 0
+      fi
+      git -C "$M" fetch -q superapp-mobile development
+      if git -C "$M" checkout -q development 2>/dev/null || git -C "$M" checkout -q -b development superapp-mobile/development; then
+        git -C "$M" merge -q --ff-only superapp-mobile/development 2>/dev/null || true
+        if git -C "$M" merge --no-edit "$MB"; then
+          if git -C "$M" push superapp-mobile development; then
+            echo -e "${GREEN}✔ development updated on superapp-mobile.${RESET}"
+          else
+            echo -e "${RED}❌ Push of development failed.${RESET}"
+          fi
+        else
+          git -C "$M" merge --abort 2>/dev/null || true
+          echo -e "${RED}❌ Merge conflict: development left unchanged. Merge it by hand inside super-app.${RESET}"
+        fi
+        git -C "$M" checkout -q "$MB"
+      else
+        echo -e "${RED}❌ Could not switch super-app to development.${RESET}"
+      fi
+    fi
+  fi
+  echo ""
 }
 
 case "$REMOTE_CHOICE" in
@@ -283,4 +361,5 @@ esac
 
 echo -e "${BOLD}${GREEN}======================================================${RESET}"
 echo -e "${BOLD}${GREEN} 🎉 All selected operations completed! ${RESET}"
+echo -e "${CYAN} Not covered here: mini app packages (../superapp-miniapps) are their own repository.${RESET}"
 echo -e "${BOLD}${GREEN}======================================================${RESET}"

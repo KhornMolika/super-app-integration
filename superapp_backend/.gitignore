@@ -67,4 +67,5 @@ secrets/
 *.pem
 *.pub
 
-/scratch/
+scratch/
+data/

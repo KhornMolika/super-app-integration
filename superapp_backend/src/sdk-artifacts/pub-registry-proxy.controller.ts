@@ -19,6 +19,26 @@ import * as path from 'path';
 import { nexusApiBaseUrl } from '../integrations/nexus/nexus-url';
 import { DEFAULT_PUB_GATEWAY } from '../integrations/flutter/miniapp-dependency.util';
 
+/** The file name of an archive link (no query string). */
+export function archiveFileName(archiveUrl: string): string {
+  try {
+    return path.posix.basename(new URL(archiveUrl, 'http://x/').pathname);
+  } catch {
+    return path.posix.basename(String(archiveUrl).split('?')[0]);
+  }
+}
+
+/**
+ * [archiveUrl] as Nexus wrote it (often its public address, or relative) on
+ * [nexusBase]: the path from /repository/ on, with its query.
+ */
+export function onNexusBase(archiveUrl: string, nexusBase: string): string {
+  const base = nexusBase.replace(/\/+$/, '');
+  const u = new URL(archiveUrl, `${base}/repository/pub-hosted/`);
+  const at = u.pathname.indexOf('/repository/');
+  return at >= 0 ? `${base}${u.pathname.slice(at)}${u.search}` : u.toString();
+}
+
 /** First value of a possibly repeated or comma-joined forwarded header. */
 function firstHeader(v: string | string[] | undefined): string {
   return String(Array.isArray(v) ? v[0] : v || '').split(',')[0].trim();
@@ -220,14 +240,14 @@ export class PubRegistryProxyController {
 
         // Rewrite archive_url to point back to our /pub gateway
         if (metadata.latest && metadata.latest.archive_url) {
-          const filename = path.basename(metadata.latest.archive_url);
+          const filename = archiveFileName(metadata.latest.archive_url);
           metadata.latest.archive_url = `${publicPubBase}/packages/${packageName}/versions/${filename}`;
         }
 
         if (Array.isArray(metadata.versions)) {
           for (const ver of metadata.versions) {
             if (ver.archive_url) {
-              const filename = path.basename(ver.archive_url);
+              const filename = archiveFileName(ver.archive_url);
               ver.archive_url = `${publicPubBase}/packages/${packageName}/versions/${filename}`;
             }
           }
@@ -236,9 +256,10 @@ export class PubRegistryProxyController {
         res.setHeader('Content-Type', 'application/vnd.pub.v2+json');
         return res.json(metadata);
       }
+      this.logger.warn(`Nexus answered HTTP ${upstreamRes.status} for ${upstreamUrl}`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      this.logger.debug(`Nexus pub query failed at ${upstreamUrl}: ${msg}`);
+      this.logger.warn(`Nexus pub query failed at ${upstreamUrl}: ${msg}`);
     }
 
     // Local workspace fallback (dev/POC without Nexus): only for the SDK, never
@@ -267,7 +288,11 @@ export class PubRegistryProxyController {
   ) {
     const nexusBase = this.getNexusBaseUrl();
     const nexusAuth = this.getNexusAuthHeader();
-    const upstreamUrl = `${nexusBase}/repository/pub-hosted/packages/${packageName}/versions/${archiveFilename}`;
+    // The archive link Nexus itself lists for this file (its layout is Nexus's
+    // business), else the conventional pub path
+    const upstreamUrl =
+      (await this.nexusArchiveUrl(packageName, archiveFilename)) ||
+      `${nexusBase}/repository/pub-hosted/packages/${packageName}/versions/${archiveFilename}`;
 
     try {
       const upstreamRes = await fetch(upstreamUrl, {
@@ -291,14 +316,40 @@ export class PubRegistryProxyController {
           return res.send(Buffer.from(buf));
         }
       }
+      this.logger.warn(`Nexus answered HTTP ${upstreamRes.status} for archive ${upstreamUrl}`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      this.logger.debug(`Could not stream archive from ${upstreamUrl}: ${msg}`);
+      this.logger.warn(`Could not stream archive from ${upstreamUrl}: ${msg}`);
     }
 
     throw new NotFoundException(
       `Archive "${archiveFilename}" not found on repository storage.`,
     );
+  }
+
+  /**
+   * The archive_url Nexus lists for [archiveFilename] of [packageName], moved
+   * onto the address the backend reaches Nexus at. Null when not listed.
+   */
+  private async nexusArchiveUrl(packageName: string, archiveFilename: string): Promise<string | null> {
+    const nexusBase = this.getNexusBaseUrl();
+    const metadataUrl = `${nexusBase}/repository/pub-hosted/api/packages/${packageName}`;
+    try {
+      const r = await fetch(metadataUrl, {
+        headers: { ...this.getNexusAuthHeader(), Accept: 'application/vnd.pub.v2+json, application/json' },
+      });
+      if (!r.ok) {
+        this.logger.warn(`Nexus answered HTTP ${r.status} for ${metadataUrl}`);
+        return null;
+      }
+      const metadata: any = await r.json();
+      const all = [metadata?.latest, ...(Array.isArray(metadata?.versions) ? metadata.versions : [])];
+      const listed = all.find((v) => v?.archive_url && archiveFileName(v.archive_url) === archiveFilename);
+      return listed ? onNexusBase(listed.archive_url, nexusBase) : null;
+    } catch (err: unknown) {
+      this.logger.warn(`Nexus pub query failed at ${metadataUrl}: ${err instanceof Error ? err.message : String(err)}`);
+      return null;
+    }
   }
 
   /** In-cluster Nexus when NEXUS_INTERNAL_URL is set (see nexus-url.ts). */
