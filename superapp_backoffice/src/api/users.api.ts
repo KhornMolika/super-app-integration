@@ -60,6 +60,10 @@ export const usersApi = {
   getAll: (params?: Record<string, any>) =>
     apiClient<PaginatedResponse<User> | User[]>('/api/users', { params }),
 
+  /** Create-user form: is this email, or this staff ID in that organization, already used? */
+  availability: (params: { email?: string; staffId?: string; organizationId?: string }) =>
+    apiClient<{ emailTaken: boolean; staffIdTaken: boolean }>('/api/users/availability', { params }),
+
   getStats: () =>
     apiClient<{ total: number; active: number; pending: number; unverified?: number; inactive: number }>('/api/users/stats'),
 
@@ -73,6 +77,9 @@ export const usersApi = {
     roleIds?: string[];
     organizationId: string;
     password?: string;
+    staffId?: string;
+    position?: string;
+    phoneNumber?: string;
     telegramChatId?: string;
     telegramUsername?: string;
     isActive?: boolean;

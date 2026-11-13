@@ -26,7 +26,6 @@ import { PaginationProps } from '@/components/ui/Pagination';
 import { CleanDropdownOption } from '@/components/ui/CleanDropdown';
 import { DataTable, DataTableColumn } from '@/components/ui/DataTable';
 import {
-  UserModal,
   getRoleTheme,
   getUserRoles,
   getUserEffectiveStatus,
@@ -112,9 +111,7 @@ function UsersContent() {
     }
   }, [can]);
   // Modals State
-  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const lastPushedUrlRef = React.useRef<string>('');
-  const [editingUser, setEditingUser] = useState<User | null>(null);
   // Debounce search input to avoid spamming the backend on every keystroke
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -260,9 +257,9 @@ function UsersContent() {
     }
   }, [hasUserRead, fetchRoles, fetchGlobalCounts]);
   // User Actions
+  // Creating a user is its own page (identity, organization, role, staff profile)
   const handleOpenCreateUser = () => {
-    setEditingUser(null);
-    setIsUserModalOpen(true);
+    router.push('/users/new');
   };
   const handleOpenEditUser = useCallback((user: User) => {
     router.push(`/users/${user.id}/edit`);
@@ -954,26 +951,6 @@ function UsersContent() {
           paginationProps={paginationProps}
           emptyMessage="No users match your filter criteria"
           emptySubMessage="Try adjusting your search query, role, or status filter"
-        />
-        {/* User Create / Edit Modal */}
-        <UserModal
-          isOpen={isUserModalOpen}
-          onClose={() => setIsUserModalOpen(false)}
-          editingUser={editingUser}
-          roles={
-            isPlatformAdmin
-              ? roles
-              : roles.filter((r: any) => (r?.name || r) !== 'SUPER_ADMIN')
-          }
-          organizations={
-            isPlatformAdmin
-              ? organizations
-              : organizations.filter((o) => o.id === currentUser?.organizationId)
-          }
-          onSuccess={() => {
-            fetchUsers();
-            fetchGlobalCounts();
-          }}
         />
       </div>
     </ProtectedRoute>

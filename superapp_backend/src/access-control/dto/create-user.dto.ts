@@ -5,11 +5,15 @@ import {
   IsOptional,
   IsArray,
   IsBoolean,
+  MaxLength,
+  MinLength,
+  Matches,
 } from 'class-validator';
 
 export class CreateUserDto {
   @IsString()
   @IsNotEmpty({ message: 'User full name is required' })
+  @MaxLength(120, { message: 'Name must be at most 120 characters' })
   name!: string;
 
   @IsEmail({}, { message: 'A valid email address is required' })
@@ -36,14 +40,19 @@ export class CreateUserDto {
 
   @IsString()
   @IsOptional()
+  @MaxLength(100, { message: 'Position must be at most 100 characters' })
   position?: string;
 
   @IsString()
   @IsOptional()
+  @MaxLength(50, { message: 'Staff ID must be at most 50 characters' })
   staffId?: string;
 
   @IsString()
   @IsOptional()
+  @Matches(/^$|^\+?[0-9 ()-]{6,30}$/, {
+    message: 'Phone number: digits, spaces, ( ) - and an optional leading +, 6 to 30 characters',
+  })
   phoneNumber?: string;
 
   @IsString()
@@ -72,6 +81,7 @@ export class CreateUserDto {
 
   @IsString()
   @IsOptional()
+  @MinLength(6, { message: 'Password must be at least 6 characters' })
   password?: string;
 
   @IsString()

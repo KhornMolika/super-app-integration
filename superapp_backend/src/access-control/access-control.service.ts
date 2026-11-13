@@ -495,6 +495,47 @@ export class AccessControlService {
     return formatUserResponse(identity);
   }
 
+  /** Staff IDs are unique within an organization (UQ_staff_agency_staffId). */
+  private async assertStaffIdFree(
+    organizationId: string | null | undefined,
+    staffId: string | null | undefined,
+    exceptIdentityId?: string,
+  ): Promise<void> {
+    const id = (staffId || '').trim();
+    if (!organizationId || !id) return;
+    const taken = await this.staffProfileRepository.findOne({
+      where: { organizationId, staffId: id },
+      select: { id: true, identityId: true },
+    });
+    if (taken && taken.identityId !== exceptIdentityId) {
+      throw new BadRequestException(
+        `Staff ID '${id}' is already used in this organization.`,
+      );
+    }
+  }
+
+  /** What the create-user form checks as you type. */
+  async userAvailability(
+    query: { email?: string; staffId?: string; organizationId?: string },
+    requester?: any,
+  ): Promise<{ emailTaken: boolean; staffIdTaken: boolean }> {
+    const email = (query.email || '').toLowerCase().trim();
+    const emailTaken = email
+      ? (await this.identityRepository.count({ where: { email } })) > 0
+      : false;
+    let staffIdTaken = false;
+    const staffId = (query.staffId || '').trim();
+    const orgId = query.organizationId?.trim();
+    // Only inside organizations the requester may place users in
+    if (staffId && orgId && canActInOrg(requester, orgId)) {
+      staffIdTaken =
+        (await this.staffProfileRepository.count({
+          where: { organizationId: orgId, staffId },
+        })) > 0;
+    }
+    return { emailTaken, staffIdTaken };
+  }
+
   private organizationOf(id?: string | null): Promise<Organization | null> {
     if (!id) return Promise.resolve(null);
     return this.identityRepository.manager
@@ -593,6 +634,8 @@ export class AccessControlService {
     }
     this.assertOrgAssignable(targetOrgId, requester);
     assertSuperAdminOrg(roles, organization);
+
+    await this.assertStaffIdFree(targetOrgId, dto.staffId);
 
     const identityStatus =
       dto.status ||
@@ -822,6 +865,11 @@ export class AccessControlService {
         'A staff member must have a role. Provide roleIds or roleNames.',
       );
     }
+    await this.assertStaffIdFree(
+      staffProfile.organizationId,
+      staffProfile.staffId,
+      identity.id,
+    );
     // Covers both a role change and moving a Super Admin to another organization
     assertSuperAdminOrg(
       [staffProfile.role],

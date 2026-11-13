@@ -102,6 +102,21 @@ export class UsersController {
     return this.accessControlService.findAllUsers(query);
   }
 
+  /** Create-user form: is this email, or this staff ID in that organization, taken? */
+  @Get('availability')
+  @RequirePermissions('user:manage')
+  async availability(
+    @Query('email') email: string,
+    @Query('staffId') staffId: string,
+    @Query('organizationId') organizationId: string,
+    @Req() req: any,
+  ) {
+    return this.accessControlService.userAvailability(
+      { email, staffId, organizationId },
+      req?.user,
+    );
+  }
+
   @Get('stats')
   @RequirePermissions('organization:read')
   async getStats(@Req() req: any) {

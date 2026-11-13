@@ -98,7 +98,7 @@ export const getRoleTheme = (roleName: string) => {
         gradient: 'from-accent-500/10 via-accent-500/5 to-transparent border-accent-200/80 dark:border-accent-500/30',
         iconBg: 'bg-accent-50 text-accent-600 dark:bg-accent-500/20 dark:text-accent-300',
         bar: 'bg-accent-500',
-        label: 'System Admin',
+        label: 'Org Admin',
       };
     case 'MA_DEVELOPER':
     case 'MINI_APP_DEVELOPER':
@@ -192,10 +192,10 @@ export const getSensitivityBadge = (level: 'CRITICAL' | 'ELEVATED' | 'STANDARD' 
 export const getUserAccessScope = (roleName?: string): string => {
   const normalized = (roleName || '').toUpperCase();
   if (normalized.includes('SUPER_ADMIN') || normalized.includes('SUPER ADMIN')) {
-    return 'SuperApp Global Administration & Root Governance';
+    return 'Runs the platform across every organization';
   }
   if (normalized.includes('ADMIN')) {
-    return 'Platform Administration & Ecosystem Governance';
+    return 'Manages the users and mini apps of their organization';
   }
   if (normalized.includes('DEVELOPER') || normalized.includes('MINIAPP')) {
     return 'MiniApp Development, Sandbox & Deployment Scope';
