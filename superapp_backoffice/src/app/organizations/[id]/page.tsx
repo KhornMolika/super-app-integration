@@ -23,7 +23,12 @@ function OrganizationDetailContent() {
   const id = (typeof params?.id === 'string' ? params.id : Array.isArray(params?.id) ? params.id[0] : '') || '';
 
   const { user, role, can } = useAuth();
-  const isSuperOrAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN' || can('organization:manage');
+  // SUPER_ADMIN (platform admin) manages every organization. An organization
+  // admin edits their own organization's profile only (name, logo, description).
+  const isSuperOrAdmin = role === 'SUPER_ADMIN';
+  const isOwnOrgAdmin =
+    role === 'ADMIN' && can('organization:manage') && user?.organizationId === id;
+  const canEditProfile = isSuperOrAdmin || isOwnOrgAdmin;
 
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [loading, setLoading] = useState(true);
@@ -384,19 +389,25 @@ function OrganizationDetailContent() {
 
   // Edit organization (Super Admin / Admin only)
   const handleSaveEdit = async (formData: OrganizationFormData) => {
-    if (!organization || !isSuperOrAdmin) return;
+    if (!organization || !canEditProfile) return;
     setIsSubmitting(true);
     setErrorMessage(null);
 
     try {
-      const payload: Partial<Organization> = {
-        name: formData.name.trim(),
-        code: formData.code.trim().toUpperCase() || undefined,
-        parentId: formData.parentId || null,
-        parentAuthority: formData.parentId ? (formData.parentAuthority?.trim() || undefined) : null,
-        description: formData.description.trim() || undefined,
-        status: formData.status,
-      };
+      const payload: Partial<Organization> = isSuperOrAdmin
+        ? {
+            name: formData.name.trim(),
+            code: formData.code.trim().toUpperCase() || undefined,
+            parentId: formData.parentId || null,
+            parentAuthority: formData.parentId ? (formData.parentAuthority?.trim() || undefined) : null,
+            description: formData.description.trim() || undefined,
+            status: formData.status,
+          }
+        : {
+            // Organization admin: profile fields only (the API refuses the rest)
+            name: formData.name.trim(),
+            description: formData.description.trim() || undefined,
+          };
       if (formData.logo === null && !formData.logoFile) {
         payload.logo = null;
       }
@@ -463,6 +474,7 @@ function OrganizationDetailContent() {
       <OrganizationDetailHeader
         organization={organization}
         isSuperOrAdmin={isSuperOrAdmin}
+        canEditProfile={canEditProfile}
         onToggleStatus={handleToggleStatus}
         onEdit={() => setIsEditModalOpen(true)}
         onDelete={isSuperOrAdmin ? handleDeleteOrganization : undefined}
@@ -478,9 +490,10 @@ function OrganizationDetailContent() {
         isSuperOrAdmin={isSuperOrAdmin}
       />
 
-      {/* Edit Organization Modal (Super Admin / Admin only) */}
-      {isSuperOrAdmin && (
+      {/* Edit Organization Modal: Super Admin (all fields) or own-org admin (profile) */}
+      {canEditProfile && (
         <OrganizationModal
+          profileOnly={!isSuperOrAdmin}
           isOpen={isEditModalOpen}
           editingOrg={organization}
           availableOrganizations={parentOptions}

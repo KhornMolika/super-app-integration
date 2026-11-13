@@ -632,11 +632,17 @@ export class MiniappsService implements OnApplicationBootstrap {
     }
 
     // Filter Status
+    // The filter is the lifecycle stage. SUSPENDED is the availability gate
+    // (an app keeps its stage, e.g. ACTIVE, while suspended), so it matches either.
     if (status && status !== 'ALL') {
-      qb.andWhere(
-        '(app.lifecycleStatus = :reqStatus OR app.availabilityStatus = :reqStatus)',
-        { reqStatus: status },
-      );
+      if (status === 'SUSPENDED') {
+        qb.andWhere(
+          '(app.availabilityStatus = :reqStatus OR app.lifecycleStatus = :reqStatus)',
+          { reqStatus: status },
+        );
+      } else {
+        qb.andWhere('app.lifecycleStatus = :reqStatus', { reqStatus: status });
+      }
     }
 
     if (!includeArchived && status !== 'ARCHIVED') {

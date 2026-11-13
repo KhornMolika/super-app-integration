@@ -15,6 +15,9 @@ export interface MiniApp {
   status: string;
   lifecycleStatus?: string;
   availabilityStatus?: string;
+  /** The caller's access on this app (GET /mini-apps/:id only): VIEW | EDIT | MAINTAIN | OWN | ADMIN. */
+  myAccess?: string;
+  ownerId?: string;
   version?: string;
   currentReleaseVersion?: string;
   activeTestVersion?: string;
@@ -258,6 +261,16 @@ export const miniappsApi = {
   removeCollaborator: (id: string, userId: string) =>
     apiClient<{ success: boolean }>(`/api/mini-apps/${id}/collaborators/${userId}`, {
       method: 'DELETE',
+    }),
+
+  /**
+   * Hands the app to another active developer or admin of its organization.
+   * The previous owner stays on as MAINTAINER unless keepPreviousOwner is false.
+   */
+  transferOwnership: (id: string, newOwnerId: string, keepPreviousOwner = true) =>
+    apiClient<MiniApp>(`/api/mini-apps/${id}/transfer-ownership`, {
+      method: 'POST',
+      body: { newOwnerId, keepPreviousOwner },
     }),
 };
 

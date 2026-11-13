@@ -393,7 +393,9 @@ function SidebarNavContent() {
   const searchParams = useSearchParams();
   const { can, user, role } = useAuth();
   const capabilityView = useCapabilityView();
-  const isSuperOrAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN' || can('organization:manage');
+  // Only the platform admin browses every organization; everyone else
+  // (organization admins included) gets "My Organization"
+  const isSuperOrAdmin = role === 'SUPER_ADMIN';
   const { isCollapsed, isWizardStepAllowed, completedWizardSteps } = useSidebar();
 
 

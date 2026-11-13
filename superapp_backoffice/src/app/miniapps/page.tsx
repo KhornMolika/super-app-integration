@@ -18,12 +18,39 @@ import {
   PaginationMeta,
 } from '@/api';
 import { getMiniAppPhase } from '@/components/miniapp-detail/miniappActions';
+import {
+  LifecycleBadge,
+  AvailabilityBadge,
+  lifecycleOf,
+  availabilityOf,
+} from '@/components/miniapp-detail/MiniAppStatusBadges';
 import { BackendServiceOfflineNotice } from '@/components/ui/BackendServiceOfflineNotice';
 import { useAuth } from '@/lib/auth';
 import { toast } from '@/components/ui/Toast';
 import ActionMenu from '@/components/ui/ActionMenu';
 import { PaginationProps } from '@/components/ui/Pagination';
 import { DataTable, DataTableColumn } from '@/components/ui/DataTable';
+
+const INTEGRATION_LABEL: Record<string, string> = {
+  WEBVIEW: 'WebView',
+  FLUTTER_PACKAGE: 'Flutter package',
+  NATIVE_SDK: 'Native SDK',
+  DEEP_LINK: 'Deep link',
+};
+
+/** Lifecycle filter: the governance stage (the API's status filter). */
+const LIFECYCLE_FILTERS = [
+  { value: 'ALL', label: 'All stages' },
+  { value: 'DRAFT', label: 'Draft' },
+  { value: 'IN_REVIEW', label: 'In review' },
+  { value: 'CHANGES_REQUESTED', label: 'Changes requested' },
+  { value: 'APPROVED_FOR_TESTING', label: 'Approved for testing' },
+  { value: 'TESTING', label: 'Testing' },
+  { value: 'TEST_PASSED', label: 'Test passed' },
+  { value: 'ACTIVE', label: 'Active' },
+  { value: 'SUSPENDED', label: 'Suspended' },
+  { value: 'ARCHIVED', label: 'Archived' },
+];
 
 const INTEGRATION_METHODS = [
   { value: 'ALL', label: 'All Methods' },
@@ -39,13 +66,17 @@ function MiniAppsContent() {
   const searchParams = useSearchParams();
 
   const { role, user, hasRole } = useAuth();
+  // Admins see a scope switch: every app (SUPER_ADMIN) or their organization's
+  // (ADMIN). Everyone else sees the apps they own or collaborate on.
   const isSuper = hasRole('SUPER_ADMIN') || hasRole('ADMIN');
+  const isPlatformAdmin = hasRole('SUPER_ADMIN');
 
   // Read initial query params from URL
   const initialPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
   const initialLimit = Math.max(1, parseInt(searchParams.get('limit') || '10', 10));
   const initialSearch = searchParams.get('search') || '';
   const initialMethod = searchParams.get('method') || 'ALL';
+  const initialStage = searchParams.get('stage') || 'ALL';
   const initialScope = (searchParams.get('scope') as 'all' | 'mine') || (isSuper ? 'all' : 'mine');
 
   const [scope, setScope] = useState<'all' | 'mine'>(initialScope);
@@ -60,6 +91,7 @@ function MiniAppsContent() {
   const [searchQuery, setSearchQuery] = useState<string>(initialSearch);
   const [debouncedSearch, setDebouncedSearch] = useState<string>(initialSearch);
   const [methodFilter, setMethodFilter] = useState<string>(initialMethod);
+  const [stageFilter, setStageFilter] = useState<string>(initialStage);
 
   const [paginationMeta, setPaginationMeta] = useState<PaginationMeta>({
     page: initialPage,
@@ -91,6 +123,7 @@ function MiniAppsContent() {
     if (pageSize !== 10) params.set('limit', String(pageSize));
     if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
     if (methodFilter !== 'ALL') params.set('method', methodFilter);
+    if (stageFilter !== 'ALL') params.set('stage', stageFilter);
     if (scope !== (isSuper ? 'all' : 'mine')) params.set('scope', scope);
 
     const queryStr = params.toString();
@@ -101,7 +134,7 @@ function MiniAppsContent() {
         window.history.replaceState(null, '', targetUrl);
       }
     }
-  }, [currentPage, pageSize, debouncedSearch, methodFilter, scope, isSuper, pathname]);
+  }, [currentPage, pageSize, debouncedSearch, methodFilter, stageFilter, scope, isSuper, pathname]);
 
   // Handle browser back/forward navigation smoothly via popstate
   useEffect(() => {
@@ -117,6 +150,7 @@ function MiniAppsContent() {
       setCurrentPage(pageFromUrl);
       setPageSize(limitFromUrl);
       setMethodFilter(methodFromUrl);
+      setStageFilter(params.get('stage') || 'ALL');
       setScope(scopeFromUrl);
       setSearchQuery(searchFromUrl);
       setDebouncedSearch(searchFromUrl);
@@ -141,6 +175,9 @@ function MiniAppsContent() {
       }
       if (methodFilter !== 'ALL') {
         queryParams.integrationMethod = methodFilter;
+      }
+      if (stageFilter !== 'ALL') {
+        queryParams.status = stageFilter;
       }
 
       const res = await miniappsApi.getAll(queryParams);
@@ -168,7 +205,7 @@ function MiniAppsContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [showArchived, scope, isSuper, currentPage, pageSize, debouncedSearch, methodFilter]);
+  }, [showArchived, scope, isSuper, currentPage, pageSize, debouncedSearch, methodFilter, stageFilter]);
 
   useEffect(() => {
     fetchMiniApps();
@@ -188,7 +225,7 @@ function MiniAppsContent() {
   const miniAppColumns: DataTableColumn<MiniApp>[] = useMemo(() => [
     {
       key: 'name',
-      header: 'App Name',
+      header: 'App',
       width: 'w-[23%]',
       sortable: true,
       defaultSort: true,
@@ -196,10 +233,15 @@ function MiniAppsContent() {
       cell: (app) => (
         <div className="flex items-center space-x-3">
           <AppLogoAvatar logo={app.logo} name={app.name} size="md" />
-          <div>
-            <span className="text-slate-800 dark:text-slate-200 font-semibold block">{app.name || '-'}</span>
+          <div className="min-w-0">
+            <span className="text-slate-800 dark:text-slate-200 font-semibold block truncate max-w-[220px]">{app.name || '-'}</span>
             {app.appId && (
-              <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500 block">{app.appId}</span>
+              <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500 block truncate max-w-[220px]">{app.appId}</span>
+            )}
+            {(app as any).owner?.name && (
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate max-w-[220px]">
+                Owner: {(app as any).owner.name}
+              </span>
             )}
           </div>
         </div>
@@ -208,7 +250,9 @@ function MiniAppsContent() {
     {
       key: 'organization',
       header: 'Organization',
-      width: 'w-[13%]',
+      width: 'w-[11%]',
+      headerClassName: 'hidden md:table-cell',
+      className: 'hidden md:table-cell',
       sortable: true,
       sortValue: (app) => app.organizationCode || getOrganizationCode(app.organization || app.category) || '',
       cell: (app) => {
@@ -226,71 +270,48 @@ function MiniAppsContent() {
       },
     },
     {
+      key: 'lifecycle',
+      header: 'Lifecycle',
+      width: 'w-[15%]',
+      sortable: true,
+      sortValue: (app) => lifecycleOf(app),
+      cell: (app) => <LifecycleBadge app={app} />,
+    },
+    {
+      key: 'availability',
+      header: 'Availability',
+      width: 'w-[12%]',
+      sortable: true,
+      sortValue: (app) => availabilityOf(app),
+      cell: (app) => <AvailabilityBadge app={app} />,
+    },
+    {
       key: 'integration',
       header: 'Integration',
-      width: 'w-[12%]',
+      width: 'w-[11%]',
+      headerClassName: 'hidden lg:table-cell',
+      className: 'hidden lg:table-cell',
       sortable: true,
       sortValue: (app) => app.integrationMethod || 'WEBVIEW',
       cell: (app) => (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-          {app.integrationMethod || 'WEBVIEW'}
+        <span className="text-xs font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">
+          {INTEGRATION_LABEL[app.integrationMethod || 'WEBVIEW'] || app.integrationMethod}
         </span>
       ),
     },
     {
       key: 'version',
       header: 'Version',
-      width: 'w-[9%]',
+      width: 'w-[8%]',
+      headerClassName: 'hidden xl:table-cell',
+      className: 'hidden xl:table-cell',
       sortable: true,
-      sortValue: (app) => app.version || app.currentReleaseVersion || '0.1.0',
+      sortValue: (app) => app.currentReleaseVersion || app.version || '',
       cell: (app) => (
         <span className="text-xs font-mono text-slate-500">
-          {app.version || app.currentReleaseVersion || '0.1.0'}
+          {app.currentReleaseVersion || app.version || '-'}
         </span>
       ),
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      width: 'w-[15%]',
-      sortable: true,
-      sortValue: (app) => app.status || 'DRAFT',
-      cell: (app) => {
-        const phase = getMiniAppPhase(app as any);
-        const isLiveProduction = phase === 'live';
-        const label =
-          phase === 'suspended' ? 'SUSPENDED' : (app.status || 'DRAFT').replace(/_/g, ' ');
-        const hasProductionHistory = Boolean(
-          app.versionHistory?.some(
-            (v: any) => v.type === 'PRODUCTION' && (v.status === 'ACTIVE' || v.status === 'PREVIOUS')
-          )
-        );
-        const hasPendingUpdate = Boolean(
-          (isLiveProduction || hasProductionHistory) && (app.pendingRevision || app.status === 'IN_REVIEW')
-        );
-        const isNewAppInReview =
-          (app.status === 'IN_REVIEW' || app.status === 'PROCESSING' || app.status === 'SUBMITTED') &&
-          !isLiveProduction &&
-          !hasPendingUpdate;
-
-        return (
-          <span
-            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-              phase === 'suspended'
-                ? 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400'
-                : phase === 'archived'
-                ? 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-                : isLiveProduction
-                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
-                : isNewAppInReview
-                ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400'
-                : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-            }`}
-          >
-            {label}
-          </span>
-        );
-      },
     },
     {
       key: 'updatedAt',
@@ -300,7 +321,9 @@ function MiniAppsContent() {
           <span>Last Updated</span>
         </div>
       ),
-      width: 'w-[16%]',
+      width: 'w-[12%]',
+      headerClassName: 'hidden md:table-cell',
+      className: 'hidden md:table-cell',
       sortable: true,
       sortValue: (app) =>
         app.updatedAt
@@ -416,16 +439,18 @@ function MiniAppsContent() {
   return (
     <div className="w-full min-w-0 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
       {/* Top Header */}
-      <div className="flex justify-between items-end flex-wrap gap-4">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">MiniApps</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">MiniApps</h2>
           <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
             {isSuper && scope === 'all'
-              ? 'Manage all platform registered applications and permissions.'
-              : `Manage your registered applications (${user?.email || 'Logged-in User'}).`}
+              ? isPlatformAdmin
+                ? 'Every MiniApp on the platform.'
+                : 'Every MiniApp of your organization.'
+              : 'MiniApps you own or collaborate on.'}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {isSuper && (
             <div className="inline-flex rounded-xl p-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
               <button
@@ -437,7 +462,7 @@ function MiniAppsContent() {
                     : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'
                 }`}
               >
-                All Applications
+                {isPlatformAdmin ? 'All apps' : 'Organization'}
               </button>
               <button
                 type="button"
@@ -448,7 +473,7 @@ function MiniAppsContent() {
                     : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'
                 }`}
               >
-                My MiniApps
+                Mine
               </button>
             </div>
           )}
@@ -480,6 +505,17 @@ function MiniAppsContent() {
           searchPlaceholder="Search MiniApps by name, appId, or description..."
           filters={[
             {
+              id: 'stage',
+              label: 'Lifecycle',
+              value: stageFilter,
+              options: LIFECYCLE_FILTERS,
+              onChange: (val: string) => {
+                setStageFilter(val);
+                setCurrentPage(1);
+              },
+              dropdownWidth: 'w-56',
+            },
+            {
               id: 'method',
               label: 'Integration',
               value: methodFilter,
@@ -488,10 +524,11 @@ function MiniAppsContent() {
               dropdownWidth: 'w-56',
             },
           ]}
-          isFiltered={searchQuery.trim() !== '' || methodFilter !== 'ALL'}
+          isFiltered={searchQuery.trim() !== '' || methodFilter !== 'ALL' || stageFilter !== 'ALL'}
           onResetFilters={() => {
             setSearchQuery('');
             setMethodFilter('ALL');
+            setStageFilter('ALL');
             setCurrentPage(1);
           }}
           totalItemsCount={paginationMeta.totalItems}

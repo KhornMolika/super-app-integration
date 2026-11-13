@@ -4,3 +4,4 @@ export * from './CollaboratorsSection';
 export * from './TelegramAlertsSection';
 export * from './AddCollaboratorModal';
 export * from './DeleteCollaboratorModal';
+export * from './TransferOwnershipModal';

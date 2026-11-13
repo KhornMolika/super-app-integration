@@ -3,12 +3,16 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from '@/components/ui/Toast';
 import { telegramApi, miniappsApi } from '@/api';
+import { useAuth } from '@/lib/auth';
+import { useRouter } from 'next/navigation';
+import { CollaboratorRole, collaboratorRoleLabel, toAccessLevel } from '@/lib/miniappAccess';
 import {
   PublisherContactsSection,
   CollaboratorsSection,
   TelegramAlertsSection,
   AddCollaboratorModal,
   DeleteCollaboratorModal,
+  TransferOwnershipModal,
 } from './team';
 
 export interface TeamFormProps {
@@ -48,10 +52,17 @@ export default function TeamForm({
 
   // Add Collaborator Modal state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [changingRoleUserId, setChangingRoleUserId] = useState<string | null>(null);
+
+  // The caller's access on this app, from GET /mini-apps/:id (myAccess)
+  const { user: currentUser } = useAuth();
+  const router = useRouter();
+  const myAccess = toAccessLevel(formData.myAccess);
 
   // Prevent background scrolling when either modal is open
   useEffect(() => {
-    if (isAddModalOpen || Boolean(collaboratorToDelete)) {
+    if (isAddModalOpen || isTransferModalOpen || Boolean(collaboratorToDelete)) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'auto';
@@ -59,7 +70,7 @@ export default function TeamForm({
     return () => {
       document.body.style.overflow = 'auto';
     };
-  }, [isAddModalOpen, collaboratorToDelete]);
+  }, [isAddModalOpen, isTransferModalOpen, collaboratorToDelete]);
 
   const resolvedOrgId =
     formData.organizationId ||
@@ -96,24 +107,66 @@ export default function TeamForm({
     }
   };
 
+  const loadCollaborators = React.useCallback(async () => {
+    if (!formData.id) return;
+    try {
+      setLoadingCollaborators(true);
+      const collabs = await miniappsApi.getCollaborators(formData.id);
+      if (Array.isArray(collabs)) {
+        setCollaborators(collabs);
+      }
+    } catch (err) {
+      console.warn('Failed to load collaborators', err);
+    } finally {
+      setLoadingCollaborators(false);
+    }
+  }, [formData.id]);
+
   // Load existing collaborators on mount
   useEffect(() => {
-    if (!formData.id) return;
-    const loadCollaborators = async () => {
-      try {
-        setLoadingCollaborators(true);
-        const collabs = await miniappsApi.getCollaborators(formData.id);
-        if (Array.isArray(collabs)) {
-          setCollaborators(collabs);
-        }
-      } catch (err) {
-        console.warn('Failed to load collaborators', err);
-      } finally {
-        setLoadingCollaborators(false);
-      }
-    };
     loadCollaborators();
-  }, [formData.id]);
+  }, [loadCollaborators]);
+
+  // Role change: the add endpoint updates an existing collaborator's role
+  const handleChangeRole = async (collab: any, role: CollaboratorRole) => {
+    const uid = collab.userId || collab.user?.id;
+    if (!formData.id || !uid) return;
+    const previous = collab.role;
+    setChangingRoleUserId(uid);
+    setCollaborators((prev) =>
+      prev.map((c) => ((c.userId || c.user?.id) === uid ? { ...c, role } : c)),
+    );
+    try {
+      await miniappsApi.addCollaborator(formData.id, uid, role);
+      toast.success(
+        `${collab.user?.name || collab.user?.email || 'Collaborator'} is now a ${collaboratorRoleLabel(role)}.`,
+        'Role updated',
+      );
+    } catch (err: any) {
+      setCollaborators((prev) =>
+        prev.map((c) => ((c.userId || c.user?.id) === uid ? { ...c, role: previous } : c)),
+      );
+      toast.error(err?.message || 'Could not change the role.', 'Error');
+    } finally {
+      setChangingRoleUserId(null);
+    }
+  };
+
+  // After a transfer: new owner on the form, team reloaded (the previous owner
+  // may now be a Maintainer), and the caller's own access may have dropped
+  const handleTransferred = (updated: any) => {
+    if (setFormData && updated) {
+      setFormData((prev: any) => ({
+        ...prev,
+        ownerId: updated.ownerId ?? prev.ownerId,
+        owner: updated.owner ?? prev.owner,
+        ownerName: updated.owner?.name ?? prev.ownerName,
+        ownerEmail: updated.owner?.email ?? prev.ownerEmail,
+        myAccess: prev.myAccess === 'OWN' ? 'MAINTAIN' : prev.myAccess,
+      }));
+    }
+    loadCollaborators();
+  };
 
   // Fetch Telegram status & profile info on mount
   useEffect(() => {
@@ -312,6 +365,13 @@ export default function TeamForm({
 
     try {
       await miniappsApi.removeCollaborator(formData.id, targetUserId);
+      if (currentUser?.id && targetUserId === currentUser.id) {
+        // Left the app: this page is no longer visible to the caller
+        toast.success(`You left ${formData.name || 'this MiniApp'}.`, 'Left MiniApp');
+        setCollaboratorToDelete(null);
+        router.push('/miniapps');
+        return;
+      }
       toast.success(
         `${
           collaboratorToDelete.user?.name ||
@@ -375,8 +435,13 @@ export default function TeamForm({
           collaborators={collaborators}
           loadingCollaborators={loadingCollaborators}
           removingUserId={removingUserId}
+          myAccess={myAccess}
+          currentUserId={currentUser?.id}
+          changingRoleUserId={changingRoleUserId}
           onOpenAddModal={() => setIsAddModalOpen(true)}
           onSelectCollaboratorToDelete={(collab) => setCollaboratorToDelete(collab)}
+          onChangeRole={handleChangeRole}
+          onOpenTransferModal={() => setIsTransferModalOpen(true)}
         />
 
         {/* Section 3: Team Telegram Channel Alerts */}
@@ -413,12 +478,25 @@ export default function TeamForm({
         setFormData={setFormData}
       />
 
-      {/* Modal 2: Deletion Confirmation Modal */}
+      {/* Modal 2: Deletion Confirmation Modal (also "Leave" for yourself) */}
       <DeleteCollaboratorModal
         collaborator={collaboratorToDelete}
+        isSelf={Boolean(
+          currentUser?.id &&
+            (collaboratorToDelete?.userId || collaboratorToDelete?.user?.id) === currentUser.id,
+        )}
         onClose={() => setCollaboratorToDelete(null)}
         onConfirmDelete={handleConfirmDeleteCollaborator}
         isRemoving={Boolean(removingUserId)}
+      />
+
+      {/* Modal 3: Transfer ownership (owner, org admin, Super Admin) */}
+      <TransferOwnershipModal
+        isOpen={isTransferModalOpen}
+        onClose={() => setIsTransferModalOpen(false)}
+        formData={formData}
+        organizationId={resolvedOrgId}
+        onTransferred={handleTransferred}
       />
     </>
   );

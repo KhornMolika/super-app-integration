@@ -16,6 +16,7 @@ import {
   PlusCircleIcon,
   BuildingIcon,
 } from '@/components/ui/Icons';
+import { COLLABORATOR_ROLES, CollaboratorRole } from '@/lib/miniappAccess';
 import { getAvatarColor } from './team.utils';
 
 export interface AddCollaboratorModalProps {
@@ -44,7 +45,7 @@ export function AddCollaboratorModal({
   const [isSearchingUsers, setIsSearchingUsers] = useState(false);
   const [agencyStaff, setAgencyStaff] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [selectedRole, setSelectedRole] = useState<'DEVELOPER' | 'MAINTAINER' | 'VIEWER'>('DEVELOPER');
+  const [selectedRole, setSelectedRole] = useState<CollaboratorRole>('DEVELOPER');
   const [isInviting, setIsInviting] = useState(false);
   const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
 
@@ -379,100 +380,52 @@ export function AddCollaboratorModal({
           )}
         </div>
 
-        {/* Role Selection Cards (MAINTAINER, DEVELOPER, VIEWER) */}
-        <div className="space-y-2">
-          <Label className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-            Collaborator Role <span className="text-rose-500">*</span>
-          </Label>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            {/* DEVELOPER Card */}
-            <div
-              onClick={() => setSelectedRole('DEVELOPER')}
-              className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
-                selectedRole === 'DEVELOPER'
-                  ? 'border-sky-500 bg-sky-50/70 dark:bg-sky-950/40 ring-2 ring-sky-500/25 shadow-xs'
-                  : 'border-slate-200 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-800/60 hover:bg-slate-100/60 dark:hover:bg-slate-800/90 hover:border-slate-300 dark:hover:border-slate-600'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[11px] font-bold text-sky-700 dark:text-sky-300 px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-900/60 uppercase tracking-wider flex items-center gap-1">
-                  <CodeIcon className="w-3 h-3" />
-                  <span>DEVELOPER</span>
-                </span>
-                <div
-                  className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                    selectedRole === 'DEVELOPER'
-                      ? 'border-sky-500 bg-sky-500 text-white'
-                      : 'border-slate-300 dark:border-slate-600 bg-transparent'
+        {/* Role: one accent (brand) marks the choice; cards stay neutral */}
+        <fieldset className="space-y-2">
+          <legend className="text-xs font-semibold text-slate-800 dark:text-slate-200 mb-2">
+            Role <span className="text-rose-500">*</span>
+          </legend>
+          <div role="radiogroup" className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {COLLABORATOR_ROLES.map((r) => {
+              const isSelected = selectedRole === r.value;
+              const Icon = r.value === 'MAINTAINER' ? ShieldIcon : r.value === 'VIEWER' ? EyeIcon : CodeIcon;
+              return (
+                <button
+                  key={r.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={isSelected}
+                  onClick={() => setSelectedRole(r.value)}
+                  className={`p-3 rounded-xl border text-left transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 ${
+                    isSelected
+                      ? 'border-brand-500 bg-brand-600/10 dark:bg-brand-500/15'
+                      : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 hover:border-slate-300 dark:hover:border-slate-600'
                   }`}
                 >
-                  {selectedRole === 'DEVELOPER' && <CheckIcon className="w-3 h-3 stroke-[3]" />}
-                </div>
-              </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
-                Edit details, URLs and versions, upload artifacts, and run rescans.
-              </p>
-            </div>
-
-            {/* MAINTAINER Card */}
-            <div
-              onClick={() => setSelectedRole('MAINTAINER')}
-              className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
-                selectedRole === 'MAINTAINER'
-                  ? 'border-emerald-500 bg-emerald-50/70 dark:bg-emerald-950/40 ring-2 ring-emerald-500/25 shadow-xs'
-                  : 'border-slate-200 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-800/60 hover:bg-slate-100/60 dark:hover:bg-slate-800/90 hover:border-slate-300 dark:hover:border-slate-600'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 uppercase tracking-wider flex items-center gap-1">
-                  <ShieldIcon className="w-3 h-3" />
-                  <span>MAINTAINER</span>
-                </span>
-                <div
-                  className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                    selectedRole === 'MAINTAINER'
-                      ? 'border-emerald-500 bg-emerald-500 text-white'
-                      : 'border-slate-300 dark:border-slate-600 bg-transparent'
-                  }`}
-                >
-                  {selectedRole === 'MAINTAINER' && <CheckIcon className="w-3 h-3 stroke-[3]" />}
-                </div>
-              </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
-                Co-maintainer. Edit permissions, submit for review, roll back, and manage collaborators.
-              </p>
-            </div>
-
-            {/* VIEWER Card */}
-            <div
-              onClick={() => setSelectedRole('VIEWER')}
-              className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
-                selectedRole === 'VIEWER'
-                  ? 'border-purple-500 bg-purple-50/70 dark:bg-purple-950/40 ring-2 ring-purple-500/25 shadow-xs'
-                  : 'border-slate-200 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-800/60 hover:bg-slate-100/60 dark:hover:bg-slate-800/90 hover:border-slate-300 dark:hover:border-slate-600'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[11px] font-bold text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/60 uppercase tracking-wider flex items-center gap-1">
-                  <EyeIcon className="w-3 h-3" />
-                  <span>VIEWER</span>
-                </span>
-                <div
-                  className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                    selectedRole === 'VIEWER'
-                      ? 'border-purple-500 bg-purple-500 text-white'
-                      : 'border-slate-300 dark:border-slate-600 bg-transparent'
-                  }`}
-                >
-                  {selectedRole === 'VIEWER' && <CheckIcon className="w-3 h-3 stroke-[3]" />}
-                </div>
-              </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
-                Read-only. Inspect builds, issues and audit records, and download test builds.
-              </p>
-            </div>
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-slate-900 dark:text-slate-100">
+                      <Icon className="w-3.5 h-3.5 text-slate-400" />
+                      {r.label}
+                    </span>
+                    <span
+                      aria-hidden="true"
+                      className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                        isSelected
+                          ? 'border-brand-600 bg-brand-600 text-white'
+                          : 'border-slate-300 dark:border-slate-600'
+                      }`}
+                    >
+                      {isSelected && <CheckIcon className="w-3 h-3 stroke-[3]" />}
+                    </span>
+                  </span>
+                  <span className="block mt-1.5 text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+                    {r.grants.slice(r.value === 'VIEWER' ? 0 : 1).join('. ')}.
+                  </span>
+                </button>
+              );
+            })}
           </div>
-        </div>
+        </fieldset>
 
         {/* Modal Actions */}
         <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">

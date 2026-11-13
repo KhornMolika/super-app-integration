@@ -7,6 +7,8 @@
  * the backend applies, so a button is only shown when it can work.
  */
 
+import { MiniAppAccessLevel, hasAccess } from '@/lib/miniappAccess';
+
 export type MiniAppPhase =
   | 'draft'
   | 'review'
@@ -35,6 +37,12 @@ export interface MiniAppActionUser {
   role?: string;
   userId?: string;
   can: (permission: string) => boolean;
+  /**
+   * The caller's access on this app (API `myAccess`). Each action needs both
+   * the role permission and this level, as the API checks both. Missing reads
+   * as VIEW: nothing beyond reading is offered until the API says otherwise.
+   */
+  access?: MiniAppAccessLevel;
 }
 
 export interface MiniAppAllowedActions {
@@ -108,16 +116,21 @@ export function getAllowedActions(
   const availability = (app.availabilityStatus || '').toUpperCase();
   const phase = getMiniAppPhase(app);
   const isSuper = user.role === 'SUPER_ADMIN';
-  const isAdmin = user.role === 'ADMIN';
   const isOwner = Boolean(user.userId && app.ownerId && user.userId === app.ownerId);
-  const canUpdate = user.can('miniapp:update');
-  const canApprove = user.can('miniapp:approve');
-  const canReject = user.can('miniapp:reject');
-  const canSuspend = user.can('miniapp:suspend');
+  const access = user.access ?? 'VIEW';
+  // Role permission AND access level on this app (owner / collaborator role / org admin)
+  const canEditApp = hasAccess(access, 'EDIT');
+  const canMaintain = hasAccess(access, 'MAINTAIN');
+  const canOwn = hasAccess(access, 'OWN');
+  const isAppAdmin = hasAccess(access, 'ADMIN');
+  const canUpdate = user.can('miniapp:update') && canEditApp;
+  const canApprove = user.can('miniapp:approve') && isAppAdmin;
+  const canReject = user.can('miniapp:reject') && isAppAdmin;
+  const canSuspend = user.can('miniapp:suspend') && isAppAdmin;
   const isLive = phase === 'live';
   const archiveRequested = Boolean(app.archiveRequest);
   const hasRevision = Boolean(app.pendingRevision);
-  const ownerOrAdmin = isOwner || isSuper || isAdmin;
+  const ownerOrAdmin = canOwn;
   // Same rule as the backend (assertSecurityScanNotFailed): no approval after a failed
   // scan. Request Changes and Reject stay, so the reviewer can send it back or turn it down.
   const scanFailed = (app.validationStatus || '').toUpperCase() === 'FAILED';
@@ -128,7 +141,7 @@ export function getAllowedActions(
     isOwner,
     archiveRequested,
     scanFailed,
-    submit: phase === 'draft' && canUpdate && ownerOrAdmin,
+    submit: phase === 'draft' && canUpdate && canMaintain,
     approve: phase === 'review' && canApprove && !scanFailed,
     requestChanges: phase === 'review' && canReject,
     reject: phase === 'review' && canReject,
@@ -137,7 +150,7 @@ export function getAllowedActions(
     passTesting: phase === 'testing' && canApprove,
     activate: phase === 'test-passed' && canApprove,
     publishRevision: isLive && hasRevision && canApprove && !scanFailed,
-    discardRevision: isLive && hasRevision && canUpdate && (ownerOrAdmin || canApprove),
+    discardRevision: isLive && hasRevision && canUpdate && canMaintain,
     resume: phase === 'suspended' && canSuspend,
     decideArchive: isSuper && archiveRequested && phase !== 'archived',
     restore: phase === 'archived' && isSuper,
@@ -151,7 +164,7 @@ export function getAllowedActions(
     requestArchive: !isSuper && canSuspend && phase === 'suspended' && !archiveRequested,
     delete: DELETABLE.includes(status) && canUpdate && ownerOrAdmin,
     deletePermanently: phase === 'archived' && isSuper,
-    rollback: (isSuper || isAdmin) && phase !== 'archived',
+    rollback: canMaintain && user.can('miniapp:update') && phase !== 'archived',
     downloadTestApk: phase === 'testing' || phase === 'test-passed' || phase === 'live',
   };
 }

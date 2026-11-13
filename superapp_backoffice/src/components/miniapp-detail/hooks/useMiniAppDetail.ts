@@ -12,6 +12,7 @@ import { IntegrationMethod, NativeSdkConfigDto, SourceType } from '@/types/minia
 import { SubmissionModalState } from '@/components/ui/SubmissionModal';
 import { BuildProgressModalState } from '@/components/ui/BuildProgressModal';
 import { MiniAppDetailFormData, INITIAL_MINIAPP_FORM_DATA } from '../types';
+import { hasAccess, toAccessLevel } from '@/lib/miniappAccess';
 
 export function useMiniAppDetail(id: string, can: (permission: string) => boolean) {
   const router = useRouter();
@@ -140,7 +141,12 @@ export function useMiniAppDetail(id: string, can: (permission: string) => boolea
   }, {} as Record<string, string>);
 
   const hasErrors = Object.keys(allErrors).length > 0;
-  const isEditable = can('miniapp:update') && isEditingUnlocked;
+  // Editing needs the role permission and EDIT on this app (owner, Developer or
+  // Maintainer collaborator, org admin): the API refuses the save otherwise
+  const isEditable =
+    can('miniapp:update') &&
+    hasAccess(toAccessLevel((formData as any).myAccess), 'EDIT') &&
+    isEditingUnlocked;
 
   // Fetch MiniApp Configuration
   const fetchApp = useCallback(async (isRetry = false, isSilent = false) => {

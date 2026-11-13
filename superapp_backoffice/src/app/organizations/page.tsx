@@ -30,7 +30,9 @@ function OrganizationsContent() {
   const searchParams = useSearchParams();
 
   const { user, role, can, isLoading: isAuthLoading } = useAuth();
-  const isSuperOrAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN' || can('organization:manage');
+  // Only the platform admin (SUPER_ADMIN) lists every organization; everyone
+  // else, organization admins included, is sent to their own organization.
+  const isSuperOrAdmin = role === 'SUPER_ADMIN';
 
   // Read initial query params from URL
   const initialPage = Math.max(1, parseInt(searchParams.get('page') || '1', 10));

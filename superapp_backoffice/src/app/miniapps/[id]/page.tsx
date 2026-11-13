@@ -23,6 +23,7 @@ import {
   useMiniAppLifecycle,
 } from '@/components/miniapp-detail';
 import { getAllowedActions } from '@/components/miniapp-detail/miniappActions';
+import { toAccessLevel } from '@/lib/miniappAccess';
 import { PackagePublishPanel } from '@/components/miniapp-detail/PackagePublishPanel';
 
 const TAB_TITLES: Record<MiniAppTabType, string> = {
@@ -160,7 +161,12 @@ function ManageMiniAppContent() {
     role,
   });
 
-  const actions = getAllowedActions(formData, { role, userId: user?.id, can });
+  const actions = getAllowedActions(formData, {
+    role,
+    userId: user?.id,
+    can,
+    access: toAccessLevel((formData as any).myAccess),
+  });
 
   if (isLoading || fetchError || !formData.id) {
     return (

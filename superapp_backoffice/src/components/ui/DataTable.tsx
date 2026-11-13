@@ -503,7 +503,7 @@ export function DataTable<T>({
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={`skeleton-${i}`} className="animate-pulse">
                     {columns.map((col, cIdx) => (
-                      <td key={`col-${cIdx}`} className="px-6 py-4">
+                      <td key={`col-${cIdx}`} className={`px-6 py-4 ${col.className || ''}`}>
                         <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-3/4" />
                       </td>
                     ))}

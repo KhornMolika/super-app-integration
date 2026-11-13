@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { LifecycleBadge, AvailabilityBadge } from './MiniAppStatusBadges';
+import { ACCESS_LEVEL_INFO, toAccessLevel } from '@/lib/miniappAccess';
 import { IntegrationMethod } from '@/types/miniapp.types';
 import { BuildingIcon } from '@/components/ui/Icons';
 import { AppLogoAvatar } from '@/components/ui/AppLogoAvatar';
@@ -60,9 +62,7 @@ export default function MiniAppDetailHeader({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Suspension is an availability flag; show it in the pill like a status
-  const status =
-    actions.phase === 'suspended' ? 'SUSPENDED' : (formData.status || 'DRAFT');
+  const accessInfo = ACCESS_LEVEL_INFO[toAccessLevel((formData as any).myAccess)];
   const testVersion =
     formData.activeTestVersion ||
     formData.integrationConfig?.superAppTestVersion ||
@@ -71,47 +71,23 @@ export default function MiniAppDetailHeader({
 
   return (
     <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm transition-all">
-      <div className="flex items-center space-x-4">
+      <div className="flex items-start sm:items-center gap-4 min-w-0">
         <AppLogoAvatar logo={formData.logo} name={formData.name} size="lg" />
-        <div>
-          <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight break-words mr-1">
               {formData.name || 'Manage MiniApp'}
             </h2>
-            {/* Status Pill Badge */}
+            {/* Lifecycle (governance stage) and availability (runtime gate) are separate */}
+            <LifecycleBadge app={formData} size="md" />
+            <AvailabilityBadge app={formData} size="md" />
+            {/* The caller's access on this app (owner / collaborator role / admin) */}
             <span
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${
-                status === 'ACTIVE'
-                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
-                  : status === 'APPROVED'
-                  ? 'bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800'
-                  : status === 'IN_REVIEW'
-                  ? 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800'
-                  : status === 'TESTING' || status === 'BUILDING'
-                  ? 'bg-accent-50 text-accent-800 border border-accent-200 dark:bg-accent-950/40 dark:text-accent-300 dark:border-accent-800'
-                  : status === 'REJECTED' || status === 'SUSPENDED'
-                  ? 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
-                  : status === 'ARCHIVED'
-                  ? 'bg-slate-200 text-slate-600 border border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-600'
-                  : 'bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
-              }`}
+              title={accessInfo.summary}
+              className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap"
             >
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  status === 'ACTIVE'
-                    ? 'bg-emerald-500'
-                    : status === 'APPROVED'
-                    ? 'bg-teal-500'
-                    : status === 'IN_REVIEW'
-                    ? 'bg-blue-500 animate-pulse'
-                    : status === 'TESTING' || status === 'BUILDING'
-                    ? 'bg-accent-500 animate-pulse'
-                    : status === 'REJECTED' || status === 'SUSPENDED'
-                    ? 'bg-rose-500'
-                    : 'bg-slate-400'
-                }`}
-              />
-              <span>{status.replace(/_/g, ' ')}</span>
+              <span className="sr-only">Your access: </span>
+              {accessInfo.label}
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-2 mt-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400">

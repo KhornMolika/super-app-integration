@@ -13,6 +13,7 @@ import {
   CameraIcon,
   HashIcon,
   AlertTriangleIcon,
+  LockIcon,
 } from '@/components/ui/Icons';
 import { normalizeAssetUrl } from '@/lib/asset-utils';
 import { getOrgInitialCode } from './OrganizationAvatar';
@@ -37,6 +38,11 @@ interface OrganizationModalProps {
   errorMessage: string | null;
   onClose: () => void;
   onSubmit: (formData: OrganizationFormData) => Promise<void>;
+  /**
+   * Organization admin editing their own organization: only name, logo and
+   * description. Code, parent and status are platform-admin fields.
+   */
+  profileOnly?: boolean;
 }
 
 export function OrganizationModal({
@@ -47,6 +53,7 @@ export function OrganizationModal({
   errorMessage,
   onClose,
   onSubmit,
+  profileOnly = false,
 }: OrganizationModalProps) {
   const [formData, setFormData] = useState<OrganizationFormData>({
     name: '',
@@ -410,6 +417,8 @@ export function OrganizationModal({
             />
           </div>
 
+          {!profileOnly && (
+          <>
           {/* Section 3: Two-column grid (Short Code + Parent Authority) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Short Code / Acronym */}
@@ -478,6 +487,8 @@ export function OrganizationModal({
             </div>
           </div>
 
+          </>
+          )}
           {/* Section 4: Mandate & Description */}
           <div>
             <label
@@ -496,6 +507,8 @@ export function OrganizationModal({
             />
           </div>
 
+          {!profileOnly && (
+          <>
           {/* Section 5: Modern Segmented Operational Status Selector */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
@@ -564,6 +577,14 @@ export function OrganizationModal({
             )}
           </div>
 
+          </>
+          )}
+          {profileOnly && (
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-start gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 px-3 py-2.5">
+              <LockIcon className="w-3.5 h-3.5 shrink-0 mt-0.5 text-slate-400" />
+              <span>Short code, parent authority and status are managed by the platform admin.</span>
+            </p>
+          )}
           {/* Modal Footer */}
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800 mt-6">
             <Button

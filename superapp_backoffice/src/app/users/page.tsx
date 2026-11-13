@@ -38,7 +38,10 @@ function UsersContent() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const confirm = useConfirm();
-  const { can, user: currentUser } = useAuth();
+  const { can, user: currentUser, role: myRole } = useAuth();
+  // Organization admins manage their own organization only (the API enforces it);
+  // only the platform admin may place users in other organizations or grant SUPER_ADMIN
+  const isPlatformAdmin = myRole === 'SUPER_ADMIN';
   const hasUserRead = can('user:read');
   const canManageUsers = can('user:manage');
   // Read initial query params from URL
@@ -802,7 +805,9 @@ function UsersContent() {
                 Users
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Manage operator accounts, status approvals, and platform user directory.
+                {isPlatformAdmin
+                  ? 'Manage operator accounts, status approvals, and platform user directory.'
+                  : 'Members of your organization. You can add, edit and deactivate them.'}
               </p>
             </div>
           </div>
@@ -955,8 +960,16 @@ function UsersContent() {
           isOpen={isUserModalOpen}
           onClose={() => setIsUserModalOpen(false)}
           editingUser={editingUser}
-          roles={roles}
-          organizations={organizations}
+          roles={
+            isPlatformAdmin
+              ? roles
+              : roles.filter((r: any) => (r?.name || r) !== 'SUPER_ADMIN')
+          }
+          organizations={
+            isPlatformAdmin
+              ? organizations
+              : organizations.filter((o) => o.id === currentUser?.organizationId)
+          }
           onSuccess={() => {
             fetchUsers();
             fetchGlobalCounts();

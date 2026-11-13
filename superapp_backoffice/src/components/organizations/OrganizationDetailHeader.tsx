@@ -12,6 +12,8 @@ import { AlertTriangleIcon } from '@/components/ui/Icons';
 export interface OrganizationDetailHeaderProps {
   organization: Organization;
   isSuperOrAdmin: boolean;
+  /** Super Admin, or the organization's own admin (profile edits only). */
+  canEditProfile?: boolean;
   onToggleStatus: () => void;
   onEdit: () => void;
   onDelete?: () => void;
@@ -22,6 +24,7 @@ export interface OrganizationDetailHeaderProps {
 export function OrganizationDetailHeader({
   organization,
   isSuperOrAdmin,
+  canEditProfile = isSuperOrAdmin,
   onToggleStatus,
   onEdit,
   onDelete,
@@ -43,7 +46,7 @@ export function OrganizationDetailHeader({
     }
   }, [isSuperOrAdmin]);
 
-  const actionItems: ActionMenuItem[] = [
+  const allActionItems: ActionMenuItem[] = [
     {
       label: 'Edit Organization',
       onClick: onEdit,
@@ -100,6 +103,9 @@ export function OrganizationDetailHeader({
       : []),
   ];
 
+  // Status and delete are platform-admin actions; an organization admin only edits its profile
+  const actionItems = isSuperOrAdmin ? allActionItems : allActionItems.slice(0, 1);
+
   return (
     <div className="space-y-4">
       {/* Top Navigation & Actions Bar */}
@@ -135,8 +141,8 @@ export function OrganizationDetailHeader({
           </div>
         </div>
 
-        {/* Management Actions Menu (Super Admins & Admins only) */}
-        {isSuperOrAdmin && (
+        {/* Management Actions Menu: Super Admin (all) or own-org admin (edit only) */}
+        {canEditProfile && (
           <div className="shrink-0">
             <ActionMenu
               items={actionItems}

@@ -19,16 +19,19 @@ const ROLE_PERMISSIONS: Record<Role, string[]> = {
     'organization:read', 'organization:manage',
     'audit_log:read', 'settings:manage'
   ],
+  // Organization admin: every grant is scoped to their own organization by the
+  // API. Platform settings and Super App build tools (settings:manage,
+  // super_app:manage) are SUPER_ADMIN only.
   ADMIN: [
     'miniapp:create', 'miniapp:read', 'miniapp:update', 'miniapp:submit', 'miniapp:delete', 'miniapp:approve', 'miniapp:reject', 'miniapp:suspend',
     'miniapp_permission:approve', 'issue:resolve',
-    'permission_proposal:read', // regulatory admin: sees requests, only SUPER_ADMIN decides
-    'super_app:read', 'super_app:manage',
+    'permission_proposal:read', // sees their organization's requests, only SUPER_ADMIN decides
+    'super_app:read',
     'user:read', 'user:manage',
     'role:read',
     'permission:read',
     'organization:read', 'organization:manage',
-    'audit_log:read', 'settings:manage'
+    'audit_log:read'
   ],
   MA_DEVELOPER: [
     'miniapp:create', 'miniapp:read', 'miniapp:update', 'miniapp:submit',
