@@ -1,3 +1,4 @@
+import { buildStagesFor } from './build-inclusion';
 import { NativeSdkCodegenService } from './native-sdk-codegen.service';
 
 function serviceWith(apps: any[]) {
@@ -37,7 +38,7 @@ describe('NativeSdkCodegenService.buildManifest', () => {
     // Only apps that belong in a build; archived/rejected/draft are not asked for
     const where = (repo.find.mock.calls[0] as any)[0].where;
     expect(where.integrationMethod).toBe('NATIVE_SDK');
-    expect(where.lifecycleStatus._value).toEqual(['APPROVED', 'BUILDING', 'BUILD_FAILED', 'TESTING', 'TEST_PASSED', 'ACTIVE']);
+    expect(where.lifecycleStatus._value).toEqual(buildStagesFor('debug'));
   });
 
   it('skips, with a reason, an SDK not published to Nexus or with bad coordinates', async () => {

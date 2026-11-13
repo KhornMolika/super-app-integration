@@ -56,7 +56,8 @@ dev_dependencies:
         {
           id: 'ma-1',
           name: 'Public Transit',
-          status: 'APPROVED',
+          status: 'ACTIVE',
+          lifecycleStatus: 'ACTIVE',
           integrationMethod: 'FLUTTER_PACKAGE',
           integrationConfig: {
             packageName: 'sc_public_miniapp',
@@ -280,6 +281,7 @@ dev_dependencies:
       id: 'hr-uuid-1234',
       appId: 'miniapp_fsa_hr_abc',
       name: 'FSA HR',
+      lifecycleStatus: 'ACTIVE',
       integrationMethod: 'FLUTTER_PACKAGE',
       integrationConfig: { packageName: 'fsa_hr_miniapp' },
       homeWidget: { widgetClass: 'HrHomeWidget', verifiedClass: 'HrHomeWidget' },
@@ -288,6 +290,7 @@ dev_dependencies:
       id: 'kyc-uuid-1',
       appId: 'ma_flutter_kyc',
       name: 'KYC',
+      lifecycleStatus: 'ACTIVE',
       integrationMethod: 'FLUTTER_PACKAGE',
       integrationConfig: { packageName: 'ma_flutter_kyc' },
     };

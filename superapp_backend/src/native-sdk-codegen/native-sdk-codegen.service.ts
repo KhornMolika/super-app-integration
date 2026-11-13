@@ -9,6 +9,11 @@ import { GitlabMrService } from './gitlab-mr.service';
 import { NativeSdkVendor, hasAndroid, hasIos } from './vendor.types';
 import { replaceMarkedRegion } from './marker';
 import {
+  SuperAppBuildType,
+  buildExclusionReason,
+  buildStagesFor,
+} from './build-inclusion';
+import {
   NATIVE_SDK_MARKED_REGIONS,
   NativeSdkTargetKey,
   REGION_DEPS,
@@ -55,7 +60,6 @@ function isFilled(value: unknown): value is string {
 }
 
 /** Statuses whose Android SDK goes into a Super App build (see buildManifest). */
-export const MANIFEST_STATUSES = ['APPROVED', 'BUILDING', 'BUILD_FAILED', 'TESTING', 'TEST_PASSED', 'ACTIVE'];
 
 export interface NativeSdkManifest {
   repositories: string[];
@@ -142,23 +146,29 @@ export class NativeSdkCodegenService {
    */
   /**
    * What a Super App build must include for Native SDK mini apps: the Nexus
-   * Maven repository and one dependency per app that is approved, building,
-   * in testing or live. Archived, rejected, draft and deleted apps are left
-   * out, so they drop out of the next build. Suspended apps stay in (their
-   * lifecycle is unchanged), so Resume works without a new build.
+   * Maven repository and one dependency per app this build includes (see
+   * build-inclusion.ts: a test build takes live, testing and currently
+   * building apps; a release build live apps only; failed builds and failed
+   * scans never). Suspended apps stay in, so Resume works without a new build.
    * Read by Jenkins (callback token) before `flutter build`.
    */
-  async buildManifest(): Promise<NativeSdkManifest> {
-    const apps = await this.miniappRepository.find({
+  async buildManifest(buildType: SuperAppBuildType = 'debug'): Promise<NativeSdkManifest> {
+    const found = await this.miniappRepository.find({
       where: {
         integrationMethod: 'NATIVE_SDK',
-        lifecycleStatus: In(MANIFEST_STATUSES),
+        lifecycleStatus: In(buildStagesFor(buildType)),
       },
       order: { appId: 'ASC' },
     });
+    const preSkipped: { appId: string; reason: string }[] = [];
+    const apps = found.filter((app) => {
+      const reason = buildExclusionReason(app, buildType);
+      if (reason) preSkipped.push({ appId: app.appId, reason });
+      return !reason;
+    });
     const dependencies = new Set<string>();
     const iosPods = new Map<string, string>();
-    const skipped: { appId: string; reason: string }[] = [];
+    const skipped: { appId: string; reason: string }[] = [...preSkipped];
     const cocoapodsSpecsUrl = this.nexusRepoUrl('NEXUS_COCOAPODS_SPECS_REPO', 'cocoapods-specs');
     for (const app of apps) {
       const c = app.integrationConfig || {};

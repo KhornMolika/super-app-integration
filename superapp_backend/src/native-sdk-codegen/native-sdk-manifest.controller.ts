@@ -1,4 +1,5 @@
-import { Controller, Get, Header, UseGuards } from '@nestjs/common';
+import { Controller, Get, Header, Query, UseGuards } from '@nestjs/common';
+import { parseBuildType } from './build-inclusion';
 import { CallbackTokenGuard } from '../integrations/release-assembly/callback-token.guard';
 import { BypassTransform } from '../common/decorators/bypass-transform.decorator';
 import { NativeSdkCodegenService } from './native-sdk-codegen.service';
@@ -6,7 +7,9 @@ import { BuildGitCredentialsService } from './build-git-credentials.service';
 import { BuildMiniAppsService } from './build-miniapps.service';
 
 /**
- * Read by the Super App build (Jenkins) before `flutter build`. Machine-to-machine,
+ * Read by the Super App build (Jenkins) before `flutter build`. Jenkins passes
+ * ?buildType=debug|release: a release build bundles ACTIVE apps only (see
+ * build-inclusion.ts); without it, the test-build list is returned. Machine-to-machine,
  * so it uses the Jenkins callback token, not a user login.
  */
 @Controller(['release-assembly', 'api/release-assembly'])
@@ -21,8 +24,8 @@ export class NativeSdkManifestController {
   @Get('native-sdk-manifest')
   @UseGuards(CallbackTokenGuard)
   @BypassTransform()
-  manifest() {
-    return this.codegen.buildManifest();
+  manifest(@Query('buildType') buildType?: string) {
+    return this.codegen.buildManifest(parseBuildType(buildType));
   }
 
   /**
@@ -34,8 +37,8 @@ export class NativeSdkManifestController {
   @UseGuards(CallbackTokenGuard)
   @BypassTransform()
   @Header('Cache-Control', 'no-store')
-  buildMiniApps() {
-    return this.miniApps.plan();
+  buildMiniApps(@Query('buildType') buildType?: string) {
+    return this.miniApps.plan(parseBuildType(buildType));
   }
 
   /**
@@ -46,7 +49,7 @@ export class NativeSdkManifestController {
   @UseGuards(CallbackTokenGuard)
   @BypassTransform()
   @Header('Cache-Control', 'no-store')
-  buildGitCredentials() {
-    return this.gitCredentials.list();
+  buildGitCredentials(@Query('buildType') buildType?: string) {
+    return this.gitCredentials.list(parseBuildType(buildType));
   }
 }

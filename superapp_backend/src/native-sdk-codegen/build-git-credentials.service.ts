@@ -7,7 +7,11 @@ import {
   extractDecryptedGitToken,
 } from '../miniapps/helpers/flutter-credential.helper';
 import { gitSourceUrlOf, isGitSource, splitGitUrl } from '../integrations/flutter/git-source.util';
-import { MANIFEST_STATUSES } from './native-sdk-codegen.service';
+import {
+  SuperAppBuildType,
+  buildExclusionReason,
+  buildStagesFor,
+} from './build-inclusion';
 
 /** How the Super App build fetches one private mini app repository. */
 export type BuildGitCredential =
@@ -36,11 +40,13 @@ export class BuildGitCredentialsService {
     private readonly miniappRepository: Repository<MiniApp>,
   ) {}
 
-  async list(): Promise<BuildGitCredentials> {
-    const apps = await this.miniappRepository.find({
-      where: { integrationMethod: 'FLUTTER_PACKAGE', lifecycleStatus: In(MANIFEST_STATUSES) },
+  /** Keys only for the repositories this build includes (see build-inclusion.ts). */
+  async list(buildType: SuperAppBuildType = 'debug'): Promise<BuildGitCredentials> {
+    const found = await this.miniappRepository.find({
+      where: { integrationMethod: 'FLUTTER_PACKAGE', lifecycleStatus: In(buildStagesFor(buildType)) },
       order: { appId: 'ASC' },
     });
+    const apps = found.filter((app) => !buildExclusionReason(app, buildType));
     const credentials: BuildGitCredential[] = [];
     const skipped: { appId: string; reason: string }[] = [];
     const seen = new Set<string>();

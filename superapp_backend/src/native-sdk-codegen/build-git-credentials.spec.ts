@@ -1,3 +1,4 @@
+import { buildStagesFor } from './build-inclusion';
 import { BuildGitCredentialsService } from './build-git-credentials.service';
 import { splitGitUrl } from '../integrations/flutter/git-source.util';
 
@@ -25,7 +26,12 @@ describe('BuildGitCredentialsService.list', () => {
     const repo = { find: jest.fn(async () => apps) };
     return { svc: new BuildGitCredentialsService(repo as any), repo };
   }
-  const app = (appId: string, cfg: Record<string, any>) => ({ appId, integrationMethod: 'FLUTTER_PACKAGE', integrationConfig: cfg });
+  const app = (appId: string, cfg: Record<string, any>) => ({
+    appId,
+    lifecycleStatus: 'ACTIVE',
+    integrationMethod: 'FLUTTER_PACKAGE',
+    integrationConfig: cfg,
+  });
 
   it('lists each private source repository in the build with its own key or token', async () => {
     const { svc, repo } = serviceWith([
@@ -43,7 +49,7 @@ describe('BuildGitCredentialsService.list', () => {
     // Only apps that will be in the build
     const where = (repo.find.mock.calls[0] as any)[0].where;
     expect(where.integrationMethod).toBe('FLUTTER_PACKAGE');
-    expect(where.lifecycleStatus._value).toEqual(['APPROVED', 'BUILDING', 'BUILD_FAILED', 'TESTING', 'TEST_PASSED', 'ACTIVE']);
+    expect(where.lifecycleStatus._value).toEqual(buildStagesFor('debug'));
   });
 
   it('says why a private repository cannot be set up, without secrets', async () => {

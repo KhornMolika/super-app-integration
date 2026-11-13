@@ -3,6 +3,7 @@ import {
   Logger,
   BadRequestException,
   BadGatewayException,
+  ForbiddenException,
   NotFoundException,
   OnApplicationBootstrap,
   Optional,
@@ -24,6 +25,10 @@ import { PermissionDetectorHelper } from './helpers/permission-detector.helper';
 import { MiniappValidationHelper } from './helpers/miniapp-validation.helper';
 import { nativeEntryClassProblems } from './helpers/native-sdk-config.helper';
 import { MiniappLifecycleHelper } from './helpers/miniapp-lifecycle.helper';
+import {
+  FOUR_EYES_SUBMIT_ACTIONS,
+  fourEyesViolation,
+} from './helpers/four-eyes';
 import {
   MiniappRetirementHelper,
   RetirementActor,
@@ -203,6 +208,15 @@ export class MiniappsService implements OnApplicationBootstrap {
     } catch (e: any) {
       this.logger.warn(`Failed to log audit activity: ${e.message}`);
     }
+  }
+
+  /** Four-eyes approval: see helpers/four-eyes.ts. */
+  private async assertFourEyes(app: MiniApp, approverId: string) {
+    const submitterId = await this.auditService
+      .lastActorOf('MiniApp', app.id, FOUR_EYES_SUBMIT_ACTIONS)
+      .catch(() => null);
+    const reason = fourEyesViolation(approverId, app.ownerId, submitterId);
+    if (reason) throw new ForbiddenException(reason);
   }
 
   async create(data: Partial<MiniApp>, actorId?: string) {
@@ -589,6 +603,7 @@ export class MiniappsService implements OnApplicationBootstrap {
       limit = 20,
       search,
       status,
+      availability,
       integrationMethod,
       organizationId,
       includeArchived,
@@ -599,7 +614,8 @@ export class MiniappsService implements OnApplicationBootstrap {
     const qb = this.miniappRepository
       .createQueryBuilder('app')
       .leftJoinAndSelect('app.issues', 'issues')
-      .leftJoinAndSelect('app.owner', 'owner');
+      .leftJoinAndSelect('app.owner', 'owner')
+      .leftJoinAndSelect('app.organizationRelation', 'org');
 
     // Access scoping (miniapps/access/miniapp-access.policy.ts): SUPER_ADMIN all,
     // ADMIN their organization, everyone else owned + collaborated apps.
@@ -622,13 +638,26 @@ export class MiniappsService implements OnApplicationBootstrap {
       );
     }
 
-    // Search: name, description, appId, tagline
+    // Search: name, App ID, tagline, description, organization code or name
     if (search?.trim()) {
       const sanitized = escapeLikeString(search.trim());
       qb.andWhere(
-        '(app.name ILIKE :search OR app.description ILIKE :search OR app.appId ILIKE :search OR app.tagline ILIKE :search)',
+        '(app.name ILIKE :search OR app.appId ILIKE :search OR app.tagline ILIKE :search OR app.description ILIKE :search OR org.code ILIKE :search OR org.name ILIKE :search)',
         { search: `%${sanitized}%` },
       );
+    }
+
+    // Availability: the runtime gate, separate from the lifecycle stage
+    const isSuspended =
+      "(app.availabilityStatus = 'SUSPENDED' OR app.lifecycleStatus = 'SUSPENDED')";
+    const isLive =
+      "(app.lifecycleStatus = 'ACTIVE' OR app.availabilityStatus = 'PRODUCTION')";
+    if (availability === 'SUSPENDED') {
+      qb.andWhere(isSuspended);
+    } else if (availability === 'LIVE') {
+      qb.andWhere(`NOT ${isSuspended} AND ${isLive}`);
+    } else if (availability === 'NOT_LIVE') {
+      qb.andWhere(`NOT ${isSuspended} AND NOT ${isLive}`);
     }
 
     // Filter Status
@@ -661,12 +690,15 @@ export class MiniappsService implements OnApplicationBootstrap {
       qb.andWhere('app.organizationId = :organizationId', { organizationId });
     }
 
-    // Allowlisted Sorting
+    // Allowlisted Sorting (keys match the Backoffice table columns)
     const sortColumns: Record<string, string> = {
       createdAt: 'app.createdAt',
       updatedAt: 'app.updatedAt',
       name: 'app.name',
       status: 'app.lifecycleStatus',
+      lifecycle: 'app.lifecycleStatus',
+      availability: 'app.availabilityStatus',
+      organization: 'org.code',
       integrationMethod: 'app.integrationMethod',
     };
     const orderColumn = sortColumns[sortBy] || 'app.createdAt';
@@ -697,6 +729,7 @@ export class MiniappsService implements OnApplicationBootstrap {
   async publishRevision(id: string, actorId: string) {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
+    await this.assertFourEyes(app, actorId);
 
     const isNativeSdk = this.assertNativeSdkReady(app);
     if (isNativeSdk) {
@@ -902,6 +935,7 @@ export class MiniappsService implements OnApplicationBootstrap {
   async approve(id: string, actorId: string) {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
+    await this.assertFourEyes(app, actorId);
 
     const rawCaps = (app as any).capabilities || (app as any).permissions;
     if (
@@ -991,6 +1025,7 @@ export class MiniappsService implements OnApplicationBootstrap {
   async activate(id: string, actorId: string) {
     const app = await this.findOne(id);
     if (!app) throw new BadRequestException('App not found');
+    await this.assertFourEyes(app, actorId);
     return this.lifecycleHelper.activate(
       app,
       actorId,

@@ -8,7 +8,11 @@ import {
   miniAppDependencyOf,
 } from '../integrations/flutter/miniapp-dependency.util';
 import { renderMiniAppRegistry, RegistryEntry } from '../integrations/flutter/miniapp-registry.render';
-import { MANIFEST_STATUSES } from './native-sdk-codegen.service';
+import {
+  SuperAppBuildType,
+  buildExclusionReason,
+  buildStagesFor,
+} from './build-inclusion';
 
 export interface BuildMiniAppPackage {
   appId: string;
@@ -42,9 +46,10 @@ export class BuildMiniAppsService {
     private readonly config: ConfigService,
   ) {}
 
-  async plan(): Promise<BuildMiniApps> {
+  /** `buildType`: which build reads the list (see build-inclusion.ts). */
+  async plan(buildType: SuperAppBuildType = 'debug'): Promise<BuildMiniApps> {
     const apps = await this.miniappRepository.find({
-      where: { integrationMethod: 'FLUTTER_PACKAGE', lifecycleStatus: In(MANIFEST_STATUSES) },
+      where: { integrationMethod: 'FLUTTER_PACKAGE', lifecycleStatus: In(buildStagesFor(buildType)) },
       order: { appId: 'ASC' },
     });
     const gateway = this.config.get<string>('SUPER_APP_PUB_URL');
@@ -54,6 +59,11 @@ export class BuildMiniAppsService {
     const byPackage = new Map<string, string>();
 
     for (const app of apps) {
+      const excluded = buildExclusionReason(app, buildType);
+      if (excluded) {
+        skipped.push({ appId: app.appId, reason: excluded });
+        continue;
+      }
       const r = miniAppDependencyOf(app, gateway);
       if ('skip' in r) {
         skipped.push({ appId: app.appId, reason: r.skip });

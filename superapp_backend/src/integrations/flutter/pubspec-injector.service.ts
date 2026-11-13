@@ -12,6 +12,10 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
+import {
+  buildExclusionReason,
+  buildStagesFor,
+} from '../../native-sdk-codegen/build-inclusion';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -500,21 +504,15 @@ export class PubspecInjectorService {
       'Synchronizing all approved Flutter Package MiniApps into pubspec.yaml...',
     );
 
-    const approvedMiniApps = await this.miniappRepository.find({
-      where: {
-        lifecycleStatus: In([
-          'APPROVED',
-          'TESTING',
-          'ACTIVE',
-          'IN_REVIEW',
-          'BUILDING',
-        ]),
-      },
+    // Same rule as the Jenkins build (build-inclusion.ts, test build)
+    const candidates = await this.miniappRepository.find({
+      where: { lifecycleStatus: In(buildStagesFor('debug')) },
     });
 
-    const flutterMiniApps = approvedMiniApps.filter(
+    const flutterMiniApps = candidates.filter(
       (app) =>
-        (app.integrationMethod || '').toUpperCase() === 'FLUTTER_PACKAGE',
+        (app.integrationMethod || '').toUpperCase() === 'FLUTTER_PACKAGE' &&
+        !buildExclusionReason(app, 'debug'),
     );
 
     const baseFrameworkDeps = new Set([
@@ -604,13 +602,14 @@ export class PubspecInjectorService {
       return;
     }
     try {
-      const approvedMiniApps = await this.miniappRepository.find({
-        where: {
-          status: In(['APPROVED', 'TESTING', 'TEST_PASSED', 'ACTIVE', 'IN_REVIEW'] as any),
-        },
+      // Same rule as the Jenkins build (build-inclusion.ts, test build)
+      const candidates = await this.miniappRepository.find({
+        where: { lifecycleStatus: In(buildStagesFor('debug')) },
       });
-      const flutterMiniApps = approvedMiniApps.filter(
-        (app) => (app.integrationMethod || '').toUpperCase() === 'FLUTTER_PACKAGE',
+      const flutterMiniApps = candidates.filter(
+        (app) =>
+          (app.integrationMethod || '').toUpperCase() === 'FLUTTER_PACKAGE' &&
+          !buildExclusionReason(app, 'debug'),
       );
       this.generateDynamicRegistry(flutterMiniApps);
     } catch (err: any) {

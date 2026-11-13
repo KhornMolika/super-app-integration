@@ -1,3 +1,4 @@
+import { buildStagesFor } from './build-inclusion';
 import { BuildMiniAppsService } from './build-miniapps.service';
 import { miniAppDependencyOf, pubspecHostedUrlFor } from '../integrations/flutter/miniapp-dependency.util';
 import { dartString, renderMiniAppRegistry } from '../integrations/flutter/miniapp-registry.render';
@@ -105,7 +106,29 @@ describe('BuildMiniAppsService.plan', () => {
     expect(r.registryDart).not.toContain('local_pkg');
     const where = (repo.find.mock.calls[0] as any)[0].where;
     expect(where.integrationMethod).toBe('FLUTTER_PACKAGE');
-    expect(where.lifecycleStatus._value).toEqual(['APPROVED', 'BUILDING', 'BUILD_FAILED', 'TESTING', 'TEST_PASSED', 'ACTIVE']);
+    expect(where.lifecycleStatus._value).toEqual(buildStagesFor('debug'));
+  });
+
+  it('leaves a failed test build out of the next build, saying why (build log)', async () => {
+    const pkg = (name: string) => ({ sourceType: 'ARTIFACT', packageName: name, packageVersion: '1.0.0' });
+    const { svc } = serviceWith([
+      app('live', pkg('live_pkg')),
+      app('building', pkg('building_pkg'), { lifecycleStatus: 'APPROVED', buildStatus: 'BUILDING' }),
+      app('failed', pkg('failed_pkg'), { lifecycleStatus: 'APPROVED', buildStatus: 'FAILED' }),
+      app('bad_scan', pkg('bad_scan_pkg'), { lifecycleStatus: 'TESTING', validationStatus: 'FAILED' }),
+    ]);
+    const r = await svc.plan('debug');
+    expect(r.packages.map((p) => p.appId)).toEqual(['live', 'building']);
+    expect(r.skipped).toEqual([
+      { appId: 'failed', reason: 'its last test build failed (retry the test build for this app)' },
+      { appId: 'bad_scan', reason: 'security scan failed' },
+    ]);
+  });
+
+  it('a release build asks for live apps only', async () => {
+    const { svc, repo } = serviceWith([app('live', { sourceType: 'ARTIFACT', packageName: 'live_pkg' })]);
+    await svc.plan('release');
+    expect((repo.find.mock.calls[0] as any)[0].where.lifecycleStatus._value).toEqual(['ACTIVE']);
   });
 
   it('with no mini apps, the registry registers nothing', async () => {

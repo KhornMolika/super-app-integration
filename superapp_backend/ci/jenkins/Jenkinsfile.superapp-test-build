@@ -45,6 +45,17 @@ def privateGitDeps() {
     return deps
 }
 
+/**
+ * Adds this build's type, so the backend lists only the mini apps this build
+ * may bundle: a release build takes live apps only, a test build also the apps
+ * under test (never failed builds or failed scans). Older backends ignore it.
+ */
+def withBuildType(String url) {
+    if (!url) return url
+    def type = params.BUILD_TYPE == 'debug' ? 'debug' : 'release'
+    return url + (url.contains('?') ? '&' : '?') + 'buildType=' + type
+}
+
 /** Backend list of each in-build mini app's private repository and its key. */
 def gitCredentialsUrl() {
     def explicit = (p('BUILD_CREDENTIALS_URL') ?: '').trim()
@@ -73,7 +84,7 @@ def syncMiniApps() {
         echo 'WARNING: no backend URL (CALLBACK_URL / MINIAPPS_URL): building with the mini apps committed in super-app'
         return
     }
-    withEnv(["MINIAPPS_LIST_URL=${url}", "FLUTTER_IMAGE=${p('FLUTTER_IMAGE')}"]) {
+    withEnv(["MINIAPPS_LIST_URL=${withBuildType(url)}", "FLUTTER_IMAGE=${p('FLUTTER_IMAGE')}"]) {
         sh '''
             set -e +x  # no trace: keeps the callback token and passwords out of the console log
             LIST="$WORKSPACE/build-miniapps.json"
@@ -112,7 +123,7 @@ def syncNativeSdks() {
         sh "rm -f ${env.MOBILE_DIR}/native_sdks.json"
         return
     }
-    withEnv(["MANIFEST_URL=${manifestUrl}"]) {
+    withEnv(["MANIFEST_URL=${withBuildType(manifestUrl)}"]) {
         sh '''
             set -e +x  # no trace: keeps the callback token and passwords out of the console log
             curl -sSf --max-time 30 -H "x-callback-token: ${CALLBACK_TOKEN:-}" "$MANIFEST_URL" -o "$MOBILE_DIR/native_sdks.json"
@@ -170,7 +181,7 @@ def withPrivateGitDeps(Closure body) {
         def credsUrl = gitCredentialsUrl()
         if (credsUrl) {
             writeFile file: '.ci-secrets/write-git-config.js', text: gitConfigJs()
-            withEnv(["GIT_CREDS_URL=${credsUrl}"]) {
+            withEnv(["GIT_CREDS_URL=${withBuildType(credsUrl)}"]) {
                 sh '''
                     set -e +x  # no trace: keeps the callback token and passwords out of the console log
                     S="$WORKSPACE/.ci-secrets"
