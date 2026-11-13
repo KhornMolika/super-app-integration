@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { copyText } from '@/lib/clipboard';
 
 export interface EditorFile {
   filename: string;
@@ -16,7 +17,7 @@ export function VSCodeEditor({ files }: { files: EditorFile[] }) {
 
   const handleCopy = () => {
     if (!activeFile) return;
-    navigator.clipboard.writeText(activeFile.code);
+    copyText(activeFile.code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

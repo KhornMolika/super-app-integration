@@ -9,6 +9,7 @@ import { AppLogoAvatar } from '@/components/ui/AppLogoAvatar';
 import { getOrganizationCode, getOrganizationFullName } from '@/api';
 import type { MiniAppAllowedActions } from './miniappActions';
 import type { LifecycleActionType } from './types';
+import { copyText } from '@/lib/clipboard';
 
 export interface MiniAppDetailHeaderProps {
   formData: any;
@@ -46,7 +47,7 @@ export default function MiniAppDetailHeader({
 
   const copyAppId = () => {
     if (formData.appId) {
-      navigator.clipboard.writeText(formData.appId);
+      copyText(formData.appId);
       setCopiedAppId(true);
       setTimeout(() => setCopiedAppId(false), 2000);
     }

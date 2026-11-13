@@ -10,6 +10,7 @@ import CapabilitiesForm from '@/components/forms/CapabilitiesForm';
 import VersionHistoryTab from '@/components/miniapp-detail/VersionHistoryTab';
 import ValidationReportTab from '@/components/ui/ValidationReportTab';
 import ActivityTab from '@/components/ui/ActivityTab';
+import { RunHistoryTab } from '@/components/miniapp-detail/RunHistoryTab';
 import type { MiniAppTabType } from '@/components/miniapp-detail/MiniAppDetailTabs';
 import { MiniAppDetailFormData } from './types';
 import { NativeSdkConfigDto } from '@/types/miniapp.types';
@@ -170,6 +171,8 @@ export function MiniAppSectionContent({
       {activeTab === 'report' && (
         <ValidationReportTab miniApp={formData} onRefresh={onRefreshApp} />
       )}
+
+      {activeTab === 'runs' && <RunHistoryTab miniAppId={id} />}
 
       {activeTab === 'activity' && (
         <ActivityTab miniAppId={id} />

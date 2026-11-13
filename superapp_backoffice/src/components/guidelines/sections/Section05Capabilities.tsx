@@ -8,6 +8,7 @@ import { permissionsApi, CapabilityItem } from "@/api/permissions.api";
 import { renderCapabilityIcon, getCapabilityVisual } from "@/lib/capability-visuals";
 
 import { IntegrationMethodTab } from "@/types";
+import { copyText } from '@/lib/clipboard';
 
 interface Section05CapabilitiesProps {
   activeMethodTab?: IntegrationMethodTab;
@@ -143,7 +144,7 @@ export function Section05Capabilities({
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const copyCode = (code: string, key: string) => {
-    navigator.clipboard.writeText(code);
+    copyText(code);
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 2000);
   };

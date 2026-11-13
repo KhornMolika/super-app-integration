@@ -1,3 +1,4 @@
+import { MiniAppRunsService } from '../../../miniapps/miniapp-runs.service';
 import { simulatedScanAllowed } from '../simulated-scan.policy';
 import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -34,6 +35,7 @@ export class FlutterPackageSecurityScanner {
     private readonly scanFinalizer: ScanFinalizerService,
     @Optional()
     private readonly pubVulnerabilityScanner?: PubVulnerabilityScannerService,
+    @Optional() private readonly runs?: MiniAppRunsService,
   ) {}
 
   private async delay(ms: number): Promise<void> {
@@ -91,6 +93,7 @@ export class FlutterPackageSecurityScanner {
     app.validationStages = stages;
     app.validationStatus = 'RUNNING';
     await this.miniappRepository.save(app);
+    await this.runs?.syncScan(app);
 
     // Production: never a simulated pass for a package that was not really scanned
     if (!simulatedScanAllowed()) {
@@ -125,6 +128,7 @@ export class FlutterPackageSecurityScanner {
     const emitUpdate = async (stageId: string) => {
       app.validationStages = stages;
       await this.miniappRepository.save(app);
+      await this.runs?.syncScan(app);
       this.notificationsService.emitStageUpdate({
         miniAppId,
         stage: stages[stageId],

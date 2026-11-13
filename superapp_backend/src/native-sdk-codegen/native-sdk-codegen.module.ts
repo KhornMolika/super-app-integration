@@ -1,3 +1,4 @@
+import { MiniAppRunsModule } from '../miniapps/miniapp-runs.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -15,6 +16,7 @@ import { BuildMiniAppsService } from './build-miniapps.service';
     ConfigModule,
     TypeOrmModule.forFeature([MiniApp]),
     IntegrationsModule,
+    MiniAppRunsModule,
   ],
   controllers: [NativeSdkManifestController],
   providers: [NativeSdkCodegenService, GitlabMrService, BuildGitCredentialsService, BuildMiniAppsService],

@@ -23,6 +23,7 @@ import {
   Sparkles,
   ExternalLink,
 } from 'lucide-react';
+import { copyText } from '@/lib/clipboard';
 
 export interface DownloadApkModalProps {
   isOpen: boolean;
@@ -232,7 +233,7 @@ export default function DownloadApkModal({
       )}&type=test&appName=superapp`;
 
   const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
+    copyText(text);
     setCopiedLink(true);
     toast.success('Direct APK download link copied to clipboard!');
     setTimeout(() => setCopiedLink(false), 2000);

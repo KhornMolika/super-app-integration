@@ -22,6 +22,7 @@ import {
   IntegrationMethodOption,
   getCapabilityMethodSyntax,
 } from '@/lib/capability-methods';
+import { copyText } from '@/lib/clipboard';
 
 interface CapabilitiesTabProps {
   capabilities: CapabilityItem[];
@@ -127,7 +128,7 @@ export function CapabilitiesTab({
   const handleCopy = (e: React.MouseEvent, text: string, id: string) => {
     e.stopPropagation();
     e.preventDefault();
-    navigator.clipboard.writeText(text);
+    copyText(text);
     setCopiedKey(id);
     setTimeout(() => setCopiedKey(null), 1500);
   };

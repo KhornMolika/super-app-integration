@@ -13,6 +13,7 @@ import {
   ClipboardCheckIcon,
   XIcon,
 } from "@/components/ui/Icons";
+import { copyText } from '@/lib/clipboard';
 
 export interface FlutterArchiveUploaderProps {
   isUploading: boolean;
@@ -52,7 +53,7 @@ export default function FlutterArchiveUploader({
 
 
   const copyToClipboard = (text: string, type: "bash" | "ps") => {
-    navigator.clipboard.writeText(text);
+    copyText(text);
     if (type === "bash") {
       setCopiedBash(true);
       setTimeout(() => setCopiedBash(false), 2000);

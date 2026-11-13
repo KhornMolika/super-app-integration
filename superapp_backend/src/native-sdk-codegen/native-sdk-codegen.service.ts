@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { MiniAppRunsService } from '../miniapps/miniapp-runs.service';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
@@ -106,6 +107,7 @@ export class NativeSdkCodegenService {
     private readonly configService: ConfigService,
     private readonly gitlabProvider: GitLabProvider,
     private readonly gitlabMrService: GitlabMrService,
+    @Optional() private readonly runs?: MiniAppRunsService,
   ) {}
 
   private repoSlug(): string {
@@ -160,6 +162,7 @@ export class NativeSdkCodegenService {
       },
       order: { appId: 'ASC' },
     });
+    await this.runs?.attach(found);
     const preSkipped: { appId: string; reason: string }[] = [];
     const apps = found.filter((app) => {
       const reason = buildExclusionReason(app, buildType);

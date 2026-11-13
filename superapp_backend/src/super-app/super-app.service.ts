@@ -1,4 +1,10 @@
-import { Injectable, OnApplicationBootstrap, Logger } from '@nestjs/common';
+import { MiniAppRunsService } from '../miniapps/miniapp-runs.service';
+import {
+  Injectable,
+  OnApplicationBootstrap,
+  Logger,
+  Optional,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -20,6 +26,7 @@ export class SuperAppService implements OnApplicationBootstrap {
     private miniAppRepository: Repository<MiniApp>,
     private configService: ConfigService,
     private capabilitiesService: CapabilitiesService,
+    @Optional() private readonly runs?: MiniAppRunsService,
   ) {}
 
   async onApplicationBootstrap() {
@@ -184,6 +191,7 @@ export class SuperAppService implements OnApplicationBootstrap {
     const apps = await this.miniAppRepository.find({
       where: { activeTestVersion: version },
     });
+    await this.runs?.attach(apps);
     return (
       apps.length > 0 &&
       apps.every(
@@ -206,6 +214,7 @@ export class SuperAppService implements OnApplicationBootstrap {
     const holders = await this.miniAppRepository.find({
       where: { activeTestVersion: row.superAppVersion },
     });
+    await this.runs?.attach(holders);
     return holders.every(
       (a) => String(a.lifecycleStatus) === 'BUILD_FAILED' || String(a.buildStatus) === 'FAILED',
     );

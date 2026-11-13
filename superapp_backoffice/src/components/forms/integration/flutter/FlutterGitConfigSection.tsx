@@ -19,6 +19,7 @@ import {
   ExternalLinkIcon,
 } from "@/components/ui/Icons";
 import { integrationsApi } from "@/api/integrations.api";
+import { copyText } from '@/lib/clipboard';
 
 export interface FlutterGitConfigSectionProps {
   flutterConfig: any;
@@ -93,9 +94,28 @@ export default function FlutterGitConfigSection({
     }
   };
 
-  const handleCopyPublicKey = (keyText: string) => {
+  const [copyFailed, setCopyFailed] = useState(false);
+  const publicKeyRef = React.useRef<HTMLPreElement>(null);
+
+  /** Selects the whole key so it can be copied by hand (Ctrl+C) when copying fails. */
+  const selectPublicKey = () => {
+    const el = publicKeyRef.current;
+    if (!el || typeof window === "undefined") return;
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(range);
+  };
+
+  const handleCopyPublicKey = async (keyText?: string) => {
     if (!keyText) return;
-    navigator.clipboard.writeText(keyText);
+    const ok = await copyText(keyText);
+    setCopyFailed(!ok);
+    if (!ok) {
+      selectPublicKey();
+      return;
+    }
     setCopiedKey(true);
     setTimeout(() => setCopiedKey(false), 2000);
   };
@@ -301,9 +321,18 @@ export default function FlutterGitConfigSection({
 
                   {/* Public Key Display Area */}
                   <div className="relative group">
-                    <pre className="w-full font-mono text-[11px] p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 whitespace-pre-wrap break-all leading-relaxed max-h-28 overflow-y-auto">
-                      {flutterConfig?.deployPublicKey || "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... (Platform Managed)"}
+                    <pre
+                      ref={publicKeyRef}
+                      onClick={flutterConfig?.deployPublicKey ? selectPublicKey : undefined}
+                      className="w-full font-mono text-[11px] p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 whitespace-pre-wrap break-all leading-relaxed max-h-28 overflow-y-auto select-all cursor-text"
+                    >
+                      {flutterConfig?.deployPublicKey || "No public key yet. Generate a new key to get one."}
                     </pre>
+                    {copyFailed && (
+                      <p className="mt-1.5 text-[11px] text-amber-600 dark:text-amber-400">
+                        This browser blocked copying. The key is selected: press Ctrl+C (Cmd+C on Mac).
+                      </p>
+                    )}
                   </div>
 
                   {/* Action Bar */}
@@ -312,11 +341,12 @@ export default function FlutterGitConfigSection({
                       <button
                         type="button"
                         onClick={() => handleCopyPublicKey(flutterConfig?.deployPublicKey)}
+                        disabled={!flutterConfig?.deployPublicKey}
                         className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition-all ${
                           copiedKey
                             ? "bg-emerald-600 text-white shadow-emerald-500/20"
                             : "bg-accent-500 hover:bg-accent-600 text-slate-950 font-bold shadow-accent-500/20"
-                        }`}
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
                       >
                         {copiedKey ? (
                           <>

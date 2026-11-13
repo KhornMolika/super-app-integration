@@ -21,6 +21,7 @@ import {
   LockIcon,
   SendIcon,
 } from 'lucide-react';
+import { copyText } from '@/lib/clipboard';
 
 interface UserProfileCardProps {
   user: {
@@ -107,7 +108,7 @@ export function UserProfileCard({
 
   const handleCopyId = () => {
     if (!userId) return;
-    navigator.clipboard.writeText(userId);
+    copyText(userId);
     setCopiedId(true);
     setTimeout(() => setCopiedId(false), 2000);
     toast.info('User ID copied to clipboard!', 'Copied');

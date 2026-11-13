@@ -34,6 +34,7 @@ const TAB_TITLES: Record<MiniAppTabType, string> = {
   permissions: 'Capabilities',
   versions: 'Versions & Releases',
   report: 'Security & Compliance',
+  runs: 'Scans & Builds',
   activity: 'Activity & Audit',
 };
 
@@ -59,6 +60,7 @@ function ManageMiniAppContent() {
       'permissions',
       'versions',
       'report',
+      'runs',
       'activity',
     ],
     []

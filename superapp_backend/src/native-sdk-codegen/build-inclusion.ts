@@ -71,8 +71,9 @@ export function buildExclusionReason(
     return `${stage || 'no'} stage is not part of a ${type === 'release' ? 'release' : 'test'} build`;
   }
 
-  // Live apps are always rebuilt as they are: their scan result may belong to a
-  // pending revision, which does not change what is live.
+  // A live app stays until someone suspends or archives it: a failed rescan
+  // must not silently remove it from users' Super App. (validationStatus is the
+  // app's own latest scan; a pending revision's scan is kept apart.)
   if (stage === 'ACTIVE') return null;
 
   if (String(app.validationStatus || '').toUpperCase() === 'FAILED') {

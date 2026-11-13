@@ -5,6 +5,7 @@ import { Button, Input, Label } from '@/components/ui/inputs';
 import { validateProductionUrlFormat, generateClientVerificationToken } from '@/lib/integration-utils';
 import { miniappsApi } from '@/api';
 import { CheckIcon, CheckCircleIcon, AlertTriangleIcon, XCircleIcon, ArrowRightIcon } from '@/components/ui/Icons';
+import { copyText } from '@/lib/clipboard';
 
 export interface WebViewIntegrationFormProps {
   formData: any;
@@ -614,7 +615,7 @@ export default function WebViewIntegrationForm({
                     <button
                       type="button"
                       onClick={() => {
-                        navigator.clipboard.writeText(fullEndpointUrl);
+                        copyText(fullEndpointUrl);
                         setCopiedPath(true);
                         setTimeout(() => setCopiedPath(false), 2000);
                       }}
@@ -632,7 +633,7 @@ export default function WebViewIntegrationForm({
                     <button
                       type="button"
                       onClick={() => {
-                        navigator.clipboard.writeText(dynamicJsonString);
+                        copyText(dynamicJsonString);
                         setCopiedJson(true);
                         setTimeout(() => setCopiedJson(false), 2000);
                       }}
@@ -676,7 +677,7 @@ export default function WebViewIntegrationForm({
                     <button
                       type="button"
                       onClick={() => {
-                        navigator.clipboard.writeText(dynamicPayload.verificationToken);
+                        copyText(dynamicPayload.verificationToken);
                         setCopiedToken(true);
                         setTimeout(() => setCopiedToken(false), 2000);
                       }}

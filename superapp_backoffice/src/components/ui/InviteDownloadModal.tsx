@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from '@/components/ui/Toast';
 import { miniappsApi, telegramApi } from '@/api';
+import { copyText } from '@/lib/clipboard';
 
 export interface InviteDownloadModalProps {
   isOpen: boolean;
@@ -79,7 +80,7 @@ export default function InviteDownloadModal({
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(fullDownloadUrl)}&color=0f172a&bgcolor=f8fafc&margin=2`;
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(fullDownloadUrl);
+    copyText(fullDownloadUrl);
     setCopiedLink(true);
     toast.success('Tester invite & download link copied to clipboard!', 'Link Copied');
     setTimeout(() => setCopiedLink(false), 2500);

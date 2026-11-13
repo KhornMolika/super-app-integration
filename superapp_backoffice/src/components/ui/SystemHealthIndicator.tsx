@@ -10,6 +10,7 @@ import {
   CheckIcon,
   ClockIcon,
 } from '@/components/ui/Icons';
+import { copyText } from '@/lib/clipboard';
 
 export function SystemHealthIndicator() {
   const [mounted, setMounted] = useState(false);
@@ -77,7 +78,7 @@ export function SystemHealthIndicator() {
       errorDetail: error,
     };
 
-    navigator.clipboard.writeText(JSON.stringify(report, null, 2)).then(() => {
+    copyText(JSON.stringify(report, null, 2)).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });

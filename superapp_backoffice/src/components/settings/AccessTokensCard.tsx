@@ -6,6 +6,7 @@ import { Button, Input, Label } from '@/components/ui/inputs';
 import { authApi, AccessTokenItem } from '@/api/auth.api';
 import { toast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmationProvider';
+import { copyText } from '@/lib/clipboard';
 
 export function AccessTokensCard() {
   const confirm = useConfirm();
@@ -95,7 +96,7 @@ export function AccessTokensCard() {
   };
 
   const copyToClipboard = (text: string, type: 'token' | 'npm' | 'dart') => {
-    navigator.clipboard.writeText(text);
+    copyText(text);
     if (type === 'token') {
       setCopiedToken(true);
       setTimeout(() => setCopiedToken(false), 2000);

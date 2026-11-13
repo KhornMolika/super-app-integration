@@ -17,6 +17,7 @@ import {
   Section08ValidationLifecycle,
   Section09Troubleshooting,
 } from "@/components/guidelines/sections";
+import { copyText } from '@/lib/clipboard';
 
 const CATEGORY_FRIENDLY_NAMES: Record<string, string> = {
   GENERAL: "Fundamentals",
@@ -222,7 +223,7 @@ export default function GuidelinesPage() {
   }, [sections, searchQuery]);
 
   const copyCommand = (text: string, stack: string) => {
-    navigator.clipboard.writeText(text);
+    copyText(text);
     setCopiedStack(stack);
     setTimeout(() => setCopiedStack(null), 2000);
   };

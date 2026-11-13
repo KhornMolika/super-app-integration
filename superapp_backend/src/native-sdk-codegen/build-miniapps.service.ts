@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { MiniAppRunsService } from '../miniapps/miniapp-runs.service';
+import { Injectable, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
@@ -44,6 +45,7 @@ export class BuildMiniAppsService {
     @InjectRepository(MiniApp)
     private readonly miniappRepository: Repository<MiniApp>,
     private readonly config: ConfigService,
+    @Optional() private readonly runs?: MiniAppRunsService,
   ) {}
 
   /** `buildType`: which build reads the list (see build-inclusion.ts). */
@@ -52,6 +54,7 @@ export class BuildMiniAppsService {
       where: { integrationMethod: 'FLUTTER_PACKAGE', lifecycleStatus: In(buildStagesFor(buildType)) },
       order: { appId: 'ASC' },
     });
+    await this.runs?.attach(apps);
     const gateway = this.config.get<string>('SUPER_APP_PUB_URL');
     const packages: BuildMiniAppPackage[] = [];
     const skipped: { appId: string; reason: string }[] = [];

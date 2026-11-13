@@ -13,6 +13,7 @@ import {
   getNotificationTypeStyle,
   formatNotificationRelativeTime,
 } from '@/lib/notification-target.helper';
+import { copyText } from '@/lib/clipboard';
 
 export default function NotificationDetailPage() {
   const router = useRouter();
@@ -128,7 +129,7 @@ export default function NotificationDetailPage() {
   };
 
   const handleCopyText = (text: string, keyName: string) => {
-    navigator.clipboard.writeText(text);
+    copyText(text);
     setCopiedKey(keyName);
     toast.success('Copied to clipboard');
     setTimeout(() => setCopiedKey(null), 2000);

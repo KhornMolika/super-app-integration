@@ -1,3 +1,4 @@
+import { MiniAppRunsModule } from '../miniapps/miniapp-runs.module';
 import { AuthModule } from '../auth/auth.module';
 import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
@@ -47,6 +48,7 @@ import { PubspecInjectorController } from './flutter/pubspec-injector.controller
     forwardRef(() => AuditModule),
     CapabilitiesModule,
     forwardRef(() => StorageModule),
+    MiniAppRunsModule,
   ],
   controllers: [
     GitIntegrationController,

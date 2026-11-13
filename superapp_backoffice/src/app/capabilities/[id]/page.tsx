@@ -46,6 +46,7 @@ import {
   X,
 } from 'lucide-react';
 import { Pagination } from '@/components/ui/Pagination';
+import { copyText } from '@/lib/clipboard';
 
 export default function CapabilityDetailPage({
   params,
@@ -117,7 +118,7 @@ export default function CapabilityDetailPage({
   };
 
   const handleCopy = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
+    copyText(text);
     setCopiedKey(label);
     toast.success(`${label} copied to clipboard!`);
     setTimeout(() => setCopiedKey(null), 1500);

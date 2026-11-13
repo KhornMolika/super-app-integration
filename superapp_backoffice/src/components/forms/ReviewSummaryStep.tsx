@@ -6,6 +6,7 @@ import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 import { CreateMiniAppDto, HOME_WIDGET_FIELD, IntegrationMethod } from '@/types/miniapp.types';
 import { getOrganizationCode, getOrganizationFullName } from '@/api';
 import { renderCapabilityIcon } from '@/lib/capability-visuals';
+import { copyText } from '@/lib/clipboard';
 
 export interface ReviewSummaryStepProps {
   formData: Partial<CreateMiniAppDto>;
@@ -17,7 +18,7 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
 
   const handleCopyAppId = () => {
     if (formData.appId) {
-      navigator.clipboard.writeText(formData.appId);
+      copyText(formData.appId);
       setCopiedAppId(true);
       setTimeout(() => setCopiedAppId(false), 2000);
     }

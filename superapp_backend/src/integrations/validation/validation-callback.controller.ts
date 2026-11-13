@@ -1,3 +1,4 @@
+import { MiniAppRunsService } from '../../miniapps/miniapp-runs.service';
 import {
   Controller,
   Post,
@@ -79,6 +80,8 @@ export class ValidationCallbackController {
     private readonly scannedArtifactPublisher?: ScannedArtifactPublisherService,
     @Optional()
     private readonly capabilityGate?: CapabilityGateService,
+    @Optional()
+    private readonly runs?: MiniAppRunsService,
   ) {}
 
   @Post('stage')
@@ -102,6 +105,7 @@ export class ValidationCallbackController {
       where: { id: miniAppId },
     });
     if (!app) return { ok: false };
+    await this.runs?.loadScanInProgress(app);
 
     const stages = app.validationStages || {};
 
@@ -143,6 +147,7 @@ export class ValidationCallbackController {
 
     app.validationStages = stages;
     await this.miniappRepository.save(app);
+    await this.runs?.syncScan(app);
 
     this.notificationsService.emitStageUpdate({
       miniAppId,
@@ -242,6 +247,7 @@ export class ValidationCallbackController {
       );
       throw new NotFoundException(`MiniApp ${dto.miniAppId} not found`);
     }
+    await this.runs?.loadScanInProgress(app);
 
     // Clear old validation issues
     await this.issueRepository.delete({
@@ -327,6 +333,7 @@ export class ValidationCallbackController {
       app.validationErrors = null;
 
       await this.miniappRepository.save(app);
+      await this.runs?.syncScan(app);
 
       await this.notificationsService.createNotification(
         app.ownerId || '',
@@ -481,6 +488,7 @@ export class ValidationCallbackController {
       }
 
       await this.miniappRepository.save(app);
+      await this.runs?.syncScan(app);
 
       // Real-time stage update to immediately stop frontend spinners
       this.notificationsService.emitStageUpdate({

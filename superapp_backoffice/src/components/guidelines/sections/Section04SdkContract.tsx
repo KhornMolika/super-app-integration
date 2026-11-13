@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { copyText } from "@/lib/clipboard";
 import {
   BanIcon,
   CheckCircleIcon,
@@ -47,7 +48,7 @@ export function Section04SdkContract({
   const [copiedSnippet, setCopiedSnippet] = useState<string | null>(null);
 
   const handleCopy = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
+    copyText(text);
     setCopiedSnippet(id);
     setTimeout(() => setCopiedSnippet(null), 2000);
   };

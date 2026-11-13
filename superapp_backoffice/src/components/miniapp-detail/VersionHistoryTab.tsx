@@ -8,6 +8,7 @@ import { miniappsApi } from '@/api';
 import { Select } from '@/components/ui/inputs';
 import { DotBadge } from '@/components/ui/Icons';
 import { useAuth } from '@/lib/auth';
+import { copyText } from '@/lib/clipboard';
 
 export interface VersionRecord {
   version: string;
@@ -135,7 +136,7 @@ export default function VersionHistoryTab({
   }, [miniAppId]);
 
   const handleCopyChecksum = (hash: string) => {
-    navigator.clipboard.writeText(hash);
+    copyText(hash);
     setCopiedChecksum(hash);
     toast.info(`SHA-256 Checksum copied: ${hash.substring(0, 16)}...`, 'Checksum Copied');
     setTimeout(() => setCopiedChecksum(null), 2500);

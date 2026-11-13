@@ -1,9 +1,10 @@
+import { MiniAppRunsService } from '../../miniapps/miniapp-runs.service';
 import { testApkBuildMode } from '../../common/utils/build-mode.util';
 import {
   LOCAL_BUILDS_DISABLED_MESSAGE,
   localBuildsEnabled,
 } from '../../common/utils/local-workspace.util';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as fs from 'fs';
@@ -55,6 +56,7 @@ export class ApkBuildManagerService {
     @InjectRepository(MiniApp)
     private readonly miniappRepository: Repository<MiniApp>,
     private readonly notificationsService: NotificationsService,
+    @Optional() private readonly runs?: MiniAppRunsService,
   ) {}
 
   private appendLog(line: string) {
@@ -333,6 +335,7 @@ export class ApkBuildManagerService {
                   { activeTestVersion: releaseVersion },
                 ],
               });
+              await this.runs?.attach(buildingApps);
               for (const app of buildingApps) {
                 this.notificationsService.emitBuildStageUpdate({
                   miniAppId: app.id,

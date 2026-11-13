@@ -1,3 +1,4 @@
+import { MiniAppRunsModule } from '../miniapps/miniapp-runs.module';
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -12,6 +13,7 @@ import { CapabilitiesModule } from '../capabilities/capabilities.module';
     TypeOrmModule.forFeature([SuperAppCapability, MiniApp]),
     AuthModule,
     CapabilitiesModule,
+    MiniAppRunsModule,
   ],
   controllers: [SuperAppController],
   providers: [SuperAppService],

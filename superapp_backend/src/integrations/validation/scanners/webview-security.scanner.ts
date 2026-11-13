@@ -1,4 +1,5 @@
-﻿import { Injectable, Logger } from '@nestjs/common';
+import { MiniAppRunsService } from '../../../miniapps/miniapp-runs.service';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as dns from 'dns';
@@ -28,6 +29,7 @@ export class WebViewSecurityScanner {
     private readonly pipelinePacerService: PipelinePacerService,
     private readonly scanFinalizer: ScanFinalizerService,
     private readonly capabilityGate: CapabilityGateService,
+    @Optional() private readonly runs?: MiniAppRunsService,
   ) {}
 
   private async delay(ms: number): Promise<void> {
@@ -100,12 +102,14 @@ export class WebViewSecurityScanner {
     app.validationStages = stages;
     app.validationStatus = 'RUNNING';
     await this.miniappRepository.save(app);
+    await this.runs?.syncScan(app);
 
     await this.pipelinePacerService.paceValidationStart(app.name || app.appId);
 
     const emitUpdate = async (stageId: string) => {
       app.validationStages = stages;
       await this.miniappRepository.save(app);
+      await this.runs?.syncScan(app);
       this.notificationsService.emitStageUpdate({
         miniAppId,
         stage: stages[stageId],

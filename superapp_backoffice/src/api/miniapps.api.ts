@@ -146,6 +146,14 @@ export const miniappsApi = {
       res?.data ? res.data : res,
     ),
 
+  /** Security scan runs, newest first (paged envelope: { data, meta }). */
+  getScans: (id: string, params?: { page?: number; limit?: number }) =>
+    apiClient<any>(`/api/mini-apps/${id}/scans`, { params }),
+
+  /** Test and release build runs, newest first (paged envelope: { data, meta }). */
+  getBuilds: (id: string, params?: { page?: number; limit?: number }) =>
+    apiClient<any>(`/api/mini-apps/${id}/builds`, { params }),
+
   rollback: (id: string, targetVersion: string, reason?: string) =>
     apiClient<{ success: boolean; message?: string }>(`/api/mini-apps/${id}/rollback`, {
       method: 'POST',

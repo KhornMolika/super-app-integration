@@ -1,3 +1,4 @@
+import { MiniAppRunsService } from '../../miniapps/miniapp-runs.service';
 import { testApkBuildMode } from '../../common/utils/build-mode.util';
 import { isPgUuid } from '../../common/utils/uuid.util';
 import { Injectable, Logger, Optional } from '@nestjs/common';
@@ -6,7 +7,7 @@ import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Repository } from 'typeorm';
+import { IsNull, Repository, In } from 'typeorm';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 import { Identity } from '../../identities/entities/identity.entity';
 import { SuperAppCapability } from '../../super-app/entities/super-app-capability.entity';
@@ -51,6 +52,8 @@ export class ReleaseAssemblyVerificationService {
     @Optional()
     @InjectRepository(SuperAppCapability)
     private readonly versionRepository?: Repository<SuperAppCapability>,
+    @Optional()
+    private readonly runs?: MiniAppRunsService,
   ) {}
 
   /**
@@ -283,9 +286,12 @@ export class ReleaseAssemblyVerificationService {
         try {
           await this.miniappRepository.update(appDto.id, {
             lifecycleStatus: 'BUILDING',
-            buildStatus: 'BUILDING',
-            buildStages: initialBuildStages as any,
-            buildError: null as any,
+          });
+          await this.runs?.recordBuild(appDto.id, {
+            status: 'BUILDING',
+            stages: initialBuildStages,
+            error: null,
+            version: dto.releaseVersion ?? null,
           });
 
           const appRecord = await this.miniappRepository.findOne({
@@ -398,6 +404,7 @@ export class ReleaseAssemblyVerificationService {
         app.buildError = undefined;
       }
       await this.miniappRepository.save(app);
+      await this.runs?.syncBuildFromApp(app);
 
       this.notificationsService.emitBuildStageUpdate({
         miniAppId: app.id,
@@ -427,9 +434,10 @@ export class ReleaseAssemblyVerificationService {
       Boolean,
     );
 
+    const buildingIds = (await this.runs?.appIdsWithBuildInProgress()) ?? [];
     const whereConditions: any[] = [
       { lifecycleStatus: 'BUILDING' },
-      { buildStatus: 'BUILDING' },
+      ...(buildingIds.length ? [{ id: In(buildingIds) }] : []),
     ];
     for (const v of candidateVersions) {
       whereConditions.push({ activeTestVersion: v });
@@ -492,6 +500,7 @@ export class ReleaseAssemblyVerificationService {
       }
     }
 
+    await this.runs?.attach(apps);
     return apps;
   }
 
@@ -515,14 +524,18 @@ export class ReleaseAssemblyVerificationService {
       await this.markVersionPublished(body.releaseVersion);
       const buildingApps = await this.resolveBuildingApps(body);
 
-      await this.miniappRepository
+      const inProgress = (await this.runs?.appIdsWithBuildInProgress()) ?? [];
+      const qb = this.miniappRepository
         .createQueryBuilder()
         .update(MiniApp)
-        .set({ lifecycleStatus: 'TESTING', buildStatus: 'COMPLETED' })
-        .where('"buildStatus" = :status OR "lifecycleStatus" = :status', {
-          status: 'BUILDING',
-        })
-        .execute();
+        .set({ lifecycleStatus: 'TESTING' })
+        .where('"lifecycleStatus" = :status', { status: 'BUILDING' });
+      if (inProgress.length)
+        qb.orWhere('id IN (:...inProgress)', { inProgress });
+      await qb.execute();
+      for (const id of inProgress) {
+        await this.runs?.recordBuild(id, { status: 'COMPLETED' });
+      }
 
       const repoName = 'apk-test-builds';
       const filename =
@@ -599,11 +612,11 @@ export class ReleaseAssemblyVerificationService {
         app.buildError = null as any;
         await this.miniappRepository.update(app.id, {
           lifecycleStatus: 'TESTING',
-          buildStatus: 'COMPLETED',
-          buildError: null as any,
-          buildStages: allCompletedStages,
         });
         await this.miniappRepository.save(app);
+        await this.runs?.syncBuildFromApp(app, {
+          buildType: body.buildType === 'release' ? 'release' : 'debug',
+        });
 
         this.notificationsService.emitBuildCompleted({
           miniAppId: app.id,
@@ -766,9 +779,11 @@ export class ReleaseAssemblyVerificationService {
 
       await this.miniappRepository.update(app.id, {
         lifecycleStatus: 'BUILD_FAILED',
-        buildStatus: 'FAILED',
-        buildError: errorMessage,
-        buildStages: currentStages,
+      });
+      await this.runs?.recordBuild(app.id, {
+        status: 'FAILED',
+        error: errorMessage,
+        stages: currentStages,
       });
 
       this.notificationsService.emitBuildCompleted({
@@ -874,39 +889,31 @@ export class ReleaseAssemblyVerificationService {
     };
 
     const isFailure = dto.status === 'FAILED';
-    const updatePayload: any = {
-      buildStages: () =>
-        `jsonb_set(COALESCE("buildStages", '{}'::jsonb), ARRAY[:stageId]::text[], CAST(:stageJson AS jsonb), true)`,
-    };
-    if (isFailure) {
-      updatePayload.lifecycleStatus = 'BUILD_FAILED';
-      updatePayload.buildStatus = 'FAILED';
-      updatePayload.buildError =
-        dto.details || `Stage ${dto.stageName || dto.stageId} failed.`;
-    }
-
-    const result = await this.miniappRepository
-      .createQueryBuilder()
-      .update(MiniApp)
-      .set(updatePayload)
-      .where('"buildStatus" = :status OR "lifecycleStatus" = :status', {
-        status: 'BUILDING',
-      })
-      .setParameters({ stageId: dto.stageId, stageJson: JSON.stringify(stage) })
-      .returning(['id', 'buildStages', 'buildStatus', 'lifecycleStatus', 'buildError'])
-      .execute();
-
-    const rows: { id: string; buildStages: any }[] = result?.raw || [];
+    const failure = isFailure
+      ? dto.details || `Stage ${dto.stageName || dto.stageId} failed.`
+      : null;
+    const rows =
+      (await this.runs?.setStageOnBuildsInProgress(
+        dto.stageId,
+        stage,
+        failure,
+      )) ?? [];
     if (!rows.length) {
       this.logger.warn(
         `Build stage update for release ${dto.releaseVersion} ignored: no BUILDING mini-apps`,
       );
       return { ok: false, updated: 0 };
     }
+    if (isFailure) {
+      await this.miniappRepository.update(
+        { id: In(rows.map((r) => r.miniAppId)) },
+        { lifecycleStatus: 'BUILD_FAILED' },
+      );
+    }
 
     for (const row of rows) {
       this.notificationsService.emitBuildStageUpdate({
-        miniAppId: row.id,
+        miniAppId: row.miniAppId,
         appName: dto.appName,
         releaseVersion: dto.releaseVersion,
         stage,
@@ -934,6 +941,7 @@ export class ReleaseAssemblyVerificationService {
         const apps = await this.miniappRepository.find({
           where: miniAppIds.map((id) => ({ id })),
         });
+        await this.runs?.attach(apps);
         const anyBuilding = apps.some((a) => a.buildStatus === 'BUILDING' || a.lifecycleStatus === 'BUILDING');
         if (!anyBuilding || polls >= maxPolls) {
           clearInterval(interval);
@@ -1018,6 +1026,7 @@ export class ReleaseAssemblyVerificationService {
       app.buildError = errorMessage;
       app.buildStages = stages;
       await this.miniappRepository.save(app);
+      await this.runs?.syncBuildFromApp(app);
 
       this.notificationsService.emitBuildCompleted({
         miniAppId: app.id,

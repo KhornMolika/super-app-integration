@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 import { Identity } from '../../identities/entities/identity.entity';
 import { PubspecInjectorService } from '../flutter/pubspec-injector.service';
+import { MiniAppRunsService } from '../../miniapps/miniapp-runs.service';
 
 describe('ReleaseAssemblyVerificationService', () => {
   let service: ReleaseAssemblyVerificationService;
@@ -17,6 +18,7 @@ describe('ReleaseAssemblyVerificationService', () => {
   let mailService: jest.Mocked<Partial<MailService>>;
   let configService: jest.Mocked<Partial<ConfigService>>;
   let mockMiniappRepo: any;
+  let mockRuns: any;
   let mockUserRepo: any;
 
   beforeEach(async () => {
@@ -71,6 +73,14 @@ describe('ReleaseAssemblyVerificationService', () => {
       createQueryBuilder: jest.fn(),
     };
 
+    mockRuns = {
+      recordBuild: jest.fn().mockResolvedValue(null),
+      syncBuildFromApp: jest.fn().mockResolvedValue(null),
+      appIdsWithBuildInProgress: jest.fn().mockResolvedValue([]),
+      setStageOnBuildsInProgress: jest.fn().mockResolvedValue([]),
+      attach: jest.fn(async (x: any) => x),
+    };
+
     mockUserRepo = {
       findOne: jest
         .fn()
@@ -98,6 +108,7 @@ describe('ReleaseAssemblyVerificationService', () => {
           },
         },
         { provide: getRepositoryToken(MiniApp), useValue: mockMiniappRepo },
+        { provide: MiniAppRunsService, useValue: mockRuns },
         { provide: getRepositoryToken(Identity), useValue: mockUserRepo },
       ],
     }).compile();
@@ -143,17 +154,21 @@ describe('ReleaseAssemblyVerificationService', () => {
         },
       ],
     });
-    expect(mockMiniappRepo.update).toHaveBeenCalledWith(
+    expect(mockMiniappRepo.update).toHaveBeenCalledWith('app-1', {
+      lifecycleStatus: 'BUILDING',
+    });
+    // A new build run with fresh stages (mini_app_builds)
+    expect(mockRuns.recordBuild).toHaveBeenCalledWith(
       'app-1',
       expect.objectContaining({
-        lifecycleStatus: 'BUILDING',
-        buildStatus: 'BUILDING',
-        buildStages: expect.objectContaining({
+        status: 'BUILDING',
+        error: null,
+        version: '1.0.0',
+        stages: expect.objectContaining({
           preflight: expect.objectContaining({ id: 'preflight', status: 'RUNNING' }),
           compile: expect.objectContaining({ id: 'compile', status: 'PENDING' }),
           publish: expect.objectContaining({ id: 'publish', status: 'PENDING' }),
         }),
-        buildError: null,
       }),
     );
   });
@@ -196,43 +211,27 @@ describe('ReleaseAssemblyVerificationService', () => {
       status: 'RUNNING' as const,
       details: 'gradle assembleDebug',
     };
-    let qb: any;
-    const setup = (raw: any[]) => {
-      qb = {
-        update: jest.fn().mockReturnThis(),
-        set: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        setParameters: jest.fn().mockReturnThis(),
-        returning: jest.fn().mockReturnThis(),
-        execute: jest.fn().mockResolvedValue({ raw }),
-      };
-      mockMiniappRepo.createQueryBuilder = jest.fn().mockReturnValue(qb);
+    const setup = (rows: any[]) => {
+      mockRuns.setStageOnBuildsInProgress = jest.fn().mockResolvedValue(rows);
     };
 
-    it('runs one atomic jsonb_set UPDATE on BUILDING apps and emits per row', async () => {
+    it('sets the stage on every build in progress (one atomic update per build) and emits per app', async () => {
       const stages = { compile: { id: 'compile', status: 'RUNNING' } };
-      setup([{ id: 'app-1', buildStages: stages }]);
+      setup([{ miniAppId: 'app-1', buildStages: stages }]);
 
       const res = await service.handleBuildStageUpdate(dto);
 
-      expect(qb.where).toHaveBeenCalledWith(
-        '"buildStatus" = :status OR "lifecycleStatus" = :status',
-        { status: 'BUILDING' },
-      );
-      const setArg = qb.set.mock.calls[0][0];
-      expect(setArg.buildStages()).toContain('jsonb_set');
-      const params = qb.setParameters.mock.calls[0][0];
-      expect(params.stageId).toBe('compile');
-      expect(JSON.parse(params.stageJson)).toMatchObject({
+      const [stageId, stage, failure] =
+        mockRuns.setStageOnBuildsInProgress.mock.calls[0];
+      expect(stageId).toBe('compile');
+      expect(stage).toMatchObject({
         id: 'compile',
         name: 'Compile',
         status: 'RUNNING',
         details: 'gradle assembleDebug',
       });
-      expect(JSON.parse(params.stageJson).updatedAt).toBeDefined();
-      expect(qb.returning).toHaveBeenCalledWith(
-        expect.arrayContaining(['id', 'buildStages']),
-      );
+      expect(stage.updatedAt).toBeDefined();
+      expect(failure).toBeNull();
       expect(mockMiniappRepo.save).not.toHaveBeenCalled();
       expect(notificationsService.emitBuildStageUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -307,13 +306,12 @@ describe('ReleaseAssemblyVerificationService', () => {
         status: 'FAILED',
         errorMessage: 'APK build error',
       });
-      expect(mockMiniappRepo.update).toHaveBeenCalledWith(
+      expect(mockMiniappRepo.update).toHaveBeenCalledWith('app-1', {
+        lifecycleStatus: 'BUILD_FAILED',
+      });
+      expect(mockRuns.recordBuild).toHaveBeenCalledWith(
         'app-1',
-        expect.objectContaining({
-          lifecycleStatus: 'BUILD_FAILED',
-          buildStatus: 'FAILED',
-          buildError: 'APK build error',
-        }),
+        expect.objectContaining({ status: 'FAILED', error: 'APK build error' }),
       );
       expect(notificationsService.createNotification).toHaveBeenCalledWith(
         'u1',

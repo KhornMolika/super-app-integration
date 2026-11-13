@@ -33,6 +33,7 @@ import {
 import { ProposalProgress } from '@/components/capabilities/ProposalProgress';
 import { superAppApi } from '@/api/super-app.api';
 import { getCapabilityVisual } from '@/lib/capability-visuals';
+import { copyText } from '@/lib/clipboard';
 
 interface ProposalReviewModalProps {
   proposal: PermissionProposal | null;
@@ -431,7 +432,7 @@ export function ProposalReviewModal({
                 <button
                   type="button"
                   onClick={() => {
-                    navigator.clipboard.writeText(proposal.permissionKey);
+                    copyText(proposal.permissionKey);
                     setCopiedKey(true);
                     setTimeout(() => setCopiedKey(false), 1500);
                   }}

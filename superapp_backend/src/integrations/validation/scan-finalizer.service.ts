@@ -1,3 +1,4 @@
+import { MiniAppRunsService } from '../../miniapps/miniapp-runs.service';
 import { Injectable, Logger, Optional } from '@nestjs/common';
 import { StorageService } from '../../storage/storage.service';
 import {
@@ -42,6 +43,8 @@ export class ScanFinalizerService {
     private readonly storageService?: StorageService,
     @Optional()
     private readonly scannedArtifactPublisher?: ScannedArtifactPublisherService,
+    @Optional()
+    private readonly runs?: MiniAppRunsService,
   ) {}
 
   async finalizeScan(
@@ -104,6 +107,7 @@ export class ScanFinalizerService {
       }
       app.validationErrors = null;
       await this.miniappRepository.save(app);
+      await this.runs?.syncScan(app);
 
       this.notificationsService.emitStageUpdate({
         miniAppId: app.id,
@@ -224,6 +228,7 @@ export class ScanFinalizerService {
       }
 
       await this.miniappRepository.save(app);
+      await this.runs?.syncScan(app);
 
       this.notificationsService.emitStageUpdate({
         miniAppId: app.id,

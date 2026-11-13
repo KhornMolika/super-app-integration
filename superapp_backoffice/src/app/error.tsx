@@ -10,6 +10,7 @@ import {
   CopyIcon,
   CheckIcon,
 } from '@/components/ui/Icons';
+import { copyText } from '@/lib/clipboard';
 
 interface ErrorProps {
   error: Error & { digest?: string; status?: number; code?: string; data?: any };
@@ -54,7 +55,7 @@ export default function GlobalError({ error, reset }: ErrorProps) {
       timestamp: new Date().toISOString(),
       url: typeof window !== 'undefined' ? window.location.href : '',
     };
-    navigator.clipboard.writeText(JSON.stringify(errorDetails, null, 2)).then(() => {
+    copyText(JSON.stringify(errorDetails, null, 2)).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });

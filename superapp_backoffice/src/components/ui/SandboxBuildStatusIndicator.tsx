@@ -15,6 +15,7 @@ import {
   ZapIcon,
   ShieldCheckIcon,
 } from '@/components/ui/Icons';
+import { copyText } from '@/lib/clipboard';
 
 export default function SandboxBuildStatusIndicator() {
   const { hasRole } = useAuth();
@@ -84,7 +85,7 @@ export default function SandboxBuildStatusIndicator() {
   const handleCopyLogs = () => {
     if (!status?.recentLogs || !status.recentLogs.length) return;
     const text = status.recentLogs.join('\n');
-    navigator.clipboard.writeText(text).then(() => {
+    copyText(text).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });

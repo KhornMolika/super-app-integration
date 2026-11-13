@@ -35,6 +35,7 @@ import {
   RefreshIcon,
   EyeIcon,
 } from '@/components/ui/Icons';
+import { copyText } from '@/lib/clipboard';
 
 export interface ValidationReportProps {
   miniApp: any;
@@ -678,7 +679,7 @@ export default function ValidationReportTab({ miniApp, onRefresh }: ValidationRe
 
   const handleCopySbomJson = () => {
     if (!sbom) return;
-    navigator.clipboard.writeText(JSON.stringify(sbom, null, 2));
+    copyText(JSON.stringify(sbom, null, 2));
     setSbomCopied(true);
     setTimeout(() => setSbomCopied(false), 2500);
   };

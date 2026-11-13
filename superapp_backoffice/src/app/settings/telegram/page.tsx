@@ -11,6 +11,7 @@ import {
   TelegramGroupItem,
 } from '@/components/settings';
 import { telegramApi } from '@/api';
+import { copyText } from '@/lib/clipboard';
 
 export default function TelegramSettingsPage() {
   const { role } = useAuth();
@@ -254,7 +255,7 @@ export default function TelegramSettingsPage() {
   };
 
   const copyToClipboard = (text: string, isTeam = false) => {
-    navigator.clipboard.writeText(text);
+    copyText(text);
     if (isTeam) {
       setCopiedTeamChatId(true);
       setTimeout(() => setCopiedTeamChatId(false), 2000);

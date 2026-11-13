@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { MiniAppRunsService } from '../miniapps/miniapp-runs.service';
+import { Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { MiniApp } from '../miniapps/entities/miniapp.entity';
@@ -38,6 +39,7 @@ export class BuildGitCredentialsService {
   constructor(
     @InjectRepository(MiniApp)
     private readonly miniappRepository: Repository<MiniApp>,
+    @Optional() private readonly runs?: MiniAppRunsService,
   ) {}
 
   /** Keys only for the repositories this build includes (see build-inclusion.ts). */
@@ -46,6 +48,7 @@ export class BuildGitCredentialsService {
       where: { integrationMethod: 'FLUTTER_PACKAGE', lifecycleStatus: In(buildStagesFor(buildType)) },
       order: { appId: 'ASC' },
     });
+    await this.runs?.attach(found);
     const apps = found.filter((app) => !buildExclusionReason(app, buildType));
     const credentials: BuildGitCredential[] = [];
     const skipped: { appId: string; reason: string }[] = [];

@@ -14,7 +14,7 @@ describe('Super App build inclusion', () => {
     it.each([
       ['a live app', app('ACTIVE')],
       [
-        'a live app whose pending revision failed its scan',
+        'a live app whose rescan failed (suspend it to take it out)',
         app('ACTIVE', { validationStatus: 'FAILED' }),
       ],
       ['an app under test', app('TESTING')],
