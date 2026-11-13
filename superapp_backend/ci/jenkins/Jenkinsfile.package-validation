@@ -455,8 +455,16 @@ pipeline {
                         --data-binary @"$S/report.json" "$SCAN_REPORT_URL") || code=error
                     echo "Scan report sent to the backend: HTTP $code"
                     if [ "$code" != "200" ]; then head -c 500 "$S/report-response.txt" 2>/dev/null; echo; exit 1; fi
-                    node -e 'try { const r = JSON.parse(require("fs").readFileSync(process.env.S + "/report-response.txt", "utf8")); const d = r.data || r; console.log("Result: " + (d.status || d.validationStatus || JSON.stringify(d).slice(0, 200))); } catch (err) {}' || true
+                    node -e 'try { const fs = require("fs"); const r = JSON.parse(fs.readFileSync(process.env.S + "/report-response.txt", "utf8")); const d = r.data || r; const v = String(d.status || d.validationStatus || ""); console.log("Result: " + (v || JSON.stringify(d).slice(0, 200))); fs.writeFileSync(process.env.S + "/verdict.txt", v); } catch (err) {}' || true
                 ''')
+                // The build ran fine either way; a failed scan shows as UNSTABLE (yellow), not SUCCESS
+                def verdict = fileExists('scan/verdict.txt') ? readFile('scan/verdict.txt').trim().toUpperCase() : ''
+                if (verdict == 'FAILED') {
+                    currentBuild.result = 'UNSTABLE'
+                    currentBuild.description = "Scan FAILED: ${params.PACKAGE_NAME ?: params.MINIAPP_ID} (see the security report)"
+                } else if (verdict == 'PASSED') {
+                    currentBuild.description = "Scan passed: ${params.PACKAGE_NAME ?: params.MINIAPP_ID}"
+                }
             }
         }
         cleanup {

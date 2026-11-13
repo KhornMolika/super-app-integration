@@ -47,6 +47,17 @@ export class CallbackTokenGuard implements CanActivate {
       return true;
     }
 
+    // A placeholder from the example env files is public: in production it would
+    // let anyone post scan and build results (and the /pub gateway refuses it, so
+    // builds fail at `flutter pub get`). Refuse it here too, with a clear log.
+    if (process.env.NODE_ENV === 'production' && expected.startsWith('CHANGE_ME')) {
+      this.logger.error(
+        'RELEASE_CALLBACK_TOKEN is still the CHANGE_ME placeholder: refusing Jenkins callbacks in production. ' +
+          'Set a random value (openssl rand -hex 32) in the backend secret and restart the backend.',
+      );
+      throw new UnauthorizedException('Callback token is not configured');
+    }
+
     const req = context.switchToHttp().getRequest();
     const rawHeader =
       req.headers?.['x-callback-token'] ||

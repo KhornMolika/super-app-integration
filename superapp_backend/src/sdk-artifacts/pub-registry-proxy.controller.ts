@@ -17,6 +17,24 @@ import { Readable } from 'stream';
 import * as fs from 'fs';
 import * as path from 'path';
 import { nexusApiBaseUrl } from '../integrations/nexus/nexus-url';
+import { DEFAULT_PUB_GATEWAY } from '../integrations/flutter/miniapp-dependency.util';
+
+/** First value of a possibly repeated or comma-joined forwarded header. */
+function firstHeader(v: string | string[] | undefined): string {
+  return String(Array.isArray(v) ? v[0] : v || '').split(',')[0].trim();
+}
+
+/**
+ * The /pub base for archive links: the configured gateway when set, else the
+ * address the request came in on (local development).
+ */
+export function publicPubBase(configured: string | undefined, req: Request): string {
+  const base = (configured || (process.env.NODE_ENV === 'production' ? DEFAULT_PUB_GATEWAY : '')).trim().replace(/\/+$/, '');
+  if (base) return base;
+  const proto = firstHeader(req.headers['x-forwarded-proto']) || req.protocol || 'https';
+  const host = firstHeader(req.headers['x-forwarded-host']) || req.get('host') || 'app.fintechcenterfsa.com';
+  return `${proto}://${host}/pub`;
+}
 
 /**
  * Scoped Dart Pub Registry Gateway Controller (/pub/*)
@@ -301,13 +319,15 @@ export class PubRegistryProxyController {
     return { Authorization: `Basic ${b64}` };
   }
 
+  /**
+   * The public /pub address for archive_url: SUPER_APP_PUB_URL, the same one the
+   * build writes into the Super App pubspec.yaml. Never guessed from the request
+   * behind the ingress, where X-Forwarded-Proto can be http: `dart pub` sends the
+   * token only to URLs under the registered https address, so an http archive
+   * link was downloaded without it and failed with "authentication failed".
+   */
   private getPublicPubBase(req: Request): string {
-    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
-    const host =
-      req.headers['x-forwarded-host'] ||
-      req.get('host') ||
-      'app.fintechcenterfsa.com';
-    return `${proto}://${host}/pub`;
+    return publicPubBase(this.configService.get<string>('SUPER_APP_PUB_URL'), req);
   }
 
   private generateLocalFallbackMetadata(packageName: string, req: Request) {

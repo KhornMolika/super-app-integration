@@ -29,6 +29,21 @@ describe('CallbackTokenGuard', () => {
     }
   });
 
+  it('refuses a CHANGE_ME placeholder token in production, even when the caller sends it', () => {
+    const prev = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    try {
+      const g = make('CHANGE_ME_RELEASE_CALLBACK_TOKEN');
+      const err = jest.spyOn((g as any).logger, 'error').mockImplementation();
+      expect(() =>
+        g.canActivate(ctx({ 'x-callback-token': 'CHANGE_ME_RELEASE_CALLBACK_TOKEN' })),
+      ).toThrow('Callback token is not configured');
+      expect(String(err.mock.calls[0][0])).toMatch(/placeholder/);
+    } finally {
+      process.env.NODE_ENV = prev;
+    }
+  });
+
   it('built-in dev tokens no longer open a configured guard', () => {
     for (const t of ['dev-jenkins-callback-token', 'CHANGE_ME_JENKINS_CALLBACK_TOKEN']) {
       expect(() => make('s3cret').canActivate(ctx({ 'x-callback-token': t }))).toThrow();
