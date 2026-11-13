@@ -150,7 +150,13 @@ rules:
 }
 
 /** The selected checks (CHECKS); all of them when none were sent. */
+/** No mini app: a run started by hand (e.g. to register new parameters). Nothing to scan or report. */
+boolean noMiniApp() {
+    return !(params.MINIAPP_ID ?: '').trim()
+}
+
 boolean wants(String id) {
+    if (noMiniApp()) return false
     def checks = (params.CHECKS ?: '').split(',').collect { it.trim() }.findAll { it }
     return checks.isEmpty() || checks.contains(id) ||
         (id == 'license_compliance' && checks.contains('license_audit')) ||
@@ -196,7 +202,7 @@ pipeline {
         string(name: 'ALLOWED_CAPABILITIES', defaultValue: 'camera,geolocator,location,local_auth,biometrics', description: 'Capabilities the Super App offers')
         string(name: 'REQUIRED_CAPABILITIES', defaultValue: '', description: 'Capabilities the mini app requests')
         string(name: 'CHECKS', defaultValue: '', description: 'Selected checks, comma separated (empty: all)')
-        string(name: 'SCAN_SOURCE_URL', defaultValue: '', description: 'Backend URL of this mini app\'s source: <url>/archive or <url>/git')
+        string(name: 'SCAN_SOURCE_URL', defaultValue: '', description: 'Backend address of this mini app source, ending in scan-source/ID (the pipeline adds /archive or /git). Set by the backend.')
         string(name: 'SCAN_TICKET', defaultValue: '', description: 'Short-lived ticket for SCAN_SOURCE_URL (from the backend)')
         string(name: 'CALLBACK_URL', defaultValue: 'http://host.docker.internal:3000/api/integrations/validation/callback', description: 'Backend validation callback URL')
         string(name: 'CALLBACK_TOKEN', defaultValue: '', description: 'Backend callback token (RELEASE_CALLBACK_TOKEN)')
@@ -213,6 +219,12 @@ pipeline {
         stage('Prepare') {
             steps {
                 script {
+                    if (noMiniApp()) {
+                        echo 'No MINIAPP_ID: nothing to scan. This run only updates the job parameters (scans are started by the backend).'
+                        currentBuild.result = 'NOT_BUILT'
+                        currentBuild.description = 'Parameters updated (no mini app)'
+                        return
+                    }
                     env.STAGE_URL = (params.CALLBACK_URL ?: '').replaceAll('/callback$', '/stage')
                     env.SCAN_REPORT_URL = (params.CALLBACK_URL ?: '').replaceAll('/callback$', '/scan-report')
                     sh(prelude() + '''
@@ -227,6 +239,7 @@ pipeline {
         }
 
         stage('Ingestion & Integrity Verification') {
+            when { expression { !noMiniApp() } }
             steps {
                 script {
                     notifyStage('ingest', 'Ingestion & Integrity Verification',
@@ -382,6 +395,7 @@ pipeline {
     post {
         always {
             script {
+                if (noMiniApp()) return
                 // Always report, also after an error above: otherwise the scan stays RUNNING
                 sh(prelude() + '''
                     mkdir -p "$R"
