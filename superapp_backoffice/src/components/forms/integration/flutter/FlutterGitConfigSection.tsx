@@ -2,22 +2,6 @@
 
 import React, { useState } from "react";
 import { Input, Label, Select } from "@/components/ui/inputs";
-import {
-  GlobeIcon,
-  LockIcon,
-  CheckCircleIcon,
-  KeyIcon,
-  ShieldCheckIcon,
-  SettingsIcon,
-  AlertTriangleIcon,
-  EyeIcon,
-  CheckIcon,
-  XIcon,
-  CopyIcon,
-  RefreshIcon,
-  FingerprintIcon,
-  ExternalLinkIcon,
-} from "@/components/ui/Icons";
 import { integrationsApi } from "@/api/integrations.api";
 import { copyText } from '@/lib/clipboard';
 
@@ -69,7 +53,6 @@ export default function FlutterGitConfigSection({
   lockedCommitSha,
 }: FlutterGitConfigSectionProps) {
   const [showTokenPassword, setShowTokenPassword] = useState(false);
-  const [activeGuideTab, setActiveGuideTab] = useState<"github" | "gitlab">("github");
   const [isGeneratingKey, setIsGeneratingKey] = useState(false);
   const [copiedKey, setCopiedKey] = useState(false);
   const [showManualOverride, setShowManualOverride] = useState(false);
@@ -133,639 +116,303 @@ export default function FlutterGitConfigSection({
     }
   }, [isPrivateRepo, authMethod, flutterConfig?.deployPublicKey, flutterConfig?.hasDeployKey]);
 
+  const urlError = allErrors["integrationConfigFlutter.gitUrl"];
+  const tokenError = allErrors["integrationConfigFlutter.gitAccessToken"];
+  const hasKey = Boolean(flutterConfig?.deployPublicKey || flutterConfig?.hasDeployKey);
+
+  const seg = (active: boolean) =>
+    `px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+      active
+        ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm"
+        : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+    }`;
+  const smallBtn =
+    "h-8 px-3 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 transition-colors";
+
+  const status: { tone: string; text: string } | null = isGitValidating
+    ? { tone: "text-slate-500 dark:text-slate-400", text: "Checking the repository..." }
+    : gitValidationResult?.isDeployKeyNotice
+      ? {
+          tone: "text-slate-600 dark:text-slate-300",
+          text: "Uses the deploy key. The build checks pubspec.yaml when it clones the repo.",
+        }
+      : gitValidationResult?.isValid
+        ? {
+            tone: "text-brand-700 dark:text-brand-300",
+            text: `Found pubspec.yaml${gitValidationResult.packageName ? ` · package ${gitValidationResult.packageName}` : ""}`,
+          }
+        : gitValidationResult && (gitValidationResult.error || gitValidationResult.message)
+          ? { tone: "text-rose-600 dark:text-rose-400", text: gitValidationResult.error || gitValidationResult.message }
+          : null;
+
+  const refLabel = selectedRefType === "tag" ? "Tag" : selectedRefType === "branch" ? "Branch" : "Commit";
+  const refOptions = selectedRefType === "tag" ? tags : selectedRefType === "branch" ? branches : [];
+
   return (
     <div className="space-y-6">
-      {/* Repository Access Level Selector */}
+      {/* Repository */}
       <div>
-        <Label className="mb-2 block font-semibold text-slate-800 dark:text-slate-200">
-          Repository Access Level <span className="text-rose-500">*</span>
-        </Label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() => handleRepoVisibilityChange(false)}
-            disabled={!isEditable}
-            className={`flex items-start gap-3.5 p-4 rounded-xl border text-left transition-all ${
-              !isPrivateRepo
-                ? "border-emerald-500 bg-emerald-50/70 dark:bg-emerald-950/30 ring-2 ring-emerald-500/20 shadow-sm"
-                : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900/50"
-            }`}
-          >
-            <div
-              className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-                !isPrivateRepo
-                  ? "bg-emerald-500 text-white shadow-sm"
-                  : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
-              }`}
-            >
-              <GlobeIcon className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-sm text-slate-900 dark:text-white">
-                  Public Repository
-                </span>
-                {!isPrivateRepo && (
-                  <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300">
-                    Active
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Open source or publicly accessible repository. Zero credentials or tokens required.
-              </p>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleRepoVisibilityChange(true)}
-            disabled={!isEditable}
-            className={`flex items-start gap-3.5 p-4 rounded-xl border text-left transition-all ${
-              isPrivateRepo
-                ? "border-accent-500 bg-accent-50/70 dark:bg-accent-950/30 ring-2 ring-accent-500/20 shadow-sm"
-                : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900/50"
-            }`}
-          >
-            <div
-              className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-                isPrivateRepo
-                  ? "bg-accent-500 text-slate-950 font-bold shadow-sm"
-                  : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
-              }`}
-            >
-              <LockIcon className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-sm text-slate-900 dark:text-white">
-                  Private Repository
-                </span>
-                {isPrivateRepo && (
-                  <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full bg-accent-100 text-accent-800 dark:bg-accent-900/60 dark:text-accent-300">
-                    Active
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Internal or proprietary code. Authorized securely via SSH Deploy Key (Recommended) or Token.
-              </p>
-            </div>
-          </button>
-        </div>
-      </div>
-
-      {!isPrivateRepo ? (
-        /* Public Repository Reassurance Banner */
-        <div className="p-4 rounded-xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/50 dark:bg-emerald-950/20 flex items-start gap-3">
-          <CheckCircleIcon className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-          <div className="text-xs sm:text-sm text-emerald-900 dark:text-emerald-200">
-            <span className="font-bold">Public Repository Access:</span> Zero credentials or personal tokens are stored. The automated CI/CD pipeline and security scanner will shallow clone this repository anonymously.
-          </div>
-        </div>
-      ) : (
-        /* Private Repository Authentication Settings */
-        <div className="p-5 rounded-2xl border border-accent-200 dark:border-accent-800/80 bg-gradient-to-br from-accent-50/20 via-white to-slate-50/40 dark:from-accent-950/20 dark:via-slate-900 dark:to-slate-900 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-accent-100 dark:border-accent-900/60 pb-3">
-            <div>
-              <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <KeyIcon className="w-4 h-4 text-accent-600 dark:text-accent-400" />
-                <span>Private Repository Authentication</span>
-              </h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Choose your preferred authentication method for CI/CD ingestion
-              </p>
-            </div>
-
-            {/* Sub-tabs: Deploy Key vs Token */}
-            <div className="inline-flex rounded-lg p-1 bg-slate-200/70 dark:bg-slate-800 self-start sm:self-auto">
-              <button
-                type="button"
-                onClick={() => handleAuthMethodChange("deploy_key")}
-                disabled={!isEditable}
-                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                  authMethod === "deploy_key"
-                    ? "bg-white dark:bg-slate-900 text-accent-600 dark:text-accent-400 shadow-sm"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                }`}
-              >
-                <KeyIcon className="w-3.5 h-3.5" />
-                <span>SSH Deploy Key (Recommended)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleAuthMethodChange("token")}
-                disabled={!isEditable}
-                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                  authMethod === "token"
-                    ? "bg-white dark:bg-slate-900 text-accent-600 dark:text-accent-400 shadow-sm"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                }`}
-              >
-                <LockIcon className="w-3.5 h-3.5" />
-                <span>Access / Deploy Token</span>
-              </button>
-            </div>
-          </div>
-
-          {authMethod === "deploy_key" ? (
-            <div className="space-y-4 pt-1">
-              {/* Platform Managed Security Assurance Banner */}
-              <div className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 flex items-start gap-3 bg-gradient-to-r from-accent-50/70 to-slate-50/70 dark:from-accent-950/30 dark:to-slate-900/60 p-4 rounded-xl border border-accent-200/80 dark:border-accent-800/60 shadow-sm">
-                <ShieldCheckIcon className="w-5 h-5 text-accent-600 dark:text-accent-400 shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                    <span>SuperApp Dedicated Deploy Key</span>
-                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-accent-100 dark:bg-accent-900/60 text-accent-800 dark:text-accent-300 border border-accent-200 dark:border-accent-700">
-                      Zero Private Key Leakage
-                    </span>
-                  </div>
-                  <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
-                    The SuperApp automatically generates an isolated, read-only SSH key pair dedicated to this MiniApp. 
-                    The private key is encrypted (AES-256-GCM) and kept securely inside the platform CI runner. You only need to add the <strong>public key</strong> to your Git repository.
-                  </p>
-                </div>
-              </div>
-
-              {/* Dedicated Public Key Card */}
-              {Boolean(flutterConfig?.deployPublicKey || flutterConfig?.hasDeployKey) ? (
-                <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/70 space-y-3 shadow-sm">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-3">
-                    <div className="flex items-center gap-2">
-                      <KeyIcon className="w-4 h-4 text-accent-600 dark:text-accent-400" />
-                      <span className="text-xs font-bold text-slate-900 dark:text-white">
-                        Public Deploy Key (Add to your Git Repo)
-                      </span>
-                    </div>
-
-                    {/* Metadata Badges */}
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                        <LockIcon className="w-3 h-3 text-slate-500" />
-                        <span>ED25519</span>
-                      </span>
-                      {flutterConfig?.deployKeyFingerprint && (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                          <FingerprintIcon className="w-3 h-3 text-accent-500" />
-                          <span className="truncate max-w-[160px]" title={flutterConfig.deployKeyFingerprint}>
-                            {flutterConfig.deployKeyFingerprint}
-                          </span>
-                        </span>
-                      )}
-                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                        <ShieldCheckIcon className="w-3 h-3 text-emerald-600" />
-                        <span>Encrypted (AES-256)</span>
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Public Key Display Area */}
-                  <div className="relative group">
-                    <pre
-                      ref={publicKeyRef}
-                      onClick={flutterConfig?.deployPublicKey ? selectPublicKey : undefined}
-                      className="w-full font-mono text-[11px] p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 whitespace-pre-wrap break-all leading-relaxed max-h-28 overflow-y-auto select-all cursor-text"
-                    >
-                      {flutterConfig?.deployPublicKey || "No public key yet. Generate a new key to get one."}
-                    </pre>
-                    {copyFailed && (
-                      <p className="mt-1.5 text-[11px] text-amber-600 dark:text-amber-400">
-                        This browser blocked copying. The key is selected: press Ctrl+C (Cmd+C on Mac).
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Action Bar */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleCopyPublicKey(flutterConfig?.deployPublicKey)}
-                        disabled={!flutterConfig?.deployPublicKey}
-                        className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition-all ${
-                          copiedKey
-                            ? "bg-emerald-600 text-white shadow-emerald-500/20"
-                            : "bg-accent-500 hover:bg-accent-600 text-slate-950 font-bold shadow-accent-500/20"
-                        } disabled:opacity-50 disabled:cursor-not-allowed`}
-                      >
-                        {copiedKey ? (
-                          <>
-                            <CheckIcon className="w-4 h-4 text-white" />
-                            <span>Public Key Copied!</span>
-                          </>
-                        ) : (
-                          <>
-                            <CopyIcon className="w-4 h-4 text-white" />
-                            <span>Copy Public Key</span>
-                          </>
-                        )}
-                      </button>
-
-                      {isEditable && (
-                        <button
-                          type="button"
-                          onClick={handleGenerateDedicatedKey}
-                          disabled={isGeneratingKey}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-all disabled:opacity-50"
-                        >
-                          <RefreshIcon className={`w-3.5 h-3.5 text-slate-500 ${isGeneratingKey ? "animate-spin" : ""}`} />
-                          <span>{isGeneratingKey ? "Generating..." : "Rotate / Regenerate Key Pair"}</span>
-                        </button>
-                      )}
-                    </div>
-
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                      <CheckCircleIcon className="w-3.5 h-3.5 text-emerald-500" />
-                      <span>Ready for GitHub &amp; GitLab deploy keys</span>
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                /* Key Not Yet Generated - Instant Generation CTA */
-                <div className="p-6 rounded-xl border border-dashed border-accent-300 dark:border-accent-800 bg-accent-50/30 dark:bg-accent-950/20 text-center space-y-3">
-                  <div className="w-10 h-10 rounded-full bg-accent-100 dark:bg-accent-900/60 text-accent-600 dark:text-accent-400 mx-auto flex items-center justify-center">
-                    <KeyIcon className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h5 className="text-sm font-bold text-slate-900 dark:text-white">
-                      Generate Dedicated SSH Key Pair
-                    </h5>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
-                      Click below to generate a unique ED25519 deploy key pair for this repository with zero private key handling.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleGenerateDedicatedKey}
-                    disabled={isGeneratingKey || !isEditable}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-accent-500 hover:bg-accent-600 text-slate-950 shadow-sm transition-all disabled:opacity-50"
-                  >
-                    <KeyIcon className={`w-4 h-4 ${isGeneratingKey ? "animate-spin" : ""}`} />
-                    <span>{isGeneratingKey ? "Generating Key Pair..." : "Generate Dedicated Deploy Key"}</span>
-                  </button>
-                </div>
-              )}
-
-              {/* Step-by-Step GitHub & GitLab Deployment Guide */}
-              <div className="bg-slate-100/80 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700/60 text-xs space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                    <SettingsIcon className="w-4 h-4 text-accent-500" />
-                    <span>How to Add this Deploy Key in 3 Steps:</span>
-                  </span>
-                  <div className="flex items-center gap-1 bg-white dark:bg-slate-900 rounded-lg p-0.5 border border-slate-200 dark:border-slate-700 text-[11px]">
-                    <button
-                      type="button"
-                      onClick={() => setActiveGuideTab("github")}
-                      className={`px-2.5 py-1 rounded-md font-semibold transition-all flex items-center gap-1.5 ${
-                        activeGuideTab === "github"
-                          ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-bold shadow-sm"
-                          : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
-                      }`}
-                    >
-                      <GlobeIcon className="w-3.5 h-3.5" />
-                      <span>GitHub</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveGuideTab("gitlab")}
-                      className={`px-2.5 py-1 rounded-md font-semibold transition-all flex items-center gap-1.5 ${
-                        activeGuideTab === "gitlab"
-                          ? "bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300 font-bold shadow-sm"
-                          : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
-                      }`}
-                    >
-                      <GlobeIcon className="w-3.5 h-3.5" />
-                      <span>GitLab</span>
-                    </button>
-                  </div>
-                </div>
-
-                {activeGuideTab === "github" ? (
-                  <ol className="list-decimal list-inside space-y-2 text-slate-600 dark:text-slate-300 leading-relaxed">
-                    <li>
-                      Click the <strong className="text-accent-600 dark:text-accent-400 font-semibold">Copy Public Key</strong> button above.
-                    </li>
-                    <li>
-                      In your GitHub repository, navigate to: <strong>Settings</strong> &rarr;{" "}
-                      <strong>Deploy keys</strong> &rarr; click{" "}
-                      <strong>Add deploy key</strong>.
-                    </li>
-                    <li>
-                      Set Title to <code className="bg-black/10 dark:bg-black/40 px-1.5 py-0.5 rounded text-accent-600 dark:text-accent-400 font-mono text-[11px]">SuperApp CI Pipeline</code> and paste the copied public key into <strong>Key</strong>.
-                    </li>
-                    <li>
-                      Keep <strong>&quot;Allow write access&quot; UNCHECKED</strong> (read-only is strictly recommended). Click <strong>Add key</strong>.
-                    </li>
-                  </ol>
-                ) : (
-                  <ol className="list-decimal list-inside space-y-2 text-slate-600 dark:text-slate-300 leading-relaxed">
-                    <li>
-                      Click the <strong className="text-orange-600 dark:text-orange-400 font-semibold">Copy Public Key</strong> button above.
-                    </li>
-                    <li>
-                      In your GitLab repository, navigate to: <strong>Settings</strong> &rarr;{" "}
-                      <strong>Repository</strong> &rarr; expand{" "}
-                      <strong>Deploy keys</strong> &rarr; click{" "}
-                      <strong>Add key</strong>.
-                    </li>
-                    <li>
-                      Set Title to <code className="bg-black/10 dark:bg-black/40 px-1.5 py-0.5 rounded text-orange-600 dark:text-orange-400 font-mono text-[11px]">SuperApp CI Pipeline</code> and paste the copied public key into <strong>Key</strong>.
-                    </li>
-                    <li>
-                      Leave <strong>&quot;Grant write permissions&quot; UNCHECKED</strong>. Click <strong>Add key</strong>.
-                    </li>
-                  </ol>
-                )}
-
-                <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-[11px] text-emerald-800 dark:text-emerald-200 flex items-start gap-2">
-                  <CheckCircleIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                  <div>
-                    <strong>Verification Ready:</strong> Once the public key is saved in GitHub/GitLab, enter your repository URL below and click <strong>Verify Access</strong> to automatically confirm branch and tag discovery.
-                  </div>
-                </div>
-              </div>
-
-              {/* Optional Advanced Accordion for Custom Private Key */}
-              <div className="pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowManualOverride(!showManualOverride)}
-                  className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1.5 font-medium transition-colors"
-                >
-                  <SettingsIcon className="w-3.5 h-3.5" />
-                  <span>{showManualOverride ? "Hide Manual Override" : "Advanced: Provide Custom Private Key (Manual Override)"}</span>
-                </button>
-
-                {showManualOverride && (
-                  <div className="mt-3 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
-                        <KeyIcon className="w-3.5 h-3.5 text-accent-500" />
-                        <span>Custom Private Key (Optional)</span>
-                      </Label>
-                      <span className="text-[11px] text-slate-500 font-mono">ED25519 or RSA PEM</span>
-                    </div>
-                    <textarea
-                      name="deployKey"
-                      value={flutterConfig?.deployKey || ""}
-                      onChange={(e: any) => {
-                        if (onUpdateFlutterConfig) {
-                          onUpdateFlutterConfig({
-                            deployKey: e.target.value,
-                          });
-                        } else {
-                          handleFlutterChange(e);
-                        }
-                      }}
-                      disabled={!isEditable}
-                      rows={4}
-                      placeholder={"Paste your own private key here only if your organization forbids platform-generated keys..."}
-                      className="w-full font-mono text-xs p-2.5 rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-200 focus:ring-2 focus:ring-accent-500"
-                    />
-                    <p className="text-[11px] text-slate-500">
-                      If left empty, the platform will use the dedicated key generated above.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-3 pt-1">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <Label className="text-xs">
-                    Access Token / Project Deploy Token{" "}
-                    <span className="text-rose-500">*</span>
-                  </Label>
-                  <button
-                    type="button"
-                    onClick={() => setShowTokenPassword(!showTokenPassword)}
-                    className="text-xs text-accent-600 dark:text-accent-400 hover:underline flex items-center gap-1"
-                  >
-                    <EyeIcon className="w-3.5 h-3.5" />
-                    <span>{showTokenPassword ? "Hide Token" : "Show Token"}</span>
-                  </button>
-                </div>
-                <Input
-                  name="gitAccessToken"
-                  type={showTokenPassword ? "text" : "password"}
-                  value={flutterConfig?.gitAccessToken || ""}
-                  onChange={handleFlutterChange}
-                  disabled={!isEditable}
-                  placeholder="ghp_xxxxxxxxxxxx or glpat-xxxxxxxxxxxx"
-                  className={
-                    allErrors["integrationConfigFlutter.gitAccessToken"]
-                      ? "border-rose-500 ring-1 ring-rose-500"
-                      : ""
-                  }
-                />
-                {allErrors["integrationConfigFlutter.gitAccessToken"] && (
-                  <p className="mt-1 text-xs text-rose-600 font-medium">
-                    {allErrors["integrationConfigFlutter.gitAccessToken"]}
-                  </p>
-                )}
-                <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
-                  GitHub Personal Access Token with <code>repo</code> scope, or GitLab Project Deploy Token with <code>read_repository</code> scope.
-                </p>
-              </div>
-            </div>
+        <div className="flex items-baseline justify-between gap-2">
+          <Label htmlFor="git-url">
+            Repository URL <span className="text-rose-500">*</span>
+          </Label>
+          {detectedProvider && (
+            <span className="text-xs text-slate-500 dark:text-slate-400">
+              {detectedProvider === "github" ? "GitHub" : "GitLab"}
+            </span>
           )}
         </div>
-      )}
+        <Input
+          id="git-url"
+          required
+          name="gitUrl"
+          value={flutterConfig?.gitUrl || ""}
+          onChange={handleGitUrlChange}
+          disabled={!isEditable}
+          placeholder="https://github.com/org/repo or git@github.com:org/repo.git"
+          className={`font-mono ${gitValidationResult?.isValid === false || urlError ? "border-rose-500 ring-1 ring-rose-500" : ""}`}
+        />
+        <p className={`mt-1.5 text-xs ${status?.tone || "text-slate-500 dark:text-slate-400"}`}>
+          {urlError || status?.text || "A link to a subfolder works too, e.g. .../tree/main/packages/my_app."}
+        </p>
+      </div>
 
-      {/* Git Repository and Branch/Tag Inputs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="col-span-1 md:col-span-2">
-          <div className="flex items-center justify-between mb-1">
-            <Label>
-              Git Repository URL <span className="text-rose-500">*</span>
-            </Label>
-            <div className="flex items-center gap-2">
-              {isGitValidating && (
-                <span className="text-sm text-blue-500 animate-pulse font-medium">
-                  Validating repository...
-                </span>
-              )}
-              {detectedProvider && (
-                <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                    detectedProvider === "github"
-                      ? "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700"
-                      : "bg-orange-100 text-orange-800 dark:bg-orange-950/60 dark:text-orange-300"
-                  }`}
-                >
-                  {detectedProvider === "github" ? "GitHub" : "GitLab"}
-                </span>
-              )}
-            </div>
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+        <div>
+          <Label htmlFor="git-path">
+            Folder <span className="text-xs font-normal text-slate-400">Optional</span>
+          </Label>
           <Input
-            required
-            name="gitUrl"
-            value={flutterConfig?.gitUrl || ""}
-            onChange={handleGitUrlChange}
-            disabled={!isEditable}
-            placeholder={
-              isPrivateRepo && authMethod === "deploy_key"
-                ? "git@github.com:org/repo.git or https://github.com/org/repo"
-                : "https://github.com/org/repo or paste direct subfolder link..."
-            }
-            className={
-              gitValidationResult?.isValid === true
-                ? "border-emerald-500 ring-1 ring-emerald-500"
-                : gitValidationResult?.isValid === false
-                  ? "border-rose-500 ring-1 ring-rose-500"
-                  : ""
-            }
-          />
-          <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
-            Tip: You can paste repository root or direct subfolder links (e.g. <code>.../tree/main/packages/miniapp</code>). For SSH deploy keys, SSH clone URLs (<code>git@...</code>) are recommended.
-          </p>
-        </div>
-
-        {/* Monorepo Subdirectory / Path Field */}
-        <div className="col-span-1 md:col-span-2">
-          <Label>Monorepo Subdirectory / Package Path (Optional)</Label>
-          <Input
+            id="git-path"
             name="gitPath"
             value={flutterConfig?.gitPath || flutterConfig?.path || ""}
             onChange={handleGitPathChange}
             disabled={!isEditable}
-            placeholder="e.g. ma_flutter_trust_regulator or packages/miniapp"
+            placeholder="packages/my_app"
+            className="font-mono"
           />
-          <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
-            If your repository is a monorepo, specify the relative path to the folder containing <code>pubspec.yaml</code>.
-          </p>
+          <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">Where pubspec.yaml is, if not at the top.</p>
         </div>
 
         <div>
-          <Label>Reference Type</Label>
-          <Select
-            value={selectedRefType}
-            onChange={(e: any) => handleRefTypeChange(e.target.value)}
-            disabled={!isEditable}
-          >
-            <option value="tag">Tag (Recommended for stable releases)</option>
-            <option value="branch">Branch (Development / Active feature)</option>
-            <option value="commit">Commit SHA (Exact Lock)</option>
-          </Select>
-        </div>
-
-        <div>
-          <Label>
-            Reference Value (
-            {selectedRefType === "tag"
-              ? "Tag"
-              : selectedRefType === "branch"
-                ? "Branch"
-                : "Commit SHA"}
-            )
-          </Label>
-          {selectedRefType === "tag" && tags.length > 0 ? (
-            <Select
-              value={selectedRef || (tags.length > 0 ? tags[0] : "")}
-              onChange={(e: any) => handleRefChange(e.target.value)}
-              disabled={!isEditable}
-            >
-              {tags.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <Label htmlFor="git-ref" className="!mb-0">
+              Version
+            </Label>
+            <div className="inline-flex p-0.5 rounded-xl bg-slate-100 dark:bg-slate-800" role="tablist">
+              {(["tag", "branch", "commit"] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  role="tab"
+                  aria-selected={selectedRefType === t}
+                  onClick={() => handleRefTypeChange(t)}
+                  disabled={!isEditable}
+                  className={seg(selectedRefType === t)}
+                >
+                  {t === "tag" ? "Tag" : t === "branch" ? "Branch" : "Commit"}
+                </button>
               ))}
-            </Select>
-          ) : selectedRefType === "branch" && branches.length > 0 ? (
+            </div>
+          </div>
+          {refOptions.length > 0 ? (
             <Select
-              value={selectedRef || (branches.length > 0 ? branches[0] : "")}
+              id="git-ref"
+              value={selectedRef || refOptions[0]}
               onChange={(e: any) => handleRefChange(e.target.value)}
               disabled={!isEditable}
             >
-              {branches.map((b) => (
-                <option key={b} value={b}>
-                  {b}
+              {refOptions.map((r) => (
+                <option key={r} value={r}>
+                  {r}
                 </option>
               ))}
             </Select>
           ) : (
             <Input
+              id="git-ref"
               value={selectedRef || flutterConfig?.gitBranch || ""}
               onChange={(e: any) => handleRefChange(e.target.value)}
               disabled={!isEditable}
-              placeholder={
-                selectedRefType === "tag"
-                  ? "e.g. v1.0.0"
-                  : selectedRefType === "branch"
-                    ? "e.g. main"
-                    : "e.g. 7f8b9c0d1e2f"
-              }
+              placeholder={selectedRefType === "tag" ? "v1.0.0" : selectedRefType === "branch" ? "main" : "7f8b9c0d1e2f"}
+              aria-label={refLabel}
+              className="font-mono"
             />
           )}
+          <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+            {lockedCommitSha
+              ? `Builds use commit ${lockedCommitSha.substring(0, 8)}.`
+              : selectedRefType === "tag"
+                ? "A tag is best for releases."
+                : selectedRefType === "branch"
+                  ? "Builds take the latest commit on this branch."
+                  : "Builds always use this exact commit."}
+          </p>
         </div>
-
-        {/* Git SHA Locking and Reproducibility Banner */}
-        {lockedCommitSha && (
-          <div className="col-span-1 md:col-span-2 p-3 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 text-sm">
-            <div className="flex items-center gap-2">
-              <ShieldCheckIcon className="w-5 h-5 text-brand-600 dark:text-brand-400 shrink-0" />
-              <span className="text-slate-700 dark:text-slate-300 font-medium">
-                Reproducible Build Lock: Commit SHA resolved
-              </span>
-            </div>
-            <div className="px-3 py-1 bg-accent-100 dark:bg-accent-950/80 text-accent-700 dark:text-accent-300 font-mono font-bold rounded-lg shrink-0 flex items-center gap-1.5 text-xs sm:text-sm">
-              <LockIcon className="w-3.5 h-3.5" />
-              <span>SHA:</span>
-              <span>{lockedCommitSha.substring(0, 8)}...</span>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Real-Time Git Validation Feedback Card */}
-      {gitValidationResult && (
-        <div
-          className={`p-4 rounded-xl border text-sm transition-all duration-200 ${
-            gitValidationResult.isDeployKeyNotice
-              ? "bg-accent-50/80 dark:bg-accent-950/30 border-accent-200 dark:border-accent-800 text-accent-900 dark:text-accent-200"
-              : gitValidationResult.isValid
-                ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200"
-                : "bg-rose-50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200"
-          }`}
-        >
-          <div className="flex items-center justify-between font-semibold">
-            <span className="flex items-center gap-1.5">
-              {gitValidationResult.isDeployKeyNotice ? (
-                <KeyIcon className="w-4 h-4 text-accent-600 dark:text-accent-400" />
-              ) : gitValidationResult.isValid ? (
-                <CheckIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              ) : (
-                <XIcon className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-              )}
-              <span>
-                {gitValidationResult.isDeployKeyNotice
-                  ? "Deploy Key Authentication Configured"
-                  : gitValidationResult.isValid
-                    ? "Repository & pubspec.yaml Verified"
-                    : "Validation Error"}
-              </span>
-            </span>
-            {gitValidationResult.packageName && (
-              <span className="font-mono bg-white/70 dark:bg-slate-900/60 px-2 py-0.5 rounded text-xs border border-slate-200 dark:border-slate-700">
-                Package: {gitValidationResult.packageName}
-              </span>
-            )}
+      {/* Access */}
+      <section className="rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Access</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {isPrivateRepo ? "The build needs read access to the repository." : "Anyone can read it. Nothing to set up."}
+            </p>
           </div>
-          {gitValidationResult.message && (
-            <p className="mt-1 text-xs sm:text-sm">
-              {gitValidationResult.message}
-            </p>
-          )}
-          {gitValidationResult.error && (
-            <p className="mt-1 text-xs sm:text-sm">
-              {gitValidationResult.error}
-            </p>
-          )}
+          <div className="inline-flex p-0.5 rounded-xl bg-slate-100 dark:bg-slate-800" role="tablist">
+            <button type="button" role="tab" aria-selected={!isPrivateRepo} onClick={() => handleRepoVisibilityChange(false)} disabled={!isEditable} className={seg(!isPrivateRepo)}>
+              Public
+            </button>
+            <button type="button" role="tab" aria-selected={isPrivateRepo} onClick={() => handleRepoVisibilityChange(true)} disabled={!isEditable} className={seg(isPrivateRepo)}>
+              Private
+            </button>
+          </div>
         </div>
-      )}
+
+        {isPrivateRepo && (
+          <>
+            <div className="inline-flex p-0.5 rounded-xl bg-slate-100 dark:bg-slate-800" role="tablist">
+              <button type="button" role="tab" aria-selected={authMethod === "deploy_key"} onClick={() => handleAuthMethodChange("deploy_key")} disabled={!isEditable} className={seg(authMethod === "deploy_key")}>
+                Deploy key (recommended)
+              </button>
+              <button type="button" role="tab" aria-selected={authMethod === "token"} onClick={() => handleAuthMethodChange("token")} disabled={!isEditable} className={seg(authMethod === "token")}>
+                Access token
+              </button>
+            </div>
+
+            {authMethod === "deploy_key" ? (
+              <ol className="space-y-4">
+                <li className="flex gap-3">
+                  <span className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0">1</span>
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-sm text-slate-700 dark:text-slate-300">Copy this public key. We made it for this app only.</p>
+                      <div className="flex items-center gap-2">
+                        {isEditable && hasKey && (
+                          <button type="button" onClick={handleGenerateDedicatedKey} disabled={isGeneratingKey} className={smallBtn}>
+                            {isGeneratingKey ? "Making..." : "New key"}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleCopyPublicKey(flutterConfig?.deployPublicKey)}
+                          disabled={!flutterConfig?.deployPublicKey}
+                          className={smallBtn}
+                        >
+                          {copiedKey ? "Copied" : "Copy key"}
+                        </button>
+                      </div>
+                    </div>
+                    {hasKey ? (
+                      <pre
+                        ref={publicKeyRef}
+                        onClick={flutterConfig?.deployPublicKey ? selectPublicKey : undefined}
+                        className="max-h-28 overflow-y-auto whitespace-pre-wrap break-all rounded-xl bg-slate-50 dark:bg-slate-900/60 p-3 font-mono text-xs text-slate-800 dark:text-slate-200 select-all cursor-text"
+                      >
+                        {flutterConfig?.deployPublicKey || "The key was saved earlier. Make a new key to see it again."}
+                      </pre>
+                    ) : (
+                      <button type="button" onClick={handleGenerateDedicatedKey} disabled={isGeneratingKey || !isEditable} className={smallBtn}>
+                        {isGeneratingKey ? "Making a key..." : "Make a key"}
+                      </button>
+                    )}
+                    {copyFailed && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400">
+                        Copy was blocked. The key is selected: press Ctrl+C (Cmd+C on Mac).
+                      </p>
+                    )}
+                    {flutterConfig?.deployKeyFingerprint && (
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate" title={flutterConfig.deployKeyFingerprint}>
+                        {flutterConfig.deployKeyFingerprint}
+                      </p>
+                    )}
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <span className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0">2</span>
+                  <div className="text-sm text-slate-700 dark:text-slate-300 space-y-1">
+                    <p>Add it to the repository as a read-only deploy key:</p>
+                    <ul className="text-xs text-slate-500 dark:text-slate-400 space-y-0.5">
+                      <li>GitHub: Settings → Deploy keys → Add deploy key</li>
+                      <li>GitLab: Settings → Repository → Deploy keys → Add key</li>
+                    </ul>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Leave write access off.</p>
+                  </div>
+                </li>
+                <li className="flex gap-3">
+                  <span className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0">3</span>
+                  <p className="text-sm text-slate-700 dark:text-slate-300">
+                    That&apos;s it. The repository URL above is checked again with the key.
+                  </p>
+                </li>
+              </ol>
+            ) : (
+              <div>
+                <div className="flex items-baseline justify-between gap-2">
+                  <Label htmlFor="git-token">
+                    Access token <span className="text-rose-500">*</span>
+                  </Label>
+                  <button
+                    type="button"
+                    onClick={() => setShowTokenPassword(!showTokenPassword)}
+                    className="text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+                  >
+                    {showTokenPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
+                <Input
+                  id="git-token"
+                  name="gitAccessToken"
+                  type={showTokenPassword ? "text" : "password"}
+                  value={flutterConfig?.gitAccessToken || ""}
+                  onChange={handleFlutterChange}
+                  disabled={!isEditable}
+                  placeholder="ghp_... or glpat-..."
+                  autoComplete="off"
+                  className={`font-mono ${tokenError ? "border-rose-500 ring-1 ring-rose-500" : ""}`}
+                />
+                <p className={`mt-1.5 text-xs ${tokenError ? "text-rose-600 dark:text-rose-400" : "text-slate-500 dark:text-slate-400"}`}>
+                  {tokenError || "Read-only: GitHub token with repo scope, or GitLab token with read_repository."}
+                </p>
+              </div>
+            )}
+
+            {authMethod === "deploy_key" && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setShowManualOverride(!showManualOverride)}
+                  aria-expanded={showManualOverride}
+                  className="text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+                >
+                  {showManualOverride ? "Hide own key" : "Use your own private key instead"}
+                </button>
+                {showManualOverride && (
+                  <div className="mt-2 space-y-1.5">
+                    <textarea
+                      name="deployKey"
+                      aria-label="Your private key"
+                      value={flutterConfig?.deployKey || ""}
+                      onChange={(e: any) => {
+                        if (onUpdateFlutterConfig) onUpdateFlutterConfig({ deployKey: e.target.value });
+                        else handleFlutterChange(e);
+                      }}
+                      disabled={!isEditable}
+                      rows={4}
+                      placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 p-2.5 font-mono text-xs text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-brand-500"
+                    />
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Only if your organization doesn&apos;t allow platform keys. It is stored encrypted.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </section>
     </div>
   );
 }

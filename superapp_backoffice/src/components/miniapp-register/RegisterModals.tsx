@@ -38,7 +38,6 @@ export function RegisterModals({
           formData.integrationConfigFlutter?.versionConstraint ||
           'v1.0.0'
         }
-        category={formData.category}
         appId={formData.appId}
         status={(formData as any).status || 'DRAFT'}
         isFlutter={formData.integrationMethod === IntegrationMethod.FLUTTER_PACKAGE}

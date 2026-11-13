@@ -2,28 +2,39 @@ import { IntegrationMethod, SourceType, CreateMiniAppDto } from '@/types/miniapp
 import { generateClientVerificationToken } from '@/components/forms/IntegrationForm';
 
 export const STEP_TITLES = [
-  'General Information',
-  'Legal & Compliance Policies',
-  'Technical Integration',
-  'Capabilities & Scopes',
-  'Security & Compliance Profile',
-  'Review Registration',
+  'Basics',
+  'Integration',
+  'Permissions',
+  'Security scans',
+  'Review',
 ] as const;
 
 export const STEP_DESCRIPTIONS = [
-  'Provide app identity, catalog details, display name, organization, and icon.',
-  'Configure official terms of service, privacy disclosures, and regulatory policies.',
-  'Configure your runtime architecture: WebView, Flutter Package, Native SDK, or Deep Link.',
-  'Declare native host device permissions with user privacy justifications.',
-  'Automated TLS verification, domain checks, and compliance validation.',
-  'Inspect all registration parameters before submitting for platform audit.',
+  'Name, icon and description shown in the Super App. Terms and privacy are optional.',
+  'How the Super App runs your app.',
+  'Device features your app needs, and why.',
+  'Scans that run on every submission. Recommended ones are on.',
+  'Check everything, then submit for review.',
 ] as const;
+
+export const TOTAL_STEPS = STEP_TITLES.length;
+
+/**
+ * Validation sections (the numbers the validators use) behind each wizard
+ * step: 1 basics, 2 terms & privacy, 3 integration, 4 permissions, 5 scans.
+ */
+export const STEP_SECTIONS: readonly (readonly number[])[] = [[1, 2], [3], [4], [5], []];
+
+/** The wizard step that shows a validation section. */
+export function stepOfSection(section: number): number {
+  const i = STEP_SECTIONS.findIndex((secs) => secs.includes(section));
+  return i >= 0 ? i + 1 : 1;
+}
 
 export function getInitialRegisterFormData(): Partial<CreateMiniAppDto> {
   return {
     name: '',
     appId: '',
-    category: '',
     organization: '',
     organizationCode: '',
     shortDescription: '',

@@ -202,48 +202,41 @@ type NavGroupWithTab = {
 
 const miniAppRegisterNavGroups: NavGroupWithTab[] = [
   {
-    label: 'REGISTRATION WIZARD',
+    label: 'REGISTER MINI APP',
     items: [
       {
-        name: 'Basic Information',
+        name: 'Basics',
         href: '/miniapps/register?step=1',
         tabKey: '1',
         stepNumber: 1,
         icon: null as any,
       },
       {
-        name: 'Legal & Compliance',
+        name: 'Integration',
         href: '/miniapps/register?step=2',
         tabKey: '2',
         stepNumber: 2,
         icon: null as any,
       },
       {
-        name: 'Technical Integration',
+        name: 'Permissions',
         href: '/miniapps/register?step=3',
         tabKey: '3',
         stepNumber: 3,
         icon: null as any,
       },
       {
-        name: 'Capabilities & Scopes',
+        name: 'Security scans',
         href: '/miniapps/register?step=4',
         tabKey: '4',
         stepNumber: 4,
         icon: null as any,
       },
       {
-        name: 'Security Profile',
+        name: 'Review',
         href: '/miniapps/register?step=5',
         tabKey: '5',
         stepNumber: 5,
-        icon: null as any,
-      },
-      {
-        name: 'Review & Submit',
-        href: '/miniapps/register?step=6',
-        tabKey: '6',
-        stepNumber: 6,
         icon: null as any,
       },
     ],

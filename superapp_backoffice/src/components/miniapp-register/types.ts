@@ -6,7 +6,7 @@ import {
 } from '@/types/miniapp.types';
 import { SubmissionModalState } from '@/components/ui/SubmissionModal';
 
-export type RegisterWizardStep = 1 | 2 | 3 | 4 | 5 | 6;
+export type RegisterWizardStep = 1 | 2 | 3 | 4 | 5;
 
 export interface RegisterWizardHeaderProps {
   step: number;
@@ -22,6 +22,8 @@ export interface RegisterWizardBottomBarProps {
   step: number;
   isSubmitting: boolean;
   isCurrentStepComplete?: boolean;
+  /** What still blocks Continue, e.g. ['a name', 'an icon']. */
+  missing?: string[];
   onPrevStep: () => void;
   onNextStep: () => void;
 }

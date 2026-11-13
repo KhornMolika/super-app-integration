@@ -54,9 +54,6 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
                 target: { name: 'organizationCode', value: targetOrg.code },
               } as any);
             }
-            handleChange({
-              target: { name: 'category', value: targetOrg.name },
-            } as any);
           }
         }
       } catch (err) {
@@ -132,12 +129,7 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
         target: { name: 'organizationCode', value: targetCode },
       } as any);
     }
-    if (formData.category !== targetName) {
-      handleChange({
-        target: { name: 'category', value: targetName },
-      } as any);
-    }
-  }, [userAffiliatedOrg, formData.id, formData.organization, formData.organizationCode, formData.category, handleChange]);
+  }, [userAffiliatedOrg, formData.id, formData.organization, formData.organizationCode, handleChange]);
 
   // Filter out any INACTIVE organizations and sort in Ascending (ASC) order from A to Z
   const activeDbOrgs = useMemo(
@@ -176,207 +168,158 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
       handleChange({
         target: { name: 'organizationCode', value: selectedOrg?.code || '' },
       } as any);
-
-      handleChange({
-        target: { name: 'category', value: chosenName },
-      } as any);
     }
   };
 
+  const tagline = formData.tagline ?? formData.shortDescription ?? '';
+  const description = formData.description ?? formData.fullDescription ?? '';
+  const errorRing = 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500';
+  const counter = (n: number, max: number) => (
+    <span className={`text-xs tabular-nums ${n > max * 0.9 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500'}`}>
+      {n}/{max}
+    </span>
+  );
+
   return (
-    <>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* 1. MiniApp Name */}
-        <div>
-          <Label>
-            MiniApp Name <span className="text-rose-500">*</span>
-          </Label>
-          <Input
-            required
-            disabled={!isEditable}
-            name="name"
-            value={formData.name || ''}
-            onChange={handleChange}
-            placeholder="e.g. Core Banking App"
-            className={allErrors.name ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
-          />
-          {allErrors.name && <p className="mt-1.5 text-sm text-rose-600 font-medium">{allErrors.name}</p>}
-        </div>
-
-        {/* 2. MiniApp Slug */}
-        <div>
-          <Label>
-            MiniApp Slug <span className="text-slate-400 font-normal text-xs">(URL &amp; Catalog Key)</span> <span className="text-rose-500">*</span>
-          </Label>
-          <div className="relative flex items-center">
-            <Input
-              disabled
-              readOnly
-              name="slug"
-              value={formData.slug || ''}
-              placeholder="e.g. staff-portal-attendance"
-              className={`font-mono text-base !bg-slate-200/70 dark:!bg-slate-800/90 !border-slate-300/80 dark:!border-slate-700 !text-slate-600 dark:!text-slate-200 placeholder:!text-slate-400 dark:placeholder:!text-slate-400 cursor-not-allowed select-all pr-10 ${allErrors.slug ? '!border-rose-500 ring-1 ring-rose-500 bg-rose-50/50' : ''}`}
-            />
-            <div className="absolute right-3.5 pointer-events-none flex items-center text-slate-400 dark:text-slate-500">
-              <LockIcon className="w-4 h-4" />
-            </div>
-          </div>
-          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-            Binary MiniApp ID (<code>app_id</code>) is auto-detected from your package in the Integration step.
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+      {/* Name, with the app ID it produces */}
+      <div>
+        <Label htmlFor="miniapp-name">
+          Name <span className="text-rose-500">*</span>
+        </Label>
+        <Input
+          id="miniapp-name"
+          required
+          disabled={!isEditable}
+          name="name"
+          value={formData.name || ''}
+          onChange={handleChange}
+          placeholder="e.g. Staff Attendance"
+          className={allErrors.name ? errorRing : ''}
+        />
+        {allErrors.name ? (
+          <p className="mt-1.5 text-sm text-rose-600 dark:text-rose-400">{allErrors.name}</p>
+        ) : formData.slug ? (
+          <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+            App ID <code className="font-mono text-slate-700 dark:text-slate-300">{formData.slug}</code>
           </p>
-          {allErrors.slug && <p className="mt-1.5 text-sm text-rose-600 font-medium">{allErrors.slug}</p>}
-        </div>
-
-        {/* 3. Organization (Auto-detected and locked to user's organization) */}
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <Label className="flex items-center gap-1.5">
-              <BuildingIcon className="w-3.5 h-3.5 text-sky-500" />
-              <span>
-                Organization <span className="text-rose-500">*</span>
-              </span>
-            </Label>
-            {userAffiliatedOrg ? (
-              <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
-                Affiliated Organization (Locked)
-              </span>
-            ) : loadingOrgs ? (
-              <span className="text-[11px] text-slate-400 animate-pulse">
-                Querying database...
-              </span>
-            ) : null}
-          </div>
-          {userAffiliatedOrg ? (
-            <div>
-              <div className="relative flex items-center">
-                <Input
-                  disabled
-                  readOnly
-                  name="organization"
-                  value={
-                    userAffiliatedOrg.code
-                      ? `${userAffiliatedOrg.code} — ${userAffiliatedOrg.name}`
-                      : userAffiliatedOrg.name
-                  }
-                  className="font-medium text-sm !bg-slate-100/90 dark:!bg-slate-800/90 !border-slate-300/80 dark:!border-slate-700 !text-slate-800 dark:!text-slate-200 cursor-not-allowed select-all pr-10"
-                />
-                <div
-                  className="absolute right-3.5 pointer-events-none flex items-center text-slate-400 dark:text-slate-500"
-                  title="Organization is locked to your affiliated authority"
-                >
-                  <LockIcon className="w-4 h-4" />
-                </div>
-              </div>
-              <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                MiniApp ownership is locked to your affiliated organization ({userAffiliatedOrg.code || userAffiliatedOrg.name}). Changing organization is restricted.
-              </p>
-            </div>
-          ) : (
-            <Select
-              name="organization"
-              value={formData.organization || ''}
-              onChange={handleOrgSelect}
-              disabled={!isEditable || loadingOrgs}
-              className="text-sm font-medium"
-            >
-              {activeDbOrgs.length === 0 ? (
-                <option value="">
-                  {loadingOrgs ? 'Loading organizations from database...' : 'No active organizations found'}
-                </option>
-              ) : (
-                <>
-                  <option value="">Select an organization</option>
-                  {Object.entries(groupedByParent).map(([parent, orgs]) => (
-                    <optgroup key={parent} label={parent} className="font-semibold text-slate-700 dark:text-slate-200">
-                      {orgs.map((org) => (
-                        <option key={org.id} value={org.name} className="font-normal text-slate-800 dark:text-slate-300">
-                          {org.code ? `${org.code} — ` : ''}{org.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </>
-              )}
-            </Select>
-          )}
-        </div>
-
-        {/* 4. Logo Upload */}
-        <div>
-          <LogoUploadInput
-            value={formData.logo || ''}
-            onChange={(logoVal) => handleChange({ target: { name: 'logo', value: logoVal } })}
-            error={allErrors.logo}
-            required={true}
-          />
-        </div>
-
-        {/* 5. Tagline / Short Description */}
-        <div className="col-span-1 md:col-span-2">
-          <div className="flex items-center justify-between mb-1">
-            <Label>Tagline / Short Description</Label>
-            <div className="flex items-center gap-2">
-              <span className={`text-[11px] font-mono ${
-                (formData.tagline ?? formData.shortDescription ?? '').length > 90
-                  ? 'text-amber-500 font-semibold'
-                  : 'text-slate-400 dark:text-slate-500'
-              }`}>
-                {(formData.tagline ?? formData.shortDescription ?? '').length} / 100 characters
-              </span>
-              <span className="text-xs text-slate-400 font-medium">Optional</span>
-            </div>
-          </div>
-          <Input
-            name="tagline"
-            maxLength={100}
-            value={formData.tagline ?? formData.shortDescription ?? ''}
-            onChange={(e) => {
-              handleChange(e);
-              handleChange({ target: { name: 'shortDescription', value: e.target.value } } as any);
-            }}
-            placeholder="e.g. Instant payments and digital wallet for retail users"
-          />
-          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-            Concise summary displayed on mobile app catalog tiles, search snippets, and notifications (max 100 characters).
-          </p>
-        </div>
-
-        {/* 6. Description */}
-        <div className="col-span-1 md:col-span-2">
-          <div className="flex items-center justify-between mb-1">
-            <Label>Description</Label>
-            <div className="flex items-center gap-2">
-              <span className={`text-[11px] font-mono ${
-                (formData.description ?? formData.fullDescription ?? '').length > 900
-                  ? 'text-amber-500 font-semibold'
-                  : 'text-slate-400 dark:text-slate-500'
-              }`}>
-                {(formData.description ?? formData.fullDescription ?? '').length} / 1000 characters
-              </span>
-              <span className="text-xs text-slate-400 font-medium">Optional</span>
-            </div>
-          </div>
-          <Textarea
-            name="description"
-            rows={3}
-            maxLength={1000}
-            value={formData.description ?? formData.fullDescription ?? ''}
-            onChange={(e) => {
-              handleChange(e);
-              handleChange({ target: { name: 'fullDescription', value: e.target.value } } as any);
-            }}
-            placeholder="e.g. Comprehensive details explaining the features, user flows, and core functionality of this MiniApp..."
-            className={allErrors.description || allErrors.fullDescription ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50' : ''}
-          />
-          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-            Comprehensive details explaining features, user flows, and capabilities for the MiniApp detail page (max 1,000 characters).
-          </p>
-          {(allErrors.description || allErrors.fullDescription) && (
-            <p className="mt-1.5 text-sm text-rose-600 font-medium">{allErrors.description || allErrors.fullDescription}</p>
-          )}
-        </div>
+        ) : null}
+        {allErrors.slug && <p className="mt-1.5 text-sm text-rose-600 dark:text-rose-400">{allErrors.slug}</p>}
       </div>
-    </>
+
+      {/* Organization: plain text when it is fixed to the user's own */}
+      <div>
+        <Label htmlFor="miniapp-org">
+          Organization <span className="text-rose-500">*</span>
+        </Label>
+        {userAffiliatedOrg ? (
+          <div
+            id="miniapp-org"
+            className="flex items-center gap-2 min-h-[42px] px-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 text-sm text-slate-800 dark:text-slate-200"
+            title="Mini apps belong to your organization"
+          >
+            <BuildingIcon className="w-4 h-4 text-slate-400 shrink-0" />
+            <span className="truncate">
+              {userAffiliatedOrg.code ? (
+                <>
+                  <span className="font-semibold">{userAffiliatedOrg.code}</span>
+                  <span className="text-slate-500 dark:text-slate-400"> · {userAffiliatedOrg.name}</span>
+                </>
+              ) : (
+                userAffiliatedOrg.name
+              )}
+            </span>
+            <LockIcon className="w-3.5 h-3.5 text-slate-400 ml-auto shrink-0" />
+          </div>
+        ) : (
+          <Select
+            id="miniapp-org"
+            name="organization"
+            value={formData.organization || ''}
+            onChange={handleOrgSelect}
+            disabled={!isEditable || loadingOrgs}
+          >
+            {activeDbOrgs.length === 0 ? (
+              <option value="">{loadingOrgs ? 'Loading...' : 'No active organizations'}</option>
+            ) : (
+              <>
+                <option value="">Select an organization</option>
+                {Object.entries(groupedByParent).map(([parent, orgs]) => (
+                  <optgroup key={parent} label={parent}>
+                    {orgs.map((org) => (
+                      <option key={org.id} value={org.name}>
+                        {org.code ? `${org.code} · ` : ''}
+                        {org.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </>
+            )}
+          </Select>
+        )}
+      </div>
+
+      {/* Icon */}
+      <div className="md:col-span-2">
+        <LogoUploadInput
+          value={formData.logo || ''}
+          onChange={(logoVal) => handleChange({ target: { name: 'logo', value: logoVal } })}
+          error={allErrors.logo}
+          required={true}
+          label="Icon"
+          helperText="Square PNG, JPG, SVG or WebP, 512 × 512 px, up to 2 MB."
+        />
+      </div>
+
+      {/* Tagline */}
+      <div className="md:col-span-2">
+        <div className="flex items-baseline justify-between gap-2">
+          <Label htmlFor="miniapp-tagline">
+            Tagline <span className="text-xs font-normal text-slate-400">Optional</span>
+          </Label>
+          {counter(tagline.length, 100)}
+        </div>
+        <Input
+          id="miniapp-tagline"
+          name="tagline"
+          maxLength={100}
+          disabled={!isEditable}
+          value={tagline}
+          onChange={(e) => {
+            handleChange(e);
+            handleChange({ target: { name: 'shortDescription', value: e.target.value } } as any);
+          }}
+          placeholder="One line shown under the app name"
+        />
+      </div>
+
+      {/* Description */}
+      <div className="md:col-span-2">
+        <div className="flex items-baseline justify-between gap-2">
+          <Label htmlFor="miniapp-description">
+            Description <span className="text-xs font-normal text-slate-400">Optional</span>
+          </Label>
+          {counter(description.length, 1000)}
+        </div>
+        <Textarea
+          id="miniapp-description"
+          name="description"
+          rows={4}
+          maxLength={1000}
+          disabled={!isEditable}
+          value={description}
+          onChange={(e) => {
+            handleChange(e);
+            handleChange({ target: { name: 'fullDescription', value: e.target.value } } as any);
+          }}
+          placeholder="What the app does and who it is for"
+          className={allErrors.description || allErrors.fullDescription ? errorRing : ''}
+        />
+        {(allErrors.description || allErrors.fullDescription) && (
+          <p className="mt-1.5 text-sm text-rose-600 dark:text-rose-400">{allErrors.description || allErrors.fullDescription}</p>
+        )}
+      </div>
+    </div>
   );
 }

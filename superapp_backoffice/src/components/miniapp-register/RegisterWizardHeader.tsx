@@ -2,9 +2,13 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/inputs';
 import { RegisterWizardHeaderProps } from './types';
+import { STEP_TITLES } from './constants';
 
+/**
+ * One header for the register wizard: where you are, a slim progress bar and
+ * the two page actions. Neutral surfaces; the brand colour marks progress only.
+ */
 export function RegisterWizardHeader({
   step,
   stepTitle,
@@ -14,86 +18,67 @@ export function RegisterWizardHeader({
   onCancel,
   onSaveDraft,
 }: RegisterWizardHeaderProps) {
-  return (
-    <>
-      {/* Top Breadcrumb */}
-      <div className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400 mb-2 px-1">
-        <Link
-          href="/miniapps"
-          className="hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
-        >
-          MiniApps
-        </Link>
-        <span>/</span>
-        <span className="text-slate-700 dark:text-slate-300 font-semibold">Register MiniApp</span>
-        <span>/</span>
-        <span className="text-brand-600 dark:text-brand-400 font-bold">
-          Step {step} of 6: {stepTitle}
-        </span>
-      </div>
+  const total = STEP_TITLES.length;
 
-      {/* Header Card */}
-      <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm transition-all">
-        <div className="flex items-center space-x-4">
-          <div>
-            <div className="flex items-center gap-3">
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-                {miniAppName || 'Register MiniApp'}
-              </h2>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-brand-50 text-brand-700 border border-brand-200 dark:bg-brand-950/40 dark:text-brand-300 dark:border-brand-800">
-                <span className="w-2 h-2 rounded-full bg-brand-500 animate-pulse" />
-                <span>Step {step} of 6</span>
-              </span>
-            </div>
-            <p className="text-slate-500 dark:text-slate-400 mt-1 text-xs sm:text-sm">
-              {stepDescription}
-            </p>
-          </div>
+  return (
+    <header className="mb-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <Link
+            href="/miniapps"
+            className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Mini apps
+          </Link>
+          <h1 className="mt-1 text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100 truncate">
+            {miniAppName?.trim() || 'Register a mini app'}
+          </h1>
         </div>
 
-        {/* Header Action Buttons & Progress */}
-        <div className="flex items-center gap-3 self-end md:self-auto flex-wrap">
-          <span className="text-xs text-slate-400 dark:text-slate-500 font-medium hidden lg:inline-block mr-1">
-            Progress:{' '}
-            <strong className="text-slate-700 dark:text-slate-300 font-mono">
-              {Math.round((step / 6) * 100)}%
-            </strong>
-          </span>
-
-          <Button
+        <div className="flex items-center gap-2 shrink-0">
+          <button
             type="button"
-            variant="outline"
-            className="h-9 px-4 text-xs sm:text-sm font-semibold border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-50"
             onClick={onCancel}
             disabled={isSubmitting}
+            className="h-9 px-3.5 rounded-xl text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800 disabled:opacity-50 transition-colors"
           >
             Cancel
-          </Button>
-
-          <Button
+          </button>
+          <button
             type="button"
-            variant="outline"
-            className="h-9 px-4 text-xs sm:text-sm font-semibold border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-1.5 text-slate-700 dark:text-slate-300 disabled:opacity-50"
             onClick={onSaveDraft}
             disabled={isSubmitting}
+            className="h-9 px-3.5 rounded-xl text-sm font-semibold border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 transition-colors"
           >
-            <svg
-              className="w-4 h-4 text-slate-500 dark:text-slate-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
-              />
-            </svg>
-            <span>Save as Draft</span>
-          </Button>
+            Save draft
+          </button>
         </div>
       </div>
-    </>
+
+      <div className="mt-4">
+        <div className="flex items-baseline justify-between gap-3">
+          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            <span className="text-slate-500 dark:text-slate-400 font-medium">
+              Step {step} of {total} ·{' '}
+            </span>
+            {stepTitle}
+          </p>
+        </div>
+        <div className="mt-2 grid gap-1" style={{ gridTemplateColumns: `repeat(${total}, minmax(0, 1fr))` }} aria-hidden="true">
+          {STEP_TITLES.map((t, i) => (
+            <span
+              key={t}
+              className={`h-1 rounded-full transition-colors ${
+                i < step ? 'bg-brand-500' : 'bg-slate-200 dark:bg-slate-800'
+              }`}
+            />
+          ))}
+        </div>
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{stepDescription}</p>
+      </div>
+    </header>
   );
 }

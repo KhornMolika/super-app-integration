@@ -16,66 +16,60 @@ export default function DeepLinkIntegrationForm({
   handleDeepLinkChange,
   isEditable = true,
 }: DeepLinkIntegrationFormProps) {
-  const deepLinkConfig = formData.integrationConfigDeepLink || {};
+  const config = formData.integrationConfigDeepLink || {};
+  const schemeError = allErrors['integrationConfigDeepLink.urlScheme'];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800">
-      <div className="col-span-1 md:col-span-2">
-        <div className="flex items-center justify-between mb-1">
-          <Label>
-            URL Scheme / Deep Link URI <span className="text-rose-500">*</span>
-          </Label>
-          <span className="text-sm text-slate-400 font-mono">e.g. trustregulator:// or myapp://open</span>
-        </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+      <div className="md:col-span-2">
+        <Label htmlFor="dl-scheme">
+          Link that opens your app <span className="text-rose-500">*</span>
+        </Label>
         <Input
+          id="dl-scheme"
           name="urlScheme"
           disabled={!isEditable}
-          value={deepLinkConfig?.urlScheme || ''}
+          value={config.urlScheme || ''}
           onChange={handleDeepLinkChange}
-          placeholder="trustregulator://open"
-          className={
-            allErrors['integrationConfigDeepLink.urlScheme']
-              ? 'border-rose-500 ring-1 ring-rose-500 focus:ring-rose-500 bg-rose-50/50'
-              : ''
-          }
+          placeholder="myapp://open or https://app.example.com/open"
+          className={schemeError ? 'border-rose-500 ring-1 ring-rose-500' : ''}
         />
-        {allErrors['integrationConfigDeepLink.urlScheme'] && (
-          <p className="mt-1.5 text-sm text-rose-600 font-medium">
-            {allErrors['integrationConfigDeepLink.urlScheme']}
-          </p>
+        {schemeError ? (
+          <p className="mt-1.5 text-sm text-rose-600 dark:text-rose-400">{schemeError}</p>
+        ) : (
+          <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">A URL scheme or an app link.</p>
         )}
-        <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
-          The custom URI scheme or universal app link invoked by the SuperApp to launch this MiniApp externally.
-        </p>
       </div>
 
       <div>
-        <Label>Package Name / Bundle ID (Optional)</Label>
+        <Label htmlFor="dl-package">
+          Package or bundle ID <span className="text-xs font-normal text-slate-400">Optional</span>
+        </Label>
         <Input
+          id="dl-package"
           name="packageName"
           disabled={!isEditable}
-          value={deepLinkConfig?.packageName || ''}
+          value={config.packageName || ''}
           onChange={handleDeepLinkChange}
-          placeholder="com.fsa.trustregulator"
+          placeholder="com.example.myapp"
         />
-        <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
-          Android package name or iOS bundle ID for native app installation checks.
-        </p>
+        <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">Used to check if the app is installed.</p>
       </div>
 
       <div>
-        <Label>App Store / Play Store Fallback URL (Optional)</Label>
+        <Label htmlFor="dl-store">
+          Store link <span className="text-xs font-normal text-slate-400">Optional</span>
+        </Label>
         <Input
+          id="dl-store"
           name="appStoreUrl"
           disabled={!isEditable}
-          value={deepLinkConfig?.appStoreUrl || ''}
+          value={config.appStoreUrl || ''}
           onChange={handleDeepLinkChange}
           type="url"
           placeholder="https://play.google.com/store/apps/details?id=..."
         />
-        <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
-          Web store redirect URL if the target app is not installed on the user&apos;s device.
-        </p>
+        <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">Opens when the app isn&apos;t installed.</p>
       </div>
     </div>
   );

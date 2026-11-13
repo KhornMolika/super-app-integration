@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   STEP_TITLES,
   STEP_DESCRIPTIONS,
+  TOTAL_STEPS,
   RegisterWizardHeader,
   RegisterWizardBottomBar,
   RegisterWizardStepContent,
@@ -22,6 +23,7 @@ function RegisterMiniAppContent() {
     nextStep,
     prevStep,
     isCurrentStepComplete,
+    missingForStep,
     isSubmitting,
     modalState,
     setModalState,
@@ -51,7 +53,7 @@ function RegisterMiniAppContent() {
 
   return (
     <>
-      <div className="w-full min-w-0 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out pb-12">
+      <div className="w-full min-w-0 max-w-5xl mx-auto pb-6">
         <RegisterWizardHeader
           step={step}
           stepTitle={STEP_TITLES[step - 1]}
@@ -63,10 +65,10 @@ function RegisterMiniAppContent() {
         />
 
         <form
-          className="space-y-6"
+          className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
-            if (step === 6) handleSubmit(e);
+            if (step === TOTAL_STEPS) handleSubmit(e);
           }}
         >
           <RegisterWizardStepContent
@@ -93,6 +95,7 @@ function RegisterMiniAppContent() {
             step={step}
             isSubmitting={isSubmitting}
             isCurrentStepComplete={isCurrentStepComplete}
+            missing={missingForStep}
             onPrevStep={prevStep}
             onNextStep={nextStep}
           />

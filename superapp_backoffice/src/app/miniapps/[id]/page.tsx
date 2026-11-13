@@ -319,7 +319,6 @@ function ManageMiniAppContent() {
             'v1.0.0'
           }
           apkUrl={`/api/download-apk?type=test&version=${encodeURIComponent(formData.activeTestVersion || latestTestVersion || (formData as any).integrationConfig?.superAppTestVersion || 'v0.0.1')}`}
-          category={formData.category}
           appId={formData.appId || formData.id || (formData as any)._id}
           status={formData.status}
           buildCompletedAt={

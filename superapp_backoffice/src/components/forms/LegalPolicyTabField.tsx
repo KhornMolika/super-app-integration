@@ -1,15 +1,9 @@
 ﻿'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Label, Textarea, Button } from '@/components/ui/inputs';
+import { Textarea } from '@/components/ui/inputs';
 import { ValidatedUrlInput } from '@/components/ui/ValidatedUrlInput';
-import {
-  GlobeIcon,
-  PackageIcon,
-  SparklesIcon,
-  CheckIcon,
-  EyeIcon,
-} from '@/components/ui/Icons';
+import { CheckIcon, EyeIcon } from '@/components/ui/Icons';
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 import { IntegrationMethod } from '@/types/miniapp.types';
 
@@ -106,197 +100,92 @@ export default function LegalPolicyTabField({
     (activeTab === 'document' && descValue?.trim())
   );
 
+  const tabClass = (active: boolean) =>
+    `px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+      active
+        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
+        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+    }`;
+  const isPrivacy = title.toLowerCase().includes('privacy');
+
   return (
-    <div className="p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/60 shadow-2xs space-y-4">
-      {/* Header & Segmented Mode Switcher */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-        <div>
-          <div className="flex items-center gap-2">
-            <h5 className="text-base font-bold text-slate-900 dark:text-slate-100">
-              {title}
-            </h5>
-            {isConfigured ? (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                <CheckIcon className="w-2.5 h-2.5" />
-                <span>Configured</span>
-              </span>
-            ) : (
-              <span className="text-xs text-slate-400 font-medium">Optional</span>
-            )}
-          </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            {activeTab === 'url'
-              ? 'Public web link to policy disclosures.'
-              : 'Self-contained offline document or markdown policy text.'}
-          </p>
-        </div>
-
-        {/* Segmented Pill Switcher */}
-        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shrink-0 self-start sm:self-auto">
-          <button
-            type="button"
-            onClick={() => setActiveTab('url')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 ease-out active:scale-[0.98] cursor-pointer ${
-              activeTab === 'url'
-                ? 'bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 shadow-2xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-            }`}
-          >
-            <GlobeIcon className="w-3.5 h-3.5" />
-            <span>Live Web URL</span>
-            {!isNativeOrPackage && (
-              <span className="text-[10px] px-1 py-0.2 rounded bg-brand-50 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 font-medium hidden md:inline">
-                Recommended
-              </span>
-            )}
+    <section className="rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          {title}
+          {isConfigured ? (
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-brand-600 dark:text-brand-400">
+              <CheckIcon className="w-3 h-3" />
+              Added
+            </span>
+          ) : (
+            <span className="text-xs font-normal text-slate-400">Optional</span>
+          )}
+        </h3>
+        <div className="inline-flex p-0.5 rounded-xl bg-slate-100 dark:bg-slate-800 shrink-0" role="tablist">
+          <button type="button" role="tab" aria-selected={activeTab === 'url'} onClick={() => setActiveTab('url')} className={tabClass(activeTab === 'url')}>
+            Link
           </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('document')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 ease-out active:scale-[0.98] cursor-pointer ${
-              activeTab === 'document'
-                ? 'bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 shadow-2xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-            }`}
-          >
-            <PackageIcon className="w-3.5 h-3.5" />
-            <span>Markdown / Document</span>
-            {isNativeOrPackage && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent-50 dark:bg-accent-950/60 text-accent-800 dark:text-accent-300 font-medium hidden md:inline">
-                Offline-Ready
-              </span>
-            )}
+          <button type="button" role="tab" aria-selected={activeTab === 'document'} onClick={() => setActiveTab('document')} className={tabClass(activeTab === 'document')}>
+            Text
           </button>
         </div>
       </div>
 
-      {/* Tab Content with Smooth Enter Animation */}
-      <div key={activeTab} className="tab-panel-enter">
-      {/* Tab 1: Live Web URL */}
-      {activeTab === 'url' && (
-        <div className="space-y-3.5 animate-in fade-in duration-200">
-          <ValidatedUrlInput
-            name={urlFieldName}
-            label={`${title} URL`}
-            value={urlValue}
-            onChange={(e) => onChangeUrl(e.target.value)}
-            placeholder={
-              title.toLowerCase().includes('privacy')
-                ? 'https://example.com/privacy-policy'
-                : 'https://example.com/terms'
-            }
-            helperText={`Public HTTPS endpoint hosting official ${title.toLowerCase()}.`}
-            optional={true}
-            externalError={urlError}
-          />
-
-          <div>
-            <div className="flex justify-between items-center mb-1">
-              <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Key Provisions Summary
-              </Label>
-              <span className="text-[11px] text-slate-400">Optional</span>
-            </div>
-            <Textarea
-              rows={2}
-              disabled={!isEditable}
-              value={descValue}
-              onChange={(e) => onChangeDesc(e.target.value)}
-              placeholder={`Brief bullet points or key clauses of the ${title.toLowerCase()}...`}
-              className={`text-xs sm:text-sm ${
-                descError ? 'border-rose-500 ring-1 ring-rose-500 bg-rose-50/50' : ''
-              }`}
-            />
-            {descError && <p className="mt-1 text-xs text-rose-600 font-medium">{descError}</p>}
-          </div>
-        </div>
-      )}
-
-      {/* Tab 2: Document / Markdown Text */}
-      {activeTab === 'document' && (
-        <div className="space-y-3.5 animate-in fade-in duration-200">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-              <span>Full {title} Policy Content (Markdown Supported)</span>
-            </Label>
-
-            {isEditable && (
-              <div className="flex items-center gap-2">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".md,.txt,.pdf"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="h-8 px-2.5 text-xs font-medium inline-flex items-center gap-1 text-slate-600 dark:text-slate-300"
-                >
-                  <PackageIcon className="w-3.5 h-3.5" />
-                  <span>Import .md / .txt File</span>
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleInsertTemplate}
-                  className="h-8 px-2.5 text-xs font-medium inline-flex items-center gap-1 text-brand-600 dark:text-brand-400 border-brand-200 dark:border-brand-800 bg-brand-50/50 dark:bg-brand-950/40"
-                >
-                  <SparklesIcon className="w-3.5 h-3.5 text-brand-500" />
-                  <span>Insert Standard Template</span>
-                </Button>
-              </div>
-            )}
-          </div>
-
+      {activeTab === 'url' ? (
+        <ValidatedUrlInput
+          name={urlFieldName}
+          label={`${title} link`}
+          value={urlValue}
+          onChange={(e) => onChangeUrl(e.target.value)}
+          placeholder={isPrivacy ? 'https://example.com/privacy' : 'https://example.com/terms'}
+          optional={true}
+          externalError={urlError}
+        />
+      ) : (
+        <div className="space-y-2">
           <Textarea
             rows={6}
             disabled={!isEditable}
             value={descValue}
             onChange={(e) => onChangeDesc(e.target.value)}
-            placeholder={`Enter complete ${title.toLowerCase()} policy clauses, markdown text, or import from a file...`}
-            className={`font-mono text-xs sm:text-sm ${
-              descError ? 'border-rose-500 ring-1 ring-rose-500 bg-rose-50/50' : ''
-            }`}
+            aria-label={`${title} text`}
+            placeholder={`Paste the ${title.toLowerCase()} here. Markdown works.`}
+            className={`font-mono text-xs sm:text-sm ${descError ? 'border-rose-500 ring-1 ring-rose-500' : ''}`}
           />
+          {descError && <p className="text-xs text-rose-600 dark:text-rose-400">{descError}</p>}
 
-          {descError && <p className="mt-1 text-xs text-rose-600 font-medium">{descError}</p>}
-
-          <div className="flex items-center justify-between text-xs text-slate-400">
-            <span>{descValue ? `${descValue.length} characters` : 'No text entered'}</span>
-
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+            {isEditable && (
+              <>
+                <input ref={fileInputRef} type="file" accept=".md,.txt,.pdf" onChange={handleFileUpload} className="hidden" />
+                <button type="button" onClick={() => fileInputRef.current?.click()} className="font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white">
+                  Import file
+                </button>
+                <button type="button" onClick={handleInsertTemplate} className="font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white">
+                  Use a template
+                </button>
+              </>
+            )}
             {descValue && descValue.length > 20 && (
               <button
                 type="button"
                 onClick={() => setShowPreview(!showPreview)}
-                className="text-brand-600 dark:text-brand-400 hover:underline inline-flex items-center gap-1 font-medium"
+                className="ml-auto inline-flex items-center gap-1 font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
               >
                 <EyeIcon className="w-3.5 h-3.5" />
-                <span>{showPreview ? 'Hide Preview' : 'Show Rendered Preview'}</span>
+                {showPreview ? 'Hide preview' : 'Preview'}
               </button>
             )}
           </div>
 
-          {/* Formatted Markdown Preview Drawer */}
           {showPreview && descValue && (
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300 space-y-2 max-h-56 overflow-y-auto font-sans leading-relaxed animate-in fade-in duration-150 shadow-inner">
-              <div className="font-bold text-slate-900 dark:text-white border-b border-slate-200 dark:border-slate-700 pb-1.5 flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <EyeIcon className="w-3.5 h-3.5 text-brand-600" />
-                  <span>Rendered Policy Preview</span>
-                </span>
-                <span className="text-[10px] font-mono text-slate-400 uppercase bg-slate-200/60 dark:bg-slate-700 px-1.5 py-0.5 rounded">SuperApp Native View</span>
-              </div>
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-sm text-slate-700 dark:text-slate-300 max-h-56 overflow-y-auto">
               <MarkdownRenderer content={descValue} />
             </div>
           )}
         </div>
       )}
-      </div>
-    </div>
+    </section>
   );
 }

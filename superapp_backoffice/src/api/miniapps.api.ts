@@ -9,7 +9,6 @@ export interface MiniApp {
   description?: string;
   shortDescription?: string;
   fullDescription?: string;
-  category?: string;
   iconUrl?: string;
   logo?: string;
   status: string;
@@ -146,6 +145,12 @@ export const miniappsApi = {
       res?.data ? res.data : res,
     ),
 
+  /** Versions, newest first, each with the capabilities it asks for and their review. */
+  getVersionCapabilities: (id: string) =>
+    apiClient<any>(`/api/mini-apps/${id}/version-capabilities`).then((res) =>
+      Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [],
+    ),
+
   /** Security scan runs, newest first (paged envelope: { data, meta }). */
   getScans: (id: string, params?: { page?: number; limit?: number }) =>
     apiClient<any>(`/api/mini-apps/${id}/scans`, { params }),
@@ -236,7 +241,6 @@ export const miniappsApi = {
     gitUrl?: string;
     gitBranch?: string;
     gitPath?: string;
-    category?: string;
     name?: string;
     appId?: string;
   }) =>

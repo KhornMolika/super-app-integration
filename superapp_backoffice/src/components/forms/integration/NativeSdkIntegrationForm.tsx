@@ -5,17 +5,7 @@ import { Input, Label } from '@/components/ui/inputs';
 import { NativeSdkConfigDto } from '@/types/miniapp.types';
 import { sdkArtifactsApi, SdkArtifactUploadResponse } from '@/api';
 import { deriveNativeSdkDefaults } from '@/lib/integration-utils';
-import {
-  PackageIcon,
-  CheckCircleIcon,
-  AlertTriangleIcon,
-  TagIcon,
-  DevicePhoneIcon,
-  ZapIcon,
-  CheckIcon,
-  XCircleIcon,
-  SparklesIcon,
-} from '@/components/ui/Icons';
+import { CheckIcon } from '@/components/ui/Icons';
 
 export interface NativeSdkIntegrationFormProps {
   formData: any;
@@ -62,14 +52,14 @@ function EntryClassHint({
   if (scan.detection === 'contract' && scan.candidates.length > 1) {
     return (
       <div className="mt-1.5 space-y-1">
-        <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
-          {scan.candidates.length} classes implement {contract}. Pick the entry class:
+        <span className="text-xs text-slate-600 dark:text-slate-400">
+          {scan.candidates.length} classes implement {contract}. Pick one:
         </span>
         <select
           value={scan.candidates.includes(current) ? current : ''}
           onChange={(e) => e.target.value && onPick(e.target.value)}
           disabled={disabled}
-          className="w-full font-mono text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5"
+          className="w-full font-mono text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5"
         >
           <option value="">Choose...</option>
           {scan.candidates.map((c) => (
@@ -82,17 +72,17 @@ function EntryClassHint({
   if (scan.detection === 'contract') {
     const ok = scan.candidates.includes(current);
     return (
-      <p className={`text-[11px] mt-1 ${ok ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>
+      <p className={`text-xs mt-1.5 ${ok ? 'text-slate-500 dark:text-slate-400' : 'text-amber-600 dark:text-amber-400'}`}>
         {ok
-          ? `Detected: implements ${contract}.`
-          : `This name does not match the class that implements ${contract}: ${scan.candidates[0]}`}
+          ? `Implements ${contract}.`
+          : `The class that implements ${contract} is ${scan.candidates[0]}.`}
       </p>
     );
   }
   return (
-    <p className="text-[11px] mt-1 text-amber-700 dark:text-amber-400">
-      No class in this file implements {contract}, so the name above is only a guess. The SDK must implement the
-      contract from the FSA native SDK package (see its README), or the Super App cannot open it.
+    <p className="text-xs mt-1.5 text-amber-600 dark:text-amber-400">
+      No class in the file implements {contract}, so this name is a guess. The Super App can only open a class that
+      implements it.
     </p>
   );
 }
@@ -126,6 +116,10 @@ export default function NativeSdkIntegrationForm({
   // Classes in the uploaded file that implement the FSA host contract
   const [androidEntry, setAndroidEntry] = useState<EntryScan | null>(null);
   const [iosEntry, setIosEntry] = useState<EntryScan | null>(null);
+  const [showMaven, setShowMaven] = useState(false);
+  const mavenHasError = ['androidMavenGroupId', 'androidMavenArtifactId', 'androidMavenVersion'].some(
+    (k) => allErrors[`integrationConfigNativeSdk.${k}`],
+  );
 
   // Compute smart standard defaults based on MiniApp name, appId, organization & organizationCode
   const derivedDefaults = useMemo(() => {
@@ -211,7 +205,7 @@ export default function NativeSdkIntegrationForm({
     const lower = file.name.toLowerCase();
     if (!lower.endsWith('.zip') && !lower.endsWith('.xcframework.zip')) {
       setIosUploadError(
-        'Invalid iOS artifact. Must be a .zip containing .xcframework.',
+        'Choose a .zip that contains the .xcframework.',
       );
       setIosUploadSuccess(null);
       e.target.value = '';
@@ -280,7 +274,7 @@ export default function NativeSdkIntegrationForm({
       }
 
       setDetectedNotice(
-        `Auto-detected iOS Module (${derivedModuleName}) & View (${derivedTypeName}) from archive!`,
+        `Found module ${derivedModuleName} and class ${derivedTypeName} in the iOS file.`,
       );
       setTimeout(() => setDetectedNotice(null), 4500);
     } catch (err: any) {
@@ -300,7 +294,7 @@ export default function NativeSdkIntegrationForm({
 
     const lower = file.name.toLowerCase();
     if (!lower.endsWith('.aar')) {
-      setAndroidUploadError('Invalid Android artifact. Must be a .aar file.');
+      setAndroidUploadError('Choose an .aar file.');
       setAndroidUploadSuccess(null);
       e.target.value = '';
       return;
@@ -392,7 +386,7 @@ export default function NativeSdkIntegrationForm({
       }
 
       setDetectedNotice(
-        `Auto-detected Android package (${finalPackageName}) & class (${finalObjectName}) from AAR!`,
+        `Found package ${finalPackageName} and class ${finalObjectName} in the Android file.`,
       );
       setTimeout(() => setDetectedNotice(null), 4500);
     } catch (err: any) {
@@ -404,504 +398,188 @@ export default function NativeSdkIntegrationForm({
     }
   };
 
-  return (
-    <div className="space-y-6 animate-in fade-in duration-300">
-      {/* Auto-detected notification banner */}
-      {detectedNotice && (
-        <div className="p-3 rounded-xl bg-emerald-100/90 dark:bg-emerald-900/40 border border-emerald-300 dark:border-emerald-700 text-xs text-emerald-900 dark:text-emerald-200 flex items-center gap-2 animate-in fade-in slide-in-from-top-1 shadow-sm">
-          <CheckCircleIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-          <span className="font-semibold">{detectedNotice}</span>
-        </div>
+  const err = (key: string) => allErrors[`integrationConfigNativeSdk.${key}`];
+
+  const field = (
+    key: keyof NativeSdkConfigDto,
+    label: string,
+    placeholder: string,
+    hint?: React.ReactNode,
+  ) => (
+    <div>
+      <Label htmlFor={`sdk-${key}`}>{label}</Label>
+      <Input
+        id={`sdk-${key}`}
+        name={key}
+        value={(nativeConfig[key] as string) || ''}
+        onChange={(e) => handleFieldChange(key, e.target.value)}
+        placeholder={placeholder}
+        disabled={!isEditable}
+        className={`font-mono text-sm ${err(key) ? 'border-rose-500 ring-1 ring-rose-500' : ''}`}
+      />
+      {err(key) ? (
+        <p className="mt-1.5 text-xs text-rose-600 dark:text-rose-400">{err(key)}</p>
+      ) : (
+        hint
       )}
+    </div>
+  );
 
-      {/* Grid: iOS Framework & Android AAR Sections */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* ===================== iOS Framework Section ===================== */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-5 shadow-sm space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800 flex items-center justify-center text-sky-600 dark:text-sky-400 font-bold">
-                <DevicePhoneIcon className="w-4 h-4" />
-              </div>
-              <div>
-                <h5 className="font-bold text-sm text-slate-900 dark:text-white">
-                  iOS Native Framework (.xcframework.zip)
-                </h5>
-                <p className="text-xs text-slate-500">
-                  Swift / Objective-C CocoaPods binary
-                </p>
-              </div>
-            </div>
-            <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded-md bg-sky-100 text-sky-800 dark:bg-sky-900/60 dark:text-sky-300">
-              iOS Target
-            </span>
+  const fileButton = (
+    hasFile: boolean,
+    busy: boolean,
+    accept: string,
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
+  ) => (
+    <label
+      className={`h-9 px-4 rounded-xl text-sm font-semibold inline-flex items-center shrink-0 ${
+        busy || !isEditable
+          ? 'bg-slate-200 dark:bg-slate-800 text-slate-500 cursor-not-allowed'
+          : hasFile
+            ? 'border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer'
+            : 'bg-brand-600 hover:bg-brand-700 text-white cursor-pointer'
+      }`}
+    >
+      {busy ? 'Checking file...' : hasFile ? 'Replace file' : 'Choose file'}
+      <input type="file" accept={accept} onChange={onChange} disabled={busy || !isEditable} className="sr-only" />
+    </label>
+  );
+
+  const fileSummary = (opts: {
+    filename?: string;
+    sha?: string;
+    extra?: string;
+    perms?: string[];
+  }) => (
+    <div className="rounded-xl bg-slate-50 dark:bg-slate-900/60 p-3 space-y-1">
+      <p className="flex items-center gap-1.5 text-sm font-medium text-slate-900 dark:text-slate-100 min-w-0">
+        <CheckIcon className="w-4 h-4 text-brand-600 dark:text-brand-400 shrink-0" />
+        <span className="font-mono truncate">{opts.filename || 'File checked'}</span>
+      </p>
+      <p className="text-xs text-slate-500 dark:text-slate-400">
+        {[opts.extra, opts.sha ? `SHA-256 ${opts.sha.substring(0, 10)}...` : '', 'uploaded when you submit']
+          .filter(Boolean)
+          .join(' · ')}
+      </p>
+      {opts.perms && opts.perms.length > 0 && (
+        <p className="text-xs text-slate-600 dark:text-slate-400">Uses: {opts.perms.join(', ')}</p>
+      )}
+    </div>
+  );
+
+  const hasAndroid = Boolean(androidUploadSuccess || nativeConfig.androidStoragePath || nativeConfig.androidMinioKey);
+  const hasIos = Boolean(iosUploadSuccess || nativeConfig.iosStoragePath || nativeConfig.iosMinioKey);
+  const minSdk = androidUploadSuccess?.minSdkVersion || nativeConfig.androidMinSdkVersion;
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-slate-600 dark:text-slate-400">
+        Add the Android library, the iOS framework, or both. Names fill in from the file.
+      </p>
+
+      {detectedNotice && <p className="text-xs text-slate-600 dark:text-slate-300">{detectedNotice}</p>}
+
+      {/* Android */}
+      <section className="rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Android</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">An .aar file, up to 200 MB.</p>
           </div>
+          {fileButton(Boolean(nativeConfig.androidArtifactFilename), isUploadingAndroid, '.aar', handleAndroidFileUpload)}
+        </div>
+        {androidUploadError && <p className="text-sm text-rose-600 dark:text-rose-400">{androidUploadError}</p>}
+        {hasAndroid &&
+          fileSummary({
+            filename: nativeConfig.androidArtifactFilename,
+            sha: androidUploadSuccess?.sha256 || nativeConfig.androidChecksum,
+            extra: minSdk ? `min SDK ${minSdk}` : '',
+            perms: nativeConfig.androidDetectedPermissions,
+          })}
 
-          {/* iOS Upload Area */}
-          <div className="p-4 rounded-xl border-2 border-dashed border-sky-200 dark:border-sky-800/80 bg-sky-50/30 dark:bg-sky-950/10 hover:border-sky-400 transition-colors">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-lg bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
-                  <PackageIcon className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 block">
-                    {nativeConfig.iosArtifactFilename ||
-                      'Upload .xcframework.zip'}
-                  </span>
-                  <span className="text-[11px] text-slate-500">
-                    Max 200MB • Auto-detects module &amp; type from Info.plist
-                  </span>
-                </div>
-              </div>
-              <label
-                className={`cursor-pointer px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 ${
-                  isUploadingIos || !isEditable
-                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                    : 'bg-sky-600 hover:bg-sky-700 text-white'
-                }`}
-              >
-                {isUploadingIos ? (
-                  <>
-                    <svg
-                      className="animate-spin w-3.5 h-3.5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8v8H4z"
-                      />
-                    </svg>
-                    <span>Scanning &amp; Staging...</span>
-                  </>
-                ) : (
-                  <>
-                    <ZapIcon className="w-3.5 h-3.5" />
-                    <span>
-                      {nativeConfig.iosArtifactFilename
-                        ? 'Replace ZIP'
-                        : 'Choose File'}
-                    </span>
-                  </>
-                )}
-                <input
-                  type="file"
-                  accept=".zip,application/zip"
-                  onChange={handleIosFileUpload}
-                  disabled={isUploadingIos || !isEditable}
-                  className="hidden"
-                />
-              </label>
-            </div>
-
-            {iosUploadError && (
-              <div className="mt-3 p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-xs text-rose-800 dark:text-rose-300 flex items-center gap-2">
-                <XCircleIcon className="w-4 h-4 shrink-0 text-rose-600" />
-                <span>{iosUploadError}</span>
-              </div>
-            )}
-
-            {(iosUploadSuccess ||
-              nativeConfig.iosStoragePath ||
-              nativeConfig.iosMinioKey) && (
-              <div className="mt-3 p-3 bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg text-xs text-emerald-900 dark:text-emerald-200 space-y-1.5">
-                <div className="flex items-center justify-between font-semibold flex-wrap gap-1">
-                  <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
-                    <CheckCircleIcon className="w-4 h-4 text-emerald-600" />
-                    <span>Scanned. Uploaded when you submit</span>
-                  </span>
-                  {(iosUploadSuccess?.sha256 || nativeConfig.iosChecksum) && (
-                    <span className="font-mono text-[10px] text-slate-500 bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
-                      SHA:{' '}
-                      {(
-                        iosUploadSuccess?.sha256 || nativeConfig.iosChecksum
-                      )?.substring(0, 10)}
-                      ...
-                    </span>
-                  )}
-                </div>
-                {nativeConfig.iosDetectedPermissions &&
-                  nativeConfig.iosDetectedPermissions.length > 0 && (
-                    <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                      <span className="text-[11px] font-medium text-slate-500">
-                        Detected Capabilities:
-                      </span>
-                      {nativeConfig.iosDetectedPermissions.map((perm) => (
-                        <span
-                          key={perm}
-                          className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800 dark:bg-sky-900/60 dark:text-sky-300 flex items-center gap-1"
-                        >
-                          <SparklesIcon className="w-3 h-3 text-sky-600" />
-                          <span>{perm}</span>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-              </div>
-            )}
-          </div>
-
-          {/* iOS Module & Type Name Inputs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div>
-              <Label className="text-xs font-semibold flex items-center gap-1.5">
-                <TagIcon className="w-3.5 h-3.5 text-sky-600" />
-                <span>iOS Module Name *</span>
-              </Label>
-              <Input
-                name="iosModuleName"
-                value={nativeConfig.iosModuleName || ''}
-                onChange={(e) =>
-                  handleFieldChange('iosModuleName', e.target.value)
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4">
+          {field('androidPackageName', 'Package', 'com.example.myapp')}
+          {field(
+            'androidObjectName',
+            'Entry class',
+            'MyAppSdk',
+            <EntryClassHint
+              scan={androidEntry}
+              contract="FSAMiniAppNativeEntry"
+              current={[nativeConfig.androidPackageName, nativeConfig.androidObjectName].filter(Boolean).join('.')}
+              onPick={(fq) => {
+                if (!isEditable) return;
+                const dot = fq.lastIndexOf('.');
+                const pick = { androidPackageName: fq.slice(0, dot), androidObjectName: fq.slice(dot + 1) };
+                if (onUpdateNativeSdkConfig) onUpdateNativeSdkConfig(pick);
+                else {
+                  handleFieldChange('androidPackageName', pick.androidPackageName);
+                  handleFieldChange('androidObjectName', pick.androidObjectName);
                 }
-                placeholder="e.g. SpaBookingSDK"
-                disabled={!isEditable}
-                className="font-mono text-xs mt-1"
-              />
-              <span className="text-[10px] text-slate-400">
-                Identifier imported via <code>import &lt;Module&gt;</code>
-              </span>
-              {allErrors['integrationConfigNativeSdk.iosModuleName'] && (
-                <p className="text-[11px] text-rose-600 mt-1 flex items-center gap-1">
-                  <AlertTriangleIcon className="w-3 h-3 shrink-0" />
-                  {allErrors['integrationConfigNativeSdk.iosModuleName']}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <Label className="text-xs font-semibold flex items-center gap-1.5">
-                <TagIcon className="w-3.5 h-3.5 text-sky-600" />
-                <span>iOS Type / View Controller *</span>
-              </Label>
-              <Input
-                name="iosTypeName"
-                value={nativeConfig.iosTypeName || ''}
-                onChange={(e) =>
-                  handleFieldChange('iosTypeName', e.target.value)
-                }
-                placeholder="e.g. SpaBookingSDKView"
-                disabled={!isEditable}
-                className="font-mono text-xs mt-1"
-              />
-              <span className="text-[10px] text-slate-400">
-                Class responding to <code>.initialize()</code> &amp;{' '}
-                <code>.present()</code>
-              </span>
-              <EntryClassHint
-                scan={iosEntry}
-                contract="FSAMiniAppNativeProtocol"
-                current={nativeConfig.iosTypeName || ''}
-                onPick={(v) => handleFieldChange('iosTypeName', v)}
-                disabled={!isEditable}
-              />
-              {allErrors['integrationConfigNativeSdk.iosTypeName'] && (
-                <p className="text-[11px] text-rose-600 mt-1 flex items-center gap-1">
-                  <AlertTriangleIcon className="w-3 h-3 shrink-0" />
-                  {allErrors['integrationConfigNativeSdk.iosTypeName']}
-                </p>
-              )}
-            </div>
-          </div>
+              }}
+              disabled={!isEditable}
+            />,
+          )}
         </div>
 
-
-        {/* ===================== Android AAR Section ===================== */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-5 shadow-sm space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-bold">
-                <PackageIcon className="w-4 h-4" />
-              </div>
-              <div>
-                <h5 className="font-bold text-sm text-slate-900 dark:text-white">
-                  Android Native Archive (.aar)
-                </h5>
-                <p className="text-xs text-slate-500">
-                  Kotlin / Java Maven hosted artifact
-                </p>
-              </div>
-            </div>
-            <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300">
-              Android Target
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowMaven((v) => !v)}
+            aria-expanded={showMaven || mavenHasError}
+            className="text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+          >
+            {showMaven || mavenHasError ? 'Hide Maven details' : 'Maven details'}
+            <span className="font-mono text-slate-400">
+              {' '}
+              {[nativeConfig.androidMavenGroupId, nativeConfig.androidMavenArtifactId, nativeConfig.androidMavenVersion]
+                .filter(Boolean)
+                .join(':')}
             </span>
-          </div>
-
-          {/* Android Upload Area */}
-          <div className="p-4 rounded-xl border-2 border-dashed border-emerald-200 dark:border-emerald-800/80 bg-emerald-50/30 dark:bg-emerald-950/10 hover:border-emerald-400 transition-colors">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                  <PackageIcon className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 block">
-                    {nativeConfig.androidArtifactFilename || 'Upload .aar Binary'}
-                  </span>
-                  <span className="text-[11px] text-slate-500">
-                    Max 200MB • Auto-detects Package &amp; Entry Class
-                  </span>
-                </div>
-              </div>
-              <label
-                className={`cursor-pointer px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 ${
-                  isUploadingAndroid || !isEditable
-                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                    : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                }`}
-              >
-                {isUploadingAndroid ? (
-                  <>
-                    <svg
-                      className="animate-spin w-3.5 h-3.5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8v8H4z"
-                      />
-                    </svg>
-                    <span>Scanning &amp; Staging...</span>
-                  </>
-                ) : (
-                  <>
-                    <ZapIcon className="w-3.5 h-3.5" />
-                    <span>
-                      {nativeConfig.androidArtifactFilename
-                        ? 'Replace AAR'
-                        : 'Choose File'}
-                    </span>
-                  </>
-                )}
-                <input
-                  type="file"
-                  accept=".aar"
-                  onChange={handleAndroidFileUpload}
-                  disabled={isUploadingAndroid || !isEditable}
-                  className="hidden"
-                />
-              </label>
+          </button>
+          {(showMaven || mavenHasError) && (
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-4">
+              {field('androidMavenGroupId', 'Group ID', 'com.example')}
+              {field('androidMavenArtifactId', 'Artifact ID', 'my-app-sdk')}
+              {field('androidMavenVersion', 'Version', '1.0.0')}
             </div>
-
-            {androidUploadError && (
-              <div className="mt-3 p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-xs text-rose-800 dark:text-rose-300 flex items-center gap-2">
-                <XCircleIcon className="w-4 h-4 shrink-0 text-rose-600" />
-                <span>{androidUploadError}</span>
-              </div>
-            )}
-
-            {(androidUploadSuccess ||
-              nativeConfig.androidStoragePath ||
-              nativeConfig.androidMinioKey) && (
-              <div className="mt-3 p-3 bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg text-xs text-emerald-900 dark:text-emerald-200 space-y-1.5">
-                <div className="flex items-center justify-between font-semibold flex-wrap gap-1">
-                  <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
-                    <CheckCircleIcon className="w-4 h-4 text-emerald-600" />
-                    <span>Scanned. Uploaded when you submit</span>
-                  </span>
-                  {(androidUploadSuccess?.sha256 ||
-                    nativeConfig.androidChecksum) && (
-                    <span className="font-mono text-[10px] text-slate-500 bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
-                      SHA:{' '}
-                      {(
-                        androidUploadSuccess?.sha256 ||
-                        nativeConfig.androidChecksum
-                      )?.substring(0, 10)}
-                      ...
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-3 pt-1 text-[11px] text-slate-600 dark:text-slate-300 flex-wrap">
-                  {(androidUploadSuccess?.minSdkVersion ||
-                    nativeConfig.androidMinSdkVersion) && (
-                    <span className="inline-flex items-center gap-1 font-mono font-semibold">
-                      <CheckIcon className="w-3.5 h-3.5 text-emerald-600" />
-                      minSdkVersion:{' '}
-                      {androidUploadSuccess?.minSdkVersion ||
-                        nativeConfig.androidMinSdkVersion}
-                    </span>
-                  )}
-                  {nativeConfig.androidDetectedPermissions &&
-                    nativeConfig.androidDetectedPermissions.length > 0 && (
-                      <div className="flex items-center gap-1 flex-wrap">
-                        {nativeConfig.androidDetectedPermissions.map((perm) => (
-                          <span
-                            key={perm}
-                            className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 flex items-center gap-1"
-                          >
-                            <SparklesIcon className="w-3 h-3 text-emerald-600" />
-                            <span>{perm}</span>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Android Maven Coordinates */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            <div>
-              <Label className="text-xs font-semibold flex items-center gap-1">
-                <TagIcon className="w-3 h-3 text-emerald-600" />
-                <span>Maven Group ID *</span>
-              </Label>
-              <Input
-                name="androidMavenGroupId"
-                value={nativeConfig.androidMavenGroupId || ''}
-                onChange={(e) =>
-                  handleFieldChange('androidMavenGroupId', e.target.value)
-                }
-                placeholder="e.g. com.fsa.sdk"
-                disabled={!isEditable}
-                className="font-mono text-xs mt-1"
-              />
-              {allErrors['integrationConfigNativeSdk.androidMavenGroupId'] && (
-                <p className="text-[11px] text-rose-600 mt-1">
-                  {allErrors['integrationConfigNativeSdk.androidMavenGroupId']}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <Label className="text-xs font-semibold flex items-center gap-1">
-                <TagIcon className="w-3 h-3 text-emerald-600" />
-                <span>Maven Artifact ID *</span>
-              </Label>
-              <Input
-                name="androidMavenArtifactId"
-                value={nativeConfig.androidMavenArtifactId || ''}
-                onChange={(e) =>
-                  handleFieldChange('androidMavenArtifactId', e.target.value)
-                }
-                placeholder="e.g. spa-booking-sdk"
-                disabled={!isEditable}
-                className="font-mono text-xs mt-1"
-              />
-              {allErrors['integrationConfigNativeSdk.androidMavenArtifactId'] && (
-                <p className="text-[11px] text-rose-600 mt-1">
-                  {allErrors['integrationConfigNativeSdk.androidMavenArtifactId']}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <Label className="text-xs font-semibold flex items-center gap-1">
-                <TagIcon className="w-3 h-3 text-emerald-600" />
-                <span>Maven Version *</span>
-              </Label>
-              <Input
-                name="androidMavenVersion"
-                value={nativeConfig.androidMavenVersion || ''}
-                onChange={(e) =>
-                  handleFieldChange('androidMavenVersion', e.target.value)
-                }
-                placeholder="e.g. 1.0.0"
-                disabled={!isEditable}
-                className="font-mono text-xs mt-1"
-              />
-              {allErrors['integrationConfigNativeSdk.androidMavenVersion'] && (
-                <p className="text-[11px] text-rose-600 mt-1">
-                  {allErrors['integrationConfigNativeSdk.androidMavenVersion']}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Android Package & Entry Object */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div>
-              <Label className="text-xs font-semibold flex items-center gap-1">
-                <TagIcon className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Package Name *</span>
-              </Label>
-              <Input
-                name="androidPackageName"
-                value={nativeConfig.androidPackageName || ''}
-                onChange={(e) =>
-                  handleFieldChange('androidPackageName', e.target.value)
-                }
-                placeholder="e.g. com.example.spabooking"
-                disabled={!isEditable}
-                className="font-mono text-xs mt-1"
-              />
-              <span className="text-[10px] text-slate-400">
-                Target dotted package for Kotlin/Java imports
-              </span>
-              {allErrors['integrationConfigNativeSdk.androidPackageName'] && (
-                <p className="text-[11px] text-rose-600 mt-1">
-                  {allErrors['integrationConfigNativeSdk.androidPackageName']}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <Label className="text-xs font-semibold flex items-center gap-1">
-                <TagIcon className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Android Object / Class *</span>
-              </Label>
-              <Input
-                name="androidObjectName"
-                value={nativeConfig.androidObjectName || ''}
-                onChange={(e) =>
-                  handleFieldChange('androidObjectName', e.target.value)
-                }
-                placeholder="e.g. SpaBookingSDK"
-                disabled={!isEditable}
-                className="font-mono text-xs mt-1"
-              />
-              <span className="text-[10px] text-slate-400">
-                Entry object responding to <code>.initialize()</code> &amp;{' '}
-                <code>.present()</code>
-              </span>
-              <EntryClassHint
-                scan={androidEntry}
-                contract="FSAMiniAppNativeEntry"
-                current={[nativeConfig.androidPackageName, nativeConfig.androidObjectName].filter(Boolean).join('.')}
-                onPick={(fq) => {
-                  if (!isEditable) return;
-                  const dot = fq.lastIndexOf('.');
-                  const pick = { androidPackageName: fq.slice(0, dot), androidObjectName: fq.slice(dot + 1) };
-                  if (onUpdateNativeSdkConfig) onUpdateNativeSdkConfig(pick);
-                  else {
-                    handleFieldChange('androidPackageName', pick.androidPackageName);
-                    handleFieldChange('androidObjectName', pick.androidObjectName);
-                  }
-                }}
-                disabled={!isEditable}
-              />
-              {allErrors['integrationConfigNativeSdk.androidObjectName'] && (
-                <p className="text-[11px] text-rose-600 mt-1">
-                  {allErrors['integrationConfigNativeSdk.androidObjectName']}
-                </p>
-              )}
-            </div>
-          </div>
+          )}
         </div>
-      </div>
+      </section>
+
+      {/* iOS */}
+      <section className="rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">iOS</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">An .xcframework in a .zip, up to 200 MB.</p>
+          </div>
+          {fileButton(Boolean(nativeConfig.iosArtifactFilename), isUploadingIos, '.zip,application/zip', handleIosFileUpload)}
+        </div>
+        {iosUploadError && <p className="text-sm text-rose-600 dark:text-rose-400">{iosUploadError}</p>}
+        {hasIos &&
+          fileSummary({
+            filename: nativeConfig.iosArtifactFilename,
+            sha: iosUploadSuccess?.sha256 || nativeConfig.iosChecksum,
+            perms: nativeConfig.iosDetectedPermissions,
+          })}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4">
+          {field('iosModuleName', 'Module', 'MyAppSDK')}
+          {field(
+            'iosTypeName',
+            'Entry class',
+            'MyAppSDKView',
+            <EntryClassHint
+              scan={iosEntry}
+              contract="FSAMiniAppNativeProtocol"
+              current={nativeConfig.iosTypeName || ''}
+              onPick={(v) => handleFieldChange('iosTypeName', v)}
+              disabled={!isEditable}
+            />,
+          )}
+        </div>
+      </section>
     </div>
   );
 }
-
-

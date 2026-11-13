@@ -133,7 +133,6 @@ export interface CreateMiniAppDto {
   name: string;
   tagline?: string;
   description?: string;
-  category?: string;
   organization?: string;
   organizationCode?: string;
   shortDescription?: string;

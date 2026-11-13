@@ -1,23 +1,7 @@
 "use client";
 
 import React, { useMemo, useEffect } from 'react';
-import { Button } from '@/components/ui/inputs';
-import {
-  StarIcon,
-  PackageIcon,
-  GlobeIcon,
-  ShieldCheckIcon,
-  ShieldIcon,
-  KeyIcon,
-  LockIcon,
-  ZapIcon,
-  VirusIcon,
-  DocumentTextIcon,
-  ClipboardCheckIcon,
-  CheckCircleIcon,
-  CheckIcon,
-  XCircleIcon,
-} from '@/components/ui/Icons';
+import { ShieldCheckIcon, LockIcon, ClipboardCheckIcon } from '@/components/ui/Icons';
 
 export type CheckCategory = 'vulnerability' | 'access' | 'supply_chain';
 
@@ -161,33 +145,6 @@ export function getRecommendedChecksForMethod(method: string): string[] {
   ).map((c) => c.id);
 }
 
-function renderCheckIcon(checkId: string, className = "w-5 h-5") {
-  switch (checkId) {
-    case 'sast':
-      return <ShieldCheckIcon className={className} />;
-    case 'dependency_scan':
-      return <PackageIcon className={className} />;
-    case 'secret_scan':
-      return <KeyIcon className={className} />;
-    case 'capability_gate':
-      return <LockIcon className={className} />;
-    case 'sbom':
-      return <ClipboardCheckIcon className={className} />;
-    case 'malware_scan':
-      return <VirusIcon className={className} />;
-    case 'license_compliance':
-      return <DocumentTextIcon className={className} />;
-    case 'domain_tls_audit':
-      return <GlobeIcon className={className} />;
-    case 'csp_headers_audit':
-      return <ShieldIcon className={className} />;
-    case 'dast_zap':
-      return <ZapIcon className={className} />;
-    default:
-      return <ShieldIcon className={className} />;
-  }
-}
-
 interface SecurityValidationSelectorProps {
   integrationMethod: string;
   selectedChecks: string[];
@@ -252,203 +209,86 @@ export default function SecurityValidationSelector({
     recommendedChecks.length === selectedCount &&
     recommendedChecks.every((id) => selectedChecks.includes(id));
 
+  const isPackage = normMethod === 'FLUTTER_PACKAGE' || normMethod === 'NATIVE_SDK';
+  const linkClass =
+    'font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed';
+
   return (
     <div className="space-y-5">
-      {/* Header with description & quick actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 shadow-sm">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h4 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <ShieldCheckIcon className="w-5 h-5 text-brand-600 dark:text-brand-400" />
-              <span>Security Validation Profile</span>
-            </h4>
-            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-              isAllSelected
-                ? 'bg-brand-100 text-brand-800 dark:bg-brand-900/50 dark:text-brand-300 border border-brand-300 dark:border-brand-700'
-                : 'bg-slate-100 text-slate-700 dark:bg-slate-700/60 dark:text-slate-300 border border-slate-300 dark:border-slate-600'
-            }`}>
-              <CheckIcon className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
-              {selectedCount} of {availableChecks.length} Selected
-            </span>
-          </div>
-          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
-            Configure automated CI/CD security audits and compliance gates for this MiniApp.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleSelectRecommended}
-            disabled={disabled}
-            className={`text-xs sm:text-sm h-8 !px-3 font-semibold transition-all inline-flex items-center gap-1.5 shadow-none ${
-              isRecommendedSelected
-                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200 border-emerald-400 dark:border-emerald-600 ring-1 ring-emerald-400/50'
-                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
-            }`}
-          >
-            <StarIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            <span>Recommended</span>
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleSelectAll}
-            disabled={disabled}
-            className={`text-xs sm:text-sm h-8 !px-3 font-semibold transition-all inline-flex items-center gap-1.5 shadow-none ${
-              isAllSelected
-                ? 'bg-brand-100 text-brand-800 dark:bg-brand-900/50 dark:text-brand-300 border-brand-300 dark:border-brand-700 ring-1 ring-brand-400/50'
-                : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
-            }`}
-          >
-            <CheckCircleIcon className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
-            <span>Select All</span>
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleClearAll}
-            disabled={disabled || selectedCount === 0}
-            className="text-xs sm:text-sm h-8 !px-3 font-semibold text-slate-500 dark:text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 border-slate-200 dark:border-slate-700 shadow-none inline-flex items-center gap-1.5"
-          >
-            <XCircleIcon className="w-3.5 h-3.5" />
-            <span>Clear</span>
-          </Button>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <p className="text-sm text-slate-700 dark:text-slate-300">
+          <span className="font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
+            {selectedCount} of {availableChecks.length}
+          </span>{' '}
+          scans on
+        </p>
+        <div className="flex items-center gap-4 text-xs">
+          <button type="button" onClick={handleSelectRecommended} disabled={disabled || isRecommendedSelected} className={linkClass}>
+            Use recommended
+          </button>
+          <button type="button" onClick={handleSelectAll} disabled={disabled || isAllSelected} className={linkClass}>
+            Turn all on
+          </button>
+          <button type="button" onClick={handleClearAll} disabled={disabled || selectedCount === 0} className={linkClass}>
+            Turn all off
+          </button>
         </div>
       </div>
 
-      {/* Mandatory Check Banner */}
-      <div className="p-3.5 rounded-xl bg-slate-100/90 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 text-xs shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 border border-brand-200 dark:border-brand-800/60 flex items-center justify-center shrink-0">
-            {normMethod === 'FLUTTER_PACKAGE' || normMethod === 'NATIVE_SDK' ? (
-              <PackageIcon className="w-4 h-4" />
-            ) : (
-              <GlobeIcon className="w-4 h-4" />
-            )}
-          </div>
-          <div>
-            <span className="font-bold text-slate-900 dark:text-slate-100">
-              {normMethod === 'FLUTTER_PACKAGE' || normMethod === 'NATIVE_SDK'
-                ? 'Stage 1: Source Ingestion & Integrity Verification (SHA-256 Digest)'
-                : 'Stage 1: Pre-Flight & SSRF Defense (DNS & Private IP Scope)'}
-            </span>
-            <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5">
-              Automatically enforced pipeline baseline for all {normMethod.replace('_', ' ')} submissions.
-            </p>
-          </div>
-        </div>
-        <span className="px-2.5 py-1 rounded font-bold uppercase tracking-wider bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] shrink-0 border border-slate-300 dark:border-slate-600">
-          Enforced
-        </span>
-      </div>
+      <p className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+        <LockIcon className="w-3.5 h-3.5 shrink-0" />
+        {isPackage
+          ? 'Always runs: package integrity check (SHA-256).'
+          : 'Always runs: domain and network safety check.'}
+      </p>
 
-      {/* Categorized Security Checks */}
-      <div className="space-y-5">
-        {CATEGORY_DEFINITIONS.map((category) => {
-          const checksInCat = availableChecks.filter((c) => c.category === category.id);
-          if (checksInCat.length === 0) return null;
+      {CATEGORY_DEFINITIONS.map((category) => {
+        const checksInCat = availableChecks.filter((c) => c.category === category.id);
+        if (checksInCat.length === 0) return null;
 
-          const selectedInCat = checksInCat.filter((c) => selectedChecks.includes(c.id)).length;
-          const CategoryIcon = category.icon;
-
-          return (
-            <div
-              key={category.id}
-              className="rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white/70 dark:bg-slate-800/40 p-4 space-y-3"
-            >
-              {/* Category Subheader */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center border ${category.accentColor}`}>
-                    <CategoryIcon className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h5 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                      {category.title}
-                    </h5>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {category.description}
-                    </p>
-                  </div>
-                </div>
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600">
-                  {selectedInCat} of {checksInCat.length}
-                </span>
-              </div>
-
-              {/* Cards Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-                {checksInCat.map((check) => {
-                  const isChecked = selectedChecks.includes(check.id);
-                  const isRec = check.isRecommended(normMethod);
-
-                  return (
-                    <div
-                      key={check.id}
-                      onClick={() => toggleCheck(check.id)}
-                      className={`p-3.5 rounded-xl border transition-all duration-200 cursor-pointer flex items-start gap-3 select-none ${
-                        isChecked
-                          ? 'border-brand-500 ring-1 ring-brand-500 bg-brand-50/50 dark:bg-brand-950/20 shadow-sm'
-                          : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-800/80 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-sm'
-                      } ${disabled ? 'opacity-70 cursor-not-allowed' : ''}`}
+        return (
+          <section key={category.id} className="space-y-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              {category.title}
+            </h3>
+            <ul className="rounded-2xl border border-slate-200/80 dark:border-slate-800 divide-y divide-slate-200/70 dark:divide-slate-800 overflow-hidden">
+              {checksInCat.map((check) => {
+                const isChecked = selectedChecks.includes(check.id);
+                const isRec = check.isRecommended(normMethod);
+                const inputId = `scan-${check.id}`;
+                return (
+                  <li key={check.id}>
+                    <label
+                      htmlFor={inputId}
+                      className={`flex items-start gap-3 px-4 py-3 transition-colors ${
+                        disabled ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                      }`}
                     >
-                      {/* Checkbox */}
-                      <div className="pt-0.5 shrink-0">
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => toggleCheck(check.id)}
-                          disabled={disabled}
-                          className="w-4 h-4 text-brand-600 rounded border-slate-300 dark:border-slate-600 focus:ring-brand-500 cursor-pointer"
-                        />
-                      </div>
-
-                      {/* Icon Avatar */}
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border transition-colors ${
-                        isChecked
-                          ? 'bg-brand-100 dark:bg-brand-900/60 text-brand-700 dark:text-brand-300 border-brand-300 dark:border-brand-700'
-                          : 'bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'
-                      }`}>
-                        {renderCheckIcon(check.id, "w-4 h-4")}
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                          <span className={`text-sm font-bold ${
-                            isChecked
-                              ? 'text-brand-950 dark:text-white'
-                              : 'text-slate-900 dark:text-slate-100'
-                          }`}>
-                            {check.name}
-                          </span>
-
-                          {isRec && (
-                            <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
-                              <StarIcon className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
-                              Recommended
-                            </span>
-                          )}
-
-                          <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500 ml-auto shrink-0">
-                            {check.tool}
-                          </span>
-                        </div>
-
-                        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-2">
+                      <input
+                        id={inputId}
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleCheck(check.id)}
+                        disabled={disabled}
+                        className="mt-0.5 w-4 h-4 shrink-0 rounded border-slate-300 dark:border-slate-600 text-brand-600 focus:ring-brand-500"
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                          <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{check.name}</span>
+                          {isRec && <span className="text-xs text-slate-500 dark:text-slate-400">Recommended</span>}
+                        </span>
+                        <span className="block mt-0.5 text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
                           {check.description}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+                        </span>
+                      </span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        );
+      })}
     </div>
   );
 }

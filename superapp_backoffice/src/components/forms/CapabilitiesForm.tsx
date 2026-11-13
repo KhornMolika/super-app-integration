@@ -6,14 +6,6 @@ import { miniappsApi } from '@/api';
 import { permissionsApi, Permission, CapabilityItem } from '@/api/permissions.api';
 import {
   CheckIcon,
-  ShieldIcon,
-  ShieldCheckIcon,
-  ZapIcon,
-  AlertTriangleIcon,
-  SparklesIcon,
-  CameraIcon,
-  GlobeIcon,
-  PackageIcon,
   XIcon,
 } from '@/components/ui/Icons';
 import { PlusCircle } from 'lucide-react';
@@ -361,7 +353,6 @@ export default function CapabilitiesForm({
         gitUrl,
         gitBranch,
         gitPath,
-        category: formData.category,
         name: formData.name,
         appId: formData.appId,
       });
@@ -533,80 +524,51 @@ export default function CapabilitiesForm({
   const activeCount = formData.permissions?.length || 0;
 
   return (
-    <div className="space-y-5 animate-in fade-in duration-300">
-      {/* Discovery Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800">
-        <div>
-          <div className="flex items-center gap-2">
-            <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <ShieldCheckIcon className="w-4 h-4 text-brand-600 dark:text-brand-400" />
-              <span>Capabilities</span>
-            </h4>
-            <span
-              className={`px-2 py-0.5 rounded-full text-[11px] font-semibold inline-flex items-center gap-1 transition-all ${isLoadingHostCapas
-                  ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
-                  : hasAutoDetected && !isManuallyModified
-                    ? 'bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
-                    : 'bg-brand-100 text-brand-800 dark:bg-brand-950/60 dark:text-brand-300 border border-brand-200 dark:border-brand-800'
-                }`}
-            >
-              {isLoadingHostCapas ? (
-                <>
-                  <svg className="animate-spin w-2.5 h-2.5 text-brand-500" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                  </svg>
-                  <span>Syncing Shell...</span>
-                </>
-              ) : hasAutoDetected && !isManuallyModified ? (
-                <>
-                  <ZapIcon className="w-3 h-3 text-amber-500 fill-amber-500/20" />
-                  <span>{activeCount} Auto-Detected</span>
-                </>
-              ) : (
-                <span>{activeCount} Capabilities Selected</span>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-slate-700 dark:text-slate-300">
+          {isLoadingHostCapas ? (
+            'Loading features...'
+          ) : (
+            <>
+              <span className="font-semibold text-slate-900 dark:text-slate-100 tabular-nums">{activeCount}</span> selected
+              {hasAutoDetected && !isManuallyModified && activeCount > 0 && (
+                <span className="text-slate-500 dark:text-slate-400"> · found in your code</span>
               )}
-            </span>
-          </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Select native device and bridge features needed by your MiniApp.
-          </p>
-        </div>
-
-        <Button
+            </>
+          )}
+        </p>
+        <button
           type="button"
-          variant="outline"
           onClick={handleAutoDetect}
           disabled={isDetecting}
-          className="shrink-0 text-xs h-8 px-3 font-semibold inline-flex items-center gap-1.5 border-brand-500/40 hover:bg-brand-50 text-brand-700 dark:text-brand-300 dark:hover:bg-brand-950/40 shadow-xs transition-all self-start sm:self-auto"
+          className="h-8 px-3 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 inline-flex items-center gap-1.5 disabled:opacity-50 transition-colors"
         >
           {isDetecting ? (
             <>
-              <svg className="animate-spin w-3 h-3 text-brand-500" fill="none" viewBox="0 0 24 24">
+              <svg className="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24" aria-hidden="true">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
               </svg>
-              <span>Scanning...</span>
+              Detecting...
             </>
           ) : (
-            <>
-              <ZapIcon className="w-3 h-3 text-amber-500" />
-              <span>Auto-Detect</span>
-            </>
+            'Detect from code'
           )}
-        </Button>
+        </button>
       </div>
 
       {detectionNotice && (
-        <div className="p-3 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs flex items-center justify-between gap-2 font-medium">
+        <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs flex items-center justify-between gap-2">
           <span className="flex items-center gap-1.5">
-            <CheckIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <CheckIcon className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400 shrink-0" />
             <span>{detectionNotice}</span>
           </span>
           <button
             type="button"
             onClick={() => setDetectionNotice(null)}
-            className="text-emerald-600 hover:text-emerald-800 p-0.5 rounded"
+            aria-label="Dismiss"
+            className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-0.5 rounded"
           >
             <XIcon className="w-3.5 h-3.5" />
           </button>
@@ -631,8 +593,8 @@ export default function CapabilitiesForm({
             <div
               key={type}
               className={`rounded-2xl border transition-all duration-200 overflow-hidden ${isActive
-                  ? 'bg-white dark:bg-slate-900 border-brand-500/80 dark:border-brand-500/60 shadow-xs ring-1 ring-brand-500/20'
-                  : 'bg-white/70 dark:bg-slate-900/40 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                  ? 'bg-white dark:bg-slate-900 border-brand-500/60'
+                  : 'bg-white dark:bg-slate-900/40 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                 }`}
             >
               {/* Header Row: Icon + Title + Status + Switch */}
@@ -644,7 +606,7 @@ export default function CapabilitiesForm({
                   }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border shadow-2xs ${visual.bg}`}>
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
                     {visual.icon}
                   </div>
                   <div className="min-w-0">
@@ -653,16 +615,8 @@ export default function CapabilitiesForm({
                         {visual.title || type}
                       </h4>
 
-                      {isWhitelisted ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                          <CheckIcon className="w-2.5 h-2.5" />
-                          <span>Host Supported</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-                          <SparklesIcon className="w-2.5 h-2.5 text-indigo-500" />
-                          <span>Proposal Requested</span>
-                        </span>
+                      {!isWhitelisted && (
+                        <span className="text-xs text-slate-500 dark:text-slate-400">Not in the Super App yet</span>
                       )}
                     </div>
                   </div>
@@ -680,7 +634,7 @@ export default function CapabilitiesForm({
                         disabled={!isEditable}
                         onClick={() => handleFieldChange(type, 'required', true)}
                         className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition ${isRequired
-                            ? 'bg-white dark:bg-slate-900 text-rose-700 dark:text-rose-400 shadow-2xs'
+                            ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
                             : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
                           }`}
                       >
@@ -691,7 +645,7 @@ export default function CapabilitiesForm({
                         disabled={!isEditable}
                         onClick={() => handleFieldChange(type, 'required', false)}
                         className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition ${!isRequired
-                            ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-2xs'
+                            ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
                             : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
                           }`}
                       >
@@ -716,32 +670,20 @@ export default function CapabilitiesForm({
               {isActive && (
                 <div className="px-3.5 pb-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/20 space-y-2">
                   {!isWhitelisted && (
-                    <div className="p-2.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50 text-[11px] text-indigo-900 dark:text-indigo-200 flex items-start gap-2">
-                      <SparklesIcon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
-                      <span>
-                        <strong>Host Extension Request:</strong> This capability is not yet in the host shell. Submitting this MiniApp will automatically log a Capability Proposal for SuperApp administrators to review and inject support.
-                      </span>
-                    </div>
-                  )}
-
-                  {(!activePerm.purpose || !activePerm.purpose.trim()) && (
-                    <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-300 flex items-center gap-1.5 font-medium">
-                      <AlertTriangleIcon className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                      <span>
-                        <strong>Action Required:</strong> Please enter the specific reason why {formData.name || 'your MiniApp'} requires {visual.title || type} access.
-                      </span>
-                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Submitting asks a Super Admin to add this feature to the Super App.
+                    </p>
                   )}
 
                   <div className="flex items-center justify-between">
                     <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                      <span>Purpose Description</span>
+                      <span>Why your app needs it</span>
                       <span className="text-rose-500 font-bold">*</span>
                     </Label>
                     {compliant ? (
-                      <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
-                        <CheckIcon className="w-2.5 h-2.5" />
-                        <span>Compliant</span>
+                      <span className="text-xs font-medium text-brand-600 dark:text-brand-400 flex items-center gap-1">
+                        <CheckIcon className="w-3 h-3" />
+                        <span>Store-ready</span>
                       </span>
                     ) : isEditable && activePerm.purpose ? (
                       <button
@@ -751,10 +693,9 @@ export default function CapabilitiesForm({
                           const formatted = formatCompliantPurpose(type, activePerm.purpose, formData.name);
                           handleFieldChange(type, 'purpose', formatted);
                         }}
-                        className="text-[11px] font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-brand-50 dark:hover:bg-brand-950/40 transition"
+                        className="text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition"
                       >
-                        <SparklesIcon className="w-3 h-3 text-brand-500" />
-                        <span>Auto-Format</span>
+                        <span>Tidy wording</span>
                       </button>
                     ) : null}
                   </div>
@@ -772,7 +713,7 @@ export default function CapabilitiesForm({
                       }
                     }}
                     placeholder={`e.g. ${formData.name || 'This MiniApp'} requires ${type.toLowerCase()} access to ${meta?.defaultAction || 'provide core application features'}.`}
-                    className={`h-8 text-xs ${purposeError ? 'border-rose-500 bg-rose-50/50' : 'bg-white dark:bg-slate-900'
+                    className={`h-9 text-sm ${purposeError ? 'border-rose-500 ring-1 ring-rose-500' : 'bg-white dark:bg-slate-900'
                       }`}
                   />
                   {purposeError && (
@@ -787,13 +728,11 @@ export default function CapabilitiesForm({
 
       {/* Request Custom Capability Section (Clean, Compact, Minimal) */}
       {isEditable && (
-        <div className="p-4 rounded-2xl bg-slate-50/60 dark:bg-slate-900/40 border border-dashed border-slate-300 dark:border-slate-800 space-y-3">
+        <div className="p-4 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 space-y-3">
           <div className="flex items-center justify-between">
-            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-              <PackageIcon className="w-3.5 h-3.5 text-slate-400" />
-              <span>Request Custom Capability</span>
+            <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+              Need a feature that isn&apos;t listed?
             </h4>
-            <span className="text-[11px] text-slate-400">Propose an unlisted device feature</span>
           </div>
 
           <div className="space-y-1">
@@ -841,7 +780,7 @@ export default function CapabilitiesForm({
           <div className="space-y-1">
             <div className="flex items-center justify-between">
               <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Purpose Description <span className="text-rose-500 font-bold">*</span>
+                Why your app needs it <span className="text-rose-500 font-bold">*</span>
               </Label>
               {customKey && (
                 <button
@@ -851,10 +790,9 @@ export default function CapabilitiesForm({
                     const formatted = formatCompliantPurpose(customKey, customPurpose, formData.name);
                     setCustomPurpose(formatted);
                   }}
-                  className="text-[11px] font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-brand-50 dark:hover:bg-brand-950/40 transition"
+                  className="text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition"
                 >
-                  <SparklesIcon className="w-3 h-3 text-brand-500" />
-                  <span>Auto-Format</span>
+                  <span>Tidy wording</span>
                 </button>
               )}
             </div>
@@ -864,7 +802,7 @@ export default function CapabilitiesForm({
                 value={customPurpose}
                 onChange={(e) => setCustomPurpose(e.target.value)}
                 placeholder="e.g. Tap contactless smart cards to verify identity tokens."
-                className="h-8 text-xs bg-white dark:bg-slate-900 flex-1"
+                className="h-9 text-sm bg-white dark:bg-slate-900 flex-1"
               />
 
               <Button

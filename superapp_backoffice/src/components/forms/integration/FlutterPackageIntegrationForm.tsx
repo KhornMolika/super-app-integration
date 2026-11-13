@@ -111,10 +111,6 @@ export default function FlutterPackageIntegrationForm({
   const [isTestingResolution, setIsTestingResolution] = useState(false);
   const [resolutionResult, setResolutionResult] = useState<any>(null);
   const [isSyncingPubspec, setIsSyncingPubspec] = useState(false);
-  const [isRebuildingSandbox, setIsRebuildingSandbox] = useState(false);
-  const [sandboxRebuildMessage, setSandboxRebuildMessage] = useState<
-    string | null
-  >(null);
 
   const loadPubspecStatus = async () => {
     try {
@@ -247,21 +243,6 @@ export default function FlutterPackageIntegrationForm({
       });
     } finally {
       setIsSyncingPubspec(false);
-    }
-  };
-
-  const handleRebuildSandbox = async () => {
-    try {
-      setIsRebuildingSandbox(true);
-      setSandboxRebuildMessage(null);
-      const res = await pubspecApi.triggerSandboxBuild();
-      setSandboxRebuildMessage(
-        res?.message || "Sandbox compilation triggered in background.",
-      );
-    } catch (err: any) {
-      setSandboxRebuildMessage(`Failed to trigger sandbox build: ${err.message}`);
-    } finally {
-      setIsRebuildingSandbox(false);
     }
   };
 
@@ -573,7 +554,7 @@ export default function FlutterPackageIntegrationForm({
               (resVal.error.toLowerCase().includes("not found") ||
                 resVal.error.includes("404"))
             ) {
-              resVal.error = `File 'pubspec.yaml' not found or repository is private. If this repository is private, please select '🔒 Private Repository' above and configure SSH Deploy Key or Access Token.`;
+              resVal.error = `File 'pubspec.yaml' not found or repository is private. If this repository is private, choose Private under Access and add a deploy key or token.`;
             }
             if (effectivePkg) {
               resVal.packageName = effectivePkg;
@@ -876,8 +857,7 @@ export default function FlutterPackageIntegrationForm({
   }, [flutterConfig.packageName, currentMode]);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
-      {/* Reusable Mode Selector */}
+    <div className="space-y-6">
       <FlutterModeSelector
         mode={currentMode}
         onSelectMode={handleSelectMode}
@@ -946,14 +926,11 @@ export default function FlutterPackageIntegrationForm({
         isPrechecking={isPrechecking}
         isTestingResolution={isTestingResolution}
         isSyncingPubspec={isSyncingPubspec}
-        isRebuildingSandbox={isRebuildingSandbox}
         precheckResult={precheckResult}
         resolutionResult={resolutionResult}
-        sandboxRebuildMessage={sandboxRebuildMessage}
         onRunPrecheck={handleRunPrecheck}
         onSyncPubspec={handleSyncPubspec}
         onTestResolution={handleTestResolution}
-        onRebuildSandbox={handleRebuildSandbox}
         onClosePrecheckResult={() => setPrecheckResult(null)}
         onCloseResolutionResult={() => setResolutionResult(null)}
       />

@@ -18,7 +18,6 @@ interface PreviewModalProps {
   url: string;
   title?: string;
   version?: string;
-  category?: string;
   appId?: string;
   apkUrl?: string;
   isFlutter?: boolean;
@@ -41,7 +40,6 @@ export default function PreviewModal({
   url,
   title = 'MiniApp',
   version = '1.0.0',
-  category,
   appId,
   apkUrl = '/api/download-apk?type=test&version=v0.0.1',
   isFlutter = false,

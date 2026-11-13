@@ -34,9 +34,11 @@ import {
   extractValidationErrors,
 } from '../utils/registerPayload.utils';
 import {
-  isStepRequiredInfoComplete,
+  isWizardStepComplete,
   getStepsCompletionMap,
+  getWizardStepMissing,
 } from '../utils/stepValidation.utils';
+import { STEP_SECTIONS, TOTAL_STEPS } from '../constants';
 
 export function useMiniAppRegister() {
   const router = useRouter();
@@ -92,20 +94,20 @@ export function useMiniAppRegister() {
   // Step state with query parameter synchronization
   const stepQuery = searchParams?.get('step');
   const parsedStep = stepQuery ? parseInt(stepQuery, 10) : 1;
-  const initialStep = !isNaN(parsedStep) && parsedStep >= 1 && parsedStep <= 6 ? parsedStep : 1;
+  const initialStep = !isNaN(parsedStep) && parsedStep >= 1 && parsedStep <= TOTAL_STEPS ? parsedStep : 1;
   const [step, setStepState] = useState(initialStep);
   const [maxVisitedStep, setMaxVisitedStep] = useState(initialStep);
 
   const setStep = (newStep: number | ((prev: number) => number)) => {
     setStepState((prev) => {
       const resolved = typeof newStep === 'function' ? newStep(prev) : newStep;
-      const clamped = Math.max(1, Math.min(6, resolved));
+      const clamped = Math.max(1, Math.min(TOTAL_STEPS, resolved));
 
       // Guard: do not allow advancing if any previous step is incomplete
       if (clamped > 1) {
         for (let s = 1; s < clamped; s++) {
-          if (!isStepRequiredInfoComplete(s, formData, pendingArchiveFile)) {
-            toast.warning(`Please complete Step ${s} before proceeding.`, 'Required Info Missing');
+          if (!isWizardStepComplete(s, formData, pendingArchiveFile)) {
+            toast.warning(`Finish step ${s} first.`, 'Missing information');
             router.replace(`/miniapps/register?step=${s}`, { scroll: false });
             return s;
           }
@@ -121,7 +123,7 @@ export function useMiniAppRegister() {
   useEffect(() => {
     if (stepQuery) {
       const p = parseInt(stepQuery, 10);
-      if (!isNaN(p) && p >= 1 && p <= 6 && p !== step) {
+      if (!isNaN(p) && p >= 1 && p <= TOTAL_STEPS && p !== step) {
         setStepState(p);
         setMaxVisitedStep((oldMax) => Math.max(oldMax, p));
       }
@@ -150,8 +152,13 @@ export function useMiniAppRegister() {
 
   // Check if all required info for current step is completed
   const isCurrentStepComplete = useMemo(() => {
-    return isStepRequiredInfoComplete(step, formData, pendingArchiveFile);
+    return isWizardStepComplete(step, formData, pendingArchiveFile);
   }, [step, formData, pendingArchiveFile]);
+
+  const missingForStep = useMemo(
+    () => getWizardStepMissing(step, formData, pendingArchiveFile),
+    [step, formData, pendingArchiveFile],
+  );
 
   // Synchronize completed steps to the sidebar navigation
   useEffect(() => {
@@ -162,7 +169,7 @@ export function useMiniAppRegister() {
   useEffect(() => {
     if (step > 1) {
       for (let s = 1; s < step; s++) {
-        if (!isStepRequiredInfoComplete(s, formData, pendingArchiveFile)) {
+        if (!isWizardStepComplete(s, formData, pendingArchiveFile)) {
           setStepState(s);
           router.replace(`/miniapps/register?step=${s}`, { scroll: false });
           break;
@@ -212,7 +219,6 @@ export function useMiniAppRegister() {
           organization: userOrgName,
           organizationCode: userOrgCode,
           organizationId: userOrgId,
-          category: userOrgName,
         } : {}),
       }));
     }
@@ -407,7 +413,7 @@ export function useMiniAppRegister() {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    if (name === 'organization' || name === 'category') {
+    if (name === 'organization') {
       const userOrg = user?.organization;
       const userOrgName = typeof userOrg === 'string' ? userOrg : userOrg?.name;
       if (userOrgName) {
@@ -416,7 +422,6 @@ export function useMiniAppRegister() {
       setFormData((prev) => ({
         ...prev,
         organization: value,
-        category: value,
       }));
       return;
     }
@@ -686,7 +691,16 @@ export function useMiniAppRegister() {
     }
   };
 
-  const validateStep = async (currentStep: number) => {
+  /** Validates every section behind a wizard step. */
+  const validateStep = async (wizardStep: number) => {
+    let ok = true;
+    for (const section of STEP_SECTIONS[wizardStep - 1] || []) {
+      ok = (await validateSection(section)) && ok;
+    }
+    return ok;
+  };
+
+  const validateSection = async (currentStep: number) => {
     const result = await validateMiniAppStep(currentStep, {
       ...formData,
       pendingArchiveFile: pendingArchiveFile || undefined,
@@ -710,7 +724,7 @@ export function useMiniAppRegister() {
 
   const nextStep = async () => {
     if (!isCurrentStepComplete) {
-      toast.warning('Please complete all required fields before proceeding to the next step.', 'Required Info Missing');
+      toast.warning('Fill in the missing fields to continue.', 'Missing information');
       await validateStep(step);
       return;
     }
@@ -761,7 +775,7 @@ export function useMiniAppRegister() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    for (let s = 1; s <= 5; s++) {
+    for (let s = 1; s < TOTAL_STEPS; s++) {
       const valid = await validateStep(s);
       if (!valid) {
         setIsSubmitting(false);
@@ -902,7 +916,7 @@ export function useMiniAppRegister() {
     }
     toast.success('Capability proposal submitted! Admins can now review and inject code.');
     setShowUnsupportedModal(false);
-    setStep(5);
+    setStep(STEP_SECTIONS.findIndex((secs) => secs.includes(5)) + 1);
   };
 
   const handleFixLater = async () => {
@@ -932,6 +946,7 @@ export function useMiniAppRegister() {
     nextStep,
     prevStep,
     isCurrentStepComplete,
+    missingForStep,
     completionMap,
     maxVisitedStep,
     isSubmitting,
