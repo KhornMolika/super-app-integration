@@ -157,9 +157,10 @@ export class SuperAppService implements OnApplicationBootstrap {
 
     const currentVer = latest.superAppVersion || 'v1.0.0';
 
-    // A version whose test build failed was never published: hand it out
-    // again, so failed builds do not use up version numbers.
-    if (await this.isFailedTestVersion(currentVer)) {
+    // A version that was never published (its builds failed, or the app that
+    // held it was deleted) is handed out again: failed builds do not use up
+    // version numbers.
+    if (await this.isReusableVersion(latest)) {
       return currentVer;
     }
 
@@ -194,13 +195,30 @@ export class SuperAppService implements OnApplicationBootstrap {
   }
 
   /**
+   * True when [row]'s version may be built again: no build of it succeeded,
+   * and no mini app is building, testing or live with it. Also true for the
+   * older rule: every app built with it has its build failed.
+   */
+  async isReusableVersion(row: SuperAppCapability | null): Promise<boolean> {
+    if (!row?.superAppVersion) return false;
+    if (await this.isFailedTestVersion(row.superAppVersion)) return true;
+    if (row.publishedAt) return false;
+    const holders = await this.miniAppRepository.find({
+      where: { activeTestVersion: row.superAppVersion },
+    });
+    return holders.every(
+      (a) => String(a.lifecycleStatus) === 'BUILD_FAILED' || String(a.buildStatus) === 'FAILED',
+    );
+  }
+
+  /**
    * Preview the next suggested version tag without immediately saving
    */
   async getNextSuggestedVersion(): Promise<string> {
     const latest = await this.findLatestCapability();
     if (!latest) return 'v1.0.0';
     const currentVer = latest.superAppVersion || 'v1.0.0';
-    if (await this.isFailedTestVersion(currentVer)) return currentVer;
+    if (await this.isReusableVersion(latest)) return currentVer;
     return this.computeNextVersion(currentVer);
   }
 

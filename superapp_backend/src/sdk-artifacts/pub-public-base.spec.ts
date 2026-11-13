@@ -1,4 +1,4 @@
-import { archiveFileName, onNexusBase, publicPubBase } from './pub-registry-proxy.controller';
+import { archiveFileName, nexusArchiveStoragePath, onNexusBase, publicPubBase } from './pub-registry-proxy.controller';
 
 const req = (headers: Record<string, string>, host = 'backend:3000', protocol = 'http') =>
   ({ headers, protocol, get: (k: string) => (k.toLowerCase() === 'host' ? host : undefined) }) as any;
@@ -32,5 +32,14 @@ describe('archive links from Nexus', () => {
 
   it('file names ignore the query string', () => {
     expect(archiveFileName('https://h/repository/pub-hosted/a/fsa_hr_miniapp-2.0.0.tar.gz?sig=1')).toBe('fsa_hr_miniapp-2.0.0.tar.gz');
+  });
+});
+
+describe('nexusArchiveStoragePath (where Nexus pub-hosted keeps an archive)', () => {
+  it('<name>/<version>/<name>-<version>.tar.gz, as the Nexus browser shows it', () => {
+    const base = 'http://super-app-nexus-svc:8081/nexus/';
+    const want = 'http://super-app-nexus-svc:8081/nexus/repository/pub-hosted/fsa_hr_miniapp/2.0.0/fsa_hr_miniapp-2.0.0.tar.gz';
+    expect(nexusArchiveStoragePath(base, 'fsa_hr_miniapp', 'fsa_hr_miniapp-2.0.0.tar.gz')).toBe(want);
+    expect(nexusArchiveStoragePath(base, 'fsa_hr_miniapp', '2.0.0.tar.gz')).toBe(want);
   });
 });

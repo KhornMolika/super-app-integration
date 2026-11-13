@@ -12,6 +12,7 @@ import { ReleaseAssemblyVerificationController } from './release-assembly/releas
 import { ReleaseAssemblyVerificationService } from './release-assembly/release-assembly-verification.service';
 
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { SuperAppCapability } from '../super-app/entities/super-app-capability.entity';
 import { MiniApp } from '../miniapps/entities/miniapp.entity';
 import { MiniAppIssue } from '../miniapps/entities/miniapp-issue.entity';
 import { Identity } from '../identities/entities/identity.entity';
@@ -41,7 +42,7 @@ import { PubspecInjectorController } from './flutter/pubspec-injector.controller
   imports: [
     ConfigModule,
     forwardRef(() => AuthModule),
-    TypeOrmModule.forFeature([MiniApp, MiniAppIssue, Identity]),
+    TypeOrmModule.forFeature([MiniApp, MiniAppIssue, Identity, SuperAppCapability]),
     NotificationsModule,
     forwardRef(() => AuditModule),
     CapabilitiesModule,

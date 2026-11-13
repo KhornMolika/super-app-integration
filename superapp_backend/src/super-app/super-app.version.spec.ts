@@ -1,10 +1,11 @@
 import { SuperAppService } from './super-app.service';
 
 describe('SuperAppService test build versions', () => {
-  function serviceWith(latestVersion: string, appsWithLatest: any[]) {
+  function serviceWith(latestVersion: string, appsWithLatest: any[], publishedAt: Date | null = null) {
     const capRepo = {
-      find: jest.fn(async () => [{ superAppVersion: latestVersion, capabilities: ['x'] }]),
+      find: jest.fn(async () => [{ superAppVersion: latestVersion, capabilities: ['x'], publishedAt }]),
       save: jest.fn(async (v: any) => v),
+      update: jest.fn(async () => ({ affected: 1 })),
     };
     const appRepo = { find: jest.fn(async () => appsWithLatest) };
     const caps = { findAll: jest.fn(async () => []) };
@@ -35,8 +36,19 @@ describe('SuperAppService test build versions', () => {
     }
   });
 
-  it('moves on when no mini app used the version (a release or manual version)', async () => {
-    const { svc } = serviceWith('v1.0.5', []);
+  it('reuses a never-published version whose app is gone (deleted after its build failed)', async () => {
+    const { svc, capRepo } = serviceWith('v1.0.5', []);
+    expect(await svc.getAndRegisterNextVersion()).toBe('v1.0.5');
+    expect(capRepo.save).not.toHaveBeenCalled();
+  });
+
+  it('moves on once a build of the version succeeded (published), even with no app holding it', async () => {
+    const { svc } = serviceWith('v1.0.5', [], new Date('2026-11-12T02:21:00Z'));
+    expect(await svc.getAndRegisterNextVersion()).toBe('v1.0.6');
+  });
+
+  it('a published version that an app is testing is not reused', async () => {
+    const { svc } = serviceWith('v1.0.5', [{ lifecycleStatus: 'TESTING', buildStatus: 'COMPLETED' }], new Date());
     expect(await svc.getAndRegisterNextVersion()).toBe('v1.0.6');
   });
 });

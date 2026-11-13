@@ -19,6 +19,17 @@ import * as path from 'path';
 import { nexusApiBaseUrl } from '../integrations/nexus/nexus-url';
 import { DEFAULT_PUB_GATEWAY } from '../integrations/flutter/miniapp-dependency.util';
 
+/**
+ * Where Nexus pub-hosted stores an archive: <name>/<version>/<name>-<version>.tar.gz
+ * (as the Nexus browser shows it). [archiveFilename] is "<name>-<version>.tar.gz"
+ * or "<version>.tar.gz".
+ */
+export function nexusArchiveStoragePath(nexusBase: string, packageName: string, archiveFilename: string): string {
+  const base = nexusBase.replace(/\/+$/, '');
+  const version = archiveFilename.replace(/\.tar\.gz$/, '').replace(new RegExp(`^${packageName}-`), '');
+  return `${base}/repository/pub-hosted/${packageName}/${version}/${packageName}-${version}.tar.gz`;
+}
+
 /** The file name of an archive link (no query string). */
 export function archiveFileName(archiveUrl: string): string {
   try {
@@ -288,11 +299,11 @@ export class PubRegistryProxyController {
   ) {
     const nexusBase = this.getNexusBaseUrl();
     const nexusAuth = this.getNexusAuthHeader();
-    // The archive link Nexus itself lists for this file (its layout is Nexus's
-    // business), else the conventional pub path
+    // The archive link Nexus itself lists for this file, else where Nexus
+    // pub-hosted stores it: <name>/<version>/<name>-<version>.tar.gz
     const upstreamUrl =
       (await this.nexusArchiveUrl(packageName, archiveFilename)) ||
-      `${nexusBase}/repository/pub-hosted/packages/${packageName}/versions/${archiveFilename}`;
+      nexusArchiveStoragePath(nexusBase, packageName, archiveFilename);
 
     try {
       const upstreamRes = await fetch(upstreamUrl, {

@@ -1,14 +1,15 @@
 import { testApkBuildMode } from '../../common/utils/build-mode.util';
 import { isPgUuid } from '../../common/utils/uuid.util';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
 import { Identity } from '../../identities/entities/identity.entity';
+import { SuperAppCapability } from '../../super-app/entities/super-app-capability.entity';
 import { JenkinsService } from '../jenkins/jenkins.service';
 import { latestCodegenMrIid } from '../../miniapps/helpers/native-sdk-config.helper';
 import { NexusIntegrationService } from '../nexus/nexus-integration.service';
@@ -47,7 +48,25 @@ export class ReleaseAssemblyVerificationService {
     private readonly miniappRepository: Repository<MiniApp>,
     @InjectRepository(Identity)
     private readonly userRepository: Repository<Identity>,
+    @Optional()
+    @InjectRepository(SuperAppCapability)
+    private readonly versionRepository?: Repository<SuperAppCapability>,
   ) {}
+
+  /**
+   * Records that a build of [version] succeeded, so the next build gets a new
+   * Super App version (an unpublished one is reused: SuperAppService).
+   */
+  private async markVersionPublished(version?: string): Promise<void> {
+    const v = String(version || '').trim();
+    if (!v || !this.versionRepository) return;
+    const formatted = v.startsWith('v') ? v : `v${v}`;
+    try {
+      await this.versionRepository.update({ superAppVersion: formatted, publishedAt: IsNull() }, { publishedAt: new Date() });
+    } catch (err: any) {
+      this.logger.warn(`Could not mark Super App ${formatted} as published: ${err?.message || err}`);
+    }
+  }
 
   /**
    * Performs Release Assembly Checksum Verification & SuperApp Release Assembly
@@ -493,6 +512,7 @@ export class ReleaseAssemblyVerificationService {
     const isSuccess = body.status === 'COMPLETED' || body.status === 'SUCCESS';
 
     if (isSuccess) {
+      await this.markVersionPublished(body.releaseVersion);
       const buildingApps = await this.resolveBuildingApps(body);
 
       await this.miniappRepository

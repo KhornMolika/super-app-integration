@@ -20,6 +20,13 @@ export class SuperAppCapability {
   @Column('simple-array')
   capabilities!: string[];
 
+  /**
+   * When a build of this version succeeded (its APK was published). A version
+   * without it was never published, so a new build may use it again.
+   */
+  @Column({ type: 'timestamptz', nullable: true })
+  publishedAt?: Date | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 
