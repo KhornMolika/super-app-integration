@@ -178,6 +178,37 @@ describe('MiniAppVersionsService: a live app with a revision', () => {
   });
 });
 
+describe('MiniAppVersionsService.servingCapabilities', () => {
+  const LIVE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const NEW = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  const NONE = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+
+  it('serves the live row, never the pending revision; an unreleased app its working row', async () => {
+    const { svc } = setup();
+    await svc.syncFromApp({
+      id: LIVE,
+      lifecycleStatus: 'ACTIVE',
+      currentReleaseVersion: '1.0.0',
+      capabilities: [{ type: 'camera', required: true }],
+      pendingRevision: { capabilities: ['camera', 'location'] },
+    });
+    await svc.syncFromApp({ id: NEW, lifecycleStatus: 'TESTING', capabilities: ['nfc'], pendingRevision: null });
+
+    const served = await svc.servingCapabilities([LIVE, NEW, NONE, 'not-a-uuid']);
+    expect(served.get(LIVE)).toEqual([{ type: 'camera', required: true }]);
+    expect(served.get(NEW)).toEqual(['nfc']);
+    // No version row: left out, so the caller falls back to mini_apps.capabilities
+    expect(served.has(NONE)).toBe(false);
+    expect(served.size).toBe(2);
+  });
+
+  it('an app whose version declares nothing is served an empty list', async () => {
+    const { svc } = setup();
+    await svc.syncFromApp({ id: NEW, lifecycleStatus: 'DRAFT', capabilities: [], pendingRevision: null });
+    expect((await svc.servingCapabilities([NEW])).get(NEW)).toEqual([]);
+  });
+});
+
 describe('parseDeclaredCapabilities', () => {
   it('reads entries like the capability gate', () => {
     expect(

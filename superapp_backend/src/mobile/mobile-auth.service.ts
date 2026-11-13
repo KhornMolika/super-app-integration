@@ -1,5 +1,6 @@
 import { isPgUuid } from '../common/utils/uuid.util';
 import { CapabilityGateService } from '../capabilities/capability-gate.service';
+import { MiniAppVersionsService } from '../miniapps/versions/miniapp-versions.service';
 import { loadPasswordHash } from '../identities/identity-credentials.helper';
 import {
   BadRequestException,
@@ -102,6 +103,8 @@ export class MobileAuthService {
     private readonly consumerProfiles?: Repository<ConsumerProfile>,
     @Optional()
     private readonly capabilityGate?: CapabilityGateService,
+    @Optional()
+    private readonly versions?: MiniAppVersionsService,
   ) {}
 
   get accessTtlSeconds(): number {
@@ -753,7 +756,10 @@ export class MobileAuthService {
     // keeps the Mini App registered but not launchable. Enforced server-side,
     // so an outdated client that ignores `launchable` still cannot open it.
     if (this.capabilityGate) {
-      const availability = await this.capabilityGate.evaluate(miniApp.capabilities);
+      // The capabilities of the version being served; mini_apps.capabilities
+      // only when the app has no version row yet.
+      const served = (await this.versions?.servingCapabilities([miniApp.id]))?.get(miniApp.id);
+      const availability = await this.capabilityGate.evaluate(served ?? miniApp.capabilities);
       if (!availability.launchable) {
         throw new ForbiddenException(
           `${availability.unavailableReason}: this Mini App needs a capability the Super App does not provide yet.`,

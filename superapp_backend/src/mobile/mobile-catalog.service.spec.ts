@@ -135,6 +135,20 @@ describe('MobileCatalogService.list', () => {
     ]);
   });
 
+  it('serves the capabilities of the version each app is on, else mini_apps.capabilities', async () => {
+    const { repo } = qbFor([
+      makeApp({ id: 'v1', capabilities: ['camera', 'location'] } as any),
+      makeApp({ id: 'v2', capabilities: ['nfc'] } as any),
+    ]);
+    const versions = {
+      servingCapabilities: jest.fn(async () => new Map([['v1', ['camera']]])),
+    };
+    const page = await new MobileCatalogService(repo, undefined, versions as any).list(undefined, 20, 0);
+    expect(versions.servingCapabilities).toHaveBeenCalledWith(['v1', 'v2']);
+    expect(page.items[0].permissions).toEqual(['camera']);
+    expect(page.items[1].permissions).toEqual(['nfc']);
+  });
+
   it('escapes LIKE wildcards in the name search', async () => {
     const { repo, calls } = qbFor([]);
     await new MobileCatalogService(repo).list('50%_off\\', 10, 0);

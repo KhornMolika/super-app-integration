@@ -284,6 +284,45 @@ export class MiniAppVersionsService {
     }));
   }
 
+  /**
+   * The capabilities each app is served with on phones: those of its live
+   * (ACTIVE) row, else of its working row (TESTING, then DRAFT). Entries are
+   * the declarations as written. An app with no such row is left out, so the
+   * caller can fall back to mini_apps.capabilities.
+   */
+  async servingCapabilities(miniAppIds: string[]): Promise<Map<string, unknown[]>> {
+    const ids = [...new Set(miniAppIds.filter((id) => UUID.test(id)))];
+    const out = new Map<string, unknown[]>();
+    if (!ids.length) return out;
+
+    const order = [MiniAppVersionStatus.ACTIVE, MiniAppVersionStatus.TESTING, MiniAppVersionStatus.DRAFT];
+    const rows = await this.versions.find({
+      where: { miniAppId: In(ids), status: In(order) },
+      order: { createdAt: 'DESC' },
+    });
+    const serving = new Map<string, MiniAppVersion>();
+    for (const row of rows) {
+      const current = serving.get(row.miniAppId);
+      if (!current || order.indexOf(row.status as any) < order.indexOf(current.status as any)) {
+        serving.set(row.miniAppId, row);
+      }
+    }
+    if (!serving.size) return out;
+
+    const versionIds = [...serving.values()].map((r) => r.id);
+    const caps = await this.caps.find({
+      where: { versionId: In(versionIds) },
+      order: { position: 'ASC' },
+    });
+    for (const [miniAppId, row] of serving) {
+      out.set(
+        miniAppId,
+        caps.filter((c) => c.versionId === row.id).map((c) => c.declaration),
+      );
+    }
+    return out;
+  }
+
   /** Runs syncFromApp and only logs a failure: the app save already happened. */
   async syncQuietly(app: VersionSyncSource): Promise<void> {
     try {

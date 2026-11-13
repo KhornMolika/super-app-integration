@@ -25,6 +25,7 @@ import { MobileProfileService } from './mobile-profile.service';
 import { MobileRegulatorsService } from './mobile-regulators.service';
 import { Organization } from '../organizations/entities/organization.entity';
 import { MobileController } from './mobile.controller';
+import { MiniAppVersionsModule } from '../miniapps/versions/miniapp-versions.module';
 import { PasswordService } from './password.service';
 
 // MailService comes from the @Global NotificationsModule.
@@ -33,6 +34,7 @@ import { PasswordService } from './password.service';
     AuthModule,
     forwardRef(() => StorageModule),
     CapabilitiesModule,
+    MiniAppVersionsModule,
     TypeOrmModule.forFeature([
       Identity,
       StaffProfile,

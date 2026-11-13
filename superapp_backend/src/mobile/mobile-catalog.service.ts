@@ -12,6 +12,7 @@ import {
   evaluateAgainstCatalog,
 } from '../capabilities/capability-gate.service';
 import { isAssetProxyLink } from '../storage/asset-url-signer';
+import { MiniAppVersionsService } from '../miniapps/versions/miniapp-versions.service';
 
 export interface CatalogItem {
   id: string;
@@ -228,6 +229,7 @@ export class MobileCatalogService {
   constructor(
     @InjectRepository(MiniApp) private readonly miniApps: Repository<MiniApp>,
     @Optional() private readonly capabilityGate?: CapabilityGateService,
+    @Optional() private readonly versions?: MiniAppVersionsService,
   ) {}
 
   async list(
@@ -310,6 +312,13 @@ export class MobileCatalogService {
       .take(limit)
       .skip(offset)
       .getManyAndCount();
+    // Capabilities come from the version each app is serving; apps without a
+    // version row yet keep mini_apps.capabilities.
+    const served = await this.versions?.servingCapabilities(rows.map((r) => r.id));
+    for (const r of rows) {
+      const caps = served?.get(r.id);
+      if (caps) r.capabilities = caps as any;
+    }
     // One catalog read for the whole page; launchability is computed, never stored
     const snapshot = this.capabilityGate ? await this.capabilityGate.snapshot() : null;
 

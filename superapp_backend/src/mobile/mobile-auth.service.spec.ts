@@ -1030,6 +1030,28 @@ describe('MobileAuthService login failure bookkeeping vs concurrent writes', () 
       expect(gate.evaluate).toHaveBeenCalledWith([{ type: 'biometrics', required: true }]);
     });
 
+    it('checks the capabilities of the version being served, not the app JSON', async () => {
+      const c = build();
+      const gate = {
+        evaluate: jest.fn().mockResolvedValue({ launchable: true, capabilities: [], hostVersion: 'v1.2.0' }),
+      };
+      const versions = {
+        servingCapabilities: jest.fn(async () => new Map([['ma-3', ['camera']]])),
+      };
+      const svc = new MobileAuthService(
+        c.users as any, c.vTokens as any, c.rTokens as any, c.miniApps as any,
+        c.passwords, c.authService, c.mail as any, c.limiter,
+        undefined, undefined, gate as any, versions as any,
+      );
+      await c.users.save({ id: 'u-3', email: 'r@y.z', name: 'R', status: IdentityStatus.ACTIVE } as any);
+      await c.miniApps.save({ id: 'ma-3', appId: 'kh.gov.fsa.cam', slug: 'cam', targetAudience: 'PUBLIC',
+        capabilities: [{ type: 'biometrics', required: true }] } as any);
+
+      await svc.tokenExchange('u-3', 'kh.gov.fsa.cam').catch(() => undefined);
+      expect(versions.servingCapabilities).toHaveBeenCalledWith(['ma-3']);
+      expect(gate.evaluate).toHaveBeenCalledWith(['camera']);
+    });
+
     it('rejects exchange with 400 BadRequest when MiniApp is not found', async () => {
       const c = build();
       const citizen = {
