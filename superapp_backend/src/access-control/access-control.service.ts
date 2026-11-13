@@ -1,8 +1,12 @@
 import { randomBytes } from 'crypto';
 import {
   canActInOrg,
+  includesSuperAdmin,
   isPlatformAdmin,
+  isPlatformOwnerOrg,
+  platformOwnerOrgCode,
   requesterOrgId,
+  SUPER_ADMIN_OUTSIDE_PLATFORM_ORG,
 } from './helpers/platform-admin.helper';
 import {
   Injectable,
@@ -149,7 +153,8 @@ export class AccessControlService {
         let ftcOrgId: string | null = null;
         try {
           const ftcOrgs = await this.identityRepository.manager.query(
-            "SELECT id, name, code FROM organizations WHERE code = 'FTC' OR name ILIKE '%Financial Technology Center%' LIMIT 1",
+            'SELECT id, name, code FROM organizations WHERE UPPER(code) = $1 LIMIT 1',
+            [platformOwnerOrgCode()],
           );
           if (ftcOrgs && ftcOrgs.length > 0) ftcOrgId = ftcOrgs[0].id;
         } catch (_) {}
@@ -173,7 +178,8 @@ export class AccessControlService {
         if (!staffProfile.organizationId) {
           try {
             const ftcOrgs = await this.identityRepository.manager.query(
-              "SELECT id, name, code FROM organizations WHERE code = 'FTC' OR name ILIKE '%Financial Technology Center%' LIMIT 1",
+              'SELECT id, name, code FROM organizations WHERE UPPER(code) = $1 LIMIT 1',
+              [platformOwnerOrgCode()],
             );
             if (ftcOrgs && ftcOrgs.length > 0) {
               staffProfile.organizationId = ftcOrgs[0].id;
@@ -228,7 +234,8 @@ export class AccessControlService {
     let ftcOrgId: string | null = null;
     try {
       const ftcOrgs = await this.identityRepository.manager.query(
-        "SELECT id, name, code FROM organizations WHERE code = 'FTC' OR name ILIKE '%Financial Technology Center%' LIMIT 1",
+        'SELECT id, name, code FROM organizations WHERE UPPER(code) = $1 LIMIT 1',
+        [platformOwnerOrgCode()],
       );
       if (ftcOrgs && ftcOrgs.length > 0) ftcOrgId = ftcOrgs[0].id;
     } catch (_) {}
@@ -488,22 +495,18 @@ export class AccessControlService {
     return formatUserResponse(identity);
   }
 
+  private organizationOf(id?: string | null): Promise<Organization | null> {
+    if (!id) return Promise.resolve(null);
+    return this.identityRepository.manager
+      .getRepository(Organization)
+      .findOne({ where: { id } });
+  }
+
   private isRequesterSuperAdmin(requester?: any): boolean {
     if (!requester) return true; // Internal calls (seeder / registration)
-    const roles: string[] = Array.isArray(requester.roles)
-      ? requester.roles
-          .map((r: any) => (typeof r === 'string' ? r : r?.name))
-          .filter(Boolean)
-      : requester.role
-        ? [requester.role]
-        : [];
-    const email = (requester.email || '').toLowerCase().trim();
-    return (
-      roles.some(
-        (r) =>
-          r.toUpperCase() === 'SUPER_ADMIN' || r.toUpperCase() === 'SUPERADMIN',
-      ) || Boolean(OFFICIAL_SEEDS[email])
-    );
+    // By role only: an official seed email is not authority (one of them is an
+    // organization ADMIN). JwtAuthGuard has already checked the organization.
+    return isPlatformAdmin(requester);
   }
 
   async createUser(
@@ -589,6 +592,7 @@ export class AccessControlService {
       );
     }
     this.assertOrgAssignable(targetOrgId, requester);
+    assertSuperAdminOrg(roles, organization);
 
     const identityStatus =
       dto.status ||
@@ -818,6 +822,12 @@ export class AccessControlService {
         'A staff member must have a role. Provide roleIds or roleNames.',
       );
     }
+    // Covers both a role change and moving a Super Admin to another organization
+    assertSuperAdminOrg(
+      [staffProfile.role],
+      staffProfile.organization ??
+        (await this.organizationOf(staffProfile.organizationId)),
+    );
 
     const profileToSave = staffProfile;
     await this.identityRepository.manager.transaction(async (manager) => {
@@ -893,6 +903,11 @@ export class AccessControlService {
       staffProfile.roleId = role.id;
       staffProfile.status = 'ACTIVE';
     }
+    assertSuperAdminOrg(
+      [role],
+      staffProfile.organization ??
+        (await this.organizationOf(staffProfile.organizationId)),
+    );
 
     identity.status = 'ACTIVE';
     const profileToSave = staffProfile;
@@ -1246,5 +1261,15 @@ export class AccessControlService {
     identity.avatarUpdatedAt = new Date();
     const saved = await this.identityRepository.save(identity);
     return formatUserResponse(saved);
+  }
+}
+
+/** SUPER_ADMIN is only ever given to a member of the platform owner organization. */
+function assertSuperAdminOrg(
+  roles: readonly unknown[],
+  organization: { code?: string | null } | null | undefined,
+): void {
+  if (includesSuperAdmin(roles) && !isPlatformOwnerOrg(organization?.code)) {
+    throw new BadRequestException(SUPER_ADMIN_OUTSIDE_PLATFORM_ORG);
   }
 }

@@ -7,6 +7,10 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import {
+  includesSuperAdmin,
+  isPlatformOwnerOrg,
+} from '../../access-control/helpers/platform-admin.helper';
+import {
   AuthService,
   BACK_OFFICE_TYP,
   END_USER_AUDIENCE,
@@ -49,6 +53,17 @@ export class JwtAuthGuard implements CanActivate {
     // Also tokens issued before the Backoffice was limited to these roles (e.g. STAFF)
     if (!hasBackofficeAccess(platformRoles({ roles: payload?.roles }))) {
       this.logger.warn(`Refused ${where}: roles ${JSON.stringify(payload?.roles ?? [])} have no Backoffice access (user ${payload?.sub})`);
+      throw new UnauthorizedException();
+    }
+    // SUPER_ADMIN is valid only inside the platform owner organization (FTC).
+    // Also refuses tokens issued before that rule, or before the user moved org.
+    if (
+      includesSuperAdmin(payload?.roles) &&
+      !isPlatformOwnerOrg(payload?.organizationCode)
+    ) {
+      this.logger.warn(
+        `Refused ${where}: SUPER_ADMIN token outside the platform owner organization (user ${payload?.sub}, org ${payload?.organizationCode ?? 'none'})`,
+      );
       throw new UnauthorizedException();
     }
     request['user'] = payload;

@@ -21,6 +21,7 @@ import { toast } from '@/components/ui/Toast';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { ShieldCheckIcon, CheckIcon, BuildingIcon } from '@/components/ui/Icons';
 import { getRoleTheme, getUserEffectiveStatus, getUserRoles, AvatarUpload } from '@/components/users';
+import { isPlatformOwnerOrgCode } from '@/lib/config';
 import { OrganizationSelect } from '@/components/organizations/OrganizationSelect';
 
 
@@ -43,16 +44,16 @@ const ROLE_OPTIONS: RoleOption[] = [
   },
   {
     key: 'ADMIN',
-    label: 'Platform Administrator',
+    label: 'Organization Admin',
     badge: 'Admin',
-    desc: 'Review submissions, manage organizational operators, and oversee security gates',
-    capabilities: ['Review & approve applications', 'Manage tenant users', 'Resolve compliance issues'],
+    desc: 'Manages the users and mini apps of their own organization',
+    capabilities: ['Review & approve organization apps', 'Manage organization users', 'Resolve compliance issues'],
   },
   {
     key: 'SUPER_ADMIN',
     label: 'Super Administrator',
     badge: 'Super Admin',
-    desc: 'Full platform governance, security control, tenant administration & root access',
+    desc: 'Runs the platform across every organization (platform owner organization only)',
     capabilities: ['Global system governance', 'Manage RBAC & permissions', 'Full audit registry inspection'],
   },
 ];
@@ -241,6 +242,23 @@ function EditUserContent() {
       getUserRoles(user).some((r) => r.name === 'SUPER_ADMIN')
     )
   );
+  // Super Admin is only offered for members of the platform owner organization
+  const roleOptions = ROLE_OPTIONS.filter(
+    (opt) =>
+      opt.key !== 'SUPER_ADMIN' ||
+      isTargetSuperAdmin ||
+      isPlatformOwnerOrgCode(selectedOrg?.code),
+  );
+  useEffect(() => {
+    if (
+      selectedRole === 'SUPER_ADMIN' &&
+      !isTargetSuperAdmin &&
+      !isPlatformOwnerOrgCode(selectedOrg?.code)
+    ) {
+      setSelectedRole('ADMIN');
+    }
+  }, [selectedRole, isTargetSuperAdmin, selectedOrg]);
+
   const isSelf = Boolean(
     user && currentUser && (
       currentUser.id === user.id ||
@@ -639,8 +657,8 @@ function EditUserContent() {
               </div>
 
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {ROLE_OPTIONS.map((opt) => {
+              <div className={`grid grid-cols-1 gap-3 ${roleOptions.length >= 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
+                {roleOptions.map((opt) => {
                   const isSelected = selectedRole === opt.key;
                   const theme = getRoleTheme(opt.key);
                   return (

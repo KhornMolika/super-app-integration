@@ -1,3 +1,4 @@
+import { platformOwnerOrgCode } from './helpers/platform-admin.helper';
 import { Injectable, OnApplicationBootstrap, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -452,11 +453,11 @@ export class SeederService implements OnApplicationBootstrap {
 
     if (!ftcOrg) {
       ftcOrg =
+        // Official SUPER_ADMIN accounts go to the platform owner organization
+        // only, never to whichever organization happens to come first.
         (await this.organizationRepository.findOne({
-          where: [{ code: 'FTC' }, { name: 'Financial Technology Center' }],
-        })) ||
-        (await this.organizationRepository.find({ take: 1 }))[0] ||
-        null;
+          where: { code: platformOwnerOrgCode() },
+        })) || null;
     }
 
     // Clean up obsolete mock organization 'Fintech Center'

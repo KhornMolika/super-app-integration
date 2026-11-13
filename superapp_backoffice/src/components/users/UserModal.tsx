@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom';
 import { Button, Input, Label } from '@/components/ui/inputs';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/lib/auth';
+import { isPlatformOwnerOrgCode, PLATFORM_OWNER_ORG_CODE } from '@/lib/config';
 import {
   usersApi,
   organizationsApi,
@@ -210,6 +211,10 @@ export function UserModal({
   );
 
 
+  // Super Admin is only offered for members of the platform owner organization
+  const selectedOrgCode = organizationsList.find((o) => o.id === formData.organizationId)?.code;
+  const superAdminAllowed = isEditingSuperAdmin || isPlatformOwnerOrgCode(selectedOrgCode);
+
   // Normalized available roles list sorted logically
   const availableRoles = useMemo(() => {
     const list = roles && roles.length > 0 ? roles : DEFAULT_ROLES;
@@ -218,8 +223,16 @@ export function UserModal({
       ADMIN: 2,
       SUPER_ADMIN: 3,
     };
-    return [...list].sort((a, b) => (orderMap[a.name] || 99) - (orderMap[b.name] || 99));
-  }, [roles]);
+    return [...list]
+      .filter((r) => r.name !== 'SUPER_ADMIN' || superAdminAllowed)
+      .sort((a, b) => (orderMap[a.name] || 99) - (orderMap[b.name] || 99));
+  }, [roles, superAdminAllowed]);
+
+  useEffect(() => {
+    if (!superAdminAllowed && formData.selectedRole === 'SUPER_ADMIN') {
+      setFormData((prev) => ({ ...prev, selectedRole: 'ADMIN' }));
+    }
+  }, [superAdminAllowed, formData.selectedRole]);
 
 
 
@@ -557,12 +570,14 @@ export function UserModal({
                 Assign Role *
               </Label>
               <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
-                Each user has exactly one assigned role
+                {superAdminAllowed
+                  ? 'Each user has exactly one assigned role'
+                  : `Super Admin is for ${PLATFORM_OWNER_ORG_CODE} members only`}
               </span>
             </div>
 
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div className={`grid grid-cols-1 gap-2.5 ${availableRoles.length >= 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
               {availableRoles.map((r) => {
                 const isSelected = formData.selectedRole === r.name;
                 const meta = getRoleMeta(r.name);

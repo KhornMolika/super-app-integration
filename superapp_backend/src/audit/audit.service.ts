@@ -428,4 +428,18 @@ export class AuditService implements OnApplicationBootstrap {
       order: { createdAt: 'DESC' },
     });
   }
+
+  /** Who last did one of `actions` on a resource, or null. */
+  async lastActorOf(
+    resourceType: string,
+    resourceId: string,
+    actions: string[],
+  ): Promise<string | null> {
+    const row = await this.auditLogRepository.findOne({
+      where: { resourceType, resourceId, action: In(actions) },
+      order: { createdAt: 'DESC' },
+      select: { id: true, actorId: true },
+    });
+    return row?.actorId && row.actorId !== 'system' ? row.actorId : null;
+  }
 }

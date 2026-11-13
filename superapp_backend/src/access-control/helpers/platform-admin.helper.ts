@@ -8,7 +8,32 @@
  *
  * Decided by role only, never by the email address: anyone can self-register an
  * address such as "admin.x@example.com" or "superadmin@example.com".
+ *
+ * SUPER_ADMIN belongs to the platform owner organization (FTC, which runs the
+ * Super App) and nowhere else. Every other organization is a tenant. Enforced
+ * when the role or organization is assigned (AccessControlService), when a
+ * token is issued (AuthService) and on every Backoffice request (JwtAuthGuard),
+ * so `isPlatformAdmin` below can trust the role it reads from the token.
  */
+
+/** Code of the organization that runs the platform (env PLATFORM_OWNER_ORG_CODE). */
+export function platformOwnerOrgCode(): string {
+  return (process.env.PLATFORM_OWNER_ORG_CODE || 'FTC').trim().toUpperCase();
+}
+
+export function isPlatformOwnerOrg(code: unknown): boolean {
+  return (
+    typeof code === 'string' &&
+    code.trim().toUpperCase() === platformOwnerOrgCode()
+  );
+}
+
+/** True when a list of role names (or role objects) contains SUPER_ADMIN. */
+export function includesSuperAdmin(roles: unknown): boolean {
+  return roleNamesOf({ roles }).includes('SUPER_ADMIN');
+}
+
+export const SUPER_ADMIN_OUTSIDE_PLATFORM_ORG = `Super Admin is reserved for the platform owner organization (${platformOwnerOrgCode()}).`;
 
 function roleNamesOf(requester: unknown): string[] {
   const roles = (requester as { roles?: unknown } | null | undefined)?.roles;

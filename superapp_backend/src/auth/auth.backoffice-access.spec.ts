@@ -34,7 +34,8 @@ describe('Backoffice access: SUPER_ADMIN, ADMIN and MA_DEVELOPER only', () => {
   });
 
   it.each(['SUPER_ADMIN', 'ADMIN', 'MA_DEVELOPER'])('%s signs in to the Backoffice', async (role) => {
-    const { svc } = await service({ roles: [{ name: role, permissions: [] }] });
+    // Super Admin belongs to the platform owner organization (FTC)
+    const { svc } = await service({ roles: [{ name: role, permissions: [] }], organization: { code: 'FTC' } });
     const r = await svc.login({ email: EMAIL, password: PASSWORD } as any);
     expect(r).toMatchObject({ success: true });
   });
@@ -86,7 +87,7 @@ describe('Backoffice access: SUPER_ADMIN, ADMIN and MA_DEVELOPER only', () => {
     });
 
     it('accepts Backoffice roles, including older tokens with the legacy developer name', () => {
-      expect(guardFor({ roles: ['SUPER_ADMIN'] })()).toBe(true);
+      expect(guardFor({ roles: ['SUPER_ADMIN'], organizationCode: 'FTC' })()).toBe(true);
       expect(guardFor({ roles: ['MA_DEVELOPER'] })()).toBe(true);
       expect(guardFor({ roles: ['MINI_APP_DEVELOPER'] })()).toBe(true);
     });

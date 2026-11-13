@@ -1,6 +1,7 @@
 import {
   BadGatewayException,
   BadRequestException,
+  ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
 import { MiniappsService } from './miniapps.service';
@@ -38,7 +39,7 @@ function build(app: any) {
     miniappRepository as any,
     {} as any,
     {} as any,
-    {} as any,
+    { lastActorOf: jest.fn().mockResolvedValue(null) } as any,
     {} as any,
     {} as any,
     lifecycleHelper as any,
@@ -269,5 +270,34 @@ describe('MiniappsService.rerunNativeSdkCodegen', () => {
       err,
     );
     expect(b.codegen.regenerate).not.toHaveBeenCalled();
+  });
+});
+
+describe('MiniappsService four-eyes approval', () => {
+  const webview = { id: '1', ownerId: 'owner', integrationMethod: 'WEBVIEW' };
+
+  it.each([
+    ['approve', 'lifecycleHelper.approve'],
+    ['publishRevision', 'lifecycleHelper.publishRevision'],
+  ])('%s refuses the owner', async (action) => {
+    const { service, lifecycleHelper } = build({ ...webview });
+    await expect((service as any)[action]('1', 'owner')).rejects.toThrow(
+      ForbiddenException,
+    );
+    expect(lifecycleHelper.approve).not.toHaveBeenCalled();
+    expect(lifecycleHelper.publishRevision).not.toHaveBeenCalled();
+  });
+
+  it('refuses the person who submitted it', async () => {
+    const { service } = build({ ...webview });
+    (service as any).auditService.lastActorOf.mockResolvedValue('dev');
+    await expect(service.approve('1', 'dev')).rejects.toThrow(/You submitted/);
+  });
+
+  it('lets another admin approve', async () => {
+    const { service, lifecycleHelper } = build({ ...webview });
+    (service as any).auditService.lastActorOf.mockResolvedValue('dev');
+    await expect(service.approve('1', 'reviewer')).resolves.toBeDefined();
+    expect(lifecycleHelper.approve).toHaveBeenCalled();
   });
 });

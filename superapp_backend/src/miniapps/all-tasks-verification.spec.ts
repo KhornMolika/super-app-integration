@@ -61,7 +61,10 @@ describe('All Tasks Verification - Multi-Method MiniApps & Enterprise Plan', () 
         }),
       };
 
-      const mockAudit = { log: jest.fn() };
+      const mockAudit = {
+        log: jest.fn(),
+        lastActorOf: jest.fn().mockResolvedValue(null),
+      };
       const mockActivityRepo = {
         create: jest.fn((x) => x),
         save: jest.fn().mockResolvedValue(undefined),

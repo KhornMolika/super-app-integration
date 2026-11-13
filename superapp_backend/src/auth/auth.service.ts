@@ -37,6 +37,11 @@ import {
   VerifyOtpDto,
   ResetPasswordDto,
 } from './dto';
+import {
+  includesSuperAdmin,
+  isPlatformOwnerOrg,
+  SUPER_ADMIN_OUTSIDE_PLATFORM_ORG,
+} from '../access-control/helpers/platform-admin.helper';
 import { resolveOrganizationDetails } from '../organizations/helpers/organization-resolver.helper';
 import { OrganizationsService } from '../organizations/organizations.service';
 
@@ -212,6 +217,7 @@ export class AuthService implements OnModuleInit {
     });
 
     const roles = platformRoles(user);
+    assertSuperAdminInPlatformOrg(roles, user.organization?.code);
 
     // If permissions not explicitly loaded from DB relations, supply standard defaults
     if (permissions.size === 0) {
@@ -646,12 +652,16 @@ export class AuthService implements OnModuleInit {
     // without a Backoffice role (STAFF, consumers)
     const roles = platformRoles(user);
     if (!hasBackofficeAccess(roles)) throw new ForbiddenException(NO_BACKOFFICE_ACCESS_MESSAGE);
+    assertSuperAdminInPlatformOrg(roles, user.organization?.code);
 
     const tokenPayload = {
       sub: user.id,
       email: user.email,
       name: user.name,
       roles,
+      // JwtAuthGuard checks a SUPER_ADMIN token against the platform owner org
+      organizationId: user.organizationId || user.organization?.id || null,
+      organizationCode: user.organization?.code || null,
       scopes,
       typ: BACK_OFFICE_TYP, // Permits authentication via general AuthGuards, NPM proxy, and Pub proxy
     };
@@ -1158,6 +1168,19 @@ export class AuthService implements OnModuleInit {
  * back to developer rights (STAFF and users without a role must not be able to build
  * mini apps or request capabilities).
  */
+/**
+ * No token for a SUPER_ADMIN outside the platform owner organization: the role
+ * would give a tenant authority over every organization.
+ */
+export function assertSuperAdminInPlatformOrg(
+  roles: readonly string[],
+  organizationCode: unknown,
+): void {
+  if (includesSuperAdmin(roles) && !isPlatformOwnerOrg(organizationCode)) {
+    throw new ForbiddenException(SUPER_ADMIN_OUTSIDE_PLATFORM_ORG);
+  }
+}
+
 export function platformRoles(user: any): string[] {
   const list: any[] = user?.roles || (user?.role ? [user.role] : []);
   return Array.from(

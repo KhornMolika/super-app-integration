@@ -21,8 +21,22 @@ describe('access token roles', () => {
   });
 
   it('keeps the platform roles and the developer aliases', () => {
-    expect(tokenRoles({ roles: [{ name: 'SUPER_ADMIN' }] })).toEqual(['SUPER_ADMIN']);
+    expect(
+      tokenRoles({
+        roles: [{ name: 'SUPER_ADMIN' }],
+        organization: { code: 'FTC' },
+      }),
+    ).toEqual(['SUPER_ADMIN']);
     expect(tokenRoles({ roles: [{ name: 'ADMIN' }] })).toEqual(['ADMIN']);
     expect(tokenRoles({ roles: [{ name: 'MINI_APP_DEVELOPER' }] })).toEqual(['MA_DEVELOPER']);
+  });
+
+  it('never issues a Super Admin token outside the platform owner organization', () => {
+    expect(() =>
+      tokenRoles({
+        roles: [{ name: 'SUPER_ADMIN' }],
+        organization: { code: 'IRC' },
+      }),
+    ).toThrow(/platform owner organization/);
   });
 });
