@@ -280,15 +280,18 @@ describe('Capabilities loaded from the version rows (no JSON columns)', () => {
   const { MiniAppVersion } = require('../entities/miniapp-version.entity');
   const cap = (key: string, position: number, declaration: any = key) => ({ capabilityKey: key, position, declaration });
   const version = (status: string, day: number, caps: any[]) => {
-    const v = Object.assign(new MiniAppVersion(), { status, createdAt: new Date(2026, 0, day), capabilities: caps });
+    const v = Object.assign(new MiniAppVersion(), { status, createdAt: new Date(2026, 0, day), capabilityRows: caps });
     v.loadPermissions();
     return v;
   };
 
   it('a version lists its capability rows in order as permissions', () => {
     const v = version('PREVIOUS', 1, [cap('nfc', 1), cap('camera', 0, { type: 'camera', required: true })]);
-    expect(v.permissions).toEqual([{ type: 'camera', required: true }, 'nfc']);
-    expect(JSON.parse(JSON.stringify(v))).not.toHaveProperty('capabilities');
+    expect(v.capabilities).toEqual([{ type: 'camera', required: true }, 'nfc']);
+    const json = JSON.parse(JSON.stringify(v));
+    expect(json.permissions).toEqual([{ type: 'camera', required: true }, 'nfc']);
+    expect(json).not.toHaveProperty('capabilities');
+    expect(json).not.toHaveProperty('capabilityRows');
   });
 
   it('an app asks for what its serving version asks for: ACTIVE, else TESTING, else DRAFT', () => {

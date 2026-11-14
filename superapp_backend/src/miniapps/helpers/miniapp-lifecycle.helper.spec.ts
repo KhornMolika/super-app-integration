@@ -230,8 +230,8 @@ describe('MiniappLifecycleHelper - Revision & Approval Lifecycle', () => {
       expect(result.lifecycleStatus).toBe('ACTIVE');
       // Staged revision remains but moved to DRAFT for developer remediation
       expect(result.pendingRevision).toBeDefined();
-      expect(result.pendingRevision.revisionStatus).toBe('DRAFT');
-      expect(result.pendingRevision.changesRequestedReason).toBe(
+      expect(result.pendingRevision!.revisionStatus).toBe('DRAFT');
+      expect(result.pendingRevision!.changesRequestedReason).toBe(
         'Please clarify storage permission use-case',
       );
       expect(mockNotificationsService.createNotification).toHaveBeenCalledWith(

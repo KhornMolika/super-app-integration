@@ -24,7 +24,6 @@ import { MiniAppVersionsService } from './versions/miniapp-versions.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { MiniappsService } from './miniapps.service';
 import { CreateMiniAppDto } from './dto/create-miniapp.dto';
-import { MiniAppStatus } from './entities/miniapp.entity';
 import { UpdateMiniAppDto } from './dto/update-miniapp.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RbacGuard } from '../access-control/guards/rbac.guard';

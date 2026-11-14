@@ -20,6 +20,7 @@ describe('SdkArtifactUploadService (MinIO Quarantine & Nexus Flow)', () => {
     findOne: jest.Mock;
     save: jest.Mock;
     createQueryBuilder: jest.Mock;
+    manager?: { getRepository: jest.Mock };
   };
   let patches: any[];
   let dbConfig: any;

@@ -75,7 +75,7 @@ export class DomainAssociationHelper {
           if (!permType) continue;
           const exists = newPerms.some(
             (existing) =>
-              (existing.type || existing)?.toLowerCase() ===
+              String(typeof existing === 'string' ? existing : existing?.type || '').toLowerCase() ===
               permType.toLowerCase(),
           );
           if (!exists) {

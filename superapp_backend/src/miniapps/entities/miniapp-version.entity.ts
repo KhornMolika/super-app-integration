@@ -12,6 +12,8 @@ import {
 } from 'typeorm';
 import { MiniApp } from './miniapp.entity';
 import { MiniAppVersionCapability } from './miniapp-version-capability.entity';
+import type { MiniAppCapabilityDeclaration } from './miniapp.entity';
+import type { IntegrationConfig } from '../integration-config';
 
 /**
  * Version-Level Lifecycle Status Taxonomy (MiniAppVersion Entity)
@@ -69,7 +71,7 @@ export class MiniAppVersion {
 
   /** This version's integration (URL, package, SDK, deep link). Phones get the live one. */
   @Column({ type: 'jsonb', nullable: true })
-  integrationConfig?: Record<string, any> | null;
+  integrationConfig?: IntegrationConfig | null;
 
   /** This version's Home widget; null = none. */
   @Column({ type: 'jsonb', nullable: true })
@@ -77,18 +79,22 @@ export class MiniAppVersion {
 
   /** What this version asks for, one row per capability (loaded with the version). */
   @OneToMany(() => MiniAppVersionCapability, (c) => c.version, { eager: true })
-  capabilities?: MiniAppVersionCapability[];
+  capabilityRows?: MiniAppVersionCapability[];
 
   /**
-   * The capabilities as declared, in order. Not a column: filled after load
-   * from the capability rows (mini_app_version_capabilities).
+   * The capabilities as declared, in order (each row's declaration). Not a
+   * column: filled after load from capabilityRows. Same list as
+   * MiniApp.capabilities for the version an app serves.
    */
-  permissions?: any[];
+  capabilities?: MiniAppCapabilityDeclaration[];
+
+  /** API name of `capabilities` (the old column); kept so responses do not change. */
+  permissions?: MiniAppCapabilityDeclaration[];
 
   /**
    * DRAFT row of a live app: the whole staged revision (branding, legal,
-   * integration, scan state). Mirrors mini_apps.pendingRevision until that
-   * column goes (step 3b). Never serialized: it can hold integration secrets.
+   * integration, scan state); MiniApp.pendingRevision is filled from it.
+   * Never serialized: it can hold integration secrets.
    */
   @Column({ type: 'jsonb', nullable: true })
   revision?: Record<string, any> | null;
@@ -108,16 +114,18 @@ export class MiniAppVersion {
 
   @AfterLoad()
   loadPermissions(): void {
-    if (!Array.isArray(this.capabilities)) return;
-    this.permissions = [...this.capabilities]
+    if (!Array.isArray(this.capabilityRows)) return;
+    this.capabilities = [...this.capabilityRows]
       .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
       .map((c) => c.declaration);
+    this.permissions = this.capabilities;
   }
 
   toJSON() {
     const clone = { ...this };
     delete (clone as any).miniApp;
-    delete (clone as any).capabilities;
+    delete (clone as any).capabilityRows;
+    delete (clone as any).capabilities; // sent as permissions
     delete (clone as any).revision;
     return clone;
   }

@@ -387,6 +387,20 @@ To guarantee **zero downtime** and ensure that broken builds or pending reviews 
 └─────────────────────────┴────────────────────────────────────────────────────────┘
 ```
 
+> **Current code vs. this section, and the target (Phase 6).** Today the code has two overlapping app fields:
+> `lifecycleStatus` (16 values that mix review, build, test and availability) and `availabilityStatus`
+> (`TESTING`, `PRODUCTION`, `SUSPENDED`; the `ENABLED`/`INACTIVE` values below were never built). Phase 6 in
+> section 10 replaces them with **one status per question**:
+>
+> | Question | Column | Values |
+> | :--- | :--- | :--- |
+> | Can users get the app? | `mini_apps.status` | `DRAFT` (never released), `LIVE`, `SUSPENDED`, `ARCHIVED` |
+> | Where is this version in review and release? | `mini_app_versions.status` | `DRAFT`, `SUBMITTED`, `IN_REVIEW`, `CHANGES_REQUESTED`, `REJECTED`, `APPROVED`, `TESTING`, `TEST_PASSED`, `ACTIVE`, `PREVIOUS`, `DEPRECATED` |
+> | Is a build or scan running? | `mini_app_builds.buildStatus`, `mini_app_scans.status` | unchanged |
+>
+> A live app with a new version in review stays `LIVE` while that version moves through review on its own row.
+> The `BUILDING*` and `APPROVED_FOR_TESTING` values go: "building" is read from the latest build run.
+
 ---
 
 ### Process Flow 1: MiniApp Master Lifecycle (`mini_apps.lifecycleStatus`)
@@ -797,6 +811,8 @@ CREATE TABLE mini_apps (
 
 All technical integration fields are stored inside `mini_app_versions.integrationConfig` (JSONB) and validated strictly by NestJS DTOs:
 
+> **Field names in code.** The examples below show the intent; the fields the code actually uses are typed per method in [`integration-config.ts`](../../superapp_backend/src/miniapps/integration-config.ts) (`WebViewIntegrationConfig`: `productionUrl`, `stagingUrl`, `allowedDomains`, ...; `FlutterPackageIntegrationConfig`: `gitUrl`, `gitBranch`, `gitTag`, `commitSha`, `packageName`, ...; `NativeSdkIntegrationConfig`; `DeepLinkIntegrationConfig`: `urlScheme`, `appStoreUrl`, ...). `integrationConfigFor(app, method)` returns the config typed for its method. Build output (`artifactUrl`, `apkSize`, checksums) lives in `mini_app_builds`.
+
 #### A. If `integrationMethod === 'WEBVIEW'`
 ```json
 {
@@ -975,4 +991,17 @@ To transition safely without corrupting existing data or causing downtime, the m
   - [x] Verified zero Next.js build errors in backoffice (`pnpm --dir superapp_backoffice build` - 42/42 pages).
   - [x] Ran backend unit tests: **72 passed, 72 total test suites; 716 passed, 716 total tests**.
   - [x] Safely deleted legacy entities `user.entity.ts` and `end-user.entity.ts`.
+
+- [ ] **Phase 6: One Status Per Question** (target model in the note at the top of section 3)
+  - [x] 6.0a `mini_app_versions` capability relation renamed `capabilityRows`; `capabilities` on both `MiniApp` and `MiniAppVersion` now means the declared list (responses unchanged: versions still send it as `permissions`). Per-method `integrationConfig` types and `integrationConfigFor()` in `miniapps/integration-config.ts`.
+  - [x] 6.0 Cleanup, no migration: `MiniAppStatus` (a copy of the lifecycle enum), the `TERMINATED` alias and the unused `MiniAppSharingScope` enum are removed; the `MiniApp` properties filled from other tables (`integrationConfig`, `capabilities`, `pendingRevision`, the scan and build fields) have real types instead of `any`.
+  - [ ] 6a Expand (migration `AddAppAndVersionStatus`):
+    - [ ] `mini_apps.status` varchar NOT NULL DEFAULT `'DRAFT'`, backfilled: `ARCHIVED` lifecycle -> `ARCHIVED`; `SUSPENDED` lifecycle or availability -> `SUSPENDED`; `ACTIVE` lifecycle, `PRODUCTION` availability or an `ACTIVE` version row -> `LIVE`; everything else -> `DRAFT`.
+    - [ ] `mini_app_versions.status` takes the review values: the working row of an unreleased app, and the DRAFT row of a live app, get the stage from `lifecycleStatus` (unreleased) or `reviewStatus` (revision). Mapping: `SUBMITTED`, `IN_REVIEW`, `CHANGES_REQUESTED`, `REJECTED` as they are; `APPROVED`, `APPROVED_FOR_TESTING` -> `APPROVED`; `BUILDING`, `BUILDING_STAGE_1`, `TESTING` -> `TESTING`; `TEST_PASSED`, `BUILDING_STAGE_2` -> `TEST_PASSED`.
+    - [ ] Index `(miniAppId, status)` on `mini_app_versions`.
+  - [ ] 6b Writers write both: one `setAppStatus` / `setVersionStage` helper per transition in the lifecycle, retirement and validation helpers; the old columns are derived from the new ones in that helper, so the two can never disagree. `revisionRowOf` and the served-row rule read "not `ACTIVE`/`PREVIOUS`/`DEPRECATED`" instead of `DRAFT`.
+  - [ ] 6c Reads switch to the new columns: `isMiniAppLive`, the mobile catalog filter, the token exchange suspension check, build inclusion, the list filters and counts, the Telegram status cards. API responses keep `lifecycleStatus` and `availabilityStatus` (derived) until the backoffice has moved; the mobile catalog item keeps `status` with its current values (`ACTIVE` for live, `TESTING` for a test build), so the phone app is untouched.
+  - [ ] 6d Backoffice: one badge for the app (`Draft`, `Live`, `Suspended`, `Archived`), one for the version in progress (review stage), and a `Building` / `Scanning` badge from the latest runs; filters and banners use the same three.
+  - [ ] 6e Contract (migration `DropLegacyAppStatus`): drop `mini_apps.lifecycleStatus`, `availabilityStatus`, `activeTestVersion`, `draftVersion` (read from the TESTING / in-progress row) and `currentReleaseVersion` (read from the `liveVersionId` row; kept in responses), and `mini_app_versions.reviewStatus` (now `status`). `down` restores them from the new columns. **Take a database backup before deploying.**
+  - [ ] 6f Optional: `suspension` and `archiveRequest` move from jsonb on `mini_apps` to `mini_app_status_events` (one row per suspend, resume, archive request, archive and decline, with actor and reason), so the app keeps its full history instead of only the latest one.
 ```

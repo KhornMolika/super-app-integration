@@ -10,7 +10,6 @@ import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
 import {
   MiniApp,
-  MiniAppStatus,
   MiniAppLifecycleStatus,
   MiniAppAvailabilityStatus,
   isMiniAppLive,
@@ -990,19 +989,14 @@ export class MiniappMutationHelper {
       merged.integrationMethod === 'FLUTTER_PACKAGE' &&
       merged.integrationConfig
     ) {
-      merged.integrationConfig = secureFlutterIntegrationConfig(
+      const cfg = secureFlutterIntegrationConfig(
         merged.integrationConfig,
         existing.integrationConfig,
-      );
-      if (
-        !merged.integrationConfig.packageName &&
-        merged.integrationConfig.gitUrl
-      ) {
-        merged.integrationConfig.packageName = inferPackageNameFromGitUrl(
-          merged.integrationConfig.gitUrl,
-          merged.integrationConfig.gitPath || merged.integrationConfig.path,
-        );
+      ) as Record<string, any> | null | undefined;
+      if (cfg && !cfg.packageName && cfg.gitUrl) {
+        cfg.packageName = inferPackageNameFromGitUrl(cfg.gitUrl, cfg.gitPath || cfg.path);
       }
+      merged.integrationConfig = cfg ?? null;
     }
 
     const effectiveVer =

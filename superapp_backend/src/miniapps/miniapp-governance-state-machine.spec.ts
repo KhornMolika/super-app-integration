@@ -239,7 +239,7 @@ describe('Phase 3: Lifecycle & Governance State Machine Testing', () => {
       expect(result.availabilityStatus).toBe(MiniAppAvailabilityStatus.TESTING);
       expect(result.buildStatus).toBe('BUILDING');
       expect(result.buildStages).toBeDefined();
-      expect(result.buildStages.preflight.status).toBe('RUNNING');
+      expect(result.buildStages!.preflight.status).toBe('RUNNING');
       expect(mockSuperAppService.getAndRegisterNextVersion).toHaveBeenCalled();
       expect(mockJenkinsService.triggerSuperAppBuild).toHaveBeenCalledWith(
         expect.objectContaining({

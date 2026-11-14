@@ -680,7 +680,7 @@ describe('MiniappLifecycleHelper and homeWidget', () => {
 
       it('publishRevision: an unchanged source keeps the live verification without a re-check', async () => {
         const ctx = pkgSetup({});
-        const cfg = { sourceType: 'GIT', gitUrl: GIT_URL, gitTag: 'v1.0.0', packageName: PKG };
+        const cfg = { sourceType: 'GIT' as const, gitUrl: GIT_URL, gitTag: 'v1.0.0', packageName: PKG };
         const app = gitApp({
           integrationConfig: { ...cfg },
           pendingRevision: gitRevision({ gitTag: 'v1.0.0' }),

@@ -45,7 +45,7 @@ export class MiniAppVersionCapability {
   @Column({ type: 'uuid' })
   versionId!: string;
 
-  @ManyToOne(() => MiniAppVersion, (v) => v.capabilities, { onDelete: 'CASCADE' })
+  @ManyToOne(() => MiniAppVersion, (v) => v.capabilityRows, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'versionId' })
   version?: MiniAppVersion;
 

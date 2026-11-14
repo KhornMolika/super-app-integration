@@ -1,7 +1,7 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { MiniApp, MiniAppStatus } from '../miniapps/entities/miniapp.entity';
+import { MiniApp, MiniAppLifecycleStatus } from '../miniapps/entities/miniapp.entity';
 import { buildPaginationMeta } from '../common/utils/pagination.util';
 import { PaginationMeta } from '../common/interfaces/paginated-result.interface';
 import { CatalogQueryDto } from './dto/catalog-query.dto';
@@ -87,7 +87,7 @@ export function toCatalogItem(
     ? 'https://app.fintechcenterfsa.com'
     : `http://${host}:3000`;
 
-  let config = app.integrationConfig;
+  let config: Record<string, any> = app.integrationConfig as Record<string, any>;
   if (config && typeof config === 'object') {
     config = stripServerOnlyConfig(JSON.parse(JSON.stringify(config)));
     const urlKeys = [
@@ -286,9 +286,9 @@ export class MobileCatalogService {
       '(m.lifecycleStatus IN (:...statuses) OR m.availabilityStatus IN (:...statuses))',
       {
         statuses: [
-          MiniAppStatus.ACTIVE,
-          MiniAppStatus.TESTING,
-          MiniAppStatus.APPROVED,
+          MiniAppLifecycleStatus.ACTIVE,
+          MiniAppLifecycleStatus.TESTING,
+          MiniAppLifecycleStatus.APPROVED,
         ],
       },
     )

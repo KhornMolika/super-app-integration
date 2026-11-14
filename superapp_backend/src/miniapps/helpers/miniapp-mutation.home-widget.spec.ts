@@ -176,7 +176,7 @@ describe('MiniappMutationHelper and homeWidget', () => {
         'admin-1',
       );
 
-      expect(existing.pendingRevision.homeWidget).toEqual(live);
+      expect(existing.pendingRevision!.homeWidget).toEqual(live);
     });
 
     it('a revision that does not send the field carries the live value', async () => {
@@ -226,7 +226,7 @@ describe('MiniappMutationHelper and homeWidget', () => {
         'admin-1',
       );
 
-      expect(existing.pendingRevision.homeWidget).toEqual({
+      expect(existing.pendingRevision!.homeWidget).toEqual({
         widgetClass: 'HrHomeWidget',
       });
     });

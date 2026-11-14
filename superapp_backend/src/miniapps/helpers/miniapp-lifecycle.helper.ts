@@ -166,7 +166,7 @@ export class MiniappLifecycleHelper {
     const inRevision = Boolean(rev?.integrationConfig);
     const method = String((inRevision && rev?.integrationMethod) || app.integrationMethod || '').toUpperCase();
     if (method !== 'FLUTTER_PACKAGE') return null;
-    const config: Record<string, any> = (inRevision ? rev.integrationConfig : app.integrationConfig) || {};
+    const config: Record<string, any> = (inRevision ? rev!.integrationConfig : app.integrationConfig) || {};
     if (!isFlutterArtifactConfig(config)) return null; // Git source: built from Git
 
     const storagePath: string | undefined = config.packageStoragePath || config.minioKey || undefined;
@@ -206,7 +206,7 @@ export class MiniappLifecycleHelper {
     const inRevision = Boolean(rev?.integrationConfig);
     const method = String((inRevision && rev?.integrationMethod) || app.integrationMethod || '').toUpperCase();
     if (method !== 'FLUTTER_PACKAGE') return;
-    const config: Record<string, any> = inRevision ? rev.integrationConfig : (app.integrationConfig ||= {});
+    const config: Record<string, any> = inRevision ? rev!.integrationConfig : (app.integrationConfig ||= {});
     try {
       const res = await this.artifactPublisher.ensureFlutterPackagePublished(app, { config, inRevision });
       if (res) {
@@ -223,7 +223,7 @@ export class MiniappLifecycleHelper {
   }
 
   /** Staged package archive from MinIO, or null when absent/unreadable. */
-  private async readStagedArchive(storagePath?: string): Promise<Buffer | null> {
+  private async readStagedArchive(storagePath?: string | null): Promise<Buffer | null> {
     if (!storagePath || !this.storageService) return null;
     try {
       const buf = await this.storageService.getObjectBuffer(

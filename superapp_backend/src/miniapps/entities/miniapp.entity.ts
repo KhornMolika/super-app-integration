@@ -21,6 +21,7 @@ import { Notification } from '../../notifications/entities/notification.entity';
 import { Organization } from '../../organizations/entities/organization.entity';
 import type { HomeWidget } from '../home-widget';
 import { appIntegrationFields } from '../versions/integration-fields';
+import type { IntegrationConfig } from '../integration-config';
 
 /**
  * Application-Level Lifecycle & Governance Status Taxonomy (MiniApp Entity)
@@ -68,11 +69,8 @@ export enum MiniAppLifecycleStatus {
   /** Non-terminal governance feedback from SuperAdmin. Partner updates application specifications and returns to DRAFT. */
   CHANGES_REQUESTED = 'CHANGES_REQUESTED',
 
-  /** Permanently decommissioned and delisted from mobile catalog. Maintained as read-only historical audit record. Replaces TERMINATED. */
+  /** Permanently decommissioned and delisted from mobile catalog. Maintained as read-only historical audit record. */
   ARCHIVED = 'ARCHIVED',
-
-  /** Backwards-compatibility alias for ARCHIVED. */
-  TERMINATED = 'ARCHIVED',
 }
 
 export enum MiniAppAvailabilityStatus {
@@ -87,20 +85,11 @@ export enum MiniAppTargetAudience {
   ORGANIZATION_ONLY = 'ORGANIZATION_ONLY',
 }
 
-export enum MiniAppSharingScope {
-  GLOBAL = 'GLOBAL',
-  RESTRICTED_DEPARTMENT = 'RESTRICTED_DEPARTMENT',
-}
+/** A declared capability: a key string, or { type | key | name, required, purpose, ... }. */
+export type MiniAppCapabilityDeclaration = string | Record<string, any>;
 
-// Backwards-compatible status enum alias
-export const MiniAppStatus = {
-  ...MiniAppLifecycleStatus,
-  ACTIVE: 'ACTIVE',
-  BUILDING: 'BUILDING',
-  TESTING: 'TESTING',
-  SUSPENDED: 'SUSPENDED',
-  ARCHIVED: 'ARCHIVED',
-};
+/** A staged change set of a live app (the fields it changes, e.g. integrationConfig). */
+export type MiniAppRevision = Record<string, any>;
 
 export interface MiniAppSuspension {
   reason: string;
@@ -214,33 +203,34 @@ export class MiniApp {
   @Column({ nullable: true })
   alertTelegramChatId?: string;
 
+  /** WEBVIEW, FLUTTER_PACKAGE, NATIVE_SDK or DEEP_LINK (IntegrationMethod); it decides the shape of integrationConfig. */
   @Column({ nullable: true })
-  integrationMethod!: string; // WEBVIEW, FLUTTER_PACKAGE, NATIVE_SDK, DEEP_LINK
-
+  integrationMethod!: string;
   /*
    * The integration below is not stored on mini_apps: it belongs to the
    * version the app serves (mini_app_versions.integrationConfig, homeWidget;
    * the domain-verification fields inside integrationConfig). Filled after
    * load from the eager versions, written with persistAppVersions.
+   * Typed for one method with integrationConfigFor(app, 'FLUTTER_PACKAGE').
    */
-  integrationConfig!: any;
+  integrationConfig!: IntegrationConfig | null;
 
   // The Home widget the app declares for the Widget Slot (shape depends on
   // integrationMethod, see HOME_WIDGET_FIELD); null = no Home widget.
   homeWidget?: HomeWidget | null;
 
-  verificationToken?: string;
+  verificationToken?: string | null;
 
   isDomainVerified!: boolean;
 
-  domainVerifiedAt?: Date;
+  domainVerifiedAt?: Date | null;
 
   /**
    * What the app asks for: the capabilities of the version it serves (the
    * ACTIVE row, else its TESTING/DRAFT working row). Not a column: filled
    * after load from the eager versions, written with persistAppVersions.
    */
-  capabilities!: any[];
+  capabilities!: MiniAppCapabilityDeclaration[];
 
   @Column({ type: 'jsonb', nullable: true, default: () => "'[]'" })
   securityChecks?: string[];
@@ -252,7 +242,7 @@ export class MiniApp {
    * builder lists); written with persistAppVersions after a save.
    * undefined = not loaded, null = none.
    */
-  pendingRevision?: any;
+  pendingRevision?: MiniAppRevision | null;
 
   /** Set while availability is SUSPENDED (or the app is ARCHIVED). */
   @Column({ type: 'jsonb', nullable: true })
@@ -282,11 +272,11 @@ export class MiniApp {
    * MiniAppRunsService (syncScan, recordBuild, ...).
    */
   validationStatus?: string;
-  validationStages?: any;
-  validationReport?: any;
-  validationErrors?: any;
+  validationStages?: Record<string, any> | null;
+  validationReport?: Record<string, any> | null;
+  validationErrors?: any[] | Record<string, any> | null;
   buildStatus?: string;
-  buildStages?: any;
+  buildStages?: Record<string, any> | null;
   buildError?: string | null;
 
   @OneToMany(() => MiniAppCollaborator, (collab) => collab.miniApp, {
@@ -331,8 +321,8 @@ export class MiniApp {
       this.homeWidget = (serving.homeWidget as HomeWidget | null) ?? null;
     }
     if (this.capabilities === undefined) {
-      this.capabilities = Array.isArray(serving?.capabilities)
-        ? [...serving!.capabilities]
+      this.capabilities = Array.isArray(serving?.capabilityRows)
+        ? [...serving!.capabilityRows]
             .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
             .map((c) => c.declaration)
         : [];

@@ -402,8 +402,7 @@ export class ValidationCallbackController {
           this.logger,
         );
         if (purgeResult.report) {
-          if (!app.validationReport) app.validationReport = {} as any;
-          app.validationReport.malwareIncident = purgeResult.report;
+          (app.validationReport ||= {}).malwareIncident = purgeResult.report;
 
           await this.auditService.log({
             actorId: 'system:jenkins',
