@@ -97,3 +97,14 @@ export function revisionVersionOf(app: {
   const minor = parseInt(app.currentReleaseVersion.split('.')[1] || '0', 10);
   return `1.${minor + 1}.0`;
 }
+
+/**
+ * The version row that holds an app's pending revision: the DRAFT row of a
+ * live app (one with an ACTIVE row), else the working DRAFT/TESTING row.
+ * Rows are expected newest first.
+ */
+export function revisionRowOf<T extends { status?: string | null }>(rows: T[] | null | undefined): T | undefined {
+  if (!Array.isArray(rows)) return undefined;
+  const live = rows.some((r) => r.status === 'ACTIVE');
+  return rows.find((r) => r.status === 'DRAFT' || (!live && r.status === 'TESTING'));
+}

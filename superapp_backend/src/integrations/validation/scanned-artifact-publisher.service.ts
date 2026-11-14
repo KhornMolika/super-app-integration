@@ -3,7 +3,7 @@ import { ModuleRef } from '@nestjs/core';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
-import { MiniAppVersionsService } from '../../miniapps/versions/miniapp-versions.service';
+import { MiniAppVersionsService, versionsServiceFor } from '../../miniapps/versions/miniapp-versions.service';
 import { StorageService } from '../../storage/storage.service';
 import { NexusIntegrationService } from '../nexus/nexus-integration.service';
 import { SdkArtifactUploadService } from '../../sdk-artifacts/sdk-artifact-upload.service';
@@ -244,20 +244,19 @@ export class ScannedArtifactPublisherService {
 
   /** Merges fields into integrationConfig (or the pending revision's) without overwriting other changes. */
   private async patchConfig(id: string, inRevision: boolean, patch: Record<string, any>): Promise<void> {
-    const qb = this.miniappRepository.createQueryBuilder().update(MiniApp).where('id = :id', { id });
     if (inRevision) {
-      qb.set({
-        pendingRevision: () =>
-          `jsonb_set(COALESCE("pendingRevision", '{}'::jsonb), '{integrationConfig}', ` +
-          `COALESCE("pendingRevision"->'integrationConfig', '{}'::jsonb) || CAST(:patch AS jsonb))`,
-      });
-    } else {
-      qb.set({
-        integrationConfig: () => `COALESCE("integrationConfig", '{}'::jsonb) || CAST(:patch AS jsonb)`,
-      });
+      // The revision lives on its version row
+      await (this.versionRows ?? versionsServiceFor(this.miniappRepository))?.patchRevisionConfig(id, patch);
+      return;
     }
-    await qb.setParameters({ patch: JSON.stringify(patch) }).execute();
-    // A raw UPDATE skips the entity subscriber: copy the revision to its version row
-    if (inRevision) await this.versionRows?.resyncApp(id);
+    await this.miniappRepository
+      .createQueryBuilder()
+      .update(MiniApp)
+      .where('id = :id', { id })
+      .set({
+        integrationConfig: () => `COALESCE("integrationConfig", '{}'::jsonb) || CAST(:patch AS jsonb)`,
+      })
+      .setParameters({ patch: JSON.stringify(patch) })
+      .execute();
   }
 }

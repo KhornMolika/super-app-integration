@@ -69,6 +69,7 @@ import {
   normalizeHomeWidget,
   sameHomeWidget,
 } from '../home-widget';
+import { persistRevision } from '../versions/miniapp-versions.service';
 
 @Injectable()
 export class MiniappMutationHelper {
@@ -738,6 +739,7 @@ export class MiniappMutationHelper {
         }
 
         await this.miniappRepository.save(existing);
+        await persistRevision(this.miniappRepository, existing);
         const updated = await this.miniappRepository.findOne({
           where: { id: existing.id },
           relations: { issues: true, collaborators: true, legal: true },
@@ -895,6 +897,7 @@ export class MiniappMutationHelper {
 
       existing.pendingRevision = revisionData;
       await this.miniappRepository.save(existing);
+      await persistRevision(this.miniappRepository, existing);
 
       // Kick off async validation on the staged revision
       this.validationHelper
@@ -1048,6 +1051,7 @@ export class MiniappMutationHelper {
     (merged as any).versionHistory = currentHistory;
 
     await this.miniappRepository.save(merged);
+    await persistRevision(this.miniappRepository, merged);
 
     // Kick off async validation only when NOT in draft mode
     const isDraft =

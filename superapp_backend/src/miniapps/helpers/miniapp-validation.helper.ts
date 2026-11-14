@@ -21,6 +21,7 @@ import {
   buildDynamicValidationStages,
   getDefaultChecksForMethod,
 } from '../../integrations/validation/local-security-scanner.service';
+import { persistRevision } from '../versions/miniapp-versions.service';
 
 /** An app in one of these has been approved at least once: a failed check never sends it back to DRAFT. */
 const POST_APPROVAL_STATUSES = new Set([
@@ -479,7 +480,7 @@ export class MiniappValidationHelper {
         if (!isLive) {
           updatePayload.lifecycleStatus = 'DRAFT';
         } else if (app.pendingRevision) {
-          updatePayload.pendingRevision = {
+          app.pendingRevision = {
             ...app.pendingRevision,
             validationStatus: 'FAILED',
             validationErrors: errors,
@@ -488,12 +489,14 @@ export class MiniappValidationHelper {
         if (Object.keys(updatePayload).length > 0) {
           await this.miniappRepository.update(id, updatePayload);
         }
+        await persistRevision(this.miniappRepository, app);
       } catch (updErr: any) {
         this.logger.warn(
           `Could not update validationErrors directly: ${updErr.message}`,
         );
         if (!isLive) app.lifecycleStatus = 'DRAFT' as any;
         await this.miniappRepository.save(app);
+        await persistRevision(this.miniappRepository, app);
       }
       // The failed run: the pending revision's when there is one
       app.validationStatus = 'FAILED';
@@ -561,7 +564,7 @@ export class MiniappValidationHelper {
       if (!isLive) {
         updatePayload.lifecycleStatus = 'SUBMITTED';
       } else if (app.pendingRevision) {
-        updatePayload.pendingRevision = {
+        app.pendingRevision = {
           ...app.pendingRevision,
           validationStatus: 'RUNNING',
           validationStages: initialStages,
@@ -570,6 +573,7 @@ export class MiniappValidationHelper {
       if (Object.keys(updatePayload).length > 0) {
         await this.miniappRepository.update(id, updatePayload);
       }
+      await persistRevision(this.miniappRepository, app);
       app.validationStatus = 'RUNNING';
       app.validationStages = initialStages as any;
       app.validationErrors = null;
@@ -887,6 +891,7 @@ export class MiniappValidationHelper {
     };
 
     await this.miniappRepository.save(app);
+    await persistRevision(this.miniappRepository, app);
     await this.runs?.syncScan(app);
 
     this.notificationsService.emitStageUpdate({

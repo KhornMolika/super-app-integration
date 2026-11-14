@@ -1,5 +1,5 @@
 import { IsOptional, IsString, IsBoolean, IsIn } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { QueryBoolean } from '../../common/transformers/query-boolean';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 export class QueryMiniAppsDto extends PaginationQueryDto {
@@ -24,13 +24,13 @@ export class QueryMiniAppsDto extends PaginationQueryDto {
   organizationId?: string;
 
   @IsOptional()
-  @Transform(({ value }) => value === true || value === 'true' || value === '1')
+  @QueryBoolean()
   @IsBoolean()
   mine?: boolean;
 
   /** Archived apps are left out of the list unless asked for. */
   @IsOptional()
-  @Transform(({ value }) => value === true || value === 'true' || value === '1')
+  @QueryBoolean()
   @IsBoolean()
   includeArchived?: boolean;
 }

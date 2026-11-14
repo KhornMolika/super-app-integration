@@ -10,6 +10,7 @@ import {
 import {
   capabilityChanged,
   parseDeclaredCapabilities,
+  revisionRowOf,
   revisionVersionOf,
   workingVersionOf,
   workingVersionStatus,
@@ -46,8 +47,11 @@ export interface VersionSyncSource {
  *                   revision is a DRAFT row with its own capabilities.
  *
  * syncFromApp runs after every committed save of a mini app (see
- * MiniAppVersionSyncSubscriber). Approving, publishing and rolling back are
- * explicit calls from the lifecycle.
+ * MiniAppVersionSyncSubscriber) and keeps the live and working rows. The
+ * pending revision lives only on its version row (`revision`): every writer
+ * calls persistRevision, and a loaded app gets it back from its eager
+ * versions (MiniApp @AfterLoad) or attachRevisions. Approving, publishing and
+ * rolling back are explicit calls from the lifecycle.
  */
 @Injectable()
 export class MiniAppVersionsService {
@@ -81,12 +85,8 @@ export class MiniAppVersionsService {
     );
   }
 
-  /**
-   * Brings the version rows and their capabilities in line with the app.
-   * skipLive: leave the live row alone (publishing copies the revision onto
-   * the in-memory app before the live row is retired).
-   */
-  async syncFromApp(app: VersionSyncSource, opts: { skipLive?: boolean } = {}): Promise<void> {
+  /** Brings the live or working row and its capabilities in line with the app. */
+  async syncFromApp(app: VersionSyncSource): Promise<void> {
     if (!app?.id) return;
     const rows = await this.rowsOf(app.id);
     const live = rows.find((r) => r.status === MiniAppVersionStatus.ACTIVE);
@@ -112,27 +112,109 @@ export class MiniAppVersionsService {
       return;
     }
 
-    if (!opts.skipLive) await this.setCapabilities(app.id, live.id, app.capabilities);
+    await this.setCapabilities(app.id, live.id, app.capabilities);
+  }
 
-    const draft = rows.find((r) => r.status === MiniAppVersionStatus.DRAFT);
-    if (app.pendingRevision) {
-      const rev = app.pendingRevision;
-      const version = revisionVersionOf(app);
-      let row = draft;
-      if (!row) row = await this.newRow(app, version, MiniAppVersionStatus.DRAFT, rev.changelog);
+  /**
+   * Stores app.pendingRevision on its version row (the only place it lives).
+   *   object     live app: the DRAFT row (made if missing) gets the revision,
+   *              its version, changelog, review state and capabilities;
+   *              unreleased app: the working row keeps it.
+   *   null       the revision is gone: a live app's DRAFT row is deleted, a
+   *              working row's revision cleared.
+   *   undefined  not loaded: nothing changes.
+   * Unchanged revisions are not written again.
+   */
+  async persistRevision(app: VersionSyncSource): Promise<void> {
+    if (!app?.id || app.pendingRevision === undefined) return;
+    const rev = app.pendingRevision && typeof app.pendingRevision === 'object' ? app.pendingRevision : null;
+    let rows = await this.rowsOf(app.id);
+    const live = rows.some((r) => r.status === MiniAppVersionStatus.ACTIVE);
+    let row = revisionRowOf(rows);
+
+    if (!rev) {
+      if (!row) return;
+      if (live) {
+        await this.caps.delete({ versionId: row.id });
+        await this.versions.delete({ id: row.id });
+      } else if (row.revision != null) {
+        await this.versions.update({ id: row.id }, { revision: null, reviewStatus: null, submittedAt: null });
+      }
+      return;
+    }
+
+    const review = {
+      revision: rev,
+      reviewStatus: typeof rev.revisionStatus === 'string' ? rev.revisionStatus.slice(0, 30) : null,
+      submittedAt: toDate(rev.submittedAt),
+    };
+    if (!live) {
+      if (!row) {
+        await this.syncFromApp(app);
+        rows = await this.rowsOf(app.id);
+        row = revisionRowOf(rows);
+      }
+      if (row && JSON.stringify(row.revision ?? null) !== JSON.stringify(rev)) {
+        await this.versions.update({ id: row.id }, review);
+      }
+      return;
+    }
+
+    const version = revisionVersionOf(app);
+    if (!row) row = await this.newRow(app, version, MiniAppVersionStatus.DRAFT, rev.changelog);
+    const changed =
+      JSON.stringify(row.revision ?? null) !== JSON.stringify(rev) ||
+      row.version !== version ||
+      Boolean(rev.changelog && row.changelog !== rev.changelog);
+    if (changed) {
       await this.versions.update({ id: row.id }, {
         version,
         ...(rev.changelog ? { changelog: rev.changelog } : {}),
-        revision: rev,
-        reviewStatus: typeof rev.revisionStatus === 'string' ? rev.revisionStatus.slice(0, 30) : null,
-        submittedAt: toDate(rev.submittedAt),
+        ...review,
       });
-      await this.setCapabilities(app.id, row.id, rev.capabilities ?? rev.permissions ?? app.capabilities);
-    } else if (draft && app.pendingRevision === null) {
-      // Revision discarded (a published one was turned ACTIVE first)
-      await this.caps.delete({ versionId: draft.id });
-      await this.versions.delete({ id: draft.id });
     }
+    await this.setCapabilities(app.id, row.id, rev.capabilities ?? rev.permissions ?? app.capabilities);
+  }
+
+  /**
+   * Fills pendingRevision on apps loaded without their versions (query
+   * builder lists). One query for the whole list; apps that already carry it
+   * are left alone.
+   */
+  async attachRevisions<T extends { id: string; pendingRevision?: any }>(apps: T[]): Promise<T[]> {
+    const todo = apps.filter((a) => a?.id && a.pendingRevision === undefined && UUID.test(a.id));
+    if (!todo.length) return apps;
+    const rows = await this.versions.find({
+      where: {
+        miniAppId: In(todo.map((a) => a.id)),
+        status: In([MiniAppVersionStatus.ACTIVE, MiniAppVersionStatus.DRAFT, MiniAppVersionStatus.TESTING]),
+      },
+      order: { createdAt: 'DESC' },
+    });
+    for (const app of todo) {
+      app.pendingRevision = revisionRowOf(rows.filter((r) => r.miniAppId === app.id))?.revision ?? null;
+    }
+    return apps;
+  }
+
+  /**
+   * Merges fields into the pending revision's integrationConfig in one
+   * UPDATE, so concurrent scan callbacks cannot lose each other's fields.
+   */
+  async patchRevisionConfig(miniAppId: string, patch: Record<string, any>): Promise<void> {
+    const row = revisionRowOf(await this.rowsOf(miniAppId));
+    if (!row) return;
+    await this.versions
+      .createQueryBuilder()
+      .update(MiniAppVersion)
+      .set({
+        revision: () =>
+          `jsonb_set(COALESCE("revision", '{}'::jsonb), '{integrationConfig}', ` +
+          `COALESCE("revision"->'integrationConfig', '{}'::jsonb) || CAST(:patch AS jsonb))`,
+      } as any)
+      .where('id = :id', { id: row.id })
+      .setParameters({ patch: JSON.stringify(patch) })
+      .execute();
   }
 
   /**
@@ -218,7 +300,7 @@ export class MiniAppVersionsService {
     actorId?: string | null,
     changelog?: string,
   ): Promise<void> {
-    await this.syncFromApp(app, { skipLive: true });
+    await this.persistRevision(app);
     const rows = await this.rowsOf(app.id);
     const draft = rows.find((r) => r.status === MiniAppVersionStatus.DRAFT);
     if (!draft) return;
@@ -352,7 +434,6 @@ export class MiniAppVersionsService {
           'm.integrationMethod',
           'm.integrationConfig',
           'm.capabilities',
-          'm.pendingRevision',
         ])
         .where('m.id = :id', { id: miniAppId })
         .getOne();
@@ -370,4 +451,30 @@ export class MiniAppVersionsService {
       this.logger.warn(`Version sync failed for mini app ${app?.id}: ${err?.message}`);
     }
   }
+}
+
+/**
+ * persistRevision for code that has a MiniApp repository but not the
+ * service: the version tables are reached through the repository's manager.
+ * A stand-in repository without a manager (unit tests) is skipped.
+ */
+export async function persistRevision(
+  appRepository: Repository<MiniApp> | undefined | null,
+  app: VersionSyncSource | null | undefined,
+): Promise<void> {
+  if (!app?.id || app.pendingRevision === undefined) return;
+  await versionsServiceFor(appRepository)?.persistRevision(app);
+}
+
+/** A MiniAppVersionsService on the same connection as a MiniApp repository. */
+export function versionsServiceFor(
+  appRepository: Repository<MiniApp> | undefined | null,
+): MiniAppVersionsService | null {
+  const manager = (appRepository as any)?.manager;
+  if (typeof manager?.getRepository !== 'function') return null;
+  return new MiniAppVersionsService(
+    manager.getRepository(MiniAppVersion),
+    manager.getRepository(MiniAppVersionCapability),
+    appRepository as Repository<MiniApp>,
+  );
 }

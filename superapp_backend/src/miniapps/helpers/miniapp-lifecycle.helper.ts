@@ -1,5 +1,5 @@
 import { MiniAppRunsService } from '../miniapp-runs.service';
-import { MiniAppVersionsService } from '../versions/miniapp-versions.service';
+import { MiniAppVersionsService, persistRevision } from '../versions/miniapp-versions.service';
 import { revisionVersionOf } from '../versions/version-capabilities';
 import { scanConfigOf, scanScopeOf } from '../../integrations/validation/scan-source-ticket';
 import { gitRefOf, gitSourceUrlOf, isGitSource, scanSourceOf } from '../../integrations/flutter/git-source.util';
@@ -289,6 +289,7 @@ export class MiniappLifecycleHelper {
       if (next && !sameVerified(next, widget)) {
         app.homeWidget = next;
         await this.miniappRepository.save(app);
+        await persistRevision(this.miniappRepository, app);
       }
     } catch (err: any) {
       this.logger.warn(
@@ -368,6 +369,7 @@ export class MiniappLifecycleHelper {
     app.lifecycleStatus = MiniAppLifecycleStatus.SUBMITTED;
     app.validationStatus = 'RUNNING';
     await this.miniappRepository.save(app);
+    await persistRevision(this.miniappRepository, app);
     await this.runs?.syncScan(app, actorId);
 
     // The new version's own package or repository when one is under review
@@ -515,6 +517,7 @@ export class MiniappLifecycleHelper {
     if (customChecks && customChecks.length > 0) {
       app.securityChecks = customChecks;
       await this.miniappRepository.save(app);
+      await persistRevision(this.miniappRepository, app);
     }
 
     const method = (app.integrationMethod || 'WEBVIEW') as
@@ -529,6 +532,7 @@ export class MiniappLifecycleHelper {
     app.validationStages = initialStages;
     app.validationStatus = 'RUNNING';
     await this.miniappRepository.save(app);
+    await persistRevision(this.miniappRepository, app);
     await this.runs?.syncScan(app, actorId);
 
     // The new version's own package or repository when one is under review
@@ -757,6 +761,7 @@ export class MiniappLifecycleHelper {
     };
 
     await this.miniappRepository.save(app);
+    await persistRevision(this.miniappRepository, app);
     await this.runs?.syncScan(app, actorId);
 
     this.notificationsService.emitStageUpdate({
@@ -877,6 +882,7 @@ export class MiniappLifecycleHelper {
     app.lifecycleStatus = MiniAppLifecycleStatus.APPROVED;
     (app as any).status = 'APPROVED';
     await this.miniappRepository.save(app);
+    await persistRevision(this.miniappRepository, app);
     await this.versions?.approveWorking(app, actorId);
 
     // Auto-inject Flutter package dependency into SuperApp pubspec.yaml if applicable
@@ -976,6 +982,7 @@ export class MiniappLifecycleHelper {
     }
     app.lifecycleStatus = MiniAppLifecycleStatus.REJECTED;
     await this.miniappRepository.save(app);
+    await persistRevision(this.miniappRepository, app);
 
     // 1. Dispatch Notification (WebSocket + Telegram to MA Manager, MA Team Group, & SA Admins)
     if (app.ownerId) {
@@ -1049,6 +1056,7 @@ export class MiniappLifecycleHelper {
         changesRequestedAt: new Date().toISOString(),
       };
       await this.miniappRepository.save(app);
+      await persistRevision(this.miniappRepository, app);
 
       if (app.ownerId) {
         await this.notificationsService.createNotification(
@@ -1086,6 +1094,7 @@ export class MiniappLifecycleHelper {
 
     app.lifecycleStatus = MiniAppLifecycleStatus.CHANGES_REQUESTED;
     await this.miniappRepository.save(app);
+    await persistRevision(this.miniappRepository, app);
 
     // 1. Dispatch Notification (WebSocket + Telegram to MA Manager, MA Team Group, & SA Admins)
     if (app.ownerId) {
@@ -1181,6 +1190,7 @@ export class MiniappLifecycleHelper {
         testVersion: releaseVersion,
       };
       await this.miniappRepository.save(app);
+      await persistRevision(this.miniappRepository, app);
 
       const testBuildType =
         testApkBuildMode();
@@ -1294,6 +1304,7 @@ export class MiniappLifecycleHelper {
     };
 
     await this.miniappRepository.save(app);
+    await persistRevision(this.miniappRepository, app);
     await this.runs?.syncBuildFromApp(app, { buildType: 'debug' }, actorId);
 
     // Dispatch explicit BUILDING status notification
@@ -1408,6 +1419,7 @@ export class MiniappLifecycleHelper {
     app.lifecycleStatus = MiniAppLifecycleStatus.TEST_PASSED;
     (app as any).status = MiniAppLifecycleStatus.TEST_PASSED;
     const saved = await this.miniappRepository.save(app);
+    await persistRevision(this.miniappRepository, app);
 
     if (app.ownerId) {
       await this.notificationsService.createNotification(
@@ -1470,6 +1482,7 @@ export class MiniappLifecycleHelper {
       superAppReleaseVersion: releaseVersion,
     };
     await this.miniappRepository.save(app);
+    await persistRevision(this.miniappRepository, app);
 
     try {
       this.logger.log(
@@ -1490,6 +1503,7 @@ export class MiniappLifecycleHelper {
     app.lifecycleStatus = MiniAppLifecycleStatus.ACTIVE;
     app.availabilityStatus = MiniAppAvailabilityStatus.PRODUCTION;
     await this.miniappRepository.save(app);
+    await persistRevision(this.miniappRepository, app);
 
     if (app.ownerId) {
       await this.notificationsService.createNotification(
@@ -1663,6 +1677,7 @@ export class MiniappLifecycleHelper {
     app.availabilityStatus = MiniAppAvailabilityStatus.PRODUCTION;
 
     await this.miniappRepository.save(app);
+    await persistRevision(this.miniappRepository, app);
 
     // Auto-update Flutter package dependency in SuperApp pubspec.yaml if applicable
     if ((app.integrationMethod || '').toUpperCase() === 'FLUTTER_PACKAGE') {
@@ -1742,6 +1757,7 @@ export class MiniappLifecycleHelper {
       app.lifecycleStatus = (app as any).status || 'ACTIVE';
     }
     await this.miniappRepository.save(app);
+    await persistRevision(this.miniappRepository, app);
 
     // 1. Dispatch Notification
     if (app.ownerId) {
@@ -1862,6 +1878,7 @@ export class MiniappLifecycleHelper {
 
     if (released) await this.versions?.rollbackTo(app.id, released.row.id);
     await this.miniappRepository.save(app);
+    await persistRevision(this.miniappRepository, app);
 
     if (isFlutterPackage) {
       if (app.homeWidget?.widgetClass) {
@@ -2035,6 +2052,7 @@ export class MiniappLifecycleHelper {
     app.buildError = errorMessage;
     app.buildStages = stages;
     await this.miniappRepository.save(app);
+    await persistRevision(this.miniappRepository, app);
     await this.runs?.syncBuildFromApp(app);
 
     this.notificationsService.emitBuildCompleted({

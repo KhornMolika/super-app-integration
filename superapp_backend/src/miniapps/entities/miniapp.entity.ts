@@ -1,4 +1,5 @@
 import {
+  AfterLoad,
   Entity,
   Column,
   PrimaryGeneratedColumn,
@@ -244,7 +245,13 @@ export class MiniApp {
   @Column({ type: 'jsonb', nullable: true, default: () => "'[]'" })
   securityChecks?: string[];
 
-  @Column({ type: 'jsonb', nullable: true })
+  /**
+   * The staged revision of a live app. Not a column: it lives on the app's
+   * DRAFT version row (mini_app_versions.revision). Filled after load from
+   * the eager versions (or MiniAppVersionsService.attachRevisions for query
+   * builder lists); written with persistRevision after a save.
+   * undefined = not loaded, null = none.
+   */
   pendingRevision?: any;
 
   /** Set while availability is SUSPENDED (or the app is ARCHIVED). */
@@ -289,6 +296,18 @@ export class MiniApp {
     eager: true,
   })
   versions!: MiniAppVersion[];
+
+  /** Same rule as revisionRowOf() in versions/version-capabilities.ts. */
+  @AfterLoad()
+  loadPendingRevision(): void {
+    if (this.pendingRevision !== undefined || !Array.isArray(this.versions)) return;
+    const rows = [...this.versions].sort(
+      (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime(),
+    );
+    const live = rows.some((r) => r.status === 'ACTIVE');
+    const row = rows.find((r) => r.status === 'DRAFT' || (!live && r.status === 'TESTING'));
+    this.pendingRevision = row?.revision ?? null;
+  }
 
   @OneToMany(() => MiniAppBuild, (build) => build.miniApp, {
     cascade: true,

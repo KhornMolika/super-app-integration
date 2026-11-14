@@ -28,7 +28,7 @@ interface Opts {
 }
 
 function setup(app: Record<string, any> | null, opts: Opts = {}) {
-  const patches: { set: any; params: any }[] = [];
+  const patches: { set: any; params: any; revision?: boolean }[] = [];
   const qb: any = {
     update: jest.fn().mockReturnThis(),
     where: jest.fn().mockReturnThis(),
@@ -66,7 +66,11 @@ function setup(app: Record<string, any> | null, opts: Opts = {}) {
   };
   const sdk = { publishToNexus: jest.fn().mockResolvedValue({ androidNexusMavenUrl: 'm' }) };
   const moduleRef: any = { get: jest.fn((t: any) => (t === SdkArtifactUploadService ? sdk : undefined)) };
-  const versionRows: any = { resyncApp: jest.fn().mockResolvedValue(undefined) };
+  const versionRows: any = {
+    patchRevisionConfig: jest.fn(async (_id: string, patch: any) => {
+      patches.push({ set: { revision: 'jsonb_set' }, params: patch, revision: true });
+    }),
+  };
   const svc = new ScannedArtifactPublisherService(repo, storage, nexus, moduleRef, versionRows);
   const lastPatch = () => patches[patches.length - 1]?.params;
   return { svc, storage, nexus, sdk, patches, lastPatch, versionRows };
@@ -126,10 +130,10 @@ describe('ScannedArtifactPublisherService: after a passed scan', () => {
     const { svc, nexus, patches, versionRows } = setup(app, { archive: packageZip('fsa_hr_miniapp', '1.3.0') });
     await svc.publishAfterPassedScan('app-1');
     expect(nexus.publishPubArchive).toHaveBeenCalledWith(expect.any(Buffer), 'fsa_hr_miniapp', '1.3.0');
-    expect(patches.every((p) => Object.keys(p.set)[0] === 'pendingRevision')).toBe(true);
-    // The raw UPDATE skips the entity subscriber, so the revision's version row is re-synced
-    expect(versionRows.resyncApp).toHaveBeenCalledTimes(patches.length);
-    expect(versionRows.resyncApp).toHaveBeenCalledWith('app-1');
+    // Recorded on the revision's version row (atomic jsonb_set there), never on the app
+    expect(patches.length).toBeGreaterThan(0);
+    expect(patches.every((p) => p.revision)).toBe(true);
+    expect(versionRows.patchRevisionConfig).toHaveBeenCalledWith('app-1', expect.objectContaining({ nexusPublishedVersion: '1.3.0' }));
   });
 
   it('leaves Git-source packages alone (nothing in MinIO to publish)', async () => {

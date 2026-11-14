@@ -14,6 +14,7 @@ import {
   TelegramDiscoveredGroup,
   TelegramLogger,
 } from './telegram.types';
+import { persistRevision } from '../../../miniapps/versions/miniapp-versions.service';
 
 export class TelegramGroupHelper {
   /**
@@ -518,6 +519,7 @@ export class TelegramGroupHelper {
           }
         }
         await miniAppRepository.save(app);
+        await persistRevision(miniAppRepository, app);
         updatedCount++;
       }
     }
@@ -591,6 +593,7 @@ export class TelegramGroupHelper {
       app.pendingRevision = pendingRev;
     }
     await miniAppRepository.save(app);
+    await persistRevision(miniAppRepository, app);
 
     return {
       success: true,

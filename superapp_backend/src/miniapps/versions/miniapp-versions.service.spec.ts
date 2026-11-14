@@ -117,7 +117,7 @@ describe('MiniAppVersionsService: a live app with a revision', () => {
     expect(live.status).toBe('ACTIVE');
 
     app.pendingRevision = { capabilities: ['camera', 'nfc'], changelog: 'Adds NFC' };
-    await svc.syncFromApp(app);
+    await svc.persistRevision(app);
     const draft = versions.find((v) => v.status === 'DRAFT');
     expect(draft).toMatchObject({ version: revisionVersionOf(app), changelog: 'Adds NFC' });
     expect(capsOf(draft.id).map((c) => c.capabilityKey)).toEqual(['camera', 'nfc']);
@@ -134,7 +134,7 @@ describe('MiniAppVersionsService: a live app with a revision', () => {
       revisionStatus: 'IN_REVIEW',
       submittedAt: '2026-10-01T08:30:00.000Z',
     };
-    await svc.syncFromApp(app);
+    await svc.persistRevision(app);
     const draft = versions.find((v) => v.status === 'DRAFT');
     expect(draft.revision).toEqual(app.pendingRevision);
     expect(draft.reviewStatus).toBe('IN_REVIEW');
@@ -142,7 +142,7 @@ describe('MiniAppVersionsService: a live app with a revision', () => {
 
     // Changes requested: the same row follows, an unreadable date becomes null
     app.pendingRevision = { ...app.pendingRevision, revisionStatus: 'DRAFT', submittedAt: 'soon' };
-    await svc.syncFromApp(app);
+    await svc.persistRevision(app);
     expect(versions.filter((v) => v.status === 'DRAFT')).toHaveLength(1);
     expect(draft).toMatchObject({ reviewStatus: 'DRAFT', submittedAt: null });
   });
@@ -152,7 +152,7 @@ describe('MiniAppVersionsService: a live app with a revision', () => {
     const app = liveApp();
     await svc.syncFromApp(app);
     app.pendingRevision = { capabilities: ['camera', 'nfc'] };
-    await svc.syncFromApp(app);
+    await svc.persistRevision(app);
     const oldLive = versions.find((v) => v.status === 'ACTIVE');
 
     // publishRevision copies the revision onto the app before publishDraft
@@ -167,8 +167,26 @@ describe('MiniAppVersionsService: a live app with a revision', () => {
     app.pendingRevision = null;
     app.currentReleaseVersion = '1.3.0';
     await svc.syncFromApp(app);
+    await svc.persistRevision(app);
     expect(versions.filter((v) => v.status === 'ACTIVE')).toHaveLength(1);
     expect(versions).toHaveLength(2);
+  });
+
+  it('an unchanged revision is not written again', async () => {
+    const { svc, versions } = setup();
+    const app = liveApp();
+    await svc.syncFromApp(app);
+    app.pendingRevision = { name: 'v2', revisionStatus: 'IN_REVIEW' };
+    await svc.persistRevision(app);
+    const draft = versions.find((v) => v.status === 'DRAFT');
+    const updatedAt = draft.revision;
+    app.pendingRevision = { name: 'v2', revisionStatus: 'IN_REVIEW' };
+    await svc.persistRevision(app);
+    expect(draft.revision).toBe(updatedAt);
+    // undefined = not loaded: nothing changes
+    app.pendingRevision = undefined;
+    await svc.persistRevision(app);
+    expect(versions.filter((v) => v.status === 'DRAFT')).toHaveLength(1);
   });
 
   it('discarding the revision deletes its DRAFT row', async () => {
@@ -176,9 +194,9 @@ describe('MiniAppVersionsService: a live app with a revision', () => {
     const app = liveApp();
     await svc.syncFromApp(app);
     app.pendingRevision = { capabilities: ['nfc'] };
-    await svc.syncFromApp(app);
+    await svc.persistRevision(app);
     app.pendingRevision = null;
-    await svc.syncFromApp(app);
+    await svc.persistRevision(app);
     expect(versions.map((v) => v.status)).toEqual(['ACTIVE']);
     expect(caps.every((c) => c.versionId === versions[0].id)).toBe(true);
   });
@@ -188,7 +206,7 @@ describe('MiniAppVersionsService: a live app with a revision', () => {
     const app = liveApp();
     await svc.syncFromApp(app);
     app.pendingRevision = { capabilities: ['nfc'] };
-    await svc.syncFromApp(app);
+    await svc.persistRevision(app);
     app.capabilities = ['nfc'];
     await svc.publishDraft(app, '1.3.0', REVIEWER);
 
@@ -198,6 +216,62 @@ describe('MiniAppVersionsService: a live app with a revision', () => {
     expect(versions.find((v) => v.version === '1.2.0').status).toBe('ACTIVE');
     expect(versions.find((v) => v.version === '1.3.0').status).toBe('PREVIOUS');
     expect(await svc.findReleased('a', '9.9.9')).toBeNull();
+  });
+});
+
+describe('MiniAppVersionsService: revisions of an unreleased app and loading', () => {
+  const APP = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+
+  it('an unreleased app keeps its revision on the working row; null clears it', async () => {
+    const { svc, versions } = setup();
+    const app: any = { id: APP, lifecycleStatus: 'DRAFT', capabilities: ['camera'] };
+    app.pendingRevision = { name: 'Renamed', revisionStatus: 'IN_REVIEW' };
+    await svc.persistRevision(app);
+    expect(versions).toHaveLength(1);
+    expect(versions[0]).toMatchObject({ status: 'DRAFT', reviewStatus: 'IN_REVIEW' });
+    expect(versions[0].revision).toEqual({ name: 'Renamed', revisionStatus: 'IN_REVIEW' });
+
+    app.pendingRevision = null;
+    await svc.persistRevision(app);
+    expect(versions).toHaveLength(1);
+    expect(versions[0]).toMatchObject({ revision: null, reviewStatus: null });
+  });
+
+  it('attachRevisions fills apps loaded without their versions, in one query', async () => {
+    const { svc } = setup();
+    const live: any = { id: APP, lifecycleStatus: 'ACTIVE', currentReleaseVersion: '1.0.0', capabilities: [] };
+    await svc.syncFromApp(live);
+    live.pendingRevision = { name: 'Next' };
+    await svc.persistRevision(live);
+
+    const other = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+    const listed: any[] = [{ id: APP }, { id: other }, { id: APP, pendingRevision: { kept: true } }];
+    await svc.attachRevisions(listed);
+    expect(listed[0].pendingRevision).toEqual({ name: 'Next' });
+    expect(listed[1].pendingRevision).toBeNull();
+    expect(listed[2].pendingRevision).toEqual({ kept: true });
+  });
+
+  it('a loaded MiniApp gets its revision from the eager versions', () => {
+    const { MiniApp } = require('../entities/miniapp.entity');
+    const load = (versions: any[]) => {
+      const app = Object.assign(new MiniApp(), { versions });
+      app.loadPendingRevision();
+      return app.pendingRevision;
+    };
+    const at = (d: number) => new Date(2026, 0, d);
+    expect(load([
+      { status: 'ACTIVE', createdAt: at(1), revision: { stale: true } },
+      { status: 'DRAFT', createdAt: at(2), revision: { name: 'Next' } },
+    ])).toEqual({ name: 'Next' });
+    // Live app: a TESTING row is never its revision
+    expect(load([{ status: 'ACTIVE', createdAt: at(1) }, { status: 'TESTING', createdAt: at(2), revision: { x: 1 } }])).toBeNull();
+    // Unreleased: the working row
+    expect(load([{ status: 'TESTING', createdAt: at(2), revision: { y: 1 } }])).toEqual({ y: 1 });
+    // Versions not loaded: left undefined (not "no revision")
+    const bare = new MiniApp();
+    bare.loadPendingRevision();
+    expect(bare.pendingRevision).toBeUndefined();
   });
 });
 

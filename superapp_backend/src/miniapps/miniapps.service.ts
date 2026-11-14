@@ -68,6 +68,7 @@ import {
   PackagePublishError,
   ScannedArtifactPublisherService,
 } from '../integrations/validation/scanned-artifact-publisher.service';
+import { versionsServiceFor } from './versions/miniapp-versions.service';
 
 @Injectable()
 export class MiniappsService implements OnApplicationBootstrap {
@@ -716,6 +717,8 @@ export class MiniappsService implements OnApplicationBootstrap {
     qb.skip((page - 1) * limit).take(limit);
 
     const [apps, totalItems] = await qb.getManyAndCount();
+    // The list query skips the eager versions: add each pending revision
+    await versionsServiceFor(this.miniappRepository)?.attachRevisions(apps);
     await this.runs?.attach(apps);
     const masked = apps.map((a) => maskMiniAppCredentials(a));
 

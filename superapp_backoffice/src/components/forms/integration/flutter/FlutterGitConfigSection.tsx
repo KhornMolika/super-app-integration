@@ -56,12 +56,17 @@ export default function FlutterGitConfigSection({
   const [isGeneratingKey, setIsGeneratingKey] = useState(false);
   const [copiedKey, setCopiedKey] = useState(false);
   const [showManualOverride, setShowManualOverride] = useState(false);
+  const [keyError, setKeyError] = useState("");
 
   const handleGenerateDedicatedKey = async () => {
     try {
       setIsGeneratingKey(true);
+      setKeyError("");
       const appName = flutterConfig?.packageName || flutterConfig?.appName || "miniapp";
       const keyInfo = await integrationsApi.generateDeployKey(appName);
+      if (!keyInfo?.publicKey || !keyInfo?.encryptedPrivateKey) {
+        throw new Error("The server did not return a key.");
+      }
       if (onUpdateFlutterConfig) {
         onUpdateFlutterConfig({
           deployKey: keyInfo.encryptedPrivateKey,
@@ -72,6 +77,9 @@ export default function FlutterGitConfigSection({
       }
     } catch (err) {
       console.error("Failed to generate dedicated deploy key:", err);
+      setKeyError(
+        `Could not make a key: ${(err as any)?.message || "unknown error"}. Try again.`,
+      );
     } finally {
       setIsGeneratingKey(false);
     }
@@ -110,6 +118,7 @@ export default function FlutterGitConfigSection({
       !flutterConfig?.deployPublicKey &&
       !flutterConfig?.hasDeployKey &&
       !isGeneratingKey &&
+      !keyError &&
       isEditable
     ) {
       handleGenerateDedicatedKey();
@@ -220,9 +229,11 @@ export default function FlutterGitConfigSection({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
         <div>
-          <Label htmlFor="git-path">
-            Folder <span className="text-xs font-normal text-slate-400">Optional</span>
-          </Label>
+          <div className="flex items-center min-h-9 mb-1.5">
+            <Label htmlFor="git-path" className="!mb-0">
+              Folder <span className="text-xs font-normal text-slate-400">Optional</span>
+            </Label>
+          </div>
           <Input
             id="git-path"
             name="gitPath"
@@ -236,7 +247,7 @@ export default function FlutterGitConfigSection({
         </div>
 
         <div>
-          <div className="flex items-center justify-between gap-2 mb-1.5">
+          <div className="flex items-center justify-between gap-2 min-h-9 mb-1.5">
             <Label htmlFor="git-ref" className="!mb-0">
               Version
             </Label>
@@ -272,7 +283,7 @@ export default function FlutterGitConfigSection({
           ) : (
             <Input
               id="git-ref"
-              value={selectedRef || flutterConfig?.gitBranch || ""}
+              value={selectedRef || (selectedRefType === "branch" ? flutterConfig?.gitBranch || "" : "")}
               onChange={(e: any) => handleRefChange(e.target.value)}
               disabled={!isEditable}
               placeholder={selectedRefType === "tag" ? "v1.0.0" : selectedRefType === "branch" ? "main" : "7f8b9c0d1e2f"}
@@ -284,10 +295,10 @@ export default function FlutterGitConfigSection({
             {lockedCommitSha
               ? `Builds use commit ${lockedCommitSha.substring(0, 8)}.`
               : selectedRefType === "tag"
-                ? "A tag is best for releases."
+                ? "Recommended. Tag the release to match the version in pubspec.yaml."
                 : selectedRefType === "branch"
-                  ? "Builds take the latest commit on this branch."
-                  : "Builds always use this exact commit."}
+                  ? "For testing only. Each build takes the newest commit, which may not be what was reviewed."
+                  : "Exact and can't change, but harder to read than a tag."}
           </p>
         </div>
       </div>
@@ -313,14 +324,18 @@ export default function FlutterGitConfigSection({
 
         {isPrivateRepo && (
           <>
-            <div className="inline-flex p-0.5 rounded-xl bg-slate-100 dark:bg-slate-800" role="tablist">
-              <button type="button" role="tab" aria-selected={authMethod === "deploy_key"} onClick={() => handleAuthMethodChange("deploy_key")} disabled={!isEditable} className={seg(authMethod === "deploy_key")}>
-                Deploy key (recommended)
-              </button>
-              <button type="button" role="tab" aria-selected={authMethod === "token"} onClick={() => handleAuthMethodChange("token")} disabled={!isEditable} className={seg(authMethod === "token")}>
-                Access token
-              </button>
-            </div>
+            {authMethod === "token" && (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-amber-50 dark:bg-amber-950/30 px-3 py-2">
+                <p className="text-xs text-amber-800 dark:text-amber-300">
+                  This app uses an access token. A deploy key is safer: it reads only this repository and isn&apos;t tied to a person.
+                </p>
+                {isEditable && (
+                  <button type="button" onClick={() => handleAuthMethodChange("deploy_key")} className={smallBtn}>
+                    Switch to a deploy key
+                  </button>
+                )}
+              </div>
+            )}
 
             {authMethod === "deploy_key" ? (
               <ol className="space-y-4">
@@ -328,9 +343,11 @@ export default function FlutterGitConfigSection({
                   <span className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0">1</span>
                   <div className="min-w-0 flex-1 space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-sm text-slate-700 dark:text-slate-300">Copy this public key. We made it for this app only.</p>
+                      <p className="text-sm text-slate-700 dark:text-slate-300">
+                        {flutterConfig?.deployPublicKey ? "Copy this public key. It was made for this app only." : "Make a key for this app."}
+                      </p>
                       <div className="flex items-center gap-2">
-                        {isEditable && hasKey && (
+                        {isEditable && hasKey && flutterConfig?.deployPublicKey && (
                           <button type="button" onClick={handleGenerateDedicatedKey} disabled={isGeneratingKey} className={smallBtn}>
                             {isGeneratingKey ? "Making..." : "New key"}
                           </button>
@@ -345,19 +362,34 @@ export default function FlutterGitConfigSection({
                         </button>
                       </div>
                     </div>
-                    {hasKey ? (
+                    {flutterConfig?.deployPublicKey ? (
                       <pre
                         ref={publicKeyRef}
                         onClick={flutterConfig?.deployPublicKey ? selectPublicKey : undefined}
                         className="max-h-28 overflow-y-auto whitespace-pre-wrap break-all rounded-xl bg-slate-50 dark:bg-slate-900/60 p-3 font-mono text-xs text-slate-800 dark:text-slate-200 select-all cursor-text"
                       >
-                        {flutterConfig?.deployPublicKey || "The key was saved earlier. Make a new key to see it again."}
+                        {flutterConfig.deployPublicKey}
                       </pre>
+                    ) : hasKey ? (
+                      <div className="rounded-xl bg-slate-50 dark:bg-slate-900/60 p-3 space-y-2">
+                        <p className="text-xs text-slate-600 dark:text-slate-300">
+                          A key is saved, but its public half wasn&apos;t kept, so it can&apos;t be shown.
+                          {isEditable
+                            ? " Make a new key, then replace the deploy key in the repository."
+                            : " Edit the app to make a new key."}
+                        </p>
+                        {isEditable && (
+                          <button type="button" onClick={handleGenerateDedicatedKey} disabled={isGeneratingKey} className={smallBtn}>
+                            {isGeneratingKey ? "Making a key..." : "Make a new key"}
+                          </button>
+                        )}
+                      </div>
                     ) : (
                       <button type="button" onClick={handleGenerateDedicatedKey} disabled={isGeneratingKey || !isEditable} className={smallBtn}>
                         {isGeneratingKey ? "Making a key..." : "Make a key"}
                       </button>
                     )}
+                    {keyError && <p className="text-xs text-rose-600 dark:text-rose-400">{keyError}</p>}
                     {copyFailed && (
                       <p className="text-xs text-amber-600 dark:text-amber-400">
                         Copy was blocked. The key is selected: press Ctrl+C (Cmd+C on Mac).

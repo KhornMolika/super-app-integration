@@ -187,8 +187,12 @@ export default function FlutterPackageIntegrationForm({
       authMethod: isPrivate ? flutterConfig.authMethod || "deploy_key" : "none",
     };
     if (!isPrivate) {
+      // Forget the whole key: a public half left behind would no longer match anything
       updates.gitAccessToken = "";
       updates.deployKey = "";
+      updates.deployPublicKey = "";
+      updates.deployKeyFingerprint = "";
+      updates.hasDeployKey = false;
     }
     if (onUpdateFlutterConfig) {
       onUpdateFlutterConfig(updates);
@@ -467,21 +471,37 @@ export default function FlutterPackageIntegrationForm({
 
   const handleRefTypeChange = (type: "tag" | "branch" | "commit") => {
     setSelectedRefType(type);
-    let defaultVal = selectedRef;
-    if (type === "tag" && tags.length > 0) {
-      defaultVal = tags[0];
+    // A value only carries over when it fits the new type (a branch is not a tag)
+    let defaultVal = "";
+    if (type === "tag") {
+      defaultVal = tags.includes(selectedRef) ? selectedRef : tags[0] || "";
     } else if (type === "branch") {
       defaultVal =
         branches.length > 0
           ? branches[0]
           : flutterConfig.gitBranch || "main";
-    } else if (type === "commit" && lockedCommitSha) {
-      defaultVal = lockedCommitSha;
+    } else if (type === "commit") {
+      defaultVal = lockedCommitSha || "";
     }
-    if (defaultVal) {
-      handleRefChange(defaultVal);
-    }
+    handleRefChange(defaultVal);
   };
+
+  // A saved ref opens on its own tab: a branch name under Branch, a SHA under Commit
+  const inferredRefFor = React.useRef<string>("");
+  useEffect(() => {
+    const ref = selectedRef || flutterConfig.gitBranch || "";
+    if (!ref || inferredRefFor.current === ref) return;
+    if (tags.includes(ref)) {
+      inferredRefFor.current = ref;
+      setSelectedRefType("tag");
+    } else if (branches.includes(ref)) {
+      inferredRefFor.current = ref;
+      setSelectedRefType("branch");
+    } else if (/^[0-9a-f]{7,40}$/i.test(ref)) {
+      inferredRefFor.current = ref;
+      setSelectedRefType("commit");
+    }
+  }, [tags, branches, selectedRef, flutterConfig.gitBranch]);
 
   // Real-time Git URL Validation with Debounce (600ms)
   useEffect(() => {

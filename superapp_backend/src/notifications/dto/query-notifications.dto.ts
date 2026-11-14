@@ -1,10 +1,10 @@
 import { IsOptional, IsString, IsBoolean } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { QueryBoolean } from '../../common/transformers/query-boolean';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 export class QueryNotificationsDto extends PaginationQueryDto {
   @IsOptional()
-  @Transform(({ value }) => value === true || value === 'true' || value === '1')
+  @QueryBoolean()
   @IsBoolean()
   isRead?: boolean;
 
