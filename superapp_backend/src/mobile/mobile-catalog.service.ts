@@ -275,13 +275,11 @@ export class MobileCatalogService {
       'm.description',
       'm.logo',
       'm.integrationMethod',
-      'm.integrationConfig',
       'm.lifecycleStatus',
       'm.availabilityStatus',
       'org.name',
       'org.code',
       'm.organizationId',
-      'm.homeWidget',
       'legal.termsDescription',
       'legal.privacyPolicyDescription',
     ]).where(
@@ -318,11 +316,9 @@ export class MobileCatalogService {
     for (const r of rows) {
       const v = served?.get(r.id);
       r.capabilities = (v?.capabilities ?? r.capabilities ?? []) as any;
-      if (v?.integration) {
-        r.integrationMethod = v.integration.integrationMethod ?? r.integrationMethod;
-        r.integrationConfig = v.integration.integrationConfig;
-        r.homeWidget = v.integration.homeWidget;
-      }
+      r.integrationMethod = v?.integration?.integrationMethod ?? r.integrationMethod;
+      r.integrationConfig = v?.integration?.integrationConfig ?? null;
+      r.homeWidget = (v?.integration?.homeWidget ?? null) as any;
     }
     // One catalog read for the whole page; launchability is computed, never stored
     const snapshot = this.capabilityGate ? await this.capabilityGate.snapshot() : null;

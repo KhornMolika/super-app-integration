@@ -154,18 +154,8 @@ export class SdkArtifactUploadService {
         }
 
         const patch = { ...scannedFields, ...urlFields };
-        await this.miniappRepository
-          .createQueryBuilder()
-          .update(MiniApp)
-          .set({
-            integrationConfig: () =>
-              `COALESCE("integrationConfig", '{}'::jsonb) || CAST(:patch AS jsonb)`,
-          })
-          .where('id = :id', { id: miniApp.id })
-          .setParameters({ patch: JSON.stringify(patch) })
-          .execute();
-        // A raw UPDATE: the version rows (what phones get) follow explicitly
-        await versionsServiceFor(this.miniappRepository)?.resyncApp(miniApp.id);
+        // The integration lives on the version the app serves (atomic jsonb merge)
+        await versionsServiceFor(this.miniappRepository)?.patchServingConfig(miniApp.id, patch);
       }
     }
 
@@ -288,18 +278,8 @@ export class SdkArtifactUploadService {
 
     // Persist Nexus URLs atomically
     if (Object.keys(patch).length > 0) {
-      await this.miniappRepository
-        .createQueryBuilder()
-        .update(MiniApp)
-        .set({
-          integrationConfig: () =>
-            `COALESCE("integrationConfig", '{}'::jsonb) || CAST(:patch AS jsonb)`,
-        })
-        .where('id = :id', { id: miniApp.id })
-        .setParameters({ patch: JSON.stringify(patch) })
-        .execute();
-      // A raw UPDATE: the version rows (what phones get) follow explicitly
-      await versionsServiceFor(this.miniappRepository)?.resyncApp(miniApp.id);
+      // The integration lives on the version the app serves (atomic jsonb merge)
+      await versionsServiceFor(this.miniappRepository)?.patchServingConfig(miniApp.id, patch);
     }
 
     return {

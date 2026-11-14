@@ -249,16 +249,7 @@ export class ScannedArtifactPublisherService {
       await (this.versionRows ?? versionsServiceFor(this.miniappRepository))?.patchRevisionConfig(id, patch);
       return;
     }
-    await this.miniappRepository
-      .createQueryBuilder()
-      .update(MiniApp)
-      .where('id = :id', { id })
-      .set({
-        integrationConfig: () => `COALESCE("integrationConfig", '{}'::jsonb) || CAST(:patch AS jsonb)`,
-      })
-      .setParameters({ patch: JSON.stringify(patch) })
-      .execute();
-    // A raw UPDATE: the live version row (what phones get) follows explicitly
-    await (this.versionRows ?? versionsServiceFor(this.miniappRepository))?.resyncApp(id);
+    // The integration lives on the version the app serves
+    await (this.versionRows ?? versionsServiceFor(this.miniappRepository))?.patchServingConfig(id, patch);
   }
 }

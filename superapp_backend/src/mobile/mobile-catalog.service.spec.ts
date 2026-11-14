@@ -152,7 +152,7 @@ describe('MobileCatalogService.list', () => {
                 integration: { integrationMethod: 'WEBVIEW', integrationConfig: { url: 'https://live-version' }, homeWidget: null },
               },
             ],
-            // A row without an integration yet: the app's columns are used
+            // A row without an integration: phones get none (mini_apps keeps no copy)
             ['v2', { versionId: 'row-2', capabilities: ['nfc'], integration: null }],
           ]),
       ),
@@ -162,7 +162,7 @@ describe('MobileCatalogService.list', () => {
     expect(page.items[0]).toMatchObject({ permissions: ['camera'], integrationMethod: 'WEBVIEW' });
     expect(page.items[0].integrationConfig?.url).toBe('https://live-version');
     expect(page.items[1].permissions).toEqual(['nfc']);
-    expect(page.items[1].integrationConfig?.url).toBe('https://kept');
+    expect(page.items[1].integrationConfig).toBeNull();
   });
 
   it('escapes LIKE wildcards in the name search', async () => {
@@ -171,14 +171,29 @@ describe('MobileCatalogService.list', () => {
     expect(calls.and[2][1]).toEqual({ q: '%50\\%\\_off\\\\%' });
   });
 
-  it('selects homeWidget and returns it as widget', async () => {
-    const { repo, calls } = qbFor([
-      makeApp({
-        homeWidget: { widgetClass: 'HrHomeWidget', verifiedClass: 'HrHomeWidget' },
-      }),
-    ]);
-    const page = await new MobileCatalogService(repo).list(undefined, 20, 0);
-    expect(calls.select).toContain('m.homeWidget');
+  it('takes the Home widget from the served version and returns it as widget', async () => {
+    const { repo, calls } = qbFor([makeApp()]);
+    const versions = {
+      servingVersions: jest.fn(
+        async () =>
+          new Map<string, any>([
+            [
+              makeApp().id,
+              {
+                versionId: 'row',
+                capabilities: [],
+                integration: {
+                  integrationMethod: 'FLUTTER_PACKAGE',
+                  integrationConfig: {},
+                  homeWidget: { widgetClass: 'HrHomeWidget', verifiedClass: 'HrHomeWidget' },
+                },
+              },
+            ],
+          ]),
+      ),
+    };
+    const page = await new MobileCatalogService(repo, undefined, versions as any).list(undefined, 20, 0);
+    expect(calls.select).not.toContain('m.homeWidget');
     expect(calls.select).toContain('m.organizationId');
     expect(page.items[0].widget).toEqual({ widgetClass: 'HrHomeWidget' });
   });

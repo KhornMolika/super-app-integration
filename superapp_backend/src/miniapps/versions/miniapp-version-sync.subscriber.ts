@@ -17,8 +17,6 @@ const WATCHED = new Set([
   'lifecycleStatus',
   'currentReleaseVersion',
   'integrationMethod',
-  'integrationConfig',
-  'homeWidget',
 ]);
 
 /**

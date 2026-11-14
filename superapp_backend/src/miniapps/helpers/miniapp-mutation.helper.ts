@@ -71,6 +71,12 @@ import {
 } from '../home-widget';
 import { persistAppVersions } from '../versions/miniapp-versions.service';
 
+/** Fields that live on the version rows: create() and merge() leave them out. */
+const VERSION_FIELDS = ['integrationConfig', 'homeWidget', 'verificationToken', 'isDomainVerified', 'domainVerifiedAt'] as const;
+function copyVersionFields(target: any, data: any): void {
+  for (const k of VERSION_FIELDS) if (data?.[k] !== undefined) target[k] = data[k];
+}
+
 @Injectable()
 export class MiniappMutationHelper {
   private readonly logger = new Logger(MiniappMutationHelper.name);
@@ -416,6 +422,7 @@ export class MiniappMutationHelper {
 
     const app = this.miniappRepository.create(data as Partial<MiniApp>);
     // Not columns (they live on the version rows): create() leaves them out
+    copyVersionFields(app, data);
     app.capabilities = data.capabilities;
     app.pendingRevision = null;
     let savedApp: MiniApp;
@@ -952,6 +959,8 @@ export class MiniappMutationHelper {
     data.lifecycleStatus = 'SUBMITTED';
 
     const merged = this.miniappRepository.merge(existing, data);
+    // merge() copies columns only; the integration lives on the version rows
+    copyVersionFields(merged, data);
     if (data.capabilities || data.permissions) {
       merged.capabilities = data.capabilities || data.permissions;
     }

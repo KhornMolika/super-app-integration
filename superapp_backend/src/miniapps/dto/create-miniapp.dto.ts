@@ -417,9 +417,6 @@ export class CreateMiniAppDto {
   @IsOptional()
   organizationCode?: string;
 
-  @IsString()
-  @IsOptional()
-  sharingScope?: string;
 
   @IsString()
   @IsOptional()

@@ -68,6 +68,9 @@ function setup(app: Record<string, any> | null, opts: Opts = {}) {
   const moduleRef: any = { get: jest.fn((t: any) => (t === SdkArtifactUploadService ? sdk : undefined)) };
   const versionRows: any = {
     resyncApp: jest.fn().mockResolvedValue(undefined),
+    patchServingConfig: jest.fn(async (_id: string, patch: any) => {
+      patches.push({ set: { integrationConfig: 'jsonb merge' }, params: patch });
+    }),
     patchRevisionConfig: jest.fn(async (_id: string, patch: any) => {
       patches.push({ set: { revision: 'jsonb_set' }, params: patch, revision: true });
     }),

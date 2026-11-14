@@ -59,9 +59,9 @@ export class ArtifactDistributionHelper {
     const history = rows.map((v) => ({
       id: v.id,
       version: v.version,
-      gitRef: v.gitRef || null,
-      packageName: v.packageName || packageName,
-      sourceType: v.sourceType || null,
+      gitRef: v.integrationConfig?.commitSha || v.integrationConfig?.gitBranch || v.integrationConfig?.gitRef || null,
+      packageName: v.integrationConfig?.packageName || packageName,
+      sourceType: v.integrationMethod || v.integrationConfig?.sourceType || null,
       type:
         v.status === 'TESTING'
           ? 'TEST'
@@ -75,11 +75,11 @@ export class ArtifactDistributionHelper {
       submittedAt: iso(v.submittedAt),
       createdAt: iso(v.createdAt),
       releasedBy: v.releasedBy || null,
-      checksum: v.checksum || null,
-      apkSize: v.apkSize || null,
-      artifactUrl: v.artifactUrl || null,
-      buildNumber: v.buildNumber ?? null,
-      jenkinsJobUrl: v.jenkinsJobUrl || null,
+      checksum: v.integrationConfig?.archiveChecksum || null,
+      apkSize: v.integrationConfig?.apkSize || null,
+      artifactUrl: v.integrationConfig?.artifactUrl || null,
+      buildNumber: v.integrationConfig?.buildNumber ?? null,
+      jenkinsJobUrl: v.integrationConfig?.jenkinsJobUrl || null,
     }));
 
     return {

@@ -307,6 +307,27 @@ describe('Capabilities loaded from the version rows (no JSON columns)', () => {
     expect(bare.capabilities).toBeUndefined();
   });
 
+  it('an app gets its integration from the version it serves (verification inside the config)', () => {
+    const app = Object.assign(new MiniApp(), {
+      versions: [
+        Object.assign(new MiniAppVersion(), {
+          status: 'ACTIVE',
+          createdAt: new Date(2026, 0, 1),
+          integrationConfig: { url: 'https://live', verificationToken: 't', isDomainVerified: true },
+          homeWidget: { url: 'w' },
+        }),
+        Object.assign(new MiniAppVersion(), {
+          status: 'DRAFT',
+          createdAt: new Date(2026, 0, 2),
+          integrationConfig: { url: 'https://next' },
+        }),
+      ],
+    });
+    app.loadPendingRevision();
+    expect(app.integrationConfig.url).toBe('https://live');
+    expect(app).toMatchObject({ verificationToken: 't', isDomainVerified: true, homeWidget: { url: 'w' } });
+  });
+
   it('persistAppVersions writes the capabilities and the revision through the repository manager', async () => {
     const { persistAppVersions } = require('./miniapp-versions.service');
     const versions = memoryRepo();

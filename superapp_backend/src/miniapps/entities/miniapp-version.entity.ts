@@ -54,41 +54,14 @@ export class MiniAppVersion {
   @Column({ default: MiniAppVersionStatus.DRAFT })
   status!: string; // ACTIVE, TESTING, PREVIOUS, DEPRECATED, DRAFT
 
-  @Column({ nullable: true })
-  gitRef?: string;
-
-  @Column({ nullable: true })
-  packageName?: string;
-
-  @Column({ nullable: true })
-  sourceType?: string; // GIT, ARTIFACT, WEBVIEW
-
-  @Column({ nullable: true })
-  saVersion?: string;
-
   @Column({ type: 'text', nullable: true })
   changelog?: string;
-
-  @Column({ type: 'text', nullable: true })
-  artifactUrl?: string;
-
-  @Column({ nullable: true })
-  apkSize?: string;
-
-  @Column({ nullable: true })
-  checksum?: string;
 
   @Column({ type: 'timestamptz', nullable: true })
   releasedAt?: Date;
 
   @Column({ nullable: true })
   releasedBy?: string;
-
-  @Column({ type: 'int', nullable: true })
-  buildNumber?: number;
-
-  @Column({ nullable: true })
-  jenkinsJobUrl?: string;
 
   /** How this version runs: WEBVIEW, FLUTTER_PACKAGE, NATIVE_SDK, DEEP_LINK. */
   @Column({ type: 'varchar', length: 30, nullable: true })

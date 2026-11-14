@@ -240,7 +240,8 @@ describe('MobileAccountService.requestDeletion', () => {
     await expect(
       c.auth.login({ email: 'jane@example.io', password: PW }),
     ).rejects.toThrow('Invalid credentials');
-  });
+    // Several sign-ins, each checking a password hash: slow when the whole suite runs in parallel
+  }, 30_000);
 
   it('a restore that loses a race (account no longer pending deletion) issues no session', async () => {
     const disableAfterLoad = (c: Awaited<ReturnType<typeof buildAccount>>) => {

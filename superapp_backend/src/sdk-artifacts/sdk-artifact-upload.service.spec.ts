@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { createHash } from 'crypto';
 import { SdkArtifactUploadService } from './sdk-artifact-upload.service';
+import { MiniAppVersionsService } from '../miniapps/versions/miniapp-versions.service';
 
 describe('SdkArtifactUploadService (MinIO Quarantine & Nexus Flow)', () => {
   let scanner: { scanXcframework: jest.Mock; scanAar: jest.Mock };
@@ -73,7 +74,15 @@ describe('SdkArtifactUploadService (MinIO Quarantine & Nexus Flow)', () => {
       findOne: jest.fn().mockResolvedValue(miniApp),
       save: jest.fn(async (x) => x),
       createQueryBuilder: jest.fn(() => qb),
+      // The integration lives on the served version row (patchServingConfig)
+      manager: { getRepository: jest.fn(() => ({})) },
     };
+    jest
+      .spyOn(MiniAppVersionsService.prototype, 'patchServingConfig')
+      .mockImplementation(async (_id: string, patch: Record<string, any>) => {
+        patches.push(patch);
+        dbConfig = { ...dbConfig, ...patch };
+      });
     const config = {
       get: jest.fn().mockImplementation((k: string, d?: string) => d),
     };
@@ -85,6 +94,8 @@ describe('SdkArtifactUploadService (MinIO Quarantine & Nexus Flow)', () => {
       repo as any,
     );
   });
+
+  afterEach(() => jest.restoreAllMocks());
 
   it("inspect scans in memory and stores nothing (no MinIO, no Nexus, no database)", async () => {
     scanner.scanAar.mockResolvedValue({ androidPackageName: "com.x.spa", detectedPermissions: ["CAMERA"] });

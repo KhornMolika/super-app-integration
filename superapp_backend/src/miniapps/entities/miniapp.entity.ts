@@ -20,6 +20,7 @@ import { MiniAppLegal } from './miniapp-legal.entity';
 import { Notification } from '../../notifications/entities/notification.entity';
 import { Organization } from '../../organizations/entities/organization.entity';
 import type { HomeWidget } from '../home-widget';
+import { appIntegrationFields } from '../versions/integration-fields';
 
 /**
  * Application-Level Lifecycle & Governance Status Taxonomy (MiniApp Entity)
@@ -167,12 +168,6 @@ export class MiniApp {
 
   @Column({
     type: 'varchar',
-    default: MiniAppSharingScope.GLOBAL,
-  })
-  sharingScope!: string;
-
-  @Column({
-    type: 'varchar',
     default: MiniAppTargetAudience.PUBLIC,
   })
   targetAudience!: string;
@@ -222,21 +217,22 @@ export class MiniApp {
   @Column({ nullable: true })
   integrationMethod!: string; // WEBVIEW, FLUTTER_PACKAGE, NATIVE_SDK, DEEP_LINK
 
-  @Column({ type: 'jsonb', nullable: true })
+  /*
+   * The integration below is not stored on mini_apps: it belongs to the
+   * version the app serves (mini_app_versions.integrationConfig, homeWidget;
+   * the domain-verification fields inside integrationConfig). Filled after
+   * load from the eager versions, written with persistAppVersions.
+   */
   integrationConfig!: any;
 
   // The Home widget the app declares for the Widget Slot (shape depends on
   // integrationMethod, see HOME_WIDGET_FIELD); null = no Home widget.
-  @Column({ type: 'jsonb', nullable: true })
   homeWidget?: HomeWidget | null;
 
-  @Column({ nullable: true })
   verificationToken?: string;
 
-  @Column({ default: false })
   isDomainVerified!: boolean;
 
-  @Column({ type: 'timestamp', nullable: true })
   domainVerifiedAt?: Date;
 
   /**
@@ -320,11 +316,21 @@ export class MiniApp {
       const row = rows.find((r) => r.status === 'DRAFT' || (!live && r.status === 'TESTING'));
       this.pendingRevision = row?.revision ?? null;
     }
+    const serving =
+      rows.find((r) => r.status === 'ACTIVE') ??
+      rows.find((r) => r.status === 'TESTING') ??
+      rows.find((r) => r.status === 'DRAFT');
+    if (serving && this.integrationConfig === undefined) {
+      const f = appIntegrationFields(serving.integrationConfig);
+      this.integrationConfig = f.integrationConfig;
+      this.verificationToken = f.verificationToken ?? undefined;
+      this.isDomainVerified = Boolean(f.isDomainVerified);
+      this.domainVerifiedAt = (f.domainVerifiedAt as Date) ?? undefined;
+    }
+    if (serving && this.homeWidget === undefined) {
+      this.homeWidget = (serving.homeWidget as HomeWidget | null) ?? null;
+    }
     if (this.capabilities === undefined) {
-      const serving =
-        rows.find((r) => r.status === 'ACTIVE') ??
-        rows.find((r) => r.status === 'TESTING') ??
-        rows.find((r) => r.status === 'DRAFT');
       this.capabilities = Array.isArray(serving?.capabilities)
         ? [...serving!.capabilities]
             .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))

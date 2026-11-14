@@ -18,24 +18,25 @@ export function formatMiniAppResponse<T = any>(app: T): T {
     Array.isArray(a.versions) && a.versions.length > 0
       ? a.versions.map((v: any) => ({
           version: v.version || '1.0.0',
-          gitRef: v.gitRef,
-          packageName: v.packageName,
-          sourceType: v.sourceType,
-          saVersion: v.saVersion,
-          type: v.type || 'PRODUCTION',
+          // Kept in the response shape; the values now live in integrationConfig
+          gitRef: v.integrationConfig?.commitSha || v.integrationConfig?.gitBranch || v.integrationConfig?.gitRef,
+          packageName: v.integrationConfig?.packageName,
+          sourceType: v.integrationMethod || v.integrationConfig?.sourceType,
+          saVersion: v.integrationConfig?.saVersion,
+          type: v.status === 'TESTING' ? 'TEST' : v.status === 'DRAFT' ? 'DRAFT' : 'PRODUCTION',
           status: v.status || 'DRAFT',
           changelog: v.changelog,
-          artifactUrl: v.artifactUrl,
-          apkSize: v.apkSize,
-          checksum: v.checksum,
+          artifactUrl: v.integrationConfig?.artifactUrl,
+          apkSize: v.integrationConfig?.apkSize,
+          checksum: v.integrationConfig?.archiveChecksum,
           releasedAt: v.releasedAt
             ? typeof v.releasedAt === 'string'
               ? v.releasedAt
               : v.releasedAt.toISOString()
             : '',
           releasedBy: v.releasedBy,
-          buildNumber: v.buildNumber,
-          jenkinsJobUrl: v.jenkinsJobUrl,
+          buildNumber: v.integrationConfig?.buildNumber,
+          jenkinsJobUrl: v.integrationConfig?.jenkinsJobUrl,
           integrationConfig: v.integrationConfig,
           permissions: v.permissions,
         }))
