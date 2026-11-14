@@ -1,5 +1,13 @@
 import { apiClient, unwrapItem } from './client';
 
+export interface GitCommit {
+  sha: string;
+  shortSha: string;
+  message: string;
+  authorName: string;
+  date: string;
+}
+
 export interface GitValidationResult {
   isValid: boolean;
   packageName?: string;
@@ -80,6 +88,13 @@ export const integrationsApi = {
     deployKey?: string;
   }) =>
     apiClient<{ validation: GitValidationResult; provider?: 'github' | 'gitlab' }>('/api/integrations/git/validate', {
+      method: 'POST',
+      body: data,
+    }).then(unwrapItem),
+
+  /** Newest commits of a branch (GitHub/GitLab API; needs public access or a token). */
+  getGitCommits: (data: { url: string; ref: string; limit?: number; token?: string }) =>
+    apiClient<{ commits: GitCommit[] }>('/api/integrations/git/commits', {
       method: 'POST',
       body: data,
     }).then(unwrapItem),

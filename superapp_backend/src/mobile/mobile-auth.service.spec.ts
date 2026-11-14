@@ -196,7 +196,8 @@ describe('MobileAuthService', () => {
         expect(res).toEqual({ message: REGISTER_MESSAGE });
         expect(c.mail.sendEmailVerification).toHaveBeenCalled();
       }
-    });
+      // Five registrations, each hashing a password: slow when the whole suite runs in parallel
+    }, 30_000);
   });
 
   describe('register', () => {

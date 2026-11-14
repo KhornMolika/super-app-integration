@@ -53,7 +53,7 @@ function RegisterMiniAppContent() {
 
   return (
     <>
-      <div className="w-full min-w-0 max-w-5xl mx-auto pb-6">
+      <div className="w-full min-w-0 pb-6">
         <RegisterWizardHeader
           step={step}
           stepTitle={STEP_TITLES[step - 1]}

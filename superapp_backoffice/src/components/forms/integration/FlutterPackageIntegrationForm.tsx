@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { SourceType } from "@/types/miniapp.types";
 import { miniappsApi, integrationsApi, pubspecApi, unwrapItem } from "@/api";
+import type { GitCommit } from "@/api/integrations.api";
 import { useAuth } from "@/lib/auth";
 import { inferPackageNameFromGitUrl } from "@/lib/miniapp-form.validator";
 import { toast } from "@/components/ui/Toast";
@@ -86,9 +87,14 @@ export default function FlutterPackageIntegrationForm({
   const [branches, setBranches] = useState<string[]>([]);
   const [selectedRefType, setSelectedRefType] = useState<
     "tag" | "branch" | "commit"
-  >("tag");
+  >("branch");
   const [selectedRef, setSelectedRef] = useState<string>("");
-  const [lockedCommitSha, setLockedCommitSha] = useState<string>("");
+  const [lockedCommitSha, setLockedCommitSha] = useState<string>(
+    /^[0-9a-f]{40}$/i.test(String(flutterConfig.commitSha || "")) ? String(flutterConfig.commitSha) : "",
+  );
+  const [commits, setCommits] = useState<GitCommit[]>([]);
+  const [isLoadingCommits, setIsLoadingCommits] = useState(false);
+  const [branchHeadSha, setBranchHeadSha] = useState<string>("");
 
   // State for Nexus Real-Time Validation
   const [isNexusValidating, setIsNexusValidating] = useState(false);
@@ -457,10 +463,14 @@ export default function FlutterPackageIntegrationForm({
 
   const handleRefChange = (val: string) => {
     setSelectedRef(val);
+    // Another branch: its commit is picked again (the newest, once listed)
+    const branchChanged = val !== (flutterConfig.gitBranch || "");
+    if (branchChanged) setLockedCommitSha("");
     if (onUpdateFlutterConfig) {
       onUpdateFlutterConfig({
         gitBranch: val,
         ref: val,
+        ...(branchChanged ? { commitSha: "" } : {}),
       });
     } else {
       handleFlutterChange({
@@ -486,22 +496,55 @@ export default function FlutterPackageIntegrationForm({
     handleRefChange(defaultVal);
   };
 
-  // A saved ref opens on its own tab: a branch name under Branch, a SHA under Commit
-  const inferredRefFor = React.useRef<string>("");
-  useEffect(() => {
-    const ref = selectedRef || flutterConfig.gitBranch || "";
-    if (!ref || inferredRefFor.current === ref) return;
-    if (tags.includes(ref)) {
-      inferredRefFor.current = ref;
-      setSelectedRefType("tag");
-    } else if (branches.includes(ref)) {
-      inferredRefFor.current = ref;
-      setSelectedRefType("branch");
-    } else if (/^[0-9a-f]{7,40}$/i.test(ref)) {
-      inferredRefFor.current = ref;
-      setSelectedRefType("commit");
+
+  /** The exact commit builds and scans use (gitRefOf on the server reads commitSha). */
+  const handleCommitChange = (sha: string) => {
+    setLockedCommitSha(sha);
+    if (onUpdateFlutterConfig) {
+      onUpdateFlutterConfig({ commitSha: sha });
+    } else {
+      handleFlutterChange({ target: { name: "commitSha", value: sha } } as any);
     }
-  }, [tags, branches, selectedRef, flutterConfig.gitBranch]);
+  };
+
+  // Commits of the chosen branch. Listed through the GitHub/GitLab API, so a
+  // deploy-key repository gets only the newest commit (resolve-sha above).
+  const commitBranch = selectedRef || flutterConfig.gitBranch || "";
+  useEffect(() => {
+    const url = flutterConfig.gitUrl?.trim() || "";
+    if (!url || !commitBranch || (isPrivateRepo && authMethod !== "token")) {
+      setCommits([]);
+      return;
+    }
+    let cancelled = false;
+    setIsLoadingCommits(true);
+    const t = setTimeout(async () => {
+      try {
+        const res: any = await integrationsApi.getGitCommits({
+          url,
+          ref: commitBranch,
+          limit: 20,
+          token: isPrivateRepo ? flutterConfig.gitAccessToken || undefined : undefined,
+        });
+        const list: GitCommit[] = res?.commits || res?.data?.commits || [];
+        if (cancelled) return;
+        setCommits(list);
+        if (list.length) {
+          setBranchHeadSha(list[0].sha);
+          // Keep a picked commit that belongs to this branch, else take the newest
+          if (!list.some((c) => c.sha === flutterConfig.commitSha)) handleCommitChange(list[0].sha);
+        }
+      } catch {
+        if (!cancelled) setCommits([]);
+      } finally {
+        if (!cancelled) setIsLoadingCommits(false);
+      }
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [flutterConfig.gitUrl, commitBranch, isPrivateRepo, authMethod, flutterConfig.gitAccessToken]);
 
   // Real-time Git URL Validation with Debounce (600ms)
   useEffect(() => {
@@ -659,10 +702,11 @@ export default function FlutterPackageIntegrationForm({
             });
             const sha = shaData?.sha || shaData?.data?.sha;
             if (sha) {
-              setLockedCommitSha(sha);
-              handleFlutterChange({
-                target: { name: "commitSha", value: sha },
-              } as any);
+              setBranchHeadSha(sha);
+              if (!flutterConfig.commitSha) {
+                setLockedCommitSha(sha);
+                handleCommitChange(sha);
+              }
             }
           } catch {}
         } catch (err: any) {
@@ -722,7 +766,11 @@ export default function FlutterPackageIntegrationForm({
                 deployKey: flutterConfig.deployKey || undefined,
               });
               if (shaData.sha) {
-                setLockedCommitSha(shaData.sha);
+                setBranchHeadSha(shaData.sha);
+                if (!flutterConfig.commitSha) {
+                  setLockedCommitSha(shaData.sha);
+                  handleCommitChange(shaData.sha);
+                }
               }
             } catch {}
           } else {
@@ -900,16 +948,17 @@ export default function FlutterPackageIntegrationForm({
           handleAuthMethodChange={handleAuthMethodChange}
           handleGitUrlChange={handleGitUrlChange}
           handleGitPathChange={handleGitPathChange}
-          handleRefTypeChange={handleRefTypeChange}
           handleRefChange={handleRefChange}
+          commits={commits}
+          isLoadingCommits={isLoadingCommits}
+          branchHeadSha={branchHeadSha}
+          onCommitChange={handleCommitChange}
           handleFlutterChange={handleFlutterChange}
           onUpdateFlutterConfig={onUpdateFlutterConfig}
           isGitValidating={isGitValidating}
           gitValidationResult={gitValidationResult}
           detectedProvider={detectedProvider}
-          tags={tags}
           branches={branches}
-          selectedRefType={selectedRefType}
           selectedRef={selectedRef}
           lockedCommitSha={lockedCommitSha}
         />

@@ -29,7 +29,7 @@ import { MiniAppIssue } from '../../miniapps/entities/miniapp-issue.entity';
 import { NotificationsService, MailService } from '../../notifications';
 import { AuditService } from '../../audit/audit.service';
 import { resolveBackofficeBaseUrl } from '../../common/utils/network.utils';
-import { persistRevision } from '../../miniapps/versions/miniapp-versions.service';
+import { persistAppVersions } from '../../miniapps/versions/miniapp-versions.service';
 
 export interface ValidationFindingDto {
   id: string;
@@ -148,7 +148,7 @@ export class ValidationCallbackController {
 
     app.validationStages = stages;
     await this.miniappRepository.save(app);
-    await persistRevision(this.miniappRepository, app);
+    await persistAppVersions(this.miniappRepository, app);
     await this.runs?.syncScan(app);
 
     this.notificationsService.emitStageUpdate({
@@ -335,7 +335,7 @@ export class ValidationCallbackController {
       app.validationErrors = null;
 
       await this.miniappRepository.save(app);
-      await persistRevision(this.miniappRepository, app);
+      await persistAppVersions(this.miniappRepository, app);
       await this.runs?.syncScan(app);
 
       await this.notificationsService.createNotification(
@@ -491,7 +491,7 @@ export class ValidationCallbackController {
       }
 
       await this.miniappRepository.save(app);
-      await persistRevision(this.miniappRepository, app);
+      await persistAppVersions(this.miniappRepository, app);
       await this.runs?.syncScan(app);
 
       // Real-time stage update to immediately stop frontend spinners

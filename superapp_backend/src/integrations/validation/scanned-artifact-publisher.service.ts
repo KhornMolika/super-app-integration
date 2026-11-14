@@ -258,5 +258,7 @@ export class ScannedArtifactPublisherService {
       })
       .setParameters({ patch: JSON.stringify(patch) })
       .execute();
+    // A raw UPDATE: the live version row (what phones get) follows explicitly
+    await (this.versionRows ?? versionsServiceFor(this.miniappRepository))?.resyncApp(id);
   }
 }

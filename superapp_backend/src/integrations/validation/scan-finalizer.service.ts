@@ -19,7 +19,7 @@ import { ValidationFindingDto } from './validation-callback.controller';
 import { resolveBackofficeBaseUrl } from '../../common/utils/network.utils';
 import { getDefaultChecksForMethod } from './validation-stage.catalog';
 import { ScannedArtifactPublisherService } from './scanned-artifact-publisher.service';
-import { persistRevision } from '../../miniapps/versions/miniapp-versions.service';
+import { persistAppVersions } from '../../miniapps/versions/miniapp-versions.service';
 
 @Injectable()
 export class ScanFinalizerService {
@@ -108,7 +108,7 @@ export class ScanFinalizerService {
       }
       app.validationErrors = null;
       await this.miniappRepository.save(app);
-      await persistRevision(this.miniappRepository, app);
+      await persistAppVersions(this.miniappRepository, app);
       await this.runs?.syncScan(app);
 
       this.notificationsService.emitStageUpdate({
@@ -230,7 +230,7 @@ export class ScanFinalizerService {
       }
 
       await this.miniappRepository.save(app);
-      await persistRevision(this.miniappRepository, app);
+      await persistAppVersions(this.miniappRepository, app);
       await this.runs?.syncScan(app);
 
       this.notificationsService.emitStageUpdate({

@@ -67,6 +67,7 @@ function setup(app: Record<string, any> | null, opts: Opts = {}) {
   const sdk = { publishToNexus: jest.fn().mockResolvedValue({ androidNexusMavenUrl: 'm' }) };
   const moduleRef: any = { get: jest.fn((t: any) => (t === SdkArtifactUploadService ? sdk : undefined)) };
   const versionRows: any = {
+    resyncApp: jest.fn().mockResolvedValue(undefined),
     patchRevisionConfig: jest.fn(async (_id: string, patch: any) => {
       patches.push({ set: { revision: 'jsonb_set' }, params: patch, revision: true });
     }),

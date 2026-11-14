@@ -276,7 +276,6 @@ export class MobileCatalogService {
       'm.logo',
       'm.integrationMethod',
       'm.integrationConfig',
-      'm.capabilities',
       'm.lifecycleStatus',
       'm.availabilityStatus',
       'org.name',
@@ -312,12 +311,18 @@ export class MobileCatalogService {
       .take(limit)
       .skip(offset)
       .getManyAndCount();
-    // Capabilities come from the version each app is serving; apps without a
-    // version row yet keep mini_apps.capabilities.
-    const served = await this.versions?.servingCapabilities(rows.map((r) => r.id));
+    // Capabilities and integration come from the version each app serves
+    // (the app's own columns until that version holds an integration); the
+    // item phones get keeps its shape.
+    const served = await this.versions?.servingVersions(rows.map((r) => r.id));
     for (const r of rows) {
-      const caps = served?.get(r.id);
-      if (caps) r.capabilities = caps as any;
+      const v = served?.get(r.id);
+      r.capabilities = (v?.capabilities ?? r.capabilities ?? []) as any;
+      if (v?.integration) {
+        r.integrationMethod = v.integration.integrationMethod ?? r.integrationMethod;
+        r.integrationConfig = v.integration.integrationConfig;
+        r.homeWidget = v.integration.homeWidget;
+      }
     }
     // One catalog read for the whole page; launchability is computed, never stored
     const snapshot = this.capabilityGate ? await this.capabilityGate.snapshot() : null;

@@ -45,7 +45,7 @@ const REVISION_VERSION = `
     END)`;
 
 /** Capability rows from a jsonb list, as parseDeclaredCapabilities() reads it. */
-function insertCaps(source: string, approved: boolean): string {
+export function insertCaps(source: string, approved: boolean): string {
   return `
     INSERT INTO "mini_app_version_capabilities"
       ("miniAppId", "versionId", "capabilityKey", "required", "purpose", "declaration", "position", "status", "approvedAt")

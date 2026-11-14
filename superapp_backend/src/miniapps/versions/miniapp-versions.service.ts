@@ -33,6 +33,8 @@ export interface VersionSyncSource {
   version?: string | null;
   integrationMethod?: string | null;
   integrationConfig?: any;
+  homeWidget?: any;
+  liveVersionId?: string | null;
   capabilities?: unknown;
   pendingRevision?: any;
 }
@@ -79,13 +81,36 @@ export class MiniAppVersionsService {
         status,
         sourceType: app.integrationMethod || undefined,
         packageName: app.integrationConfig?.packageName || undefined,
+        integrationMethod: app.integrationMethod ?? null,
+        integrationConfig: app.integrationConfig ?? null,
+        homeWidget: app.homeWidget ?? null,
         changelog,
         ...(status === MiniAppVersionStatus.ACTIVE ? { releasedAt: new Date() } : {}),
       }),
     );
   }
 
-  /** Brings the live or working row and its capabilities in line with the app. */
+  /**
+   * The integration a row should hold, from the app (live or working row) or
+   * from its revision (DRAFT row of a live app). Fields the source does not
+   * carry are left out, so a partial read changes nothing.
+   */
+  private integrationPatch(row: MiniAppVersion, src: { integrationMethod?: any; integrationConfig?: any; homeWidget?: any }) {
+    const patch: Partial<MiniAppVersion> = {};
+    const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+    if (src.integrationMethod !== undefined && row.integrationMethod !== (src.integrationMethod ?? null)) {
+      patch.integrationMethod = src.integrationMethod ?? null;
+    }
+    if (src.integrationConfig !== undefined && !same(row.integrationConfig, src.integrationConfig)) {
+      patch.integrationConfig = src.integrationConfig ?? null;
+    }
+    if (src.homeWidget !== undefined && !same(row.homeWidget, src.homeWidget)) {
+      patch.homeWidget = src.homeWidget ?? null;
+    }
+    return patch;
+  }
+
+  /** Brings the live or working row (status, capabilities, integration) in line with the app. */
   async syncFromApp(app: VersionSyncSource): Promise<void> {
     if (!app?.id) return;
     const rows = await this.rowsOf(app.id);
@@ -100,7 +125,7 @@ export class MiniAppVersionsService {
       if (!work) {
         work = await this.newRow(app, version, status ?? MiniAppVersionStatus.DRAFT);
       } else {
-        const patch: Partial<MiniAppVersion> = {};
+        const patch: Partial<MiniAppVersion> = this.integrationPatch(work, app);
         if (status && work.status !== status) {
           patch.status = status;
           if (status === MiniAppVersionStatus.ACTIVE) patch.releasedAt = new Date();
@@ -109,10 +134,22 @@ export class MiniAppVersionsService {
         if (Object.keys(patch).length) await this.versions.update({ id: work.id }, patch);
       }
       await this.setCapabilities(app.id, work.id, app.capabilities);
+      if (status === MiniAppVersionStatus.ACTIVE) await this.pointLive(app, work.id);
       return;
     }
 
+    const livePatch = this.integrationPatch(live, app);
+    if (Object.keys(livePatch).length) await this.versions.update({ id: live.id }, livePatch);
     await this.setCapabilities(app.id, live.id, app.capabilities);
+    await this.pointLive(app, live.id);
+  }
+
+  /** mini_apps.liveVersionId follows the ACTIVE row. */
+  private async pointLive(app: VersionSyncSource, versionId: string): Promise<void> {
+    if (typeof this.apps?.update !== 'function' || app.liveVersionId === versionId) return;
+    // update() leaves the entity subscriber's watched columns alone: no sync loop
+    await this.apps.update({ id: app.id }, { liveVersionId: versionId });
+    app.liveVersionId = versionId;
   }
 
   /**
@@ -171,17 +208,27 @@ export class MiniAppVersionsService {
         version,
         ...(rev.changelog ? { changelog: rev.changelog } : {}),
         ...review,
+        ...this.integrationPatch(row, {
+          integrationMethod: rev.integrationMethod ?? app.integrationMethod,
+          integrationConfig: rev.integrationConfig ?? app.integrationConfig,
+          homeWidget: rev.homeWidget !== undefined ? rev.homeWidget : app.homeWidget,
+        }),
       });
     }
     await this.setCapabilities(app.id, row.id, rev.capabilities ?? rev.permissions ?? app.capabilities);
   }
 
   /**
-   * Fills pendingRevision on apps loaded without their versions (query
-   * builder lists). One query for the whole list; apps that already carry it
-   * are left alone.
+   * Fills pendingRevision and capabilities on apps loaded without their
+   * versions (query builder lists): two queries for the whole list. Apps that
+   * already carry them are left alone.
    */
-  async attachRevisions<T extends { id: string; pendingRevision?: any }>(apps: T[]): Promise<T[]> {
+  async attachRevisions<T extends { id: string; pendingRevision?: any; capabilities?: any }>(apps: T[]): Promise<T[]> {
+    const needCaps = apps.filter((a) => a?.id && a.capabilities === undefined && UUID.test(a.id));
+    if (needCaps.length) {
+      const served = await this.servingCapabilities(needCaps.map((a) => a.id));
+      for (const app of needCaps) app.capabilities = served.get(app.id) ?? [];
+    }
     const todo = apps.filter((a) => a?.id && a.pendingRevision === undefined && UUID.test(a.id));
     if (!todo.length) return apps;
     const rows = await this.versions.find({
@@ -334,7 +381,7 @@ export class MiniAppVersionsService {
     const caps = await this.caps.find({ where: { versionId: row.id }, order: { position: 'ASC' } });
     return {
       row,
-      capabilities: caps.length ? caps.map((c) => c.declaration) : (row.permissions ?? []),
+      capabilities: caps.map((c) => c.declaration),
     };
   }
 
@@ -345,6 +392,7 @@ export class MiniAppVersionsService {
       { status: MiniAppVersionStatus.PREVIOUS },
     );
     await this.versions.update({ id: versionId }, { status: MiniAppVersionStatus.ACTIVE });
+    if (typeof this.apps?.update === 'function') await this.apps.update({ id: miniAppId }, { liveVersionId: versionId });
   }
 
   /** Versions of one app, newest first, each with its capabilities. */
@@ -382,12 +430,31 @@ export class MiniAppVersionsService {
   /**
    * The capabilities each app is served with on phones: those of its live
    * (ACTIVE) row, else of its working row (TESTING, then DRAFT). Entries are
-   * the declarations as written. An app with no such row is left out, so the
-   * caller can fall back to mini_apps.capabilities.
+   * the declarations as written. An app with no such row is left out.
    */
   async servingCapabilities(miniAppIds: string[]): Promise<Map<string, unknown[]>> {
-    const ids = [...new Set(miniAppIds.filter((id) => UUID.test(id)))];
     const out = new Map<string, unknown[]>();
+    for (const [id, v] of await this.servingVersions(miniAppIds)) out.set(id, v.capabilities);
+    return out;
+  }
+
+  /**
+   * What phones get for each app, from the version it serves (ACTIVE row,
+   * else its TESTING, then DRAFT working row): capabilities and integration.
+   * integration is null when that row does not hold one yet.
+   */
+  async servingVersions(miniAppIds: string[]): Promise<
+    Map<
+      string,
+      {
+        versionId: string;
+        capabilities: unknown[];
+        integration: { integrationMethod: string | null; integrationConfig: any; homeWidget: any } | null;
+      }
+    >
+  > {
+    const ids = [...new Set(miniAppIds.filter((id) => UUID.test(id)))];
+    const out = new Map<string, any>();
     if (!ids.length) return out;
 
     const order = [MiniAppVersionStatus.ACTIVE, MiniAppVersionStatus.TESTING, MiniAppVersionStatus.DRAFT];
@@ -410,10 +477,18 @@ export class MiniAppVersionsService {
       order: { position: 'ASC' },
     });
     for (const [miniAppId, row] of serving) {
-      out.set(
-        miniAppId,
-        caps.filter((c) => c.versionId === row.id).map((c) => c.declaration),
-      );
+      out.set(miniAppId, {
+        versionId: row.id,
+        capabilities: caps.filter((c) => c.versionId === row.id).map((c) => c.declaration),
+        integration:
+          row.integrationConfig != null
+            ? {
+                integrationMethod: row.integrationMethod ?? null,
+                integrationConfig: row.integrationConfig,
+                homeWidget: row.homeWidget ?? null,
+              }
+            : null,
+      });
     }
     return out;
   }
@@ -433,7 +508,8 @@ export class MiniAppVersionsService {
           'm.currentReleaseVersion',
           'm.integrationMethod',
           'm.integrationConfig',
-          'm.capabilities',
+          'm.homeWidget',
+          'm.liveVersionId',
         ])
         .where('m.id = :id', { id: miniAppId })
         .getOne();
@@ -454,16 +530,22 @@ export class MiniAppVersionsService {
 }
 
 /**
- * persistRevision for code that has a MiniApp repository but not the
- * service: the version tables are reached through the repository's manager.
- * A stand-in repository without a manager (unit tests) is skipped.
+ * Writes what lives on the version rows after an app save: its capabilities
+ * (live or working row) and its pending revision. For code that has a
+ * MiniApp repository but not the service: the version tables are reached
+ * through the repository's manager. A stand-in repository without a manager
+ * (unit tests) is skipped.
  */
-export async function persistRevision(
+export async function persistAppVersions(
   appRepository: Repository<MiniApp> | undefined | null,
   app: VersionSyncSource | null | undefined,
 ): Promise<void> {
-  if (!app?.id || app.pendingRevision === undefined) return;
-  await versionsServiceFor(appRepository)?.persistRevision(app);
+  if (!app?.id) return;
+  const svc = versionsServiceFor(appRepository);
+  if (!svc) return;
+  // The live or working row with the app's capabilities, then the revision
+  if (app.capabilities !== undefined) await svc.syncFromApp(app);
+  if (app.pendingRevision !== undefined) await svc.persistRevision(app);
 }
 
 /** A MiniAppVersionsService on the same connection as a MiniApp repository. */

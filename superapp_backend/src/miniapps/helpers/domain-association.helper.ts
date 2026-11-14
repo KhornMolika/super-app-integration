@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MiniApp } from '../entities/miniapp.entity';
 import { DomainVerificationService } from '../../integrations/webview/domain-verification.service';
+import { persistAppVersions } from '../versions/miniapp-versions.service';
 
 @Injectable()
 export class DomainAssociationHelper {
@@ -33,6 +34,7 @@ export class DomainAssociationHelper {
       app.verificationToken =
         this.domainVerificationService.generateVerificationToken();
       await this.miniappRepository.save(app);
+      await persistAppVersions(this.miniappRepository, app);
     }
 
     const result = await this.domainVerificationService.verifyDomainOwnership(
@@ -93,6 +95,7 @@ export class DomainAssociationHelper {
       }
 
       await this.miniappRepository.save(app);
+      await persistAppVersions(this.miniappRepository, app);
 
       return {
         verified: true,

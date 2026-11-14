@@ -68,7 +68,7 @@ import {
   PackagePublishError,
   ScannedArtifactPublisherService,
 } from '../integrations/validation/scanned-artifact-publisher.service';
-import { versionsServiceFor } from './versions/miniapp-versions.service';
+import { versionsServiceFor, persistAppVersions } from './versions/miniapp-versions.service';
 
 @Injectable()
 export class MiniappsService implements OnApplicationBootstrap {
@@ -180,6 +180,7 @@ export class MiniappsService implements OnApplicationBootstrap {
         }
         if (changed) {
           await this.miniappRepository.save(app);
+          await persistAppVersions(this.miniappRepository, app);
         }
       }
     } catch (err: any) {

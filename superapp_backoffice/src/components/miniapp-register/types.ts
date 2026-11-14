@@ -6,7 +6,7 @@ import {
 } from '@/types/miniapp.types';
 import { SubmissionModalState } from '@/components/ui/SubmissionModal';
 
-export type RegisterWizardStep = 1 | 2 | 3 | 4 | 5;
+export type RegisterWizardStep = 1 | 2 | 3 | 4 | 5 | 6;
 
 export interface RegisterWizardHeaderProps {
   step: number;

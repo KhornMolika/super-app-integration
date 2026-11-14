@@ -69,7 +69,7 @@ import {
   normalizeHomeWidget,
   sameHomeWidget,
 } from '../home-widget';
-import { persistRevision } from '../versions/miniapp-versions.service';
+import { persistAppVersions } from '../versions/miniapp-versions.service';
 
 @Injectable()
 export class MiniappMutationHelper {
@@ -415,9 +415,13 @@ export class MiniappMutationHelper {
     }
 
     const app = this.miniappRepository.create(data as Partial<MiniApp>);
+    // Not columns (they live on the version rows): create() leaves them out
+    app.capabilities = data.capabilities;
+    app.pendingRevision = null;
     let savedApp: MiniApp;
     try {
       savedApp = await this.miniappRepository.save(app);
+      await persistAppVersions(this.miniappRepository, app);
     } catch (error: any) {
       if (error.code === '23505') {
         throw new BadRequestException(
@@ -739,7 +743,7 @@ export class MiniappMutationHelper {
         }
 
         await this.miniappRepository.save(existing);
-        await persistRevision(this.miniappRepository, existing);
+        await persistAppVersions(this.miniappRepository, existing);
         const updated = await this.miniappRepository.findOne({
           where: { id: existing.id },
           relations: { issues: true, collaborators: true, legal: true },
@@ -897,7 +901,7 @@ export class MiniappMutationHelper {
 
       existing.pendingRevision = revisionData;
       await this.miniappRepository.save(existing);
-      await persistRevision(this.miniappRepository, existing);
+      await persistAppVersions(this.miniappRepository, existing);
 
       // Kick off async validation on the staged revision
       this.validationHelper
@@ -1051,7 +1055,7 @@ export class MiniappMutationHelper {
     (merged as any).versionHistory = currentHistory;
 
     await this.miniappRepository.save(merged);
-    await persistRevision(this.miniappRepository, merged);
+    await persistAppVersions(this.miniappRepository, merged);
 
     // Kick off async validation only when NOT in draft mode
     const isDraft =

@@ -275,6 +275,105 @@ describe('MiniAppVersionsService: revisions of an unreleased app and loading', (
   });
 });
 
+describe('Capabilities loaded from the version rows (no JSON columns)', () => {
+  const { MiniApp } = require('../entities/miniapp.entity');
+  const { MiniAppVersion } = require('../entities/miniapp-version.entity');
+  const cap = (key: string, position: number, declaration: any = key) => ({ capabilityKey: key, position, declaration });
+  const version = (status: string, day: number, caps: any[]) => {
+    const v = Object.assign(new MiniAppVersion(), { status, createdAt: new Date(2026, 0, day), capabilities: caps });
+    v.loadPermissions();
+    return v;
+  };
+
+  it('a version lists its capability rows in order as permissions', () => {
+    const v = version('PREVIOUS', 1, [cap('nfc', 1), cap('camera', 0, { type: 'camera', required: true })]);
+    expect(v.permissions).toEqual([{ type: 'camera', required: true }, 'nfc']);
+    expect(JSON.parse(JSON.stringify(v))).not.toHaveProperty('capabilities');
+  });
+
+  it('an app asks for what its serving version asks for: ACTIVE, else TESTING, else DRAFT', () => {
+    const load = (versions: any[]) => {
+      const app = Object.assign(new MiniApp(), { versions });
+      app.loadPendingRevision();
+      return app.capabilities;
+    };
+    expect(load([version('ACTIVE', 1, [cap('camera', 0)]), version('DRAFT', 2, [cap('nfc', 0)])])).toEqual(['camera']);
+    expect(load([version('TESTING', 1, [cap('location', 0)]), version('DRAFT', 2, [cap('nfc', 0)])])).toEqual(['location']);
+    expect(load([version('DRAFT', 1, [cap('nfc', 0)])])).toEqual(['nfc']);
+    expect(load([])).toEqual([]);
+    // Versions not loaded: left undefined so nothing is written over
+    const bare = new MiniApp();
+    bare.loadPendingRevision();
+    expect(bare.capabilities).toBeUndefined();
+  });
+
+  it('persistAppVersions writes the capabilities and the revision through the repository manager', async () => {
+    const { persistAppVersions } = require('./miniapp-versions.service');
+    const versions = memoryRepo();
+    const caps = memoryRepo();
+    const repoFor: any = (entity: any) => (entity.name === 'MiniAppVersion' ? versions : caps);
+    const appRepo: any = { manager: { getRepository: repoFor } };
+    const app: any = { id: 'x', lifecycleStatus: 'ACTIVE', currentReleaseVersion: '1.0.0', capabilities: ['camera'], pendingRevision: { capabilities: ['camera', 'nfc'] } };
+    await persistAppVersions(appRepo, app);
+    const live = versions.rows.find((v: any) => v.status === 'ACTIVE');
+    const draft = versions.rows.find((v: any) => v.status === 'DRAFT');
+    expect(caps.rows.filter((c: any) => c.versionId === live.id).map((c: any) => c.capabilityKey)).toEqual(['camera']);
+    expect(caps.rows.filter((c: any) => c.versionId === draft.id).map((c: any) => c.capabilityKey)).toEqual(['camera', 'nfc']);
+    // A stand-in repository without a manager is skipped
+    await expect(persistAppVersions({} as any, app)).resolves.toBeUndefined();
+  });
+});
+
+describe('MiniAppVersionsService: integration on the version (step 4)', () => {
+  const APP = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
+  const withApps = () => {
+    const ctx = setup();
+    const apps: any[] = [];
+    const appRepo: any = { update: jest.fn(async (where: any, patch: any) => apps.push({ where, patch })) };
+    const svc = new MiniAppVersionsService((ctx.svc as any).versions, (ctx.svc as any).caps, appRepo);
+    return { ...ctx, svc, appUpdates: apps };
+  };
+
+  it('the live row holds the app integration and the app points to it', async () => {
+    const { svc, versions, appUpdates } = withApps();
+    const app: any = {
+      id: APP,
+      lifecycleStatus: 'ACTIVE',
+      currentReleaseVersion: '1.0.0',
+      integrationMethod: 'WEBVIEW',
+      integrationConfig: { url: 'https://v1' },
+      homeWidget: null,
+    };
+    await svc.syncFromApp(app);
+    const live = versions.find((v) => v.status === 'ACTIVE');
+    expect(live).toMatchObject({ integrationMethod: 'WEBVIEW', integrationConfig: { url: 'https://v1' } });
+    expect(appUpdates).toEqual([{ where: { id: APP }, patch: { liveVersionId: live.id } }]);
+
+    // Already pointing there: no second write
+    await svc.syncFromApp(app);
+    expect(appUpdates).toHaveLength(1);
+  });
+
+  it('the revision DRAFT row holds the revision integration; phones still get the live one', async () => {
+    const { svc, versions } = withApps();
+    const app: any = { id: APP, lifecycleStatus: 'ACTIVE', currentReleaseVersion: '1.0.0', integrationMethod: 'WEBVIEW', integrationConfig: { url: 'https://v1' } };
+    await svc.syncFromApp(app);
+    app.pendingRevision = { integrationConfig: { url: 'https://v2' }, revisionStatus: 'IN_REVIEW' };
+    await svc.persistRevision(app);
+    expect(versions.find((v) => v.status === 'DRAFT').integrationConfig).toEqual({ url: 'https://v2' });
+
+    const served = await svc.servingVersions([APP]);
+    expect(served.get(APP)?.integration?.integrationConfig).toEqual({ url: 'https://v1' });
+  });
+
+  it('a partial read (no integration fields) leaves the row as it is', async () => {
+    const { svc, versions } = withApps();
+    await svc.syncFromApp({ id: APP, lifecycleStatus: 'DRAFT', integrationConfig: { url: 'https://draft' } } as any);
+    await svc.syncFromApp({ id: APP, lifecycleStatus: 'DRAFT' } as any);
+    expect(versions[0].integrationConfig).toEqual({ url: 'https://draft' });
+  });
+});
+
 describe('MiniAppVersionsService.servingCapabilities', () => {
   const LIVE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
   const NEW = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';

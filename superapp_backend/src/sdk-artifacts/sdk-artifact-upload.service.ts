@@ -18,6 +18,7 @@ import {
   ScannedNativeSdkResult,
 } from './artifact-scanner.service';
 import { StorageService } from '../storage/storage.service';
+import { versionsServiceFor } from '../miniapps/versions/miniapp-versions.service';
 
 export type SdkPlatform = 'IOS' | 'ANDROID';
 
@@ -163,6 +164,8 @@ export class SdkArtifactUploadService {
           .where('id = :id', { id: miniApp.id })
           .setParameters({ patch: JSON.stringify(patch) })
           .execute();
+        // A raw UPDATE: the version rows (what phones get) follow explicitly
+        await versionsServiceFor(this.miniappRepository)?.resyncApp(miniApp.id);
       }
     }
 
@@ -295,6 +298,8 @@ export class SdkArtifactUploadService {
         .where('id = :id', { id: miniApp.id })
         .setParameters({ patch: JSON.stringify(patch) })
         .execute();
+      // A raw UPDATE: the version rows (what phones get) follow explicitly
+      await versionsServiceFor(this.miniappRepository)?.resyncApp(miniApp.id);
     }
 
     return {

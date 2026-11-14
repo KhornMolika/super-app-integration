@@ -90,7 +90,7 @@ export function AuthSplitLayout({
                       width={200}
                       height={200}
                       className="w-full h-full object-contain filter drop-shadow-sm"
-                      priority
+                      loading="eager"
                     />
                     {/* Subtle Sheen Highlight */}
                     <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-white/30 via-transparent to-transparent pointer-events-none" />
@@ -113,7 +113,8 @@ export function AuthSplitLayout({
           {/* RIGHT COLUMN: Seamless Form Container on Same Background */}
           <div className="w-full flex justify-center lg:justify-end">
             <div className="w-full max-w-[420px] p-2 sm:p-0">
-              {/* Mobile-only brand header */}
+              {/* Mobile-only brand header. Neither logo uses priority: each sits
+                  in a block hidden at one breakpoint, so its preload would go unused. */}
               <div className="lg:hidden flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500/80 via-brand-600/70 to-accent-500/80 p-0.5 shadow-sm shadow-brand-500/20 shrink-0">
                   <div className="w-full h-full bg-white rounded-[10px] flex items-center justify-center p-1 overflow-hidden">
@@ -123,7 +124,7 @@ export function AuthSplitLayout({
                       width={36}
                       height={36}
                       className="w-full h-full object-contain"
-                      priority
+                      loading="eager"
                     />
                   </div>
                 </div>

@@ -45,7 +45,7 @@ export class MiniAppVersionCapability {
   @Column({ type: 'uuid' })
   versionId!: string;
 
-  @ManyToOne(() => MiniAppVersion, { onDelete: 'CASCADE' })
+  @ManyToOne(() => MiniAppVersion, (v) => v.capabilities, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'versionId' })
   version?: MiniAppVersion;
 
@@ -60,7 +60,7 @@ export class MiniAppVersionCapability {
 
   /** The entry as declared: a key string or { type, purpose, required, ... }. */
   @Column({ type: 'jsonb' })
-  declaration!: unknown;
+  declaration!: any;
 
   /** Order in the declared list. */
   @Column({ type: 'int', default: 0 })

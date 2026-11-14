@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Input, Label, Select } from "@/components/ui/inputs";
-import { integrationsApi } from "@/api/integrations.api";
+import { integrationsApi, type GitCommit } from "@/api/integrations.api";
 import { copyText } from '@/lib/clipboard';
 
 export interface FlutterGitConfigSectionProps {
@@ -15,16 +15,19 @@ export interface FlutterGitConfigSectionProps {
   handleAuthMethodChange: (method: "deploy_key" | "token") => void;
   handleGitUrlChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleGitPathChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleRefTypeChange: (type: "tag" | "branch" | "commit") => void;
   handleRefChange: (val: string) => void;
+  /** Newest commits of the branch (empty when they can't be listed). */
+  commits: GitCommit[];
+  isLoadingCommits: boolean;
+  /** Newest commit of the branch, also known for deploy-key repositories. */
+  branchHeadSha: string;
+  onCommitChange: (sha: string) => void;
   handleFlutterChange: (e: any) => void;
   onUpdateFlutterConfig?: (updates: Record<string, any>) => void;
   isGitValidating: boolean;
   gitValidationResult: any;
   detectedProvider: "github" | "gitlab" | null;
-  tags: string[];
   branches: string[];
-  selectedRefType: "tag" | "branch" | "commit";
   selectedRef: string;
   lockedCommitSha: string;
 }
@@ -39,16 +42,17 @@ export default function FlutterGitConfigSection({
   handleAuthMethodChange,
   handleGitUrlChange,
   handleGitPathChange,
-  handleRefTypeChange,
   handleRefChange,
+  commits,
+  isLoadingCommits,
+  branchHeadSha,
+  onCommitChange,
   handleFlutterChange,
   onUpdateFlutterConfig,
   isGitValidating,
   gitValidationResult,
   detectedProvider,
-  tags,
   branches,
-  selectedRefType,
   selectedRef,
   lockedCommitSha,
 }: FlutterGitConfigSectionProps) {
@@ -195,8 +199,16 @@ export default function FlutterGitConfigSection({
             }
           : null;
 
-  const refLabel = selectedRefType === "tag" ? "Tag" : selectedRefType === "branch" ? "Branch" : "Commit";
-  const refOptions = selectedRefType === "tag" ? tags : selectedRefType === "branch" ? branches : [];
+  const branch = selectedRef || flutterConfig?.gitBranch || "";
+  const commitSha = String(flutterConfig?.commitSha || lockedCommitSha || "");
+  const commitError =
+    commitSha && !/^[0-9a-f]{40}$/i.test(commitSha) ? "A commit is 40 characters: 0-9 and a-f." : "";
+  const ago = (iso: string) => {
+    const t = new Date(iso).getTime();
+    if (Number.isNaN(t)) return "";
+    const days = Math.floor((Date.now() - t) / 86400000);
+    return days <= 0 ? "today" : days === 1 ? "yesterday" : `${days}d ago`;
+  };
 
   return (
     <div className="space-y-6">
@@ -247,34 +259,20 @@ export default function FlutterGitConfigSection({
         </div>
 
         <div>
-          <div className="flex items-center justify-between gap-2 min-h-9 mb-1.5">
-            <Label htmlFor="git-ref" className="!mb-0">
-              Version
+          <div className="flex items-center min-h-9 mb-1.5">
+            <Label htmlFor="git-branch" className="!mb-0">
+              Branch
             </Label>
-            <div className="inline-flex p-0.5 rounded-xl bg-slate-100 dark:bg-slate-800" role="tablist">
-              {(["tag", "branch", "commit"] as const).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  role="tab"
-                  aria-selected={selectedRefType === t}
-                  onClick={() => handleRefTypeChange(t)}
-                  disabled={!isEditable}
-                  className={seg(selectedRefType === t)}
-                >
-                  {t === "tag" ? "Tag" : t === "branch" ? "Branch" : "Commit"}
-                </button>
-              ))}
-            </div>
           </div>
-          {refOptions.length > 0 ? (
+          {branches.length > 0 ? (
             <Select
-              id="git-ref"
-              value={selectedRef || refOptions[0]}
+              id="git-branch"
+              value={branch || branches[0]}
               onChange={(e: any) => handleRefChange(e.target.value)}
               disabled={!isEditable}
             >
-              {refOptions.map((r) => (
+              {!branches.includes(branch) && branch && <option value={branch}>{branch}</option>}
+              {branches.map((r) => (
                 <option key={r} value={r}>
                   {r}
                 </option>
@@ -282,25 +280,61 @@ export default function FlutterGitConfigSection({
             </Select>
           ) : (
             <Input
-              id="git-ref"
-              value={selectedRef || (selectedRefType === "branch" ? flutterConfig?.gitBranch || "" : "")}
+              id="git-branch"
+              value={branch}
               onChange={(e: any) => handleRefChange(e.target.value)}
               disabled={!isEditable}
-              placeholder={selectedRefType === "tag" ? "v1.0.0" : selectedRefType === "branch" ? "main" : "7f8b9c0d1e2f"}
-              aria-label={refLabel}
+              placeholder="main"
               className="font-mono"
             />
           )}
-          <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
-            {lockedCommitSha
-              ? `Builds use commit ${lockedCommitSha.substring(0, 8)}.`
-              : selectedRefType === "tag"
-                ? "Recommended. Tag the release to match the version in pubspec.yaml."
-                : selectedRefType === "branch"
-                  ? "For testing only. Each build takes the newest commit, which may not be what was reviewed."
-                  : "Exact and can't change, but harder to read than a tag."}
-          </p>
+          <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">The branch your release is on.</p>
         </div>
+      </div>
+
+      {/* Commit of that branch: what is scanned and built, exactly */}
+      <div>
+        <div className="flex items-center justify-between gap-2 min-h-9 mb-1.5">
+          <Label htmlFor="git-commit" className="!mb-0">
+            Commit
+          </Label>
+          {isLoadingCommits && <span className="text-xs text-slate-400">Loading commits...</span>}
+        </div>
+        {commits.length > 0 ? (
+          <Select
+            id="git-commit"
+            value={commitSha || commits[0].sha}
+            onChange={(e: any) => onCommitChange(e.target.value)}
+            disabled={!isEditable}
+            className="font-mono"
+          >
+            {commitSha && !commits.some((c) => c.sha === commitSha) && (
+              <option value={commitSha}>{commitSha.substring(0, 7)} (saved)</option>
+            )}
+            {commits.map((c, i) => (
+              <option key={c.sha} value={c.sha}>
+                {`${c.shortSha || c.sha.substring(0, 7)}  ${(c.message || "").split("\n")[0].slice(0, 60)}  · ${ago(c.date)}${i === 0 ? "  (newest)" : ""}`}
+              </option>
+            ))}
+          </Select>
+        ) : (
+          <Input
+            id="git-commit"
+            value={commitSha}
+            onChange={(e: any) => onCommitChange(e.target.value.trim())}
+            disabled={!isEditable}
+            placeholder={branchHeadSha || "40-character commit SHA"}
+            className={`font-mono ${commitError ? "border-rose-500 ring-1 ring-rose-500" : ""}`}
+          />
+        )}
+        <p className={`mt-1.5 text-xs ${commitError ? "text-rose-600 dark:text-rose-400" : "text-slate-500 dark:text-slate-400"}`}>
+          {commitError ||
+            (commits.length > 0
+              ? "Scans and builds use exactly this commit, so what is reviewed is what ships."
+              : branchHeadSha
+                ? `Newest on ${branch || "the branch"}: ${branchHeadSha.substring(0, 7)}. Commits can't be listed for this repository; paste another SHA to use it.`
+                : "Scans and builds use exactly this commit.")}
+        </p>
       </div>
 
       {/* Access */}

@@ -3,6 +3,7 @@ import { generateClientVerificationToken } from '@/components/forms/IntegrationF
 
 export const STEP_TITLES = [
   'Basics',
+  'Terms & privacy',
   'Integration',
   'Permissions',
   'Security scans',
@@ -10,7 +11,8 @@ export const STEP_TITLES = [
 ] as const;
 
 export const STEP_DESCRIPTIONS = [
-  'Name, icon and description shown in the Super App. Terms and privacy are optional.',
+  'Name, icon and description shown in the Super App.',
+  'Optional. Recommended before the app goes live.',
   'How the Super App runs your app.',
   'Device features your app needs, and why.',
   'Scans that run on every submission. Recommended ones are on.',
@@ -23,7 +25,7 @@ export const TOTAL_STEPS = STEP_TITLES.length;
  * Validation sections (the numbers the validators use) behind each wizard
  * step: 1 basics, 2 terms & privacy, 3 integration, 4 permissions, 5 scans.
  */
-export const STEP_SECTIONS: readonly (readonly number[])[] = [[1, 2], [3], [4], [5], []];
+export const STEP_SECTIONS: readonly (readonly number[])[] = [[1], [2], [3], [4], [5], []];
 
 /** The wizard step that shows a validation section. */
 export function stepOfSection(section: number): number {

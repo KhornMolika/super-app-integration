@@ -135,18 +135,34 @@ describe('MobileCatalogService.list', () => {
     ]);
   });
 
-  it('serves the capabilities of the version each app is on, else mini_apps.capabilities', async () => {
+  it('builds each item from the version the app serves, in the same shape', async () => {
     const { repo } = qbFor([
-      makeApp({ id: 'v1', capabilities: ['camera', 'location'] } as any),
-      makeApp({ id: 'v2', capabilities: ['nfc'] } as any),
+      makeApp({ id: 'v1', integrationMethod: 'WEBVIEW', integrationConfig: { url: 'https://app-column' } } as any),
+      makeApp({ id: 'v2', integrationMethod: 'WEBVIEW', integrationConfig: { url: 'https://kept' }, capabilities: ['nfc'] } as any),
     ]);
     const versions = {
-      servingCapabilities: jest.fn(async () => new Map([['v1', ['camera']]])),
+      servingVersions: jest.fn(
+        async () =>
+          new Map<string, any>([
+            [
+              'v1',
+              {
+                versionId: 'row-1',
+                capabilities: ['camera'],
+                integration: { integrationMethod: 'WEBVIEW', integrationConfig: { url: 'https://live-version' }, homeWidget: null },
+              },
+            ],
+            // A row without an integration yet: the app's columns are used
+            ['v2', { versionId: 'row-2', capabilities: ['nfc'], integration: null }],
+          ]),
+      ),
     };
     const page = await new MobileCatalogService(repo, undefined, versions as any).list(undefined, 20, 0);
-    expect(versions.servingCapabilities).toHaveBeenCalledWith(['v1', 'v2']);
-    expect(page.items[0].permissions).toEqual(['camera']);
+    expect(versions.servingVersions).toHaveBeenCalledWith(['v1', 'v2']);
+    expect(page.items[0]).toMatchObject({ permissions: ['camera'], integrationMethod: 'WEBVIEW' });
+    expect(page.items[0].integrationConfig?.url).toBe('https://live-version');
     expect(page.items[1].permissions).toEqual(['nfc']);
+    expect(page.items[1].integrationConfig?.url).toBe('https://kept');
   });
 
   it('escapes LIKE wildcards in the name search', async () => {

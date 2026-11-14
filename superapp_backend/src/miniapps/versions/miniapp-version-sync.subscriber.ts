@@ -14,9 +14,11 @@ import { MiniAppVersionsService } from './miniapp-versions.service';
 
 /** Saving any of these can change the version rows or their capabilities. */
 const WATCHED = new Set([
-  'capabilities',
   'lifecycleStatus',
   'currentReleaseVersion',
+  'integrationMethod',
+  'integrationConfig',
+  'homeWidget',
 ]);
 
 /**

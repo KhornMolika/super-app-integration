@@ -239,7 +239,11 @@ export class MiniApp {
   @Column({ type: 'timestamp', nullable: true })
   domainVerifiedAt?: Date;
 
-  @Column({ type: 'jsonb', nullable: true, default: () => "'[]'" })
+  /**
+   * What the app asks for: the capabilities of the version it serves (the
+   * ACTIVE row, else its TESTING/DRAFT working row). Not a column: filled
+   * after load from the eager versions, written with persistAppVersions.
+   */
   capabilities!: any[];
 
   @Column({ type: 'jsonb', nullable: true, default: () => "'[]'" })
@@ -249,7 +253,7 @@ export class MiniApp {
    * The staged revision of a live app. Not a column: it lives on the app's
    * DRAFT version row (mini_app_versions.revision). Filled after load from
    * the eager versions (or MiniAppVersionsService.attachRevisions for query
-   * builder lists); written with persistRevision after a save.
+   * builder lists); written with persistAppVersions after a save.
    * undefined = not loaded, null = none.
    */
   pendingRevision?: any;
@@ -264,6 +268,10 @@ export class MiniApp {
 
   @Column({ nullable: true })
   currentReleaseVersion?: string;
+
+  /** The version phones get (its ACTIVE mini_app_versions row); null before the first release. */
+  @Column({ type: 'uuid', nullable: true })
+  liveVersionId?: string | null;
 
   @Column({ nullable: true })
   activeTestVersion?: string;
@@ -297,16 +305,32 @@ export class MiniApp {
   })
   versions!: MiniAppVersion[];
 
-  /** Same rule as revisionRowOf() in versions/version-capabilities.ts. */
+  /**
+   * Fills pendingRevision and capabilities from the eager versions. Same
+   * rules as revisionRowOf() and servingCapabilities() in versions/.
+   */
   @AfterLoad()
   loadPendingRevision(): void {
-    if (this.pendingRevision !== undefined || !Array.isArray(this.versions)) return;
+    if (!Array.isArray(this.versions)) return;
     const rows = [...this.versions].sort(
       (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime(),
     );
     const live = rows.some((r) => r.status === 'ACTIVE');
-    const row = rows.find((r) => r.status === 'DRAFT' || (!live && r.status === 'TESTING'));
-    this.pendingRevision = row?.revision ?? null;
+    if (this.pendingRevision === undefined) {
+      const row = rows.find((r) => r.status === 'DRAFT' || (!live && r.status === 'TESTING'));
+      this.pendingRevision = row?.revision ?? null;
+    }
+    if (this.capabilities === undefined) {
+      const serving =
+        rows.find((r) => r.status === 'ACTIVE') ??
+        rows.find((r) => r.status === 'TESTING') ??
+        rows.find((r) => r.status === 'DRAFT');
+      this.capabilities = Array.isArray(serving?.capabilities)
+        ? [...serving!.capabilities]
+            .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+            .map((c) => c.declaration)
+        : [];
+    }
   }
 
   @OneToMany(() => MiniAppBuild, (build) => build.miniApp, {
