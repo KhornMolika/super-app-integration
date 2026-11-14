@@ -41,6 +41,7 @@ import { createPaginatedResponse } from '../common/utils/pagination.util';
 import { escapeLikeString } from '../common/utils/sql.util';
 import { SortOrder } from '../common/dto/pagination-query.dto';
 import { loadPasswordHash } from '../identities/identity-credentials.helper';
+import { ConsumerProfile } from '../consumers/entities/consumer-profile.entity';
 
 export const OFFICIAL_SEEDS: Record<
   string,
@@ -279,7 +280,8 @@ export class AccessControlService {
       .leftJoinAndSelect('ident.staffProfile', 'staffProfile')
       .leftJoinAndSelect('staffProfile.role', 'role')
       .leftJoinAndSelect('role.permissions', 'permission')
-      .leftJoinAndSelect('staffProfile.organization', 'organization');
+      .leftJoinAndSelect('staffProfile.organization', 'organization')
+      .leftJoinAndSelect('ident.consumerProfile', 'consumerProfile');
 
     const isUnverifiedQuery =
       query?.status === 'PENDING_EMAIL_VERIFICATION';
@@ -487,6 +489,7 @@ export class AccessControlService {
           role: { permissions: true },
           organization: true,
         },
+        consumerProfile: true,
       },
     });
     if (!identity) {
@@ -564,6 +567,7 @@ export class AccessControlService {
     }
 
     const isSuperAdmin = this.isRequesterSuperAdmin(requester);
+    if (dto.accountType === 'CONSUMER') return this.createConsumer(dto, isSuperAdmin);
 
     let roles: Role[] = [];
     if (dto.roleId) {
@@ -673,6 +677,35 @@ export class AccessControlService {
     await this.staffProfileRepository.save(staffProfile);
 
     return this.findUserById(savedIdentity.id);
+  }
+
+  /**
+   * A mobile app user made by a Super Admin (consumers belong to no
+   * organization, so an organization ADMIN cannot reach them). The email
+   * counts as verified, like other provisioned accounts; without a password
+   * the user sets one through "Forgot password" in the app.
+   */
+  private async createConsumer(dto: CreateUserDto, isSuperAdmin: boolean): Promise<FormattedUserResponse> {
+    if (!isSuperAdmin) {
+      throw new ForbiddenException('Only Super Administrators can create mobile app users');
+    }
+    const passwordHash = await hashPassword(
+      dto.password && dto.password.trim() ? dto.password.trim() : randomBytes(32).toString('hex'),
+    );
+    const identity = await this.identityRepository.save(
+      this.identityRepository.create({
+        name: dto.name.trim(),
+        email: dto.email.toLowerCase().trim(),
+        status: dto.isActive === false ? 'PENDING_APPROVAL' : 'ACTIVE',
+        passwordHash,
+        emailVerifiedAt: new Date(),
+      }),
+    );
+    const consumers = this.identityRepository.manager.getRepository(ConsumerProfile);
+    await consumers.save(
+      consumers.create({ identityId: identity.id, phoneNumber: dto.phoneNumber?.trim() || null }),
+    );
+    return this.findUserById(identity.id);
   }
 
   async updateUser(

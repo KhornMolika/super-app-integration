@@ -237,6 +237,46 @@ describe('AccessControlService - User Organization Updates & Creation', () => {
       );
       expect(created).toBeDefined();
     });
+
+    describe('a mobile app user (CONSUMER)', () => {
+      const consumerRepo = {
+        create: jest.fn((x: any) => x),
+        save: jest.fn(async (x: any) => ({ ...x, id: 'consumer-1' })),
+      };
+      const SUPER = { sub: 'sa', roles: ['SUPER_ADMIN'] };
+
+      beforeEach(() => {
+        consumerRepo.create.mockClear();
+        consumerRepo.save.mockClear();
+        mockIdentityRepo.manager.getRepository.mockImplementation((e: any) =>
+          e?.name === 'ConsumerProfile' ? consumerRepo : mockOrgRepo,
+        );
+      });
+
+      it('gets a consumer profile, no organization, role or staff profile', async () => {
+        await service.createUser(
+          { accountType: 'CONSUMER', name: ' Dara ', email: 'Dara@Example.io', phoneNumber: '+855 12 345 678' } as any,
+          SUPER,
+        );
+        expect(mockIdentityRepo.create).toHaveBeenCalledWith(
+          expect.objectContaining({ name: 'Dara', email: 'dara@example.io', status: 'ACTIVE', emailVerifiedAt: expect.any(Date) }),
+        );
+        expect(consumerRepo.create).toHaveBeenCalledWith(
+          expect.objectContaining({ phoneNumber: '+855 12 345 678' }),
+        );
+        expect(mockStaffProfileRepo.create).not.toHaveBeenCalled();
+      });
+
+      it('only a Super Admin can create one', async () => {
+        await expect(
+          service.createUser(
+            { accountType: 'CONSUMER', name: 'Dara', email: 'dara@example.io' } as any,
+            { sub: 'admin', roles: ['ADMIN'], organizationId: 'org-1' },
+          ),
+        ).rejects.toThrow('Only Super Administrators can create mobile app users');
+        expect(consumerRepo.save).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe('deleteRole', () => {

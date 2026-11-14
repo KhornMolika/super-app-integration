@@ -121,6 +121,9 @@ export default function NewUserPage() {
   const [touched, setTouched] = useState<Partial<Record<keyof FormState, boolean>>>({});
   const [taken, setTaken] = useState<{ email?: string; staffId?: string }>({});
   const [showPassword, setShowPassword] = useState(false);
+  // Super Admins can also add a mobile app user (consumers belong to no organization)
+  const [accountType, setAccountType] = useState<'STAFF' | 'CONSUMER'>('STAFF');
+  const isConsumer = accountType === 'CONSUMER';
 
   const [form, setForm] = useState<FormState>({
     name: '',
@@ -211,17 +214,19 @@ export default function NewUserPage() {
     else if (!EMAIL.test(email)) e.email = 'Enter a valid email address.';
     else if (taken.email === email) e.email = 'This email is already used by another account.';
     if (form.setPassword && form.password.trim().length < 6) e.password = 'At least 6 characters.';
-    if (!form.organizationId) e.organizationId = 'Choose an organization.';
-    if (!form.role) e.role = 'Choose a role.';
-    const staffId = form.staffId.trim();
-    if (staffId.length > 50) e.staffId = 'At most 50 characters.';
-    else if (staffId && taken.staffId === `${form.organizationId}:${staffId}`)
-      e.staffId = 'Already used in this organization.';
-    if (form.position.trim().length > 100) e.position = 'At most 100 characters.';
+    if (!isConsumer) {
+      if (!form.organizationId) e.organizationId = 'Choose an organization.';
+      if (!form.role) e.role = 'Choose a role.';
+      const staffId = form.staffId.trim();
+      if (staffId.length > 50) e.staffId = 'At most 50 characters.';
+      else if (staffId && taken.staffId === `${form.organizationId}:${staffId}`)
+        e.staffId = 'Already used in this organization.';
+      if (form.position.trim().length > 100) e.position = 'At most 100 characters.';
+    }
     if (form.phoneNumber.trim() && !PHONE.test(form.phoneNumber.trim()))
       e.phoneNumber = 'Digits, spaces, ( ) and -, with an optional leading +.';
     return e;
-  }, [form, taken]);
+  }, [form, taken, isConsumer]);
 
   const shown = (key: keyof FormState) => (touched[key] ? errors[key] : undefined);
   const hasErrors = Object.keys(errors).length > 0;
@@ -244,16 +249,23 @@ export default function NewUserPage() {
     }
     setSubmitting(true);
     try {
-      const res: any = await usersApi.create({
+      const common = {
         name: form.name.trim(),
         email: form.email.trim().toLowerCase(),
-        organizationId: form.organizationId,
-        roleNames: [form.role],
         password: form.setPassword ? form.password.trim() : undefined,
-        staffId: form.staffId.trim() || undefined,
-        position: form.position.trim() || undefined,
         phoneNumber: form.phoneNumber.trim() || undefined,
-      });
+      };
+      const res: any = await usersApi.create(
+        (isConsumer
+          ? { ...common, accountType: 'CONSUMER' }
+          : {
+              ...common,
+              organizationId: form.organizationId,
+              roleNames: [form.role],
+              staffId: form.staffId.trim() || undefined,
+              position: form.position.trim() || undefined,
+            }) as any,
+      );
       const created = res?.data ?? res;
       toast.success(`${form.name.trim()} was added.`, 'User created');
       router.push(created?.id ? `/users/${created.id}` : '/users');
@@ -266,14 +278,14 @@ export default function NewUserPage() {
 
   if (!can('user:manage')) {
     return (
-      <div className="max-w-3xl mx-auto py-16 text-center text-sm text-slate-500 dark:text-slate-400">
+      <div className="py-16 text-center text-sm text-slate-500 dark:text-slate-400">
         You do not have permission to add users.
       </div>
     );
   }
 
   return (
-    <form onSubmit={submit} noValidate className="max-w-3xl mx-auto w-full min-w-0 space-y-5 pb-28 sm:pb-8">
+    <form onSubmit={submit} noValidate className="w-full min-w-0 space-y-5 pb-28 sm:pb-8">
       <div>
         <Link href="/users" className="text-sm font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">
           Users
@@ -287,6 +299,37 @@ export default function NewUserPage() {
         </div>
       )}
 
+      {isSuper && (
+        <div role="radiogroup" aria-label="Account type" className="grid gap-2 sm:grid-cols-2">
+          {[
+            { v: 'STAFF' as const, t: 'Back-office staff', d: 'Works in an organization and signs in to the Back Office.' },
+            { v: 'CONSUMER' as const, t: 'Mobile app user', d: 'Uses the Super App on a phone. No organization or role.' },
+          ].map((o) => (
+            <label
+              key={o.v}
+              className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
+                accountType === o.v
+                  ? 'border-emerald-500 bg-emerald-50/60 dark:bg-emerald-500/10'
+                  : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/40'
+              }`}
+            >
+              <input
+                type="radio"
+                name="accountType"
+                className="mt-1 accent-emerald-600"
+                checked={accountType === o.v}
+                onChange={() => setAccountType(o.v)}
+              />
+              <span>
+                <span className="block text-sm font-medium text-slate-900 dark:text-slate-100">{o.t}</span>
+                <span className="block text-xs text-slate-500 dark:text-slate-400">{o.d}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      )}
+
+      <div className="grid gap-5 xl:grid-cols-2 items-start">
       <Section title="Account" text="How this person signs in.">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Full name" htmlFor="name" required error={shown('name')}>
@@ -319,7 +362,7 @@ export default function NewUserPage() {
           <div className="grid gap-2 sm:grid-cols-2">
             {[
               { v: true, t: 'Set it now', d: 'Share it with the person yourself.' },
-              { v: false, t: 'They set it', d: 'They use Forgot password on the sign-in page.' },
+              { v: false, t: 'They set it', d: isConsumer ? 'They use Forgot password in the app.' : 'They use Forgot password on the sign-in page.' },
             ].map((o) => (
               <label
                 key={String(o.v)}
@@ -369,6 +412,23 @@ export default function NewUserPage() {
         </fieldset>
       </Section>
 
+      {isConsumer ? (
+        <Section title="Mobile profile" text="Optional. Shown on the person's profile in the app.">
+          <Field label="Phone" htmlFor="phoneNumber" error={shown('phoneNumber')}>
+            <input
+              id="phoneNumber"
+              type="tel"
+              autoComplete="off"
+              placeholder="+855 12 345 678"
+              value={form.phoneNumber}
+              onChange={(e) => set('phoneNumber', e.target.value)}
+              onBlur={() => touch('phoneNumber')}
+              className={inputClass(shown('phoneNumber'))}
+            />
+          </Field>
+        </Section>
+      ) : (
+        <>
       <Section title="Organization" text="The organization this person works for. It decides which mini apps and users they can see.">
         {isSuper ? (
           <Field label="Organization" htmlFor="organization" required error={shown('organizationId')}>
@@ -462,10 +522,13 @@ export default function NewUserPage() {
           </Field>
         </div>
       </Section>
+        </>
+      )}
+      </div>
 
       {/* Actions: pinned to the bottom on phones */}
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur px-4 py-3 sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-0">
-        <div className="max-w-3xl mx-auto flex gap-2 sm:justify-end">
+        <div className="flex gap-2 sm:justify-end">
           <Link
             href="/users"
             className="flex-1 sm:flex-none text-center px-4 py-2.5 rounded-xl text-sm font-semibold border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"

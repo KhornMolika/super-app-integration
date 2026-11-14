@@ -1,16 +1,14 @@
-import {
-  IsString,
-  IsNotEmpty,
-  IsEmail,
-  IsOptional,
-  IsArray,
-  IsBoolean,
-  MaxLength,
-  MinLength,
-  Matches,
-} from 'class-validator';
+import { IsString, IsNotEmpty, IsEmail, IsOptional, IsArray, IsBoolean, MaxLength, MinLength, Matches, IsIn, ValidateIf } from 'class-validator';
 
 export class CreateUserDto {
+  /**
+   * STAFF (default): a back-office user in an organization, with a role.
+   * CONSUMER: a mobile app user; no organization, role or staff fields.
+   */
+  @IsOptional()
+  @IsIn(['STAFF', 'CONSUMER'], { message: 'Account type is STAFF or CONSUMER' })
+  accountType?: 'STAFF' | 'CONSUMER';
+
   @IsString()
   @IsNotEmpty({ message: 'User full name is required' })
   @MaxLength(120, { message: 'Name must be at most 120 characters' })
@@ -75,6 +73,8 @@ export class CreateUserDto {
   @IsOptional()
   status?: string;
 
+  // Consumers belong to no organization
+  @ValidateIf((o: CreateUserDto) => o.accountType !== 'CONSUMER')
   @IsString({ message: 'Organization ID must be a string' })
   @IsNotEmpty({ message: 'Organization is required' })
   organizationId!: string;

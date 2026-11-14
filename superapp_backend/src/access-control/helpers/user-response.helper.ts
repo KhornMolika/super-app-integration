@@ -56,7 +56,15 @@ export function formatUserResponse(user: any): FormattedUserResponse {
     organization: org || null,
     position: staffProfile?.position || user.position || null,
     staffId: staffProfile?.staffId || user.staffId || null,
-    phoneNumber: staffProfile?.phoneNumber || user.phoneNumber || null,
+    phoneNumber: staffProfile?.phoneNumber || user.consumerProfile?.phoneNumber || user.phoneNumber || null,
+    /** STAFF (back office), CONSUMER (mobile app) or both. */
+    accountType: staffProfile
+      ? user.consumerProfile
+        ? 'STAFF_AND_CONSUMER'
+        : 'STAFF'
+      : user.consumerProfile
+        ? 'CONSUMER'
+        : 'STAFF',
     externalId: staffProfile?.externalId || user.externalId || null,
     telegramChatId: user.telegramChatId || null,
     telegramUsername: user.telegramUsername || null,
