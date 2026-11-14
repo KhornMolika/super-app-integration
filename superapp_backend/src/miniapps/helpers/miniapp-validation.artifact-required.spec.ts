@@ -60,11 +60,11 @@ async function validate(
     runs.syncScan.mock.results.map((r) => r.value),
   )) as any[];
   const failedRun = runs_.find((a) => a?.validationStatus === 'FAILED');
-  const payload = update.mock.calls.map((c) => c[1]).find(Boolean) || {};
   const saved = failedRun
     ? {
         validationStatus: failedRun.validationStatus,
-        lifecycleStatus: payload.lifecycleStatus,
+        // Where the app stands after the check
+        lifecycleStatus: app.lifecycleStatus,
       }
     : undefined;
   return {
@@ -135,6 +135,6 @@ describe('a failed check on a new app', () => {
       },
     );
     expect(saved?.validationStatus).toBe('FAILED');
-    expect(saved?.lifecycleStatus).toBeUndefined();
+    expect(saved?.lifecycleStatus).toBe('ACTIVE');
   });
 });

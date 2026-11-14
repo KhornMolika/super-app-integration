@@ -49,7 +49,7 @@ const setup = () => {
 const REVIEWER = '11111111-1111-4111-8111-111111111111';
 
 describe('MiniAppVersionsService: an app before its first release', () => {
-  it('keeps one working row that follows the lifecycle, with the app capabilities', async () => {
+  it('keeps one working row whose status is the app stage, with the app capabilities', async () => {
     const { svc, versions, capsOf } = setup();
     const app: any = { id: 'a', lifecycleStatus: 'DRAFT', currentReleaseVersion: '1.0.0', capabilities: ['camera'], pendingRevision: null };
     await svc.syncFromApp(app);
@@ -57,9 +57,22 @@ describe('MiniAppVersionsService: an app before its first release', () => {
     expect(versions[0]).toMatchObject({ version: '1.0.0', status: 'DRAFT' });
     expect(capsOf(versions[0].id)).toMatchObject([{ capabilityKey: 'camera', status: 'REQUESTED' }]);
 
+    app.lifecycleStatus = 'IN_REVIEW';
+    await svc.syncFromApp(app);
+    expect(versions[0].status).toBe('IN_REVIEW');
+
     app.lifecycleStatus = 'APPROVED';
     await svc.approveWorking(app, REVIEWER);
     expect(versions).toHaveLength(1);
+    expect(versions[0].status).toBe('APPROVED');
+
+    // A failed test build stays at APPROVED (the build run says it failed)
+    app.lifecycleStatus = 'BUILD_FAILED';
+    await svc.syncFromApp(app);
+    expect(versions[0].status).toBe('APPROVED');
+
+    app.lifecycleStatus = 'TESTING';
+    await svc.syncFromApp(app);
     expect(versions[0].status).toBe('TESTING');
     expect(capsOf(versions[0].id)[0]).toMatchObject({ status: 'APPROVED', approvedById: REVIEWER });
 
@@ -109,7 +122,7 @@ describe('MiniAppVersionsService: a live app with a revision', () => {
     pendingRevision: null,
   });
 
-  it('the revision is a DRAFT row with its own capabilities; the live row keeps its own', async () => {
+  it('the revision is its own row with its own capabilities; the live row keeps its own', async () => {
     const { svc, versions, capsOf } = setup();
     const app = liveApp();
     await svc.syncFromApp(app);
@@ -124,7 +137,7 @@ describe('MiniAppVersionsService: a live app with a revision', () => {
     expect(capsOf(live.id).map((c) => c.capabilityKey)).toEqual(['camera']);
   });
 
-  it('the DRAFT row holds the whole revision and its review state', async () => {
+  it('the revision row holds the whole revision; its status is the review stage', async () => {
     const { svc, versions } = setup();
     const app = liveApp();
     await svc.syncFromApp(app);
@@ -135,16 +148,21 @@ describe('MiniAppVersionsService: a live app with a revision', () => {
       submittedAt: '2026-10-01T08:30:00.000Z',
     };
     await svc.persistRevision(app);
-    const draft = versions.find((v) => v.status === 'DRAFT');
+    const draft = versions.find((v) => v.status !== 'ACTIVE');
     expect(draft.revision).toEqual(app.pendingRevision);
-    expect(draft.reviewStatus).toBe('IN_REVIEW');
+    expect(draft.status).toBe('IN_REVIEW');
     expect(draft.submittedAt).toEqual(new Date('2026-10-01T08:30:00.000Z'));
 
     // Changes requested: the same row follows, an unreadable date becomes null
     app.pendingRevision = { ...app.pendingRevision, revisionStatus: 'DRAFT', submittedAt: 'soon' };
     await svc.persistRevision(app);
-    expect(versions.filter((v) => v.status === 'DRAFT')).toHaveLength(1);
-    expect(draft).toMatchObject({ reviewStatus: 'DRAFT', submittedAt: null });
+    expect(versions.filter((v) => v.status !== 'ACTIVE')).toHaveLength(1);
+    expect(draft).toMatchObject({ status: 'DRAFT', submittedAt: null });
+
+    // In the test build
+    app.pendingRevision = { ...app.pendingRevision, revisionStatus: 'TESTING' };
+    await svc.persistRevision(app);
+    expect(draft.status).toBe('TESTING');
   });
 
   it('publishing makes the DRAFT row live (approved) and the old live row PREVIOUS', async () => {
@@ -178,7 +196,7 @@ describe('MiniAppVersionsService: a live app with a revision', () => {
     await svc.syncFromApp(app);
     app.pendingRevision = { name: 'v2', revisionStatus: 'IN_REVIEW' };
     await svc.persistRevision(app);
-    const draft = versions.find((v) => v.status === 'DRAFT');
+    const draft = versions.find((v) => v.status === 'IN_REVIEW');
     const updatedAt = draft.revision;
     app.pendingRevision = { name: 'v2', revisionStatus: 'IN_REVIEW' };
     await svc.persistRevision(app);
@@ -186,7 +204,7 @@ describe('MiniAppVersionsService: a live app with a revision', () => {
     // undefined = not loaded: nothing changes
     app.pendingRevision = undefined;
     await svc.persistRevision(app);
-    expect(versions.filter((v) => v.status === 'DRAFT')).toHaveLength(1);
+    expect(versions.filter((v) => v.status === 'IN_REVIEW')).toHaveLength(1);
   });
 
   it('discarding the revision deletes its DRAFT row', async () => {
@@ -228,13 +246,14 @@ describe('MiniAppVersionsService: revisions of an unreleased app and loading', (
     app.pendingRevision = { name: 'Renamed', revisionStatus: 'IN_REVIEW' };
     await svc.persistRevision(app);
     expect(versions).toHaveLength(1);
-    expect(versions[0]).toMatchObject({ status: 'DRAFT', reviewStatus: 'IN_REVIEW' });
+    // An unreleased app's row keeps the app stage; the revision keeps its own state
+    expect(versions[0]).toMatchObject({ status: 'DRAFT' });
     expect(versions[0].revision).toEqual({ name: 'Renamed', revisionStatus: 'IN_REVIEW' });
 
     app.pendingRevision = null;
     await svc.persistRevision(app);
     expect(versions).toHaveLength(1);
-    expect(versions[0]).toMatchObject({ revision: null, reviewStatus: null });
+    expect(versions[0]).toMatchObject({ revision: null });
   });
 
   it('attachRevisions fills apps loaded without their versions, in one query', async () => {
@@ -264,8 +283,10 @@ describe('MiniAppVersionsService: revisions of an unreleased app and loading', (
       { status: 'ACTIVE', createdAt: at(1), revision: { stale: true } },
       { status: 'DRAFT', createdAt: at(2), revision: { name: 'Next' } },
     ])).toEqual({ name: 'Next' });
-    // Live app: a TESTING row is never its revision
-    expect(load([{ status: 'ACTIVE', createdAt: at(1) }, { status: 'TESTING', createdAt: at(2), revision: { x: 1 } }])).toBeNull();
+    // Live app: the revision row in any stage (here in the test build)
+    expect(load([{ status: 'ACTIVE', createdAt: at(1) }, { status: 'TESTING', createdAt: at(2), revision: { x: 1 } }])).toEqual({ x: 1 });
+    // Only released rows: no revision
+    expect(load([{ status: 'ACTIVE', createdAt: at(2) }, { status: 'PREVIOUS', createdAt: at(1), revision: { old: 1 } }])).toBeNull();
     // Unreleased: the working row
     expect(load([{ status: 'TESTING', createdAt: at(2), revision: { y: 1 } }])).toEqual({ y: 1 });
     // Versions not loaded: left undefined (not "no revision")
@@ -294,14 +315,15 @@ describe('Capabilities loaded from the version rows (no JSON columns)', () => {
     expect(json).not.toHaveProperty('capabilityRows');
   });
 
-  it('an app asks for what its serving version asks for: ACTIVE, else TESTING, else DRAFT', () => {
+  it('an app asks for what its serving version asks for: ACTIVE, else the row being worked on', () => {
     const load = (versions: any[]) => {
       const app = Object.assign(new MiniApp(), { versions });
       app.loadPendingRevision();
       return app.capabilities;
     };
     expect(load([version('ACTIVE', 1, [cap('camera', 0)]), version('DRAFT', 2, [cap('nfc', 0)])])).toEqual(['camera']);
-    expect(load([version('TESTING', 1, [cap('location', 0)]), version('DRAFT', 2, [cap('nfc', 0)])])).toEqual(['location']);
+    expect(load([version('TESTING', 1, [cap('location', 0)]), version('PREVIOUS', 0, [cap('nfc', 0)])])).toEqual(['location']);
+    expect(load([version('IN_REVIEW', 1, [cap('camera', 0)])])).toEqual(['camera']);
     expect(load([version('DRAFT', 1, [cap('nfc', 0)])])).toEqual(['nfc']);
     expect(load([])).toEqual([]);
     // Versions not loaded: left undefined so nothing is written over
@@ -378,13 +400,13 @@ describe('MiniAppVersionsService: integration on the version (step 4)', () => {
     expect(appUpdates).toHaveLength(1);
   });
 
-  it('the revision DRAFT row holds the revision integration; phones still get the live one', async () => {
+  it('the revision row holds the revision integration; phones still get the live one', async () => {
     const { svc, versions } = withApps();
     const app: any = { id: APP, lifecycleStatus: 'ACTIVE', currentReleaseVersion: '1.0.0', integrationMethod: 'WEBVIEW', integrationConfig: { url: 'https://v1' } };
     await svc.syncFromApp(app);
     app.pendingRevision = { integrationConfig: { url: 'https://v2' }, revisionStatus: 'IN_REVIEW' };
     await svc.persistRevision(app);
-    expect(versions.find((v) => v.status === 'DRAFT').integrationConfig).toEqual({ url: 'https://v2' });
+    expect(versions.find((v) => v.status === 'IN_REVIEW').integrationConfig).toEqual({ url: 'https://v2' });
 
     const served = await svc.servingVersions([APP]);
     expect(served.get(APP)?.integration?.integrationConfig).toEqual({ url: 'https://v1' });
@@ -445,5 +467,95 @@ describe('parseDeclaredCapabilities', () => {
       ['nfc', false, null, 2],
     ]);
     expect(parseDeclaredCapabilities(null)).toEqual([]);
+  });
+});
+
+describe('MiniAppVersionsService.applyLifecycle (writes without a full save)', () => {
+  const ID = 'abababab-abab-4bab-8bab-abababababab';
+  const withStore = (appStatus: string) => {
+    const ctx = setup();
+    const store: any = { id: ID, appStatus, integrationMethod: 'WEBVIEW', liveVersionId: null };
+    const qb: any = { select: () => qb, where: () => qb, getOne: async () => ({ ...store }) };
+    const appRepo: any = {
+      update: jest.fn(async (_w: any, patch: any) => Object.assign(store, patch)),
+      createQueryBuilder: () => qb,
+    };
+    const svc = new MiniAppVersionsService((ctx.svc as any).versions, (ctx.svc as any).caps, appRepo);
+    return { ...ctx, svc, store };
+  };
+
+  it('moves the working row to the stage; the app status stays DRAFT', async () => {
+    const { svc, versions, store } = withStore('DRAFT');
+    await svc.syncFromApp({ id: ID, lifecycleStatus: 'APPROVED', currentReleaseVersion: '2.0.0' } as any);
+    await svc.applyLifecycle(ID, 'TESTING');
+    expect(versions[0]).toMatchObject({ status: 'TESTING', version: '2.0.0' });
+    expect(store.appStatus).toBe('DRAFT');
+    await svc.applyLifecycle(ID, 'BUILD_FAILED');
+    expect(versions[0].status).toBe('APPROVED');
+  });
+
+  it('a live app stays LIVE through its builds; ARCHIVED archives it', async () => {
+    const { svc, store } = withStore('LIVE');
+    await svc.applyLifecycle(ID, 'BUILDING');
+    expect(store.appStatus).toBe('LIVE');
+    await svc.applyLifecycle(ID, 'ARCHIVED');
+    expect(store.appStatus).toBe('ARCHIVED');
+  });
+
+  it('a suspended test app stays suspended', async () => {
+    const { svc, store } = withStore('SUSPENDED');
+    await svc.applyLifecycle(ID, 'TESTING');
+    expect(store.appStatus).toBe('SUSPENDED');
+  });
+});
+
+describe('MiniApp: the old status fields are worked out and written through', () => {
+  const { MiniApp } = require('../entities/miniapp.entity');
+  const loaded = (appStatus: string, versions: any[], extra: any = {}) => {
+    const app = Object.assign(new MiniApp(), { appStatus, versions, ...extra });
+    app.loadPendingRevision();
+    return app;
+  };
+
+  it('reads lifecycle and availability from the status and the version stage', () => {
+    expect(loaded('DRAFT', [{ status: 'IN_REVIEW', version: '1.0.0' }]).lifecycleStatus).toBe('IN_REVIEW');
+    const live = loaded('LIVE', [{ status: 'ACTIVE', version: '1.2.0' }, { status: 'IN_REVIEW', version: '1.3.0' }]);
+    expect([live.lifecycleStatus, live.availabilityStatus, live.versionStage]).toEqual(['ACTIVE', 'PRODUCTION', 'IN_REVIEW']);
+    expect(live.currentReleaseVersion).toBe('1.2.0');
+    const suspended = loaded('SUSPENDED', [{ status: 'ACTIVE', version: '1.0.0' }]);
+    expect([suspended.lifecycleStatus, suspended.availabilityStatus]).toEqual(['ACTIVE', 'SUSPENDED']);
+    // A test build in progress shows as BUILDING (the latest build run)
+    const building = loaded('DRAFT', [{ status: 'APPROVED', version: '1.0.0' }], { buildStatus: 'BUILDING' });
+    expect(building.lifecycleStatus).toBe('BUILDING');
+  });
+
+  it('a write sets the app status and the stage, and is remembered for the sync', () => {
+    const { writtenLifecycle } = require('../entities/miniapp.entity');
+    const app = loaded('DRAFT', [{ status: 'IN_REVIEW', version: '1.0.0' }]);
+    expect(writtenLifecycle(app)).toBeUndefined();
+    app.lifecycleStatus = 'APPROVED';
+    expect([app.appStatus, app.versionStage, app.lifecycleStatus]).toEqual(['DRAFT', 'APPROVED', 'APPROVED']);
+    expect(writtenLifecycle(app)).toBe('APPROVED');
+    expect(app.updatedAt).toBeInstanceOf(Date);
+
+    // Suspend and resume a live app
+    const live = loaded('LIVE', [{ status: 'ACTIVE', version: '1.0.0' }]);
+    live.availabilityStatus = 'SUSPENDED';
+    expect(live.appStatus).toBe('SUSPENDED');
+    live.availabilityStatus = 'PRODUCTION';
+    expect(live.appStatus).toBe('LIVE');
+
+    // Archive, then restore as a draft (lifecycle first, then availability)
+    live.lifecycleStatus = 'ARCHIVED';
+    live.availabilityStatus = 'SUSPENDED';
+    expect(live.appStatus).toBe('ARCHIVED');
+    live.lifecycleStatus = 'DRAFT';
+    live.availabilityStatus = 'TESTING';
+    expect(live.appStatus).toBe('DRAFT');
+  });
+
+  it('JSON keeps the old fields', () => {
+    const json = JSON.parse(JSON.stringify(loaded('LIVE', [{ status: 'ACTIVE', version: '1.0.0' }])));
+    expect(json).toMatchObject({ appStatus: 'LIVE', lifecycleStatus: 'ACTIVE', availabilityStatus: 'PRODUCTION' });
   });
 });

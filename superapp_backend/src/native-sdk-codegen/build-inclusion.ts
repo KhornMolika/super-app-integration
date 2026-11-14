@@ -43,6 +43,18 @@ export function buildStagesFor(type: SuperAppBuildType): string[] {
   return type === 'release' ? RELEASE_BUILD_STAGES : TEST_BUILD_STAGES;
 }
 
+/**
+ * mini_apps.status values a build reads candidates from: everything but
+ * archived. Which of them a build takes is the stage (inBuildStages, after
+ * the runs are attached: a running test build shows as BUILDING).
+ */
+export const BUILD_CANDIDATE_STATUSES = ['DRAFT', 'LIVE', 'SUSPENDED'];
+
+/** The app's stage is one this build type takes. */
+export function inBuildStages(app: { lifecycleStatus?: string | null }, type: SuperAppBuildType): boolean {
+  return buildStagesFor(type).includes(String(app.lifecycleStatus || '').toUpperCase());
+}
+
 /** Approved but not yet tested: only included while its own test build runs. */
 const AWAITING_TEST_BUILD = new Set([
   'APPROVED',

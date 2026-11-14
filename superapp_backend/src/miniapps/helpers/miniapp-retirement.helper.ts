@@ -12,6 +12,10 @@ import {
   MiniAppLifecycleStatus,
 } from '../entities/miniapp.entity';
 import { NotificationsService } from '../../notifications';
+import {
+  MiniAppStatusEvent,
+  MiniAppStatusEventType,
+} from '../entities/miniapp-status-event.entity';
 
 /** Who is acting, taken from the signed-in user's token. */
 export interface RetirementActor {
@@ -78,6 +82,31 @@ export class MiniappRetirementHelper {
     return app.name || app.appId || 'MiniApp';
   }
 
+  /**
+   * The history row of a change (mini_app_status_events): the app's
+   * suspension and archiveRequest are read back from these rows. A stand-in
+   * repository without a manager (unit tests) records nothing.
+   */
+  private async record(
+    app: MiniApp,
+    type: MiniAppStatusEventType,
+    actor: RetirementActor,
+    extra: { reason?: string | null; previousAvailability?: string | null } = {},
+  ): Promise<void> {
+    const repo = (this.miniappRepository as any)?.manager?.getRepository?.(MiniAppStatusEvent);
+    if (!repo) return;
+    await repo.save(
+      repo.create({
+        miniAppId: app.id,
+        type,
+        reason: extra.reason ?? null,
+        actorId: actor.id ? String(actor.id).slice(0, 64) : null,
+        actorName: actor.name ?? null,
+        previousAvailability: extra.previousAvailability ?? null,
+      }),
+    );
+  }
+
   private async notifyOwner(app: MiniApp, title: string, message: string, type: string) {
     if (!app.ownerId) return;
     try {
@@ -137,10 +166,16 @@ export class MiniappRetirementHelper {
       previousAvailability: app.availabilityStatus,
     };
     app.availabilityStatus = MiniAppAvailabilityStatus.SUSPENDED;
-    if (body?.requestArchive && !MiniappRetirementHelper.isSuperAdmin(actor)) {
+    const asksArchive = Boolean(body?.requestArchive && !MiniappRetirementHelper.isSuperAdmin(actor));
+    if (asksArchive) {
       await this.askSuperAdmins(app, actor, reason);
     }
     await this.miniappRepository.save(app);
+    await this.record(app, MiniAppStatusEventType.SUSPENDED, actor, {
+      reason,
+      previousAvailability: app.suspension.previousAvailability,
+    });
+    if (asksArchive) await this.record(app, MiniAppStatusEventType.ARCHIVE_REQUESTED, actor, { reason });
 
     await this.notifyOwner(
       app,
@@ -176,6 +211,7 @@ export class MiniappRetirementHelper {
     app.suspension = null;
     app.archiveRequest = null;
     await this.miniappRepository.save(app);
+    await this.record(app, MiniAppStatusEventType.RESUMED, actor);
 
     await this.notifyOwner(
       app,
@@ -214,6 +250,7 @@ export class MiniappRetirementHelper {
     }
     await this.askSuperAdmins(app, actor, reason);
     await this.miniappRepository.save(app);
+    await this.record(app, MiniAppStatusEventType.ARCHIVE_REQUESTED, actor, { reason });
     await log(
       app.id,
       actor.id,
@@ -263,6 +300,10 @@ export class MiniappRetirementHelper {
     app.availabilityStatus = MiniAppAvailabilityStatus.SUSPENDED;
     app.archiveRequest = null;
     await this.miniappRepository.save(app);
+    await this.record(app, MiniAppStatusEventType.ARCHIVED, actor, {
+      reason,
+      previousAvailability: app.suspension.previousAvailability,
+    });
 
     const label = MiniappRetirementHelper.label(app);
     await this.notifyOwner(app, 'MiniApp archived', `"${label}" was archived: ${reason}`, 'MINIAPP_ARCHIVED');
@@ -305,6 +346,7 @@ export class MiniappRetirementHelper {
     }
     app.archiveRequest = null;
     await this.miniappRepository.save(app);
+    await this.record(app, MiniAppStatusEventType.ARCHIVE_DECLINED, actor, { reason: note?.trim() || null });
 
     if (request.requestedById) {
       try {
@@ -342,6 +384,7 @@ export class MiniappRetirementHelper {
     app.suspension = null;
     app.archiveRequest = null;
     await this.miniappRepository.save(app);
+    await this.record(app, MiniAppStatusEventType.RESTORED, actor);
 
     await this.notifyOwner(
       app,

@@ -131,4 +131,36 @@ describe('MiniappRetirementHelper', () => {
       await expect(helper.restore(app({ lifecycleStatus: 'ARCHIVED' }), admin, log)).rejects.toThrow(ForbiddenException);
     });
   });
+
+  describe('status history (mini_app_status_events)', () => {
+    const withEvents = () => {
+      const events: any[] = [];
+      const eventRepo = { create: (x: any) => x, save: jest.fn(async (x: any) => (events.push(x), x)) };
+      const repo = { save: jest.fn(async (a: any) => a), manager: { getRepository: () => eventRepo } };
+      const notifications = { createNotification: jest.fn(async () => ({})), notifyAdmins: jest.fn(async () => ({})) };
+      const helper = new MiniappRetirementHelper(repo as any, notifications as any);
+      return { helper, events, log: jest.fn(async () => undefined) };
+    };
+
+    it('records each change with who did it and why', async () => {
+      const { helper, events, log } = withEvents();
+      const a = app({ availabilityStatus: 'PRODUCTION', lifecycleStatus: 'ACTIVE' });
+      await helper.suspend(a, admin, { reason: 'Fraud reports', requestArchive: true }, log);
+      await helper.declineArchive(a, superAdmin, 'Keep it', log);
+      await helper.resume(a, superAdmin, log);
+      await helper.archive(a, superAdmin, 'End of service', log);
+      await helper.restore(a, superAdmin, log);
+      expect(events.map((e) => e.type)).toEqual([
+        'SUSPENDED',
+        'ARCHIVE_REQUESTED',
+        'ARCHIVE_DECLINED',
+        'RESUMED',
+        'ARCHIVED',
+        'RESTORED',
+      ]);
+      expect(events[0]).toMatchObject({ miniAppId: 'app-1', reason: 'Fraud reports', actorId: 'ad-1', actorName: 'Regulator', previousAvailability: 'PRODUCTION' });
+      expect(events[2]).toMatchObject({ reason: 'Keep it', actorId: 'sa-1' });
+      expect(events[4]).toMatchObject({ reason: 'End of service', previousAvailability: 'PRODUCTION' });
+    });
+  });
 });

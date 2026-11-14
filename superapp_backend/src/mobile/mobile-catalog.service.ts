@@ -1,7 +1,8 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { MiniApp, MiniAppLifecycleStatus } from '../miniapps/entities/miniapp.entity';
+import { MiniApp } from '../miniapps/entities/miniapp.entity';
+import { AppStatus, lifecycleOf } from '../miniapps/status/app-status';
 import { buildPaginationMeta } from '../common/utils/pagination.util';
 import { PaginationMeta } from '../common/interfaces/paginated-result.interface';
 import { CatalogQueryDto } from './dto/catalog-query.dto';
@@ -203,7 +204,7 @@ export function toCatalogItem(
       app.legal?.privacyPolicyDescription ??
       raw.privacyPolicyDescription ??
       null,
-    status: app.lifecycleStatus ?? raw.status ?? 'ACTIVE',
+    status: raw.catalogStatus ?? app.lifecycleStatus ?? raw.status ?? 'ACTIVE',
   };
   if (app.integrationMethod === 'NATIVE_SDK') {
     item.nativeSdk = { available: true };
@@ -275,28 +276,18 @@ export class MobileCatalogService {
       'm.description',
       'm.logo',
       'm.integrationMethod',
-      'm.lifecycleStatus',
-      'm.availabilityStatus',
+      'm.appStatus',
+      'm.liveVersionId',
       'org.name',
       'org.code',
       'm.organizationId',
       'legal.termsDescription',
       'legal.privacyPolicyDescription',
-    ]).where(
-      '(m.lifecycleStatus IN (:...statuses) OR m.availabilityStatus IN (:...statuses))',
-      {
-        statuses: [
-          MiniAppLifecycleStatus.ACTIVE,
-          MiniAppLifecycleStatus.TESTING,
-          MiniAppLifecycleStatus.APPROVED,
-        ],
-      },
-    )
-      // Suspended and archived apps leave the phones at once
-      .andWhere(
-        `(m.availabilityStatus IS NULL OR m.availabilityStatus <> 'SUSPENDED')`,
-      )
-      .andWhere(`m.lifecycleStatus <> 'ARCHIVED'`);
+    ])
+      // Suspended and archived apps leave the phones at once; live and
+      // unreleased apps are listed (as before: every unreleased app had the
+      // default availability TESTING), each with its launchability
+      .where('m.appStatus IN (:...statuses)', { statuses: [AppStatus.DRAFT, AppStatus.LIVE] });
 
     if (q) {
       const escaped = q.replace(/[\\%_]/g, (c) => `\\${c}`);
@@ -319,6 +310,12 @@ export class MobileCatalogService {
       r.integrationMethod = v?.integration?.integrationMethod ?? r.integrationMethod;
       r.integrationConfig = v?.integration?.integrationConfig ?? null;
       r.homeWidget = (v?.integration?.homeWidget ?? null) as any;
+      // The item status: ACTIVE when live, else the stage of the served version
+      (r as any).catalogStatus = lifecycleOf({
+        appStatus: r.appStatus,
+        stage: v?.status && v.status !== 'ACTIVE' ? v.status : null,
+        everLive: Boolean(r.liveVersionId),
+      });
     }
     // One catalog read for the whole page; launchability is computed, never stored
     const snapshot = this.capabilityGate ? await this.capabilityGate.snapshot() : null;

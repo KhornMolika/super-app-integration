@@ -21,7 +21,7 @@ import {
   buildDynamicValidationStages,
   getDefaultChecksForMethod,
 } from '../../integrations/validation/local-security-scanner.service';
-import { persistAppVersions } from '../versions/miniapp-versions.service';
+import { applyLifecycle, persistAppVersions } from '../versions/miniapp-versions.service';
 
 /** An app in one of these has been approved at least once: a failed check never sends it back to DRAFT. */
 const POST_APPROVAL_STATUSES = new Set([
@@ -476,18 +476,15 @@ export class MiniappValidationHelper {
 
     if (Object.keys(errors).length > 0) {
       try {
-        const updatePayload: any = {};
         if (!isLive) {
-          updatePayload.lifecycleStatus = 'DRAFT';
+          await applyLifecycle(this.miniappRepository, id, 'DRAFT');
+          app.lifecycleStatus = 'DRAFT' as any;
         } else if (app.pendingRevision) {
           app.pendingRevision = {
             ...app.pendingRevision,
             validationStatus: 'FAILED',
             validationErrors: errors,
           };
-        }
-        if (Object.keys(updatePayload).length > 0) {
-          await this.miniappRepository.update(id, updatePayload);
         }
         await persistAppVersions(this.miniappRepository, app);
       } catch (updErr: any) {
@@ -560,18 +557,15 @@ export class MiniappValidationHelper {
         app.securityChecks,
       );
 
-      const updatePayload: any = {};
       if (!isLive) {
-        updatePayload.lifecycleStatus = 'SUBMITTED';
+        await applyLifecycle(this.miniappRepository, id, 'SUBMITTED');
+        app.lifecycleStatus = 'SUBMITTED' as any;
       } else if (app.pendingRevision) {
         app.pendingRevision = {
           ...app.pendingRevision,
           validationStatus: 'RUNNING',
           validationStages: initialStages,
         };
-      }
-      if (Object.keys(updatePayload).length > 0) {
-        await this.miniappRepository.update(id, updatePayload);
       }
       await persistAppVersions(this.miniappRepository, app);
       app.validationStatus = 'RUNNING';

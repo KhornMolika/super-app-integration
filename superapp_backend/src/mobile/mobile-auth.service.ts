@@ -746,6 +746,7 @@ export class MobileAuthService {
       throw new BadRequestException(`MiniApp '${miniAppIdentifier}' not found`);
     }
 
+    // Suspended or archived (availability SUSPENDED for both)
     if (miniApp.availabilityStatus === 'SUSPENDED') {
       throw new ForbiddenException(
         'MiniApp is currently suspended by regulatory authority',

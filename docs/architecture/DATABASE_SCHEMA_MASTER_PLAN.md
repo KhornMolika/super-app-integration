@@ -387,19 +387,22 @@ To guarantee **zero downtime** and ensure that broken builds or pending reviews 
 └─────────────────────────┴────────────────────────────────────────────────────────┘
 ```
 
-> **Current code vs. this section, and the target (Phase 6).** Today the code has two overlapping app fields:
-> `lifecycleStatus` (16 values that mix review, build, test and availability) and `availabilityStatus`
+> **Status model in the code (Phase 6, done).** The earlier code had two overlapping app fields:
+> `lifecycleStatus` (16 values that mixed review, build, test and availability) and `availabilityStatus`
 > (`TESTING`, `PRODUCTION`, `SUSPENDED`; the `ENABLED`/`INACTIVE` values below were never built). Phase 6 in
-> section 10 replaces them with **one status per question**:
+> section 10 replaced them with **one status per question**:
 >
 > | Question | Column | Values |
 > | :--- | :--- | :--- |
 > | Can users get the app? | `mini_apps.status` | `DRAFT` (never released), `LIVE`, `SUSPENDED`, `ARCHIVED` |
 > | Where is this version in review and release? | `mini_app_versions.status` | `DRAFT`, `SUBMITTED`, `IN_REVIEW`, `CHANGES_REQUESTED`, `REJECTED`, `APPROVED`, `TESTING`, `TEST_PASSED`, `ACTIVE`, `PREVIOUS`, `DEPRECATED` |
 > | Is a build or scan running? | `mini_app_builds.buildStatus`, `mini_app_scans.status` | unchanged |
+> | What happened to its availability? | `mini_app_status_events` | `SUSPENDED`, `RESUMED`, `ARCHIVE_REQUESTED`, `ARCHIVE_DECLINED`, `ARCHIVED`, `RESTORED` |
 >
 > A live app with a new version in review stays `LIVE` while that version moves through review on its own row.
-> The `BUILDING*` and `APPROVED_FOR_TESTING` values go: "building" is read from the latest build run.
+> There are no `BUILDING*` or `APPROVED_FOR_TESTING` stages: "building" is read from the latest build run.
+> API responses still carry `lifecycleStatus` and `availabilityStatus`, worked out from these columns, so the
+> flows drawn below read the same.
 
 ---
 
@@ -992,16 +995,18 @@ To transition safely without corrupting existing data or causing downtime, the m
   - [x] Ran backend unit tests: **72 passed, 72 total test suites; 716 passed, 716 total tests**.
   - [x] Safely deleted legacy entities `user.entity.ts` and `end-user.entity.ts`.
 
-- [ ] **Phase 6: One Status Per Question** (target model in the note at the top of section 3)
+- [x] **Phase 6: One Status Per Question** (target model in the note at the top of section 3)
   - [x] 6.0a `mini_app_versions` capability relation renamed `capabilityRows`; `capabilities` on both `MiniApp` and `MiniAppVersion` now means the declared list (responses unchanged: versions still send it as `permissions`). Per-method `integrationConfig` types and `integrationConfigFor()` in `miniapps/integration-config.ts`.
   - [x] 6.0 Cleanup, no migration: `MiniAppStatus` (a copy of the lifecycle enum), the `TERMINATED` alias and the unused `MiniAppSharingScope` enum are removed; the `MiniApp` properties filled from other tables (`integrationConfig`, `capabilities`, `pendingRevision`, the scan and build fields) have real types instead of `any`.
-  - [ ] 6a Expand (migration `AddAppAndVersionStatus`):
-    - [ ] `mini_apps.status` varchar NOT NULL DEFAULT `'DRAFT'`, backfilled: `ARCHIVED` lifecycle -> `ARCHIVED`; `SUSPENDED` lifecycle or availability -> `SUSPENDED`; `ACTIVE` lifecycle, `PRODUCTION` availability or an `ACTIVE` version row -> `LIVE`; everything else -> `DRAFT`.
-    - [ ] `mini_app_versions.status` takes the review values: the working row of an unreleased app, and the DRAFT row of a live app, get the stage from `lifecycleStatus` (unreleased) or `reviewStatus` (revision). Mapping: `SUBMITTED`, `IN_REVIEW`, `CHANGES_REQUESTED`, `REJECTED` as they are; `APPROVED`, `APPROVED_FOR_TESTING` -> `APPROVED`; `BUILDING`, `BUILDING_STAGE_1`, `TESTING` -> `TESTING`; `TEST_PASSED`, `BUILDING_STAGE_2` -> `TEST_PASSED`.
-    - [ ] Index `(miniAppId, status)` on `mini_app_versions`.
-  - [ ] 6b Writers write both: one `setAppStatus` / `setVersionStage` helper per transition in the lifecycle, retirement and validation helpers; the old columns are derived from the new ones in that helper, so the two can never disagree. `revisionRowOf` and the served-row rule read "not `ACTIVE`/`PREVIOUS`/`DEPRECATED`" instead of `DRAFT`.
-  - [ ] 6c Reads switch to the new columns: `isMiniAppLive`, the mobile catalog filter, the token exchange suspension check, build inclusion, the list filters and counts, the Telegram status cards. API responses keep `lifecycleStatus` and `availabilityStatus` (derived) until the backoffice has moved; the mobile catalog item keeps `status` with its current values (`ACTIVE` for live, `TESTING` for a test build), so the phone app is untouched.
-  - [ ] 6d Backoffice: one badge for the app (`Draft`, `Live`, `Suspended`, `Archived`), one for the version in progress (review stage), and a `Building` / `Scanning` badge from the latest runs; filters and banners use the same three.
-  - [ ] 6e Contract (migration `DropLegacyAppStatus`): drop `mini_apps.lifecycleStatus`, `availabilityStatus`, `activeTestVersion`, `draftVersion` (read from the TESTING / in-progress row) and `currentReleaseVersion` (read from the `liveVersionId` row; kept in responses), and `mini_app_versions.reviewStatus` (now `status`). `down` restores them from the new columns. **Take a database backup before deploying.**
-  - [ ] 6f Optional: `suspension` and `archiveRequest` move from jsonb on `mini_apps` to `mini_app_status_events` (one row per suspend, resume, archive request, archive and decline, with actor and reason), so the app keeps its full history instead of only the latest one.
+  - [x] 6a Expand (migration `AddAppAndVersionStatus`):
+    - [x] `mini_apps.status` varchar(20) NOT NULL DEFAULT `'DRAFT'` (entity property `appStatus`: `status` stays the API alias of the lifecycle), backfilled: `ARCHIVED` lifecycle -> `ARCHIVED`; `SUSPENDED` lifecycle or availability -> `SUSPENDED`; `ACTIVE` lifecycle or `PRODUCTION` availability -> `LIVE`; everything else -> `DRAFT`. (No "has an ACTIVE row" rule: the runtime uses the same rules as the backfill, `status/app-status.ts`.) A leftover `status` column from the first schema, unmapped since `AlignMiniAppAndPlatformSchema`, is dropped first.
+    - [x] `mini_app_versions.status` takes the stages: an unreleased app's working row from `lifecycleStatus`, a live app's revision row from `reviewStatus`. Mapping: `SUBMITTED`, `IN_REVIEW`, `CHANGES_REQUESTED`, `REJECTED`, `TESTING`, `TEST_PASSED` as they are; `APPROVED`, `APPROVED_FOR_TESTING`, `BUILDING`, `BUILDING_STAGE_1`, `BUILD_FAILED` -> `APPROVED` (building and a failed build are the build run); `BUILDING_STAGE_2` -> `TEST_PASSED`.
+    - [x] Indexes `(miniAppId, status)` on `mini_app_versions` and `status` on `mini_apps`.
+    - [x] The row being worked on is any stage (`revisionRowOf`), the served row ACTIVE else that row (`servingRowOf`); `MiniApp.versionStage` is its status.
+  - [x] 6b Writers write both: `appStatus` follows every save; raw `UPDATE`s of `lifecycleStatus` (release assembly, test build start, validation reset) go through `applyLifecycle()`, which writes the app status and the version stage together. Build tracking reads the build runs (`appIdsWithBuildInProgress`), not a `BUILDING` lifecycle.
+  - [x] 6c Reads use the new columns: `isMiniAppLive`, the mobile catalog filter (`status IN ('DRAFT', 'LIVE')`: the same apps as before, since every unreleased app had the default availability `TESTING`), build inclusion (candidates by status, the stage checked in memory), the Backoffice list filters and sorting. The catalog item keeps `status` with its values (`ACTIVE` when live, else the served version's stage). In-memory reads of `lifecycleStatus` / `availabilityStatus` stay: they are worked out from the new columns.
+  - [x] 6d Backoffice: a Status badge (`Draft`, `Live`, `Suspended`, `Archived`) and a Version badge (the stage of the version being worked on, `Next:` for a live app's new version, `Building` / `Build failed` from the latest build run); the list filters are Status (with Archived) and Version stage; Version history labels every stage. Scan and build stay in the Checks column. The lifecycle banners still read the lifecycle value, which is worked out the same way.
+  - [x] 6e Contract (migration `DropLegacyAppStatus`): `mini_apps.lifecycleStatus`, `availabilityStatus`, `currentReleaseVersion`, `draftVersion` and `mini_app_versions.reviewStatus` are gone. `MiniApp.lifecycleStatus` / `availabilityStatus` are getters (from `appStatus`, `versionStage` and the latest build run) and setters (they set `appStatus` and `versionStage`; the version sync subscriber or `persistAppVersions` writes the stage to the row); `currentReleaseVersion` is filled from the served row. Responses keep all three; a version's `reviewStatus` comes from its revision. `down` restores the columns from the new ones. **Take a database backup before deploying.**
+    - Kept, unlike first planned: `mini_apps.activeTestVersion`. It is the Super App test build an app was last put in (e.g. `v0.2.1`), not a mini app version, and the Super App service looks apps up by it to decide whether a version number can be reused.
+  - [x] 6f `suspension` and `archiveRequest` move from jsonb on `mini_apps` to `mini_app_status_events` (migration `CreateMiniAppStatusEvents`): one row per suspend, resume, archive request, decline, archive and restore, with actor, reason and the availability before. The app's `suspension` / `archiveRequest` are replayed from these rows after load (`status/status-events.ts`), so responses keep their shape and the full history stays.
 ```

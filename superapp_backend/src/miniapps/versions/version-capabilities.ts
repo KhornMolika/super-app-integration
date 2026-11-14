@@ -1,4 +1,5 @@
 import { normalizeDeclared } from '../../capabilities/capability-gate.service';
+import { stageOfLifecycle } from '../status/app-status';
 
 /** A declared capability entry, parsed for storage. */
 export interface ParsedCapability {
@@ -49,33 +50,17 @@ export function capabilityChanged(
 
 /**
  * Status of the version row an unreleased app works on, from the app's
- * lifecycle. null = leave it as it is (suspended, archived, unknown).
+ * lifecycle: its stage (DRAFT ... TEST_PASSED) or ACTIVE once released.
+ * null = leave it as it is (suspended, archived, unknown).
  */
-export function workingVersionStatus(lifecycle?: string | null): 'DRAFT' | 'TESTING' | 'ACTIVE' | null {
-  switch ((lifecycle || '').toUpperCase()) {
-    case 'ACTIVE':
-      return 'ACTIVE';
-    case 'APPROVED':
-    case 'APPROVED_FOR_TESTING':
-    case 'BUILDING':
-    case 'BUILDING_STAGE_1':
-    case 'TESTING':
-    case 'TEST_PASSED':
-    case 'BUILDING_STAGE_2':
-    case 'BUILD_FAILED':
-      return 'TESTING';
-    case '':
-    case 'DRAFT':
-    case 'SUBMITTED':
-    case 'IN_REVIEW':
-    case 'REJECTED':
-    case 'CHANGES_REQUESTED':
-    case 'QUARANTINE':
-      return 'DRAFT';
-    default:
-      // SUSPENDED, ARCHIVED, anything new: leave the row as it is
-      return null;
-  }
+export function workingVersionStatus(lifecycle?: string | null): string | null {
+  return stageOfLifecycle(lifecycle);
+}
+
+/** The stage of a live app's revision row, from the revision's revisionStatus. */
+export function revisionStage(revisionStatus: unknown): string {
+  const stage = stageOfLifecycle(revisionStatus);
+  return stage && stage !== 'ACTIVE' ? stage : 'DRAFT';
 }
 
 /** The version string an app is on (live, or being prepared). */
@@ -98,13 +83,5 @@ export function revisionVersionOf(app: {
   return `1.${minor + 1}.0`;
 }
 
-/**
- * The version row that holds an app's pending revision: the DRAFT row of a
- * live app (one with an ACTIVE row), else the working DRAFT/TESTING row.
- * Rows are expected newest first.
- */
-export function revisionRowOf<T extends { status?: string | null }>(rows: T[] | null | undefined): T | undefined {
-  if (!Array.isArray(rows)) return undefined;
-  const live = rows.some((r) => r.status === 'ACTIVE');
-  return rows.find((r) => r.status === 'DRAFT' || (!live && r.status === 'TESTING'));
-}
+// The row being worked on, and the row an app serves (kept import-free in status/)
+export { revisionRowOf, servingRowOf } from '../status/app-status';

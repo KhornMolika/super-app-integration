@@ -18,7 +18,10 @@ export interface VersionRecord {
   /** GIT / ARTIFACT, or the integration method the version was made with. */
   sourceType?: string | null;
   type: 'PRODUCTION' | 'TEST' | 'DRAFT';
-  status: 'ACTIVE' | 'TESTING' | 'PREVIOUS' | 'DEPRECATED' | 'SUPERSEDED' | 'ARCHIVED' | 'IN_REVIEW' | 'APPROVED' | 'DRAFT';
+  /** Released (ACTIVE, PREVIOUS, DEPRECATED) or the stage of the version being worked on. */
+  status:
+    | 'ACTIVE' | 'PREVIOUS' | 'DEPRECATED' | 'SUPERSEDED' | 'ARCHIVED'
+    | 'DRAFT' | 'SUBMITTED' | 'IN_REVIEW' | 'CHANGES_REQUESTED' | 'REJECTED' | 'APPROVED' | 'TESTING' | 'TEST_PASSED';
   changelog?: string;
   artifactUrl?: string;
   apkSize?: string;
@@ -72,6 +75,27 @@ const SOURCE_LABELS: Record<string, string> = {
   NATIVE_SDK: 'Native SDK',
   DEEP_LINK: 'Deep link',
 };
+
+/** Stages of the version being worked on, other than IN_REVIEW and TESTING (own badges). */
+const OTHER_STAGES = ['DRAFT', 'SUBMITTED', 'CHANGES_REQUESTED', 'REJECTED', 'APPROVED', 'TEST_PASSED'];
+
+/** Label of a version being worked on: its stage (a DRAFT row by its review state, as before). */
+function stageLabel(rec: { status: string; reviewStatus?: string | null }): string {
+  switch (rec.status) {
+    case 'SUBMITTED':
+      return 'Submitted';
+    case 'CHANGES_REQUESTED':
+      return 'Changes requested';
+    case 'REJECTED':
+      return 'Rejected';
+    case 'APPROVED':
+      return 'Approved';
+    case 'TEST_PASSED':
+      return 'Test passed';
+    default:
+      return draftLabel(rec.reviewStatus);
+  }
+}
 
 /** Label of a DRAFT row: the version being prepared, by where its review stands. */
 function draftLabel(reviewStatus?: string | null): string {
@@ -605,16 +629,19 @@ export default function VersionHistoryTab({
                           <DotBadge color="bg-brand-500" />
                           <span>SANDBOX TESTING</span>
                         </span>
-                      ) : rec.status === 'DRAFT' ? (
+                      ) : OTHER_STAGES.includes(rec.status) ? (
                         <span
                           className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${
-                            draftLabel(rec.reviewStatus) === 'Changes requested' || draftLabel(rec.reviewStatus) === 'Rejected'
+                            stageLabel(rec) === 'Changes requested' || stageLabel(rec) === 'Rejected'
                               ? 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
                               : 'bg-white text-slate-700 border-dashed border-slate-300 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-600'
                           }`}
                         >
-                          <DotBadge color={draftLabel(rec.reviewStatus) === 'In review' ? 'bg-amber-500' : 'bg-slate-400'} pulse={draftLabel(rec.reviewStatus) === 'In review'} />
-                          <span>{draftLabel(rec.reviewStatus).toUpperCase()}</span>
+                          <DotBadge
+                            color={stageLabel(rec) === 'In review' || stageLabel(rec) === 'Submitted' ? 'bg-amber-500' : 'bg-slate-400'}
+                            pulse={stageLabel(rec) === 'In review' || stageLabel(rec) === 'Submitted'}
+                          />
+                          <span>{stageLabel(rec).toUpperCase()}</span>
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-300 dark:border-slate-700">

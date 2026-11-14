@@ -1,5 +1,5 @@
 import { MiniAppRunsService } from '../miniapp-runs.service';
-import { MiniAppVersionsService, persistAppVersions } from '../versions/miniapp-versions.service';
+import { MiniAppVersionsService, applyLifecycle, persistAppVersions } from '../versions/miniapp-versions.service';
 import { revisionVersionOf } from '../versions/version-capabilities';
 import { scanConfigOf, scanScopeOf } from '../../integrations/validation/scan-source-ticket';
 import { gitRefOf, gitSourceUrlOf, isGitSource, scanSourceOf } from '../../integrations/flutter/git-source.util';
@@ -1266,9 +1266,7 @@ export class MiniappLifecycleHelper {
     app.availabilityStatus = MiniAppAvailabilityStatus.TESTING;
     app.buildStatus = 'BUILDING';
     app.buildError = null as any;
-    await this.miniappRepository.update(app.id, {
-      lifecycleStatus: 'APPROVED',
-    });
+    await applyLifecycle(this.miniappRepository, app.id, 'APPROVED', MiniAppAvailabilityStatus.TESTING);
     app.buildStages = {
       preflight: {
         id: 'preflight',

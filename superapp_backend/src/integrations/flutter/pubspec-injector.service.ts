@@ -12,10 +12,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import {
-  buildExclusionReason,
-  buildStagesFor,
-} from '../../native-sdk-codegen/build-inclusion';
+import { buildExclusionReason, BUILD_CANDIDATE_STATUSES } from '../../native-sdk-codegen/build-inclusion';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -506,7 +503,7 @@ export class PubspecInjectorService {
 
     // Same rule as the Jenkins build (build-inclusion.ts, test build)
     const candidates = await this.miniappRepository.find({
-      where: { lifecycleStatus: In(buildStagesFor('debug')) },
+      where: { appStatus: In(BUILD_CANDIDATE_STATUSES) }, // the stage: buildExclusionReason
     });
 
     const flutterMiniApps = candidates.filter(
@@ -604,7 +601,7 @@ export class PubspecInjectorService {
     try {
       // Same rule as the Jenkins build (build-inclusion.ts, test build)
       const candidates = await this.miniappRepository.find({
-        where: { lifecycleStatus: In(buildStagesFor('debug')) },
+        where: { appStatus: In(BUILD_CANDIDATE_STATUSES) }, // the stage: buildExclusionReason
       });
       const flutterMiniApps = candidates.filter(
         (app) =>

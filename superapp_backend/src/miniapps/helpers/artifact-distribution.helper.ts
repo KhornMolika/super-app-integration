@@ -10,6 +10,7 @@ import * as path from 'path';
 import { Readable } from 'stream';
 import { Response } from 'express';
 import { MiniApp } from '../entities/miniapp.entity';
+import { versionRowType } from '../status/version-row-type';
 
 @Injectable()
 export class ArtifactDistributionHelper {
@@ -40,14 +41,14 @@ export class ArtifactDistributionHelper {
       app.activeTestVersion || app.integrationConfig?.gitBranch || 'develop';
 
     const draftVer =
-      app.draftVersion ||
       (app.pendingRevision
         ? app.pendingRevision.version || 'v1.1.0-draft'
         : null);
 
     // Real version rows only (MiniAppVersionsService keeps them), newest first.
-    // A DRAFT row is the version being prepared; reviewStatus says where its
-    // review stands. Nothing is made up when an app has no rows.
+    // A row in a stage (DRAFT ... TEST_PASSED) is the version being prepared;
+    // a revision's reviewStatus is its own review state. Nothing is made up
+    // when an app has no rows.
     const iso = (d: unknown) =>
       d ? (d instanceof Date ? d.toISOString() : String(d)) : null;
     const rows: any[] = Array.isArray(app.versions) ? [...app.versions] : [];
@@ -62,14 +63,9 @@ export class ArtifactDistributionHelper {
       gitRef: v.integrationConfig?.commitSha || v.integrationConfig?.gitBranch || v.integrationConfig?.gitRef || null,
       packageName: v.integrationConfig?.packageName || packageName,
       sourceType: v.integrationMethod || v.integrationConfig?.sourceType || null,
-      type:
-        v.status === 'TESTING'
-          ? 'TEST'
-          : v.status === 'DRAFT'
-            ? 'DRAFT'
-            : 'PRODUCTION',
+      type: versionRowType(v.status),
       status: v.status,
-      reviewStatus: v.reviewStatus ?? null,
+      reviewStatus: v.revision?.revisionStatus ?? null,
       changelog: v.changelog || null,
       releasedAt: iso(v.releasedAt),
       submittedAt: iso(v.submittedAt),

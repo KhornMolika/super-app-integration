@@ -1,4 +1,4 @@
-import { buildStagesFor } from './build-inclusion';
+import { BUILD_CANDIDATE_STATUSES } from './build-inclusion';
 import { BuildMiniAppsService } from './build-miniapps.service';
 import { miniAppDependencyOf, pubspecHostedUrlFor } from '../integrations/flutter/miniapp-dependency.util';
 import { dartString, renderMiniAppRegistry } from '../integrations/flutter/miniapp-registry.render';
@@ -106,7 +106,7 @@ describe('BuildMiniAppsService.plan', () => {
     expect(r.registryDart).not.toContain('local_pkg');
     const where = (repo.find.mock.calls[0] as any)[0].where;
     expect(where.integrationMethod).toBe('FLUTTER_PACKAGE');
-    expect(where.lifecycleStatus._value).toEqual(buildStagesFor('debug'));
+    expect(where.appStatus._value).toEqual(BUILD_CANDIDATE_STATUSES);
   });
 
   it('leaves a failed test build out of the next build, saying why (build log)', async () => {
@@ -125,10 +125,16 @@ describe('BuildMiniAppsService.plan', () => {
     ]);
   });
 
-  it('a release build asks for live apps only', async () => {
-    const { svc, repo } = serviceWith([app('live', { sourceType: 'ARTIFACT', packageName: 'live_pkg' })]);
-    await svc.plan('release');
-    expect((repo.find.mock.calls[0] as any)[0].where.lifecycleStatus._value).toEqual(['ACTIVE']);
+  it('a release build takes live apps only', async () => {
+    const { svc } = serviceWith([
+      app('live', { sourceType: 'ARTIFACT', packageName: 'live_pkg' }),
+      app('testing', { sourceType: 'ARTIFACT', packageName: 'testing_pkg' }, { lifecycleStatus: 'TESTING' }),
+      app('draft', { sourceType: 'ARTIFACT', packageName: 'draft_pkg' }, { lifecycleStatus: 'DRAFT' }),
+    ]);
+    const r = await svc.plan('release');
+    expect(r.packages.map((p) => p.appId)).toEqual(['live']);
+    // Not in this build's stages: left out quietly, not listed as skipped
+    expect(r.skipped).toEqual([]);
   });
 
   it('with no mini apps, the registry registers nothing', async () => {

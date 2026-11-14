@@ -154,9 +154,8 @@ describe('ReleaseAssemblyVerificationService', () => {
         },
       ],
     });
-    expect(mockMiniappRepo.update).toHaveBeenCalledWith('app-1', {
-      lifecycleStatus: 'BUILDING',
-    });
+    // The stage goes to the version row (applyLifecycle); mini_apps.status is not touched
+    expect(mockMiniappRepo.update).not.toHaveBeenCalledWith('app-1', expect.objectContaining({ appStatus: expect.anything() }));
     // A new build run with fresh stages (mini_app_builds)
     expect(mockRuns.recordBuild).toHaveBeenCalledWith(
       'app-1',
@@ -272,7 +271,7 @@ describe('ReleaseAssemblyVerificationService', () => {
       ]);
     });
 
-    it('moves BUILDING to TESTING, notifies owner and emits build_completed', async () => {
+    it('moves the apps of the build to TESTING, notifies owner and emits build_completed', async () => {
       const res = await service.handleBuildCallback({
         appName: 'superapp',
         releaseVersion: 'v1.0.0',
@@ -281,7 +280,9 @@ describe('ReleaseAssemblyVerificationService', () => {
         apkUrl: 'http://nexus/app-debug.apk',
       });
 
-      expect(execute).toHaveBeenCalled();
+      // Every app of the build is now under test: the stage goes to its version
+      // row (applyLifecycle); the app status is not touched
+      expect(mockMiniappRepo.update).not.toHaveBeenCalledWith('app-1', expect.objectContaining({ appStatus: expect.anything() }));
       expect(notificationsService.createNotification).toHaveBeenCalledWith(
         'u1',
         'SuperApp Test Build Ready',
@@ -306,9 +307,7 @@ describe('ReleaseAssemblyVerificationService', () => {
         status: 'FAILED',
         errorMessage: 'APK build error',
       });
-      expect(mockMiniappRepo.update).toHaveBeenCalledWith('app-1', {
-        lifecycleStatus: 'BUILD_FAILED',
-      });
+      expect(mockMiniappRepo.update).not.toHaveBeenCalledWith('app-1', expect.objectContaining({ appStatus: expect.anything() }));
       expect(mockRuns.recordBuild).toHaveBeenCalledWith(
         'app-1',
         expect.objectContaining({ status: 'FAILED', error: 'APK build error' }),

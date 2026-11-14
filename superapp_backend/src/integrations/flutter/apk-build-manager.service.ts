@@ -6,7 +6,7 @@ import {
 } from '../../common/utils/local-workspace.util';
 import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -329,9 +329,10 @@ export class ApkBuildManagerService {
 
             // Notify connected clients that compile & publish stages completed
             try {
+              const buildingIds = (await this.runs?.appIdsWithBuildInProgress()) ?? [];
               const buildingApps = await this.miniappRepository.find({
                 where: [
-                  { lifecycleStatus: 'BUILDING' },
+                  ...(buildingIds.length ? [{ id: In(buildingIds) }] : []),
                   { activeTestVersion: releaseVersion },
                 ],
               });

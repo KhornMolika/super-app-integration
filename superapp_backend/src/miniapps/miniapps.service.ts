@@ -69,6 +69,7 @@ import {
   ScannedArtifactPublisherService,
 } from '../integrations/validation/scanned-artifact-publisher.service';
 import { versionsServiceFor, persistAppVersions } from './versions/miniapp-versions.service';
+import { stageOfLifecycle } from './status/app-status';
 
 @Injectable()
 export class MiniappsService implements OnApplicationBootstrap {
@@ -655,35 +656,41 @@ export class MiniappsService implements OnApplicationBootstrap {
       );
     }
 
-    // Availability: the runtime gate, separate from the lifecycle stage
-    const isSuspended =
-      "(app.availabilityStatus = 'SUSPENDED' OR app.lifecycleStatus = 'SUSPENDED')";
-    const isLive =
-      "(app.lifecycleStatus = 'ACTIVE' OR app.availabilityStatus = 'PRODUCTION')";
+    // Availability: the app status (mini_apps.status)
     if (availability === 'SUSPENDED') {
-      qb.andWhere(isSuspended);
+      qb.andWhere(`app.appStatus = 'SUSPENDED'`);
     } else if (availability === 'LIVE') {
-      qb.andWhere(`NOT ${isSuspended} AND ${isLive}`);
+      qb.andWhere(`app.appStatus = 'LIVE'`);
     } else if (availability === 'NOT_LIVE') {
-      qb.andWhere(`NOT ${isSuspended} AND NOT ${isLive}`);
+      qb.andWhere(`app.appStatus NOT IN ('LIVE', 'SUSPENDED')`);
+    } else if (availability === 'ARCHIVED') {
+      qb.andWhere(`app.appStatus = 'ARCHIVED'`);
     }
 
-    // Filter Status
-    // The filter is the lifecycle stage. SUSPENDED is the availability gate
-    // (an app keeps its stage, e.g. ACTIVE, while suspended), so it matches either.
+    // Stage filter, by its old lifecycle name: ACTIVE = released (also while
+    // suspended), ARCHIVED and SUSPENDED = the app status, any other value =
+    // the stage of an unreleased app's version (BUILDING, BUILD_FAILED: approved)
     if (status && status !== 'ALL') {
-      if (status === 'SUSPENDED') {
+      const released =
+        `EXISTS (SELECT 1 FROM "mini_app_versions" lv WHERE lv."miniAppId" = app.id AND lv."status" = 'ACTIVE')`;
+      const stage = stageOfLifecycle(status);
+      if (status === 'ARCHIVED' || status === 'SUSPENDED') {
+        qb.andWhere('app.appStatus = :reqStatus', { reqStatus: status });
+      } else if (stage === 'ACTIVE') {
+        qb.andWhere(`app.appStatus IN ('LIVE', 'SUSPENDED') AND ${released}`);
+      } else if (stage) {
         qb.andWhere(
-          '(app.availabilityStatus = :reqStatus OR app.lifecycleStatus = :reqStatus)',
-          { reqStatus: status },
+          `app.appStatus IN ('DRAFT', 'SUSPENDED') AND NOT ${released} AND EXISTS (` +
+            `SELECT 1 FROM "mini_app_versions" sv WHERE sv."miniAppId" = app.id AND sv."status" = :reqStage)`,
+          { reqStage: stage },
         );
       } else {
-        qb.andWhere('app.lifecycleStatus = :reqStatus', { reqStatus: status });
+        qb.andWhere('1 = 0');
       }
     }
 
-    if (!includeArchived && status !== 'ARCHIVED') {
-      qb.andWhere(`app.lifecycleStatus <> 'ARCHIVED'`);
+    if (!includeArchived && status !== 'ARCHIVED' && availability !== 'ARCHIVED') {
+      qb.andWhere(`app.appStatus <> 'ARCHIVED'`);
     }
 
     // Filter Integration Method
@@ -703,9 +710,9 @@ export class MiniappsService implements OnApplicationBootstrap {
       createdAt: 'app.createdAt',
       updatedAt: 'app.updatedAt',
       name: 'app.name',
-      status: 'app.lifecycleStatus',
-      lifecycle: 'app.lifecycleStatus',
-      availability: 'app.availabilityStatus',
+      status: 'app.appStatus',
+      lifecycle: 'app.appStatus',
+      availability: 'app.appStatus',
       organization: 'org.code',
       integrationMethod: 'app.integrationMethod',
     };

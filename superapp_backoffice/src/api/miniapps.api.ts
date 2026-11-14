@@ -14,6 +14,10 @@ export interface MiniApp {
   status: string;
   lifecycleStatus?: string;
   availabilityStatus?: string;
+  /** mini_apps.status: DRAFT, LIVE, SUSPENDED or ARCHIVED. */
+  appStatus?: string;
+  /** Stage of the version being worked on; null when nothing is in progress. */
+  versionStage?: string | null;
   /** The caller's access on this app (GET /mini-apps/:id only): VIEW | EDIT | MAINTAIN | OWN | ADMIN. */
   myAccess?: string;
   ownerId?: string;

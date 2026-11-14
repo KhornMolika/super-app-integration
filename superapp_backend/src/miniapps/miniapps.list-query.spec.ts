@@ -56,23 +56,44 @@ describe('MiniappsService.findAll list query', () => {
     expect(joins).toContain('app.organizationRelation');
   });
 
-  it('filters the lifecycle stage on lifecycleStatus only', async () => {
+  it('a stage filter matches the version an unreleased app works on', async () => {
     const { wheres } = await run({ status: 'TESTING' });
-    const clause = wheres.find((w) => w.params?.reqStatus);
-    expect(clause?.sql).toBe('app.lifecycleStatus = :reqStatus');
+    const clause = wheres.find((w) => w.params?.reqStage);
+    expect(clause?.params).toEqual({ reqStage: 'TESTING' });
+    expect(clause?.sql).toContain('sv."status" = :reqStage');
+    expect(clause?.sql).toContain('NOT EXISTS');
   });
 
-  it('SUSPENDED also matches the availability gate', async () => {
+  it('BUILDING and BUILD_FAILED are the APPROVED stage (the build run says the rest)', async () => {
+    const { wheres } = await run({ status: 'BUILD_FAILED' });
+    expect(wheres.find((w) => w.params?.reqStage)?.params).toEqual({ reqStage: 'APPROVED' });
+  });
+
+  it('ACTIVE = released, also while suspended', async () => {
+    const { wheres } = await run({ status: 'ACTIVE' });
+    expect(wheres.some((w) => w.sql.startsWith(`app.appStatus IN ('LIVE', 'SUSPENDED') AND EXISTS`))).toBe(true);
+  });
+
+  it('SUSPENDED and ARCHIVED filter the app status', async () => {
     const { wheres } = await run({ status: 'SUSPENDED' });
-    expect(wheres.find((w) => w.params?.reqStatus)?.sql).toContain(
-      'app.availabilityStatus',
-    );
+    expect(wheres.find((w) => w.params?.reqStatus)).toEqual({ sql: 'app.appStatus = :reqStatus', params: { reqStatus: 'SUSPENDED' } });
+  });
+
+  it('archived apps are left out unless asked for', async () => {
+    const { wheres } = await run({});
+    expect(wheres.some((w) => w.sql === `app.appStatus <> 'ARCHIVED'`)).toBe(true);
+  });
+
+  it('the Archived status shows only archived apps', async () => {
+    const { wheres } = await run({ availability: 'ARCHIVED' });
+    expect(wheres.some((w) => w.sql === `app.appStatus = 'ARCHIVED'`)).toBe(true);
+    expect(wheres.some((w) => w.sql === `app.appStatus <> 'ARCHIVED'`)).toBe(false);
   });
 
   it.each([
-    ['LIVE', /NOT .*SUSPENDED.* AND .*ACTIVE/],
-    ['SUSPENDED', /^\(app\.availabilityStatus = 'SUSPENDED'/],
-    ['NOT_LIVE', /NOT .*SUSPENDED.* AND NOT .*ACTIVE/],
+    ['LIVE', /^app\.appStatus = 'LIVE'$/],
+    ['SUSPENDED', /^app\.appStatus = 'SUSPENDED'$/],
+    ['NOT_LIVE', /^app\.appStatus NOT IN \('LIVE', 'SUSPENDED'\)$/],
   ])('availability %s', async (availability, pattern) => {
     const { wheres } = await run({ availability });
     expect(wheres.some((w) => pattern.test(w.sql))).toBe(true);
@@ -84,8 +105,8 @@ describe('MiniappsService.findAll list query', () => {
   });
 
   it.each([
-    ['lifecycle', 'app.lifecycleStatus'],
-    ['availability', 'app.availabilityStatus'],
+    ['lifecycle', 'app.appStatus'],
+    ['availability', 'app.appStatus'],
     ['organization', 'org.code'],
     ['updatedAt', 'app.updatedAt'],
     ['name', 'app.name'],

@@ -1,4 +1,5 @@
 import { MiniApp } from '../entities/miniapp.entity';
+import { versionRowType } from '../status/version-row-type';
 
 /**
  * Transforms a pure MiniApp entity or plain object into a standardized API response.
@@ -23,7 +24,7 @@ export function formatMiniAppResponse<T = any>(app: T): T {
           packageName: v.integrationConfig?.packageName,
           sourceType: v.integrationMethod || v.integrationConfig?.sourceType,
           saVersion: v.integrationConfig?.saVersion,
-          type: v.status === 'TESTING' ? 'TEST' : v.status === 'DRAFT' ? 'DRAFT' : 'PRODUCTION',
+          type: versionRowType(v.status),
           status: v.status || 'DRAFT',
           changelog: v.changelog,
           artifactUrl: v.integrationConfig?.artifactUrl,
@@ -66,13 +67,16 @@ export function formatMiniAppResponse<T = any>(app: T): T {
     shortDescription: a.tagline ?? a.shortDescription ?? '',
     fullDescription: a.description ?? a.fullDescription ?? '',
     status: resolvedStatus,
+    // Worked out from the app status (getters, not copied by the spread)
+    lifecycleStatus: a.lifecycleStatus,
+    availabilityStatus: a.availabilityStatus,
     organization: orgName,
     organizationCode: orgCode,
     teamName: orgName || ownerName || a.teamName,
     // Read-only alias the mobile catalog still shows; not stored or accepted.
     category: orgName,
     permissions: a.capabilities || a.permissions || [],
-    version: a.currentReleaseVersion || a.draftVersion || a.version || '1.0.0',
+    version: a.currentReleaseVersion || a.version || '1.0.0',
     versionHistory: versions,
     termsUrl: a.legal?.termsUrl ?? a.termsUrl,
     termsDescription: a.legal?.termsDescription ?? a.termsDescription,

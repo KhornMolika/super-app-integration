@@ -23,6 +23,7 @@ import {
   BuildStageUpdateDto,
   BuildCallbackDto,
 } from './dto/release-assembly-verification.dto';
+import { applyLifecycle } from '../../miniapps/versions/miniapp-versions.service';
 
 interface VerifiedAppRecord {
   id: string;
@@ -284,9 +285,8 @@ export class ReleaseAssemblyVerificationService {
 
       for (const appDto of dto.miniApps) {
         try {
-          await this.miniappRepository.update(appDto.id, {
-            lifecycleStatus: 'BUILDING',
-          });
+          // Approved and in this build: the build run says it is building
+          await applyLifecycle(this.miniappRepository, appDto.id, 'BUILDING');
           await this.runs?.recordBuild(appDto.id, {
             status: 'BUILDING',
             stages: initialBuildStages,
@@ -435,9 +435,9 @@ export class ReleaseAssemblyVerificationService {
       Boolean,
     );
 
+    // Building = a build run in progress (mini_app_builds)
     const buildingIds = (await this.runs?.appIdsWithBuildInProgress()) ?? [];
     const whereConditions: any[] = [
-      { lifecycleStatus: 'BUILDING' },
       ...(buildingIds.length ? [{ id: In(buildingIds) }] : []),
     ];
     for (const v of candidateVersions) {
@@ -525,15 +525,9 @@ export class ReleaseAssemblyVerificationService {
       await this.markVersionPublished(body.releaseVersion);
       const buildingApps = await this.resolveBuildingApps(body);
 
+      // Every app in this build is now under test
       const inProgress = (await this.runs?.appIdsWithBuildInProgress()) ?? [];
-      const qb = this.miniappRepository
-        .createQueryBuilder()
-        .update(MiniApp)
-        .set({ lifecycleStatus: 'TESTING' })
-        .where('"lifecycleStatus" = :status', { status: 'BUILDING' });
-      if (inProgress.length)
-        qb.orWhere('id IN (:...inProgress)', { inProgress });
-      await qb.execute();
+      await applyLifecycle(this.miniappRepository, inProgress, 'TESTING');
       for (const id of inProgress) {
         await this.runs?.recordBuild(id, { status: 'COMPLETED' });
       }
@@ -611,9 +605,7 @@ export class ReleaseAssemblyVerificationService {
         app.buildStatus = 'COMPLETED';
         app.buildStages = allCompletedStages;
         app.buildError = null as any;
-        await this.miniappRepository.update(app.id, {
-          lifecycleStatus: 'TESTING',
-        });
+        await applyLifecycle(this.miniappRepository, app.id, 'TESTING');
         await this.miniappRepository.save(app);
         await this.runs?.syncBuildFromApp(app, {
           buildType: body.buildType === 'release' ? 'release' : 'debug',
@@ -778,9 +770,7 @@ export class ReleaseAssemblyVerificationService {
         };
       }
 
-      await this.miniappRepository.update(app.id, {
-        lifecycleStatus: 'BUILD_FAILED',
-      });
+      await applyLifecycle(this.miniappRepository, app.id, 'BUILD_FAILED');
       await this.runs?.recordBuild(app.id, {
         status: 'FAILED',
         error: errorMessage,
@@ -906,10 +896,7 @@ export class ReleaseAssemblyVerificationService {
       return { ok: false, updated: 0 };
     }
     if (isFailure) {
-      await this.miniappRepository.update(
-        { id: In(rows.map((r) => r.miniAppId)) },
-        { lifecycleStatus: 'BUILD_FAILED' },
-      );
+      await applyLifecycle(this.miniappRepository, rows.map((r) => r.miniAppId), 'BUILD_FAILED');
     }
 
     for (const row of rows) {

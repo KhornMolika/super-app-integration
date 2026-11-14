@@ -9,15 +9,11 @@ import {
   TransactionRollbackEvent,
   UpdateEvent,
 } from 'typeorm';
-import { MiniApp } from '../entities/miniapp.entity';
+import { MiniApp, writtenLifecycle } from '../entities/miniapp.entity';
 import { MiniAppVersionsService } from './miniapp-versions.service';
 
-/** Saving any of these can change the version rows or their capabilities. */
-const WATCHED = new Set([
-  'lifecycleStatus',
-  'currentReleaseVersion',
-  'integrationMethod',
-]);
+/** Saving any of these can change the version rows. */
+const WATCHED = new Set(['appStatus', 'integrationMethod']);
 
 /**
  * Keeps version rows in step with every save of a mini app, whichever code
@@ -27,7 +23,7 @@ const WATCHED = new Set([
  */
 @Injectable()
 export class MiniAppVersionSyncSubscriber implements EntitySubscriberInterface<MiniApp> {
-  private readonly pending = new WeakMap<QueryRunner, Set<string>>();
+  private readonly pending = new WeakMap<QueryRunner, Map<string, MiniApp | null>>();
 
   constructor(
     @InjectDataSource() private readonly dataSource: DataSource,
@@ -41,13 +37,23 @@ export class MiniAppVersionSyncSubscriber implements EntitySubscriberInterface<M
   }
 
   afterInsert(event: InsertEvent<MiniApp>) {
-    return this.track(event.queryRunner, event.entity?.id);
+    return this.track(event.queryRunner, event.entity?.id, this.statusWriter(event.entity));
   }
 
   afterUpdate(event: UpdateEvent<MiniApp>) {
     const id = (event.entity as MiniApp | undefined)?.id ?? (event.databaseEntity as MiniApp | undefined)?.id;
+    const writer = this.statusWriter(event.entity);
     const touched = event.updatedColumns.some((c) => WATCHED.has(c.propertyName));
-    if (touched) return this.track(event.queryRunner, id);
+    if (writer || touched) return this.track(event.queryRunner, id, writer);
+  }
+
+  /**
+   * The saved app itself when code wrote a status on it: the stage of the
+   * version being worked on is not a mini_apps column, so the rows are
+   * synced from that app (not from a fresh read).
+   */
+  private statusWriter(entity: unknown): MiniApp | null {
+    return entity instanceof MiniApp && writtenLifecycle(entity) !== undefined ? entity : null;
   }
 
   afterTransactionCommit(event: TransactionCommitEvent) {
@@ -60,25 +66,26 @@ export class MiniAppVersionSyncSubscriber implements EntitySubscriberInterface<M
     if (!event.queryRunner.isTransactionActive) this.pending.delete(event.queryRunner);
   }
 
-  private async track(qr: QueryRunner, id?: string) {
+  private async track(qr: QueryRunner, id?: string, writer: MiniApp | null = null) {
     if (!id) return;
     if (!qr?.isTransactionActive) {
-      await this.syncById(id);
+      await this.sync(id, writer);
       return;
     }
-    const set = this.pending.get(qr) ?? new Set<string>();
-    set.add(id);
-    this.pending.set(qr, set);
+    const map = this.pending.get(qr) ?? new Map<string, MiniApp | null>();
+    map.set(id, writer ?? map.get(id) ?? null);
+    this.pending.set(qr, map);
   }
 
   private async flush(qr: QueryRunner) {
-    const ids = this.pending.get(qr);
-    if (!ids) return;
+    const apps = this.pending.get(qr);
+    if (!apps) return;
     this.pending.delete(qr);
-    for (const id of ids) await this.syncById(id);
+    for (const [id, writer] of apps) await this.sync(id, writer);
   }
 
-  private async syncById(id: string) {
-    await this.versions.resyncApp(id);
+  private async sync(id: string, writer: MiniApp | null) {
+    if (writer) await this.versions.syncQuietly(writer);
+    else await this.versions.resyncApp(id);
   }
 }

@@ -70,8 +70,21 @@ import {
 } from '../home-widget';
 import { persistAppVersions } from '../versions/miniapp-versions.service';
 
-/** Fields that live on the version rows: create() and merge() leave them out. */
-const VERSION_FIELDS = ['integrationConfig', 'homeWidget', 'verificationToken', 'isDomainVerified', 'domainVerifiedAt'] as const;
+/**
+ * Fields that are not mini_apps columns (they live on the version rows, or
+ * are worked out from the app status): create() and merge() leave them out.
+ * The lifecycle comes before availability: both set the app status.
+ */
+const VERSION_FIELDS = [
+  'integrationConfig',
+  'homeWidget',
+  'verificationToken',
+  'isDomainVerified',
+  'domainVerifiedAt',
+  'currentReleaseVersion',
+  'lifecycleStatus',
+  'availabilityStatus',
+] as const;
 function copyVersionFields(target: any, data: any): void {
   for (const k of VERSION_FIELDS) if (data?.[k] !== undefined) target[k] = data[k];
 }

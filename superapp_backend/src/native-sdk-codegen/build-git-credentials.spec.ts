@@ -1,4 +1,4 @@
-import { buildStagesFor } from './build-inclusion';
+import { BUILD_CANDIDATE_STATUSES } from './build-inclusion';
 import { BuildGitCredentialsService } from './build-git-credentials.service';
 import { splitGitUrl } from '../integrations/flutter/git-source.util';
 
@@ -49,7 +49,7 @@ describe('BuildGitCredentialsService.list', () => {
     // Only apps that will be in the build
     const where = (repo.find.mock.calls[0] as any)[0].where;
     expect(where.integrationMethod).toBe('FLUTTER_PACKAGE');
-    expect(where.lifecycleStatus._value).toEqual(buildStagesFor('debug'));
+    expect(where.appStatus._value).toEqual(BUILD_CANDIDATE_STATUSES);
   });
 
   it('says why a private repository cannot be set up, without secrets', async () => {

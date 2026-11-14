@@ -9,11 +9,12 @@ export class QueryMiniAppsDto extends PaginationQueryDto {
 
   /**
    * The runtime gate, apart from the lifecycle stage: LIVE (users can open it),
-   * SUSPENDED (taken down) or NOT_LIVE (not released yet).
+   * SUSPENDED (taken down), NOT_LIVE (draft: not released yet) or ARCHIVED
+   * (mini_apps.status).
    */
   @IsOptional()
-  @IsIn(['ALL', 'LIVE', 'SUSPENDED', 'NOT_LIVE'])
-  availability?: 'ALL' | 'LIVE' | 'SUSPENDED' | 'NOT_LIVE';
+  @IsIn(['ALL', 'LIVE', 'SUSPENDED', 'NOT_LIVE', 'ARCHIVED'])
+  availability?: 'ALL' | 'LIVE' | 'SUSPENDED' | 'NOT_LIVE' | 'ARCHIVED';
 
   @IsOptional()
   @IsString()

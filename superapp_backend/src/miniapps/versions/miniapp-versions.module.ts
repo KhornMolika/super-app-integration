@@ -3,12 +3,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { MiniApp } from '../entities/miniapp.entity';
 import { MiniAppVersion } from '../entities/miniapp-version.entity';
 import { MiniAppVersionCapability } from '../entities/miniapp-version-capability.entity';
+import { MiniAppStatusEvent } from '../entities/miniapp-status-event.entity';
 import { MiniAppVersionsService } from './miniapp-versions.service';
 import { MiniAppVersionSyncSubscriber } from './miniapp-version-sync.subscriber';
 
 /** Version rows and the capabilities each version asks for. */
 @Module({
-  imports: [TypeOrmModule.forFeature([MiniApp, MiniAppVersion, MiniAppVersionCapability])],
+  imports: [TypeOrmModule.forFeature([MiniApp, MiniAppVersion, MiniAppVersionCapability, MiniAppStatusEvent])],
   providers: [MiniAppVersionsService, MiniAppVersionSyncSubscriber],
   exports: [MiniAppVersionsService],
 })

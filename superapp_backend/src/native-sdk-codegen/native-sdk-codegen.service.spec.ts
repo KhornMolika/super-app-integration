@@ -44,7 +44,7 @@ function makeApp(overrides: Partial<MiniApp> = {}): MiniApp {
   return {
     appId: 'permit_check',
     integrationMethod: 'NATIVE_SDK',
-    status: 'APPROVED',
+    lifecycleStatus: 'APPROVED',
     integrationConfig: {
       iosModuleName: 'PermitCheckSDK',
       iosTypeName: 'PermitCheck',
@@ -166,14 +166,16 @@ describe('NativeSdkCodegenService', () => {
   });
 
   it('selects APPROVED and ACTIVE NATIVE_SDK apps', async () => {
-    await setup([makeApp()]);
-    await service.regenerate();
+    await setup([
+      makeApp(),
+      makeApp({ appId: 'draft_sdk', lifecycleStatus: 'DRAFT' } as any),
+    ]);
+    const { changedFiles } = await service.regenerate();
     const where = miniappFind.mock.calls[0][0].where;
     expect(where.integrationMethod).toBe('NATIVE_SDK');
-    expect((where.lifecycleStatus || where.status).value).toEqual([
-      'APPROVED',
-      'ACTIVE',
-    ]);
+    expect(where.appStatus.value).toEqual(['DRAFT', 'LIVE', 'SUSPENDED']);
+    // The draft is read but not wired
+    expect([...changedFiles.values()].join('\n')).not.toContain('draft_sdk');
   });
 
   it('returns no changed files when the generated content already matches', async () => {

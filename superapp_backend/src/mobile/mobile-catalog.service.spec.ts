@@ -121,18 +121,34 @@ describe('MobileCatalogService.list', () => {
     return { repo: { createQueryBuilder: () => qb } as any, calls };
   }
 
-  it('restricts to ACTIVE, TESTING, and APPROVED statuses and returns catalog items', async () => {
+  it('lists live and unreleased apps (not suspended or archived) and returns catalog items', async () => {
     const { repo, calls } = qbFor([makeApp(), makeApp({ id: 'id-2', integrationMethod: 'NATIVE_SDK' })]);
     const page = await new MobileCatalogService(repo).list(undefined, 20, 40);
-    expect(calls.where[0][1]).toEqual({ statuses: ['ACTIVE', 'TESTING', 'APPROVED'] });
+    expect(calls.where[0]).toEqual(['m.appStatus IN (:...statuses)', { statuses: ['DRAFT', 'LIVE'] }]);
+    expect(calls.select).toEqual(expect.arrayContaining(['m.appStatus', 'm.liveVersionId']));
     expect(calls.take).toBe(20);
     expect(calls.skip).toBe(40);
     expect(page).toMatchObject({ total: 7, limit: 20, offset: 40 });
-    // Only the suspended / archived exclusions, no name search
-    expect(calls.and.map((c: any[]) => c[0])).toEqual([
-      expect.stringContaining("<> 'SUSPENDED'"),
-      expect.stringContaining("<> 'ARCHIVED'"),
+    // No name search
+    expect(calls.and).toEqual([]);
+  });
+
+  it('item status: ACTIVE when live, else the stage of the served version', async () => {
+    const { repo } = qbFor([
+      makeApp({ id: 'live', appStatus: 'LIVE', liveVersionId: 'row-a' } as any),
+      makeApp({ id: 'new', appStatus: 'DRAFT' } as any),
     ]);
+    const versions = {
+      servingVersions: jest.fn(
+        async () =>
+          new Map<string, any>([
+            ['live', { versionId: 'row-a', status: 'ACTIVE', capabilities: [], integration: null }],
+            ['new', { versionId: 'row-b', status: 'TESTING', capabilities: [], integration: null }],
+          ]),
+      ),
+    };
+    const page = await new MobileCatalogService(repo, undefined, versions as any).list(undefined, 20, 0);
+    expect(page.items.map((i) => i.status)).toEqual(['ACTIVE', 'TESTING']);
   });
 
   it('builds each item from the version the app serves, in the same shape', async () => {
@@ -168,7 +184,7 @@ describe('MobileCatalogService.list', () => {
   it('escapes LIKE wildcards in the name search', async () => {
     const { repo, calls } = qbFor([]);
     await new MobileCatalogService(repo).list('50%_off\\', 10, 0);
-    expect(calls.and[2][1]).toEqual({ q: '%50\\%\\_off\\\\%' });
+    expect(calls.and[0][1]).toEqual({ q: '%50\\%\\_off\\\\%' });
   });
 
   it('takes the Home widget from the served version and returns it as widget', async () => {

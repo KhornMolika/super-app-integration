@@ -19,11 +19,19 @@ import type { IntegrationConfig } from '../integration-config';
  * Version-Level Lifecycle Status Taxonomy (MiniAppVersion Entity)
  */
 export enum MiniAppVersionStatus {
-  /** Staged new version in active development or awaiting review. */
+  /*
+   * Stages of the version being worked on (see status/app-status.ts,
+   * VersionStage): an unreleased app's row, or a live app's revision row.
+   */
   DRAFT = 'DRAFT',
-
-  /** Active test version deployed in sandbox for QA validation and regression verification. */
+  SUBMITTED = 'SUBMITTED',
+  IN_REVIEW = 'IN_REVIEW',
+  CHANGES_REQUESTED = 'CHANGES_REQUESTED',
+  REJECTED = 'REJECTED',
+  APPROVED = 'APPROVED',
+  /** In the Super App test build, with testers. */
   TESTING = 'TESTING',
+  TEST_PASSED = 'TEST_PASSED',
 
   /** Current live production version published to end users in the SuperApp catalog. */
   ACTIVE = 'ACTIVE',
@@ -98,10 +106,6 @@ export class MiniAppVersion {
    */
   @Column({ type: 'jsonb', nullable: true })
   revision?: Record<string, any> | null;
-
-  /** The revision's review state: IN_REVIEW, DRAFT (changes requested), TESTING, ... */
-  @Column({ type: 'varchar', length: 30, nullable: true })
-  reviewStatus?: string | null;
 
   @Column({ type: 'timestamptz', nullable: true })
   submittedAt?: Date | null;

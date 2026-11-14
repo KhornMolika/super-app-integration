@@ -18,7 +18,7 @@ import {
   PaginationMeta,
 } from '@/api';
 import { getMiniAppPhase } from '@/components/miniapp-detail/miniappActions';
-import { LifecycleBadge, AvailabilityBadge } from '@/components/miniapp-detail/MiniAppStatusBadges';
+import { AppStatusBadge, VersionStageBadge } from '@/components/miniapp-detail/MiniAppStatusBadges';
 import { useAuth } from '@/lib/auth';
 import { toast } from '@/components/ui/Toast';
 import ActionMenu from '@/components/ui/ActionMenu';
@@ -37,24 +37,27 @@ const METHOD_LABEL: Record<string, string> = {
   DEEP_LINK: 'Deep link',
 };
 
+/** Stage of an unreleased app's version (the `status` query); Released = has a live version. */
 const LIFECYCLE_OPTIONS = [
-  { value: 'ALL', label: 'All stages' },
+  { value: 'ALL', label: 'Any stage' },
   { value: 'DRAFT', label: 'Draft' },
+  { value: 'SUBMITTED', label: 'Submitted' },
   { value: 'IN_REVIEW', label: 'In review' },
   { value: 'CHANGES_REQUESTED', label: 'Changes requested' },
   { value: 'APPROVED', label: 'Approved' },
   { value: 'TESTING', label: 'Testing' },
   { value: 'TEST_PASSED', label: 'Test passed' },
-  { value: 'ACTIVE', label: 'Active' },
   { value: 'REJECTED', label: 'Rejected' },
-  { value: 'ARCHIVED', label: 'Archived' },
+  { value: 'ACTIVE', label: 'Released' },
 ];
 
+/** mini_apps.status (the `availability` query). */
 const AVAILABILITY_OPTIONS = [
-  { value: 'ALL', label: 'Any availability' },
+  { value: 'ALL', label: 'Any status' },
+  { value: 'NOT_LIVE', label: 'Draft' },
   { value: 'LIVE', label: 'Live' },
-  { value: 'NOT_LIVE', label: 'Not released' },
   { value: 'SUSPENDED', label: 'Suspended' },
+  { value: 'ARCHIVED', label: 'Archived' },
 ];
 
 const METHOD_OPTIONS = [
@@ -66,7 +69,7 @@ const METHOD_OPTIONS = [
 ];
 
 /** Columns the API can sort by (sortBy keys of GET /mini-apps). */
-const SORTABLE = ['name', 'organization', 'lifecycle', 'availability', 'updatedAt'] as const;
+const SORTABLE = ['name', 'organization', 'availability', 'updatedAt'] as const;
 const DEFAULT_SORT = { key: 'updatedAt', dir: 'desc' as SortDirection };
 const DEFAULT_LIMIT = 10;
 
@@ -322,18 +325,28 @@ function MiniAppsContent() {
         ),
       },
       {
-        key: 'lifecycle',
-        header: 'Lifecycle',
-        width: 'w-[14%]',
-        sortable: true,
-        cell: (app) => <LifecycleBadge app={app} />,
-      },
-      {
         key: 'availability',
-        header: 'Availability',
+        header: 'Status',
         width: 'w-[12%]',
         sortable: true,
-        cell: (app) => <AvailabilityBadge app={app} />,
+        cell: (app) => <AppStatusBadge app={app} />,
+      },
+      {
+        key: 'lifecycle',
+        header: 'Version',
+        width: 'w-[14%]',
+        sortable: false,
+        cell: (app) => (
+          <VersionStageBadge
+            app={app}
+            empty={
+              <span title="No new version in progress" className="text-xs text-slate-400 dark:text-slate-500">
+                <span aria-hidden="true">-</span>
+                <span className="sr-only">No new version in progress</span>
+              </span>
+            }
+          />
+        ),
       },
       {
         key: 'checks',
@@ -458,7 +471,7 @@ function MiniAppsContent() {
   const filters = [
     {
       id: 'stage',
-      label: 'Lifecycle',
+      label: 'Version stage',
       value: state.stage,
       options: LIFECYCLE_OPTIONS,
       onChange: (v: string) => update({ stage: v }),
@@ -466,7 +479,7 @@ function MiniAppsContent() {
     },
     {
       id: 'availability',
-      label: 'Availability',
+      label: 'Status',
       value: state.availability,
       options: AVAILABILITY_OPTIONS,
       onChange: (v: string) => update({ availability: v }),

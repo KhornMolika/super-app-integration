@@ -154,6 +154,10 @@ export interface CreateMiniAppDto {
   
   lifecycleStatus?: string;
   availabilityStatus?: string;
+  /** mini_apps.status: DRAFT, LIVE, SUSPENDED or ARCHIVED. */
+  appStatus?: string;
+  /** Stage of the version being worked on; null when nothing is in progress. */
+  versionStage?: string | null;
   capabilities?: PermissionDto[];
   
   integrationMethod: IntegrationMethod;

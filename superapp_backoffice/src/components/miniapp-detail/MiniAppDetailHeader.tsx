@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { LifecycleBadge, AvailabilityBadge } from './MiniAppStatusBadges';
+import { AppStatusBadge, VersionStageBadge } from './MiniAppStatusBadges';
 import { ACCESS_LEVEL_INFO, toAccessLevel } from '@/lib/miniappAccess';
 import { IntegrationMethod } from '@/types/miniapp.types';
 import { BuildingIcon } from '@/components/ui/Icons';
@@ -79,9 +79,9 @@ export default function MiniAppDetailHeader({
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight break-words mr-1">
               {formData.name || 'Manage MiniApp'}
             </h2>
-            {/* Lifecycle (governance stage) and availability (runtime gate) are separate */}
-            <LifecycleBadge app={formData} size="md" />
-            <AvailabilityBadge app={formData} size="md" />
+            {/* Can users get it (status), and where the version being worked on is */}
+            <AppStatusBadge app={formData} size="md" />
+            <VersionStageBadge app={formData} size="md" />
             {/* The caller's access on this app (owner / collaborator role / admin) */}
             <span
               title={accessInfo.summary}

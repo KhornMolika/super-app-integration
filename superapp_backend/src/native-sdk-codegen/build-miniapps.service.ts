@@ -10,9 +10,10 @@ import {
 } from '../integrations/flutter/miniapp-dependency.util';
 import { renderMiniAppRegistry, RegistryEntry } from '../integrations/flutter/miniapp-registry.render';
 import {
+  BUILD_CANDIDATE_STATUSES,
   SuperAppBuildType,
   buildExclusionReason,
-  buildStagesFor,
+  inBuildStages,
 } from './build-inclusion';
 
 export interface BuildMiniAppPackage {
@@ -50,11 +51,12 @@ export class BuildMiniAppsService {
 
   /** `buildType`: which build reads the list (see build-inclusion.ts). */
   async plan(buildType: SuperAppBuildType = 'debug'): Promise<BuildMiniApps> {
-    const apps = await this.miniappRepository.find({
-      where: { integrationMethod: 'FLUTTER_PACKAGE', lifecycleStatus: In(buildStagesFor(buildType)) },
+    const candidates = await this.miniappRepository.find({
+      where: { integrationMethod: 'FLUTTER_PACKAGE', appStatus: In(BUILD_CANDIDATE_STATUSES) },
       order: { appId: 'ASC' },
     });
-    await this.runs?.attach(apps);
+    await this.runs?.attach(candidates);
+    const apps = candidates.filter((app) => inBuildStages(app, buildType));
     const gateway = this.config.get<string>('SUPER_APP_PUB_URL');
     const packages: BuildMiniAppPackage[] = [];
     const skipped: { appId: string; reason: string }[] = [];

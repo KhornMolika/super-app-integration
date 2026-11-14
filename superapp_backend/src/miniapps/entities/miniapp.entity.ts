@@ -17,11 +17,33 @@ import { MiniAppVersion } from './miniapp-version.entity';
 import { MiniAppBuild } from './miniapp-build.entity';
 import { MiniAppScan } from './miniapp-scan.entity';
 import { MiniAppLegal } from './miniapp-legal.entity';
+import { MiniAppStatusEvent } from './miniapp-status-event.entity';
+import { retirementStateOf } from '../status/status-events';
 import { Notification } from '../../notifications/entities/notification.entity';
 import { Organization } from '../../organizations/entities/organization.entity';
 import type { HomeWidget } from '../home-widget';
 import { appIntegrationFields } from '../versions/integration-fields';
 import type { IntegrationConfig } from '../integration-config';
+import {
+  AppStatus,
+  appStatusOf,
+  availabilityOf,
+  lifecycleOf,
+  revisionRowOf,
+  servingRowOf,
+  stageOfLifecycle,
+} from '../status/app-status';
+
+/**
+ * Old status values written on an app in this request (not stored): what the
+ * lifecycleStatus / availabilityStatus setters were given. See MiniApp.
+ */
+const writtenStatus = new WeakMap<object, { lifecycle?: string; availability?: string }>();
+
+/** The lifecycle value code wrote on this app, or undefined when it wrote none. */
+export function writtenLifecycle(app: object | null | undefined): string | undefined {
+  return app ? writtenStatus.get(app)?.lifecycle : undefined;
+}
 
 /**
  * Application-Level Lifecycle & Governance Status Taxonomy (MiniApp Entity)
@@ -109,11 +131,17 @@ export interface MiniAppArchiveRequest {
   requestedAt: string;
 }
 
-/** Live in the catalog: ACTIVE, or older rows activated as APPROVED + PRODUCTION. */
+/**
+ * Live on phones (mini_apps.status LIVE). An object without appStatus (a
+ * plain object in older code or tests) is read from the old pair: ACTIVE, or
+ * older rows activated as APPROVED + PRODUCTION, and not suspended.
+ */
 export function isMiniAppLive(app: {
+  appStatus?: string | null;
   lifecycleStatus?: string | null;
   availabilityStatus?: string | null;
 }): boolean {
+  if (app.appStatus) return app.appStatus === AppStatus.LIVE;
   return (
     app.availabilityStatus !== 'SUSPENDED' &&
     (app.lifecycleStatus === 'ACTIVE' ||
@@ -161,11 +189,44 @@ export class MiniApp {
   })
   targetAudience!: string;
 
-  @Column({
-    type: 'varchar',
-    default: MiniAppLifecycleStatus.DRAFT,
-  })
-  lifecycleStatus!: string;
+  /**
+   * Can users get the app? DRAFT (never released), LIVE, SUSPENDED or
+   * ARCHIVED (AppStatus). Column "status"; the property is appStatus because
+   * `status` is the API alias of lifecycleStatus. The stage of the version
+   * being worked on is on its version row (versionStage).
+   */
+  @Column({ name: 'status', type: 'varchar', length: 20, default: AppStatus.DRAFT })
+  appStatus!: string;
+
+  /*
+   * The old status fields (lifecycleStatus, availabilityStatus) are not
+   * columns (Phase 6e). Reading one works it out from appStatus, the stage of
+   * the version being worked on and the latest build run (lifecycleOf,
+   * availabilityOf). Writing one sets appStatus (a column, saved with the
+   * app) and versionStage, which reaches the version row through
+   * persistAppVersions or the version sync subscriber after the save.
+   */
+  get lifecycleStatus(): string {
+    return (
+      writtenStatus.get(this)?.lifecycle ??
+      lifecycleOf({
+        appStatus: this.appStatus,
+        stage: this.versionStage,
+        everLive: this.everLive(),
+        buildStatus: this.buildStatus,
+      })
+    );
+  }
+  set lifecycleStatus(value: string) {
+    this.writeStatus({ lifecycle: value });
+  }
+
+  get availabilityStatus(): string {
+    return writtenStatus.get(this)?.availability ?? availabilityOf(this.appStatus);
+  }
+  set availabilityStatus(value: string) {
+    this.writeStatus({ availability: value });
+  }
 
   get status(): string {
     return this.lifecycleStatus;
@@ -174,11 +235,28 @@ export class MiniApp {
     this.lifecycleStatus = val;
   }
 
-  @Column({
-    type: 'varchar',
-    default: MiniAppAvailabilityStatus.TESTING,
-  })
-  availabilityStatus!: string;
+  /** A version of this app was released (it has, or had, a live row). */
+  private everLive(): boolean {
+    return (
+      Boolean(this.liveVersionId) ||
+      (Array.isArray(this.versions) && this.versions.some((v) => v?.status === 'ACTIVE'))
+    );
+  }
+
+  private writeStatus(patch: { lifecycle?: string; availability?: string }): void {
+    const lifecycleBefore = this.lifecycleStatus;
+    const availabilityBefore = this.availabilityStatus;
+    const next = { ...(writtenStatus.get(this) ?? {}), ...patch };
+    writtenStatus.set(this, next);
+    this.appStatus = appStatusOf(next.lifecycle ?? lifecycleBefore, next.availability ?? availabilityBefore);
+    if (patch.lifecycle !== undefined && !this.everLive()) {
+      const stage = stageOfLifecycle(patch.lifecycle);
+      if (stage && stage !== 'ACTIVE') this.versionStage = stage;
+    }
+    // A save then always writes a row (even when only the stage changed), so
+    // the version sync subscriber sees it
+    this.updatedAt = new Date();
+  }
 
   @OneToOne(() => MiniAppLegal, (legal) => legal.miniApp, {
     cascade: true,
@@ -244,26 +322,35 @@ export class MiniApp {
    */
   pendingRevision?: MiniAppRevision | null;
 
-  /** Set while availability is SUSPENDED (or the app is ARCHIVED). */
-  @Column({ type: 'jsonb', nullable: true })
+  /**
+   * Set while the app is SUSPENDED (or ARCHIVED). Not a column: replayed
+   * after load from statusEvents (status/status-events.ts); the retirement
+   * helper writes an event for every change.
+   */
   suspension?: MiniAppSuspension | null;
 
-  /** An ADMIN asked a SUPER_ADMIN to archive this app; cleared on archive/decline. */
-  @Column({ type: 'jsonb', nullable: true })
+  /** An ADMIN asked a SUPER_ADMIN to archive this app; cleared on archive/decline. Not a column, as suspension. */
   archiveRequest?: MiniAppArchiveRequest | null;
 
-  @Column({ nullable: true })
+  /** Every suspend, resume, archive request, decline, archive and restore, oldest first after load. */
+  @OneToMany(() => MiniAppStatusEvent, (event) => event.miniApp, { eager: true })
+  statusEvents?: MiniAppStatusEvent[];
+
+  /**
+   * The version the app is on: its live (ACTIVE) row's version, else the
+   * version being prepared. Not a column: filled after load from the version
+   * rows; a new value reaches the working row through persistAppVersions
+   * (publish and rollback move the rows themselves).
+   */
   currentReleaseVersion?: string;
 
   /** The version phones get (its ACTIVE mini_app_versions row); null before the first release. */
   @Column({ type: 'uuid', nullable: true })
   liveVersionId?: string | null;
 
+  /** The Super App test build (e.g. v0.2.1) this app was last put in. */
   @Column({ nullable: true })
   activeTestVersion?: string;
-
-  @Column({ nullable: true })
-  draftVersion?: string;
 
   /*
    * Latest scan and build runs, not columns: they live in mini_app_scans and
@@ -292,24 +379,34 @@ export class MiniApp {
   versions!: MiniAppVersion[];
 
   /**
-   * Fills pendingRevision and capabilities from the eager versions. Same
-   * rules as revisionRowOf() and servingCapabilities() in versions/.
+   * Stage of the version being worked on (DRAFT ... TEST_PASSED, see
+   * status/app-status.ts): an unreleased app's row, or a live app's revision
+   * row; null when nothing is in progress. Not a column: filled after load.
+   */
+  versionStage?: string | null;
+
+  /**
+   * Fills pendingRevision, versionStage, the integration and capabilities
+   * from the eager versions (revisionRowOf / servingRowOf in versions/).
    */
   @AfterLoad()
   loadPendingRevision(): void {
+    if (Array.isArray(this.statusEvents)) {
+      const state = retirementStateOf(this.statusEvents);
+      if (this.suspension === undefined) this.suspension = state.suspension;
+      if (this.archiveRequest === undefined) this.archiveRequest = state.archiveRequest;
+    }
     if (!Array.isArray(this.versions)) return;
     const rows = [...this.versions].sort(
       (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime(),
     );
-    const live = rows.some((r) => r.status === 'ACTIVE');
+    const working = revisionRowOf(rows);
     if (this.pendingRevision === undefined) {
-      const row = rows.find((r) => r.status === 'DRAFT' || (!live && r.status === 'TESTING'));
-      this.pendingRevision = row?.revision ?? null;
+      this.pendingRevision = working?.revision ?? null;
     }
-    const serving =
-      rows.find((r) => r.status === 'ACTIVE') ??
-      rows.find((r) => r.status === 'TESTING') ??
-      rows.find((r) => r.status === 'DRAFT');
+    if (this.versionStage === undefined) this.versionStage = working?.status ?? null;
+    const serving = servingRowOf(rows);
+    if (serving && this.currentReleaseVersion === undefined) this.currentReleaseVersion = serving.version;
     if (serving && this.integrationConfig === undefined) {
       const f = appIntegrationFields(serving.integrationConfig);
       this.integrationConfig = f.integrationConfig;
@@ -353,4 +450,13 @@ export class MiniApp {
 
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt!: Date;
+
+  /** Responses keep the old status fields (worked out, see lifecycleStatus). */
+  toJSON() {
+    return {
+      ...this,
+      lifecycleStatus: this.lifecycleStatus,
+      availabilityStatus: this.availabilityStatus,
+    };
+  }
 }

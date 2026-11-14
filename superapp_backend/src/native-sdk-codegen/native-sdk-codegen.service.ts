@@ -10,9 +10,10 @@ import { GitlabMrService } from './gitlab-mr.service';
 import { NativeSdkVendor, hasAndroid, hasIos } from './vendor.types';
 import { replaceMarkedRegion } from './marker';
 import {
+  BUILD_CANDIDATE_STATUSES,
   SuperAppBuildType,
   buildExclusionReason,
-  buildStagesFor,
+  inBuildStages,
 } from './build-inclusion';
 import {
   NATIVE_SDK_MARKED_REGIONS,
@@ -155,14 +156,15 @@ export class NativeSdkCodegenService {
    * Read by Jenkins (callback token) before `flutter build`.
    */
   async buildManifest(buildType: SuperAppBuildType = 'debug'): Promise<NativeSdkManifest> {
-    const found = await this.miniappRepository.find({
+    const candidates = await this.miniappRepository.find({
       where: {
         integrationMethod: 'NATIVE_SDK',
-        lifecycleStatus: In(buildStagesFor(buildType)),
+        appStatus: In(BUILD_CANDIDATE_STATUSES),
       },
       order: { appId: 'ASC' },
     });
-    await this.runs?.attach(found);
+    await this.runs?.attach(candidates);
+    const found = candidates.filter((app) => inBuildStages(app, buildType));
     const preSkipped: { appId: string; reason: string }[] = [];
     const apps = found.filter((app) => {
       const reason = buildExclusionReason(app, buildType);
@@ -221,13 +223,14 @@ export class NativeSdkCodegenService {
   }
 
   async loadVendors(): Promise<NativeSdkVendor[]> {
-    const apps = await this.miniappRepository.find({
+    const candidates = await this.miniappRepository.find({
       where: {
         integrationMethod: 'NATIVE_SDK',
-        lifecycleStatus: In(LIVE_STATUSES),
+        appStatus: In(BUILD_CANDIDATE_STATUSES),
       },
       order: { appId: 'ASC' },
     });
+    const apps = candidates.filter((app) => LIVE_STATUSES.includes(String(app.lifecycleStatus || '').toUpperCase()));
 
     const cocoapodsSpecsUrl = this.nexusRepoUrl(
       'NEXUS_COCOAPODS_SPECS_REPO',
