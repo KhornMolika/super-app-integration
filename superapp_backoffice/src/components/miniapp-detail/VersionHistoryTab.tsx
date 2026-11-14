@@ -11,17 +11,23 @@ import { useAuth } from '@/lib/auth';
 import { copyText } from '@/lib/clipboard';
 
 export interface VersionRecord {
+  id?: string;
   version: string;
   gitRef?: string;
   packageName?: string;
-  sourceType?: 'GIT' | 'ARTIFACT' | 'WEBVIEW';
+  /** GIT / ARTIFACT, or the integration method the version was made with. */
+  sourceType?: string | null;
   type: 'PRODUCTION' | 'TEST' | 'DRAFT';
   status: 'ACTIVE' | 'TESTING' | 'PREVIOUS' | 'DEPRECATED' | 'SUPERSEDED' | 'ARCHIVED' | 'IN_REVIEW' | 'APPROVED' | 'DRAFT';
   changelog?: string;
   artifactUrl?: string;
   apkSize?: string;
   checksum?: string;
-  releasedAt: string;
+  releasedAt: string | null;
+  /** DRAFT rows: where the review stands (IN_REVIEW, DRAFT = changes requested, TESTING, ...). */
+  reviewStatus?: string | null;
+  submittedAt?: string | null;
+  createdAt?: string | null;
   releasedBy?: string;
   buildNumber?: number;
 }
@@ -56,6 +62,48 @@ interface VersionCapability {
   required: boolean;
   purpose: string | null;
   status: 'REQUESTED' | 'APPROVED';
+}
+
+const SOURCE_LABELS: Record<string, string> = {
+  GIT: 'Git',
+  ARTIFACT: 'Package',
+  FLUTTER_PACKAGE: 'Flutter',
+  WEBVIEW: 'WebView',
+  NATIVE_SDK: 'Native SDK',
+  DEEP_LINK: 'Deep link',
+};
+
+/** Label of a DRAFT row: the version being prepared, by where its review stands. */
+function draftLabel(reviewStatus?: string | null): string {
+  switch ((reviewStatus || '').toUpperCase()) {
+    case 'IN_REVIEW':
+    case 'SUBMITTED':
+      return 'In review';
+    case 'DRAFT':
+    case 'CHANGES_REQUESTED':
+      return 'Changes requested';
+    case 'TESTING':
+    case 'APPROVED':
+    case 'TEST_PASSED':
+      return 'Testing';
+    case 'REJECTED':
+      return 'Rejected';
+    default:
+      return 'Draft';
+  }
+}
+
+function formatDate(value?: string | null): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 /** The capabilities a version asks for; amber only for ones still waiting for review. */
@@ -500,7 +548,7 @@ export default function VersionHistoryTab({
                 <th className="py-3 px-4">Package &amp; Ref</th>
                 <th className="py-3 px-4">Status</th>
                 <th className="py-3 px-4">Permissions</th>
-                <th className="py-3 px-4">Published Date</th>
+                <th className="py-3 px-4">Date</th>
                 <th className="py-3 px-4">Developer</th>
                 <th className="py-3 px-4">Checksum</th>
                 <th className="py-3 px-4 text-right">Actions</th>
@@ -523,9 +571,11 @@ export default function VersionHistoryTab({
                       <div className="flex flex-col">
                         <span className="font-mono font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                           <span>{rec.version}</span>
-                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                            {rec.sourceType === 'GIT' ? 'Git' : 'Package'}
-                          </span>
+                          {rec.sourceType && (
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                              {SOURCE_LABELS[rec.sourceType] || rec.sourceType}
+                            </span>
+                          )}
                         </span>
                       </div>
                     </td>
@@ -542,23 +592,34 @@ export default function VersionHistoryTab({
                     <td className="py-3.5 px-4">
                       {rec.status === 'ACTIVE' ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-                          <DotBadge color="emerald" pulse />
+                          <DotBadge color="bg-emerald-500" pulse />
                           <span>LIVE ACTIVE</span>
                         </span>
                       ) : rec.status === 'IN_REVIEW' ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
-                          <DotBadge color="amber" pulse />
+                          <DotBadge color="bg-amber-500" pulse />
                           <span>IN REVIEW</span>
                         </span>
                       ) : rec.status === 'TESTING' ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-brand-100 text-brand-800 dark:bg-brand-950/60 dark:text-brand-300 border border-brand-300 dark:border-brand-800">
-                          <DotBadge color="blue" />
+                          <DotBadge color="bg-brand-500" />
                           <span>SANDBOX TESTING</span>
+                        </span>
+                      ) : rec.status === 'DRAFT' ? (
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${
+                            draftLabel(rec.reviewStatus) === 'Changes requested' || draftLabel(rec.reviewStatus) === 'Rejected'
+                              ? 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
+                              : 'bg-white text-slate-700 border-dashed border-slate-300 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-600'
+                          }`}
+                        >
+                          <DotBadge color={draftLabel(rec.reviewStatus) === 'In review' ? 'bg-amber-500' : 'bg-slate-400'} pulse={draftLabel(rec.reviewStatus) === 'In review'} />
+                          <span>{draftLabel(rec.reviewStatus).toUpperCase()}</span>
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-300 dark:border-slate-700">
-                          <DotBadge color="slate" />
-                          <span>PREVIOUS</span>
+                          <DotBadge color="bg-slate-400" />
+                          <span>{rec.status === 'DEPRECATED' ? 'RETIRED' : 'PREVIOUS'}</span>
                         </span>
                       )}
                     </td>
@@ -566,16 +627,18 @@ export default function VersionHistoryTab({
                       <VersionCapabilities caps={capsByVersion[rec.version]} />
                     </td>
                     <td className="py-3.5 px-4 text-xs text-slate-500 dark:text-slate-400">
-                      {new Date(rec.releasedAt).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                      {formatDate(rec.releasedAt) ? (
+                        formatDate(rec.releasedAt)
+                      ) : formatDate(rec.submittedAt) ? (
+                        <span>Submitted {formatDate(rec.submittedAt)}</span>
+                      ) : formatDate(rec.createdAt) ? (
+                        <span>Started {formatDate(rec.createdAt)}</span>
+                      ) : (
+                        '—'
+                      )}
                     </td>
                     <td className="py-3.5 px-4 text-xs font-medium text-slate-700 dark:text-slate-300">
-                      {rec.releasedBy || 'MiniApp Developer'}
+                      {rec.releasedBy || '—'}
                     </td>
                     <td className="py-3.5 px-4">
                       {rec.checksum ? (
@@ -632,7 +695,9 @@ export default function VersionHistoryTab({
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
                           </svg>
                         </button>
-                        {canRollback && rec.version !== data?.currentReleaseVersion && (
+                        {canRollback &&
+                          rec.version !== data?.currentReleaseVersion &&
+                          (rec.status === 'PREVIOUS' || rec.status === 'DEPRECATED') && (
                           <button
                             type="button"
                             onClick={() =>

@@ -3,6 +3,7 @@ import { ModuleRef } from '@nestjs/core';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MiniApp } from '../../miniapps/entities/miniapp.entity';
+import { MiniAppVersionsService } from '../../miniapps/versions/miniapp-versions.service';
 import { StorageService } from '../../storage/storage.service';
 import { NexusIntegrationService } from '../nexus/nexus-integration.service';
 import { SdkArtifactUploadService } from '../../sdk-artifacts/sdk-artifact-upload.service';
@@ -82,6 +83,7 @@ export class ScannedArtifactPublisherService {
     @Optional() private readonly storageService?: StorageService,
     @Optional() private readonly nexusService?: NexusIntegrationService,
     @Optional() private readonly moduleRef?: ModuleRef,
+    @Optional() private readonly versionRows?: MiniAppVersionsService,
   ) {}
 
   async publishAfterPassedScan(miniAppId: string): Promise<void> {
@@ -255,5 +257,7 @@ export class ScannedArtifactPublisherService {
       });
     }
     await qb.setParameters({ patch: JSON.stringify(patch) }).execute();
+    // A raw UPDATE skips the entity subscriber: copy the revision to its version row
+    if (inRevision) await this.versionRows?.resyncApp(id);
   }
 }

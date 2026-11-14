@@ -118,6 +118,19 @@ export const TargetIcon = Target;
 export const HashIcon = Hash;
 
 // Custom UI Badges / Indicators
+/** Bare colour names some callers pass; full class names so Tailwind keeps them. */
+const DOT_COLORS: Record<string, string> = {
+  emerald: 'bg-emerald-500',
+  amber: 'bg-amber-500',
+  rose: 'bg-rose-500',
+  red: 'bg-rose-500',
+  slate: 'bg-slate-400',
+  blue: 'bg-brand-500',
+  brand: 'bg-brand-500',
+  accent: 'bg-brand-500',
+  cyan: 'bg-cyan-500',
+};
+
 export function DotBadge({
   color = 'bg-emerald-500',
   className = 'w-2 h-2',
@@ -127,7 +140,8 @@ export function DotBadge({
   className?: string;
   pulse?: boolean;
 }) {
-  return <span className={`inline-block rounded-full ${color} ${className} ${pulse ? 'animate-pulse' : ''}`} />;
+  const bg = color.startsWith('bg-') ? color : DOT_COLORS[color] ?? 'bg-slate-400';
+  return <span className={`inline-block rounded-full ${bg} ${className} ${pulse ? 'animate-pulse' : ''}`} />;
 }
 
 // Re-export all Lucide React icons for direct convenient usage

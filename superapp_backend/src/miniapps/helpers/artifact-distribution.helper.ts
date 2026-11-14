@@ -45,100 +45,42 @@ export class ArtifactDistributionHelper {
         ? app.pendingRevision.version || 'v1.1.0-draft'
         : null);
 
-    const history: any[] = Array.isArray(
-      (app as any).versionHistory || app.versions,
-    )
-      ? [...((app as any).versionHistory || app.versions)]
-      : [];
-
-    if (history.length === 0) {
-      // 1. Current version (active or in review)
-      history.push({
-        version: currentRelease,
-        gitRef: effectiveGitRef,
-        packageName,
-        sourceType:
-          app.integrationMethod === 'FLUTTER_PACKAGE'
-            ? 'GIT'
-            : app.integrationMethod === 'WEBVIEW'
-              ? 'WEBVIEW'
-              : 'ARTIFACT',
-        type:
-          app.lifecycleStatus === 'PUBLISHED'
-            ? 'PRODUCTION'
-            : app.lifecycleStatus === 'TESTING'
-              ? 'TEST'
-              : 'PRODUCTION',
-        status:
-          app.lifecycleStatus === 'PUBLISHED'
-            ? 'ACTIVE'
-            : app.lifecycleStatus === 'TESTING'
-              ? 'TESTING'
-              : app.lifecycleStatus === 'IN_REVIEW'
-                ? 'IN_REVIEW'
-                : 'ACTIVE',
-        changelog: `Official package release ${currentRelease} for ${app.name}`,
-        releasedAt: (
-          app.updatedAt ||
-          app.createdAt ||
-          new Date()
-        ).toISOString(),
-        releasedBy:
-          app.owner?.name || (app as any).ownerName || 'MiniApp Developer',
-        checksum:
-          app.integrationConfig?.archiveChecksum ||
-          'sha256:' +
-            crypto
-              .createHash('sha256')
-              .update(app.id + currentRelease)
-              .digest('hex')
-              .substring(0, 16),
-      });
-
-      // 2. Previous version (e.g. v0.9.0 if current is v1.0.0 or 1.0.0)
-      const prevVer = currentRelease.startsWith('v') ? 'v0.9.0' : '0.9.0';
-      history.push({
-        version: prevVer,
-        gitRef: prevVer,
-        packageName,
-        sourceType:
-          app.integrationMethod === 'FLUTTER_PACKAGE' ? 'GIT' : 'ARTIFACT',
-        type: 'PRODUCTION',
-        status: 'PREVIOUS',
-        changelog: `Prior stable build for ${app.name}`,
-        releasedAt: new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString(),
-        releasedBy:
-          app.owner?.name || (app as any).ownerName || 'MiniApp Developer',
-        checksum:
-          'sha256:' +
-          crypto
-            .createHash('sha256')
-            .update(app.id + prevVer)
-            .digest('hex')
-            .substring(0, 16),
-      });
-
-      // 3. Staging / Sandbox test build
-      history.push({
-        version: activeTest,
-        gitRef: app.integrationConfig?.gitBranch || 'develop',
-        packageName,
-        sourceType: 'GIT',
-        type: 'TEST',
-        status: 'TESTING',
-        changelog: `Candidate build for sandbox testing on branch ${app.integrationConfig?.gitBranch || 'develop'}`,
-        releasedAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(),
-        releasedBy:
-          app.owner?.name || (app as any).ownerName || 'MiniApp Developer',
-        checksum:
-          'sha256:' +
-          crypto
-            .createHash('sha256')
-            .update(app.id + activeTest)
-            .digest('hex')
-            .substring(0, 16),
-      });
-    }
+    // Real version rows only (MiniAppVersionsService keeps them), newest first.
+    // A DRAFT row is the version being prepared; reviewStatus says where its
+    // review stands. Nothing is made up when an app has no rows.
+    const iso = (d: unknown) =>
+      d ? (d instanceof Date ? d.toISOString() : String(d)) : null;
+    const rows: any[] = Array.isArray(app.versions) ? [...app.versions] : [];
+    rows.sort(
+      (a, b) =>
+        new Date(b.createdAt || 0).getTime() -
+        new Date(a.createdAt || 0).getTime(),
+    );
+    const history = rows.map((v) => ({
+      id: v.id,
+      version: v.version,
+      gitRef: v.gitRef || null,
+      packageName: v.packageName || packageName,
+      sourceType: v.sourceType || null,
+      type:
+        v.status === 'TESTING'
+          ? 'TEST'
+          : v.status === 'DRAFT'
+            ? 'DRAFT'
+            : 'PRODUCTION',
+      status: v.status,
+      reviewStatus: v.reviewStatus ?? null,
+      changelog: v.changelog || null,
+      releasedAt: iso(v.releasedAt),
+      submittedAt: iso(v.submittedAt),
+      createdAt: iso(v.createdAt),
+      releasedBy: v.releasedBy || null,
+      checksum: v.checksum || null,
+      apkSize: v.apkSize || null,
+      artifactUrl: v.artifactUrl || null,
+      buildNumber: v.buildNumber ?? null,
+      jenkinsJobUrl: v.jenkinsJobUrl || null,
+    }));
 
     return {
       miniAppId: app.id,

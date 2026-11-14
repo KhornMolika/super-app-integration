@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { Input, Label, Select } from "@/components/ui/inputs";
@@ -129,20 +129,61 @@ export default function FlutterGitConfigSection({
   const smallBtn =
     "h-8 px-3 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 transition-colors";
 
+  // Resolve validation object whether flat or nested in data/validation envelope
+  const val =
+    gitValidationResult?.validation ||
+    gitValidationResult?.data?.validation ||
+    gitValidationResult?.data ||
+    gitValidationResult;
+
+  const isDeployKeyNotice = Boolean(
+    gitValidationResult?.isDeployKeyNotice || val?.isDeployKeyNotice
+  );
+
+  const effectivePkg =
+    val?.packageName ||
+    gitValidationResult?.packageName ||
+    gitValidationResult?.data?.packageName ||
+    flutterConfig?.packageName;
+
+  const rawError = val?.error || gitValidationResult?.error;
+  const rawMessage = val?.message || gitValidationResult?.message;
+  const isMessageSuccess =
+    typeof rawMessage === "string" && rawMessage.trim().toLowerCase() === "success";
+
+  const hasExplicitError = Boolean(
+    rawError ||
+      val?.isValid === false ||
+      gitValidationResult?.isValid === false ||
+      (gitValidationResult?.statusCode && gitValidationResult.statusCode >= 400)
+  );
+
+  const isSuccess = Boolean(
+    !hasExplicitError &&
+      (val?.isValid === true ||
+        gitValidationResult?.isValid === true ||
+        isMessageSuccess ||
+        gitValidationResult?.statusCode === 200 ||
+        val?.statusCode === 200)
+  );
+
   const status: { tone: string; text: string } | null = isGitValidating
     ? { tone: "text-slate-500 dark:text-slate-400", text: "Checking the repository..." }
-    : gitValidationResult?.isDeployKeyNotice
+    : isDeployKeyNotice
       ? {
           tone: "text-slate-600 dark:text-slate-300",
           text: "Uses the deploy key. The build checks pubspec.yaml when it clones the repo.",
         }
-      : gitValidationResult?.isValid
+      : isSuccess
         ? {
-            tone: "text-brand-700 dark:text-brand-300",
-            text: `Found pubspec.yaml${gitValidationResult.packageName ? ` · package ${gitValidationResult.packageName}` : ""}`,
+            tone: "text-emerald-600 dark:text-emerald-400",
+            text: `Found pubspec.yaml${effectivePkg ? ` · package ${effectivePkg}` : ""}`,
           }
-        : gitValidationResult && (gitValidationResult.error || gitValidationResult.message)
-          ? { tone: "text-rose-600 dark:text-rose-400", text: gitValidationResult.error || gitValidationResult.message }
+        : hasExplicitError && (rawError || (!isMessageSuccess && rawMessage))
+          ? {
+              tone: "text-rose-600 dark:text-rose-400",
+              text: rawError || rawMessage || "Repository validation failed.",
+            }
           : null;
 
   const refLabel = selectedRefType === "tag" ? "Tag" : selectedRefType === "branch" ? "Branch" : "Commit";
@@ -170,7 +211,7 @@ export default function FlutterGitConfigSection({
           onChange={handleGitUrlChange}
           disabled={!isEditable}
           placeholder="https://github.com/org/repo or git@github.com:org/repo.git"
-          className={`font-mono ${gitValidationResult?.isValid === false || urlError ? "border-rose-500 ring-1 ring-rose-500" : ""}`}
+          className={`font-mono ${hasExplicitError || urlError ? "border-rose-500 ring-1 ring-rose-500" : isSuccess ? "border-emerald-500/50" : ""}`}
         />
         <p className={`mt-1.5 text-xs ${status?.tone || "text-slate-500 dark:text-slate-400"}`}>
           {urlError || status?.text || "A link to a subfolder works too, e.g. .../tree/main/packages/my_app."}

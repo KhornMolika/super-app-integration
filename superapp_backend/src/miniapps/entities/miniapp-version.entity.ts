@@ -93,6 +93,21 @@ export class MiniAppVersion {
   @Column({ type: 'jsonb', nullable: true, default: () => "'[]'" })
   permissions?: string[];
 
+  /**
+   * DRAFT row of a live app: the whole staged revision (branding, legal,
+   * integration, scan state). Mirrors mini_apps.pendingRevision until that
+   * column goes (step 3b). Never serialized: it can hold integration secrets.
+   */
+  @Column({ type: 'jsonb', nullable: true })
+  revision?: Record<string, any> | null;
+
+  /** The revision's review state: IN_REVIEW, DRAFT (changes requested), TESTING, ... */
+  @Column({ type: 'varchar', length: 30, nullable: true })
+  reviewStatus?: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  submittedAt?: Date | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 
@@ -102,6 +117,7 @@ export class MiniAppVersion {
   toJSON() {
     const clone = { ...this };
     delete (clone as any).miniApp;
+    delete (clone as any).revision;
     return clone;
   }
 }

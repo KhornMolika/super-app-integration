@@ -40,6 +40,7 @@ import { SandboxBuildManagerService } from './flutter/sandbox-build-manager.serv
 import { ApkBuildManagerService } from './flutter/apk-build-manager.service';
 import { PubVulnerabilityScannerService } from './validation/pub-vulnerability-scanner.service';
 import { PubspecInjectorController } from './flutter/pubspec-injector.controller';
+import { MiniAppVersionsModule } from '../miniapps/versions/miniapp-versions.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { PubspecInjectorController } from './flutter/pubspec-injector.controller
     CapabilitiesModule,
     forwardRef(() => StorageModule),
     MiniAppRunsModule,
+    MiniAppVersionsModule,
     SuperAppModule,
   ],
   controllers: [

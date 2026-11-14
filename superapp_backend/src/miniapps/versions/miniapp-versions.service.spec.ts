@@ -124,6 +124,29 @@ describe('MiniAppVersionsService: a live app with a revision', () => {
     expect(capsOf(live.id).map((c) => c.capabilityKey)).toEqual(['camera']);
   });
 
+  it('the DRAFT row holds the whole revision and its review state', async () => {
+    const { svc, versions } = setup();
+    const app = liveApp();
+    await svc.syncFromApp(app);
+    app.pendingRevision = {
+      name: 'HR v2',
+      integrationConfig: { url: 'https://hr.example/v2' },
+      revisionStatus: 'IN_REVIEW',
+      submittedAt: '2026-10-01T08:30:00.000Z',
+    };
+    await svc.syncFromApp(app);
+    const draft = versions.find((v) => v.status === 'DRAFT');
+    expect(draft.revision).toEqual(app.pendingRevision);
+    expect(draft.reviewStatus).toBe('IN_REVIEW');
+    expect(draft.submittedAt).toEqual(new Date('2026-10-01T08:30:00.000Z'));
+
+    // Changes requested: the same row follows, an unreadable date becomes null
+    app.pendingRevision = { ...app.pendingRevision, revisionStatus: 'DRAFT', submittedAt: 'soon' };
+    await svc.syncFromApp(app);
+    expect(versions.filter((v) => v.status === 'DRAFT')).toHaveLength(1);
+    expect(draft).toMatchObject({ reviewStatus: 'DRAFT', submittedAt: null });
+  });
+
   it('publishing makes the DRAFT row live (approved) and the old live row PREVIOUS', async () => {
     const { svc, versions, capsOf } = setup();
     const app = liveApp();

@@ -56,7 +56,7 @@ export const integrationsApi = {
       fingerprint: string;
       type: string;
       title: string;
-    }>('/api/integrations/git/deploy-key'),
+    }>('/api/integrations/git/deploy-key').then(unwrapItem),
 
   generateDeployKey: (title?: string) =>
     apiClient<{
@@ -68,7 +68,7 @@ export const integrationsApi = {
     }>('/api/integrations/git/deploy-key/generate', {
       method: 'POST',
       body: { title },
-    }),
+    }).then(unwrapItem),
 
   validateGit: (data: {
     url: string;
@@ -82,7 +82,7 @@ export const integrationsApi = {
     apiClient<{ validation: GitValidationResult; provider?: 'github' | 'gitlab' }>('/api/integrations/git/validate', {
       method: 'POST',
       body: data,
-    }),
+    }).then(unwrapItem),
 
   getGitTags: (data: {
     url: string;
@@ -94,14 +94,14 @@ export const integrationsApi = {
     apiClient<{ tags: string[] }>('/api/integrations/git/tags', {
       method: 'POST',
       body: data,
-    }),
+    }).then(unwrapItem),
 
   /** Home widget classes the Git package exports; `widgetCandidates` is null when its main library can't be read. */
   getGitWidgetCandidates: (data: { url: string; ref?: string; token?: string; path?: string }) =>
     apiClient<{ packageName: string | null; widgetCandidates: string[] | null }>(
       '/api/integrations/git/widget-candidates',
       { method: 'POST', body: data },
-    ),
+    ).then(unwrapItem),
 
   getGitBranches: (data: {
     url: string;
@@ -113,7 +113,7 @@ export const integrationsApi = {
     apiClient<{ branches: string[] }>('/api/integrations/git/branches', {
       method: 'POST',
       body: data,
-    }),
+    }).then(unwrapItem),
 
   resolveGitSha: (data: {
     url: string;
@@ -124,22 +124,22 @@ export const integrationsApi = {
     apiClient<{ sha: string }>('/api/integrations/git/resolve-sha', {
       method: 'POST',
       body: data,
-    }),
+    }).then(unwrapItem),
 
   getNexusPackage: (packageName: string) =>
-    apiClient<NexusPackageResult>(`/api/integrations/nexus/packages/${encodeURIComponent(packageName)}`),
+    apiClient<NexusPackageResult>(`/api/integrations/nexus/packages/${encodeURIComponent(packageName)}`).then(unwrapItem),
 
   scanGate1: (data: { url: string; ref?: string; path?: string; token?: string; declaredPermissions?: any[] }) =>
     apiClient<any>('/api/security/gate1/scan', {
       method: 'POST',
       body: data,
-    }),
+    }).then(unwrapItem),
 
   runGate1Scan: (data: { url: string; ref?: string; path?: string; token?: string; declaredPermissions?: any[] }) =>
     apiClient<any>('/api/security/gate1/scan', {
       method: 'POST',
       body: data,
-    }),
+    }).then(unwrapItem),
 };
 
 export interface PubspecStatus {

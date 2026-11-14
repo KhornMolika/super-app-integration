@@ -80,24 +80,6 @@ export class MiniAppVersionSyncSubscriber implements EntitySubscriberInterface<M
   }
 
   private async syncById(id: string) {
-    try {
-      const app = await this.dataSource
-        .getRepository(MiniApp)
-        .createQueryBuilder('m')
-        .select([
-          'm.id',
-          'm.lifecycleStatus',
-          'm.currentReleaseVersion',
-          'm.integrationMethod',
-          'm.integrationConfig',
-          'm.capabilities',
-          'm.pendingRevision',
-        ])
-        .where('m.id = :id', { id })
-        .getOne();
-      if (app) await this.versions.syncQuietly(app);
-    } catch {
-      // syncQuietly logs sync failures; a failed read only skips this sync
-    }
+    await this.versions.resyncApp(id);
   }
 }

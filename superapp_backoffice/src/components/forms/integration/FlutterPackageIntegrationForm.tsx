@@ -535,10 +535,11 @@ export default function FlutterPackageIntegrationForm({
             deployKey: flutterConfig.deployKey || undefined,
           });
 
-          const effectivePkg =
-            valData.validation?.packageName || derivedPkgName;
+          const rawVal: any = (valData as any)?.data || valData;
+          const validation = rawVal?.validation || (rawVal?.isValid !== undefined ? rawVal : undefined);
+          const effectivePkg = validation?.packageName || rawVal?.packageName || derivedPkgName;
 
-          if (!valData.validation?.isValid && isDeployKey) {
+          if (!validation?.isValid && isDeployKey) {
             setGitValidationResult({
               isValid: true,
               isDeployKeyNotice: true,
@@ -547,7 +548,7 @@ export default function FlutterPackageIntegrationForm({
               packageName: effectivePkg,
             });
           } else {
-            const resVal = valData.validation || valData;
+            const resVal = validation || rawVal;
             if (
               !resVal.isValid &&
               resVal.error &&
@@ -562,8 +563,8 @@ export default function FlutterPackageIntegrationForm({
             setGitValidationResult(resVal);
           }
 
-          if (valData.provider) {
-            setDetectedProvider(valData.provider);
+          if (rawVal?.provider || (valData as any)?.provider) {
+            setDetectedProvider(rawVal?.provider || (valData as any)?.provider);
           }
 
           if (effectivePkg && flutterConfig.packageName !== effectivePkg) {
@@ -581,46 +582,48 @@ export default function FlutterPackageIntegrationForm({
 
           // Fetch tags in background
           try {
-            const tagsData = await integrationsApi.getGitTags({
+            const tagsData: any = await integrationsApi.getGitTags({
               url,
               token: tokenToUse,
               deployKey: flutterConfig.deployKey || undefined,
               isPrivate: isPrivateRepo || url.startsWith("git@"),
               authMethod: isDeployKey ? "deploy_key" : authMethod,
             });
-            if (tagsData.tags && Array.isArray(tagsData.tags)) {
-              setTags(tagsData.tags);
+            const tagList = tagsData?.tags || tagsData?.data?.tags;
+            if (tagList && Array.isArray(tagList)) {
+              setTags(tagList);
               if (
-                tagsData.tags.length > 0 &&
+                tagList.length > 0 &&
                 !selectedRef &&
                 !flutterConfig.gitBranch &&
                 selectedRefType === "tag"
               ) {
-                handleRefChange(tagsData.tags[0]);
+                handleRefChange(tagList[0]);
               }
             }
           } catch {}
 
           // Fetch branches in background
           try {
-            const branchesData = await integrationsApi.getGitBranches({
+            const branchesData: any = await integrationsApi.getGitBranches({
               url,
               token: tokenToUse,
               deployKey: flutterConfig.deployKey || undefined,
               isPrivate: isPrivateRepo || url.startsWith("git@"),
               authMethod: isDeployKey ? "deploy_key" : authMethod,
             });
-            if (branchesData.branches && Array.isArray(branchesData.branches)) {
-              setBranches(branchesData.branches);
+            const branchList = branchesData?.branches || branchesData?.data?.branches;
+            if (branchList && Array.isArray(branchList)) {
+              setBranches(branchList);
               if (
-                branchesData.branches.length > 0 &&
+                branchList.length > 0 &&
                 !selectedRef &&
                 !flutterConfig.gitBranch &&
                 selectedRefType === "branch"
               ) {
-                const defaultBranch = branchesData.branches.includes("main")
+                const defaultBranch = branchList.includes("main")
                   ? "main"
-                  : branchesData.branches[0];
+                  : branchList[0];
                 handleRefChange(defaultBranch);
               }
             }
@@ -628,16 +631,17 @@ export default function FlutterPackageIntegrationForm({
 
           // Resolve commit SHA
           try {
-            const shaData = await integrationsApi.resolveGitSha({
+            const shaData: any = await integrationsApi.resolveGitSha({
               url,
               ref: selectedRef || flutterConfig.gitBranch || "main",
               token: tokenToUse,
               deployKey: flutterConfig.deployKey || undefined,
             });
-            if (shaData.sha) {
-              setLockedCommitSha(shaData.sha);
+            const sha = shaData?.sha || shaData?.data?.sha;
+            if (sha) {
+              setLockedCommitSha(sha);
               handleFlutterChange({
-                target: { name: "commitSha", value: shaData.sha },
+                target: { name: "commitSha", value: sha },
               } as any);
             }
           } catch {}

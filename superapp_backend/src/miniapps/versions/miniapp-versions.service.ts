@@ -1,7 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Not, Repository } from 'typeorm';
 import { MiniAppVersion, MiniAppVersionStatus } from '../entities/miniapp-version.entity';
+import { MiniApp } from '../entities/miniapp.entity';
 import {
   MiniAppVersionCapability,
   VersionCapabilityStatus,
@@ -13,6 +14,13 @@ import {
   workingVersionOf,
   workingVersionStatus,
 } from './version-capabilities';
+
+/** A stored ISO date (or Date) as a Date; anything else as null. */
+function toDate(value: unknown): Date | null {
+  if (!value) return null;
+  const d = value instanceof Date ? value : new Date(String(value));
+  return Number.isNaN(d.getTime()) ? null : d;
+}
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -50,6 +58,9 @@ export class MiniAppVersionsService {
     private readonly versions: Repository<MiniAppVersion>,
     @InjectRepository(MiniAppVersionCapability)
     private readonly caps: Repository<MiniAppVersionCapability>,
+    @Optional()
+    @InjectRepository(MiniApp)
+    private readonly apps?: Repository<MiniApp>,
   ) {}
 
   private rowsOf(miniAppId: string) {
@@ -108,14 +119,14 @@ export class MiniAppVersionsService {
       const rev = app.pendingRevision;
       const version = revisionVersionOf(app);
       let row = draft;
-      if (!row) {
-        row = await this.newRow(app, version, MiniAppVersionStatus.DRAFT, rev.changelog);
-      } else if (row.version !== version || (rev.changelog && row.changelog !== rev.changelog)) {
-        await this.versions.update(
-          { id: row.id },
-          { version, ...(rev.changelog ? { changelog: rev.changelog } : {}) },
-        );
-      }
+      if (!row) row = await this.newRow(app, version, MiniAppVersionStatus.DRAFT, rev.changelog);
+      await this.versions.update({ id: row.id }, {
+        version,
+        ...(rev.changelog ? { changelog: rev.changelog } : {}),
+        revision: rev,
+        reviewStatus: typeof rev.revisionStatus === 'string' ? rev.revisionStatus.slice(0, 30) : null,
+        submittedAt: toDate(rev.submittedAt),
+      });
       await this.setCapabilities(app.id, row.id, rev.capabilities ?? rev.permissions ?? app.capabilities);
     } else if (draft && app.pendingRevision === null) {
       // Revision discarded (a published one was turned ACTIVE first)
@@ -268,6 +279,8 @@ export class MiniAppVersionsService {
       version: r.version,
       status: r.status,
       changelog: r.changelog,
+      reviewStatus: r.reviewStatus ?? null,
+      submittedAt: r.submittedAt ?? null,
       releasedAt: r.releasedAt,
       releasedBy: r.releasedBy,
       createdAt: r.createdAt,
@@ -321,6 +334,32 @@ export class MiniAppVersionsService {
       );
     }
     return out;
+  }
+
+  /**
+   * Re-reads an app and syncs its version rows. For writes the entity
+   * subscriber cannot see (raw UPDATEs) and for the subscriber itself.
+   */
+  async resyncApp(miniAppId: string): Promise<void> {
+    if (!this.apps) return;
+    try {
+      const app = await this.apps
+        .createQueryBuilder('m')
+        .select([
+          'm.id',
+          'm.lifecycleStatus',
+          'm.currentReleaseVersion',
+          'm.integrationMethod',
+          'm.integrationConfig',
+          'm.capabilities',
+          'm.pendingRevision',
+        ])
+        .where('m.id = :id', { id: miniAppId })
+        .getOne();
+      if (app) await this.syncQuietly(app);
+    } catch (err: any) {
+      this.logger.warn(`Could not re-read mini app ${miniAppId} for version sync: ${err?.message}`);
+    }
   }
 
   /** Runs syncFromApp and only logs a failure: the app save already happened. */
