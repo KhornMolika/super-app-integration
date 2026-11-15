@@ -17,7 +17,7 @@ import {
   workingVersionOf,
   workingVersionStatus,
 } from './version-capabilities';
-import { appStatusOf, availabilityOf, IN_PROGRESS_STAGES, RELEASED_VERSION_STATUSES } from '../status/app-status';
+import { appStatusOf, availabilityOf, IN_PROGRESS_STAGES, isInProgressStage, RELEASED_VERSION_STATUSES } from '../status/app-status';
 import {
   AppIntegrationFields,
   phoneIntegrationConfig,
@@ -638,6 +638,61 @@ export async function applyLifecycle(
   await appRepository.update(ids.length === 1 ? ids[0] : ({ id: In(ids) } as any), {
     appStatus: appStatusOf(lifecycle, availability),
   } as any);
+}
+
+/** The next patch version not used by any of these (1.2.0 -> 1.2.1). */
+export function nextPatchVersion(current: string, taken: readonly string[]): string {
+  const m = /^(\d+)\.(\d+)\.(\d+)/.exec(String(current || '').trim());
+  const [maj, min, pat] = m ? [Number(m[1]), Number(m[2]), Number(m[3])] : [1, 0, 0];
+  const used = new Set(taken);
+  for (let p = pat + 1; ; p++) {
+    const v = `${maj}.${min}.${p}`;
+    if (!used.has(v)) return v;
+  }
+}
+
+/**
+ * A restored app goes through review again as a new version: its served row
+ * (ACTIVE, else the newest) is copied, with its capabilities, into a new
+ * DRAFT row (next patch version), and an ACTIVE row becomes PREVIOUS. Without
+ * it the app had no version in progress and "submit" changed nothing.
+ */
+export async function reopenForReview(
+  appRepository: Repository<MiniApp> | undefined | null,
+  miniAppId: string,
+): Promise<string | null> {
+  const manager = (appRepository as any)?.manager;
+  if (typeof manager?.transaction !== 'function') return null;
+  return manager.transaction(async (tx: any) => {
+    const rows: Array<{ id: string; version: string; status: string }> = await tx.query(
+      `SELECT id, version, status FROM "mini_app_versions" WHERE "miniAppId" = $1 ORDER BY "createdAt" DESC`,
+      [miniAppId],
+    );
+    if (rows.some((r) => isInProgressStage(r.status))) return null; // already has one
+    const source = rows.find((r) => r.status === 'ACTIVE') ?? rows[0];
+    if (!source) return null;
+    const version = nextPatchVersion(source.version, rows.map((r) => r.version));
+    const [created] = await tx.query(
+      `INSERT INTO "mini_app_versions"
+         ("miniAppId", version, status, changelog, "integrationConfig", "integrationMethod", "homeWidget")
+       SELECT "miniAppId", $2, 'DRAFT', 'Restored from the archive', "integrationConfig", "integrationMethod", "homeWidget"
+         FROM "mini_app_versions" WHERE id = $1
+       RETURNING id`,
+      [source.id, version],
+    );
+    await tx.query(
+      `INSERT INTO "mini_app_version_capabilities"
+         ("miniAppId", "versionId", "capabilityKey", required, purpose, declaration, position)
+       SELECT "miniAppId", $2, "capabilityKey", required, purpose, declaration, position
+         FROM "mini_app_version_capabilities" WHERE "versionId" = $1`,
+      [source.id, created.id],
+    );
+    await tx.query(
+      `UPDATE "mini_app_versions" SET status = 'PREVIOUS', "updatedAt" = now() WHERE "miniAppId" = $1 AND status = 'ACTIVE'`,
+      [miniAppId],
+    );
+    return created.id as string;
+  });
 }
 
 /** A MiniAppVersionsService on the same connection as a MiniApp repository. */

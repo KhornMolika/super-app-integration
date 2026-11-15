@@ -40,7 +40,7 @@ export class AuthController {
     const result = await this.authService.login(body);
     if (!result.success) {
       throw new UnauthorizedException(
-        result.message || 'Invalid credentials or user not found',
+        result.message || 'Invalid email or password',
       );
     }
     if ('access_token' in result && result.access_token) {
@@ -109,7 +109,17 @@ export class AuthController {
   }
 
   @Post('logout')
-  async logout(@Res({ passthrough: true }) res: Response) {
+  async logout(
+    @Req() req: Request,
+    @Body() body: { refresh_token?: string } | undefined,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    // Ends the session on the server too: its refresh token stops working
+    await this.authService.logout(
+      body?.refresh_token ||
+        (req as any).cookies?.['refresh_token'] ||
+        (req as any).cookies?.['refresh_token_cookie'],
+    );
     res.clearCookie('auth_token', { path: '/' });
     res.clearCookie('refresh_token', { path: '/' });
     return { success: true, message: 'Logged out successfully' };

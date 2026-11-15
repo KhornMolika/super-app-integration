@@ -65,6 +65,7 @@ const revision = (
   permissions: [],
   homeWidget: { widgetClass: 'HrHomeWidget' },
   revisionStatus: 'IN_REVIEW',
+  validationStatus: 'PASSED',
   ...over,
 });
 

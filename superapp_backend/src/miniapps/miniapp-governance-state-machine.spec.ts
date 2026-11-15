@@ -36,6 +36,7 @@ describe('Phase 3: Lifecycle & Governance State Machine Testing', () => {
     mockJenkinsService = {
       triggerMiniAppValidation: jest.fn().mockResolvedValue({ success: true }),
       triggerSuperAppBuild: jest.fn().mockResolvedValue({ success: true }),
+      trackTestBuild: jest.fn().mockReturnValue({ poll: jest.fn().mockResolvedValue({ available: false }) }),
       triggerSuperAppSandboxBuild: jest.fn().mockResolvedValue({ success: true }),
     };
     mockSuperAppService = {

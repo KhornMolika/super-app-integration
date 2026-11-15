@@ -15,6 +15,9 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
+
+const sha256Hex = (v: string) =>
+  crypto.createHash('sha256').update(v).digest('hex');
 import {
   AccessControlService,
   OFFICIAL_SEEDS,
@@ -48,6 +51,8 @@ import { OrganizationsService } from '../organizations/organizations.service';
 export const END_USER_TYP = 'end_user';
 export const BACK_OFFICE_TYP = 'back_office';
 export const REFRESH_TYP = 'back_office_refresh';
+/** A refresh token presented again this soon after its rotation is a parallel tab, not a replay. */
+export const BACK_OFFICE_REFRESH_GRACE_MS = 30 * 1000;
 export const END_USER_AUDIENCE = 'super-app-mobile';
 
 /** Short-lived access token lifetime (default 15 minutes) for security & quick permission reflection */
@@ -209,7 +214,34 @@ export class AuthService implements OnModuleInit {
   /**
    * Issues Access & Refresh token pair for a verified user
    */
-  private generateAuthTokens(user: any) {
+  /** Database for Backoffice sessions (null with a stand-in repository: stateless, unit tests). */
+  private sessionDb(): {
+    query: (sql: string, params?: unknown[]) => Promise<any>;
+  } | null {
+    const manager = (this.accessTokenRepo as any)?.manager;
+    return typeof manager?.query === 'function' ? manager : null;
+  }
+
+  private async revokeSession(familyId: string): Promise<void> {
+    await this.sessionDb()?.query(
+      `UPDATE "refresh_tokens" SET "revokedAt" = now() WHERE "familyId" = $1 AND "revokedAt" IS NULL`,
+      [familyId],
+    );
+  }
+
+  /**
+   * Access and refresh tokens. The refresh token carries a jti recorded in
+   * refresh_tokens (as sha256(jti); phone tokens are stored as the hash of the
+   * whole token, so the two never collide): it is rotated on refresh and
+   * revoked on logout or reuse.
+   */
+  private async generateAuthTokens(
+    user: any,
+    session: { familyId: string; startedAt: Date } = {
+      familyId: crypto.randomUUID(),
+      startedAt: new Date(),
+    },
+  ) {
     const permissions = new Set<string>();
     const userRoleList: any[] = user.roles || (user.role ? [user.role] : []);
     userRoleList.forEach((role: any) => {
@@ -299,10 +331,12 @@ export class AuthService implements OnModuleInit {
       typ: BACK_OFFICE_TYP,
     };
 
+    const jti = crypto.randomUUID();
     const refreshPayload = {
       sub: user.id,
       email: user.email,
       typ: REFRESH_TYP,
+      jti,
     };
 
     const accessToken = this.jwtService.sign(accessPayload, {
@@ -320,6 +354,17 @@ export class AuthService implements OnModuleInit {
       issuer: this.issuer,
       expiresIn: BACK_OFFICE_REFRESH_TOKEN_TTL_SECONDS,
     });
+    await this.sessionDb()?.query(
+      `INSERT INTO "refresh_tokens" ("familyId", "tokenHash", "identityId", "expiresAt", "familyStartedAt")
+       VALUES ($1, $2, $3, $4, $5)`,
+      [
+        session.familyId,
+        sha256Hex(jti),
+        user.id,
+        new Date(Date.now() + BACK_OFFICE_REFRESH_TOKEN_TTL_SECONDS * 1000),
+        session.startedAt,
+      ],
+    );
 
     return {
       access_token: accessToken,
@@ -332,7 +377,10 @@ export class AuthService implements OnModuleInit {
         name: user.name,
         roles,
         permissions: Array.from(permissions),
-        organizationId: user.organizationId || (user.organization ? user.organization.id : null) || null,
+        organizationId:
+          user.organizationId ||
+          (user.organization ? user.organization.id : null) ||
+          null,
         organization: user.organization || null,
       },
     };
@@ -369,7 +417,7 @@ export class AuthService implements OnModuleInit {
     if (!user) {
       return {
         success: false as const,
-        message: 'Invalid credentials or user not found',
+        message: 'Invalid email or password',
       };
     }
 
@@ -457,7 +505,7 @@ export class AuthService implements OnModuleInit {
     }
 
     this.logger.log(`[AUTH] Authentication succeeded for: ${rawEmail}`);
-    const tokens = this.generateAuthTokens(user);
+    const tokens = await this.generateAuthTokens(user);
     return {
       success: true as const,
       message: 'Logged in successfully',
@@ -553,7 +601,10 @@ export class AuthService implements OnModuleInit {
   ): Promise<{ emailDispatched: boolean; message: string }> {
     try {
       const r = await this.requestOtp({ email, purpose: 'EMAIL_VERIFICATION' });
-      return { emailDispatched: Boolean(r.emailDispatched), message: r.message };
+      return {
+        emailDispatched: Boolean(r.emailDispatched),
+        message: r.message,
+      };
     } catch (err) {
       if (err instanceof ServiceUnavailableException) {
         return {
@@ -569,6 +620,72 @@ export class AuthService implements OnModuleInit {
   /**
    * Token Refresh Rotation: Validates refresh token & issues new 15-min access token
    */
+  /**
+   * Rotates a refresh token: each one works once. Presented again within a few
+   * seconds (two tabs refreshing together) it still gets new tokens in the same
+   * session; later, the reuse means a copy leaked and ends the whole session.
+   */
+  private async claimRefresh(
+    payload: any,
+  ): Promise<{ familyId: string; startedAt: Date } | undefined> {
+    const db = this.sessionDb();
+    if (!db) return undefined;
+    const invalid = () =>
+      new UnauthorizedException('Invalid or expired refresh token');
+    if (!payload?.jti) {
+      // Issued before sessions were recorded: sign in once more
+      throw new UnauthorizedException(
+        'Your session has expired. Please sign in again.',
+      );
+    }
+    const [rec] = await db.query(
+      `SELECT * FROM "refresh_tokens" WHERE "tokenHash" = $1`,
+      [sha256Hex(payload.jti)],
+    );
+    if (
+      !rec ||
+      rec.revokedAt ||
+      new Date(rec.expiresAt).getTime() <= Date.now()
+    )
+      throw invalid();
+    if (rec.rotatedAt) {
+      if (
+        Date.now() - new Date(rec.rotatedAt).getTime() >
+        BACK_OFFICE_REFRESH_GRACE_MS
+      ) {
+        await this.revokeSession(rec.familyId);
+        throw invalid();
+      }
+    } else {
+      await db.query(
+        `UPDATE "refresh_tokens" SET "rotatedAt" = now() WHERE id = $1 AND "rotatedAt" IS NULL`,
+        [rec.id],
+      );
+    }
+    return {
+      familyId: rec.familyId,
+      startedAt: new Date(rec.familyStartedAt ?? rec.createdAt),
+    };
+  }
+
+  /** Ends the session of this refresh token (all its rotations). */
+  async logout(refreshTokenString?: string): Promise<void> {
+    if (!refreshTokenString) return;
+    let payload: any;
+    try {
+      payload = this.verifyToken(refreshTokenString, { typ: REFRESH_TYP });
+    } catch {
+      return;
+    }
+    const db = this.sessionDb();
+    if (!db || !payload?.jti) return;
+    const [rec] = await db.query(
+      `SELECT "familyId" FROM "refresh_tokens" WHERE "tokenHash" = $1`,
+      [sha256Hex(payload.jti)],
+    );
+    if (rec) await this.revokeSession(rec.familyId);
+  }
+
   async refreshToken(refreshTokenString: string) {
     if (!refreshTokenString) {
       throw new UnauthorizedException('Refresh token is required');
@@ -580,6 +697,7 @@ export class AuthService implements OnModuleInit {
     } catch {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
+    const session = await this.claimRefresh(payload);
 
     const user = await this.accessControlService.findByEmailWithPermissions(
       payload.email,
@@ -590,11 +708,14 @@ export class AuthService implements OnModuleInit {
       );
     }
     // A role change (e.g. to STAFF) ends Backoffice access at the next refresh
-    if (!OFFICIAL_SEEDS[String(payload.email || '').toLowerCase()] && !hasBackofficeAccess(platformRoles(user))) {
+    if (
+      !OFFICIAL_SEEDS[String(payload.email || '').toLowerCase()] &&
+      !hasBackofficeAccess(platformRoles(user))
+    ) {
       throw new UnauthorizedException(NO_BACKOFFICE_ACCESS_MESSAGE);
     }
 
-    const tokens = this.generateAuthTokens(user);
+    const tokens = await this.generateAuthTokens(user, session);
     return {
       success: true,
       message: 'Token refreshed successfully',
@@ -649,7 +770,8 @@ export class AuthService implements OnModuleInit {
     // Same roles as the Backoffice session; never a developer fallback for an account
     // without a Backoffice role (STAFF, consumers)
     const roles = platformRoles(user);
-    if (!hasBackofficeAccess(roles)) throw new ForbiddenException(NO_BACKOFFICE_ACCESS_MESSAGE);
+    if (!hasBackofficeAccess(roles))
+      throw new ForbiddenException(NO_BACKOFFICE_ACCESS_MESSAGE);
     assertSuperAdminInPlatformOrg(roles, user.organization?.code);
 
     const tokenPayload = {
@@ -767,8 +889,11 @@ export class AuthService implements OnModuleInit {
       }
     }
 
+    // Same rule as login: the seed password only stands in for an official
+    // seed account's own password, outside production
     if (
       !isOldValid &&
+      Boolean(OFFICIAL_SEEDS[String(user.email || '').toLowerCase()]) &&
       process.env.NODE_ENV !== 'production' &&
       defaultSeedPassword &&
       body.oldPassword === defaultSeedPassword
@@ -926,8 +1051,7 @@ export class AuthService implements OnModuleInit {
       // tell the user, instead of claiming it was sent. (In development an
       // unconfigured mailer is normal; the code is in the DUMMY log line.)
       const devSkip =
-        delivery.status === 'skipped' &&
-        process.env.NODE_ENV !== 'production';
+        delivery.status === 'skipped' && process.env.NODE_ENV !== 'production';
       if (!devSkip) {
         await this.otpRepo.update({ id: otpRecord.id }, { isUsed: true });
         throw new ServiceUnavailableException({
@@ -1187,9 +1311,15 @@ export function platformRoles(user: any): string[] {
         .map((r: any) => (typeof r === 'string' ? r : r?.name))
         .filter(Boolean)
         .map((r: string) =>
-          ['MINI_APP_DEVELOPER', 'DEVELOPER', 'QA_TESTER', 'AUDITOR'].includes(r) ? 'MA_DEVELOPER' : r,
+          ['MINI_APP_DEVELOPER', 'DEVELOPER', 'QA_TESTER', 'AUDITOR'].includes(
+            r,
+          )
+            ? 'MA_DEVELOPER'
+            : r,
         )
-        .filter((r: string) => ['SUPER_ADMIN', 'ADMIN', 'MA_DEVELOPER', 'STAFF'].includes(r)),
+        .filter((r: string) =>
+          ['SUPER_ADMIN', 'ADMIN', 'MA_DEVELOPER', 'STAFF'].includes(r),
+        ),
     ),
   );
 }
@@ -1198,10 +1328,18 @@ export function platformRoles(user: any): string[] {
  * Roles that may use the Backoffice. Every account (STAFF, consumers too) can sign in to
  * the mobile Super App; only these can sign in here.
  */
-export const BACKOFFICE_ROLES = ['SUPER_ADMIN', 'ADMIN', 'MA_DEVELOPER'] as const;
+export const BACKOFFICE_ROLES = [
+  'SUPER_ADMIN',
+  'ADMIN',
+  'MA_DEVELOPER',
+] as const;
 
-export function hasBackofficeAccess(roles: readonly string[] | undefined | null): boolean {
-  return (roles || []).some((r) => (BACKOFFICE_ROLES as readonly string[]).includes(r));
+export function hasBackofficeAccess(
+  roles: readonly string[] | undefined | null,
+): boolean {
+  return (roles || []).some((r) =>
+    (BACKOFFICE_ROLES as readonly string[]).includes(r),
+  );
 }
 
 export const NO_BACKOFFICE_ACCESS_MESSAGE =

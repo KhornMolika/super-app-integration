@@ -347,6 +347,20 @@ export class MiniAppRunsService {
   }
 
   /** Apps whose latest build is in progress (QUEUED, BUILDING, RUNNING). */
+  /** When the app's latest build started, if it is still in progress; else null. */
+  async buildInProgressSince(miniAppId: string): Promise<Date | null> {
+    const rows: Array<{ buildStatus: string; createdAt: Date | string }> = await this.builds.query(
+      `SELECT "buildStatus", "createdAt" FROM "mini_app_builds"
+        WHERE "miniAppId" = $1 ORDER BY "createdAt" DESC LIMIT 1`,
+      [miniAppId],
+    );
+    const latest = rows[0];
+    if (!latest || !['QUEUED', 'BUILDING', 'RUNNING'].includes(String(latest.buildStatus).toUpperCase())) {
+      return null;
+    }
+    return new Date(latest.createdAt);
+  }
+
   async appIdsWithBuildInProgress(): Promise<string[]> {
     const rows: Array<{ miniAppId: string }> = await this.builds.query(
       `SELECT t."miniAppId" FROM (

@@ -15,15 +15,12 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
-  NotFoundException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request, Response } from 'express';
 
-
 import {
   AuthRateLimitGuard,
-  AuthRateLimiter,
   RateLimit,
   RateLimitedException,
 } from './auth-rate-limiter';
@@ -51,14 +48,12 @@ import { CatalogQueryDto } from './dto/catalog-query.dto';
 import { UpdateProfileDto } from './dto/profile.dto';
 import { phoneBuildOf } from '../miniapps/status/app-status';
 
-
 @Controller(['mobile', 'api/mobile'])
 export class MobileController {
   constructor(
     private readonly auth: MobileAuthService,
     private readonly catalog: MobileCatalogService,
 
-    private readonly limiter: AuthRateLimiter,
     private readonly appConfigService: MobileAppConfigService,
     private readonly profiles: MobileProfileService,
     private readonly avatars: MobileAvatarService,
@@ -235,19 +230,6 @@ export class MobileController {
     // Test builds list apps in testing too; the official build live apps only
     const build = phoneBuildOf(req.headers['x-super-app-build']);
     return this.catalog.list(Object.assign(query, { build }), clientHost);
-  }
-
-  @Get('auth/dev-reset-limits')
-  @Post('auth/dev-reset-limits')
-  @HttpCode(200)
-  devResetLimits() {
-    // Resets brute-force protection for every account: developer convenience only.
-    // Previously callable by anyone in production.
-    if (process.env.NODE_ENV === 'production') {
-      throw new NotFoundException();
-    }
-    this.limiter.reset();
-    return { ok: true, message: 'Mobile rate limits reset successfully' };
   }
 
   @Get('auth/sso/providers')

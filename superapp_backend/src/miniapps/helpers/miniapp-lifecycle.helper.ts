@@ -8,6 +8,8 @@ import {
   Injectable,
   Logger,
   BadRequestException,
+  BadGatewayException,
+  ConflictException,
   Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -109,6 +111,25 @@ import {
  * the Backoffice hides the review buttons then, and a direct API call must not
  * get around that. A revision is judged by its own scan.
  */
+/**
+ * A new version of a live app goes to the phones only after its own security
+ * scan passed (editing a live app starts that scan).
+ */
+export function assertRevisionScanPassed(app: { pendingRevision?: any }): void {
+  const rev = app.pendingRevision;
+  if (!rev || typeof rev !== 'object') return;
+  const status = String(rev.validationStatus || '').toUpperCase();
+  if (status === 'PASSED' || status === 'FAILED') return; // FAILED: assertSecurityScanNotFailed explains
+  throw new BadRequestException(
+    status === 'RUNNING' || status === 'QUEUED'
+      ? 'The security scan of this version is still running. It can be published once the scan has passed.'
+      : 'This version has not passed a security scan yet. Run the scan, then publish it.',
+  );
+}
+
+/** A test build that has not reported back in this time may be started again. */
+const TEST_BUILD_RETRY_AFTER_MS = 2 * 60 * 60 * 1000;
+
 export function assertSecurityScanNotFailed(app: { validationStatus?: string | null; pendingRevision?: any }): void {
   const status = String(
     (app.pendingRevision ? app.pendingRevision.validationStatus : app.validationStatus) || '',
@@ -811,8 +832,19 @@ export class MiniappLifecycleHelper {
     }
     assertSecurityScanNotFailed(app);
 
-    const validStatuses = ['IN_REVIEW', 'SUBMITTED', 'DRAFT'];
-    if (!validStatuses.includes(currentStatus)) {
+    // Only after a passed scan (which moves SUBMITTED to IN_REVIEW): not while
+    // it runs, not for a draft that was never submitted
+    if (currentStatus === 'SUBMITTED') {
+      throw new BadRequestException(
+        'The security scan is still running. It can be approved once the scan has passed.',
+      );
+    }
+    if (currentStatus === 'DRAFT') {
+      throw new BadRequestException(
+        'This app has not been submitted. The developer must submit it for review first.',
+      );
+    }
+    if (currentStatus !== 'IN_REVIEW') {
       throw new BadRequestException(
         `App is not in review (current status: ${app.lifecycleStatus || currentStatus})`,
       );
@@ -1147,6 +1179,8 @@ export class MiniappLifecycleHelper {
     ) => Promise<void>,
   ) {
     const id = app.id;
+    // Set when Jenkins does not take the build: the admin gets an error, not "Success"
+    let triggerFailure: string | null = null;
     const currentStatus = (
       app.lifecycleStatus ||
       (app as any).status ||
@@ -1167,6 +1201,26 @@ export class MiniappLifecycleHelper {
     ) {
       throw new BadRequestException(
         `App must be in APPROVED, BUILDING, IN_REVIEW, TESTING, TEST_PASSED, ACTIVE, or BUILD_FAILED status before moving to TESTING (current: ${app.lifecycleStatus || currentStatus})`,
+      );
+    }
+    // A released app is tested through a new version only. Without one this
+    // would write APPROVED/TESTING over the live app and take it off the phones.
+    const appStatus = String((app as any).appStatus || '').toUpperCase();
+    const released =
+      currentStatus === 'ACTIVE' ||
+      appStatus === 'LIVE' ||
+      appStatus === 'SUSPENDED' ||
+      app.availabilityStatus === MiniAppAvailabilityStatus.PRODUCTION;
+    if (released && !app.pendingRevision) {
+      throw new BadRequestException(
+        'Nothing new to test: this app is live. Edit it to start a new version, then test that version.',
+      );
+    }
+    // One test build at a time; a build silent for over two hours may be retried
+    const since = await this.runs?.buildInProgressSince(id);
+    if (since && Date.now() - since.getTime() < TEST_BUILD_RETRY_AFTER_MS) {
+      throw new ConflictException(
+        'A test build is already running for this app. Wait for it to finish, or retry after two hours if it seems stuck.',
       );
     }
     // "Approve for Test Build" is an approval too: not after a failed scan
@@ -1217,11 +1271,8 @@ export class MiniappLifecycleHelper {
           this.logger.warn(
             `Jenkins test build trigger returned: ${jenkinsResult.message}`,
           );
-          await this.markBuildFailed(
-            app.id,
-            releaseVersion,
-            `Failed to trigger Jenkins pipeline: ${jenkinsResult.message}`,
-          );
+          triggerFailure = `Failed to trigger Jenkins pipeline: ${jenkinsResult.message}`;
+        await this.markBuildFailed(app.id, releaseVersion, triggerFailure);
         } else {
           this.monitorJenkinsTestBuild(app.id, releaseVersion, jenkinsResult.queueId);
         }
@@ -1240,11 +1291,8 @@ export class MiniappLifecycleHelper {
         this.logger.error(
           `Error triggering Jenkins test build for revision: ${err.message}`,
         );
-        await this.markBuildFailed(
-          app.id,
-          releaseVersion,
-          `Error triggering Jenkins test build: ${err.message}`,
-        );
+        triggerFailure = `Error triggering Jenkins test build: ${err.message}`;
+        await this.markBuildFailed(app.id, releaseVersion, triggerFailure);
       }
 
       await logActivityFn(
@@ -1258,7 +1306,12 @@ export class MiniappLifecycleHelper {
         app,
       );
 
-      return app;
+      if (triggerFailure) {
+      throw new BadGatewayException(
+        `Jenkins did not accept the test build (${triggerFailure}). The app is marked Build failed: start testing again once Jenkins is reachable.`,
+      );
+    }
+    return app;
     }
 
     // For APPROVED, IN_REVIEW, TESTING, BUILDING, BUILD_FAILED
@@ -1337,11 +1390,8 @@ export class MiniappLifecycleHelper {
         this.logger.warn(
           `Jenkins test build trigger returned: ${jenkinsResult.message}`,
         );
-        await this.markBuildFailed(
-          app.id,
-          releaseVersion,
-          `Failed to trigger Jenkins pipeline: ${jenkinsResult.message}`,
-        );
+        triggerFailure = `Failed to trigger Jenkins pipeline: ${jenkinsResult.message}`;
+        await this.markBuildFailed(app.id, releaseVersion, triggerFailure);
       } else {
         // Start background watchdog poller in case Jenkins pipeline crashes, aborts, or encounters syntax error
         this.monitorJenkinsTestBuild(app.id, releaseVersion, jenkinsResult.queueId);
@@ -1364,11 +1414,8 @@ export class MiniappLifecycleHelper {
       // and version), so the previews match the APK: no separate sandbox build
     } catch (err: any) {
       this.logger.error(`Error triggering Jenkins test build: ${err.message}`);
-      await this.markBuildFailed(
-        app.id,
-        releaseVersion,
-        `Error triggering Jenkins test build: ${err.message}`,
-      );
+      triggerFailure = `Error triggering Jenkins test build: ${err.message}`;
+        await this.markBuildFailed(app.id, releaseVersion, triggerFailure);
     }
 
     await logActivityFn(
@@ -1382,6 +1429,11 @@ export class MiniappLifecycleHelper {
       app,
     );
 
+    if (triggerFailure) {
+      throw new BadGatewayException(
+        `Jenkins did not accept the test build (${triggerFailure}). The app is marked Build failed: start testing again once Jenkins is reachable.`,
+      );
+    }
     return app;
   }
 
@@ -1555,6 +1607,7 @@ export class MiniappLifecycleHelper {
     if (!app.pendingRevision) {
       throw new BadRequestException('No pending revision found to publish');
     }
+    assertRevisionScanPassed(app);
     assertSecurityScanNotFailed(app);
     await this.assertPackageInMinio(app, 'publish this version', true);
 

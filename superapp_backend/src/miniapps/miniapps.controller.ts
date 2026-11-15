@@ -67,12 +67,7 @@ function retirementActor(req: any): RetirementActor {
 }
 
 @UseGuards(JwtAuthGuard, RbacGuard)
-@Controller([
-  'mini-apps',
-  'miniapps',
-  'api/mini-apps',
-  'api/miniapps',
-])
+@Controller(['mini-apps', 'miniapps', 'api/mini-apps', 'api/miniapps'])
 export class MiniappsController {
   constructor(
     private readonly miniappService: MiniappsService,
@@ -108,6 +103,30 @@ export class MiniappsController {
   @RequirePermissions('miniapp:read')
   getAllIssues(@Query() query: QueryIssuesDto, @Req() req: any) {
     return this.miniappService.findAllIssues(query, req?.user);
+  }
+
+  /**
+   * Status fields a client must never set: only the lifecycle actions
+   * (submit, approve, activate, suspend...) change them. The draft body is not
+   * DTO-validated, so they are removed here for every create and update.
+   */
+  private static readonly CLIENT_STATUS_FIELDS = [
+    'lifecycleStatus',
+    'availabilityStatus',
+    'status',
+    'appStatus',
+    'versionStage',
+    'suspension',
+    'archiveRequest',
+    'currentReleaseVersion',
+    'activeTestVersion',
+  ];
+
+  private withoutStatusFields(body: any): any {
+    if (!body || typeof body !== 'object') return body;
+    const copy = { ...body };
+    for (const k of MiniappsController.CLIENT_STATUS_FIELDS) delete copy[k];
+    return copy;
   }
 
   private extractIntegrationConfig(dto: any): any {
@@ -169,9 +188,10 @@ export class MiniappsController {
         `${missing.join(' and ')} ${missing.length > 1 ? 'are' : 'is'} required to save a draft.`,
       );
     }
-    const dataToSave = this.extractIntegrationConfig(createData);
+    const dataToSave = this.extractIntegrationConfig(
+      this.withoutStatusFields(createData),
+    );
     dataToSave.lifecycleStatus = 'DRAFT';
-    dataToSave.status = 'DRAFT';
     dataToSave.ownerId = req.user.sub || req.user.id;
     dataToSave.ownerEmail = dataToSave.ownerEmail || req.user.email;
     dataToSave.ownerName = dataToSave.ownerName || req.user.name;
@@ -203,9 +223,12 @@ export class MiniappsController {
   @Post()
   @RequirePermissions('miniapp:create')
   async create(@Body() createData: CreateMiniAppDto, @Req() req: any) {
-    const dataToSave = this.extractIntegrationConfig(createData);
-    dataToSave.lifecycleStatus = 'IN_REVIEW';
-    dataToSave.status = 'IN_REVIEW';
+    const dataToSave = this.extractIntegrationConfig(
+      this.withoutStatusFields(createData),
+    );
+    // Registered and submitted at once: the security scan starts now and
+    // a passed scan moves it to IN_REVIEW (as the submit button does)
+    dataToSave.lifecycleStatus = 'SUBMITTED';
     dataToSave.ownerId = req.user.sub || req.user.id;
     dataToSave.ownerEmail = dataToSave.ownerEmail || req.user.email;
     dataToSave.ownerName = dataToSave.ownerName || req.user.name;
@@ -626,7 +649,9 @@ export class MiniappsController {
     return this.capabilityGate
       ? {
           ...masked,
-          capabilityAvailability: await this.capabilityGate.evaluate(app.capabilities),
+          capabilityAvailability: await this.capabilityGate.evaluate(
+            app.capabilities,
+          ),
         }
       : masked;
   }
@@ -658,7 +683,9 @@ export class MiniappsController {
       if (!unchanged) this.access.check(level, MiniAppAccess.MAINTAIN);
     }
 
-    const dataToSave = this.extractIntegrationConfig(updateData);
+    const dataToSave = this.extractIntegrationConfig(
+      this.withoutStatusFields(updateData),
+    );
     const updated = await this.miniappService.update(
       id,
       dataToSave,
@@ -695,7 +722,10 @@ export class MiniappsController {
   /** Each version (newest first) with the capabilities it asks for and their review. */
   @Get(':id/version-capabilities')
   @RequirePermissions('miniapp:read')
-  async getVersionCapabilities(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
+  async getVersionCapabilities(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: any,
+  ) {
     await this.require(id, req, MiniAppAccess.VIEW);
     return this.versionRows ? this.versionRows.listWithCapabilities(id) : [];
   }
@@ -736,8 +766,9 @@ export class MiniappsController {
     return this.miniappService.getDiff(id, baseVersion, targetVersion);
   }
 
+  // Changes the version phones get: a review decision (Super Admin), like activate
   @Post(':id/rollback')
-  @RequirePermissions('miniapp:update')
+  @RequirePermissions('miniapp:approve')
   async rollback(
     @Param('id', ParseUUIDPipe) id: string,
     @Body('targetVersion') targetVersion: string,

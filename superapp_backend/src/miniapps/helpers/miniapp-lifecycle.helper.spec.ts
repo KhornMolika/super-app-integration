@@ -135,6 +135,7 @@ describe('MiniappLifecycleHelper - Revision & Approval Lifecycle', () => {
           permissions: ['camera', 'biometrics'],
           changelog: 'Added biometric authentication capability',
           revisionStatus: 'IN_REVIEW',
+          validationStatus: 'PASSED',
         },
       } as any;
 
@@ -174,6 +175,7 @@ describe('MiniappLifecycleHelper - Revision & Approval Lifecycle', () => {
           name: 'SS Banking Malicious Update',
           permissions: ['camera', 'contacts_access_all'],
           revisionStatus: 'IN_REVIEW',
+          validationStatus: 'PASSED',
         },
       } as any;
 
@@ -216,6 +218,7 @@ describe('MiniappLifecycleHelper - Revision & Approval Lifecycle', () => {
           name: 'SS Banking Proposed Revision',
           permissions: ['camera', 'storage'],
           revisionStatus: 'IN_REVIEW',
+          validationStatus: 'PASSED',
         },
       } as any;
 

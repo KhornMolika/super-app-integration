@@ -418,13 +418,8 @@ export class CreateMiniAppDto {
   organizationCode?: string;
 
 
-  @IsString()
-  @IsOptional()
-  lifecycleStatus?: string;
-
-  @IsString()
-  @IsOptional()
-  availabilityStatus?: string;
+  // No lifecycleStatus / availabilityStatus: only the lifecycle actions
+  // (submit, approve, activate, suspend...) change an app's status.
 
   @IsString()
   @IsOptional()

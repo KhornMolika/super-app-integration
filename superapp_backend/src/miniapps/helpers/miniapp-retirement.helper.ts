@@ -5,6 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { reopenForReview } from '../versions/miniapp-versions.service';
 import { Repository } from 'typeorm';
 import {
   MiniApp,
@@ -384,12 +385,14 @@ export class MiniappRetirementHelper {
     app.suspension = null;
     app.archiveRequest = null;
     await this.miniappRepository.save(app);
+    // Reviewed again as a new version (the archived one stays in the history)
+    const reopened = await reopenForReview(this.miniappRepository, app.id);
     await this.record(app, MiniAppStatusEventType.RESTORED, actor);
 
     await this.notifyOwner(
       app,
       'MiniApp restored',
-      `"${MiniappRetirementHelper.label(app)}" was restored as a draft. Submit it again for review.`,
+      `"${MiniappRetirementHelper.label(app)}" was restored as a draft${reopened ? ' (a new version)' : ''}. Submit it again for review.`,
       'MINIAPP_RESTORED',
     );
     await log(

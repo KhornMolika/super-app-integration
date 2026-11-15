@@ -417,21 +417,13 @@ export class MobileAuthService {
     }
 
     // passwordHash is select:false; load it explicitly for the check
-    let ok = await this.passwords.verify(
+    // Only the account's own password: no shared fallback password, in any
+    // environment (it opened every phone account on staging and replaced the
+    // user's password with it)
+    const ok = await this.passwords.verify(
       input.password,
       (await loadPasswordHash(this.users, user.id)) ?? '',
     );
-    if (
-      !ok &&
-      process.env.NODE_ENV !== 'production' &&
-      process.env.SUPERADMIN_PASSWORD
-    ) {
-      if (input.password === process.env.SUPERADMIN_PASSWORD) {
-        ok = true;
-        user.passwordHash = await this.passwords.hash(input.password);
-        await this.users.save(user);
-      }
-    }
 
     if (!ok) {
       await this.registerFailure(user);
