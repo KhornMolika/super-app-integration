@@ -10,8 +10,10 @@ export class ApiError extends Error {
   code?: string;
   isBackendDown: boolean;
 
-  constructor(message: string, status: number, data?: any) {
-    super(message);
+  constructor(message: unknown, status: number, data?: any) {
+    // Validation errors arrive as a list of messages
+    message = Array.isArray(message) ? message.join('. ') : String(message ?? '');
+    super(message as string);
     this.name = 'ApiError';
     this.status = status;
     this.data = data;
@@ -21,9 +23,9 @@ export class ApiError extends Error {
       status === 502 ||
       status === 504 ||
       this.code === 'BACKEND_SERVICE_DOWN' ||
-      message.toLowerCase().includes('backend service is currently unreachable') ||
-      message.toLowerCase().includes('fetch failed') ||
-      message.toLowerCase().includes('econnrefused');
+      (message as string).toLowerCase().includes('backend service is currently unreachable') ||
+      (message as string).toLowerCase().includes('fetch failed') ||
+      (message as string).toLowerCase().includes('econnrefused');
   }
 }
 
@@ -231,6 +233,7 @@ export async function apiClient<T = any>(endpoint: string, options: RequestOptio
 
   if (!response.ok) {
     let errorMessage =
+      (data && typeof data === 'object' && Array.isArray(data.message) && data.message.join('. ')) ||
       (data && typeof data === 'object' && (data.message || data.error)) ||
       (typeof data === 'string' && data) ||
       `Request failed with status ${response.status}`;

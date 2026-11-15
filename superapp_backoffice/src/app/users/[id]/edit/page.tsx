@@ -333,16 +333,25 @@ function EditUserContent() {
       }
 
       // 2. Commit user profile fields
-      const payload: any = {
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
-        position: position.trim() || undefined,
-        staffId: staffId.trim() || undefined,
-        phoneNumber: phoneNumber.trim() || undefined,
-        roleNames: [selectedRole],
-        organizationId: organizationId.trim() || '',
-        isActive,
-      };
+      // A mobile app user has no organization, role, position or staff ID
+      const isConsumer = user?.accountType === 'CONSUMER';
+      const payload: any = isConsumer
+        ? {
+            name: name.trim(),
+            email: email.trim().toLowerCase(),
+            phoneNumber: phoneNumber.trim() || undefined,
+            isActive,
+          }
+        : {
+            name: name.trim(),
+            email: email.trim().toLowerCase(),
+            position: position.trim() || undefined,
+            staffId: staffId.trim() || undefined,
+            phoneNumber: phoneNumber.trim() || undefined,
+            roleNames: [selectedRole],
+            organizationId: organizationId.trim() || '',
+            isActive,
+          };
 
       if (password.trim()) {
         payload.password = password.trim();

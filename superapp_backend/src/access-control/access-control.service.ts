@@ -849,6 +849,21 @@ export class AccessControlService {
       return this.findUserById(identity.id);
     }
 
+    // A mobile app user (no staff profile): organization, role, position and
+    // staff ID do not apply; the phone number lives on the consumer profile.
+    // The user edit form sends every field, so they are ignored, not refused.
+    if (!staffProfile && identity.consumerProfile) {
+      await this.identityRepository.save(identity);
+      if (dto.phoneNumber !== undefined) {
+        await this.identityRepository.manager
+          .getRepository(ConsumerProfile)
+          .update(
+            { identityId: identity.id },
+            { phoneNumber: dto.phoneNumber?.trim() || null },
+          );
+      }
+      return this.findUserById(identity.id);
+    }
 
     if (!staffProfile) {
       staffProfile = this.staffProfileRepository.create({

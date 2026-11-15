@@ -27,6 +27,7 @@ and `@test.com` on every boot).
 | 04-live-updates | New version of a live app, discard, publish on approval, testing a new version, rollback |
 | 05-phone-accounts | Sign-up with email code, sign-in, lockout, refresh rotation, logout, phone vs Backoffice tokens |
 | 06-password-change | Passwords someone else chose (seed accounts, accounts created or reset by an admin): forced change in the Backoffice and on the phone; no seed-password fallback; deactivated seed accounts stay out |
+| 07-user-management | What an organization ADMIN may manage (own organization only), editing mobile app users, no password hash from clients, sign-up and verification-code answers that do not reveal registered emails |
 
 ## Bugs these flows found (all fixed, each guarded by a test)
 
@@ -43,6 +44,8 @@ and `@test.com` on every boot).
 | Medium | Jenkins refusing the test build still answered "Success" | 502 with Jenkins' message; the app shows Build failed |
 | Medium | `/mobile/auth/dev-reset-limits` reset brute-force protection for anyone | Endpoint removed |
 | Low | Backoffice login told unknown email from wrong password | One message |
+| Low | Backoffice sign-up and "resend code" told which emails had an account | Same answer for new, existing, verified and unknown emails |
+| Medium | An ADMIN could overwrite a user's password hash (`passwordHash` in the user body) | No longer accepted from clients |
 | Low | A second `start-testing` queued another build | 409 while a build runs (retry allowed after two hours) |
 
 ## Not covered yet

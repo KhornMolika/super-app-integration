@@ -51,6 +51,9 @@ import { OrganizationsService } from '../organizations/organizations.service';
 export const END_USER_TYP = 'end_user';
 export const BACK_OFFICE_TYP = 'back_office';
 export const REFRESH_TYP = 'back_office_refresh';
+/** One answer for every sign-up, new or existing email (no account enumeration). */
+export const REGISTRATION_SUBMITTED_MESSAGE =
+  'Registration submitted. Please enter the 6-digit verification code sent to your email to confirm your identity.';
 /** A refresh token presented again this soon after its rotation is a parallel tab, not a replay. */
 export const BACK_OFFICE_REFRESH_GRACE_MS = 30 * 1000;
 export const END_USER_AUDIENCE = 'super-app-mobile';
@@ -546,9 +549,19 @@ export class AuthService implements OnModuleInit {
             : otpResult.message,
         };
       }
-      throw new BadRequestException(
-        'An account with this email already exists. Please Login.',
+      // The same answer as a new registration: telling "this email already
+      // has an account" lets anyone test which addresses are registered. The
+      // owner signs in (or resets the password) as usual; nothing is changed.
+      this.logger.warn(
+        `[AUTH] Sign-up attempted for an existing account: ${email}`,
       );
+      return {
+        success: true,
+        pendingEmailVerification: true,
+        email,
+        emailDispatched: true,
+        message: REGISTRATION_SUBMITTED_MESSAGE,
+      };
     }
 
     // Self-registered accounts start in PENDING_EMAIL_VERIFICATION so they DO NOT clutter
@@ -573,7 +586,7 @@ export class AuthService implements OnModuleInit {
       email,
       emailDispatched: otpResult.emailDispatched,
       message: otpResult.emailDispatched
-        ? 'Registration submitted. Please enter the 6-digit verification code sent to your email to confirm your identity.'
+        ? REGISTRATION_SUBMITTED_MESSAGE
         : otpResult.message,
     };
   }
@@ -944,17 +957,17 @@ export class AuthService implements OnModuleInit {
     }
 
     if (purpose === 'EMAIL_VERIFICATION') {
-      if (!user) {
-        throw new BadRequestException(
-          'No registration found for this email. Please sign up first.',
+      // No registration, or one already verified: the same answer as a sent
+      // code, so the endpoint does not reveal which emails have an account
+      if (!user || user.status !== 'PENDING_EMAIL_VERIFICATION') {
+        this.logger.warn(
+          `[OTP] Verification code requested for ${rawEmail}: ${user ? 'already verified' : 'no registration'} (nothing sent)`,
         );
-      }
-      if (user.status !== 'PENDING_EMAIL_VERIFICATION') {
         return {
           success: true,
-          alreadyVerified: true,
-          message: 'This email is already verified. You may proceed to Login.',
-          expiresInSeconds: 0,
+          message: `A 6-digit verification code was sent to ${rawEmail}.`,
+          expiresInSeconds: 300,
+          emailDispatched: true,
         };
       }
     }

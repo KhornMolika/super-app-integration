@@ -1,4 +1,16 @@
-import { IsString, IsNotEmpty, IsEmail, IsOptional, IsArray, IsBoolean, MaxLength, MinLength, Matches, IsIn, ValidateIf } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsEmail,
+  IsOptional,
+  IsArray,
+  IsBoolean,
+  MaxLength,
+  MinLength,
+  Matches,
+  IsIn,
+  ValidateIf,
+} from 'class-validator';
 
 export class CreateUserDto {
   /**
@@ -49,7 +61,8 @@ export class CreateUserDto {
   @IsString()
   @IsOptional()
   @Matches(/^$|^\+?[0-9 ()-]{6,30}$/, {
-    message: 'Phone number: digits, spaces, ( ) - and an optional leading +, 6 to 30 characters',
+    message:
+      'Phone number: digits, spaces, ( ) - and an optional leading +, 6 to 30 characters',
   })
   phoneNumber?: string;
 
@@ -84,7 +97,10 @@ export class CreateUserDto {
   @MinLength(6, { message: 'Password must be at least 6 characters' })
   password?: string;
 
-  @IsString()
-  @IsOptional()
+  /**
+   * Internal callers only (self-registration). No validation decorator, so
+   * the global ValidationPipe (whitelist) strips it from every request body:
+   * a client never sets a password hash directly.
+   */
   passwordHash?: string;
 }
