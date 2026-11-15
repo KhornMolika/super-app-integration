@@ -153,6 +153,32 @@ export function availabilityOf(appStatus: unknown): 'TESTING' | 'PRODUCTION' | '
   return 'TESTING';
 }
 
+/**
+ * Which Super App build a phone runs, from its X-Super-App-Build header:
+ * 'debug' = a test build (Jenkins MINIAPP_SET test, whatever its Flutter
+ * compile mode; the Backoffice sandbox), 'release' = the official build. No
+ * header (an older build) counts as release: it sees live apps only.
+ */
+export type PhoneBuild = 'debug' | 'release';
+
+export function phoneBuildOf(header: unknown): PhoneBuild {
+  const v = (Array.isArray(header) ? header[0] : header) as unknown;
+  return typeof v === 'string' && ['debug', 'test'].includes(v.trim().toLowerCase()) ? 'debug' : 'release';
+}
+
+/** Stages of an unreleased version that test builds carry. */
+export const TEST_BUILD_STAGES: readonly string[] = [VersionStage.TESTING, VersionStage.TEST_PASSED];
+
+/**
+ * Whether a phone of this build may list and open the app: the official
+ * build only live apps; a test build also apps in testing or test passed.
+ */
+export function phoneSees(appStatus: unknown, stage: unknown, build: PhoneBuild): boolean {
+  const status = up(appStatus);
+  if (status === AppStatus.LIVE) return true;
+  return build === 'debug' && status === AppStatus.DRAFT && TEST_BUILD_STAGES.includes(up(stage));
+}
+
 /** Live on phones (not suspended or archived). */
 export function isLiveStatus(appStatus: unknown): boolean {
   return up(appStatus) === AppStatus.LIVE;

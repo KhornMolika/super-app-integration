@@ -33,6 +33,12 @@ import {
   FULL_RETRY_AFTER_SECONDS,
   RateLimitedException,
 } from './auth-rate-limiter';
+import {
+  appStatusOf,
+  PhoneBuild,
+  phoneSees,
+  stageOfLifecycle,
+} from '../miniapps/status/app-status';
 
 export { sha256Hex } from './crypto-util';
 export { MAX_FAILED_LOGINS, LOCKOUT_MS } from './lockout';
@@ -705,6 +711,7 @@ export class MobileAuthService {
     userId: string,
     miniAppIdentifier: string,
     requestedScope?: string,
+    build: PhoneBuild = 'release',
   ): Promise<{
     access_token: string;
     token_type: string;
@@ -750,6 +757,18 @@ export class MobileAuthService {
     if (miniApp.availabilityStatus === 'SUSPENDED') {
       throw new ForbiddenException(
         'MiniApp is currently suspended by regulatory authority',
+      );
+    }
+
+    // Same rule as the catalog: the official build opens live apps only, a
+    // test build also apps in testing (a deep link cannot get around it)
+    const appStatus = miniApp.appStatus ?? appStatusOf(miniApp.lifecycleStatus, miniApp.availabilityStatus);
+    const stage = miniApp.versionStage ?? stageOfLifecycle(miniApp.lifecycleStatus);
+    if (!phoneSees(appStatus, stage, build)) {
+      throw new ForbiddenException(
+        build === 'release'
+          ? 'This MiniApp is not released yet.'
+          : 'This MiniApp is not in testing.',
       );
     }
 

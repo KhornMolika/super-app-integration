@@ -52,13 +52,20 @@ def privateGitDeps() {
  */
 def withBuildType(String url) {
     if (!url) return url
-    // MINIAPP_SET, not BUILD_TYPE: test APKs are often compiled in release mode
-    // and must still bundle the apps under test. A job that does not know the
-    // parameter yet (first run after this change) keeps the old rule, so a
-    // production build never takes untested apps.
+    return url + (url.contains('?') ? '&' : '?') + 'buildType=' + miniAppSetType()
+}
+
+/**
+ * 'debug' for a test build, 'release' for the official one. MINIAPP_SET, not
+ * BUILD_TYPE: test APKs are often compiled in release mode and must still
+ * bundle the apps under test. A job that does not know the parameter yet
+ * (first run after this change) keeps the old rule, so a production build
+ * never takes untested apps. The app gets the same value
+ * (--dart-define=SUPERAPP_BUILD), so its catalog lists the apps it bundles.
+ */
+def miniAppSetType() {
     def set = params.MINIAPP_SET ?: (params.BUILD_TYPE == 'debug' ? 'test' : 'release')
-    def type = set == 'release' ? 'release' : 'debug'
-    return url + (url.contains('?') ? '&' : '?') + 'buildType=' + type
+    return set == 'release' ? 'release' : 'debug'
 }
 
 /** Backend list of each in-build mini app's private repository and its key. */
@@ -357,7 +364,7 @@ pipeline {
                             "Compiling the Super App ${params.BUILD_TYPE} APK (universal android-arm, arm64, x64, plus an arm64-only copy)...",
                             "APK compiled.") {
                         withPrivateGitDeps {
-                        withEnv(["FLUTTER_IMAGE=${p('FLUTTER_IMAGE')}", "PUB_GATEWAY_URL=${p('PUB_GATEWAY_URL')}", "API_BASE_URL=${p('API_BASE_URL') ?: ''}", "TOOLCHAIN_CHECK_ONLY=${p('TOOLCHAIN_CHECK_ONLY') ? 'true' : 'false'}", "BUILD_WEB=${p('BUILD_WEB') ? 'true' : 'false'}"]) {
+                        withEnv(["FLUTTER_IMAGE=${p('FLUTTER_IMAGE')}", "PUB_GATEWAY_URL=${p('PUB_GATEWAY_URL')}", "API_BASE_URL=${p('API_BASE_URL') ?: ''}", "TOOLCHAIN_CHECK_ONLY=${p('TOOLCHAIN_CHECK_ONLY') ? 'true' : 'false'}", "BUILD_WEB=${p('BUILD_WEB') ? 'true' : 'false'}", "SUPERAPP_BUILD=${miniAppSetType()}"]) {
                             sh '''
                                 set -e +x  # no trace: keeps the callback token and passwords out of the console log
                                 S="$WORKSPACE/.ci-secrets"
@@ -378,7 +385,7 @@ pipeline {
                                     --memory 6g --cpus 2 \
                                     -e PUB_CACHE="$CACHE_DIR/pub" -e GRADLE_USER_HOME="$CACHE_DIR/gradle" \
                                     -e GRADLE_OPTS="-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx3g -Djava.net.preferIPv4Stack=true" \
-                                    -e NEXUS_URL -e NEXUS_USER -e NEXUS_PASSWORD -e API_BASE_URL -e BUILD_TYPE -e TOOLCHAIN_CHECK_ONLY -e BUILD_WEB \
+                                    -e NEXUS_URL -e NEXUS_USER -e NEXUS_PASSWORD -e API_BASE_URL -e BUILD_TYPE -e SUPERAPP_BUILD -e TOOLCHAIN_CHECK_ONLY -e BUILD_WEB \
                                     -e GIT_SSH_COMMAND -e GIT_DEPS_CONFIG -e FSA_PUB_TOKEN -e PUB_GATEWAY_URL \
                                     -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" \
                                     "$FLUTTER_IMAGE" bash -ec '
@@ -398,8 +405,9 @@ pipeline {
                                             exit 0
                                         fi
                                         flutter pub get
-                                        DEFINES=""
-                                        if [ -n "$API_BASE_URL" ]; then DEFINES="--dart-define=API_BASE_URL=$API_BASE_URL"; fi
+                                        # The phone tells the backend which build it is (a test build also lists mini apps in testing)
+                                        DEFINES="--dart-define=SUPERAPP_BUILD=$SUPERAPP_BUILD"
+                                        if [ -n "$API_BASE_URL" ]; then DEFINES="$DEFINES --dart-define=API_BASE_URL=$API_BASE_URL"; fi
                                         case "$API_BASE_URL" in http://*) DEFINES="$DEFINES --dart-define=ALLOW_CLEARTEXT=true";; esac
                                         # Gradle 9.1.0 into the wrapper cache before the build. services.gradle.org resets
                                         # connections from the production server, so the Nexus mirror is tried first

@@ -1,5 +1,5 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
-import { appStatusCase, stageCase } from './1795700000000-AddAppAndVersionStatus';
+import { appStatusCase, stageCase } from './sql/status-sql';
 
 /**
  * Phase 6e (contract): one status per question, the old columns go.

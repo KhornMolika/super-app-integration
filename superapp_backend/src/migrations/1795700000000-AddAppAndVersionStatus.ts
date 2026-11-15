@@ -1,4 +1,5 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import { appStatusCase, stageCase } from './sql/status-sql';
 
 /**
  * Phase 6a (expand): one status per question.
@@ -19,29 +20,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 
 const MARK = 'Phase 6 app status';
 
-/** SQL: the stage an old lifecycle (or revision status) value stands for; NULL = leave the row. */
-export function stageCase(expr: string): string {
-  return `CASE ${expr}
-    WHEN 'DRAFT' THEN 'DRAFT' WHEN 'QUARANTINE' THEN 'DRAFT'
-    WHEN 'SUBMITTED' THEN 'SUBMITTED'
-    WHEN 'IN_REVIEW' THEN 'IN_REVIEW'
-    WHEN 'CHANGES_REQUESTED' THEN 'CHANGES_REQUESTED'
-    WHEN 'REJECTED' THEN 'REJECTED'
-    WHEN 'APPROVED' THEN 'APPROVED' WHEN 'APPROVED_FOR_TESTING' THEN 'APPROVED'
-    WHEN 'BUILDING' THEN 'APPROVED' WHEN 'BUILDING_STAGE_1' THEN 'APPROVED' WHEN 'BUILD_FAILED' THEN 'APPROVED'
-    WHEN 'TESTING' THEN 'TESTING'
-    WHEN 'TEST_PASSED' THEN 'TEST_PASSED' WHEN 'BUILDING_STAGE_2' THEN 'TEST_PASSED'
-    ELSE NULL END`;
-}
 
-/** SQL: the app status for the old pair. */
-export function appStatusCase(lifecycle: string, availability: string): string {
-  return `CASE
-    WHEN ${lifecycle} IN ('ARCHIVED', 'TERMINATED') THEN 'ARCHIVED'
-    WHEN ${lifecycle} = 'SUSPENDED' OR ${availability} = 'SUSPENDED' THEN 'SUSPENDED'
-    WHEN ${lifecycle} = 'ACTIVE' OR ${availability} = 'PRODUCTION' THEN 'LIVE'
-    ELSE 'DRAFT' END`;
-}
 
 const HAS_LIVE = (app: string) =>
   `EXISTS (SELECT 1 FROM "mini_app_versions" a WHERE a."miniAppId" = ${app} AND a."status" = 'ACTIVE')`;

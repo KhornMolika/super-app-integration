@@ -906,6 +906,7 @@ describe('MobileAuthService login failure bookkeeping vs concurrent writes', () 
         slug: 'tr',
         targetAudience: 'PUBLIC',
         availabilityStatus: 'ENABLED',
+        appStatus: 'LIVE',
         organizationId: 'org-tr-id',
       };
       await c.miniApps.save(miniApp as any);
@@ -950,6 +951,7 @@ describe('MobileAuthService login failure bookkeeping vs concurrent writes', () 
         slug: 'publicservice',
         targetAudience: 'PUBLIC',
         availabilityStatus: 'ENABLED',
+        appStatus: 'LIVE',
       };
       await c.miniApps.save(miniApp as any);
 
@@ -990,10 +992,20 @@ describe('MobileAuthService login failure bookkeeping vs concurrent writes', () 
       ).rejects.toThrow(ForbiddenException);
     });
 
+    it('the official build opens live apps only; a test build also apps in testing', async () => {
+      const c = build();
+      const user = await c.users.save({ id: 'u-t', email: 't@y.z', name: 'T', status: IdentityStatus.ACTIVE } as any);
+      await c.miniApps.save({ id: 'ma-t', appId: 'kh.gov.fsa.testing', slug: 'testing', targetAudience: 'PUBLIC', appStatus: 'DRAFT', versionStage: 'TESTING' } as any);
+      await c.miniApps.save({ id: 'ma-r', appId: 'kh.gov.fsa.review', slug: 'review', targetAudience: 'PUBLIC', appStatus: 'DRAFT', versionStage: 'IN_REVIEW' } as any);
+      await expect(c.svc.tokenExchange(user.id, 'kh.gov.fsa.testing')).rejects.toThrow('not released');
+      await expect(c.svc.tokenExchange(user.id, 'kh.gov.fsa.testing', undefined, 'debug')).resolves.toHaveProperty('access_token');
+      await expect(c.svc.tokenExchange(user.id, 'kh.gov.fsa.review', undefined, 'debug')).rejects.toThrow('not in testing');
+    });
+
     it('never compares a non-UUID identifier against the uuid id column (Postgres rejects it)', async () => {
       const c = build();
       await c.users.save({ id: 'u-1', email: 'x@y.z', name: 'X', status: IdentityStatus.ACTIVE } as any);
-      await c.miniApps.save({ id: 'ma-1', appId: 'kh.gov.fsa.tr', slug: 'tr', targetAudience: 'PUBLIC' } as any);
+      await c.miniApps.save({ id: 'ma-1', appId: 'kh.gov.fsa.tr', slug: 'tr', targetAudience: 'PUBLIC', appStatus: 'LIVE' } as any);
       const spy = jest.spyOn(c.miniApps, 'findOne');
 
       await c.svc.tokenExchange('u-1', 'kh.gov.fsa.tr');
@@ -1022,7 +1034,7 @@ describe('MobileAuthService login failure bookkeeping vs concurrent writes', () 
         undefined, undefined, gate as any,
       );
       await c.users.save({ id: 'u-2', email: 'q@y.z', name: 'Q', status: IdentityStatus.ACTIVE } as any);
-      await c.miniApps.save({ id: 'ma-2', appId: 'kh.gov.fsa.bio', slug: 'bio', targetAudience: 'PUBLIC',
+      await c.miniApps.save({ id: 'ma-2', appId: 'kh.gov.fsa.bio', slug: 'bio', targetAudience: 'PUBLIC', appStatus: 'LIVE',
         capabilities: [{ type: 'biometrics', required: true }] } as any);
 
       await expect(svc.tokenExchange('u-2', 'kh.gov.fsa.bio')).rejects.toThrow(
@@ -1045,7 +1057,7 @@ describe('MobileAuthService login failure bookkeeping vs concurrent writes', () 
         undefined, undefined, gate as any, versions as any,
       );
       await c.users.save({ id: 'u-3', email: 'r@y.z', name: 'R', status: IdentityStatus.ACTIVE } as any);
-      await c.miniApps.save({ id: 'ma-3', appId: 'kh.gov.fsa.cam', slug: 'cam', targetAudience: 'PUBLIC',
+      await c.miniApps.save({ id: 'ma-3', appId: 'kh.gov.fsa.cam', slug: 'cam', targetAudience: 'PUBLIC', appStatus: 'LIVE',
         capabilities: [{ type: 'biometrics', required: true }] } as any);
 
       await svc.tokenExchange('u-3', 'kh.gov.fsa.cam').catch(() => undefined);
@@ -1108,6 +1120,7 @@ describe('MobileAuthService login failure bookkeeping vs concurrent writes', () 
         slug: 'tr-internal',
         targetAudience: 'ORGANIZATION_ONLY',
         availabilityStatus: 'ENABLED',
+        appStatus: 'LIVE',
         organizationId: 'org-tr-id',
       };
       await c.miniApps.save(internalApp as any);
@@ -1155,6 +1168,7 @@ describe('MobileAuthService login failure bookkeeping vs concurrent writes', () 
         slug: 'fsa-hrmis',
         targetAudience: 'ALL_FSA_STAFF',
         availabilityStatus: 'ENABLED',
+        appStatus: 'LIVE',
         organizationId: 'org-fsa-id',
       };
       await c.miniApps.save(fsaApp as any);

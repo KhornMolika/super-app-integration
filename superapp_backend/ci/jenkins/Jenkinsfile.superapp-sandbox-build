@@ -289,7 +289,7 @@ pipeline {
                                     if [ -n "${FSA_PUB_TOKEN:-}" ]; then dart pub token add "$PUB_GATEWAY_URL" --env-var FSA_PUB_TOKEN; fi
                                     flutter --version
                                     flutter pub get
-                                    flutter build web --base-href "$BASE_HREF" --$BUILD_MODE --dart-define=API_BASE_URL="$API_BASE_URL"
+                                    flutter build web --base-href "$BASE_HREF" --$BUILD_MODE --dart-define=API_BASE_URL="$API_BASE_URL" --dart-define=SUPERAPP_BUILD=debug
                                 '
                             test -f "$MOBILE_DIR/build/web/index.html" || { echo "No build/web/index.html"; exit 1; }
                             tar -czf superapp-sandbox.tar.gz -C "$MOBILE_DIR/build/web" .

@@ -1,5 +1,5 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
-import { insertCaps } from './1795100000000-CreateMiniAppVersionCapabilities';
+import { insertCaps } from './sql/capability-sql';
 
 /**
  * Normalization step 2b-ii (contract): capabilities live only in

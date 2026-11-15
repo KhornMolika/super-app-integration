@@ -121,10 +121,24 @@ describe('MobileCatalogService.list', () => {
     return { repo: { createQueryBuilder: () => qb } as any, calls };
   }
 
-  it('lists live and unreleased apps (not suspended or archived) and returns catalog items', async () => {
+  it('the official build lists live apps only', async () => {
+    const { repo, calls } = qbFor([]);
+    await new MobileCatalogService(repo).list({ limit: 20, offset: 0, build: 'release' } as any);
+    expect(calls.where[0]).toEqual(['m.appStatus = :live', { live: 'LIVE' }]);
+  });
+
+  it('a test build also lists unreleased apps in testing or test passed', async () => {
+    const { repo, calls } = qbFor([]);
+    await new MobileCatalogService(repo).list({ limit: 20, offset: 0, build: 'debug' } as any);
+    const [sql, params] = calls.where[0];
+    expect(sql).toContain('m.appStatus = :live OR (m.appStatus = :draft AND EXISTS');
+    expect(params).toEqual({ live: 'LIVE', draft: 'DRAFT', testStages: ['TESTING', 'TEST_PASSED'] });
+  });
+
+  it('lists live apps by default (no build given) and returns catalog items', async () => {
     const { repo, calls } = qbFor([makeApp(), makeApp({ id: 'id-2', integrationMethod: 'NATIVE_SDK' })]);
     const page = await new MobileCatalogService(repo).list(undefined, 20, 40);
-    expect(calls.where[0]).toEqual(['m.appStatus IN (:...statuses)', { statuses: ['DRAFT', 'LIVE'] }]);
+    expect(calls.where[0]).toEqual(['m.appStatus = :live', { live: 'LIVE' }]);
     expect(calls.select).toEqual(expect.arrayContaining(['m.appStatus', 'm.liveVersionId']));
     expect(calls.take).toBe(20);
     expect(calls.skip).toBe(40);

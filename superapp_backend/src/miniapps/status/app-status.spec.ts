@@ -1,4 +1,6 @@
 import {
+  phoneBuildOf,
+  phoneSees,
   appStatusOf,
   availabilityOf,
   lifecycleOf,
@@ -72,5 +74,20 @@ describe('one status per question (Phase 6)', () => {
     // Nothing written: left alone
     const partial = Object.assign(new MiniApp(), { appStatus: 'LIVE' });
     expect(partial.appStatus).toBe('LIVE');
+  });
+
+  it('which apps each phone build sees', () => {
+    expect(phoneBuildOf('debug')).toBe('debug');
+    expect(phoneBuildOf(['Test'])).toBe('debug');
+    expect(phoneBuildOf('release')).toBe('release');
+    // No header (an older build): the official rule
+    expect(phoneBuildOf(undefined)).toBe('release');
+    expect(phoneSees('LIVE', null, 'release')).toBe(true);
+    expect(phoneSees('DRAFT', 'TESTING', 'release')).toBe(false);
+    expect(phoneSees('DRAFT', 'TESTING', 'debug')).toBe(true);
+    expect(phoneSees('DRAFT', 'TEST_PASSED', 'debug')).toBe(true);
+    expect(phoneSees('DRAFT', 'IN_REVIEW', 'debug')).toBe(false);
+    expect(phoneSees('SUSPENDED', 'TESTING', 'debug')).toBe(false);
+    expect(phoneSees('LIVE', 'IN_REVIEW', 'debug')).toBe(true);
   });
 });

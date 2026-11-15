@@ -49,6 +49,7 @@ import {
 import { ChangePasswordDto, DeleteAccountDto } from './dto/account.dto';
 import { CatalogQueryDto } from './dto/catalog-query.dto';
 import { UpdateProfileDto } from './dto/profile.dto';
+import { phoneBuildOf } from '../miniapps/status/app-status';
 
 
 @Controller(['mobile', 'api/mobile'])
@@ -123,7 +124,12 @@ export class MobileController {
   @HttpCode(200)
   @UseGuards(EndUserAuthGuard)
   tokenExchange(@Req() req: Request, @Body() dto: TokenExchangeDto) {
-    return this.auth.tokenExchange(req.endUser!.id, dto.miniAppId, dto.scope);
+    return this.auth.tokenExchange(
+      req.endUser!.id,
+      dto.miniAppId,
+      dto.scope,
+      phoneBuildOf(req.headers['x-super-app-build']),
+    );
   }
 
   /** Public: force-update rules and legal URLs. Fails open (see sanitizeMobileAppConfig). */
@@ -226,7 +232,9 @@ export class MobileController {
       req.hostname ||
       'localhost:3000';
     const clientHost = String(rawHost).split(':')[0];
-    return this.catalog.list(query, clientHost);
+    // Test builds list apps in testing too; the official build live apps only
+    const build = phoneBuildOf(req.headers['x-super-app-build']);
+    return this.catalog.list(Object.assign(query, { build }), clientHost);
   }
 
   @Get('auth/dev-reset-limits')

@@ -2,7 +2,7 @@ import { Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MiniApp } from '../miniapps/entities/miniapp.entity';
-import { AppStatus, lifecycleOf } from '../miniapps/status/app-status';
+import { AppStatus, lifecycleOf, PhoneBuild, TEST_BUILD_STAGES } from '../miniapps/status/app-status';
 import { buildPaginationMeta } from '../common/utils/pagination.util';
 import { PaginationMeta } from '../common/interfaces/paginated-result.interface';
 import { CatalogQueryDto } from './dto/catalog-query.dto';
@@ -233,8 +233,13 @@ export class MobileCatalogService {
     @Optional() private readonly versions?: MiniAppVersionsService,
   ) {}
 
+  /**
+   * `build` (set by the controller from X-Super-App-Build): the official
+   * build lists live apps only; a test build also apps in testing or test
+   * passed. Default: the official build.
+   */
   async list(
-    queryOrQ?: CatalogQueryDto | string,
+    queryOrQ?: (CatalogQueryDto & { build?: PhoneBuild }) | string,
     limitOrClientHost?: number | string,
     offsetParam?: number,
     clientHostParam?: string,
@@ -244,8 +249,10 @@ export class MobileCatalogService {
     let offset = 0;
     let page: number | undefined;
     let clientHost: string | undefined;
+    let build: PhoneBuild = 'release';
 
     if (queryOrQ && typeof queryOrQ === 'object') {
+      build = queryOrQ.build === 'debug' ? 'debug' : 'release';
       q = queryOrQ.search || queryOrQ.q;
       limit = queryOrQ.limit || 20;
       offset = queryOrQ.offset || 0;
@@ -283,11 +290,19 @@ export class MobileCatalogService {
       'm.organizationId',
       'legal.termsDescription',
       'legal.privacyPolicyDescription',
-    ])
-      // Suspended and archived apps leave the phones at once; live and
-      // unreleased apps are listed (as before: every unreleased app had the
-      // default availability TESTING), each with its launchability
-      .where('m.appStatus IN (:...statuses)', { statuses: [AppStatus.DRAFT, AppStatus.LIVE] });
+    ]);
+    // Suspended and archived apps leave the phones at once. The official
+    // build lists live apps; a test build also unreleased apps whose version
+    // is in testing or test passed (the apps that build carries).
+    if (build === 'debug') {
+      qb.where(
+        `(m.appStatus = :live OR (m.appStatus = :draft AND EXISTS (` +
+          `SELECT 1 FROM "mini_app_versions" tv WHERE tv."miniAppId" = m.id AND tv."status" IN (:...testStages))))`,
+        { live: AppStatus.LIVE, draft: AppStatus.DRAFT, testStages: [...TEST_BUILD_STAGES] },
+      );
+    } else {
+      qb.where('m.appStatus = :live', { live: AppStatus.LIVE });
+    }
 
     if (q) {
       const escaped = q.replace(/[\\%_]/g, (c) => `\\${c}`);
