@@ -6,6 +6,7 @@ import { NativeSdkConfigDto } from '@/types/miniapp.types';
 import { sdkArtifactsApi, SdkArtifactUploadResponse } from '@/api';
 import { deriveNativeSdkDefaults } from '@/lib/integration-utils';
 import { CheckIcon } from '@/components/ui/Icons';
+import { Lock, Unlock } from 'lucide-react';
 
 export interface NativeSdkIntegrationFormProps {
   formData: any;
@@ -117,6 +118,8 @@ export default function NativeSdkIntegrationForm({
   const [androidEntry, setAndroidEntry] = useState<EntryScan | null>(null);
   const [iosEntry, setIosEntry] = useState<EntryScan | null>(null);
   const [showMaven, setShowMaven] = useState(false);
+  const [androidManualOverride, setAndroidManualOverride] = useState(false);
+  const [iosManualOverride, setIosManualOverride] = useState(false);
   const mavenHasError = ['androidMavenGroupId', 'androidMavenArtifactId', 'androidMavenVersion'].some(
     (k) => allErrors[`integrationConfigNativeSdk.${k}`],
   );
@@ -141,16 +144,13 @@ export default function NativeSdkIntegrationForm({
   useEffect(() => {
     if (!isEditable) return;
     const current = formData.integrationConfigNativeSdk || {};
+    const hasExistingIos = Boolean(current.iosArtifactFilename || current.iosStoragePath);
     const needsAutoFill =
-      !current.iosModuleName ||
-      !current.iosTypeName ||
       !current.androidPackageName ||
       !current.androidObjectName;
 
     if (needsAutoFill && (formData.name || formData.appId)) {
       const updates: Partial<NativeSdkConfigDto> = {
-        iosModuleName: current.iosModuleName || derivedDefaults.iosModuleName,
-        iosTypeName: current.iosTypeName || derivedDefaults.iosTypeName,
         androidMavenGroupId:
           current.androidMavenGroupId || derivedDefaults.androidMavenGroupId,
         androidMavenArtifactId:
@@ -163,6 +163,11 @@ export default function NativeSdkIntegrationForm({
         androidObjectName:
           current.androidObjectName || derivedDefaults.androidObjectName,
       };
+
+      if (hasExistingIos) {
+        if (!current.iosModuleName) updates.iosModuleName = derivedDefaults.iosModuleName;
+        if (!current.iosTypeName) updates.iosTypeName = derivedDefaults.iosTypeName;
+      }
 
       if (onUpdateNativeSdkConfig) {
         onUpdateNativeSdkConfig(updates);
@@ -405,18 +410,40 @@ export default function NativeSdkIntegrationForm({
     label: string,
     placeholder: string,
     hint?: React.ReactNode,
+    isLocked?: boolean,
   ) => (
     <div>
-      <Label htmlFor={`sdk-${key}`}>{label}</Label>
-      <Input
-        id={`sdk-${key}`}
-        name={key}
-        value={(nativeConfig[key] as string) || ''}
-        onChange={(e) => handleFieldChange(key, e.target.value)}
-        placeholder={placeholder}
-        disabled={!isEditable}
-        className={`font-mono text-sm ${err(key) ? 'border-rose-500 ring-1 ring-rose-500' : ''}`}
-      />
+      <div className="flex items-center justify-between mb-1.5">
+        <Label htmlFor={`sdk-${key}`} className="!mb-0">
+          {label}
+        </Label>
+        {isLocked && (
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+            <Lock className="w-3 h-3 text-slate-400" />
+            Auto-detected
+          </span>
+        )}
+      </div>
+      <div className="relative">
+        <Input
+          id={`sdk-${key}`}
+          name={key}
+          value={(nativeConfig[key] as string) || ''}
+          onChange={(e) => handleFieldChange(key, e.target.value)}
+          placeholder={placeholder}
+          disabled={!isEditable || isLocked}
+          className={`font-mono text-sm ${err(key) ? 'border-rose-500 ring-1 ring-rose-500' : ''} ${
+            isLocked
+              ? 'bg-slate-50 dark:bg-slate-900/50 text-slate-600 dark:text-slate-400 cursor-not-allowed pr-8'
+              : ''
+          }`}
+        />
+        {isLocked && (
+          <div className="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none text-slate-400">
+            <Lock className="w-3.5 h-3.5" />
+          </div>
+        )}
+      </div>
       {err(key) ? (
         <p className="mt-1.5 text-xs text-rose-600 dark:text-rose-400">{err(key)}</p>
       ) : (
@@ -467,9 +494,34 @@ export default function NativeSdkIntegrationForm({
     </div>
   );
 
-  const hasAndroid = Boolean(androidUploadSuccess || nativeConfig.androidStoragePath || nativeConfig.androidMinioKey);
-  const hasIos = Boolean(iosUploadSuccess || nativeConfig.iosStoragePath || nativeConfig.iosMinioKey);
+  const hasAndroid = Boolean(
+    androidUploadSuccess ||
+      nativeConfig.androidArtifactFilename ||
+      nativeConfig.androidStoragePath ||
+      nativeConfig.androidMinioKey,
+  );
+  const hasIos = Boolean(
+    iosUploadSuccess ||
+      nativeConfig.iosArtifactFilename ||
+      nativeConfig.iosStoragePath ||
+      nativeConfig.iosMinioKey,
+  );
   const minSdk = androidUploadSuccess?.minSdkVersion || nativeConfig.androidMinSdkVersion;
+
+  const isAndroidLocked =
+    !androidManualOverride &&
+    Boolean(
+      hasAndroid &&
+        (androidEntry?.detection === 'contract' ||
+          (nativeConfig.androidObjectName && !androidEntry)),
+    );
+  const isIosLocked =
+    !iosManualOverride &&
+    Boolean(
+      hasIos &&
+        (iosEntry?.detection === 'contract' ||
+          (nativeConfig.iosTypeName && !iosEntry)),
+    );
 
   return (
     <div className="space-y-4">
@@ -497,8 +549,33 @@ export default function NativeSdkIntegrationForm({
             perms: nativeConfig.androidDetectedPermissions,
           })}
 
+        <div className="flex items-center justify-between pt-1">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            Package & Entry Class
+          </p>
+          {hasAndroid && (
+            <button
+              type="button"
+              onClick={() => setAndroidManualOverride((v) => !v)}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+            >
+              {androidManualOverride ? (
+                <>
+                  <Lock className="w-3.5 h-3.5" />
+                  Lock values
+                </>
+              ) : (
+                <>
+                  <Unlock className="w-3.5 h-3.5" />
+                  Unlock to edit
+                </>
+              )}
+            </button>
+          )}
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4">
-          {field('androidPackageName', 'Package', 'com.example.myapp')}
+          {field('androidPackageName', 'Package', 'com.example.myapp', undefined, isAndroidLocked)}
           {field(
             'androidObjectName',
             'Entry class',
@@ -508,7 +585,7 @@ export default function NativeSdkIntegrationForm({
               contract="FSAMiniAppNativeEntry"
               current={[nativeConfig.androidPackageName, nativeConfig.androidObjectName].filter(Boolean).join('.')}
               onPick={(fq) => {
-                if (!isEditable) return;
+                if (!isEditable || isAndroidLocked) return;
                 const dot = fq.lastIndexOf('.');
                 const pick = { androidPackageName: fq.slice(0, dot), androidObjectName: fq.slice(dot + 1) };
                 if (onUpdateNativeSdkConfig) onUpdateNativeSdkConfig(pick);
@@ -517,8 +594,9 @@ export default function NativeSdkIntegrationForm({
                   handleFieldChange('androidObjectName', pick.androidObjectName);
                 }
               }}
-              disabled={!isEditable}
+              disabled={!isEditable || isAndroidLocked}
             />,
+            isAndroidLocked,
           )}
         </div>
 
@@ -539,9 +617,9 @@ export default function NativeSdkIntegrationForm({
           </button>
           {(showMaven || mavenHasError) && (
             <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-4">
-              {field('androidMavenGroupId', 'Group ID', 'com.example')}
-              {field('androidMavenArtifactId', 'Artifact ID', 'my-app-sdk')}
-              {field('androidMavenVersion', 'Version', '1.0.0')}
+              {field('androidMavenGroupId', 'Group ID', 'com.example', undefined, isAndroidLocked)}
+              {field('androidMavenArtifactId', 'Artifact ID', 'my-app-sdk', undefined, isAndroidLocked)}
+              {field('androidMavenVersion', 'Version', '1.0.0', undefined, isAndroidLocked)}
             </div>
           )}
         </div>
@@ -551,8 +629,15 @@ export default function NativeSdkIntegrationForm({
       <section className="rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">iOS</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">An .xcframework in a .zip, up to 200 MB.</p>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">iOS</h3>
+              <span className="text-[11px] font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
+                Optional
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              An .xcframework in a .zip, up to 200 MB. Leave blank if Android-only.
+            </p>
           </div>
           {fileButton(Boolean(nativeConfig.iosArtifactFilename), isUploadingIos, '.zip,application/zip', handleIosFileUpload)}
         </div>
@@ -564,21 +649,65 @@ export default function NativeSdkIntegrationForm({
             perms: nativeConfig.iosDetectedPermissions,
           })}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4">
-          {field('iosModuleName', 'Module', 'MyAppSDK')}
-          {field(
-            'iosTypeName',
-            'Entry class',
-            'MyAppSDKView',
-            <EntryClassHint
-              scan={iosEntry}
-              contract="FSAMiniAppNativeProtocol"
-              current={nativeConfig.iosTypeName || ''}
-              onPick={(v) => handleFieldChange('iosTypeName', v)}
-              disabled={!isEditable}
-            />,
-          )}
-        </div>
+        {hasIos || iosManualOverride || nativeConfig.iosModuleName ? (
+          <>
+            <div className="flex items-center justify-between pt-1">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Module & Entry Class
+              </p>
+              {hasIos && (
+                <button
+                  type="button"
+                  onClick={() => setIosManualOverride((v) => !v)}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+                >
+                  {iosManualOverride ? (
+                    <>
+                      <Lock className="w-3.5 h-3.5" />
+                      Lock values
+                    </>
+                  ) : (
+                    <>
+                      <Unlock className="w-3.5 h-3.5" />
+                      Unlock to edit
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4">
+              {field('iosModuleName', 'Module', 'MyAppSDK', undefined, isIosLocked)}
+              {field(
+                'iosTypeName',
+                'Entry class',
+                'MyAppSDKView',
+                <EntryClassHint
+                  scan={iosEntry}
+                  contract="FSAMiniAppNativeProtocol"
+                  current={nativeConfig.iosTypeName || ''}
+                  onPick={(v) => {
+                    if (!isEditable || isIosLocked) return;
+                    handleFieldChange('iosTypeName', v);
+                  }}
+                  disabled={!isEditable || isIosLocked}
+                />,
+                isIosLocked,
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-1">
+            <span>No iOS framework uploaded. This MiniApp will run on Android.</span>
+            <button
+              type="button"
+              onClick={() => setIosManualOverride(true)}
+              className="text-xs text-brand-600 dark:text-brand-400 hover:underline"
+            >
+              Configure iOS manually
+            </button>
+          </div>
+        )}
       </section>
     </div>
   );
