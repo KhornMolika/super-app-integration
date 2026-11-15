@@ -72,7 +72,13 @@ export class BuildGitCredentialsService {
       const privateKey = extractDecryptedDeployKey(cfg as any).trim();
       const token = extractDecryptedGitToken(cfg as any).trim();
       if (privateKey && /-----BEGIN [A-Z ]*PRIVATE KEY-----/.test(privateKey)) {
-        credentials.push({ appId: app.appId, repoUrl, ...where, type: 'ssh', privateKey: `${privateKey}\n` });
+        let host = where.host;
+        if (host === 'github.com') {
+          host = 'ssh.github.com\n  Port 443';
+        } else if (host === 'gitlab.com') {
+          host = 'altssh.gitlab.com\n  Port 443';
+        }
+        credentials.push({ appId: app.appId, repoUrl, host, path: where.path, type: 'ssh', privateKey: `${privateKey}\n` });
       } else if (token && /^[\x21-\x7e]+$/.test(token)) {
         credentials.push({ appId: app.appId, repoUrl, ...where, type: 'token', token });
       } else {

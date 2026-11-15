@@ -42,7 +42,7 @@ describe('BuildGitCredentialsService.list', () => {
     ]);
     const r = await svc.list();
     expect(r.credentials).toEqual([
-      { appId: 'ssh_app', repoUrl: 'https://github.com/P/ssh-app.git', host: 'github.com', path: 'P/ssh-app.git', type: 'ssh', privateKey: `${KEY}\n` },
+      { appId: 'ssh_app', repoUrl: 'https://github.com/P/ssh-app.git', host: 'ssh.github.com\n  Port 443', path: 'P/ssh-app.git', type: 'ssh', privateKey: `${KEY}\n` },
       { appId: 'token_app', repoUrl: 'https://git.example.com/p/t.git', host: 'git.example.com', path: 'p/t.git', type: 'token', token: 'glpat-123' },
     ]);
     expect(r.skipped).toEqual([]);
