@@ -4,14 +4,17 @@
 import { CreateMiniAppScans1794900000000 } from '../1794900000000-CreateMiniAppScans';
 
 describe('CreateMiniAppScans migration', () => {
-  const run = async (buildColumns: string[]) => {
+  const run = async (
+    buildColumns: string[],
+    appColumns: string[] = ['version', 'activeTestVersion'],
+  ) => {
     const sql: string[] = [];
     const runner = {
       query: async (q: string, params?: unknown[]) => {
         if (q.includes('information_schema.columns')) {
-          return params?.[0] === 'mini_app_builds'
-            ? buildColumns.map((column_name) => ({ column_name }))
-            : [];
+          const cols =
+            params?.[0] === 'mini_app_builds' ? buildColumns : appColumns;
+          return cols.map((column_name) => ({ column_name }));
         }
         sql.push(q);
         return [];
@@ -45,6 +48,15 @@ describe('CreateMiniAppScans migration', () => {
       /'REVISION',\s+m\."pendingRevision"->>'validationStatus'/,
     );
     expect(sql).toContain('INSERT INTO "mini_app_builds"');
+  });
+
+  it('takes the version from currentReleaseVersion when mini_apps lost "version"', async () => {
+    const sql = await run([], ['currentReleaseVersion', 'activeTestVersion']);
+    expect(sql).not.toMatch(/(m|NEW)\."version"/);
+    expect(sql).toMatch(
+      /SELECT m\."id", v\."id", m\."currentReleaseVersion", 'APP'/,
+    );
+    expect(sql).toContain('NEW."currentReleaseVersion"');
   });
 
   it('keeps the legacy columns in sync without ever blocking a mini_apps write', async () => {

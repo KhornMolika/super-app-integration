@@ -85,18 +85,29 @@ export class CreateMiniAppScans1794900000000 implements MigrationInterface {
       }
     }
 
+    // The app's version string. Databases whose mini_apps lost "version"
+    // (an old schema sync) carry it in "currentReleaseVersion".
+    const appCols = await this.columnsOf(q, 'mini_apps');
+    const ver = appCols.has('version')
+      ? '"version"'
+      : appCols.has('currentReleaseVersion')
+        ? '"currentReleaseVersion"'
+        : 'NULL::varchar';
+    const mVer = ver.startsWith('"') ? `m.${ver}` : ver;
+    const newVer = ver.startsWith('"') ? `NEW.${ver}` : ver;
+
     // The app's own latest scan
     await q.query(`
       INSERT INTO "mini_app_scans"
         ("miniAppId", "versionId", "version", "scope", "status", "stages", "report", "errors",
          "checks", "startedAt", "completedAt", "createdAt", "updatedAt")
-      SELECT m."id", v."id", m."version", 'APP', m."validationStatus",
+      SELECT m."id", v."id", ${mVer}, 'APP', m."validationStatus",
              COALESCE(m."validationStages", '{}'::jsonb), m."validationReport", m."validationErrors",
              COALESCE(m."securityChecks", '[]'::jsonb), m."updatedAt",
              CASE WHEN m."validationStatus" IN ${SCAN_DONE} THEN m."updatedAt" END,
              m."updatedAt", m."updatedAt"
       FROM "mini_apps" m
-      LEFT JOIN "mini_app_versions" v ON v."miniAppId" = m."id" AND v."version" = m."version"
+      LEFT JOIN "mini_app_versions" v ON v."miniAppId" = m."id" AND v."version" = ${mVer}
       WHERE (m."validationStatus" IS DISTINCT FROM 'PENDING'
              OR m."validationReport" IS NOT NULL
              OR COALESCE(m."validationStages", '{}'::jsonb) <> '{}'::jsonb)
@@ -126,13 +137,13 @@ export class CreateMiniAppScans1794900000000 implements MigrationInterface {
       INSERT INTO "mini_app_builds"
         ("miniAppId", "versionId", "version", "buildStatus", "buildStages", "buildError",
          "startedAt", "completedAt", "createdAt", "updatedAt")
-      SELECT m."id", v."id", COALESCE(m."activeTestVersion", m."version"), m."buildStatus",
+      SELECT m."id", v."id", COALESCE(m."activeTestVersion", ${mVer}), m."buildStatus",
              COALESCE(m."buildStages", '{}'::jsonb), m."buildError", m."updatedAt",
              CASE WHEN m."buildStatus" IN ${BUILD_DONE} THEN m."updatedAt" END,
              m."updatedAt", m."updatedAt"
       FROM "mini_apps" m
       LEFT JOIN "mini_app_versions" v
-        ON v."miniAppId" = m."id" AND v."version" = COALESCE(m."activeTestVersion", m."version")
+        ON v."miniAppId" = m."id" AND v."version" = COALESCE(m."activeTestVersion", ${mVer})
       WHERE m."buildStatus" IS NOT NULL AND m."buildStatus" <> 'IDLE'
         AND NOT EXISTS (SELECT 1 FROM "mini_app_builds" b WHERE b."miniAppId" = m."id")`);
 
@@ -197,7 +208,7 @@ export class CreateMiniAppScans1794900000000 implements MigrationInterface {
              IS DISTINCT FROM
              (OLD."validationStatus", OLD."validationStages", OLD."validationReport", OLD."validationErrors") THEN
             PERFORM mini_app_scan_record(
-              NEW."id", 'APP', NEW."version",
+              NEW."id", 'APP', ${newVer},
               NEW."validationStatus", OLD."validationStatus",
               NEW."validationStages", NEW."validationReport", NEW."validationErrors", NEW."securityChecks");
           END IF;
@@ -243,7 +254,7 @@ export class CreateMiniAppScans1794900000000 implements MigrationInterface {
             END IF;
             v_version := COALESCE(
               CASE WHEN jsonb_typeof(NEW."pendingRevision") = 'object' THEN NEW."pendingRevision"->>'version' END,
-              NEW."activeTestVersion", NEW."version");
+              NEW."activeTestVersion", ${newVer});
             SELECT "id" INTO v_id FROM "mini_app_versions"
               WHERE "miniAppId" = NEW."id" AND "version" = v_version LIMIT 1;
             INSERT INTO "mini_app_builds"
