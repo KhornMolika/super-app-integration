@@ -18,6 +18,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  accountType?: 'STAFF' | 'CONSUMER' | 'STAFF_AND_CONSUMER';
   avatarUrl?: string | null;
   externalId?: string | null;
   position?: string | null;

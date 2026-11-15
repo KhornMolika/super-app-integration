@@ -458,9 +458,25 @@ function UsersContent() {
       ),
       width: 'w-[22%]',
       sortable: true,
-      sortValue: (user) => getUserRoles(user).map((r) => r.name).join(', '),
+      sortValue: (user) => {
+        const isConsumer = user.accountType === 'CONSUMER' || (getUserRoles(user).length === 0 && !user.organization && !user.organizationId && !user.staffId && !user.position);
+        if (isConsumer && getUserRoles(user).length === 0) return 'Mobile User';
+        return getUserRoles(user).map((r) => r.name).join(', ');
+      },
       cell: (user) => {
+        const isConsumer = user.accountType === 'CONSUMER' || (getUserRoles(user).length === 0 && !user.organization && !user.organizationId && !user.staffId && !user.position);
         const userRoles = getUserRoles(user);
+        if (isConsumer && userRoles.length === 0) {
+          return (
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold border border-sky-200 dark:border-sky-500/30 bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-400 select-none"
+              title="Mobile App User (Consumer)"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
+              <span>Mobile User</span>
+            </span>
+          );
+        }
         if (userRoles.length === 0) {
           return <span className="text-xs text-slate-400 italic">No roles assigned</span>;
         }
@@ -500,9 +516,24 @@ function UsersContent() {
       ),
       width: 'w-[18%]',
       sortable: true,
-      sortValue: (user) => user.organization?.name || '',
+      sortValue: (user) => {
+        const isConsumer = user.accountType === 'CONSUMER' || (getUserRoles(user).length === 0 && !user.organization && !user.organizationId && !user.staffId && !user.position);
+        if (isConsumer && !user.organization && !user.organizationId) return '—';
+        return user.organization?.name || '';
+      },
       cell: (user) => {
+        const isConsumer = user.accountType === 'CONSUMER' || (getUserRoles(user).length === 0 && !user.organization && !user.organizationId && !user.staffId && !user.position);
         if (!user.organization && !user.organizationId) {
+          if (isConsumer) {
+            return (
+              <span
+                className="text-sm font-semibold text-slate-400 dark:text-slate-500 select-none"
+                title="Public mobile app user"
+              >
+                —
+              </span>
+            );
+          }
           return <span className="text-xs text-slate-400 italic">Independent</span>;
         }
         const orgName = user.organization?.name || 'Organization';

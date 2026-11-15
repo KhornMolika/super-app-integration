@@ -191,7 +191,6 @@ ${cleanIssue}
           'v0.2.1';
         const version = rawVer.startsWith('v') ? rawVer : `v${rawVer}`;
         const targetFilename = `superapp-test-${version}.apk`;
-        const apkUrl = `${baseUrl}/api/download-apk?type=test&version=${encodeURIComponent(version)}&appName=superapp`;
         const sandboxUrl = miniAppId
           ? `${baseUrl}/miniapps/${miniAppId}?preview=true`
           : `${baseUrl}/preview`;
@@ -209,20 +208,13 @@ ${cleanIssue}
 + Release Tag  : ${version}
 </code></pre>
 
-<blockquote>SuperApp test binary packaging is complete! You can download the test APK or launch the interactive Web Sandbox.</blockquote>
+<blockquote>SuperApp test binary packaging is complete! Tap the attached APK to install, or launch the interactive Web Sandbox.</blockquote>
         `.trim();
 
-        const actionRow: TelegramInlineButton[] = [];
-        if (apkUrl) {
-          actionRow.push({
-            text: `📲 Download ${targetFilename}`,
-            url: apkUrl,
-          });
-        }
-        actionRow.push({ text: '🌐 Launch Sandbox', url: sandboxUrl });
-
-        buttons.push(actionRow);
-        buttons.push([{ text: '📋 View in Backoffice', url: detailsUrl }]);
+        buttons.push([
+          { text: '🌐 Launch Sandbox', url: sandboxUrl },
+          { text: '📋 View in Backoffice', url: detailsUrl },
+        ]);
         return { text, buttons };
       }
 

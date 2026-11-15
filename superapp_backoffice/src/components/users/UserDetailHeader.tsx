@@ -62,7 +62,17 @@ export function UserDetailHeader({
 
 
   const userRoles = getUserRoles(user);
-  const primaryRole = userRoles[0]?.name || user.role?.name || 'USER';
+  const isConsumer =
+    user.accountType === 'CONSUMER' ||
+    (!user.organization &&
+      !user.organizationId &&
+      userRoles.length === 0 &&
+      !user.staffId &&
+      !user.position);
+  const primaryRole =
+    userRoles[0]?.name ||
+    user.role?.name ||
+    (isConsumer ? 'CONSUMER' : 'USER');
   const roleTheme = getRoleTheme(primaryRole);
   const isTelegramLinked = Boolean(user.telegramUsername || user.telegramChatId);
   const isTargetSuperAdmin = primaryRole === 'SUPER_ADMIN';
@@ -256,7 +266,7 @@ export function UserDetailHeader({
             <div className="space-y-1.5">
               <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide block">Position / Designation</span>
               <div className="font-semibold text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-normal truncate" title={user.position || roleTheme.label || 'N/A'}>
-                {user.position || roleTheme.label || <span className="text-slate-400 font-normal italic">Unassigned</span>}
+                {user.position || (isConsumer ? 'Mobile App User' : roleTheme.label) || <span className="text-slate-400 font-normal italic">Unassigned</span>}
               </div>
             </div>
 
@@ -268,6 +278,8 @@ export function UserDetailHeader({
                   <span className="font-mono font-bold px-2 py-0.5 rounded-md text-xs sm:text-sm bg-slate-100 dark:bg-slate-800 text-brand-600 dark:text-brand-400 border border-slate-200 dark:border-slate-700 inline-block">
                     {user.staffId || user.externalId}
                   </span>
+                ) : isConsumer ? (
+                  <span className="text-sm font-semibold text-slate-400 select-none">—</span>
                 ) : (
                   <span className="text-xs sm:text-sm text-slate-400 font-normal italic">Not Assigned</span>
                 )}
@@ -286,6 +298,8 @@ export function UserDetailHeader({
                   >
                     {user.organization.name}
                   </Link>
+                ) : isConsumer ? (
+                  <span className="text-sm font-semibold text-slate-400 select-none">—</span>
                 ) : (
                   <span className="text-xs sm:text-sm text-slate-500 italic">Independent</span>
                 )}

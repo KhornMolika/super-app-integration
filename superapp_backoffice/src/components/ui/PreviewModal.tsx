@@ -110,7 +110,7 @@ export default function PreviewModal({
   const miniAppHomeUrl = isDirectWebUrl
     ? url
     : (targetAppId
-        ? `${sandboxBase}?t=${reloadKey}#/miniapp/${encodeURIComponent(targetAppId)}?pkg=${encodeURIComponent(pkgParam)}&name=${encodeURIComponent(title)}&method=${encodeURIComponent(methodUpper)}`
+        ? `${sandboxBase}?t=${reloadKey}#/miniapp/${encodeURIComponent(targetAppId)}?pkg=${encodeURIComponent(pkgParam)}&name=${encodeURIComponent(title)}&method=${encodeURIComponent(methodUpper)}&preview=true`
         : `${sandboxBase}?t=${reloadKey}`);
 
   const displayMiniAppSubtitle = isDirectWebUrl
@@ -444,11 +444,14 @@ export default function PreviewModal({
                     </button>
 
                     <div className="flex flex-col items-center text-center px-2">
-                      <div className="text-xs font-bold text-white flex items-center gap-1">
-                        <span className="truncate max-w-[140px]">{title}</span>
-                        <svg className="w-3 h-3 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"/></svg>
+                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <span className="truncate max-w-[130px]">{title}</span>
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                          Preview Mode
+                        </span>
                       </div>
-                      <span className="text-[9px] text-slate-400 font-mono truncate max-w-[160px]">
+                      <span className="text-[9px] text-slate-400 font-mono truncate max-w-[180px]">
                         {displayMiniAppSubtitle}
                       </span>
                     </div>

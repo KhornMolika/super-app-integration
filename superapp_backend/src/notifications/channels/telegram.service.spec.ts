@@ -96,7 +96,7 @@ describe('TelegramService & Helper Modules', () => {
       );
     });
 
-    it('should generate rich card for TEST_BUILD_READY with download and sandbox buttons', () => {
+    it('should generate rich card for TEST_BUILD_READY with sandbox and portal buttons', () => {
       const { text, buttons } = TelegramCardHelper.buildRichCard(
         'Build Ready',
         'Artifact uploaded',
@@ -113,11 +113,11 @@ describe('TelegramService & Helper Modules', () => {
       expect(text).toContain('SUPER APP TEST BUILD READY');
       expect(text).toContain('v1.0.0');
       expect(buttons).toBeDefined();
-      expect(buttons?.[0][0].text).toContain('superapp-test-v1.0.0.apk');
+      expect(buttons?.[0][0].text).toContain('Launch Sandbox');
       expect(buttons?.[0][0].url).toContain(
-        '/api/download-apk?type=test&version=v1.0.0&appName=superapp',
+        '/miniapps/app-123?preview=true',
       );
-      expect(buttons?.[0][1].text).toContain('Launch Sandbox');
+      expect(buttons?.[0][1].text).toContain('View in Backoffice');
     });
 
     it('should generate rich card for VALIDATION_FAILED with error details', () => {
