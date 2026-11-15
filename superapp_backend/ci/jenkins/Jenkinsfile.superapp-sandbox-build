@@ -112,8 +112,17 @@ for (const c of data.credentials || []) {
   const i = n++;
   if (c.type === 'ssh') {
     fs.writeFileSync(S + '/app_key_' + i, c.privateKey, { mode: 0o600 });
-    ssh += ['Host app-dep-' + i, '  HostName ' + c.host, '  User git', '  IdentityFile ' + S + '/app_key_' + i,
-            '  IdentitiesOnly yes', '  StrictHostKeyChecking accept-new', '  UserKnownHostsFile ' + S + '/known_hosts', ''].join(NL);
+    const lines = ['Host app-dep-' + i];
+    if (c.host === 'github.com') {
+      lines.push('  HostName ssh.github.com', '  Port 443');
+    } else if (c.host === 'gitlab.com') {
+      lines.push('  HostName altssh.gitlab.com', '  Port 443');
+    } else {
+      lines.push('  HostName ' + c.host);
+    }
+    lines.push('  User git', '  IdentityFile ' + S + '/app_key_' + i,
+               '  IdentitiesOnly yes', '  StrictHostKeyChecking accept-new', '  UserKnownHostsFile ' + S + '/known_hosts', '');
+    ssh += lines.join(NL);
     git += '[url "app-dep-' + i + ':' + c.path + '"]' + NL + TAB + 'insteadOf = ' + c.repoUrl + NL;
   } else if (c.type === 'token') {
     git += '[url "https://oauth2:' + encodeURIComponent(c.token) + '@' + c.host + '/' + c.path + '"]' + NL + TAB + 'insteadOf = ' + c.repoUrl + NL;
@@ -177,7 +186,7 @@ def withPrivateGitDeps(Closure body) {
                         printf '%s\\n' "$GIT_DEP_LIST" | while IFS='|' read -r i url; do
                             [ -n "$url" ] || continue
                             cp "$(printenv "GIT_DEP_KEY_$i")" "$S/jk_key_$i"; chmod 600 "$S/jk_key_$i"
-                            printf 'Host jk-dep-%s\\n  HostName github.com\\n  User git\\n  IdentityFile %s\\n  IdentitiesOnly yes\\n  StrictHostKeyChecking accept-new\\n  UserKnownHostsFile %s/known_hosts\\n' "$i" "$S/jk_key_$i" "$S" >> "$S/ssh_config"
+                            printf 'Host jk-dep-%s\\n  HostName ssh.github.com\\n  Port 443\\n  User git\\n  IdentityFile %s\\n  IdentitiesOnly yes\\n  StrictHostKeyChecking accept-new\\n  UserKnownHostsFile %s/known_hosts\\n' "$i" "$S/jk_key_$i" "$S" >> "$S/ssh_config"
                             printf '[url "jk-dep-%s:%s"]\\n\\tinsteadOf = %s\\n' "$i" "${url#https://github.com/}" "$url" >> "$S/gitconfig"
                         done
                         echo "Extra private repositories (PRIVATE_GIT_DEPS): $(grep -c 'jk-dep-' "$S/gitconfig" || true)"

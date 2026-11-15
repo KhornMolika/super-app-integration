@@ -1,4 +1,4 @@
-﻿import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -395,6 +395,19 @@ export class GitIntegrationService {
           queryUrl = queryUrl.replace('https://github.com/', 'git@github.com:');
         } else if (queryUrl.startsWith('https://gitlab.com/')) {
           queryUrl = queryUrl.replace('https://gitlab.com/', 'git@gitlab.com:');
+        }
+      }
+
+      if (rawKey && sshCmd.startsWith('ssh -i ')) {
+        const isGitHub = queryUrl.includes('github.com');
+        const isGitLab = queryUrl.includes('gitlab.com');
+        const extraOpts = isGitHub
+          ? '-o HostName=ssh.github.com -p 443 '
+          : isGitLab
+            ? '-o HostName=altssh.gitlab.com -p 443 '
+            : '';
+        if (extraOpts) {
+          sshCmd = `ssh ${extraOpts}${sshCmd.slice(4)}`;
         }
       }
 

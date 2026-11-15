@@ -28,7 +28,10 @@ export interface FlutterGitConfigSectionProps {
   gitValidationResult: any;
   detectedProvider: "github" | "gitlab" | null;
   branches: string[];
+  tags?: string[];
   selectedRef: string;
+  refType?: "branch" | "tag";
+  onRefTypeChange?: (type: "branch" | "tag") => void;
   lockedCommitSha: string;
   onAutoDetectSha?: () => void;
 }
@@ -54,7 +57,10 @@ export default function FlutterGitConfigSection({
   gitValidationResult,
   detectedProvider,
   branches,
+  tags = [],
   selectedRef,
+  refType,
+  onRefTypeChange,
   lockedCommitSha,
   onAutoDetectSha,
 }: FlutterGitConfigSectionProps) {
@@ -64,6 +70,24 @@ export default function FlutterGitConfigSection({
   const [showManualOverride, setShowManualOverride] = useState(false);
   const [keyError, setKeyError] = useState("");
   const [isManualCommit, setIsManualCommit] = useState(false);
+  const [internalRefType, setInternalRefType] = useState<"branch" | "tag">(
+    refType || (flutterConfig?.gitTag ? "tag" : "branch")
+  );
+
+  const activeRefType = refType || internalRefType;
+
+  const handleToggleRefType = (type: "branch" | "tag") => {
+    setInternalRefType(type);
+    if (onRefTypeChange) {
+      onRefTypeChange(type);
+    } else {
+      const defaultVal =
+        type === "tag"
+          ? tags[0] || flutterConfig?.gitTag || ""
+          : branches[0] || flutterConfig?.gitBranch || "main";
+      handleRefChange(defaultVal);
+    }
+  };
 
   const handleGenerateDedicatedKey = async () => {
     try {
@@ -202,7 +226,8 @@ export default function FlutterGitConfigSection({
             }
           : null;
 
-  const branch = selectedRef || flutterConfig?.gitBranch || "";
+  const branch = (activeRefType === "branch" ? selectedRef : "") || flutterConfig?.gitBranch || "";
+  const currentTag = (activeRefType === "tag" ? selectedRef : "") || flutterConfig?.gitTag || "";
   const commitSha = String(flutterConfig?.commitSha || lockedCommitSha || "");
   const commitError =
     commitSha && !/^[0-9a-f]{40}$/i.test(commitSha) ? "A commit is 40 characters: 0-9 and a-f." : "";
@@ -273,36 +298,100 @@ export default function FlutterGitConfigSection({
         </div>
 
         <div>
-          <div className="flex items-center min-h-9 mb-1.5">
-            <Label htmlFor="git-branch" className="!mb-0">
-              Branch
+          <div className="flex items-center justify-between min-h-9 mb-1.5">
+            <Label htmlFor="git-ref" className="!mb-0 flex items-center gap-1.5">
+              <span>{activeRefType === "tag" ? "Tag" : "Branch"}</span>
             </Label>
+            <div className="inline-flex p-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs" role="tablist">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeRefType === "branch"}
+                onClick={() => handleToggleRefType("branch")}
+                disabled={!isEditable}
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                  activeRefType === "branch"
+                    ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm"
+                    : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                }`}
+              >
+                Branch
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeRefType === "tag"}
+                onClick={() => handleToggleRefType("tag")}
+                disabled={!isEditable}
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                  activeRefType === "tag"
+                    ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm"
+                    : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                }`}
+              >
+                Tag {tags.length > 0 ? `(${tags.length})` : ""}
+              </button>
+            </div>
           </div>
-          {branches.length > 0 ? (
-            <Select
-              id="git-branch"
-              value={branch || branches[0]}
-              onChange={(e: any) => handleRefChange(e.target.value)}
-              disabled={!isEditable}
-            >
-              {!branches.includes(branch) && branch && <option value={branch}>{branch}</option>}
-              {branches.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </Select>
+
+          {activeRefType === "branch" ? (
+            branches.length > 0 ? (
+              <Select
+                id="git-ref"
+                value={branch || branches[0]}
+                onChange={(e: any) => handleRefChange(e.target.value)}
+                disabled={!isEditable}
+                className="font-mono text-xs"
+              >
+                {!branches.includes(branch) && branch && <option value={branch}>{branch}</option>}
+                {branches.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </Select>
+            ) : (
+              <Input
+                id="git-ref"
+                value={branch}
+                onChange={(e: any) => handleRefChange(e.target.value)}
+                disabled={!isEditable}
+                placeholder="main"
+                className="font-mono text-xs"
+              />
+            )
           ) : (
-            <Input
-              id="git-branch"
-              value={branch}
-              onChange={(e: any) => handleRefChange(e.target.value)}
-              disabled={!isEditable}
-              placeholder="main"
-              className="font-mono"
-            />
+            tags.length > 0 ? (
+              <Select
+                id="git-ref"
+                value={currentTag || tags[0]}
+                onChange={(e: any) => handleRefChange(e.target.value)}
+                disabled={!isEditable}
+                className="font-mono text-xs"
+              >
+                {!tags.includes(currentTag) && currentTag && <option value={currentTag}>{currentTag}</option>}
+                {tags.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </Select>
+            ) : (
+              <Input
+                id="git-ref"
+                value={currentTag}
+                onChange={(e: any) => handleRefChange(e.target.value)}
+                disabled={!isEditable}
+                placeholder="v1.0.0"
+                className="font-mono text-xs"
+              />
+            )
           )}
-          <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">The branch your release is on.</p>
+          <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+            {activeRefType === "tag"
+              ? "The Git release tag (e.g. v1.0.0)."
+              : "The branch your release is on."}
+          </p>
         </div>
       </div>
 

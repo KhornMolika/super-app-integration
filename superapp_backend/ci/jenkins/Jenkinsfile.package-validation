@@ -279,7 +279,10 @@ pipeline {
                                 AUTH=$(cat git.auth); REF=$(cat git.ref)
                                 trap "rm -f $S/.git_key $S/.git_header; chown -R $HOST_UID:$HOST_GID $S/src $S/home $S/git.sha 2>/dev/null || true" EXIT
                                 if [ "$AUTH" = ssh ]; then
-                                    export GIT_SSH_COMMAND="ssh -i $S/.git_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=$S/home/known_hosts"
+                                    mkdir -p "$S/home/.ssh"
+                                    printf "Host github.com\n  Hostname ssh.github.com\n  Port 443\n  User git\n\nHost gitlab.com\n  Hostname altssh.gitlab.com\n  Port 443\n  User git\n" > "$S/home/.ssh/config"
+                                    chmod 600 "$S/home/.ssh/config"
+                                    export GIT_SSH_COMMAND="ssh -F $S/home/.ssh/config -i $S/.git_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=$S/home/known_hosts"
                                 fi
                                 g() { if [ "$AUTH" = token ]; then git -c "http.extraHeader=$(cat "$S/.git_header")" "$@"; else git "$@"; fi; }
                                 rm -rf src; git init -q src; cd src

@@ -461,24 +461,39 @@ export default function FlutterPackageIntegrationForm({
     }
   };
 
-  const handleRefChange = (val: string) => {
+  const handleRefChange = (val: string, overrideType?: "tag" | "branch") => {
     setSelectedRef(val);
-    // Another branch: its commit is picked again (the newest, once listed)
-    const branchChanged = val !== (flutterConfig.gitBranch || "");
-    if (branchChanged) setLockedCommitSha("");
-    if (onUpdateFlutterConfig) {
-      onUpdateFlutterConfig({
-        gitBranch: val,
-        ref: val,
-        ...(branchChanged ? { commitSha: "" } : {}),
-      });
+    const activeType = overrideType || selectedRefType;
+    const isTag = activeType === "tag";
+    const refChanged = val !== (isTag ? flutterConfig.gitTag : flutterConfig.gitBranch || "");
+    if (refChanged) setLockedCommitSha("");
+
+    const updates: Record<string, any> = {
+      ref: val,
+      ...(refChanged ? { commitSha: "" } : {}),
+    };
+
+    if (isTag) {
+      updates.gitTag = val;
+      updates.gitBranch = "";
     } else {
-      handleFlutterChange({
-        target: { name: "gitBranch", value: val },
-      } as any);
+      updates.gitBranch = val;
+      updates.gitTag = "";
     }
 
-    // Auto-detect latest commit SHA immediately when branch changes
+    if (onUpdateFlutterConfig) {
+      onUpdateFlutterConfig(updates);
+    } else {
+      if (isTag) {
+        handleFlutterChange({ target: { name: "gitTag", value: val } } as any);
+        handleFlutterChange({ target: { name: "gitBranch", value: "" } } as any);
+      } else {
+        handleFlutterChange({ target: { name: "gitBranch", value: val } } as any);
+        handleFlutterChange({ target: { name: "gitTag", value: "" } } as any);
+      }
+    }
+
+    // Auto-detect latest commit SHA immediately when branch or tag changes
     const url = flutterConfig.gitUrl?.trim() || "";
     if (val && url) {
       const isDeployKey =
@@ -509,7 +524,7 @@ export default function FlutterPackageIntegrationForm({
 
   const handleAutoDetectSha = async () => {
     const url = flutterConfig.gitUrl?.trim() || "";
-    const ref = selectedRef || flutterConfig.gitBranch || "main";
+    const ref = selectedRef || (selectedRefType === "tag" ? flutterConfig.gitTag : flutterConfig.gitBranch) || "main";
     if (!url) return;
     const isDeployKey =
       (isPrivateRepo && authMethod === "deploy_key") || url.startsWith("git@");
@@ -540,20 +555,18 @@ export default function FlutterPackageIntegrationForm({
   };
 
   const handleRefTypeChange = (type: "tag" | "branch" | "commit") => {
-    setSelectedRefType(type);
-    // A value only carries over when it fits the new type (a branch is not a tag)
+    const newType = type === "tag" ? "tag" : "branch";
+    setSelectedRefType(newType);
     let defaultVal = "";
-    if (type === "tag") {
-      defaultVal = tags.includes(selectedRef) ? selectedRef : tags[0] || "";
-    } else if (type === "branch") {
+    if (newType === "tag") {
+      defaultVal = tags.includes(selectedRef) ? selectedRef : tags[0] || flutterConfig.gitTag || "";
+    } else {
       defaultVal =
         branches.length > 0
-          ? branches[0]
+          ? branches.includes(selectedRef) ? selectedRef : branches[0]
           : flutterConfig.gitBranch || "main";
-    } else if (type === "commit") {
-      defaultVal = lockedCommitSha || "";
     }
-    handleRefChange(defaultVal);
+    handleRefChange(defaultVal, newType);
   };
 
 
@@ -1019,7 +1032,10 @@ export default function FlutterPackageIntegrationForm({
           gitValidationResult={gitValidationResult}
           detectedProvider={detectedProvider}
           branches={branches}
+          tags={tags}
           selectedRef={selectedRef}
+          refType={selectedRefType === "tag" ? "tag" : "branch"}
+          onRefTypeChange={handleRefTypeChange}
           lockedCommitSha={lockedCommitSha}
           onAutoDetectSha={handleAutoDetectSha}
         />
