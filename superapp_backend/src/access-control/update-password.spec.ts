@@ -8,7 +8,7 @@ describe('AccessControlService.updatePasswordDirectly', () => {
 
     await svc.updatePasswordDirectly('u1', 'scrypt$hash');
 
-    expect(update).toHaveBeenCalledWith({ id: 'u1' }, { passwordHash: 'scrypt$hash' });
+    expect(update).toHaveBeenCalledWith({ id: 'u1' }, { passwordHash: 'scrypt$hash', mustChangePassword: false });
     expect(update.mock.calls[0][1]).not.toHaveProperty('status');
   });
 });

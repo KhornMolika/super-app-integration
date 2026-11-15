@@ -20,7 +20,7 @@ import { MiniAppCollaborator } from '../miniapps/entities/miniapp-collaborator.e
 import { CapabilityProposal } from '../capability-proposals/entities/capability-proposal.entity';
 import { Notification } from '../notifications/entities/notification.entity';
 import { AuditLog } from '../audit/entities/audit-log.entity';
-import { hashPassword } from '../common/utils/password.util';
+import { hashPassword, verifyPassword } from '../common/utils/password.util';
 import { loadPasswordHash } from '../identities/identity-credentials.helper';
 
 @Injectable()
@@ -29,8 +29,10 @@ export class SeederService implements OnApplicationBootstrap {
 
   constructor(
     private readonly dataSource: DataSource,
-    @InjectRepository(Identity) private identityRepository: Repository<Identity>,
-    @InjectRepository(StaffProfile) private staffProfileRepository: Repository<StaffProfile>,
+    @InjectRepository(Identity)
+    private identityRepository: Repository<Identity>,
+    @InjectRepository(StaffProfile)
+    private staffProfileRepository: Repository<StaffProfile>,
     @InjectRepository(Role) private roleRepository: Repository<Role>,
     @InjectRepository(Permission)
     private permissionRepository: Repository<Permission>,
@@ -159,11 +161,7 @@ export class SeederService implements OnApplicationBootstrap {
         name: 'STAFF',
         description:
           'General FSA and sector regulatory personnel for mobile staff services (HR, attendance, announcements)',
-        perms: [
-          'miniapp:read',
-          'super_app:read',
-          'organization:read',
-        ],
+        perms: ['miniapp:read', 'super_app:read', 'organization:read'],
       },
     ];
 
@@ -230,8 +228,14 @@ export class SeederService implements OnApplicationBootstrap {
         try {
           fsaRoot = await this.organizationRepository.save(fsaRoot);
         } catch (saveErr: any) {
-          this.logger.warn(`Initial FSA root save attempt failed (${saveErr?.message}), self-healing column constraints...`);
-          await this.dataSource.query('ALTER TABLE "organizations" ALTER COLUMN "parentAuthority" DROP NOT NULL;').catch(() => {});
+          this.logger.warn(
+            `Initial FSA root save attempt failed (${saveErr?.message}), self-healing column constraints...`,
+          );
+          await this.dataSource
+            .query(
+              'ALTER TABLE "organizations" ALTER COLUMN "parentAuthority" DROP NOT NULL;',
+            )
+            .catch(() => {});
           try {
             fsaRoot = await this.organizationRepository.save(fsaRoot);
           } catch {
@@ -265,8 +269,14 @@ export class SeederService implements OnApplicationBootstrap {
           try {
             fsaRoot = await this.organizationRepository.save(fsaRoot);
           } catch (saveErr: any) {
-            this.logger.warn(`FSA root update attempt failed (${saveErr?.message}), self-healing column constraints...`);
-            await this.dataSource.query('ALTER TABLE "organizations" ALTER COLUMN "parentAuthority" DROP NOT NULL;').catch(() => {});
+            this.logger.warn(
+              `FSA root update attempt failed (${saveErr?.message}), self-healing column constraints...`,
+            );
+            await this.dataSource
+              .query(
+                'ALTER TABLE "organizations" ALTER COLUMN "parentAuthority" DROP NOT NULL;',
+              )
+              .catch(() => {});
             try {
               fsaRoot = await this.organizationRepository.save(fsaRoot);
             } catch {
@@ -287,17 +297,19 @@ export class SeederService implements OnApplicationBootstrap {
         where: [{ name: rootFsaData.name }, { code: rootFsaData.code }],
       });
       if (!fsaRoot) {
-        fsaRoot = await this.organizationRepository.save(
-          this.organizationRepository.create({
-            name: rootFsaData.name,
-            code: rootFsaData.code,
-            parentId: null,
-            parent: null,
-            parentAuthority: 'Primary Authority (Root)',
-            description: rootFsaData.description,
-            status: OrganizationStatus.ACTIVE,
-          }),
-        ).catch(() => null);
+        fsaRoot = await this.organizationRepository
+          .save(
+            this.organizationRepository.create({
+              name: rootFsaData.name,
+              code: rootFsaData.code,
+              parentId: null,
+              parent: null,
+              parentAuthority: 'Primary Authority (Root)',
+              description: rootFsaData.description,
+              status: OrganizationStatus.ACTIVE,
+            }),
+          )
+          .catch(() => null);
       }
     }
 
@@ -471,7 +483,9 @@ export class SeederService implements OnApplicationBootstrap {
             { organizationId: ftcOrg.id },
           );
           await this.organizationRepository.delete(mockFintechCenter.id);
-          this.logger.log("Purged obsolete mock organization 'Fintech Center'.");
+          this.logger.log(
+            "Purged obsolete mock organization 'Fintech Center'.",
+          );
         }
       }
     } catch {
@@ -532,6 +546,8 @@ export class SeederService implements OnApplicationBootstrap {
           name: acc.name,
           status: 'ACTIVE',
           passwordHash: defaultPasswordHash,
+          // The shared seed password: the owner chooses their own at first sign-in
+          mustChangePassword: true,
           // Official addresses are configured here by the platform owners, not self-registered:
           // without this the mobile sign-in refuses them (MOBILE_REQUIRE_EMAIL_VERIFICATION)
           emailVerifiedAt: new Date(),
@@ -555,19 +571,29 @@ export class SeederService implements OnApplicationBootstrap {
         let changed = false;
         // passwordHash is select:false: read it explicitly, or every boot would
         // treat it as missing and reset the official account's password.
-        if (!(await loadPasswordHash(this.identityRepository, identity.id))) {
+        const storedHash = await loadPasswordHash(
+          this.identityRepository,
+          identity.id,
+        );
+        if (!storedHash) {
           if (!defaultPasswordHash) {
             throw new Error(
               `SUPERADMIN_PASSWORD is required to initialize password for official account ${email}. Please configure it in Kubernetes Secret "super-app-backend-secret".`,
             );
           }
           identity.passwordHash = defaultPasswordHash;
+          identity.mustChangePassword = true;
+          changed = true;
+        } else if (
+          configuredPassword &&
+          !identity.mustChangePassword &&
+          (await verifyPassword(configuredPassword, storedHash))
+        ) {
+          // Still on the shared seed password: the owner must choose their own
+          identity.mustChangePassword = true;
           changed = true;
         }
-        if (identity.status !== 'ACTIVE') {
-          identity.status = 'ACTIVE';
-          changed = true;
-        }
+        // A deactivated official account stays deactivated (no forced ACTIVE)
         // Accounts seeded before this was set: the mobile sign-in refuses an unverified email
         if (!identity.emailVerifiedAt) {
           identity.emailVerifiedAt = new Date();
@@ -593,7 +619,9 @@ export class SeederService implements OnApplicationBootstrap {
             status: 'ACTIVE',
           });
           await this.staffProfileRepository.save(staffProfile);
-          this.logger.log(`Attached staff profile for official account: ${email}`);
+          this.logger.log(
+            `Attached staff profile for official account: ${email}`,
+          );
         } else {
           let spChanged = false;
           if (staffProfile.roleId !== acc.role.id) {

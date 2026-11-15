@@ -67,6 +67,13 @@ export class Identity {
   @Column({ type: 'int', default: 0 })
   failedLoginCount!: number;
 
+  /**
+   * The password was set by someone else (seed account, created or reset by
+   * an admin): the user must choose their own before anything else works.
+   */
+  @Column({ type: 'boolean', default: false })
+  mustChangePassword!: boolean;
+
   @Column({ type: 'timestamptz', nullable: true })
   lockedUntil?: Date | null;
 

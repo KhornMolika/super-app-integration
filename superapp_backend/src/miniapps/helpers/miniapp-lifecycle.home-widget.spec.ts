@@ -41,6 +41,7 @@ const ams = (over: Partial<MiniApp> = {}): MiniApp =>
     appId: 'miniapp_ams_ccef3a',
     name: 'AMS',
     status: 'ACTIVE',
+    appStatus: 'LIVE',
     currentReleaseVersion: '1.0.0',
     integrationMethod: 'DEEP_LINK',
     integrationConfig: {

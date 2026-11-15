@@ -2,6 +2,7 @@ import {
   CanActivate,
   ExecutionContext,
   Injectable,
+  ForbiddenException,
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -19,6 +20,22 @@ import {
   platformRoles,
 } from '../auth.service';
 
+/** What a session that must change its password may still call. */
+export function allowedBeforePasswordChange(request: {
+  method?: string;
+  path?: string;
+  url?: string;
+}): boolean {
+  const path = String(request.path ?? request.url ?? '')
+    .split('?')[0]
+    .replace(/^\/api(?=\/)/, '');
+  const method = String(request.method || '').toUpperCase();
+  return (
+    (method === 'POST' && path === '/auth/change-password') ||
+    (method === 'GET' && path === '/users/me')
+  );
+}
+
 /** Back-office guard: allowlist (typ=back_office) plus end-user denylist, verified by signature. */
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -33,7 +50,9 @@ export class JwtAuthGuard implements CanActivate {
     if (!token) {
       this.logger.warn(
         `Refused ${where}: no bearer token (Authorization header ${
-          request.headers.authorization ? 'present but not "Bearer <token>"' : 'missing'
+          request.headers.authorization
+            ? 'present but not "Bearer <token>"'
+            : 'missing'
         })`,
       );
       throw new UnauthorizedException();
@@ -47,12 +66,16 @@ export class JwtAuthGuard implements CanActivate {
     }
     const aud = Array.isArray(payload?.aud) ? payload.aud : [payload?.aud];
     if (payload?.typ === END_USER_TYP || aud.includes(END_USER_AUDIENCE)) {
-      this.logger.warn(`Refused ${where}: mobile user token used on a back-office route (user ${payload?.sub})`);
+      this.logger.warn(
+        `Refused ${where}: mobile user token used on a back-office route (user ${payload?.sub})`,
+      );
       throw new UnauthorizedException();
     }
     // Also tokens issued before the Backoffice was limited to these roles (e.g. STAFF)
     if (!hasBackofficeAccess(platformRoles({ roles: payload?.roles }))) {
-      this.logger.warn(`Refused ${where}: roles ${JSON.stringify(payload?.roles ?? [])} have no Backoffice access (user ${payload?.sub})`);
+      this.logger.warn(
+        `Refused ${where}: roles ${JSON.stringify(payload?.roles ?? [])} have no Backoffice access (user ${payload?.sub})`,
+      );
       throw new UnauthorizedException();
     }
     // SUPER_ADMIN is valid only inside the platform owner organization (FTC).
@@ -65,6 +88,15 @@ export class JwtAuthGuard implements CanActivate {
         `Refused ${where}: SUPER_ADMIN token outside the platform owner organization (user ${payload?.sub}, org ${payload?.organizationCode ?? 'none'})`,
       );
       throw new UnauthorizedException();
+    }
+    // A password someone else chose (seed account, created or reset by an
+    // admin): nothing but changing it until the user has chosen their own
+    if (payload?.pwc && !allowedBeforePasswordChange(request)) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'PASSWORD_CHANGE_REQUIRED',
+        message: 'Choose your own password before continuing.',
+      });
     }
     request['user'] = payload;
     return true;
@@ -90,7 +122,9 @@ export function describeTokenProblem(token: string, err: unknown): string {
   let claims: Record<string, unknown> | null = null;
   try {
     const part = token.split('.')[1];
-    claims = part ? JSON.parse(Buffer.from(part, 'base64url').toString('utf8')) : null;
+    claims = part
+      ? JSON.parse(Buffer.from(part, 'base64url').toString('utf8'))
+      : null;
   } catch {
     claims = null;
   }
@@ -102,6 +136,7 @@ export function describeTokenProblem(token: string, err: unknown): string {
   if (claims.typ !== BACK_OFFICE_TYP) {
     return `token type is ${JSON.stringify(claims.typ)}, expected ${BACK_OFFICE_TYP} (user ${String(claims.sub)})`;
   }
-  const detail = err instanceof Error && err.message ? err.message : 'verification failed';
+  const detail =
+    err instanceof Error && err.message ? err.message : 'verification failed';
   return `token failed verification (${detail}; wrong signing key or issuer?) (user ${String(claims.sub)})`;
 }

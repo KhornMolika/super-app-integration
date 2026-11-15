@@ -75,6 +75,15 @@ describe('Updating a live app', () => {
       expect(await listed(e, phone, id, 'release')).toBe(true);
     });
 
+    it('rollback is for a live app only: an app never released has nothing to go back to', async () => {
+      const draft = await appAt(e, dev, sa, 'TEST_PASSED');
+      const res = await action(e, sa, draft, 'rollback', {
+        targetVersion: '1.0.0',
+      });
+      expect(res.status).toBe(400);
+      expect((await appRow(e, draft)).status).toBe('DRAFT');
+    });
+
     it('rollback needs a target version that exists', async () => {
       expect((await action(e, sa, id, 'rollback', {})).status).toBe(400);
       expect(

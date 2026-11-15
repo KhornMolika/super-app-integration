@@ -19,6 +19,7 @@ const STANDALONE_ROUTES = [
   "/verify-otp",
   "/forgot-password",
   "/legal",
+  "/change-password",
 ];
 
 interface AppShellProps {

@@ -74,7 +74,9 @@ function LoginForm() {
     const res = await loginWithEmail(trimmedEmail, password);
     setLoading(false);
 
-    if (res.success) {
+    if (res.success && (res as { mustChangePassword?: boolean }).mustChangePassword) {
+      router.push('/change-password');
+    } else if (res.success) {
       toast.success('Signed in successfully! Redirecting...', 'Welcome Back');
       const redirectUrl = searchParams?.get('redirect');
       router.push(redirectUrl && redirectUrl.startsWith('/') && !redirectUrl.startsWith('/login') ? redirectUrl : '/miniapps');

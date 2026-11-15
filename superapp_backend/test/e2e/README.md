@@ -4,7 +4,7 @@ The real backend (AppModule: controllers, guards, services, Postgres) driven
 over HTTP the way the Backoffice and the Super App call it.
 
 ```bash
-pnpm test:e2e                  # all suites, ~70 s
+pnpm test:e2e                  # all suites, ~80 s
 pnpm test:e2e 02               # one suite
 ```
 
@@ -26,6 +26,7 @@ and `@test.com` on every boot).
 | 03-retirement | Suspend, resume, archive request and decline, archive, restore: permissions, events, effect on phones |
 | 04-live-updates | New version of a live app, discard, publish on approval, testing a new version, rollback |
 | 05-phone-accounts | Sign-up with email code, sign-in, lockout, refresh rotation, logout, phone vs Backoffice tokens |
+| 06-password-change | Passwords someone else chose (seed accounts, accounts created or reset by an admin): forced change in the Backoffice and on the phone; no seed-password fallback; deactivated seed accounts stay out |
 
 ## Bugs these flows found (all fixed, each guarded by a test)
 
@@ -37,7 +38,8 @@ and `@test.com` on every boot).
 | High | Outside production every phone account accepted `SUPERADMIN_PASSWORD` and the login overwrote the user's password | Fallback removed from phone login; the staff change-password fallback limited to the official seed accounts |
 | High | A restored app could not be submitted again | Restore opens a new version (next patch) copied from the last one |
 | Medium | Backoffice refresh tokens were stateless: no rotation, logout did not end them | Recorded in `refresh_tokens` (sha256 of the jti), rotated on refresh (30 s grace for parallel tabs), revoked on logout and on replay |
-| Medium | A developer could roll back the live version | Rollback needs `miniapp:approve` (Super Admin) |
+| Medium | A developer could roll back the live version; rollback put a suspended or archived app back on the phones | Rollback needs `miniapp:approve` (Super Admin) and a LIVE app |
+| Medium | `SUPERADMIN_PASSWORD` opened official seed accounts outside production, and seed accounts were forced back to ACTIVE | Fallbacks removed; seed accounts and admin-set passwords must be changed at first sign-in |
 | Medium | Jenkins refusing the test build still answered "Success" | 502 with Jenkins' message; the app shows Build failed |
 | Medium | `/mobile/auth/dev-reset-limits` reset brute-force protection for anyone | Endpoint removed |
 | Low | Backoffice login told unknown email from wrong password | One message |

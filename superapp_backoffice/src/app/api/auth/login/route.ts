@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { syncPasswordChangeCookie } from '@/lib/password-change';
 
 const BACKEND_URL = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -57,6 +58,9 @@ export async function POST(request: Request) {
         maxAge: (data.refresh_expires_in || 7 * 24 * 60 * 60),
       });
     }
+
+    // A password someone else chose: every page goes to /change-password
+    syncPasswordChangeCookie(response, data.must_change_password === true);
 
     return response;
   } catch (error: any) {

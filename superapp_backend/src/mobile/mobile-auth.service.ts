@@ -61,6 +61,8 @@ export interface TokenResponse {
   refresh_token: string;
   expires_in: number;
   user: { id: string; email: string; name: string };
+  /** Someone else chose the password: the app asks for the user's own before anything else. */
+  must_change_password?: boolean;
   /** Set when this sign-in cancelled a pending account deletion. */
   account_restored?: boolean;
 }
@@ -612,11 +614,14 @@ export class MobileAuthService {
       }),
     );
     const expiresIn = this.accessTtlSeconds;
+    // A password someone else chose: only changing it works until replaced
+    const mustChangePassword = user.mustChangePassword === true;
     const accessToken = this.authService.signEndUserToken(
-      { sub: user.id, email: user.email },
+      { sub: user.id, email: user.email, ...(mustChangePassword ? { pwc: true } : {}) },
       expiresIn,
     );
     return {
+      must_change_password: mustChangePassword,
       access_token: accessToken,
       refresh_token: refreshToken,
       expires_in: expiresIn,

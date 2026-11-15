@@ -1868,6 +1868,19 @@ export class MiniappLifecycleHelper {
     if (!targetVersion) {
       throw new BadRequestException('Target version is required for rollback');
     }
+    // Rollback switches the version a live app serves. It writes the app back
+    // to production, so on a suspended or archived app it would skip Resume or
+    // Restore (and their events).
+    const appStatus = String((app as any).appStatus || '').toUpperCase();
+    if (appStatus === 'SUSPENDED') {
+      throw new BadRequestException('This mini app is suspended. Resume it first, then roll back.');
+    }
+    if (appStatus === 'ARCHIVED') {
+      throw new BadRequestException('This mini app is archived. A Super Admin must restore it first.');
+    }
+    if (appStatus !== 'LIVE') {
+      throw new BadRequestException('Only a live mini app can be rolled back to an earlier release.');
+    }
 
     const history = Array.isArray((app as any).versionHistory)
       ? [...(app as any).versionHistory]

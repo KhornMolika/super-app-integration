@@ -94,8 +94,10 @@ export class MobileAccountService {
     // Sign out everywhere before the new hash is stored: if a step fails, sessions
     // are gone and the old password still works, never the reverse.
     await this.auth.revokeAllSessions(user.id);
-    await this.users.update({ id: user.id }, { passwordHash });
+    // The user's own password now: no longer one someone else chose
+    await this.users.update({ id: user.id }, { passwordHash, mustChangePassword: false });
     user.passwordHash = passwordHash;
+    user.mustChangePassword = false;
     return this.auth.startSession(user, userAgent);
   }
 

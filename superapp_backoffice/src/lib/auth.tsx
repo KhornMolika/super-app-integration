@@ -258,7 +258,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           organization: res.user.organization || null,
         });
         setIsAuthenticated(true);
-        return { success: true };
+        // A password someone else chose: the login page sends the user to /change-password
+        return { success: true, mustChangePassword: (res as any).must_change_password === true };
       }
       return { success: false, error: res?.message || 'Invalid credentials or user not found' };
     } catch (err: any) {

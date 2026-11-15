@@ -215,6 +215,20 @@ export async function apiClient<T = any>(endpoint: string, options: RequestOptio
     data = await response.text().catch(() => null);
   }
 
+  // The session must replace a password someone else chose: the backend
+  // refuses everything else, so go to the page that does it
+  if (
+    response.status === 403 &&
+    data &&
+    typeof data === 'object' &&
+    data.code === 'PASSWORD_CHANGE_REQUIRED' &&
+    typeof window !== 'undefined' &&
+    window.location.pathname !== '/change-password'
+  ) {
+    window.location.href = '/change-password';
+    throw new ApiError('Choose your own password before continuing.', 403);
+  }
+
   if (!response.ok) {
     let errorMessage =
       (data && typeof data === 'object' && (data.message || data.error)) ||

@@ -20,6 +20,7 @@ import {
   PhoneUser,
   staff,
   Staff,
+  scanResult,
   stages,
 } from './support/fixtures';
 
@@ -181,6 +182,31 @@ describe('Suspend, archive and restore', () => {
       expect((await action(e, dev, id, 'submit')).status).toBe(201);
       expect((await stages(e, id))[0]).toMatch(/:SUBMITTED$/);
     });
+  });
+
+  it('rollback is refused on a suspended or archived app (Resume / Restore first)', async () => {
+    const id = await appAt(e, dev, sa, 'LIVE');
+    await e
+      .http()
+      .patch(`/mini-apps/${id}`)
+      .set(dev.auth)
+      .send({ version: '1.1.0', tagline: 'v1.1' });
+    await scanResult(e, id, 'PASSED');
+    expect((await action(e, sa, id, 'approve')).status).toBe(201);
+    await action(e, sa, id, 'suspend', REASON);
+    const suspended = await action(e, sa, id, 'rollback', {
+      targetVersion: '1.0.0',
+    });
+    expect(suspended.status).toBe(400);
+    expect(suspended.body.message).toMatch(/Resume it first/);
+    expect((await appRow(e, id)).status).toBe('SUSPENDED');
+    expect(await listed(e, phone, id, 'release')).toBe(false);
+    await action(e, sa, id, 'archive', REASON);
+    expect(
+      (await action(e, sa, id, 'rollback', { targetVersion: '1.0.0' })).status,
+    ).toBe(400);
+    expect((await appRow(e, id)).status).toBe('ARCHIVED');
+    expect(await stages(e, id)).toEqual(['1.1.0:ACTIVE', '1.0.0:PREVIOUS']);
   });
 
   it('a developer cannot suspend, resume, archive or restore', async () => {

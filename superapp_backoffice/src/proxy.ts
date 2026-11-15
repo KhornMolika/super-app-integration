@@ -49,9 +49,21 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // 3. Guest routes: If user is authenticated and visits /login or /signup, send to dashboard
+  // 3. A password someone else chose: nothing but /change-password until replaced
+  const mustChangePassword = Boolean(request.cookies.get('pwd_change')?.value);
+  if (hasTokens && mustChangePassword && !isPublicRoute && pathname !== '/change-password') {
+    return NextResponse.redirect(new URL('/change-password', request.url));
+  }
+  if (pathname === '/change-password' && hasTokens && !mustChangePassword) {
+    // Reachable for a voluntary change too; nothing to force here
+    return NextResponse.next();
+  }
+
+  // 4. Guest routes: If user is authenticated and visits /login or /signup, send to dashboard
   if (isPublicRoute && hasTokens && (pathname === '/login' || pathname === '/signup')) {
-    return NextResponse.redirect(new URL('/miniapps', request.url));
+    return NextResponse.redirect(
+      new URL(mustChangePassword ? '/change-password' : '/miniapps', request.url),
+    );
   }
 
   return NextResponse.next();

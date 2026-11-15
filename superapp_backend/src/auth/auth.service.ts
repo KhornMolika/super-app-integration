@@ -222,6 +222,16 @@ export class AuthService implements OnModuleInit {
     return typeof manager?.query === 'function' ? manager : null;
   }
 
+  private async mustChangePassword(identityId: string): Promise<boolean> {
+    const db = this.sessionDb();
+    if (!db || !identityId) return false;
+    const [row] = await db.query(
+      `SELECT "mustChangePassword" FROM "identities" WHERE id = $1`,
+      [identityId],
+    );
+    return row?.mustChangePassword === true;
+  }
+
   private async revokeSession(familyId: string): Promise<void> {
     await this.sessionDb()?.query(
       `UPDATE "refresh_tokens" SET "revokedAt" = now() WHERE "familyId" = $1 AND "revokedAt" IS NULL`,
@@ -319,7 +329,10 @@ export class AuthService implements OnModuleInit {
       }
     }
 
+    // Set when someone else chose the password: only change-password works until replaced
+    const mustChangePassword = await this.mustChangePassword(user.id);
     const accessPayload = {
+      ...(mustChangePassword ? { pwc: true } : {}),
       sub: user.id,
       email: user.email,
       name: user.name,
@@ -367,6 +380,7 @@ export class AuthService implements OnModuleInit {
     );
 
     return {
+      must_change_password: mustChangePassword,
       access_token: accessToken,
       refresh_token: refreshToken,
       expires_in: BACK_OFFICE_ACCESS_TOKEN_TTL_SECONDS,
@@ -422,7 +436,7 @@ export class AuthService implements OnModuleInit {
     }
 
     // 1. Password Verification
-    const SEED_DEFAULT_PASSWORD = process.env.SUPERADMIN_PASSWORD;
+    // Only the account's own password: no shared seed-password fallback
     const isSeedAccount = Boolean(OFFICIAL_SEEDS[rawEmail]);
     let isMatch = false;
 
@@ -431,32 +445,6 @@ export class AuthService implements OnModuleInit {
       isMatch = await verifyPassword(rawPassword, storedHash);
       if (!isMatch && rawPassword.trim() !== rawPassword) {
         isMatch = await verifyPassword(rawPassword.trim(), storedHash);
-      }
-    }
-
-    // In non-production environments only, allow sync if SUPERADMIN_PASSWORD is configured
-    if (
-      !isMatch &&
-      isSeedAccount &&
-      process.env.NODE_ENV !== 'production' &&
-      SEED_DEFAULT_PASSWORD
-    ) {
-      const isDefaultSeedPassword =
-        rawPassword === SEED_DEFAULT_PASSWORD ||
-        rawPassword.trim() === SEED_DEFAULT_PASSWORD.trim();
-
-      if (isDefaultSeedPassword) {
-        isMatch = true;
-        const initialHash = await hashPassword(SEED_DEFAULT_PASSWORD);
-        await this.accessControlService.updatePasswordDirectly(
-          user.id,
-          initialHash,
-        );
-        // Official seed accounts are always active (non-production sync only)
-        await this.accessControlService.updateUserStatus(user.id, 'ACTIVE');
-        this.logger.log(
-          `[AUTH] Authenticated with configured seed password for: ${rawEmail}`,
-        );
       }
     }
 
@@ -478,9 +466,8 @@ export class AuthService implements OnModuleInit {
       };
     }
 
-    if (isSeedAccount) {
-      user.status = 'ACTIVE';
-    } else if (user.status === 'PENDING_EMAIL_VERIFICATION') {
+    // Seed accounts follow the same status rules (a deactivated one stays out)
+    if (user.status === 'PENDING_EMAIL_VERIFICATION') {
       // Only reached with a correct password, so the account state is not
       // revealed to guessers. `code` lets the backoffice offer verification.
       throw new UnauthorizedException({
@@ -878,7 +865,6 @@ export class AuthService implements OnModuleInit {
       throw new NotFoundException('User not found');
     }
 
-    const defaultSeedPassword = process.env.SUPERADMIN_PASSWORD;
     let isOldValid = false;
 
     const storedHash = await this.accessControlService.getPasswordHash(user.id);
@@ -889,30 +875,36 @@ export class AuthService implements OnModuleInit {
       }
     }
 
-    // Same rule as login: the seed password only stands in for an official
-    // seed account's own password, outside production
-    if (
-      !isOldValid &&
-      Boolean(OFFICIAL_SEEDS[String(user.email || '').toLowerCase()]) &&
-      process.env.NODE_ENV !== 'production' &&
-      defaultSeedPassword &&
-      body.oldPassword === defaultSeedPassword
-    ) {
-      isOldValid = true;
-    }
-
     if (!isOldValid) {
       throw new BadRequestException('Current password does not match.');
     }
 
-    const newHash = await hashPassword(
-      body.newPassword.trim() || body.newPassword,
-    );
+    const nextPassword = body.newPassword.trim() || body.newPassword;
+    if (storedHash && (await verifyPassword(nextPassword, storedHash))) {
+      throw new BadRequestException(
+        'Choose a new password: it must differ from the current one.',
+      );
+    }
+    const newHash = await hashPassword(nextPassword);
+    // Saves it and clears mustChangePassword
     await this.accessControlService.updatePasswordDirectly(user.id, newHash);
     this.logger.log(
       `[AUTH] Password successfully updated for user: ${user.email} (${user.id})`,
     );
-    return { success: true, message: 'Password updated successfully' };
+    // Other sessions end with the old password; this one continues with new tokens
+    await this.sessionDb()?.query(
+      `UPDATE "refresh_tokens" SET "revokedAt" = now() WHERE "identityId" = $1 AND "revokedAt" IS NULL`,
+      [user.id],
+    );
+    const fresh = await this.accessControlService.findByEmailWithPermissions(
+      user.email,
+    );
+    const tokens = fresh ? await this.generateAuthTokens(fresh) : {};
+    return {
+      success: true,
+      message: 'Password updated successfully',
+      ...tokens,
+    };
   }
 
   /**

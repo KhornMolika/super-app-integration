@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { syncPasswordChangeCookie } from '@/lib/password-change';
 
 const BACKEND_URL = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -27,6 +28,7 @@ export async function POST() {
       const errorResponse = NextResponse.json({ error: 'Session expired' }, { status: 401 });
       errorResponse.cookies.delete('auth_token');
       errorResponse.cookies.delete('refresh_token');
+      syncPasswordChangeCookie(errorResponse, false);
       return errorResponse;
     }
 
@@ -53,6 +55,7 @@ export async function POST() {
       });
     }
 
+    syncPasswordChangeCookie(response, data.must_change_password === true);
     return response;
   } catch {
     return NextResponse.json({ error: 'Refresh failed' }, { status: 503 });

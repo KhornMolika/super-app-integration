@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -29,6 +30,22 @@ declare global {
       endUser?: AuthenticatedEndUser;
     }
   }
+}
+
+/** What a phone session that must change its password may still call. */
+export function allowedBeforePasswordChange(request: {
+  method?: string;
+  path?: string;
+  url?: string;
+}): boolean {
+  const path = String(request.path ?? request.url ?? '')
+    .split('?')[0]
+    .replace(/^\/api(?=\/)/, '');
+  const method = String(request.method || '').toUpperCase();
+  return (
+    (method === 'GET' && path === '/mobile/me') ||
+    (method === 'POST' && path === '/mobile/me/password')
+  );
 }
 
 /**
@@ -66,6 +83,7 @@ export class EndUserAuthGuard implements CanActivate {
           email: true,
           status: true,
           sessionsRevokedAt: true,
+          mustChangePassword: true,
         },
       });
     } catch {
@@ -84,6 +102,14 @@ export class EndUserAuthGuard implements CanActivate {
       if (typeof payload.iat !== 'number' || payload.iat < revokedAtSec) {
         throw new UnauthorizedException();
       }
+    }
+    // A password someone else chose: only changing it works until replaced
+    if (user.mustChangePassword && !allowedBeforePasswordChange(request)) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'PASSWORD_CHANGE_REQUIRED',
+        message: 'Choose your own password before continuing.',
+      });
     }
     request.endUser = { id: user.id, email: user.email };
     return true;
@@ -123,13 +149,26 @@ export class OptionalEndUserAuthGuard implements CanActivate {
     try {
       user = await this.users.findOne({
         where: { id: payload.sub },
-        select: { id: true, email: true, status: true },
+        select: {
+          id: true,
+          email: true,
+          status: true,
+          mustChangePassword: true,
+        },
       });
     } catch {
       throw new UnauthorizedException();
     }
     if (!user || user.status !== IdentityStatus.ACTIVE) {
       throw new UnauthorizedException();
+    }
+    // A password someone else chose: only changing it works until replaced
+    if (user.mustChangePassword && !allowedBeforePasswordChange(request)) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'PASSWORD_CHANGE_REQUIRED',
+        message: 'Choose your own password before continuing.',
+      });
     }
     request.endUser = { id: user.id, email: user.email };
     return true;

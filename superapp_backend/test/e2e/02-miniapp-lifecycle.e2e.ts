@@ -284,7 +284,10 @@ describe('Mini app lifecycle', () => {
       ).toBe(200);
       // Saving runs the checks in the background; passing them submits the app
       const deadline = Date.now() + 5000;
-      while (Date.now() < deadline && (await stages(e, id))[0] !== '1.0.0:SUBMITTED') {
+      while (
+        Date.now() < deadline &&
+        (await stages(e, id))[0] !== '1.0.0:SUBMITTED'
+      ) {
         await new Promise((r) => setTimeout(r, 100));
       }
       expect(await stages(e, id)).toEqual(['1.0.0:SUBMITTED']);

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { syncPasswordChangeCookie } from '@/lib/password-change';
 
 const BACKEND_URL =
   process.env.BACKEND_API_URL ||
@@ -36,7 +37,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: message }, { status: res.status || 400 });
     }
 
-    return NextResponse.json(data);
+    // The backend ended the other sessions and issued new tokens for this one
+    const isProd = process.env.NODE_ENV === 'production';
+    const { access_token, refresh_token, ...result } = data;
+    const response = NextResponse.json(result);
+    if (access_token) {
+      response.cookies.set('auth_token', access_token, {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: data.expires_in || 15 * 60,
+      });
+    }
+    if (refresh_token) {
+      response.cookies.set('refresh_token', refresh_token, {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: data.refresh_expires_in || 7 * 24 * 60 * 60,
+      });
+    }
+    syncPasswordChangeCookie(response, data.must_change_password === true);
+    return response;
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || 'Password update service unreachable' },

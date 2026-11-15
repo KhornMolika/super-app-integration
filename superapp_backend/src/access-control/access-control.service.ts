@@ -88,7 +88,11 @@ export class AccessControlService {
     userId: string,
     passwordHash: string,
   ): Promise<void> {
-    await this.identityRepository.update({ id: userId }, { passwordHash });
+    // The user's own choice (change or reset): no longer a password set by someone else
+    await this.identityRepository.update(
+      { id: userId },
+      { passwordHash, mustChangePassword: false },
+    );
   }
 
   async findByEmailWithPermissions(
@@ -119,13 +123,12 @@ export class AccessControlService {
         const defaultPassword = process.env.SUPERADMIN_PASSWORD;
         if (defaultPassword) {
           identity.passwordHash = await hashPassword(defaultPassword);
+          // The shared seed password: the owner chooses their own at first sign-in
+          identity.mustChangePassword = true;
           identityChanged = true;
         }
       }
-      if (identity.status !== 'ACTIVE') {
-        identity.status = 'ACTIVE';
-        identityChanged = true;
-      }
+      // A deactivated official account stays deactivated (no forced ACTIVE)
       // Official seed address: the mobile sign-in refuses an unverified email
       if (!identity.emailVerifiedAt) {
         identity.emailVerifiedAt = new Date();
@@ -246,6 +249,8 @@ export class AccessControlService {
       name: seedInfo.name,
       status: 'ACTIVE',
       passwordHash,
+      // First sign-in with the shared seed password asks for the owner's own
+      mustChangePassword: true,
       emailVerifiedAt: new Date(), // official seed address, configured by the platform owners
     });
     identity = await this.identityRepository.save(identity);
@@ -283,8 +288,7 @@ export class AccessControlService {
       .leftJoinAndSelect('staffProfile.organization', 'organization')
       .leftJoinAndSelect('ident.consumerProfile', 'consumerProfile');
 
-    const isUnverifiedQuery =
-      query?.status === 'PENDING_EMAIL_VERIFICATION';
+    const isUnverifiedQuery = query?.status === 'PENDING_EMAIL_VERIFICATION';
     const isAllStatusQuery = query?.status === 'ALL';
 
     if (!includeUnverified && !isUnverifiedQuery && !isAllStatusQuery) {
@@ -567,7 +571,8 @@ export class AccessControlService {
     }
 
     const isSuperAdmin = this.isRequesterSuperAdmin(requester);
-    if (dto.accountType === 'CONSUMER') return this.createConsumer(dto, isSuperAdmin);
+    if (dto.accountType === 'CONSUMER')
+      return this.createConsumer(dto, isSuperAdmin);
 
     let roles: Role[] = [];
     if (dto.roleId) {
@@ -628,8 +633,7 @@ export class AccessControlService {
         'Organization is required when creating a user.',
       );
     }
-    const orgRepo =
-      this.identityRepository.manager.getRepository(Organization);
+    const orgRepo = this.identityRepository.manager.getRepository(Organization);
     organization = await orgRepo.findOne({ where: { id: targetOrgId } });
     if (!organization) {
       throw new BadRequestException(
@@ -655,10 +659,15 @@ export class AccessControlService {
       telegramUsername: dto.telegramUsername || undefined,
       status: identityStatus,
       passwordHash,
+      // A password an administrator chose: the user replaces it at first
+      // sign-in (self-registration has no requester and sets its own)
+      mustChangePassword:
+        Boolean(requester) && Boolean(dto.password && dto.password.trim()),
       // Provisioned by an administrator for this address: the user does not verify it
       // again, and the mobile sign-in (which requires a verified email) accepts it.
       // Self-registration (PENDING_EMAIL_VERIFICATION) still has to prove it with the code.
-      emailVerifiedAt: identityStatus === 'PENDING_EMAIL_VERIFICATION' ? null : new Date(),
+      emailVerifiedAt:
+        identityStatus === 'PENDING_EMAIL_VERIFICATION' ? null : new Date(),
     });
     const savedIdentity = await this.identityRepository.save(identity);
 
@@ -685,12 +694,19 @@ export class AccessControlService {
    * counts as verified, like other provisioned accounts; without a password
    * the user sets one through "Forgot password" in the app.
    */
-  private async createConsumer(dto: CreateUserDto, isSuperAdmin: boolean): Promise<FormattedUserResponse> {
+  private async createConsumer(
+    dto: CreateUserDto,
+    isSuperAdmin: boolean,
+  ): Promise<FormattedUserResponse> {
     if (!isSuperAdmin) {
-      throw new ForbiddenException('Only Super Administrators can create mobile app users');
+      throw new ForbiddenException(
+        'Only Super Administrators can create mobile app users',
+      );
     }
     const passwordHash = await hashPassword(
-      dto.password && dto.password.trim() ? dto.password.trim() : randomBytes(32).toString('hex'),
+      dto.password && dto.password.trim()
+        ? dto.password.trim()
+        : randomBytes(32).toString('hex'),
     );
     const identity = await this.identityRepository.save(
       this.identityRepository.create({
@@ -698,12 +714,18 @@ export class AccessControlService {
         email: dto.email.toLowerCase().trim(),
         status: dto.isActive === false ? 'PENDING_APPROVAL' : 'ACTIVE',
         passwordHash,
+        // A password the Super Admin chose: the user replaces it at first sign-in
+        mustChangePassword: Boolean(dto.password && dto.password.trim()),
         emailVerifiedAt: new Date(),
       }),
     );
-    const consumers = this.identityRepository.manager.getRepository(ConsumerProfile);
+    const consumers =
+      this.identityRepository.manager.getRepository(ConsumerProfile);
     await consumers.save(
-      consumers.create({ identityId: identity.id, phoneNumber: dto.phoneNumber?.trim() || null }),
+      consumers.create({
+        identityId: identity.id,
+        phoneNumber: dto.phoneNumber?.trim() || null,
+      }),
     );
     return this.findUserById(identity.id);
   }
@@ -720,6 +742,7 @@ export class AccessControlService {
           role: { permissions: true },
           organization: true,
         },
+        consumerProfile: true,
       },
     });
     if (!identity) {
@@ -736,7 +759,8 @@ export class AccessControlService {
 
     let staffProfile = identity.staffProfile;
     const targetRoles =
-      (staffProfile as any)?.roles || (staffProfile?.role ? [staffProfile.role] : []);
+      (staffProfile as any)?.roles ||
+      (staffProfile?.role ? [staffProfile.role] : []);
     const isTargetSuperAdmin = targetRoles.some(
       (r: any) => r.name === 'SUPER_ADMIN',
     );
@@ -793,6 +817,11 @@ export class AccessControlService {
 
     if (dto.password && dto.password.trim()) {
       identity.passwordHash = await hashPassword(dto.password.trim());
+      // Set by an administrator for someone else: that user replaces it at
+      // their next sign-in. Their own choice clears the requirement.
+      const self =
+        Boolean(requester) && [requester.sub, requester.id].includes(id);
+      identity.mustChangePassword = !self;
     } else if (dto.passwordHash) {
       identity.passwordHash = dto.passwordHash;
     }
@@ -820,6 +849,7 @@ export class AccessControlService {
       return this.findUserById(identity.id);
     }
 
+
     if (!staffProfile) {
       staffProfile = this.staffProfileRepository.create({
         identityId: identity.id,
@@ -830,7 +860,8 @@ export class AccessControlService {
 
     if (dto.position !== undefined) staffProfile.position = dto.position;
     if (dto.staffId !== undefined) staffProfile.staffId = dto.staffId;
-    if (dto.phoneNumber !== undefined) staffProfile.phoneNumber = dto.phoneNumber;
+    if (dto.phoneNumber !== undefined)
+      staffProfile.phoneNumber = dto.phoneNumber;
 
     if (dto.organizationId !== undefined) {
       const targetOrgId =
@@ -968,7 +999,9 @@ export class AccessControlService {
         .getRepository(Organization)
         .findOne({ where: { id: targetOrgId } });
       if (!org) {
-        throw new BadRequestException(`Organization with ID '${targetOrgId}' not found.`);
+        throw new BadRequestException(
+          `Organization with ID '${targetOrgId}' not found.`,
+        );
       }
       staffProfile = this.staffProfileRepository.create({
         identityId: identity.id,
