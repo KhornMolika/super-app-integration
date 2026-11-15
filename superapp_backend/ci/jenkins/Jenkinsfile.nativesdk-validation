@@ -191,67 +191,78 @@ pipeline {
                 echo "=========================================================="
                 echo " [STAGE 7] Final Report Aggregation & Backend Callback"
                 script {
-                    sh """
-                    node -e '
-                        const fs = require("fs");
+                    withEnv([
+                        "CB_URL=${params.CALLBACK_URL ?: ''}",
+                        "CB_TOKEN=${params.CALLBACK_TOKEN ?: env.CALLBACK_TOKEN ?: ''}",
+                        "MA_ID=${params.MINIAPP_ID ?: ''}",
+                    ]) {
+                        sh """
+                        set +x
+                        node -e '
+                            const fs = require("fs");
 
-                        const miniAppId = "${params.MINIAPP_ID}";
-                        const callbackUrl = "${params.CALLBACK_URL}";
+                            const miniAppId = process.env.MA_ID;
+                            const callbackUrl = process.env.CB_URL;
+                            const token = process.env.CB_TOKEN || "";
 
-                        const ingestFile = "${env.INGEST_REPORT}";
-                        const secretsFile = "${env.SECRETS_REPORT}";
-                        const sastFile = "${env.SAST_REPORT}";
-                        const capFile = "${env.CAPABILITY_REPORT}";
-                        const malwareFile = "${env.MALWARE_REPORT}";
-                        const licenseFile = "${env.LICENSE_REPORT}";
+                            const ingestFile = "${env.INGEST_REPORT}";
+                            const secretsFile = "${env.SECRETS_REPORT}";
+                            const sastFile = "${env.SAST_REPORT}";
+                            const capFile = "${env.CAPABILITY_REPORT}";
+                            const malwareFile = "${env.MALWARE_REPORT}";
+                            const licenseFile = "${env.LICENSE_REPORT}";
 
-                        const findings = [];
-                        let score = 100;
-                        const checks = {
-                            ingest: { passed: true, details: "Native SDK bundle integrity verified." },
-                            secret_scan: { passed: true, details: "Zero credential leaks detected." },
-                            sast: { passed: true, details: "Native SAST analysis clean." },
-                            capability_gate: { passed: true, details: "Native permissions match host allowlist." },
-                            malware_scan: { passed: true, details: "Binary signature clean." },
-                            license_audit: { passed: true, details: "Permissive OSS license verified." }
-                        };
+                            const findings = [];
+                            let score = 100;
+                            const checks = {
+                                ingest: { passed: true, details: "Native SDK bundle integrity verified." },
+                                secret_scan: { passed: true, details: "Zero credential leaks detected." },
+                                sast: { passed: true, details: "Native SAST analysis clean." },
+                                capability_gate: { passed: true, details: "Native permissions match host allowlist." },
+                                malware_scan: { passed: true, details: "Binary signature clean." },
+                                license_audit: { passed: true, details: "Permissive OSS license verified." }
+                            };
 
-                        [ingestFile, secretsFile, sastFile, capFile, malwareFile, licenseFile].forEach(f => {
-                            if (fs.existsSync(f)) {
+                            [ingestFile, secretsFile, sastFile, capFile, malwareFile, licenseFile].forEach(f => {
+                                if (fs.existsSync(f)) {
+                                    try {
+                                        const data = JSON.parse(fs.readFileSync(f, "utf8"));
+                                        if (data.findings && data.findings.length > 0) findings.push(...data.findings);
+                                        if (data.passed === false) score -= 25;
+                                    } catch (_) {}
+                                }
+                            });
+
+                            const status = score >= 70 && !findings.some(f => f.severity === "CRITICAL") ? "PASSED" : "FAILED";
+                            const payload = {
+                                miniAppId,
+                                integrationMethod: "NATIVE_SDK",
+                                status,
+                                score: Math.max(0, score),
+                                findings,
+                                checks,
+                                timestamp: new Date().toISOString()
+                            };
+
+                            (async () => {
                                 try {
-                                    const data = JSON.parse(fs.readFileSync(f, "utf8"));
-                                    if (data.findings && data.findings.length > 0) findings.push(...data.findings);
-                                    if (data.passed === false) score -= 25;
-                                } catch (_) {}
-                            }
-                        });
-
-                        const status = score >= 70 && !findings.some(f => f.severity === "CRITICAL") ? "PASSED" : "FAILED";
-                        const payload = {
-                            miniAppId,
-                            integrationMethod: "NATIVE_SDK",
-                            status,
-                            score: Math.max(0, score),
-                            findings,
-                            checks,
-                            timestamp: new Date().toISOString()
-                        };
-
-                        (async () => {
-                            try {
-                                process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-                                const res = await fetch(callbackUrl, {
-                                    method: "POST",
-                                    headers: Object.assign({ "Content-Type": "application/json" }, "${params.CALLBACK_TOKEN ?: ''}" ? { "x-callback-token": "${params.CALLBACK_TOKEN ?: ''}" } : {}),
-                                    body: JSON.stringify(payload)
-                                });
-                                console.log("Final callback HTTP status:", res.status);
-                            } catch (e) {
-                                console.error("Callback error:", e.message);
-                            }
-                        })();
-                    ' || true
-                    """
+                                    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+                                    const res = await fetch(callbackUrl, {
+                                        method: "POST",
+                                        headers: Object.assign(
+                                            { "Content-Type": "application/json" },
+                                            token ? { "x-callback-token": token } : {}
+                                        ),
+                                        body: JSON.stringify(payload)
+                                    });
+                                    console.log("Final callback HTTP status:", res.status);
+                                } catch (e) {
+                                    console.error("Callback error:", e.message);
+                                }
+                            })();
+                        ' || true
+                        """
+                    }
                 }
             }
         }
@@ -259,28 +270,43 @@ pipeline {
 }
 
 def notifyStage(String stageId, String stageName, String status, String details) {
-    sh """
-    node -e '
-        (async () => {
-            try {
-                process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-                const callbackUrl = "${params.CALLBACK_URL}".replace("/callback", "/stage");
-                const res = await fetch(callbackUrl, {
-                    method: "POST",
-                    headers: Object.assign({ "Content-Type": "application/json" }, "${params.CALLBACK_TOKEN ?: ''}" ? { "x-callback-token": "${params.CALLBACK_TOKEN ?: ''}" } : {}),
-                    body: JSON.stringify({
-                        miniAppId: "${params.MINIAPP_ID}",
-                        stageId: "${stageId}",
-                        stageName: "${stageName}",
-                        status: "${status}",
-                        details: "${details}"
-                    })
-                });
-                console.log("Stage update [" + "${stageId}" + "] status: " + res.status);
-            } catch (err) {
-                console.warn("Stage update failed for " + "${stageId}" + ":", err.message);
-            }
-        })();
-    ' || true
-    """
+    withEnv([
+        "STAGE_ID=${stageId}",
+        "STAGE_NAME=${stageName}",
+        "STAGE_STATUS=${status}",
+        "STAGE_DETAILS=${details}",
+        "CB_URL=${params.CALLBACK_URL ?: ''}",
+        "CB_TOKEN=${params.CALLBACK_TOKEN ?: env.CALLBACK_TOKEN ?: ''}",
+        "MA_ID=${params.MINIAPP_ID ?: ''}",
+    ]) {
+        sh '''
+        set +x
+        node -e '
+            (async () => {
+                try {
+                    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+                    const callbackUrl = (process.env.CB_URL || "").replace("/callback", "/stage");
+                    const token = process.env.CB_TOKEN || "";
+                    const res = await fetch(callbackUrl, {
+                        method: "POST",
+                        headers: Object.assign(
+                            { "Content-Type": "application/json" },
+                            token ? { "x-callback-token": token } : {}
+                        ),
+                        body: JSON.stringify({
+                            miniAppId: process.env.MA_ID,
+                            stageId: process.env.STAGE_ID,
+                            stageName: process.env.STAGE_NAME,
+                            status: process.env.STAGE_STATUS,
+                            details: process.env.STAGE_DETAILS
+                        })
+                    });
+                    console.log("Stage update [" + process.env.STAGE_ID + "] status: " + res.status);
+                } catch (err) {
+                    console.warn("Stage update failed for " + process.env.STAGE_ID + ":", err.message);
+                }
+            })();
+        ' || true
+        '''
+    }
 }
