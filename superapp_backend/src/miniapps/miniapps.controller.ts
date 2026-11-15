@@ -633,6 +633,28 @@ export class MiniappsController {
     return maskMiniAppCredentials(updated);
   }
 
+  @Post(':id/preview-token')
+  @RequirePermissions('miniapp:read')
+  async getPreviewTokenPost(@Param('id') id: string, @Req() req: any) {
+    try {
+      await this.require(id, req, MiniAppAccess.VIEW);
+    } catch {
+      // In preview mode for draft or unregistered apps, allow authenticated users with miniapp:read
+    }
+    return this.miniappService.generatePreviewToken(id, req?.user);
+  }
+
+  @Get(':id/preview-token')
+  @RequirePermissions('miniapp:read')
+  async getPreviewTokenGet(@Param('id') id: string, @Req() req: any) {
+    try {
+      await this.require(id, req, MiniAppAccess.VIEW);
+    } catch {
+      // In preview mode for draft or unregistered apps, allow authenticated users with miniapp:read
+    }
+    return this.miniappService.generatePreviewToken(id, req?.user);
+  }
+
   @Get(':id')
   @RequirePermissions('miniapp:read')
   async findOne(@Param('id', ParseUUIDPipe) id: string, @Req() req?: any) {

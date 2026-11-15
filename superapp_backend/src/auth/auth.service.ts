@@ -194,7 +194,7 @@ export class AuthService implements OnModuleInit {
 
   signMiniAppToken(
     payload: Record<string, any>,
-    audience: string,
+    audience: string | string[],
     expiresInSeconds = 600,
   ): string {
     return this.jwtService.sign(

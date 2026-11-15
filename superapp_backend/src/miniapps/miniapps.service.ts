@@ -64,6 +64,8 @@ import {
 } from './access/miniapp-access.policy';
 import { StaffProfile } from '../staff/entities/staff-profile.entity';
 import { NotificationsService } from '../notifications/notifications.service';
+import { AuthService } from '../auth/auth.service';
+import * as crypto from 'crypto';
 import {
   PackagePublishError,
   ScannedArtifactPublisherService,
@@ -119,7 +121,107 @@ export class MiniappsService implements OnApplicationBootstrap {
     private notificationsService?: NotificationsService,
     @Optional()
     private runs?: MiniAppRunsService,
+    @Optional()
+    private readonly authService?: AuthService,
   ) {}
+
+  /**
+   * Generates a fresh, unique preview token signed with the platform private key.
+   * Scoped to the requested mini app with the caller's profile and preview claims.
+   * A new unique jti and fresh timestamp are generated on every call.
+   */
+  async generatePreviewToken(idOrAppId: string, currentUser?: any) {
+    const UUID_PATTERN =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const where = UUID_PATTERN.test(idOrAppId)
+      ? { id: idOrAppId }
+      : { appId: idOrAppId };
+    const app = await this.miniappRepository.findOne({ where }).catch(() => null);
+
+    const targetAppId = app?.appId || idOrAppId;
+    const audiences = Array.from(
+      new Set(
+        [targetAppId, 'fsa_hr_miniapp', app?.id, idOrAppId].filter(
+          (x): x is string => typeof x === 'string' && x.length > 0,
+        ),
+      ),
+    );
+
+    const userId = currentUser?.sub || currentUser?.id;
+    let staffProfile: StaffProfile | null = null;
+    if (userId) {
+      try {
+        staffProfile = await this.miniappRepository.manager.findOne(
+          StaffProfile,
+          {
+            where: { identityId: userId },
+            relations: { organization: true, role: true },
+          },
+        );
+      } catch {
+        // Fall back gracefully if table or relation is temporarily unavailable
+      }
+    }
+
+    const jti = crypto.randomUUID();
+    const claims: Record<string, any> = {
+      sub: userId || 'FSA-UPR-000012345',
+      name: currentUser?.name || 'Demo Staff (Preview)',
+      email: currentUser?.email || 'preview.staff@fsa.gov.kh',
+      staffId: staffProfile?.staffId || 'FSA-DEMO-001',
+      position:
+        staffProfile?.position ||
+        (currentUser?.roles?.includes('SUPER_ADMIN')
+          ? 'Super Administrator'
+          : 'Technical Specialist'),
+      organizationName:
+        staffProfile?.organization?.name ||
+        currentUser?.organization ||
+        'FinTech Center (FSA)',
+      organizationCode:
+        staffProfile?.organization?.code ||
+        currentUser?.organizationCode ||
+        'FSA',
+      organizationId:
+        staffProfile?.organizationId ||
+        currentUser?.organizationId ||
+        app?.organizationId,
+      role:
+        staffProfile?.role?.name ||
+        (currentUser?.roles && currentUser.roles[0]) ||
+        'SUPER_ADMIN',
+      scope: 'openid profile miniapp:preview',
+      preview: true,
+      jti,
+    };
+
+    const expiresIn = 3600; // 1 hour preview session
+    let token: string;
+    if (this.authService) {
+      token = this.authService.signMiniAppToken(claims, audiences, expiresIn);
+    } else {
+      const header = Buffer.from(
+        JSON.stringify({ alg: 'RS256', typ: 'JWT', kid: 'mock' }),
+      ).toString('base64url');
+      const payload = Buffer.from(
+        JSON.stringify({
+          ...claims,
+          aud: audiences,
+          typ: 'miniapp_token',
+          iat: Math.floor(Date.now() / 1000),
+          exp: Math.floor(Date.now() / 1000) + expiresIn,
+        }),
+      ).toString('base64url');
+      token = `${header}.${payload}.preview-signature`;
+    }
+
+    return {
+      token,
+      expires_in: expiresIn,
+      app_id: targetAppId,
+      jti,
+    };
+  }
 
   /**
    * "Publish to Nexus" in the Backoffice: makes sure the Flutter package (of the

@@ -6,6 +6,7 @@ import { Button } from './inputs';
 import IframePreviewEngine from './IframePreviewEngine';
 import { DevicePhoneIcon } from '@/components/ui/Icons';
 import DownloadApkModal from './DownloadApkModal';
+import { miniappsApi } from '@/api/miniapps.api';
 
 export type DeviceType = 
   | 'Responsive' | 'Custom' 
@@ -56,6 +57,8 @@ export default function PreviewModal({
   const [mounted, setMounted] = useState(false);
   const [currentScreen, setCurrentScreen] = useState<'sandbox' | 'miniapp'>('sandbox');
   const [showApkModal, setShowApkModal] = useState(false);
+  const [previewToken, setPreviewToken] = useState<string | null>(null);
+  const [isLoadingToken, setIsLoadingToken] = useState<boolean>(false);
   
   const previewAreaRef = useRef<HTMLDivElement>(null);
   const [autoScale, setAutoScale] = useState(1);
@@ -107,15 +110,45 @@ export default function PreviewModal({
   const superAppContainerUrl = `${sandboxBase}?t=${reloadKey}`;
 
   // Effective MiniApp starting URL (Loads directly into the mini app's own home screen)
+  const tokenQueryParam = previewToken ? `&token=${encodeURIComponent(previewToken)}` : '';
   const miniAppHomeUrl = isDirectWebUrl
     ? url
     : (targetAppId
-        ? `${sandboxBase}?t=${reloadKey}#/miniapp/${encodeURIComponent(targetAppId)}?pkg=${encodeURIComponent(pkgParam)}&name=${encodeURIComponent(title)}&method=${encodeURIComponent(methodUpper)}&preview=true`
+        ? `${sandboxBase}?t=${reloadKey}#/miniapp/${encodeURIComponent(targetAppId)}?pkg=${encodeURIComponent(pkgParam)}&name=${encodeURIComponent(title)}&method=${encodeURIComponent(methodUpper)}&preview=true${tokenQueryParam}`
         : `${sandboxBase}?t=${reloadKey}`);
 
   const displayMiniAppSubtitle = isDirectWebUrl
     ? url.replace(/^https?:\/\//, '')
     : `#/miniapp/${targetAppId || title.toLowerCase().replace(/\s+/g, '_')}`;
+
+  // Fetch dynamic preview token from backend only when user accesses the MiniApp tab or reloads
+  useEffect(() => {
+    let cancelled = false;
+    if (isOpen && currentScreen === 'miniapp' && !isDirectWebUrl) {
+      const idToFetch = appId || targetAppId;
+      if (idToFetch) {
+        setIsLoadingToken(true);
+        miniappsApi
+          .getPreviewToken(idToFetch)
+          .then((res) => {
+            if (!cancelled && res?.token) {
+              setPreviewToken(res.token);
+            }
+          })
+          .catch((err) => {
+            console.error('Failed to get dynamic preview token from backend:', err);
+          })
+          .finally(() => {
+            if (!cancelled) {
+              setIsLoadingToken(false);
+            }
+          });
+      }
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, currentScreen, reloadKey, appId, targetAppId, isDirectWebUrl]);
 
   useEffect(() => {
     setMounted(true);
@@ -131,7 +164,10 @@ export default function PreviewModal({
     return () => { document.body.style.overflow = 'auto'; };
   }, [isOpen]);
 
-  const handleReload = () => setReloadKey(prev => prev + 1);
+  const handleReload = () => {
+    setPreviewToken(null);
+    setReloadKey(prev => prev + 1);
+  };
   const handleZoomIn = () => setZoom(z => Math.min(z + 25, 200));
   const handleZoomOut = () => setZoom(z => Math.max(z - 25, 25));
   const handleZoomReset = () => setZoom(100);
@@ -323,7 +359,12 @@ export default function PreviewModal({
             </button>
             <button
               type="button"
-              onClick={() => setCurrentScreen('miniapp')}
+              onClick={() => {
+                if (currentScreen !== 'miniapp') {
+                  setPreviewToken(null);
+                  setCurrentScreen('miniapp');
+                }
+              }}
               className={`px-3 py-1 font-semibold rounded-lg transition-all flex items-center gap-1.5 ${
                 currentScreen === 'miniapp'
                   ? 'bg-brand-600 text-white shadow-xs'
@@ -480,9 +521,16 @@ export default function PreviewModal({
                   <div className="flex-1 relative bg-white">
                     {isDirectWebUrl ? (
                       <IframePreviewEngine url={miniAppHomeUrl} reloadKey={reloadKey} />
+                    ) : isLoadingToken && !previewToken ? (
+                      <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-slate-400 gap-3">
+                        <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                        <span className="text-xs font-medium text-slate-300">
+                          Connecting to secure sandbox session...
+                        </span>
+                      </div>
                     ) : (
                       <iframe
-                        key={`miniapp-home-${reloadKey}`}
+                        key={`miniapp-home-${reloadKey}-${previewToken ? 'ready' : 'init'}`}
                         src={miniAppHomeUrl}
                         className="w-full h-full border-0 bg-slate-900"
                         title={`${title} MiniApp Home`}

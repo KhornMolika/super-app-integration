@@ -288,5 +288,14 @@ export const miniappsApi = {
       method: 'POST',
       body: { newOwnerId, keepPreviousOwner },
     }),
+
+  /**
+   * Generates a fresh, dynamic preview token from the backend for sandbox testing.
+   */
+  getPreviewToken: (id: string) =>
+    apiClient<{ token: string; expires_in: number; app_id: string; jti: string }>(
+      `/api/mini-apps/${encodeURIComponent(id)}/preview-token`,
+      { method: 'POST' },
+    ).then(unwrapItem),
 };
 
