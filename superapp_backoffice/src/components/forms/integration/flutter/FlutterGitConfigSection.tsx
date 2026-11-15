@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Input, Label, Select } from "@/components/ui/inputs";
 import { integrationsApi, type GitCommit } from "@/api/integrations.api";
 import { copyText } from '@/lib/clipboard';
@@ -30,6 +30,7 @@ export interface FlutterGitConfigSectionProps {
   branches: string[];
   selectedRef: string;
   lockedCommitSha: string;
+  onAutoDetectSha?: () => void;
 }
 
 export default function FlutterGitConfigSection({
@@ -55,12 +56,14 @@ export default function FlutterGitConfigSection({
   branches,
   selectedRef,
   lockedCommitSha,
+  onAutoDetectSha,
 }: FlutterGitConfigSectionProps) {
   const [showTokenPassword, setShowTokenPassword] = useState(false);
   const [isGeneratingKey, setIsGeneratingKey] = useState(false);
   const [copiedKey, setCopiedKey] = useState(false);
   const [showManualOverride, setShowManualOverride] = useState(false);
   const [keyError, setKeyError] = useState("");
+  const [isManualCommit, setIsManualCommit] = useState(false);
 
   const handleGenerateDedicatedKey = async () => {
     try {
@@ -210,6 +213,17 @@ export default function FlutterGitConfigSection({
     return days <= 0 ? "today" : days === 1 ? "yesterday" : `${days}d ago`;
   };
 
+  // Automatically select and populate the newest commit SHA when available and not yet set
+  useEffect(() => {
+    if (!commitSha) {
+      if (commits.length > 0 && commits[0]?.sha) {
+        onCommitChange(commits[0].sha);
+      } else if (branchHeadSha) {
+        onCommitChange(branchHeadSha);
+      }
+    }
+  }, [commitSha, commits, branchHeadSha, onCommitChange]);
+
   return (
     <div className="space-y-6">
       {/* Repository */}
@@ -295,44 +309,121 @@ export default function FlutterGitConfigSection({
       {/* Commit of that branch: what is scanned and built, exactly */}
       <div>
         <div className="flex items-center justify-between gap-2 min-h-9 mb-1.5">
-          <Label htmlFor="git-commit" className="!mb-0">
-            Commit
+          <Label htmlFor="git-commit" className="!mb-0 flex items-center gap-2">
+            <span>Commit</span>
+            <span className="text-[10px] font-normal px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700">
+              Auto-detected
+            </span>
           </Label>
-          {isLoadingCommits && <span className="text-xs text-slate-400">Loading commits...</span>}
+          <div className="flex items-center gap-2 text-xs">
+            {(isLoadingCommits || isGitValidating) && (
+              <span className="text-slate-400 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-ping" />
+                Auto-detecting...
+              </span>
+            )}
+            {branchHeadSha && commitSha !== branchHeadSha && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsManualCommit(false);
+                  onCommitChange(branchHeadSha);
+                }}
+                className="text-brand-600 dark:text-brand-400 hover:underline font-medium"
+                title={`Reset to latest commit on ${branch || 'branch'}: ${branchHeadSha}`}
+              >
+                ↻ Latest ({branchHeadSha.substring(0, 7)})
+              </button>
+            )}
+            {onAutoDetectSha && (
+              <button
+                type="button"
+                onClick={onAutoDetectSha}
+                className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-medium"
+                title="Fetch latest commit SHA from remote"
+              >
+                ⚡ Detect
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setIsManualCommit(!isManualCommit)}
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline"
+            >
+              {isManualCommit ? "Use Dropdown" : "Custom SHA"}
+            </button>
+          </div>
         </div>
-        {commits.length > 0 ? (
+
+        {!isManualCommit && (commits.length > 0 || branchHeadSha) ? (
           <Select
             id="git-commit"
-            value={commitSha || commits[0].sha}
-            onChange={(e: any) => onCommitChange(e.target.value)}
+            value={commitSha || (commits.length > 0 ? commits[0].sha : branchHeadSha)}
+            onChange={(e: any) => {
+              if (e.target.value === "__manual__") {
+                setIsManualCommit(true);
+              } else {
+                onCommitChange(e.target.value);
+              }
+            }}
             disabled={!isEditable}
-            className="font-mono"
+            className="font-mono text-xs"
           >
-            {commitSha && !commits.some((c) => c.sha === commitSha) && (
-              <option value={commitSha}>{commitSha.substring(0, 7)} (saved)</option>
-            )}
-            {commits.map((c, i) => (
-              <option key={c.sha} value={c.sha}>
-                {`${c.shortSha || c.sha.substring(0, 7)}  ${(c.message || "").split("\n")[0].slice(0, 60)}  · ${ago(c.date)}${i === 0 ? "  (newest)" : ""}`}
-              </option>
-            ))}
+            {commits.length > 0 ? (
+              <>
+                {commitSha && !commits.some((c) => c.sha === commitSha) && commitSha !== branchHeadSha && (
+                  <option value={commitSha}>{commitSha.substring(0, 7)} (custom saved)</option>
+                )}
+                {commits.map((c, i) => (
+                  <option key={c.sha} value={c.sha}>
+                    {`${i === 0 ? "★ [Latest] " : ""}${c.message ? c.message.split("\n")[0].slice(0, 55) : "Commit"} (${c.shortSha || c.sha.substring(0, 7)}) · ${ago(c.date)}`}
+                  </option>
+                ))}
+              </>
+            ) : branchHeadSha ? (
+              <>
+                <option value={branchHeadSha}>
+                  {`★ [Latest HEAD] ${branchHeadSha.substring(0, 7)} · Newest on ${branch || "branch"}`}
+                </option>
+                {commitSha && commitSha !== branchHeadSha && (
+                  <option value={commitSha}>{commitSha.substring(0, 7)} (custom saved)</option>
+                )}
+              </>
+            ) : null}
+            <option value="__manual__">✏️ Custom / Paste 40-character SHA...</option>
           </Select>
         ) : (
-          <Input
-            id="git-commit"
-            value={commitSha}
-            onChange={(e: any) => onCommitChange(e.target.value.trim())}
-            disabled={!isEditable}
-            placeholder={branchHeadSha || "40-character commit SHA"}
-            className={`font-mono ${commitError ? "border-rose-500 ring-1 ring-rose-500" : ""}`}
-          />
+          <div className="relative">
+            <Input
+              id="git-commit"
+              value={commitSha}
+              onChange={(e: any) => onCommitChange(e.target.value.trim())}
+              disabled={!isEditable}
+              placeholder={branchHeadSha || "40-character commit SHA (e.g. a1b2c3d...)"}
+              className={`font-mono text-xs pr-24 ${commitError ? "border-rose-500 ring-1 ring-rose-500" : ""}`}
+            />
+            {branchHeadSha && (
+              <button
+                type="button"
+                onClick={() => {
+                  onCommitChange(branchHeadSha);
+                  setIsManualCommit(false);
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 text-[11px] font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded border border-slate-300 dark:border-slate-600 transition-colors"
+                title="Paste detected latest commit SHA"
+              >
+                Use Latest
+              </button>
+            )}
+          </div>
         )}
+
         <p className={`mt-1.5 text-xs ${commitError ? "text-rose-600 dark:text-rose-400" : "text-slate-500 dark:text-slate-400"}`}>
           {commitError ||
             (commits.length > 0
-              ? "Scans and builds use exactly this commit, so what is reviewed is what ships."
+              ? `Select any commit from ${branch || "the branch"} to pin scans and builds to that exact version.`
               : branchHeadSha
-                ? `Newest on ${branch || "the branch"}: ${branchHeadSha.substring(0, 7)}. Commits can't be listed for this repository; paste another SHA to use it.`
+                ? `Latest commit on ${branch || "the branch"}: ${branchHeadSha.substring(0, 7)} (Auto-detected).`
                 : "Scans and builds use exactly this commit.")}
         </p>
       </div>

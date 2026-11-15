@@ -477,6 +477,66 @@ export default function FlutterPackageIntegrationForm({
         target: { name: "gitBranch", value: val },
       } as any);
     }
+
+    // Auto-detect latest commit SHA immediately when branch changes
+    const url = flutterConfig.gitUrl?.trim() || "";
+    if (val && url) {
+      const isDeployKey =
+        (isPrivateRepo && authMethod === "deploy_key") || url.startsWith("git@");
+      const tokenToUse =
+        isPrivateRepo && authMethod === "token"
+          ? flutterConfig.gitAccessToken || undefined
+          : undefined;
+
+      integrationsApi
+        .resolveGitSha({
+          url,
+          ref: val,
+          token: tokenToUse,
+          deployKey: flutterConfig.deployKey || undefined,
+        })
+        .then((res: any) => {
+          const sha = res?.sha || res?.data?.sha;
+          if (sha) {
+            setBranchHeadSha(sha);
+            setLockedCommitSha(sha);
+            handleCommitChange(sha);
+          }
+        })
+        .catch(() => {});
+    }
+  };
+
+  const handleAutoDetectSha = async () => {
+    const url = flutterConfig.gitUrl?.trim() || "";
+    const ref = selectedRef || flutterConfig.gitBranch || "main";
+    if (!url) return;
+    const isDeployKey =
+      (isPrivateRepo && authMethod === "deploy_key") || url.startsWith("git@");
+    const tokenToUse =
+      isPrivateRepo && authMethod === "token"
+        ? flutterConfig.gitAccessToken || undefined
+        : undefined;
+
+    setIsLoadingCommits(true);
+    try {
+      const res: any = await integrationsApi.resolveGitSha({
+        url,
+        ref,
+        token: tokenToUse,
+        deployKey: flutterConfig.deployKey || undefined,
+      });
+      const sha = res?.sha || res?.data?.sha;
+      if (sha) {
+        setBranchHeadSha(sha);
+        setLockedCommitSha(sha);
+        handleCommitChange(sha);
+      }
+    } catch (e) {
+      console.error("Failed to auto-detect SHA:", e);
+    } finally {
+      setIsLoadingCommits(false);
+    }
   };
 
   const handleRefTypeChange = (type: "tag" | "branch" | "commit") => {
@@ -961,6 +1021,7 @@ export default function FlutterPackageIntegrationForm({
           branches={branches}
           selectedRef={selectedRef}
           lockedCommitSha={lockedCommitSha}
+          onAutoDetectSha={handleAutoDetectSha}
         />
       )}
 
