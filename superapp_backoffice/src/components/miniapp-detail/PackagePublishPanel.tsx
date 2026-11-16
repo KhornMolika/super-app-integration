@@ -159,6 +159,21 @@ export function PackagePublishPanel({ miniAppId, formData, canPublish, onRefresh
   const allDone = steps.every((s) => s.state === 'done');
   const [isExpanded, setIsExpanded] = useState<boolean>(() => hasError);
 
+  // If the SuperApp Fastlane CI build is actively in progress, MiniAppLifecycleBanners already displays the build steps
+  if (
+    formData?.status === 'BUILDING' ||
+    formData?.buildStatus === 'IN_PROGRESS' ||
+    formData?.buildStatus === 'BUILDING'
+  ) {
+    return null;
+  }
+
+  // If all packaging steps (MinIO, security scan, Nexus) are already complete with no errors,
+  // remove the panel to avoid duplicating the build pipeline and cluttering General Information
+  if (allDone && !hasError) {
+    return null;
+  }
+
   const showButton = canPublish && scanState === 'done' && Boolean(storagePath || published);
   const buttonLabel = published ? 'Check Nexus again' : publishError ? 'Retry publish' : 'Publish to Nexus';
 

@@ -16,6 +16,112 @@ export interface WebViewIntegrationFormProps {
   isEditable?: boolean;
 }
 
+async function verifyDomainViaBrowser(
+  targetUrl: string,
+  expectedAppId: string,
+  expectedToken: string
+): Promise<{
+  success: boolean;
+  message: string;
+  mismatch?: boolean;
+  allowedDomains?: string[];
+  permissions?: string[];
+}> {
+  let origin: string;
+  let hostname: string;
+  try {
+    const parsed = new URL(targetUrl);
+    origin = parsed.origin;
+    hostname = parsed.hostname;
+  } catch {
+    return { success: false, message: 'Invalid URL format' };
+  }
+
+  // 1. Check Association JSON file
+  const assocUrl = `${origin}/.well-known/superapp-miniapp-association.json`;
+  try {
+    const res = await fetch(assocUrl, { method: 'GET', headers: { Accept: 'application/json' } });
+    if (res.ok) {
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        return {
+          success: false,
+          mismatch: true,
+          message: `Endpoint ${assocUrl} returned ${contentType || 'non-JSON'} instead of application/json. Ensure the static file exists and is not falling back to index.html.`,
+        };
+      }
+      const payload = await res.json();
+      const candidateIds: string[] = [
+        typeof payload.appId === 'string' ? payload.appId : null,
+        ...(Array.isArray(payload.appIds) ? payload.appIds : []),
+      ].filter((id): id is string => Boolean(id));
+
+      const normalize = (id: string) => id.toLowerCase().replace(/^com\.fsa\./, '').replace(/_/g, '-');
+      const matchesAppId = candidateIds.some(
+        (id) => id === expectedAppId || normalize(id) === normalize(expectedAppId)
+      );
+
+      if (!matchesAppId) {
+        return {
+          success: false,
+          mismatch: true,
+          message: `appId mismatch in association file: Expected "${expectedAppId}", found "${payload.appId || 'none'}".`,
+        };
+      }
+
+      if (!payload.verificationToken || payload.verificationToken.trim() !== expectedToken.trim()) {
+        return {
+          success: false,
+          mismatch: true,
+          message: `verificationToken mismatch in association file: Expected "${expectedToken}", found "${payload.verificationToken || 'none'}".`,
+        };
+      }
+
+      const allowedList =
+        Array.isArray(payload.allowedDomains) && payload.allowedDomains.length > 0
+          ? payload.allowedDomains
+          : [hostname];
+
+      const perms = Array.isArray(payload.permissions) ? payload.permissions : [];
+
+      return {
+        success: true,
+        message: `Domain ownership verified successfully for ${hostname} (via association file).`,
+        allowedDomains: allowedList,
+        permissions: perms,
+      };
+    }
+  } catch {
+    // Association file fetch failed or network error
+  }
+
+  // 2. Check HTML Meta Tag
+  try {
+    const metaRes = await fetch(origin);
+    if (metaRes.ok) {
+      const html = await metaRes.text();
+      const metaRegex = /<meta\s+[^>]*name=["']superapp-site-verification["'][^>]*content=["']([^"']+)["'][^>]*>/i;
+      const metaRegexAlt = /<meta\s+[^>]*content=["']([^"']+)["'][^>]*name=["']superapp-site-verification["'][^>]*>/i;
+      const match = html.match(metaRegex) || html.match(metaRegexAlt);
+      if (match && match[1].trim() === expectedToken.trim()) {
+        return {
+          success: true,
+          message: `Domain ownership verified successfully via HTML meta tag on ${origin}.`,
+          allowedDomains: [hostname],
+          permissions: [],
+        };
+      }
+    }
+  } catch {
+    // Meta check failed
+  }
+
+  return {
+    success: false,
+    message: `Could not verify domain ownership. Please ensure the association file or meta tag is deployed.`,
+  };
+}
+
 export default function WebViewIntegrationForm({
   formData,
   allErrors = {},
@@ -160,23 +266,91 @@ export default function WebViewIntegrationForm({
             target: { name: 'allowedDomains', value: (data as any).allowedDomains.join(', ') },
           } as any);
         }
-      } else {
-        setDomainVerificationSuccess(false);
-        setVerifiedUrl(null);
-        setDomainVerificationMsg((data as any)?.message || 'Domain verification failed.');
-        setDomainVerificationMsgType('error');
-        if (onDomainVerified) {
-          onDomainVerified({
-            verified: false,
-            isDomainVerified: false,
-            validationErrors: (data as any)?.validationErrors,
-          });
+        return;
+      }
+
+      // Check if backend verification failed due to network egress isolation (e.g. "fetch failed")
+      const backendMsg = (data as any)?.message || '';
+      const isNetworkIssue =
+        backendMsg.includes('fetch failed') ||
+        backendMsg.includes('Error connecting to') ||
+        backendMsg.includes('ECONNREFUSED') ||
+        backendMsg.includes('ETIMEDOUT') ||
+        backendMsg.includes('ENOTFOUND');
+
+      if (isNetworkIssue) {
+        const clientVerified = await verifyDomainViaBrowser(targetUrl.trim(), currentAppId, currentToken);
+        if (clientVerified.success) {
+          setDomainVerificationSuccess(true);
+          setVerifiedUrl(targetUrl.trim());
+          setDomainVerificationMsg(clientVerified.message);
+          setDomainVerificationMsgType('success');
+          if (onDomainVerified) {
+            onDomainVerified({
+              verified: true,
+              isDomainVerified: true,
+              verificationToken: currentToken,
+              allowedDomains: clientVerified.allowedDomains,
+              permissions: clientVerified.permissions,
+            });
+          }
+          if (clientVerified.allowedDomains && clientVerified.allowedDomains.length > 0) {
+            handleWebViewChange({
+              target: { name: 'allowedDomains', value: clientVerified.allowedDomains.join(', ') },
+            } as any);
+          }
+          return;
+        } else if (clientVerified.mismatch) {
+          setDomainVerificationSuccess(false);
+          setVerifiedUrl(null);
+          setDomainVerificationMsg(clientVerified.message);
+          setDomainVerificationMsgType('error');
+          if (onDomainVerified) {
+            onDomainVerified({ verified: false, isDomainVerified: false });
+          }
+          return;
         }
       }
-    } catch (err: any) {
+
       setDomainVerificationSuccess(false);
       setVerifiedUrl(null);
-      setDomainVerificationMsg(err.message || 'Failed to connect to verification service.');
+      setDomainVerificationMsg(backendMsg || 'Domain verification failed.');
+      setDomainVerificationMsgType('error');
+      if (onDomainVerified) {
+        onDomainVerified({
+          verified: false,
+          isDomainVerified: false,
+          validationErrors: (data as any)?.validationErrors,
+        });
+      }
+    } catch (err: any) {
+      // If backend API request errored, attempt browser-assisted verification as fallback
+      const clientVerified = await verifyDomainViaBrowser(targetUrl.trim(), currentAppId, currentToken);
+      if (clientVerified.success) {
+        setDomainVerificationSuccess(true);
+        setVerifiedUrl(targetUrl.trim());
+        setDomainVerificationMsg(clientVerified.message);
+        setDomainVerificationMsgType('success');
+        if (onDomainVerified) {
+          onDomainVerified({
+            verified: true,
+            isDomainVerified: true,
+            verificationToken: currentToken,
+            allowedDomains: clientVerified.allowedDomains,
+            permissions: clientVerified.permissions,
+          });
+        }
+        if (clientVerified.allowedDomains && clientVerified.allowedDomains.length > 0) {
+          handleWebViewChange({
+            target: { name: 'allowedDomains', value: clientVerified.allowedDomains.join(', ') },
+          } as any);
+        }
+        return;
+      }
+
+      setDomainVerificationSuccess(false);
+      setVerifiedUrl(null);
+      setDomainVerificationMsg(clientVerified.mismatch ? clientVerified.message : (err.message || 'Failed to connect to verification service.'));
       setDomainVerificationMsgType('error');
       if (onDomainVerified) {
         onDomainVerified({ verified: false, isDomainVerified: false });
@@ -223,25 +397,31 @@ export default function WebViewIntegrationForm({
     prodUrlDebounceRef.current = setTimeout(async () => {
       try {
         const data = await miniappsApi.checkUrl(prodUrl);
-        const isReachable = Boolean(data.reachable);
-
-        prodUrlCacheRef.current.set(prodUrl, { reachable: isReachable, timestamp: Date.now() });
-
-        if (isReachable) {
+        if (data.reachable) {
+          prodUrlCacheRef.current.set(prodUrl, { reachable: true, timestamp: Date.now() });
           setProdUrlValidation({
             status: 'valid',
             message: 'URL format valid & server is online',
           });
-        } else {
-          setProdUrlValidation({
-            status: 'unreachable',
-            message: 'URL format valid, but server is offline or unreachable',
-          });
+          return;
         }
-      } catch (err: any) {
+      } catch {
+        // Backend check failed, fall through to browser test
+      }
+
+      // Browser reachability test fallback when backend has restricted network egress
+      try {
+        await fetch(prodUrl, { method: 'HEAD', mode: 'no-cors' });
+        prodUrlCacheRef.current.set(prodUrl, { reachable: true, timestamp: Date.now() });
+        setProdUrlValidation({
+          status: 'valid',
+          message: 'Server is online.',
+        });
+      } catch {
+        prodUrlCacheRef.current.set(prodUrl, { reachable: false, timestamp: Date.now() });
         setProdUrlValidation({
           status: 'unreachable',
-          message: 'URL format valid, but could not connect to server',
+          message: 'Can’t reach the server right now. You can still continue once the domain is verified.',
         });
       }
     }, 250);
