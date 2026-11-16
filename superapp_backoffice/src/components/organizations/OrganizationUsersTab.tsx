@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/inputs';
 import { UserGroupIcon, ExternalLinkIcon } from '@/components/ui/Icons';
 import { Pagination, usePagination } from '@/components/ui/Pagination';
+import { UserAvatar } from '@/components/users';
 
 export interface OrganizationUsersTabProps {
   users?: OrganizationUser[];
@@ -63,9 +64,12 @@ export function OrganizationUsersTab({ users = [], isSuperOrAdmin }: Organizatio
                     {/* User Profile Cell */}
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3.5">
-                        <div className="w-9 h-9 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 font-bold text-xs flex items-center justify-center shrink-0">
-                          {initial}
-                        </div>
+                        <UserAvatar
+                          name={u.name}
+                          email={u.email}
+                          avatarUrl={(u as any).avatarUrl}
+                          size="sm"
+                        />
                         <div className="min-w-0">
                           <div className="font-semibold text-slate-900 dark:text-slate-100 text-sm">
                             {u.name || 'Unnamed User'}

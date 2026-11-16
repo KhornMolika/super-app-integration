@@ -13,11 +13,11 @@ pipeline {
     }
 
     environment {
-        REPORT_DIR = "/var/reports"
-        SSRF_REPORT = "/var/reports/ssrf-${params.MINIAPP_ID}.json"
-        TLS_REPORT = "/var/reports/testssl-${params.MINIAPP_ID}.json"
-        CSP_REPORT = "/var/reports/csp-${params.MINIAPP_ID}.json"
-        DAST_REPORT = "/var/reports/zap-${params.MINIAPP_ID}.json"
+        REPORT_DIR = "${WORKSPACE}/reports"
+        SSRF_REPORT = "${WORKSPACE}/reports/ssrf-${params.MINIAPP_ID}.json"
+        TLS_REPORT = "${WORKSPACE}/reports/testssl-${params.MINIAPP_ID}.json"
+        CSP_REPORT = "${WORKSPACE}/reports/csp-${params.MINIAPP_ID}.json"
+        DAST_REPORT = "${WORKSPACE}/reports/zap-${params.MINIAPP_ID}.json"
     }
 
     stages {

@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
+import { UserAvatar } from '@/components/users';
 
 export function HeaderProfile() {
   const { user, role, logout, avatarUrl: sharedAvatarUrl } = useAuth();
@@ -66,20 +67,14 @@ export function HeaderProfile() {
         aria-expanded={isOpen}
       >
         <div className="relative">
-          {hasAvatar ? (
-            <img
-              key={activeAvatarUrl!}
-              src={activeAvatarUrl!}
-              alt={userName}
-              className="w-9 h-9 rounded-full object-cover shadow-sm ring-1 ring-slate-200/80 dark:ring-slate-700/80"
-              onError={() => setImageError(true)}
-            />
-          ) : (
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-600 to-accent-600 flex items-center justify-center text-white font-bold text-xs shadow-xs shrink-0 ring-1 ring-slate-200/60 dark:ring-slate-700/60">
-              {initials}
-            </div>
-          )}
-          <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900" />
+          <UserAvatar
+            name={userName}
+            email={userEmail}
+            avatarUrl={activeAvatarUrl}
+            size="sm"
+            className="w-9 h-9"
+          />
+          <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900 z-10" />
         </div>
       </button>
 
@@ -89,21 +84,12 @@ export function HeaderProfile() {
           {/* User Identity Card with Name & Email (No role label) */}
           <div className="p-3 bg-slate-50/90 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-700/50">
             <div className="flex items-center gap-3">
-              <div className="relative w-10 h-10 rounded-full overflow-hidden shrink-0 shadow-xs ring-1 ring-slate-200/60 dark:ring-slate-700/60 bg-slate-100 dark:bg-slate-800">
-                {hasAvatar ? (
-                  <img
-                    key={`dropdown-${activeAvatarUrl}`}
-                    src={activeAvatarUrl!}
-                    alt={userName}
-                    className="w-full h-full object-cover"
-                    onError={() => setImageError(true)}
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-brand-600 to-accent-600 flex items-center justify-center text-white font-bold text-sm">
-                    {initials}
-                  </div>
-                )}
-              </div>
+              <UserAvatar
+                name={userName}
+                email={userEmail}
+                avatarUrl={activeAvatarUrl}
+                size="md"
+              />
               <div className="min-w-0 flex-1">
                 <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">
                   {userName}
