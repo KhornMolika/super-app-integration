@@ -106,20 +106,20 @@ try:
                 content = f.read()
 
             # Package name regex
-            pkg_m = re.search(r'package=[\'"]([A-Za-z0-9_.]+)[\'"]', content)
+            pkg_m = re.search(r"""package=['"]([A-Za-z0-9_.]+)['"]""", content)
             if pkg_m and not pkg_name:
                 pkg_name = pkg_m.group(1)
 
             # Permissions regex
-            perm_matches = re.findall(r'<uses-permission[^>]+android:name=[\'"]([A-Za-z0-9_.]+)[\'"]', content)
+            perm_matches = re.findall(r"""<uses-permission[^>]+android:name=['"]([A-Za-z0-9_.]+)['"]""", content)
             for pm in perm_matches:
                 manifest_permissions.add(pm)
 
             # SDK versions regex
-            min_m = re.search(r'android:minSdkVersion=[\'"]([0-9]+)[\'"]', content)
+            min_m = re.search(r"""android:minSdkVersion=['"]([0-9]+)['"]""", content)
             if min_m:
                 min_sdk = int(min_m.group(1))
-            tgt_m = re.search(r'android:targetSdkVersion=[\'"]([0-9]+)[\'"]', content)
+            tgt_m = re.search(r"""android:targetSdkVersion=['"]([0-9]+)['"]""", content)
             if tgt_m:
                 target_sdk = int(tgt_m.group(1))
         except Exception:
