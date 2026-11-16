@@ -588,8 +588,6 @@ export class MiniappsService implements OnApplicationBootstrap {
         { id },
         {
           ownerId: newOwnerId,
-          ownerName: target.name || target.email,
-          ownerEmail: target.email,
         },
       );
       await tx.delete(MiniAppCollaborator, {

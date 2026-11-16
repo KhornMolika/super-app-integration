@@ -344,7 +344,7 @@ export function UserProfileCard({
 
         {/* Right Column (5 cols): Connected Services & Tokens */}
         <div className="lg:col-span-5 space-y-6 flex flex-col justify-between">
-          {/* Personal Access Tokens (PAT) Quick Card */}
+          {/* Developer Tokens (PAT) Quick Card */}
           <Card className="p-6 rounded-3xl border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900/60 shadow-xs flex-1 flex flex-col justify-between hover:border-brand-500/40 transition-colors group">
             <div>
               <div className="flex items-center justify-between pb-3">
@@ -352,14 +352,14 @@ export function UserProfileCard({
                   <KeyIcon className="w-5 h-5" />
                 </div>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                  CLI &amp; API
+                  SDK &amp; CLI
                 </span>
               </div>
               <h4 className="text-base font-bold text-slate-900 dark:text-slate-100 mt-2">
-                Personal Access Tokens
+                Developer Tokens (PAT)
               </h4>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                Generate and manage scoped API credentials for CLI automated deployments, packaging pipelines, and scripts.
+                Generate your personal developer token (<code className="font-mono text-brand-600 dark:text-brand-400">fsa_pat_...</code>) to install private SDK packages and authenticate CLI tools.
               </p>
             </div>
 
@@ -368,7 +368,7 @@ export function UserProfileCard({
                 href="/settings/tokens"
                 className="inline-flex items-center justify-between w-full text-xs font-bold text-brand-600 dark:text-brand-400 hover:text-brand-500 transition-colors group-hover:translate-x-0.5 duration-150"
               >
-                <span>Manage Access Tokens</span>
+                <span>Manage Developer Tokens</span>
                 <ArrowRightIcon className="w-4 h-4" />
               </Link>
             </div>

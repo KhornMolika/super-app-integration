@@ -175,6 +175,36 @@ describe('DomainVerificationService', () => {
       expect(res.message).toContain('Failed to fetch association file (HTTP 404');
     });
 
+    it('verifies successfully via DNS TXT record matching verification token', async () => {
+      jest.spyOn(dns.promises, 'resolveTxt').mockResolvedValueOnce([['superapp-site-verification=tok_live_test']]);
+
+      const res = await service.verifyDomainOwnership(
+        'https://bank.example.com',
+        'test-app',
+        'tok_live_test',
+      );
+
+      expect(res.success).toBe(true);
+      expect(res.message).toContain('DNS TXT record');
+    });
+
+    it('verifies successfully via HTML meta tag matching verification token', async () => {
+      jest.spyOn(dns.promises, 'resolveTxt').mockRejectedValueOnce(new Error('ENOTFOUND'));
+      global.fetch = jest.fn().mockResolvedValueOnce({
+        ok: true,
+        text: async () => '<html><head><meta name="superapp-site-verification" content="tok_live_test"></head></html>',
+      });
+
+      const res = await service.verifyDomainOwnership(
+        'https://bank.example.com',
+        'test-app',
+        'tok_live_test',
+      );
+
+      expect(res.success).toBe(true);
+      expect(res.message).toContain('HTML meta tag');
+    });
+
     it('handles network error gracefully without crashing', async () => {
       global.fetch = jest.fn().mockRejectedValue(new Error('Connection timed out'));
 

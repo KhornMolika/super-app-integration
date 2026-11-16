@@ -56,9 +56,7 @@ export function isStepRequiredInfoComplete(
 
       if (method === IntegrationMethod.WEBVIEW) {
         const prodUrl = formData.integrationConfigWebView?.productionUrl?.trim();
-        const hasUrl = Boolean(prodUrl && prodUrl.length > 0);
-        const isVerified = Boolean(formData.isDomainVerified);
-        return hasUrl && isVerified;
+        return Boolean(prodUrl && prodUrl.length > 0);
       }
 
       if (method === IntegrationMethod.FLUTTER_PACKAGE) {

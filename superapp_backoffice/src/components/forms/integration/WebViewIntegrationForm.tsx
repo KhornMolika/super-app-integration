@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Button, Input, Label } from '@/components/ui/inputs';
@@ -33,6 +33,11 @@ export default function WebViewIntegrationForm({
   // Snippet and copy state
   const [copiedJson, setCopiedJson] = useState(false);
   const [copiedPath, setCopiedPath] = useState(false);
+  const [copiedToken, setCopiedToken] = useState(false);
+  const [copiedDnsHost, setCopiedDnsHost] = useState(false);
+  const [copiedDnsVal, setCopiedDnsVal] = useState(false);
+  const [copiedMeta, setCopiedMeta] = useState(false);
+  const [verificationTab, setVerificationTab] = useState<'dns' | 'meta' | 'json'>('dns');
 
   // State for Domain Ownership Verification
   const [isVerifyingDomain, setIsVerifyingDomain] = useState(false);
@@ -390,96 +395,237 @@ export default function WebViewIntegrationForm({
       </div>
 
       {/* Domain verification */}
-      <section className="rounded-2xl border border-slate-200/80 dark:border-slate-800">
-        <header className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-slate-200/70 dark:border-slate-800">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            Verify your domain
+      <section className="rounded-2xl border border-slate-200/80 dark:border-slate-800 overflow-hidden">
+        <header className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-slate-50/50 dark:bg-slate-900/40 border-b border-slate-200/70 dark:border-slate-800">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              Verify domain ownership
+            </h3>
             {isVerified ? (
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-brand-600 dark:text-brand-400">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                 <CheckIcon className="w-3.5 h-3.5" />
                 Verified
               </span>
             ) : (
-              <span className="text-xs font-normal text-slate-500 dark:text-slate-400">Required</span>
+              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                Required for Live
+              </span>
             )}
-          </h3>
+          </div>
           <a
             href="/guidelines?method=webview#domain-verification"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+            className="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline"
           >
-            Guide
+            Guidelines Guide &rarr;
           </a>
         </header>
 
-        <ol className="divide-y divide-slate-200/70 dark:divide-slate-800">
-          <li className="flex gap-3 p-4">
-            {stepBadge(1, isVerified)}
-            <div className="min-w-0 flex-1 space-y-2">
-              <p className="text-sm text-slate-700 dark:text-slate-300">
-                Publish a JSON file at this address. It must return <code className="font-mono text-xs">200</code> as{' '}
-                <code className="font-mono text-xs">application/json</code>.
+        {/* Prominent Verification Token Card */}
+        <div className="p-4 bg-slate-50/80 dark:bg-slate-900/60 border-b border-slate-200/70 dark:border-slate-800">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-slate-700 shadow-2xs">
+            <div className="min-w-0">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-0.5">
+                Verification Challenge Token
+              </span>
+              <code className="text-xs sm:text-sm font-mono font-bold text-brand-600 dark:text-brand-400 break-all select-all">
+                {token}
+              </code>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {isEditable && (
+                <button
+                  type="button"
+                  onClick={handleGenerateToken}
+                  className={smallBtn}
+                  title="Generate a fresh token"
+                >
+                  New token
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => copy(token, setCopiedToken)}
+                className="h-8 px-3 rounded-lg text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white inline-flex items-center gap-1.5 transition-colors shadow-2xs"
+              >
+                {copiedToken ? 'Copied!' : 'Copy Token'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Verification Method Tabs */}
+        <div className="p-4 space-y-4">
+          <div>
+            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-2">
+              Choose your verification method:
+            </span>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setVerificationTab('dns')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                  verificationTab === 'dns'
+                    ? 'bg-brand-50 border-brand-500 text-brand-700 dark:bg-brand-950/60 dark:border-brand-400 dark:text-brand-300 shadow-2xs'
+                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                }`}
+              >
+                Method A: DNS TXT Record (No Redeploy)
+              </button>
+              <button
+                type="button"
+                onClick={() => setVerificationTab('meta')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                  verificationTab === 'meta'
+                    ? 'bg-brand-50 border-brand-500 text-brand-700 dark:bg-brand-950/60 dark:border-brand-400 dark:text-brand-300 shadow-2xs'
+                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                }`}
+              >
+                Method B: HTML Meta Tag
+              </button>
+              <button
+                type="button"
+                onClick={() => setVerificationTab('json')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                  verificationTab === 'json'
+                    ? 'bg-brand-50 border-brand-500 text-brand-700 dark:bg-brand-950/60 dark:border-brand-400 dark:text-brand-300 shadow-2xs'
+                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                }`}
+              >
+                Method C: Association File (.well-known)
+              </button>
+            </div>
+          </div>
+
+          {/* Tab 1: DNS TXT Record */}
+          {verificationTab === 'dns' && (
+            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/40 space-y-3">
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                Add a DNS TXT record to your domain. Works immediately without modifying code or redeploying.
               </p>
-              <div className="flex flex-wrap items-center gap-2">
-                <code className="min-w-0 flex-1 break-all rounded-lg bg-slate-50 dark:bg-slate-900/60 px-2.5 py-1.5 font-mono text-xs text-slate-800 dark:text-slate-200">
-                  {fileUrl}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="space-y-1">
+                  <span className="text-[11px] font-bold text-slate-500">Record Type / Host</span>
+                  <div className="flex items-center gap-1.5">
+                    <code className="flex-1 p-2 rounded-lg bg-slate-900 text-slate-200 font-mono text-[11px] truncate">
+                      {`_superapp-challenge.${host || 'yourdomain.com'}`}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={() => copy(`_superapp-challenge.${host || 'yourdomain.com'}`, setCopiedDnsHost)}
+                      className={smallBtn}
+                    >
+                      {copiedDnsHost ? 'Copied' : 'Copy'}
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[11px] font-bold text-slate-500">TXT Value</span>
+                  <div className="flex items-center gap-1.5">
+                    <code className="flex-1 p-2 rounded-lg bg-slate-900 text-brand-300 font-mono text-[11px] truncate">
+                      {`superapp-site-verification=${token}`}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={() => copy(`superapp-site-verification=${token}`, setCopiedDnsVal)}
+                      className={smallBtn}
+                    >
+                      {copiedDnsVal ? 'Copied' : 'Copy'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tab 2: HTML Meta Tag */}
+          {verificationTab === 'meta' && (
+            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/40 space-y-3">
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                Add this meta tag inside the <code className="font-mono text-brand-600">&lt;head&gt;</code> of your app's homepage (<code className="font-mono">index.html</code> or <code className="font-mono">layout.tsx</code>):
+              </p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 p-2.5 rounded-lg bg-slate-900 text-brand-300 font-mono text-xs overflow-x-auto">
+                  {`<meta name="superapp-site-verification" content="${token}" />`}
                 </code>
-                <button type="button" onClick={() => copy(fileUrl, setCopiedPath)} className={smallBtn}>
-                  {copiedPath ? 'Copied' : 'Copy'}
+                <button
+                  type="button"
+                  onClick={() => copy(`<meta name="superapp-site-verification" content="${token}" />`, setCopiedMeta)}
+                  className={smallBtn}
+                >
+                  {copiedMeta ? 'Copied' : 'Copy Tag'}
                 </button>
               </div>
             </div>
-          </li>
+          )}
 
-          <li className="flex gap-3 p-4">
-            {stepBadge(2, isVerified)}
-            <div className="min-w-0 flex-1 space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm text-slate-700 dark:text-slate-300">Put this in the file.</p>
-                <div className="flex items-center gap-2">
-                  {isEditable && (
-                    <button type="button" onClick={handleGenerateToken} className={smallBtn} title="Makes a new token. Update the file after.">
-                      New token
-                    </button>
-                  )}
-                  <button type="button" onClick={() => copy(manifest, setCopiedJson)} className={smallBtn}>
-                    {copiedJson ? 'Copied' : 'Copy JSON'}
-                  </button>
-                </div>
+          {/* Tab 3: Association JSON File */}
+          {verificationTab === 'json' && (
+            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/40 space-y-3">
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                Publish a static JSON file returning <code className="font-mono text-brand-600">200 OK</code> with <code className="font-mono">application/json</code>:
+              </p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 p-2 rounded-lg bg-slate-900 text-slate-200 font-mono text-xs truncate">
+                  {fileUrl}
+                </code>
+                <button type="button" onClick={() => copy(fileUrl, setCopiedPath)} className={smallBtn}>
+                  {copiedPath ? 'Copied' : 'Copy URL'}
+                </button>
+                <button type="button" onClick={() => copy(manifest, setCopiedJson)} className={smallBtn}>
+                  {copiedJson ? 'Copied' : 'Copy JSON'}
+                </button>
               </div>
-              <pre className="max-h-56 overflow-auto rounded-xl bg-slate-900 p-3 font-mono text-xs leading-relaxed text-slate-200">
+              <pre className="max-h-48 overflow-auto rounded-xl bg-slate-900 p-3 font-mono text-xs leading-relaxed text-slate-200">
                 {manifest}
               </pre>
             </div>
-          </li>
+          )}
 
-          <li className="flex gap-3 p-4">
-            {stepBadge(3, isVerified)}
-            <div className="min-w-0 flex-1 space-y-2">
-              <div className="flex flex-wrap items-center gap-3">
-                <Button
-                  type="button"
-                  onClick={handleVerifyDomain}
-                  disabled={isVerifyingDomain || !isEditable || !prodUrlInput}
-                  className="h-9 px-4 rounded-xl text-sm font-semibold bg-brand-600 hover:bg-brand-700 text-white inline-flex items-center gap-1.5 disabled:opacity-50"
-                >
-                  {isVerifyingDomain ? 'Verifying...' : isVerified ? 'Verify again' : 'Verify domain'}
-                </Button>
-                {isVerified && (
-                  <span className="text-sm text-slate-600 dark:text-slate-300">{host} is verified.</span>
+          {/* Trigger Verification Action */}
+          <div className="pt-2 border-t border-slate-200/70 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                onClick={handleVerifyDomain}
+                disabled={isVerifyingDomain || !isEditable || !prodUrlInput}
+                className="h-9 px-4 rounded-xl text-sm font-semibold bg-brand-600 hover:bg-brand-700 text-white inline-flex items-center gap-1.5 disabled:opacity-50 shadow-2xs"
+              >
+                {isVerifyingDomain ? (
+                  <>
+                    <svg className="animate-spin w-4 h-4 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                    Verifying domain...
+                  </>
+                ) : isVerified ? (
+                  'Re-verify domain'
+                ) : (
+                  'Verify domain now'
                 )}
-                {!isVerified && !prodUrlInput && (
-                  <span className="text-xs text-slate-500 dark:text-slate-400">Enter the app URL first.</span>
-                )}
-              </div>
-              {verifyError && <p className="text-sm text-rose-600 dark:text-rose-400">{verifyError}</p>}
-              {!isVerified && domainVerificationMsgType === 'info' && domainVerificationMsg && (
-                <p className="text-xs text-slate-500 dark:text-slate-400">{domainVerificationMsg}</p>
+              </Button>
+              {isVerified && (
+                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                  <CheckIcon className="w-3.5 h-3.5" />
+                  {host} is verified
+                </span>
               )}
             </div>
-          </li>
-        </ol>
+
+            {verifyError && (
+              <p className="text-xs text-rose-600 dark:text-rose-400 font-medium w-full mt-1">
+                {verifyError}
+              </p>
+            )}
+            {!isVerified && domainVerificationMsgType === 'info' && domainVerificationMsg && (
+              <p className="text-xs text-slate-500 dark:text-slate-400 w-full mt-1">
+                {domainVerificationMsg}
+              </p>
+            )}
+          </div>
+        </div>
       </section>
 
       {/* Other domains */}

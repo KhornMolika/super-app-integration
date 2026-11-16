@@ -121,7 +121,73 @@ export class DomainVerificationService {
       }
     }
 
-    // 2. Fetch the association file
+    // 2. Multi-Method Domain Ownership Verification
+    // Method A: DNS TXT Record (_superapp-challenge.<domain> = superapp-site-verification=<token>)
+    try {
+      const challengeDomain = `_superapp-challenge.${parsedUrl.hostname}`;
+      const txtRecords = await dns.promises.resolveTxt(challengeDomain);
+      const flatRecords = txtRecords.flat();
+      const matched = flatRecords.some(
+        (r) =>
+          r.trim() === expectedToken.trim() ||
+          r.trim() === `superapp-site-verification=${expectedToken.trim()}` ||
+          r.includes(expectedToken.trim()),
+      );
+      if (matched) {
+        this.logger.log(
+          `Domain ownership verified via DNS TXT record on ${challengeDomain}`,
+        );
+        return {
+          success: true,
+          message: `Domain ownership verified successfully via DNS TXT record on ${challengeDomain}.`,
+          verifiedAt: new Date(),
+          allowedDomains: [parsedUrl.hostname],
+          permissions: [],
+        };
+      }
+    } catch {
+      // DNS record not found or lookup failed, try next methods
+    }
+
+    // Method B: HTML Meta Tag (<meta name="superapp-site-verification" content="<token>" />)
+    try {
+      const controllerMeta = new AbortController();
+      const timeoutMeta = setTimeout(() => controllerMeta.abort(), 4000);
+      const pageRes = await fetch(parsedUrl.origin, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'SuperApp-Domain-Verifier/2.0',
+          Accept: 'text/html,application/xhtml+xml',
+        },
+        signal: controllerMeta.signal,
+      });
+      clearTimeout(timeoutMeta);
+
+      if (pageRes.ok) {
+        const html = await pageRes.text();
+        const metaRegex =
+          /<meta\s+[^>]*name=["']superapp-site-verification["'][^>]*content=["']([^"']+)["'][^>]*>/i;
+        const metaRegexAlt =
+          /<meta\s+[^>]*content=["']([^"']+)["'][^>]*name=["']superapp-site-verification["'][^>]*>/i;
+        const match = html.match(metaRegex) || html.match(metaRegexAlt);
+        if (match && match[1].trim() === expectedToken.trim()) {
+          this.logger.log(
+            `Domain ownership verified via HTML meta tag on ${parsedUrl.origin}`,
+          );
+          return {
+            success: true,
+            message: `Domain ownership verified successfully via HTML meta tag on ${parsedUrl.origin}.`,
+            verifiedAt: new Date(),
+            allowedDomains: [parsedUrl.hostname],
+            permissions: [],
+          };
+        }
+      }
+    } catch {
+      // HTML check failed, proceed to association JSON file
+    }
+
+    // Method C: Association file (/.well-known/superapp-miniapp-association.json)
     const associationUrl = `${parsedUrl.origin}/.well-known/superapp-miniapp-association.json`;
     this.logger.log(
       `Fetching domain association verification from: ${associationUrl}`,

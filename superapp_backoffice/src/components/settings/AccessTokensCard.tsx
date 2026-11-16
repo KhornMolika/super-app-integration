@@ -135,14 +135,14 @@ export function AccessTokensCard() {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  Personal Access Tokens (PAT)
+                  Developer Access Tokens (PAT)
                 </h3>
                 <span className="px-2 py-0.5 rounded-full text-2xs font-semibold bg-brand-100 text-brand-700 dark:bg-brand-950/70 dark:text-brand-300">
-                  All Roles: SDK &amp; Registry Auth
+                  SDK &amp; Private Registry Auth
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-2xl leading-relaxed">
-                Personal Access Tokens (PAT) allow any authenticated user (<strong className="text-slate-700 dark:text-slate-300">Super Admin, Admin, MiniApp Developer</strong>) to authenticate CLI package managers and download official scoped SDKs (<code className="text-brand-600 dark:text-brand-400 font-mono text-2xs">@fsasuperapp/*</code> and <code className="text-brand-600 dark:text-brand-400 font-mono text-2xs">fsa_superapp_flutter_sdk</code>). You do not need to register a MiniApp first to obtain SDKs.
+                Your <strong>Developer Token (PAT)</strong> (<code className="text-brand-600 dark:text-brand-400 font-mono text-2xs">fsa_pat_...</code>) authenticates you with private package registries to download official scoped SDKs (<code className="text-brand-600 dark:text-brand-400 font-mono text-2xs">@fsasuperapp/*</code> and <code className="text-brand-600 dark:text-brand-400 font-mono text-2xs">fsa_superapp_flutter_sdk</code>). You only need <strong>one token</strong> for all your local development projects.
               </p>
             </div>
           </div>

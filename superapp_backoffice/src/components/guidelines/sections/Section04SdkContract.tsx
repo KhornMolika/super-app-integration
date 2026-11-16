@@ -58,17 +58,19 @@ export function Section04SdkContract({
       success: false,
       error: {
         code: "CAPABILITY_UNSUPPORTED",
-        capability: "nfc_reader",
-        message: "Host shell build v1.0.0 does not support capability: nfc_reader",
+        capability: "nfc",
+        message: "Host shell build v1.0.0 does not support capability: nfc",
         hostVersion: "1.0.0",
         supportedCapabilities: [
-          "camera",
-          "location",
-          "biometrics",
-          "secure_storage",
-          "notification"
+          "get_location",
+          "scan_qr_code",
+          "take_photo",
+          "photo_library",
+          "biometric_auth",
+          "nfc",
+          "secure_storage"
         ],
-        remedy: "Verify with FSASuperApp.canIUse('nfc_reader') and provide fallback UI"
+        remedy: "Verify with FSASuperApp.canIUse('nfc') and provide fallback UI"
       }
     },
     null,
@@ -169,8 +171,8 @@ export function Section04SdkContract({
             </p>
             <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-[11px] rounded-lg space-y-1 border border-slate-800">
               <p className="text-slate-400"># 1. Log into FSA BackOffice</p>
-              <p className="text-brand-300"># 2. Go to: Settings &gt; Profile / Developer Tokens</p>
-              <p className="text-emerald-400"># 3. Copy your Personal Access Token: fsa_pat_****************</p>
+              <p className="text-brand-300"># 2. Go to: Settings &gt; Developer Tokens (PAT)</p>
+              <p className="text-emerald-400"># 3. Copy your Developer Token: fsa_pat_****************</p>
             </div>
           </div>
 
@@ -396,7 +398,7 @@ export function Section04SdkContract({
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-brand-100 dark:bg-brand-950 text-brand-700 dark:text-brand-300 font-semibold">Pre-flight</span>
             </div>
             <p className="text-slate-600 dark:text-slate-400">
-              MiniApp calls <code className="font-mono font-bold text-slate-800 dark:text-slate-200">await FSASuperApp.canIUse('notification')</code> before triggering push sync alerts.
+              MiniApp calls <code className="font-mono font-bold text-slate-800 dark:text-slate-200">await FSASuperApp.canIUse('biometric_auth')</code> before triggering native sensors.
             </p>
           </div>
 
@@ -552,7 +554,7 @@ export function Section04SdkContract({
                   Inspect capability before calling native features, and close the MiniApp cleanly on task completion:
                 </p>
                 <div className="p-2.5 bg-slate-900 text-slate-200 font-mono text-[11px] rounded-lg space-y-1 border border-slate-800">
-                  <p className="text-amber-300">if (await FSASuperApp.canIUse('notification')) &#123; ... &#125;</p>
+                  <p className="text-amber-300">if (await FSASuperApp.canIUse('biometric_auth')) &#123; ... &#125;</p>
                   <p className="text-rose-300">FSASuperApp.close(); // Return to SuperApp</p>
                 </div>
               </div>
