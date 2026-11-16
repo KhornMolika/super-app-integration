@@ -137,6 +137,7 @@ export interface CreateMiniAppDto {
   organization?: string;
   organizationCode?: string;
   organizationId?: string;
+  targetAudience?: 'PUBLIC' | 'ALL_FSA_STAFF' | 'ORGANIZATION_ONLY' | string;
   shortDescription?: string;
   fullDescription?: string;
   logo?: string;

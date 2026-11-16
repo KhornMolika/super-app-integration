@@ -619,6 +619,9 @@ export class MiniappMutationHelper {
       data.logo = data.iconUrl;
       existing.logo = data.iconUrl;
     }
+    if (data.targetAudience !== undefined) {
+      existing.targetAudience = data.targetAudience;
+    }
     if (
       data.termsUrl !== undefined ||
       data.termsDescription !== undefined ||
@@ -718,6 +721,9 @@ export class MiniappMutationHelper {
           existing.supportEmail = d.supportEmail;
         if (d.homeWidget !== undefined) {
           existing.homeWidget = d.homeWidget;
+        }
+        if (d.targetAudience !== undefined) {
+          existing.targetAudience = d.targetAudience;
         }
 
         if (
@@ -830,6 +836,10 @@ export class MiniappMutationHelper {
           existingRev.description ??
           existing.description,
         logo: d.logo ?? existingRev.logo ?? existing.logo,
+        targetAudience:
+          d.targetAudience ??
+          existingRev.targetAudience ??
+          existing.targetAudience,
         termsUrl:
           d.termsUrl ?? existingRev.termsUrl ?? existing.legal?.termsUrl,
         termsDescription:

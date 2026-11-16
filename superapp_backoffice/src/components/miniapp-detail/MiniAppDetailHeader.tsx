@@ -134,6 +134,40 @@ export default function MiniAppDetailHeader({
                 </span>
               </>
             )}
+            <span className="text-slate-300 dark:text-slate-700">•</span>
+            <span
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold border ${
+                formData.targetAudience === 'ORGANIZATION_ONLY'
+                  ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+                  : formData.targetAudience === 'ALL_FSA_STAFF'
+                  ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800'
+                  : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
+              }`}
+              title={
+                formData.targetAudience === 'ORGANIZATION_ONLY'
+                  ? 'Target Audience: Strictly private to this organization staff'
+                  : formData.targetAudience === 'ALL_FSA_STAFF'
+                  ? 'Target Audience: Accessible by all FSA regulatory staff'
+                  : 'Target Audience: Publicly accessible by all consumers and citizens'
+              }
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  formData.targetAudience === 'ORGANIZATION_ONLY'
+                    ? 'bg-amber-500'
+                    : formData.targetAudience === 'ALL_FSA_STAFF'
+                    ? 'bg-indigo-500'
+                    : 'bg-emerald-500'
+                }`}
+              />
+              <span>
+                {formData.targetAudience === 'ORGANIZATION_ONLY'
+                  ? 'Private Authority'
+                  : formData.targetAudience === 'ALL_FSA_STAFF'
+                  ? 'All FSA Staff'
+                  : 'Public'}
+              </span>
+            </span>
           </div>
         </div>
       </div>

@@ -27,6 +27,7 @@ export interface MiniApp {
   version?: string;
   currentReleaseVersion?: string;
   activeTestVersion?: string;
+  targetAudience?: 'PUBLIC' | 'ALL_FSA_STAFF' | 'ORGANIZATION_ONLY' | string;
   integrationMethod?: any;
   integrationConfig?: any;
   homeWidget?: HomeWidget | null;

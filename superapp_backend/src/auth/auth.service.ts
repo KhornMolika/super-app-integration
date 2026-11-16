@@ -5,6 +5,7 @@ import {
   UnauthorizedException,
   ForbiddenException,
   BadRequestException,
+  ConflictException,
   NotFoundException,
   ServiceUnavailableException,
   Optional,
@@ -555,13 +556,9 @@ export class AuthService implements OnModuleInit {
       this.logger.warn(
         `[AUTH] Sign-up attempted for an existing account: ${email}`,
       );
-      return {
-        success: true,
-        pendingEmailVerification: true,
-        email,
-        emailDispatched: true,
-        message: REGISTRATION_SUBMITTED_MESSAGE,
-      };
+      throw new ConflictException(
+        'An account with this email address already exists. Please sign in or reset your password.',
+      );
     }
 
     // Self-registered accounts start in PENDING_EMAIL_VERIFICATION so they DO NOT clutter

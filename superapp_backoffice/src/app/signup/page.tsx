@@ -124,7 +124,11 @@ export default function SignupPage() {
     } catch (err: any) {
       const msg = err.message || 'Registration failed. Email may already be in use.';
       toast.error(msg, 'Registration Error');
-      if (msg.toLowerCase().includes('already exists')) {
+      if (
+        msg.toLowerCase().includes('already exists') ||
+        msg.toLowerCase().includes('existing account') ||
+        err?.status === 409
+      ) {
         setErrors((prev) => ({ ...prev, email: 'An account with this email already exists.' }));
       }
     } finally {
@@ -197,9 +201,20 @@ export default function SignupPage() {
               } disabled:opacity-50`}
           />
           {errors.email && (
-            <p className="mt-1 text-xs text-rose-400 flex items-center gap-1">
-              <span>•</span> {errors.email}
-            </p>
+            <div className="mt-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-200 flex items-center justify-between gap-2 animate-in fade-in">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                <span className="truncate">{errors.email}</span>
+              </div>
+              {errors.email.toLowerCase().includes('already exists') && (
+                <Link
+                  href={`/login?email=${encodeURIComponent(email.trim().toLowerCase())}`}
+                  className="font-bold underline text-brand-400 hover:text-brand-300 whitespace-nowrap text-[11px]"
+                >
+                  Sign in &rarr;
+                </Link>
+              )}
+            </div>
           )}
         </div>
 

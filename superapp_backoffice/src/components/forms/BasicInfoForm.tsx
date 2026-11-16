@@ -5,6 +5,7 @@ import { LockIcon, BuildingIcon } from '@/components/ui/Icons';
 import { organizationsApi, Organization } from '@/api/organizations.api';
 import { unwrapData } from '@/api';
 import { useAuth } from '@/lib/auth';
+import { TargetAudienceSelector } from './TargetAudienceSelector';
 
 export default function BasicInfoForm({ formData, handleChange, allErrors = {}, isEditable = true }: any) {
   const { user, role } = useAuth();
@@ -291,6 +292,20 @@ export default function BasicInfoForm({ formData, handleChange, allErrors = {}, 
           required={true}
           label="Icon"
           helperText="Square PNG, JPG, SVG or WebP, 512 × 512 px, up to 2 MB."
+        />
+      </div>
+
+      {/* Target Audience Scope */}
+      <div className="md:col-span-2">
+        <TargetAudienceSelector
+          value={formData.targetAudience}
+          onChange={(newAudience) =>
+            handleChange({
+              target: { name: 'targetAudience', value: newAudience },
+            } as any)
+          }
+          disabled={!isEditable}
+          error={allErrors.targetAudience}
         />
       </div>
 

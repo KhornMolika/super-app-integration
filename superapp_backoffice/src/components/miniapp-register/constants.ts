@@ -39,6 +39,7 @@ export function getInitialRegisterFormData(): Partial<CreateMiniAppDto> {
     appId: '',
     organization: '',
     organizationCode: '',
+    targetAudience: 'PUBLIC',
     shortDescription: '',
     fullDescription: '',
     logo: '',

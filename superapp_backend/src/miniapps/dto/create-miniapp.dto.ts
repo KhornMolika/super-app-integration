@@ -13,6 +13,7 @@ import {
   Matches,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
+import { MiniAppTargetAudience } from '../entities/miniapp.entity';
 
 export enum IntegrationMethod {
   WEBVIEW = 'WEBVIEW',
@@ -420,6 +421,10 @@ export class CreateMiniAppDto {
   @IsString()
   @IsOptional()
   organizationCode?: string;
+
+  @IsEnum(MiniAppTargetAudience)
+  @IsOptional()
+  targetAudience?: MiniAppTargetAudience;
 
 
   // No lifecycleStatus / availabilityStatus: only the lifecycle actions

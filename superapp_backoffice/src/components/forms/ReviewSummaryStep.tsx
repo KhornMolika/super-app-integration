@@ -152,6 +152,33 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                   <span className={`w-1.5 h-1.5 rounded-full ${methodMeta.dot} animate-pulse`} />
                   {methodMeta.label}
                 </span>
+                <span
+                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                    formData.targetAudience === 'ORGANIZATION_ONLY'
+                      ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+                      : formData.targetAudience === 'ALL_FSA_STAFF'
+                      ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800'
+                      : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
+                  }`}
+                  title="Target Audience Scope"
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      formData.targetAudience === 'ORGANIZATION_ONLY'
+                        ? 'bg-amber-500'
+                        : formData.targetAudience === 'ALL_FSA_STAFF'
+                        ? 'bg-indigo-500'
+                        : 'bg-emerald-500'
+                    }`}
+                  />
+                  <span>
+                    {formData.targetAudience === 'ORGANIZATION_ONLY'
+                      ? 'Private Authority'
+                      : formData.targetAudience === 'ALL_FSA_STAFF'
+                      ? 'All FSA Staff'
+                      : 'Public Store'}
+                  </span>
+                </span>
               </div>
 
               <div className="flex items-center gap-2">
@@ -287,6 +314,29 @@ export default function ReviewSummaryStep({ formData, onEditStep }: ReviewSummar
                   <span className="text-xs font-normal text-slate-500 ml-1.5 block sm:inline">
                     ({getOrganizationFullName(formData.organization)})
                   </span>
+                </span>
+              </div>
+              <div>
+                <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">
+                  Target Audience Scope
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700">
+                  {formData.targetAudience === 'ORGANIZATION_ONLY' ? (
+                    <>
+                      <span className="w-2 h-2 rounded-full bg-amber-500" />
+                      <span>Organization Only (Private Authority)</span>
+                    </>
+                  ) : formData.targetAudience === 'ALL_FSA_STAFF' ? (
+                    <>
+                      <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                      <span>All FSA Staff (Regulatory & Internal)</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                      <span>Public (Citizens & Consumers)</span>
+                    </>
+                  )}
                 </span>
               </div>
             </div>
